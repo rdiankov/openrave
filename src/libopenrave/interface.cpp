@@ -82,7 +82,8 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     if( !preference ) {
         throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
     }
-    __mapUserData = preference->__mapUserData;
+    // cannot clone the user data since it can be environment dependent!
+    //__mapUserData = preference->__mapUserData;
     __struri = preference->__struri;
     __mapReadableInterfaces = preference->__mapReadableInterfaces;
     __description = preference->__description;

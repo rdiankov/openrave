@@ -33,12 +33,19 @@
 #include <vector>
 #include <list>
 #include <stdexcept>
+#include <cmath>
 
 #ifndef IKFAST_HEADER_COMMON
 #define IKFAST_HEADER_COMMON
 
 /// should be the same as ikfast.__version__
-#define IKFAST_VERSION 68
+#define IKFAST_VERSION 70
+
+#ifdef _MSC_VER
+#ifndef isfinite
+#define isfinite _isfinite
+#endif
+#endif // _MSC_VER
 
 namespace ikfast {
 
@@ -194,6 +201,9 @@ public:
                 if( _vbasesol[i].indices[1] != (unsigned char)-1 && _vbasesol[i].indices[1] >= _vbasesol[i].maxsolutions ) {
                     throw std::runtime_error("2nd index >= max solutions for joint");
                 }
+            }
+            if( !isfinite(_vbasesol[i].foffset) ) {
+                throw std::runtime_error("foffset was not finite");
             }
         }
     }

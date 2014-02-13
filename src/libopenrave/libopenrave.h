@@ -133,8 +133,6 @@ static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 static const dReal g_fEpsilonEvalJointLimit = RavePow(g_fEpsilon,0.7);
 
-OPENRAVE_API bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
-
 template <typename T>
 class TransformSaver
 {
@@ -235,6 +233,19 @@ inline int CountCircularBranches(dReal angle)
         return static_cast<int>((angle-PI)/(2*PI));
     }
     return 0;
+}
+
+/// returns a value=angle+2*PI*N such that value is closest to testvalue
+inline dReal GetClosestValueAlongCircle(dReal angle, dReal testvalue)
+{
+    int n = static_cast<int>((testvalue-angle)/PI);
+    if( n > 1 ) {
+        return angle + static_cast<dReal>((n+1)/2)*2*PI;
+    }
+    else if( n < -1 ) {
+        return angle + static_cast<dReal>((n-1)/2)*2*PI;
+    }
+    return angle;
 }
 
 inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)

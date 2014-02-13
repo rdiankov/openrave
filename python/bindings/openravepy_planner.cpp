@@ -86,6 +86,10 @@ public:
             _paramswrite->_sExtraParameters = s;
         }
 
+        void SetRandomGeneratorSeed(uint32_t seed) {
+            _paramswrite->_nRandomGeneratorSeed = seed;
+        }
+
         void SetGoalConfig(object o)
         {
             _paramswrite->vgoalconfig = ExtractArray<dReal>(o);
@@ -96,20 +100,20 @@ public:
             _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
         }
 
-        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, int options=0xffff, bool filterreturn=false)
+        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, int options=0xffff, bool returnconfigurations=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
             ConstraintFilterReturnPtr pfilterreturn;
-            if( filterreturn ) {
+            if( returnconfigurations ) {
                 pfilterreturn.reset(new ConstraintFilterReturn());
             }
             int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, options, pfilterreturn);
-            if( filterreturn ) {
-                if( ret <= 0 ) {
-                    return boost::python::make_tuple(ret, pfilterreturn->_invalidvalues, pfilterreturn->_invalidvelocities);
+            if( returnconfigurations ) {
+                if( ret != 0 ) {
+                    return boost::python::make_tuple(ret, toPyArray(pfilterreturn->_invalidvalues), toPyArray(pfilterreturn->_invalidvelocities), pfilterreturn->_fTimeWhenInvalid);
                 }
                 else {
-                    return boost::python::make_tuple(ret, boost::python::object(), boost::python::object());
+                    return boost::python::make_tuple(ret, boost::python::object(), boost::python::object(), dReal(0));
                 }
             }
             return object(ret);
@@ -260,7 +264,7 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckPathAllConstraints, 6, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckPathAllConstraints_overloads, CheckPathAllConstraints, 6, 8)
 
 void init_openravepy_planner()
 {
@@ -297,9 +301,10 @@ void init_openravepy_planner()
         .def("SetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification, args("env","spec"), DOXY_FN(PlannerBase::PlannerParameters, SetConfigurationSpecification))
         .def("GetConfigurationSpecification",&PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification, DOXY_FN(PlannerBase::PlannerParameters, GetConfigurationSpecification))
         .def("SetExtraParameters",&PyPlannerBase::PyPlannerParameters::SetExtraParameters, args("extra"), DOXY_FN(PlannerBase::PlannerParameters, SetExtraParameters))
+        .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
-        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
+        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)

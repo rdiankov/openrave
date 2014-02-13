@@ -41,7 +41,7 @@ public:
     IvModelLoader(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simple model loader functionality returning a triangle mesh using the Coin3D library. Depending on the version, Coin3D might be licensed under GPL.";
-        RegisterCommand("LoadModel",boost::bind(&IvModelLoader::_LoadModel,this,_1,_2),"Returns the triangle mesh given a model filename");
+        RegisterCommand("LoadModel",boost::bind(&IvModelLoader::_LoadModelCommand,this,_1,_2),"Returns the triangle mesh given a model filename");
     }
 
     int main(const string& cmd)
@@ -49,7 +49,7 @@ public:
         return 0;
     }
 
-    bool _LoadModel(ostream& sout, istream& sinput)
+    bool _LoadModelCommand(ostream& sout, istream& sinput)
     {
         string filename;
         if (!getline(sinput, filename) ) {

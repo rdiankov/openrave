@@ -680,6 +680,7 @@ typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
 typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
 
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
+typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 
 class BaseXMLReader;
@@ -695,7 +696,9 @@ enum CloningOptions {
     Clone_Viewer = 2, ///< clone the viewer type, although figures won't be copied, new viewer does try to match views
     Clone_Simulation = 4, ///< clone the physics engine and simulation state (ie, timesteps, gravity)
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
-    Clone_Sensors = 16, ///< if specified, will clone the sensors attached to the robot and added to the environment
+    Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
+    Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
+    Clone_All = 0xffffffff,
 };
 
 /// base class for readable interfaces
@@ -2202,6 +2205,12 @@ public:
         return iknew;
     }
 
+    inline void Swap(IkParameterization& r) {
+        std::swap(_transform, r._transform);
+        std::swap(_type, r._type);
+        _mapCustomData.swap(r._mapCustomData);
+    }
+
 protected:
     inline static bool _IsValidCharInName(char c) {
         return c < 0 || c >= 33;
@@ -2732,6 +2741,13 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
     \return an empty string if file isn't found, otherwise path to full filename on local filesystem
  */
 OPENRAVE_API std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir="");
+
+/** \brief Given the absolute filename, return the relative path from one of the OPENRAVE_DATA directories.
+
+    Will check if filename is inside one of the OPENRAVE_DATA directories, and set newfilename to the relative path.
+    \return true if inside a OPENRAVE_DATA directory.
+ */
+OPENRAVE_API bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
 
 /// \brief Sets the default data access options for cad resources/robot files
 ///

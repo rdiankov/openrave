@@ -19,7 +19,7 @@ class RunPlanning(EnvironmentSetup):
     def setup(self):
         EnvironmentSetup.setup(self)
         self.env.SetCollisionChecker(RaveCreateCollisionChecker(self.env,self.collisioncheckername))
-
+        
     def test_basicplanning(self):
         env = self.env
         with env:

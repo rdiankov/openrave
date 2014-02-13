@@ -112,7 +112,7 @@ class VisibilityModel(DatabaseGenerator):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,target,sensorrobot=None,sensorname=None,maxvelmult=None):
+    def __init__(self,robot,target,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None):
         """Starts a visibility model using a robot, a sensor, and a target
 
         The minimum needed to be specified is the robot and a sensorname. Supports sensors that do
@@ -122,7 +122,7 @@ class VisibilityModel(DatabaseGenerator):
         DatabaseGenerator.__init__(self,robot=robot)
         self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.target = target
-        self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult)
+        self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult,ignoresensorcollision=ignoresensorcollision)
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
         self.sensorname = sensorname
@@ -243,7 +243,10 @@ class VisibilityModel(DatabaseGenerator):
         """Sets the camera transforms to the visual feedback problem"""
         self.visualprob.SetCameraTransforms(transforms=transforms)
     def showtransforms(self,options=None):
-        pts = array([dot(self.target.GetTransform(),matrixFromPose(pose))[0:3,3] for pose in self.visibilitytransforms])
+        if self.robot != self.sensorrobot:
+            pts = poseMultArrayT(self.sensorrobot.GetTransformPose(), InvertPoses(self.visibilitytransforms))[:,4:7]
+        else:
+            pts = poseMultArrayT(self.target.GetTransformPose(), self.visibilitytransforms)[:,4:7]
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
         try:
             with RobotStateSaver(self.robot):
@@ -255,12 +258,23 @@ class VisibilityModel(DatabaseGenerator):
                         with self.env:
                             if len(self.preshapes) > 0:
                                 self.robot.SetDOFValues(self.preshapes[0],self.manip.GetGripperIndices())
-                            Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
-                            Tcamera = dot(self.target.GetTransform(),matrixFromPose(pose))
-                            Tgrasp = dot(Tcamera,Trelative)
-                            Tdelta = dot(Tgrasp,linalg.inv(self.manip.GetEndEffectorTransform()))
-                            for link in self.manip.GetChildLinks():
-                                link.SetTransform(dot(Tdelta,link.GetTransform()))
+
+                            if self.robot != self.sensorrobot:
+                                # sensor is not attached to robot
+                                # robot should be grabbing the targt
+                                assert(self.robot.IsGrabbing(self.target) is not None)
+                                relativepose = poseMult(poseMult(self.attachedsensor.GetTransformPose(),InvertPose(pose)), InvertPose(self.target.GetTransformPose()))
+                                for link in self.manip.GetChildLinks():
+                                    link.SetTransform(poseMult(relativepose, link.GetTransformPose()))
+                            else:
+                                # robot should not be grabbing the targt
+                                assert(self.robot.IsGrabbing(self.target) is None)
+                                relativepose = poseMult(InvertPose(self.attachedsensor.GetTransformPose()),self.manip.GetTransformPose())
+                                globalCameraPose = poseMult(self.target.GetTransformPose(), pose)
+                                grasppose = poseMult(globalCameraPose,relativepose)
+                                deltapose = poseMult(grasppose,InvertPose(self.manip.GetTransformPose()))
+                                for link in self.manip.GetChildLinks():
+                                    link.SetTransform(poseMult(deltapose,link.GetTransformPose()))
                             visibility = self.visualprob.ComputeVisibility()
                             self.env.UpdatePublishedBodies()
                         msg='%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility)

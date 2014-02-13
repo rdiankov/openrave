@@ -95,12 +95,12 @@ public:
     PyKinBody(const PyKinBody& r);
     virtual ~PyKinBody();
     KinBodyPtr GetBody();
-    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw);
-    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw);
-    bool InitFromTrimesh(object pytrimesh, bool bDraw);
-    bool InitFromGeometries(object ogeometries);
+    bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromTrimesh(object pytrimesh, bool bDraw=true, const std::string& uri=std::string());
+    bool InitFromGeometries(object ogeometries, const std::string& uri=std::string());
+    bool Init(object olinkinfos, object ojointinfos, const std::string& uri=std::string());
     void SetLinkGeometriesFromGroup(const std::string& geomname);
-    bool Init(object olinkinfos, object ojointinfos);
     void SetName(const std::string& name);
     object GetName() const;
     int GetDOF() const;
@@ -139,8 +139,8 @@ public:
     object GetJointFromDOFIndex(int dofindex) const;
     object GetTransform() const;
     object GetTransformPose() const;
-    object GetLinkTransformations(bool returndofbranches=false) const;
-    void SetLinkTransformations(object transforms, object odofbranches=object());
+    object GetLinkTransformations(bool returndoflastvlaues=false) const;
+    void SetLinkTransformations(object transforms, object odoflastvalues=object());
     void SetLinkVelocities(object ovelocities);
     object GetLinkEnableStates() const;
     void SetLinkEnableStates(object oenablestates);
@@ -160,6 +160,7 @@ public:
     bool IsDOFPrismatic(int dofindex) const;
     void SetTransform(object transform);
     void SetDOFWeights(object o);
+    void SetDOFResolutions(object o);
     void SetDOFLimits(object olower, object oupper);
     void SetDOFVelocityLimits(object o);
     void SetDOFAccelerationLimits(object o);

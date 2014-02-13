@@ -167,6 +167,26 @@ except:
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
+class InverseKinematicsError(Exception):
+    def __init__(self,parameter=u''):
+        self.parameter = unicode(parameter)
+        
+    def __unicode__(self):
+        s = u'Inverse Kinematics Error\n%s'%self.parameter
+        return s
+        
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+    
+    def __repr__(self):
+        return '<openravepy.databases.inversekinematics.InverseKinematicsError(%r)>'%(self.parameter)
+    
+    def __eq__(self, r):
+        return self.parameter == r.parameter
+    
+    def __ne__(self, r):
+        return self.parameter != r.parameter
+    
 class InverseKinematicsModel(DatabaseGenerator):
     """Generates analytical inverse-kinematics solutions, compiles them into a shared object/DLL, and sets the robot's iksolver. Only generates the models for the robot's active manipulator. To generate IK models for each manipulator in the robot, mulitple InverseKinematicsModel classes have to be created.
     """
@@ -196,7 +216,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 for geom,isdraw,tr in self.hiddengeoms:
                     geom.SetDraw(isdraw)
                     geom.SetTransparency(tr)
-
+                    
     _cachedKinematicsHash = None # manip.GetKinematicsStructureHash() when the ik was built with
     def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
         """
@@ -215,7 +235,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         for link in robot.GetChain(manip.GetBase().GetIndex(),manip.GetEndEffector().GetIndex(),returnjoints=False)[1:]:
             for rigidlyattached in link.GetRigidlyAttachedLinks():
                 if rigidlyattached.IsStatic():
-                    raise ValueError('link %s part of IK chain cannot be declared static'%str(link))
+                    raise InverseKinematicsError(u'link %s part of IK chain cannot be declared static'%link)
         try:
             self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
         except ImportError,e:
@@ -239,7 +259,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             self.solveindices = None
         else:
             if not all([ifree in manip.GetArmIndices() for ifree in self.freeindices]):
-                raise ValueError('not all free indices %s are part of the manipulator indices %s'%(self.freeindices,manip.GetArmIndices()))
+                raise InverseKinematicsError(u'not all free indices %r are part of the manipulator indices %r'%(self.freeindices, manip.GetArmIndices()))
             
             self.solveindices = [i for i in manip.GetArmIndices() if not i in self.freeindices]
         self.forceikfast = forceikfast
@@ -279,7 +299,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         
         pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), open(statsfilename, 'w'))
         log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
-
+        
     def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
         try:
             filename = self.getstatsfilename(True)
@@ -332,7 +352,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIkSolver().GetXMLId().split(' ',1)[0]+iksuffix) if self.manip.GetIkSolver() is not None else None
                 else:
                     if int(self.iktype) != int(iktype):
-                        raise ValueError('ik does not match types %s!=%s'%(self.iktype,iktype))
+                        raise InverseKinematicsError('ik does not match types %s!=%s'%(self.iktype,iktype))
                     
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
@@ -344,7 +364,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                         freeincvalue = self.freeinc[0]
                 except TypeError:
                     freeincvalue = float(self.freeinc)
-                self.manip.GetIkSolver().SendCommand('SetFreeIncrements %f 100 %f 10'%(freeincvalue,pi/8))
+                self.manip.GetIkSolver().SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8))
             return success
         return self.has()
     
@@ -377,7 +397,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints.
         """
         if self.iktype is None:
-            raise ValueError('ik type is not set')
+            raise InverseKinematicsError(u'ik type is not set')
         
         freeindices = []
         dofexpected = IkParameterization.GetDOFFromType(self.iktype)
@@ -496,7 +516,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 
     def getfilename(self,read=False):
         if self.iktype is None:
-            raise ValueError('ik type is not set')
+            raise InverseKinematicsError(u'ik type is not set')
 
         if self.solveindices is None or self.freeindices is None:
             solveindices, freeindices = self.GetDefaultIndices()
@@ -525,7 +545,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 
     def getsourcefilename(self,read=False,outputlang='cpp'):
         if self.iktype is None:
-            raise ValueError('ik type is not set')
+            raise InverseKinematicsError(u'ik type is not set')
         
         if self.solveindices is None or self.freeindices is None:
             solveindices, freeindices = self.GetDefaultIndices()
@@ -540,7 +560,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 
     def getstatsfilename(self,read=False):
         if self.iktype is None:
-            raise ValueError('ik type is not set')
+            raise InverseKinematicsError(u'ik type is not set')
         
         if self.solveindices is None or self.freeindices is None:
             solveindices, freeindices = self.GetDefaultIndices()
@@ -786,7 +806,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngleYNorm4D
         else:
-            raise ValueError('bad type')
+            raise InverseKinematicsError(u'bad type')
 
         dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         if freeindices is not None:
@@ -798,14 +818,14 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
-            raise ValueError('number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
+            raise InverseKinematicsError(u'number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
 
         if freeinc is not None:
             self.freeinc = freeinc
         if self.freeinc is None:
             self.freeinc = self.getDefaultFreeIncrements(0.1,0.01)
         
-        log.info('Generating inverse kinematics for manip %s: %s %s (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices)
+        log.info('Generating inverse kinematics for manip %s: %s %s, precision=%d (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices, precision)
         if outputlang is None:
             outputlang = 'cpp'
         sourcefilename = self.getsourcefilename(False,outputlang)
@@ -847,7 +867,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.ikfeasibility = None
                 code = solver.writeIkSolver(chaintree,lang=outputlang)
                 if len(code) == 0:
-                    raise ValueError('failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
+                    raise InverseKinematicsError(u'failed to generate ik solver for robot %s:%s'%(self.robot.GetName(),self.manip.GetName()))
                 
                 self.statistics['generationtime'] = time.time()-generationstart
                 self.statistics['usinglapack'] = solver.usinglapack
@@ -856,7 +876,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                     from pkg_resources import resource_filename
                     shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))
                 except ImportError,e:
-                    log.warn(e)                    
+                    log.warn(e)
+                    
+                log.info(u'successfully generated c++ ik in %fs, file=%s', self.statistics['generationtime'], sourcefilename)
             except self.ikfast.IKFastSolver.IKFeasibilityError, e:
                 self.ikfeasibility = str(e)
                 log.warn(e)
@@ -919,13 +941,13 @@ class InverseKinematicsModel(DatabaseGenerator):
         :param jacobianthreshold: When testing configurations, the eigenvalues of the jacobian all have to be greater than this value
         """
         if self.ikfeasibility is not None:
-            raise ValueError('ik is infeasible')
+            raise InverseKinematicsError(u'ik is infeasible')
         
         with self.robot:
             self.robot.SetActiveManipulator(self.manip)
             # set base to identity to avoid complications when reporting errors
             self.robot.SetTransform(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.robot.GetTransform()))
-            cmd = 'DebugIK robot %s '%self.robot.GetName()
+            cmd = 'DebugIK sampledegeneratecases 0.2 robot %s '%self.robot.GetName()
             if iktests.isdigit():
                 assert(int(iktests) > 0)
                 cmd += 'numtests %d '%int(iktests)
@@ -1048,17 +1070,25 @@ class InverseKinematicsModel(DatabaseGenerator):
             log.info('testing the success rate of robot %s ',options.robot)
             env = Environment()
             try:
-                robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
-                env.Add(robot)
-                manip = None if options.manipname is None else robot.GetManipulator(options.manipname)
+                #robot = env.ReadRobotXMLFile(options.robot,{'skipgeometry':'1'})
+                #env.Add(robot)
+                env.Load(options.robot,{'skipgeometry':'1'})
+                manip = None
+                if options.manipname is None:
+                    robot = env.GetRobots()[0]
+                else:
+                    for robot in env.GetRobots():
+                        manip = robot.GetManipulator(options.manipname)
+                        if manip is not None:
+                            break
                 ikmodel = InverseKinematicsModel(robot,iktype=model.iktype,forceikfast=True,freeindices=model.freeindices,manip=manip)
                 if not ikmodel.load(freeinc=options.freeinc):
-                    raise ValueError('failed to load ik')
+                    raise InverseKinematicsError(u'failed to load ik')
                 
                 if options.iktests is not None:
                     successrate, wrongrate = ikmodel.testik(iktests=options.iktests,jacobianthreshold=options.iktestjthresh)
                     if wrongrate > 0:
-                        raise ValueError('wrong rate %f > 0!'%wrongrate)
+                        raise InverseKinematicsError(u'wrong rate %f > 0!'%wrongrate)
                     
                 elif options.perftiming:
                     results = array(ikmodel.perftiming(num=options.perftiming))

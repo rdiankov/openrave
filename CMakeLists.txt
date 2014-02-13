@@ -552,6 +552,23 @@ endif ()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
+# always include libpcrecpp since we need it for URL parsing
+pkg_check_modules(libpcrecpp libpcrecpp)
+if( libpcrecpp_FOUND )
+  set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
+  check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
+  set(CMAKE_REQUIRED_INCLUDES)
+  if( NOT HAVE_PCRECPP_H )
+    set(libpcrecpp_FOUND 0)
+  endif()
+endif()
+
+if( NOT libpcrecpp_FOUND )
+  message(STATUS "System pcre not found, using local from sources")
+  # include the local pcre
+  add_subdirectory(3rdparty/pcre-8.02)
+endif()
+
 if( OPT_COLLADA )
   if( MSVC )
     # MSVC has prepackaged collada libraries
@@ -583,22 +600,6 @@ if( OPT_COLLADA )
     endif()
   else()
     if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
-      pkg_check_modules(libpcrecpp libpcrecpp)
-      if( libpcrecpp_FOUND )
-        set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
-        check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
-        set(CMAKE_REQUIRED_INCLUDES)
-        if( NOT HAVE_PCRECPP_H )
-          set(libpcrecpp_FOUND 0)
-        endif()
-      endif()
-
-      if( NOT libpcrecpp_FOUND )
-        message(STATUS "System pcre not found, using local from sources")
-        # include the local pcre
-        add_subdirectory(3rdparty/pcre-8.02)
-      endif()
-
       add_subdirectory(3rdparty/collada-2.4.0)
     else()
       set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
@@ -858,11 +859,11 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev octave3.2-headers "collada-dom-dev (>=2.4.0)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev liblapack-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev "octave3.2-headers|liboctave-dev" "collada-dom-dev (>=2.4.0)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev liblapack-dev)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev assimp-dev libbullet-dev)# libopenscenegraph-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
@@ -880,7 +881,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   set(CPACK_DEBIAN_DISTRIBUTION_NAME ${_lsb_distribution} CACHE STRING "Name of the distrubiton")
   string(TOLOWER ${CPACK_DEBIAN_DISTRIBUTION_NAME} CPACK_DEBIAN_DISTRIBUTION_NAME)
   if( ${CPACK_DEBIAN_DISTRIBUTION_NAME} STREQUAL "ubuntu" )
-    set(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid natty oneiric precise CACHE STRING "Release code-names of the distrubiton release")
+    set(CPACK_DEBIAN_DISTRIBUTION_RELEASES lucid precise quantal raring saucy CACHE STRING "Release code-names of the distrubiton release")
   endif()
   if( OPT_BUILD_PACKAGE_DEFAULT )
     set(CPACK_COMPONENT_OPENRAVE_DEPENDS ${CPACK_DEBIAN_PACKAGE_NAME})

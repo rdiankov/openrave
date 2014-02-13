@@ -147,10 +147,13 @@ public:
         /// \brief returns the number of DOF for the gripper indices. Equivalent to GetGripperIndices().size()
         virtual int GetGripperDOF() const;
 
-        /// \brief return the normal direction to move joints to 'close' the hand
+        /// \brief return the normal gripper direction to move joints to close/chuck the hand
         virtual const std::vector<dReal>& GetClosingDirection() const {
             return _info._vClosingDirection;
         }
+
+        /// \brief sets the normal gripper direction to move joints to close/chuck the hand
+        virtual void SetClosingDirection(const std::vector<dReal>& closingdirection);
 
         /// \brief Sets the local tool direction with respect to the end effector link.
         ///
@@ -271,11 +274,12 @@ public:
 
             Some IkParameterizations can fully determine the gripper 6DOF location. If the type is Transform6D or the manipulator arm DOF <= IkParameterization DOF, then this would be possible. In the latter case, an ik solver is required to support the ik parameterization.
             \param ikparam the ik parameterization determining the gripper transform
-            \param[out] report [optional] collision report
+            \param[inout] report [optional] collision report
+            \param[in] numredundantsamples If > 0, will check collision using the full redundant degree of freedom of the IkParameterization. For example, if ikparam is IKP_TranslationDirection5D, then there's 1 degree of freedom around the axis. The manipulator will have numredundantsamples samples around this degree of freedom, and check each one. If == 0, then will use the manipulator's IK solver to get the end effector transforms to sample.
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
-        virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr()) const;
+        virtual bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
 
         /** \brief Checks self-collisions with only the gripper given an IK parameterization of the gripper.
 
@@ -396,6 +400,7 @@ public:
 public:
         AttachedSensor(RobotBasePtr probot);
         AttachedSensor(RobotBasePtr probot, const AttachedSensor &sensor, int cloningoptions);
+        AttachedSensor(RobotBasePtr probot, const AttachedSensorInfo& info);
         virtual ~AttachedSensor();
 
         virtual SensorBasePtr GetSensor() const {
@@ -510,7 +515,7 @@ private:
     /// Calls \ref KinBody::Init(linkinfos, jointinfos) and then adds the robot-specific information afterwards
     /// \param linkinfos information for all the links. Links will be created in this order
     /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
-    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos);
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::vector<ManipulatorInfoConstPtr>& manipinfos, const std::vector<AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri=std::string());
 
 
     /// \brief Returns the manipulators of the robot
@@ -529,7 +534,8 @@ private:
     virtual void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = 1);
 
     virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches) RAVE_DEPRECATED;
 
     virtual bool SetVelocity(const Vector& linearvel, const Vector& angularvel);
     virtual void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1);
@@ -699,7 +705,6 @@ private:
 
     /// \brief adds a manipulator the list
     ///
-    /// Will copy the information of this manipulator object into a new manipulator and initialize it with the robot.
     /// Will change the robot structure hash..
     /// \return the new manipulator attached to the robot
     /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
@@ -713,6 +718,16 @@ private:
 
     /// \deprecated (12/07/23)
     virtual int GetActiveManipulatorIndex() const RAVE_DEPRECATED;
+
+    /// \brief attaches a sensor to a link the list
+    ///
+    /// Will change the robot structure hash.
+    /// \return the new attached sensor
+    /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
+    virtual AttachedSensorPtr AddAttachedSensor(const AttachedSensorInfo& attachedsensorinfo, bool removeduplicate=false);
+
+    /// \brief Returns an attached sensor from its name. If no sensor is with that name is present, returns empty pointer.
+    virtual AttachedSensorPtr GetAttachedSensor(const std::string& name) const;
 
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;

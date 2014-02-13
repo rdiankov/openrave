@@ -72,7 +72,7 @@ The possible solve methods are defined by `ikfast.IKFastSolver.GetSolvers()`
 Usage
 -----
 
-The main file ikfast.py can be used both as a library and as an executable program. For advanced users, it is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time. 
+The main file ikfast.py can be used both as a library and as an executable program. For advanced users, it is also possible to use run ikfast.py as a stand-alone program, which makes it mostly independent of the OpenRAVE run-time.
 
 **However, the recommended way of using IKFast** is through the OpenRAVE :mod:`.databases.inversekinematics` database generator which directly loads the IK into OpenRAVE as an interface. 
 
@@ -182,7 +182,7 @@ if sympy_version < '0.7.0':
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '68' # also in ikfast.h
+__version__ = '70' # also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -217,7 +217,7 @@ except ImportError:
     def isnan(x): return _isnan(float(x))
 
 from operator import itemgetter
-from itertools import izip, chain
+from itertools import izip, chain, product
 try:
     from itertools import combinations, permutations
 except ImportError:
@@ -415,9 +415,18 @@ power.Pow._eval_subs = Pow_eval_subs
 # simplify.simplify.trigsimp_nonrecursive = custom_trigsimp_nonrecursive
 
 class AST:
-    """Abstarct Syntax Tree class definitions specific for evaluating complex math equations."""
-
-    class SolverSolution:
+    """Abstarct Syntax Tree class definitions specific for evaluating complex math equations.
+    """
+    
+    class SolverBase(object):
+        def GetChildrenOfType(self, classinstance):
+            return []
+        def GetZeroThreshold(self):
+            """returns the threshold to use to check for zeros
+            """
+            return None
+        
+    class SolverSolution(SolverBase):
         """Contains equations for evaluating one unknown variable. The variable can have multiple solutions, and the solution is only valid if every equation in checkforzeros is non-zero
         """
         jointname = None
@@ -492,8 +501,10 @@ class AST:
             return self.presetcheckforzeros
         def getEquationsUsed(self):
             return self.equationsused
+        def GetZeroThreshold(self):
+            return self.thresh
         
-    class SolverPolynomialRoots:
+    class SolverPolynomialRoots(SolverBase):
         """find all roots of the polynomial and plug it into jointeval. poly should be Poly
         """
         jointname = None
@@ -502,11 +513,12 @@ class AST:
         jointevalcos = None # not used
         jointevalsin = None # not used
         checkforzeros = None
-        postcheckforzeros = None # fail if zero
-        postcheckfornonzeros = None # fail if nonzero
+        postcheckforzeros = None # fail if any zero
+        postcheckfornonzeros = None # fail if any nonzero
+        postcheckforNumDenom = None # list of (A,B) pairs where Ax=B was used. Fail if A==0&&B!=0
         postcheckforrange = None # checks that value is within [-1,1]
         dictequations = None
-        thresh = 1e-7
+        thresh = 1e-8
         isHinge = True
         FeasibleIsZeros = False
         AddHalfTanValue = False
@@ -514,6 +526,7 @@ class AST:
         equationsused = None
         def __init__(self, jointname, poly=None, jointeval=None,isHinge=True):
             self.poly = poly
+            assert(self.poly.degree(0)>0)
             self.jointname=jointname
             self.jointeval = jointeval
             self.isHinge = isHinge
@@ -532,6 +545,8 @@ class AST:
                 self.postcheckfornonzeros = [e.subs(solsubs) for e in self.postcheckfornonzeros]
             if self.postcheckforrange is not None:
                 self.postcheckforrange = [e.subs(solsubs) for e in self.postcheckforrange]
+            if self.postcheckforNumDenom is not None:
+                self.postcheckforNumDenom = [e.subs(solsubs) for e in self.postcheckforNumDenom]
             self.dictequations = [(s,v.subs(solsubs)) for s,v in self.dictequations]
             self.equationsused = [e.subs(solsubs) for e in self.equationsused]
             if self.poly is not None:
@@ -549,11 +564,18 @@ class AST:
                 valid &= all([IKFastSolver.isValidSolution(e) for e in self.jointeval])
             return valid
         def getPresetCheckForZeros(self):
-            return [self.poly.LC()] # make sure highest coefficient is not 0!
+            # make sure that all the coefficients containing higher-order variables are not 0
+            zeroeq = S.Zero
+            for monom, coeff in self.poly.terms():
+                if monom[0] > 0:
+                    zeroeq += abs(coeff.subs(self.dictequations))
+            return [zeroeq]#self.poly.LC()]
         def getEquationsUsed(self):
             return self.equationsused
-    
-    class SolverCoeffFunction:
+        def GetZeroThreshold(self):
+            return self.thresh
+        
+    class SolverCoeffFunction(SolverBase):
         """Evaluate a set of coefficients and pass them to a custom function which will then return all possible values of the specified variables in jointnames.
         """
         jointnames = None
@@ -621,7 +643,7 @@ class AST:
         def getEquationsUsed(self):
             return self.equationsused
 
-    class SolverMatrixInverse:
+    class SolverMatrixInverse(SolverBase):
         """Take the inverse of a large matirx and set the coefficients of the inverse to the symbols in Asymbols.
         """
         A = None
@@ -647,9 +669,11 @@ class AST:
                         subs.append((self.Asymbols[i][j],Anew[i,j]))
             return subs
 
-    class SolverConditionedSolution:
+    class SolverConditionedSolution(SolverBase):
+        """set solutions based on evaluating equations
+        """
         dictequations = None
-        solversolutions = None
+        solversolutions = None # a list of solutions. If the solution's checkforzeros evaluates to all zeros, then that solution us used
         thresh=0.000001
         def __init__(self, solversolutions):
             self.solversolutions = solversolutions
@@ -662,8 +686,17 @@ class AST:
             return generator.generateConditionedSolution(self)
         def end(self, generator):
             return generator.endConditionedSolution(self)
+        def GetChildrenOfType(self, classinstance):
+            nodes = []
+            for childnode in self.solversolutions:
+                if isinstance(childnode, classinstance):
+                    nodes.append(childnode)
+                nodes += childnode.GetChildrenOfType(classinstance)
+            return nodes
+        def GetZeroThreshold(self):
+            return self.thresh
 
-    class SolverBranchConds:
+    class SolverBranchConds(SolverBase):
         """
         take certain branches depending if a set of equations evaluate to zero.
         Each branch can also have dictequations
@@ -676,8 +709,18 @@ class AST:
             return generator.generateBranchConds(self)
         def end(self, generator):
             return generator.endBranchConds(self)
+        def GetChildrenOfType(self, classinstance):
+            nodes = []
+            for checkzeroequations, branch, extradictequations in self.jointbranches:
+                for childnode in branch:
+                    if isinstance(childnode, classinstance):
+                        nodes.append(childnode)
+                    nodes += childnode.GetChildrenOfType(classinstance)
+            return nodes
+        def GetZeroThreshold(self):
+            return self.thresh
 
-    class SolverCheckZeros:
+    class SolverCheckZeros(SolverBase):
         jointname = None
         jointcheckeqs = None # only used for evaluation
         zerobranch = None
@@ -686,12 +729,15 @@ class AST:
         dictequations=None
         thresh=None # a threshold of 1e-6 breaks hiro ik
         equationsused = None
-        def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=0.000001,anycondition=True):
+        def __init__(self, jointname, jointcheckeqs, zerobranch, nonzerobranch,thresh=None,anycondition=True):
             self.jointname = jointname
             self.jointcheckeqs = jointcheckeqs
             self.zerobranch = zerobranch
             self.nonzerobranch = nonzerobranch
-            self.thresh = thresh
+            if thresh is None:
+                self.thresh = 0.000001
+            else:
+                self.thresh = thresh
             self.anycondition = anycondition
             self.dictequations = []
         def generate(self, generator):
@@ -720,8 +766,16 @@ class AST:
             return self
         def getEquationsUsed(self):
             return self.equationsused
-
-    class SolverFreeParameter:
+        def GetChildrenOfType(self, classinstance):
+            nodes = []
+            for childnode in self.nonzerobranch + self.zerobranch:
+                if isinstance(childnode, classinstance):
+                    nodes.append(childnode)
+                nodes += childnode.GetChildrenOfType(classinstance)
+            return nodes
+        def GetZeroThreshold(self):
+            return self.thresh
+    class SolverFreeParameter(SolverBase):
         jointname = None
         jointtree = None
         def __init__(self, jointname, jointtree):
@@ -732,7 +786,7 @@ class AST:
         def end(self, generator):
             return generator.endFreeParameter(self)
 
-    class SolverRotation:
+    class SolverRotation(SolverBase):
         T = None
         jointtree = None
         functionid=0
@@ -745,7 +799,7 @@ class AST:
         def end(self, generator):
             return generator.endRotation(self)
 
-    class SolverFunction:
+    class SolverFunction(SolverBase):
         jointtree = None
         name='innerfn'
         def __init__(self, name, jointtree):
@@ -757,7 +811,7 @@ class AST:
         def end(self, generator):
             return generator.endFunction(self)
         
-    class SolverStoreSolution:
+    class SolverStoreSolution(SolverBase):
         """Called when all the unknowns have been solved to add a solution.
         """
         alljointvars = None
@@ -776,8 +830,8 @@ class AST:
             return generator.generateStoreSolution(self)
         def end(self, generator):
             return generator.endStoreSolution(self)
-
-    class SolverSequence:
+        
+    class SolverSequence(SolverBase):
         jointtrees = None
         def __init__(self, jointtrees):
             self.jointtrees = jointtrees
@@ -785,17 +839,36 @@ class AST:
             return generator.generateSequence(self)
         def end(self, generator):
             return generator.endSequence(self)
-
-    class SolverBreak:
+        def GetChildrenOfType(self, classinstance):
+            nodes = []
+            for tree in self.jointtrees:
+                for childnode in tree:
+                    if isinstance(childnode, classinstance):
+                        nodes.append(childnode)
+                    nodes += childnode.GetChildrenOfType(classinstance)
+            return nodes
+        
+    class SolverBreak(SolverBase):
         """Terminates this scope"""
+        comment = None # a comment for the reason of the break
+        varsubs = None # variable substitutions that were valid at the break
+        othersolvedvars = None # the solved variables already
+        solsubs = None # the substitutions of the solved variables
+        endbranchtree = None # a node that points to the end of the tree
+        def __init__(self, comment, varsubs=list(), othersolvedvars=list(), solsubs=list(), globalsymbols=list(), endbranchtree=None):
+            self.comment = comment
+            self.varsubs = list(varsubs)
+            self.othersolvedvars = list(othersolvedvars)
+            self.solsubs = list(solsubs)
+            self.endbranchtree = endbranchtree
         def generate(self,generator):
             return generator.generateBreak(self)
         def end(self,generator):
             return generator.endBreak(self)
         def checkValidSolution(self):
             return True
-
-    class SolverIKChainTransform6D:
+        
+    class SolverIKChainTransform6D(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -817,7 +890,7 @@ class AST:
             self.Tfk = Tleft*self.Tfk
             self.Tee = Tleftinv*self.Tee
 
-    class SolverIKChainRotation3D:
+    class SolverIKChainRotation3D(SolverBase):
         solvejointvars = None
         freejointvars = None
         Rfk = None
@@ -839,7 +912,7 @@ class AST:
             self.Rfk = Tleft[0:3,0:3]*self.Rfk
             self.Ree = Tleftinv[0:3,0:3]*self.Ree
 
-    class SolverIKChainTranslation3D:
+    class SolverIKChainTranslation3D(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -862,7 +935,7 @@ class AST:
             self.Pfk = Tleft[0:3,0:3]*self.Pfk+Tleft[0:3,3]
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
 
-    class SolverIKChainTranslationXY2D:
+    class SolverIKChainTranslationXY2D(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -884,7 +957,7 @@ class AST:
             self.Pfk = Tleft[0:2,0:2]*self.Pfk+Tleft[0:2,3]
             self.Pee = Tleftinv[0:2,0:2]*self.Pee+Tleftinv[0:2,3]
             
-    class SolverIKChainDirection3D:
+    class SolverIKChainDirection3D(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -906,7 +979,7 @@ class AST:
             self.Dfk = Tleft[0:3,0:3]*self.Dfk
             self.Dee = Tleftinv[0:3,0:3]*self.Dee
 
-    class SolverIKChainRay:
+    class SolverIKChainRay(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -936,7 +1009,7 @@ class AST:
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
             self.Dee = Tleftinv[0:3,0:3]*self.Dee
 
-    class SolverIKChainLookat3D:
+    class SolverIKChainLookat3D(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -960,8 +1033,8 @@ class AST:
             self.Pfk = Tleft[0:3,0:3]*self.Pfk+Tleft[0:3,3]
             self.Dfk = Tleft[0:3,0:3]*self.Dfk
             self.Pee = Tleftinv[0:3,0:3]*self.Pee+Tleftinv[0:3,3]
-
-    class SolverIKChainAxisAngle:
+            
+    class SolverIKChainAxisAngle(SolverBase):
         solvejointvars = None
         freejointvars = None
         jointtree = None
@@ -1147,11 +1220,23 @@ class IKFastSolver(AutoReloader):
     class CannotSolveError(Exception):
         """thrown when ikfast fails to solve a particular set of equations with the given knowns and unknowns
         """
-        def __init__(self,value):
-            self.value=value
+        def __init__(self,value=u''):
+            self.value = value
+        def __unicode__(self):
+            return u'%s: %s'%(self.__class__.__name__, self.value)
+        
         def __str__(self):
-            return repr(self.value)
-
+            return unicode(self).encode('utf-8')
+        
+        def __repr__(self):
+            return '<%s(%r)>'%(self.__class__.__name__, self.value)
+        
+        def __eq__(self, r):
+            return self.value == r.value
+        
+        def __ne__(self, r):
+            return self.value != r.value
+        
     class IKFeasibilityError(Exception):
         """thrown when it is not possible to solve the IK due to robot not having enough degrees of freedom. For example, a robot with 5 joints does not have 6D IK
         """
@@ -1196,8 +1281,16 @@ class IKFastSolver(AutoReloader):
                 assert(not self.hascases(newcases))
                 self.handleddegeneratecases.append(newcases)
         def addcases(self,currentcases):
-            assert(not self.hascases(currentcases))
-            self.handleddegeneratecases.append(currentcases)
+            if not self.hascases(currentcases):
+                self.handleddegeneratecases.append(currentcases)
+            else:
+                log.warn('case already added') # sometimes this can happen, but it isn't a bug, just bad bookkeeping
+        def RemoveCases(self, currentcases):
+            for i, handledcases in enumerate(self.handleddegeneratecases):
+                if handledcases == currentcases:
+                    self.handleddegeneratecases.pop(i)
+                    return True
+            return False
         def gethandledconds(self,currentcases):
             handledconds = []
             for handledcases in self.handleddegeneratecases:
@@ -1217,11 +1310,16 @@ class IKFastSolver(AutoReloader):
         self.degeneratecases = None
         self.kinematicshash = kinematicshash
         self.testconsistentvalues = None
+        self.maxcasedepth = 4 # the maximum depth of special/degenerate cases to process before system gives up
+        self.globalsymbols = [] # global symbols for substitutions
+        self._scopecounter = 0 # a counter for debugging purposes that increaes every time a level changes
+        self._dodebug = False
         if precision is None:
             self.precision=8
         else:
             self.precision=precision
         self.kinbody = kinbody
+        self._iktype = None # the current iktype processing
         self.axismap = {}
         self.axismapinv = {}
         with self.kinbody:
@@ -1285,12 +1383,53 @@ class IKFastSolver(AutoReloader):
         M[3,3] = S.One
         return M
 
-    def numpyMatrixToSympy(self,T):
+    def GetMatrixFromNumpy(self,T):
+        return Matrix(4,4,[x for x in T.flat])
+    
+    def RoundMatrix(self, T):
+        """given a sympy matrix, will round the matrix and snap all its values to 15, 30, 45, 60, and 90 degrees.
+        """
         if axisAngleFromRotationMatrix is not None:
-            axisangle = axisAngleFromRotationMatrix(T)
+            Teval = T.evalf()
+            axisangle = axisAngleFromRotationMatrix([[Teval[0,0], Teval[0,1], Teval[0,2]], [Teval[1,0], Teval[1,1], Teval[1,2]], [Teval[2,0], Teval[2,1], Teval[2,2]]])
             angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
             axisangle /= angle
-            log.debug('rotation angle: %f, axis=[%f,%f,%f]', (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
+            if abs(angle) < 10**(-self.precision):
+                # rotation is identity
+                M = eye(4)
+            else:
+                log.debug('rotation angle: %f, axis=[%f,%f,%f]', (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
+                accurateaxisangle = Matrix(3,1,[self.convertRealToRational(x,self.precision-3) for x in axisangle])
+                accurateaxisangle = accurateaxisangle/accurateaxisangle.norm()
+                # angle is not a multiple of 90, can get long fractions. so check if there's any way to simplify it
+                if abs(angle-3*pi/2) < 10**(-self.precision+2):
+                    quat = [-S.One/sqrt(2), accurateaxisangle[0]/sqrt(2), accurateaxisangle[1]/sqrt(2), accurateaxisangle[2]/sqrt(2)]
+                elif abs(angle-pi) < 10**(-self.precision+2):
+                    quat = [S.Zero, accurateaxisangle[0], accurateaxisangle[1], accurateaxisangle[2]]
+                elif abs(angle-2*pi/3) < 10**(-self.precision+2):
+                    quat = [Rational(1,2), accurateaxisangle[0]*sqrt(3)/2, accurateaxisangle[1]*sqrt(3)/2, accurateaxisangle[2]*sqrt(3)/2]
+                elif abs(angle-pi/2) < 10**(-self.precision+2):
+                    quat = [S.One/sqrt(2), accurateaxisangle[0]/sqrt(2), accurateaxisangle[1]/sqrt(2), accurateaxisangle[2]/sqrt(2)]
+                elif abs(angle-pi/3) < 10**(-self.precision+2):
+                    quat = [sqrt(3)/2, accurateaxisangle[0]/2, accurateaxisangle[1]/2, accurateaxisangle[2]/2]
+                elif abs(angle-pi/4) < 10**(-self.precision+2):
+                    # cos(pi/8) = sqrt(sqrt(2)+2)/2
+                    # sin(pi/8) = sqrt(-sqrt(2)+2)/2
+                    quat = [sqrt(sqrt(2)+2)/2, sqrt(-sqrt(2)+2)/2*accurateaxisangle[0], sqrt(-sqrt(2)+2)/2*accurateaxisangle[1], sqrt(-sqrt(2)+2)/2*accurateaxisangle[2]]
+                elif abs(angle-pi/6) < 10**(-self.precision+2):
+                 # cos(pi/12) = sqrt(2)/4+sqrt(6)/4
+                    # sin(pi/12) = -sqrt(2)/4+sqrt(6)/4
+                    quat = [sqrt(2)/4+sqrt(6)/4, (-sqrt(2)/4+sqrt(6)/4)*accurateaxisangle[0], (-sqrt(2)/4+sqrt(6)/4)*accurateaxisangle[1], (-sqrt(2)/4+sqrt(6)/4)*accurateaxisangle[2]]
+                else:
+                    # could not simplify further
+                    #assert(0)
+                    return self.normalizeRotation(T)
+                
+                M = self.GetMatrixFromQuat(quat)
+            for i in range(3):
+                M[i,3] = self.convertRealToRational(T[i,3],self.precision)
+            return M
+        
         return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
 
     def numpyVectorToSympy(self,v,precision=None):
@@ -1301,8 +1440,11 @@ class IKFastSolver(AutoReloader):
         return IKFastSolver.rodrigues2(axis,cos(angle),sin(angle))
 
     @staticmethod
-    def matrixFromQuat(quat):
-        M = eye(3)
+    def GetMatrixFromQuat(quat):
+        """quaternion is [cos(angle/2), v*sin(angle/2)]
+        return 4x4 matrix with rotation component set
+        """
+        M = eye(4)
         qq1 = 2*quat[1]*quat[1]
         qq2 = 2*quat[2]*quat[2]
         qq3 = 2*quat[3]*quat[3]
@@ -1375,12 +1517,12 @@ class IKFastSolver(AutoReloader):
                     raise self.CannotSolveError('chain %s:%s contains a joint with no name!'%(chainlinks[0].GetName(),chainlinks[-1].GetName()))
                 
                 if chainjoints[i].GetHierarchyParentLink() == chainlinks[i]:
-                    TLeftjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform())
-                    TRightjoint = self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform())
+                    TLeftjoint = self.GetMatrixFromNumpy(joint.GetInternalHierarchyLeftTransform())
+                    TRightjoint = self.GetMatrixFromNumpy(joint.GetInternalHierarchyRightTransform())
                     axissign = S.One
                 else:
-                    TLeftjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyRightTransform()))
-                    TRightjoint = self.affineInverse(self.numpyMatrixToSympy(joint.GetInternalHierarchyLeftTransform()))
+                    TLeftjoint = self.affineInverse(self.GetMatrixFromNumpy(joint.GetInternalHierarchyRightTransform()))
+                    TRightjoint = self.affineInverse(self.GetMatrixFromNumpy(joint.GetInternalHierarchyLeftTransform()))
                     axissign = -S.One
                 if joint.IsStatic():
                     Tright = self.affineSimplify(Tright * TLeftjoint * TRightjoint)
@@ -1418,12 +1560,12 @@ class IKFastSolver(AutoReloader):
                         if angle > 0:
                             axisangle /= angle
                         log.debug('rotation angle of Links[%d]: %f, axis=[%f,%f,%f]', len(Links), (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
-                    Links.append(Tright * TLeftjoint)
+                    Links.append(self.RoundMatrix(Tright * TLeftjoint))
                     for Tj in Tjoints:
                         jointinds.append(len(Links))
                         Links.append(Tj)
                     Tright = TRightjoint
-            Links.append(Tright)
+            Links.append(self.RoundMatrix(Tright))
         
         # before returning the final links, try to push as much translation components
         # outwards to both ends. Sometimes these components can get in the way of detecting
@@ -1442,7 +1584,7 @@ class IKFastSolver(AutoReloader):
             Links[iright+1] = Ttrans * Links[iright+1]
             Links[iright-1] = Links[iright-1] * self.affineInverse(Ttrans)
             log.info("moved translation %s to right end",Ttrans[0:3,3].transpose())
-        
+            
         if len(jointinds) > 1:
             ileft = jointinds[0]
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
@@ -1453,7 +1595,7 @@ class IKFastSolver(AutoReloader):
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
             log.info("moved translation %s to left end",Ttrans[0:3,3].transpose())
-
+            
         if len(jointinds) > 3: # last 3 axes always have to be intersecting, move the translation of the first axis to the left
             ileft = jointinds[-3]
             separated_trans = Links[ileft][0:3,0:3] * Links[ileft+1][0:3,3]
@@ -1464,9 +1606,9 @@ class IKFastSolver(AutoReloader):
             Links[ileft-1] = Links[ileft-1] * Ttrans
             Links[ileft+1] = self.affineInverse(Ttrans) * Links[ileft+1]
             log.info("moved translation on intersecting axis %s to left",Ttrans[0:3,3].transpose())
-
+            
         return Links, jointvars
-        
+    
     def countVariables(self,expr,var):
         """Counts number of terms variable appears in"""
         if not expr.is_Add:
@@ -1478,9 +1620,9 @@ class IKFastSolver(AutoReloader):
         for term in expr.args:
             if term.has(var):
                 num += 1
-
+                
         return num
-
+    
     @staticmethod
     def isValidPowers(expr):
         if expr.is_Pow:
@@ -1491,7 +1633,7 @@ class IKFastSolver(AutoReloader):
             return all([IKFastSolver.isValidPowers(arg) for arg in expr.args])
         else:
             return True
-
+        
     @staticmethod
     def rotateDirection(sourcedir,targetdir):
         sourcedir /= sqrt(sourcedir.dot(sourcedir))
@@ -1507,12 +1649,14 @@ class IKFastSolver(AutoReloader):
             rottodirection -= sourcedir * sourcedir.dot(rottodirection)
             M[0:3,0:3] = IKFastSolver.rodrigues(rottodirection.normalized(), atan2(fsin, fcos))
         return M
-
+    
     @staticmethod
     def has(eqs,*sym):
         return any([eq.has(*sym) for eq in eqs]) if len(sym) > 0 else False
-
+    
     def trigsimp(self, eq,trigvars):
+        """recurses the sin**2 = 1-cos**2 equation for every trig var
+        """
         trigsubs = [(sin(v)**2,1-cos(v)**2) for v in trigvars if self.IsHinge(v.name)]
         eq=expand(eq)
         curcount = eq.count_ops()
@@ -1523,7 +1667,132 @@ class IKFastSolver(AutoReloader):
                 break
             curcount=newcount
         return eq
+    
+    def SimplifyAtan2(self, eq, incos=False, insin=False, epsilon=None):
+        """simplifies equations like sin(atan2(y,x)) to y/sqrt(x**2+y**2)
         
+        Sometimes can get equations like
+        sin(-atan2(-r21, -r20))
+        cos(-atan2(-r21, -r20) + 3.14159265358979)
+        
+        which means the operations internally have to be carried over
+        """
+        processed = False # if incos or insin set to True, then this flag specifies whether the function was already taking into account or not.
+        if eq.is_Add:
+            if incos:
+                lefteq = eq.args[1]
+                if len(eq.args) > 2:
+                    for ieq in range(2,len(eq.args)):
+                        lefteq += eq.args[ieq]
+                neweq = self.SimplifyAtan2(eq.args[0], incos=True) * self.SimplifyAtan2(lefteq, incos=True) - self.SimplifyAtan2(eq.args[0], insin=True) * self.SimplifyAtan2(lefteq, insin=True)
+                processed = True
+            elif insin:
+                lefteq = eq.args[1]
+                if len(eq.args) > 2:
+                    for ieq in range(2,len(eq.args)):
+                        lefteq += eq.args[ieq]
+                neweq = self.SimplifyAtan2(eq.args[0], incos=True) * self.SimplifyAtan2(lefteq, insin=True) + self.SimplifyAtan2(eq.args[0], insin=True) * self.SimplifyAtan2(lefteq, incos=True)
+                processed = True
+            else:
+                neweq = S.Zero
+                for subeq in eq.args:
+                    neweq += self.SimplifyAtan2(subeq)
+                # call simplify in order to take in common terms
+                if self.codeComplexity(neweq) > 80:
+                    neweq2 = neweq
+                else:
+                    #log.info('complexity: %d', self.codeComplexity(neweq))
+                    neweq2 = simplify(neweq)
+                if neweq2 != neweq:
+                    neweq = self.SimplifyAtan2(neweq2)
+                else:
+                    try:
+                        #print 'simplifying',neweq
+                        neweq = self.SimplifyTransform(neweq)
+                    except PolynomialError:
+                        # ok if neweq is too complicated
+                        pass
+        elif eq.is_Mul:
+            if incos and len(eq.args) == 2:
+                num = None
+                if eq.args[0].is_integer:
+                    num = eq.args[0]
+                    eq2 = eq.args[1]
+                elif eq.args[1].is_integer:
+                    num = eq.args[1]
+                    eq2 = eq.args[0]
+                if num is not None:
+                    if num == S.One:
+                        neweq = self.SimplifyAtan2(eq2,incos=True)
+                        processed = True
+                    if num == -S.One:
+                        neweq = self.SimplifyAtan2(eq2,incos=True)
+                        processed = True
+            elif insin and len(eq.args) == 2:
+                num = None
+                if eq.args[0].is_integer:
+                    num = eq.args[0]
+                    eq2 = eq.args[1]
+                elif eq.args[1].is_integer:
+                    num = eq.args[1]
+                    eq2 = eq.args[0]
+                if num is not None:
+                    if num == S.One:
+                        neweq = self.SimplifyAtan2(eq2,insin=True)
+                        processed = True
+                    if num == -S.One:
+                        neweq = -self.SimplifyAtan2(eq2,insin=True)
+                        processed = True
+            if not processed:
+                neweq = self.SimplifyAtan2(eq.args[0])
+                for subeq in eq.args[1:]:
+                    neweq *= self.SimplifyAtan2(subeq)
+        elif eq.is_Function:
+            if incos and eq.func == atan2:
+                yeq = self.SimplifyTransform(self.SimplifyAtan2(eq.args[0]))
+                xeq = self.SimplifyTransform(self.SimplifyAtan2(eq.args[1]))
+                neweq = xeq / sqrt(self.SimplifyTransform(yeq**2+xeq**2))
+                processed = True
+            elif insin and eq.func == atan2:
+                yeq = self.SimplifyTransform(self.SimplifyAtan2(eq.args[0]))
+                xeq = self.SimplifyTransform(self.SimplifyAtan2(eq.args[1]))
+                neweq = yeq / sqrt(self.SimplifyTransform(yeq**2+xeq**2))
+                processed = True
+            elif eq.func == cos:
+                neweq = self.SimplifyAtan2(eq.args[0], incos=True)
+            elif eq.func == sin:
+                neweq = self.SimplifyAtan2(eq.args[0], insin=True)
+            else:
+                newargs = [self.SimplifyAtan2(subeq) for subeq in eq.args]
+                neweq = eq.func(*newargs)
+        elif eq.is_Pow:
+            neweq = None
+            if eq.exp.is_number and eq.exp-0.5 == S.Zero:
+                if eq.base.is_Pow and eq.base.exp.is_number and eq.base.exp-2 == S.Zero:
+                    # should be abs(eq.base.base), but that could make other simplifications more difficult?
+                    neweq = abs(self.SimplifyAtan2(eq.base.base))
+            if neweq is None:
+                neweq = self.SimplifyAtan2(eq.base)**self.SimplifyAtan2(eq.exp)
+        elif eq.is_number:
+            if epsilon is None:
+                epsilon = 1e-15
+            if insin:
+                neweq = sin(eq)
+            elif incos:
+                neweq = cos(eq)
+            else:
+                neweq = eq
+            processed = True
+            if abs(neweq.evalf()) <= epsilon:
+                neweq = S.Zero
+        else:
+            neweq=eq
+        if not processed and insin:
+            return sin(neweq)
+        elif not processed and incos:
+            return cos(neweq)
+        return neweq
+    
     def codeComplexity(self,expr):
         complexity = 1
         if expr.is_Add:
@@ -1539,6 +1808,21 @@ class IKFastSolver(AutoReloader):
             for term in expr.args:
                 complexity += self.codeComplexity(term)
         return complexity
+    
+    def ComputePolyComplexity(self, peq):
+        """peq is a polynomial
+        """
+        complexity = 0
+        for monoms,coeff in peq.terms():
+            coeffcomplexity = self.codeComplexity(coeff)
+            for m in monoms:
+                if m > 1:
+                    complexity += 2
+                elif m > 0:
+                    complexity += 1
+            complexity += coeffcomplexity + 1
+        return complexity
+    
     def sortComplexity(self,exprs):
         exprs.sort(lambda x, y: self.codeComplexity(x)-self.codeComplexity(y))
         return exprs
@@ -1556,18 +1840,32 @@ class IKFastSolver(AutoReloader):
                     # args[0] and args[1] are very complicated, then there's no reason to do this check
                     substitutedargs = []
                     for argeq in eq.args:
-                        oldeq = argeq
-                        while True:
-                            neweq = oldeq.subs(self.globalsymbols)
-                            if oldeq == neweq:
-                                break
-                            oldeq = neweq
-                        substitutedargs.append(oldeq)
-                    if self.codeComplexity(substitutedargs[0]) < 20 and self.codeComplexity(substitutedargs[1]) < 20:
+                        argeq2 = self._SubstituteGlobalSymbols(argeq)
+                        if self.codeComplexity(argeq2) < 200:
+                            substitutedargs.append(self.SimplifyAtan2(argeq2))
+                        else:
+                            substitutedargs.append(argeq2)
+                    # has to be greater than 20 since some const coefficients can be simplified
+                    if self.codeComplexity(substitutedargs[0]) < 30 and self.codeComplexity(substitutedargs[1]) < 30:
                         if not substitutedargs[0].is_number or substitutedargs[0] == S.Zero:
                             if not substitutedargs[1].is_number or substitutedargs[1] == S.Zero:
-                                log.info('adding atan2(%r, %r) all zeros check', substitutedargs[0], substitutedargs[1])
-                                checkforzeros.append(abs(substitutedargs[0])+abs(substitutedargs[1]))
+                                sumeq = substitutedargs[0]**2+substitutedargs[1]**2
+                                if self.codeComplexity(sumeq) < 400:
+                                    testeq = self.SimplifyAtan2((substitutedargs[0]**2+substitutedargs[1]**2).expand())
+                                else:
+                                    testeq = sumeq
+                                testeq2 = abs(substitutedargs[0])+abs(substitutedargs[1])
+                                if self.codeComplexity(testeq) < self.codeComplexity(testeq2):
+                                    testeqmin = testeq
+                                else:
+                                    testeqmin = testeq2
+                                if testeqmin.is_Mul:
+                                    checkforzeros += testeqmin.args
+                                else:
+                                    checkforzeros.append(testeqmin)
+                                if checkforzeros[-1].evalf() == S.Zero:
+                                    raise self.CannotSolveError('equation evaluates to 0, so can never be ok')
+                                log.info('adding atan2(%r, %r) = %r all zeros check', substitutedargs[0], substitutedargs[1], checkforzeros[-1])
                 for arg in eq.args:
                     checkforzeros += self.checkForDivideByZero(arg)
             elif eq.is_Add:
@@ -1592,14 +1890,19 @@ class IKFastSolver(AutoReloader):
                     eqtemp = eqtemp.args[0]
                 while eqtemp.is_Pow:
                     eqtemp = eqtemp.base
-                checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
-                if self.CheckExpressionUnique(newcheckforzeros,checkeq):
-                    newcheckforzeros.append(checkeq)
+                #self.codeComplexity(eqtemp)
+                if self.codeComplexity(eqtemp) < 1000:
+                    checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
+                    if self.CheckExpressionUnique(newcheckforzeros,checkeq):
+                        newcheckforzeros.append(checkeq)
+                else:
+                    # not even worth checking since the equation is so big...
+                    newcheckforzeros.append(eqtemp)
             return newcheckforzeros
 
         return checkforzeros
 
-    def solutionComplexity(self,sol,solvedvars,unsolvedvars):
+    def ComputeSolutionComplexity(self,sol,solvedvars,unsolvedvars):
         # for all solutions, check if there is a divide by zero
         sol.checkforzeros = sol.getPresetCheckForZeros()
         sol.score = 20000*sol.numsolutions()
@@ -1671,9 +1974,12 @@ class IKFastSolver(AutoReloader):
 
         newcheckforzeros = []
         for eqtemp in sol.checkforzeros:
-            checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
-            if self.CheckExpressionUnique(newcheckforzeros,checkeq):
-                newcheckforzeros.append(checkeq)
+            if self.codeComplexity(eqtemp) < 1000:
+                checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
+                if self.CheckExpressionUnique(newcheckforzeros,checkeq):
+                    newcheckforzeros.append(checkeq)
+            else:
+                newcheckforzeros.append(eqtemp)
         sol.checkforzeros = newcheckforzeros
         return sol.score
 
@@ -1748,6 +2054,7 @@ class IKFastSolver(AutoReloader):
         chainlinks = self.kinbody.GetChain(baselink,eelink,returnjoints=False)
         chainjoints = self.kinbody.GetChain(baselink,eelink,returnjoints=True)
         LinksRaw, jointvars = self.forwardKinematicsChain(chainlinks,chainjoints)
+        
         for T in LinksRaw:
             log.info('[' + ','.join(['[%s, %s, %s, %s]'%(T[i,0],T[i,1],T[i,2],T[i,3]) for i in range(3)]) + ']')
             
@@ -1779,6 +2086,8 @@ class IKFastSolver(AutoReloader):
                 isolvejointvars.append(i)
                 self.invsubs += [(var.cvar,cos(v)),(var.svar,sin(v))]
 
+        self._solvejointvars = solvejointvars
+        self._jointvars = jointvars
         # set up the destination symbols
         self.Tee = eye(4)
         for i in range(0,3):
@@ -1800,6 +2109,52 @@ class IKFastSolver(AutoReloader):
             c = self.Tee[0:3,i].cross(self.Tee[0:3,3])
             self.rxpsubs += [(self.rxp[-1][j],c[j]) for j in range(3)]
         self.pvars = self.Tee[0:12]+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
+        self._rotsymbols = list(self.Tee[0:3,0:3])
+        # add positions
+        ip = 9
+        inp = 12
+        ipp = 15
+        irxp = 16
+        self._rotpossymbols = self._rotsymbols + list(self.Tee[0:3,3])+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
+        # groups of rotation variables that are unit vectors
+        self._rotnormgroups = []
+        for i in range(3):
+            self._rotnormgroups.append([self.Tee[i,0],self.Tee[i,1],self.Tee[i,2],S.One])
+            self._rotnormgroups.append([self.Tee[0,i],self.Tee[1,i],self.Tee[2,i],S.One])
+        self._rotposnormgroups = list(self._rotnormgroups)
+        self._rotposnormgroups.append([self.Tee[0,3],self.Tee[1,3],self.Tee[2,3],self.pp])
+        # dot product of rotation rows and columns is always 0
+        self._rotdotgroups = []
+        for i,j in combinations(range(3),2):
+            self._rotdotgroups.append([[i,j],[i+3,j+3],[i+6,j+6],S.Zero])
+            self._rotdotgroups.append([[3*i,3*j],[3*i+1,3*j+1],[3*i+2,3*j+2],S.Zero])
+        self._rotposdotgroups = list(self._rotdotgroups)
+        for i in range(3):
+            self._rotposdotgroups.append([[i,ip],[i+3,ip+1],[i+6,ip+2],self.npxyz[i]])
+            self._rotposdotgroups.append([[3*i+0,inp],[3*i+1,inp+1],[3*i+2,inp+2],self.Tee[i,3]])
+        self._rotcrossgroups = []
+        # cross products of rotation rows and columns always yield the left over vector
+        for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:
+            # column
+            self._rotcrossgroups.append([[i+3,j+6],[i+6,j+3],k])
+            self._rotcrossgroups.append([[i+6,j],[i,j+6],k+3])
+            self._rotcrossgroups.append([[i,j+3],[i+3,j],k+6])
+            # row
+            self._rotcrossgroups.append([[3*i+1,3*j+2],[3*i+2,3*j+1],3*k])
+            self._rotcrossgroups.append([[3*i+2,3*j],[3*i,3*j+2],3*k+1])
+            self._rotcrossgroups.append([[3*i,3*j+1],[3*i+1,3*j],3*k+2])
+            # swap if sign is negative: if j!=1+i
+            if j!=1+i:
+                for crossgroup in self._rotcrossgroups[-6:]:
+                    crossgroup[0],crossgroup[1] = crossgroup[1],crossgroup[0]
+        # add positions
+        self._rotposcrossgroups = list(self._rotcrossgroups)
+        for i in range(3):
+            # column i cross position
+            self._rotposcrossgroups.append([[i+3,ip+2],[i+6,ip+1],irxp+3*i+0])
+            self._rotposcrossgroups.append([[i+6,ip+0],[i,ip+2],irxp+3*i+1])
+            self._rotposcrossgroups.append([[i,ip+1],[i+3,ip+0],irxp+3*i+2])
+            
         self.Teeinv = self.affineInverse(self.Tee)
         LinksLeft = []
         if self.useleftmultiply:
@@ -1810,6 +2165,7 @@ class IKFastSolver(AutoReloader):
 
         self.gsymbolgen = cse_main.numbered_symbols('gconst')
         self.globalsymbols = []
+        self._scopecounter = 0
 
         # before passing to the solver, set big numbers to constant variables, this will greatly reduce computation times
 #         numbersubs = []
@@ -1891,6 +2247,7 @@ class IKFastSolver(AutoReloader):
 
     def solveFullIK_Direction3D(self,LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One])):
         """basedir needs to be filled with a 3elemtn vector of the initial direction to control"""
+        self._iktype = 'direction3d'
         basedir = Matrix(3,1,[Float(x,30) for x in rawbasedir])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
         for i in range(3):
@@ -1931,6 +2288,7 @@ class IKFastSolver(AutoReloader):
     def solveFullIK_Lookat3D(self,LinksRaw, jointvars, isolvejointvars,rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control the lookat
         """
+        self._iktype = 'lookat3d'
         basedir = Matrix(3,1,[Float(x,30) for x in rawbasedir])
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
@@ -1979,6 +2337,7 @@ class IKFastSolver(AutoReloader):
         return chaintree
 
     def solveFullIK_Rotation3D(self,LinksRaw, jointvars, isolvejointvars, Rbaseraw=eye(3)):
+        self._iktype = 'rotation3d'
         Rbase = eye(4)
         for i in range(3):
             for j in range(3):
@@ -2002,6 +2361,7 @@ class IKFastSolver(AutoReloader):
         return AST.SolverIKChainRotation3D([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], (self.Tee[0:3,0:3] * self.affineInverse(Tfirstright)[0:3,0:3]).subs(self.freevarsubs), tree, Rfk = self.Tfinal[0:3,0:3] * Tfirstright[0:3,0:3])
 
     def solveFullIK_TranslationLocalGlobal6D(self,LinksRaw, jointvars, isolvejointvars, Tgripperraw=eye(4)):
+        self._iktype = 'translation3d'
         Tgripper = eye(4)
         for i in range(4):
             for j in range(4):
@@ -2011,8 +2371,10 @@ class IKFastSolver(AutoReloader):
         chain.uselocaltrans = True
         return chain
     def solveFullIK_Translation3D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
+        self._iktype = 'translation3d'
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
         return self._solveFullIK_Translation3D(LinksRaw,jointvars,isolvejointvars,basepos)
+    
     def _solveFullIK_Translation3D(self,LinksRaw, jointvars, isolvejointvars, basepos,check=True):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
@@ -2039,6 +2401,7 @@ class IKFastSolver(AutoReloader):
         return chaintree
 
     def solveFullIK_TranslationXY2D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(2,1,[S.Zero,S.Zero])):
+        self._iktype = 'translationxy2d'
         self.ppsubs = [] # disable since pz is not valid
         self.pp = None
         basepos = Matrix(2,1,[self.convertRealToRational(x) for x in rawbasepos])
@@ -2088,10 +2451,12 @@ class IKFastSolver(AutoReloader):
         return chaintree
 
     def solveFullIK_TranslationXYOrientation3D(self,LinksRaw, jointvars, isolvejointvars, rawbasepos=Matrix(2,1,[S.Zero,S.Zero]), rawangle=S.Zero):
+        self._iktype = 'translationxyorientation3d'
         raise self.CannotSolveError('TranslationXYOrientation3D not implemented yet')
 
     def solveFullIK_Ray4D(self,LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """basedir,basepos needs to be filled with a direction and position of the ray to control"""
+        self._iktype = 'ray4d'
         basedir = Matrix(3,1,[Float(x,30) for x in rawbasedir])
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
@@ -2143,10 +2508,11 @@ class IKFastSolver(AutoReloader):
         chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=self.Tee[0:3,3].subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=self.Tfinal[0,0:3].transpose(),Pfk=self.Tfinal[0:3,3])
         chaintree.dictequations += self.ppsubs
         return chaintree
-
+    
     def solveFullIK_TranslationDirection5D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.Zero,S.Zero,S.One]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero])):
         """Solves 3D translation + 3D direction
         """
+        self._iktype = 'translationdirection5d'
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
         basedir = Matrix(3,1,[Float(x,30) for x in rawbasedir])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
@@ -2156,7 +2522,7 @@ class IKFastSolver(AutoReloader):
         offsetdist = basedir.dot(basepos)
         basepos = basepos-basedir*offsetdist
         Links = LinksRaw[:]
-
+        
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
         numzeros = int(basedir[0]==S.Zero) + int(basedir[1]==S.Zero) + int(basedir[2]==S.Zero)
 #         if numzeros < 2:
@@ -2213,7 +2579,7 @@ class IKFastSolver(AutoReloader):
         if tree is None:
             rawpolyeqs2 = [None]*len(solvejointvars)
             coupledsolutions = None
-            endbranchtree2 = []
+            endbranchtree2 = []            
             for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic]:#, self.solveManochaCanny]:
                 if coupledsolutions is not None:
                     break
@@ -2226,37 +2592,41 @@ class IKFastSolver(AutoReloader):
                     p1 = T1[0:3,0:3]*basepos+T1[0:3,3]
                     l0 = T0[0:3,0:3]*self.Tee[0,0:3].transpose()
                     l1 = T1[0:3,0:3]*basedir
+                    
+                    AllEquations = []
+                    for i in range(3):
+                        AllEquations.append(self.SimplifyTransform(p0[i]-p1[i]).expand())
+                        AllEquations.append(self.SimplifyTransform(l0[i]-l1[i]).expand())
+                    self.sortComplexity(AllEquations)
+
                     if rawpolyeqs2[index] is None:
                         rawpolyeqs2[index] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
                     try:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars,endbranchtree=[AST.SolverSequence([endbranchtree2])])
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars,endbranchtree=[AST.SolverSequence([endbranchtree2])], AllEquationsExtra=AllEquations)
                         break
                     except self.CannotSolveError, e:
                         log.warn('%s', e)
                         continue
-
+                    
             if coupledsolutions is None:
                 raise self.CannotSolveError('raghavan roth equations too complex')
-
-            log.info('solved coupled variables: %s',usedvars)
+            
+            log.info('solved coupled variables: %s',usedvars)       
             if len(usedvars) < len(solvejointvars):
-                AllEquations = []
-                for i in range(3):
-                    AllEquations.append(self.simplifyTransform(p0[i]-p1[i]).expand())
-                    AllEquations.append(self.simplifyTransform(l0[i]-l1[i]).expand())
-                self.sortComplexity(AllEquations)
                 curvars=solvejointvars[:]
                 solsubs = self.freevarsubs[:]
                 for var in usedvars:
                     curvars.remove(var)
                     solsubs += self.Variable(var).subs
                 self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
-                endbranchtree2 += self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
-                tree = self.verifyAllEquations(AllEquations,curvars,solsubs,coupledsolutions)
+                localtree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=endbranchtree)
+                # make it a function so compiled code is smaller
+                endbranchtree2.append(AST.SolverFunction('innerfn', self.verifyAllEquations(AllEquations,curvars,solsubs,localtree)))
+                tree = coupledsolutions
             else:
                 endbranchtree2 += endbranchtree
                 tree = coupledsolutions
-
+                
         chaintree = AST.SolverIKChainRay([(jointvars[ijoint],ijoint) for ijoint in isolvejointvars], [(v,i) for v,i in izip(self.freejointvars,self.ifreejointvars)], Pee=(self.Tee[0:3,3]-self.Tee[0,0:3].transpose()*offsetdist).subs(self.freevarsubs), Dee=self.Tee[0,0:3].transpose().subs(self.freevarsubs),jointtree=tree,Dfk=self.Tfinal[0,0:3].transpose(),Pfk=self.Tfinal[0:3,3],is5dray=True)
         chaintree.dictequations += self.ppsubs
         return chaintree
@@ -2282,12 +2652,14 @@ class IKFastSolver(AutoReloader):
         AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)
         self.checkSolvability(AllEquations,rotvars,self.freejointvars+transvars)
         localdirtree = self.SolveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
-        dirtree += self.verifyAllEquations(AllEquations,rotvars,solsubs,localdirtree)
+        # make it a function so compiled code is smaller
+        dirtree.append(AST.SolverFunction('innerfn', self.verifyAllEquations(AllEquations,rotvars,solsubs,localdirtree)))
         return transtree
 
     def solveFullIK_6D(self, LinksRaw, jointvars, isolvejointvars,Tgripperraw=eye(4)):
         """Solves the full 6D translatio + rotation IK
         """
+        self._iktype = 'transform6d'
         Tgripper = eye(4)
         for i in range(4):
             for j in range(4):
@@ -2300,7 +2672,7 @@ class IKFastSolver(AutoReloader):
 #                 if Links[0][i,3] != S.Zero:
 #                     self.Tee[i,3] = S.Zero
 #             self.Teeinv = self.affineInverse(self.Tee)
-
+        
         LinksInv = [self.affineInverse(link) for link in Links]
         self.Tfinal = self.multiplyMatrix(Links)
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
@@ -2362,19 +2734,17 @@ class IKFastSolver(AutoReloader):
                                 if tree is not None:
                                     break
         if tree is None:
-            linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))
-            # insert [1] element in the beginning
-            #linklist.insert(0,linklist.pop(1))
-            for T0links, T1links in linklist:
+            linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))            
+            for T0links, T1links in linklist:#[2:]:
                 try:
-                    # if T1links[-1] doesn't have any symbols, put it over to T0links
+                    # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
                     if not self.has(T1links[-1], *solvejointvars):
                         T0links.append(self.affineInverse(T1links.pop(-1)))
                     tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree)
                     break
                 except (self.CannotSolveError,self.IKFeasibilityError), e:
                     log.warn('%s',e)
-
+                    
         if tree is None:
             raise self.CannotSolveError('cannot solve 6D mechanism!')
 
@@ -2539,6 +2909,7 @@ class IKFastSolver(AutoReloader):
     def solve6DIntersectingAxes(self, T0links, T1links, transvars,rotvars,solveRotationFirst,endbranchtree):
         """Solve 6D equations using fact that 3 axes are intersecting. The 3 intersecting axes are all part of T0links and will be used to compute the rotation of the robot. The other 3 axes are part of T1links and will be used to first compute the position.
         """
+        self._iktype = 'transform6d'
         assert(len(transvars)==3 and len(rotvars) == 3)
         T0 = self.multiplyMatrix(T0links)
         T0posoffset = eye(4)
@@ -2604,6 +2975,7 @@ class IKFastSolver(AutoReloader):
         """Solve 6D equations of a general kinematics structure.
         This method only works if there exists 3 consecutive joints in that do not always intersect!
         """
+        self._iktype = 'transform6d'
         rawpolyeqs2 = [None,None]
         coupledsolutions = None
         leftovervarstree = []
@@ -2611,7 +2983,8 @@ class IKFastSolver(AutoReloader):
         for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic]:#, self.solveManochaCanny]:
             if coupledsolutions is not None:
                 break
-            for splitindex in [0,1]:
+            complexities = [0,0]
+            for splitindex in [0, 1]:
                 if rawpolyeqs2[splitindex] is None:
                     if splitindex == 0:
                         # invert, this seems to always give simpler solutions, so prioritize it
@@ -2620,36 +2993,50 @@ class IKFastSolver(AutoReloader):
                     else:
                         T0 = self.affineSimplify(self.multiplyMatrix(T0links))
                         T1 = self.affineSimplify(self.multiplyMatrix(T1links))
-                    rawpolyeqs,numminvars = self.buildRaghavanRothEquationsFromMatrix(T0,T1,solvejointvars)
+                    rawpolyeqs,numminvars = self.buildRaghavanRothEquationsFromMatrix(T0,T1,solvejointvars,simplify=False)
                     if numminvars <= 5 or len(rawpolyeqs[0][1].gens) <= 6:
                         rawpolyeqs2[splitindex] = rawpolyeqs
+                complexities[splitindex] = sum([self.ComputePolyComplexity(peq0)+self.ComputePolyComplexity(peq1) for peq0, peq1 in rawpolyeqs2[splitindex]])
+            # try the lowest complexity first and then simplify!
+            sortedindices = sorted(zip(complexities,[0,1]))
+            for complexity, splitindex in sortedindices:
+                for peqs in rawpolyeqs2[splitindex]:
+                    peqs[0] = self.SimplifyTransformPoly (peqs[0])
+                    peqs[1] = self.SimplifyTransformPoly (peqs[1])
                 try:
                     if rawpolyeqs2[splitindex] is not None:
                         rawpolyeqs=rawpolyeqs2[splitindex]
                         endbranchtree=[AST.SolverSequence([leftovervarstree])]
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs,solvejointvars,endbranchtree=endbranchtree)
+                        AllEquationsExtra = []
+                        for i in range(3):
+                            for j in range(4):
+                                AllEquationsExtra.append(self.SimplifyTransform(T0[i,j]-T1[i,j]))
+                        self.sortComplexity(AllEquationsExtra)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs,solvejointvars,endbranchtree=endbranchtree,AllEquationsExtra=AllEquationsExtra)
                         break
                 except self.CannotSolveError, e:
-                    log.warn('%s',e)
+                    if rawpolyeqs2[splitindex] is not None and len(rawpolyeqs2[splitindex]) > 0:
+                        log.warn(u'solving %s: %s', rawpolyeqs2[splitindex][0][0].gens, e)
+                    else:
+                        log.warn(e)
                     continue
                 
         if coupledsolutions is None:
             raise self.CannotSolveError('6D general method failed, raghavan roth equations might be too complex')
         
         log.info('solved coupled variables: %s',usedvars)
-        AllEquations = []
-        for i in range(3):
-            for j in range(4):
-                AllEquations.append(self.simplifyTransform(T0[i,j]-T1[i,j]))
-        self.sortComplexity(AllEquations)
+        self.sortComplexity(AllEquationsExtra)
         curvars=solvejointvars[:]
         solsubs = self.freevarsubs[:]
         for var in usedvars:
             curvars.remove(var)
             solsubs += self.Variable(var).subs
-        self.checkSolvability(AllEquations,curvars,self.freejointvars+usedvars)
-        leftovertree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
-        leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
+        if len(curvars) > 0:
+            self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)
+            leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
+            leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
+        else:
+            leftovervarstree += origendbranchtree
         return coupledsolutions
     
     def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None):
@@ -2658,6 +3045,7 @@ class IKFastSolver(AutoReloader):
         :param rawglobaldir: the axis normal to rawnormaldir that represents the 0 angle.
         :param basedir: the axis in the effector coordinate system measuring the in-plane angle with
         """
+        self._iktype = 'translationaxisangle4d'
         globaldir = Matrix(3,1,[Float(x,30) for x in rawglobaldir])
         globaldir /= sqrt(globaldir[0]*globaldir[0]+globaldir[1]*globaldir[1]+globaldir[2]*globaldir[2])
         for i in range(3):
@@ -2743,7 +3131,7 @@ class IKFastSolver(AutoReloader):
                     globaldir2[i] = self.convertRealToRational(globaldir2[i])
                 if basedir2[i].is_number:
                     basedir2[i] = self.convertRealToRational(basedir2[i])
-            eq = self.simplifyTransform(self.trigsimp(globaldir2.dot(basedir2),solvejointvars))-cos(self.Tee[0])
+            eq = self.SimplifyTransform(self.trigsimp(globaldir2.dot(basedir2),solvejointvars))-cos(self.Tee[0])
             if self.CheckExpressionUnique(AllEquations,eq):
                 AllEquations.append(eq)
             if normaldir is not None:
@@ -2751,7 +3139,7 @@ class IKFastSolver(AutoReloader):
                 for i in range(3):
                     if binormaldir2[i].is_number:
                         binormaldir2[i] = self.convertRealToRational(binormaldir2[i])
-                eq = self.simplifyTransform(self.trigsimp(binormaldir2.dot(basedir2),solvejointvars))-sin(self.Tee[0])
+                eq = self.SimplifyTransform(self.trigsimp(binormaldir2.dot(basedir2),solvejointvars))-sin(self.Tee[0])
                 if self.CheckExpressionUnique(AllEquations,eq):
                     AllEquations.append(eq)
                     
@@ -2824,7 +3212,7 @@ class IKFastSolver(AutoReloader):
                         try:
                             rawsolutions=self.solveSingleVariable(self.sortComplexity(raweqns),curvar,othersolvedvars,unknownvars=solvejointvars)
                             for solution in rawsolutions:
-                                self.solutionComplexity(solution,othersolvedvars,solvejointvars)
+                                self.ComputeSolutionComplexity(solution,othersolvedvars,solvejointvars)
                                 solutions.append((solution,curvar))
                         except self.CannotSolveError:
                             pass
@@ -2937,7 +3325,7 @@ class IKFastSolver(AutoReloader):
             for j in range(leftside[i].shape[0]):
                 e = self.trigsimp(leftside[i][j] - rightside[i][j],usedvars)
                 if self.codeComplexity(e) < 1500:
-                    e = self.simplifyTransform(e)
+                    e = self.SimplifyTransform(e)
                 if self.CheckExpressionUnique(AllEquations,e):
                     AllEquations.append(e)
             if uselength:
@@ -2948,7 +3336,7 @@ class IKFastSolver(AutoReloader):
                     pe2 += rightside[i][j]**2
                 if self.codeComplexity(p2) < 1200 and self.codeComplexity(pe2) < 1200:
                     # sympy's trigsimp/customtrigsimp give up too easily
-                    e = self.simplifyTransform(self.trigsimp(p2,usedvars)-self.trigsimp(pe2,usedvars))
+                    e = self.SimplifyTransform(self.trigsimp(p2,usedvars)-self.trigsimp(pe2,usedvars))
                     if self.CheckExpressionUnique(AllEquations,e):
                         AllEquations.append(e.expand())
                 else:
@@ -3019,7 +3407,7 @@ class IKFastSolver(AutoReloader):
         self.sortComplexity(AllEquations)
         return AllEquations
 
-    def buildRaghavanRothEquationsFromMatrix(self,T0,T1,solvejointvars):
+    def buildRaghavanRothEquationsFromMatrix(self,T0,T1,solvejointvars,simplify=True):
         """Builds the 14 equations using only 5 unknowns. Method explained in [Raghavan1993]_. Basically take the position and one column/row so that the least number of variables are used.
 
         .. [Raghavan1993] M Raghavan and B Roth, "Inverse Kinematics of the General 6R Manipulator and related Linkages",  Journal of Mechanical Design, Volume 115, Issue 3, 1993.
@@ -3043,12 +3431,12 @@ class IKFastSolver(AutoReloader):
                 numminvars = numcurvars
                 l0 = T0[irow,0:3].transpose()
                 l1 = T1[irow,0:3].transpose()
-        return self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars),numminvars
+        return self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars,simplify),numminvars
 
     def CheckEquationForVarying(self, eq):
         return eq.has('vj0px') or eq.has('vj0py') or eq.has('vj0pz')
     
-    def buildRaghavanRothEquations(self,p0,p1,l0,l1,solvejointvars):
+    def buildRaghavanRothEquationsOld(self,p0,p1,l0,l1,solvejointvars):
         eqs = []
         for i in range(3):
             eqs.append([l0[i],l1[i]])
@@ -3087,17 +3475,93 @@ class IKFastSolver(AutoReloader):
             usedvars.append([var for var in polyvars if any([eq[j].subs(polysubs).has(var) for eq in eqs])])
         polyeqs = []
         for i in range(len(eqs)):
-            polyeqs.append([None,None])
+            polyeqs.append([None,None])        
         for j in range(2):
             for i in range(len(eqs)):
                 poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
                 poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
                 if poly1 == S.Zero:
-                    polyeqs[i][j] = Poly(poly1,*usedvars[j])
+                    polyeqs[i][j] = poly1
                 else:
-                    polyeqs[i][j] = Poly(poly1,*usedvars[j]).termwise(lambda m,c: self.simplifyTransform(c))
+                    polyeqs[i][j] = self.SimplifyTransformPoly(poly1)
         # remove all fractions? having big integers could blow things up...
         return polyeqs
+    
+    def buildRaghavanRothEquations(self,p0,p1,l0,l1,solvejointvars,simplify=True):
+        trigsubs = []
+        polysubs = []
+        polyvars = []
+        for v in solvejointvars:
+            polyvars.append(v)
+            if self.IsHinge(v.name):
+                var = self.Variable(v)
+                polysubs += [(cos(v),var.cvar),(sin(v),var.svar)]
+                polyvars += [var.cvar,var.svar]
+                trigsubs.append((var.svar**2,1-var.cvar**2))
+                trigsubs.append((var.svar**3,var.svar*(1-var.cvar**2)))
+        for v in self.freejointvars:
+            if self.IsHinge(v.name):
+                trigsubs.append((sin(v)**2,1-cos(v)**2))
+                trigsubs.append((sin(v)**3,sin(v)*(1-cos(v)**2)))
+        polysubsinv = [(b,a) for a,b in polysubs]
+        polyeqs = []
+        for i in range(14):
+            polyeqs.append([None,None])
+            
+        eqs = []
+        for i in range(3):
+            eqs.append([l0[i],l1[i]])
+        for i in range(3):
+            eqs.append([p0[i],p1[i]])
+        l0xp0 = l0.cross(p0)
+        l1xp1 = l1.cross(p1)
+        for i in range(3):
+            eqs.append([l0xp0[i],l1xp1[i]])
+        eqs.append([p0.dot(p0),p1.dot(p1)])
+        eqs.append([l0.dot(p0),l1.dot(p1)])
+        starttime = time.time()
+        usedvars = []
+        for j in range(2):
+            usedvars.append([var for var in polyvars if any([eq[j].subs(polysubs).has(var) for eq in eqs])])
+        for i in range(len(eqs)):
+            if not self.CheckEquationForVarying(eqs[i][0]) and not self.CheckEquationForVarying(eqs[i][1]):
+                for j in range(2):
+                    if polyeqs[i][j] is not None:
+                        continue
+                    poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
+                    if 1:#self.codeComplexity(poly0.as_expr()) < 2000:
+                        poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
+                        if not simplify or poly1 == S.Zero:
+                            polyeqs[i][j] = poly1
+                        else:
+                            polyeqs[i][j] = self.SimplifyTransformPoly(poly1)
+                    else:
+                        polyeqs[i][j] = poly0
+        #ppl0 = p0.dot(p0)*l0 - 2*l0.dot(p0)*p0
+        #ppl1 = p1.dot(p1)*l1 - 2*l1.dot(p1)*p1        
+        ppl0 = polyeqs[9][0].as_expr()*l0 - 2*polyeqs[10][0].as_expr()*p0 # p0.dot(p0)*l0 - 2*l0.dot(p0)*p0
+        ppl1 = polyeqs[9][1].as_expr()*l1 - 2*polyeqs[10][1].as_expr()*p1 # p1.dot(p1)*l1 - 2*l1.dot(p1)*p1
+        for i in range(3):
+            eqs.append([ppl0[i],ppl1[i]])
+        for i in range(11, len(eqs)):
+            if not self.CheckEquationForVarying(eqs[i][0]) and not self.CheckEquationForVarying(eqs[i][1]):
+                for j in range(2):
+                    if polyeqs[i][j] is not None:
+                        continue
+                    poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
+                    if 1:#self.codeComplexity(poly0.as_expr()) < 2000:
+                        poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
+                        if not simplify or poly1 == S.Zero:
+                            polyeqs[i][j] = poly1
+                        else:
+                            polyeqs[i][j] = self.SimplifyTransformPoly(poly1)
+                    else:
+                        log.warn('raghavan roth equation (%d,%d) too complex', i, j)
+                        polyeqs[i][j] = poly0
+        log.info('computed in %fs', time.time()-starttime)
+        # prune any that have varying symbols
+        # remove all fractions? having big integers could blow things up...
+        return [[peq0, peq1] for peq0, peq1 in polyeqs if peq0 is not None and peq1 is not None and not self.CheckEquationForVarying(peq0) and not self.CheckEquationForVarying(peq1)]
 
     def reduceBothSides(self,polyeqs):
         """Reduces a set of equations in 5 unknowns to a set of equations with 3 unknowns by solving for one side with respect to another.
@@ -3454,7 +3918,7 @@ class IKFastSolver(AutoReloader):
         
         return numsymbolcoeffs, _computereducedequations
 
-    def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree):
+    def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree, AllEquationsExtra=None):
         """Solves the IK equations using eigenvalues/eigenvectors of a 12x12 quadratic eigenvalue problem. Method explained in
         
         Dinesh Manocha and J.F. Canny. "Efficient inverse kinematics for general 6R manipulators", IEEE Transactions on Robotics and Automation, Volume 10, Issue 5, Oct 1994.
@@ -3469,7 +3933,7 @@ class IKFastSolver(AutoReloader):
                     # give up on optimization
                     RightEquations.append(peq[1])
                 else:
-                    RightEquations.append(self.simplifyTransformPoly(peq[1]))
+                    RightEquations.append(self.SimplifyTransformPoly(peq[1]))
         
         if len(RightEquations) < 6:
             raise self.CannotSolveError('number of equations %d less than 6'%(len(RightEquations)))
@@ -3607,7 +4071,7 @@ class IKFastSolver(AutoReloader):
         self.usinglapack = True
         return raghavansolutiontree+[coupledsolution]+endbranchtree,usedvars
 
-    def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars,endbranchtree):
+    def solveLiWoernleHiller(self,rawpolyeqs,solvejointvars,endbranchtree,AllEquationsExtra=[]):
         """Li-Woernle-Hiller procedure covered in 
         Jorge Angeles, "Fundamentals of Robotics Mechanical Systems", Springer, 2007.
         """
@@ -3779,23 +4243,67 @@ class IKFastSolver(AutoReloader):
         # filled with equations where one variable is singled out
         reducedsinglevars = [None,None,None,None]
         for peq in neweqs:
-            if peq[0] != S.Zero:
-                peq0dict = peq[0].as_dict()
-                monom, value = peq0dict.items()[0]
-                if len(peq0dict) == 1 and __builtin__.sum(monom) == 1:
-                    indices = [index for index in range(4) if monom[index] == 1]
-                    if len(indices) > 0 and indices[0] < 4:
-                        reducedsinglevars[indices[0]] = (value,peq[1].as_expr())
-                neweqs_full.append(peq)
+            coeff, factors = (peq[1]-peq[0]).factor_list()
+            # check if peq[1] can factor out certain monoms                
+            if len(factors) > 1:
+                # if either of the factors evaluate to 0, then we are ok
+                # look for trivial factors that evaluate to 0 or some constant expression and put those into the checkforzeros
+                eq = S.One
+                divisoreq = S.One
+                newzeros = []
+                for factor, fdegree in factors:
+                    if sum(factor.degree_list()) == 1:
+                        log.info('assuming equation %r is non-zero', factor)
+                        newzeros.append(factor.as_expr())
+                        divisoreq *= factor.as_expr()
+                    else:
+                        eq *= factor.as_expr()
+                eq = coeff*eq.expand() # have to multiply by the coeff, or otherwise the equation will be weighted different and will be difficult to determine epsilons
+                if peq[0] != S.Zero:
+                    peq0norm, r = div(peq[0], divisoreq)
+                    assert(r==S.Zero)
+                    peq1norm, r = div(peq[1], divisoreq)
+                    assert(r==S.Zero)
+                    peq0norm = Poly(peq0norm, *peq[0].gens)
+                    peq1norm = Poly(peq1norm, *peq[1].gens)
+                    peq0dict = peq0norm.as_dict()
+                    monom, value = peq0dict.items()[0]
+                    if len(peq0dict) == 1 and __builtin__.sum(monom) == 1:
+                        indices = [index for index in range(4) if monom[index] == 1]
+                        if len(indices) > 0 and indices[0] < 4:
+                            reducedsinglevars[indices[0]] = (value, peq1norm.as_expr())
+                    isunique = True
+                    for test0, test1 in neweqs_full:
+                        if (self.equal(test0,peq0norm) or self.equal(test0,-peq0norm)) and (self.equal(test1,peq1norm) or self.equal(test1,-peq1norm)):
+                            isunique = False
+                            break
+                    if isunique:
+                        neweqs_full.append((peq0norm, peq1norm))
+                else:
+                    eq = eq.subs(self.freevarsubs)
+                    if self.CheckExpressionUnique(reducedeqs, eq):
+                        reducedeqs.append(eq)
+                        assert(len(reducedeqs)!=4)
             else:
-                reducedeqs.append(peq[1].as_expr().subs(self.freevarsubs))
+                if peq[0] != S.Zero:
+                    peq0dict = peq[0].as_dict()
+                    monom, value = peq0dict.items()[0]
+                    if len(peq0dict) == 1 and __builtin__.sum(monom) == 1:
+                        indices = [index for index in range(4) if monom[index] == 1]
+                        if len(indices) > 0 and indices[0] < 4:
+                            reducedsinglevars[indices[0]] = (value,peq[1].as_expr())
+                    neweqs_full.append(peq)
+                else:
+                    eq = peq[1].as_expr().subs(self.freevarsubs)
+                    if self.CheckExpressionUnique(reducedeqs, eq):
+                        reducedeqs.append(eq)
         for ivar in range(2):
             if reducedsinglevars[2*ivar+0] is not None and reducedsinglevars[2*ivar+1] is not None:
                 # a0*cos = b0, a1*sin = b1
                 a0,b0 = reducedsinglevars[2*ivar+0]
                 a1,b1 = reducedsinglevars[2*ivar+1]
                 reducedeqs.append((b0*a1)**2 + (a0*b1)**2 - (a0*a1)**2)
-
+                
         haszeroequations = len(reducedeqs)>0
         
         allmonoms = set()
@@ -3805,7 +4313,7 @@ class IKFastSolver(AutoReloader):
         allmonoms.sort()
         if len(allmonoms) > len(neweqs_full) and len(reducedeqs) < 4:
             raise self.CannotSolveError('new monoms is %d>%d'%(len(allmonoms), len(neweqs_full)))
-
+        
         # the equations are ginac objects
         getsubs = None
         dictequations = []
@@ -3836,6 +4344,10 @@ class IKFastSolver(AutoReloader):
                 raise self.CannotSolveError('matrix has too many symbols (%d), giving up since most likely will freeze'%nummatrixsymbols)
             
             log.info('matrix has %d symbols', nummatrixsymbols)
+            if nummatrixsymbols > 10:
+                # if matrix symbols are great, yield so that other combinations can be tested?
+                pass
+            
             AUdetmat = None
             if self.IsDeterminantNonZeroByEval(AU):
                 rows = range(A.shape[1])
@@ -3861,7 +4373,7 @@ class IKFastSolver(AutoReloader):
                         break
                 if AU.shape[0] != AU.shape[1]:
                     raise self.CannotSolveError('could not find non-singular matrix')
-
+                
             otherrows = range(A.shape[0])
             for i,row in enumerate(rows):
                 BU[i] = B[row]
@@ -3880,9 +4392,13 @@ class IKFastSolver(AutoReloader):
                 sinsubs = []
                 for freevar in self.freejointvars:
                     var=self.Variable(freevar)
-                    sinsubs.append((var.cvar**2,1-var.svar**2))
-                    sinsubs.append((var.cvar**3,var.cvar*(1-var.svar**2)))
+                    for ideg in range(2,40):
+                        if ideg % 2:
+                            sinsubs.append((var.cvar**ideg,var.cvar*(1-var.svar**2)**int((ideg-1)/2)))
+                        else:
+                            sinsubs.append((var.cvar**ideg,(1-var.svar**2)**(ideg/2)))
                 for i in range(AUinv.shape[0]):
+                    log.info('replacing row %d', i)
                     for j in range(AUinv.shape[1]):
                         numerator,denominator = self.recursiveFraction(AUinv[i,j])
                         numerator = self.trigsimp(numerator.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
@@ -3895,13 +4411,24 @@ class IKFastSolver(AutoReloader):
                             raise self.CannotSolveError('cannot divide for matrix inversion: %s'%e)
                         
                         if r != S.Zero:
-                            # sines and cosines can mix things up a lot, try converting to all sines
-                            numerator2 = (numerator*AUdet).subs(sinsubs)
-                            denominator2 = denominator.subs(sinsubs)
-                            q,r=div(numerator2,denominator2,self.freevars)
+                            # sines and cosines can mix things up a lot, so converto to half-tan
+                            numerator2, numerator2d, htvarsubsinv = self.ConvertSinCosEquationToHalfTan((AUdet*numerator).subs(sinsubs).expand().subs(sinsubs).expand().subs(sinsubs).expand(), self.freejointvars)
+                            denominator2, denominator2d, htvarsubsinv = self.ConvertSinCosEquationToHalfTan(denominator.subs(sinsubs).expand().subs(sinsubs).expand().subs(sinsubs).expand(), self.freejointvars)
+                            extranumerator, extradenominator = fraction(numerator2d/denominator2d)
+                            htvars = [v for v,eq in htvarsubsinv]
+                            q,r=div((numerator2*extradenominator).expand(),(denominator2).expand(),*htvars)
                             if r != S.Zero:
-                                log.warn('cannot get rid of denominator in (%s/%s)',numerator2,denominator2)
-                                q = (numerator/denominator)*AUdet
+                                log.warn('cannot get rid of denominator for element (%d, %d) in (%s/%s)',i, j, numerator2,denominator2)
+                                #raise self.CannotSolveError('cannot get rid of denominator')
+                                
+                            # convert back to cos/sin in order to get rid of the denominator term?
+                            sym = self.gsymbolgen.next()
+                            dictequations.append((sym, q / extranumerator))
+                            q = sym
+                            #div(q.subs(htvarsubsinv).expand(), extranumerator.subs(htvarsubsinv).expand(), *self.freevars)
+                            #newsubs=[(Symbol('htj4'), sin(self.freejointvars[0])/(1+cos(self.freejointvars[0])))]
+                            #div(q.extranumerator
+
                         AUadjugate[i,j] = self.trigsimp(q.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
                 checkforzeros.append(self.removecommonexprs(AUdet,onlygcd=False,onlynumbers=True))
                 # reason we're multiplying by adjugate instead of inverse is to get rid of the potential divides by (free) parameters
@@ -3910,7 +4437,7 @@ class IKFastSolver(AutoReloader):
                 for c in C:
                     reducedeqs.append(c)
             else:
-                if nummatrixsymbols > 60:
+                if nummatrixsymbols > 40:
                     Asymbols = []
                     for i in range(AU.shape[0]):
                         Asymbols.append([Symbol('gclwh%d_%d'%(i,j)) for j in range(AU.shape[1])])
@@ -3920,14 +4447,17 @@ class IKFastSolver(AutoReloader):
                     self.usinglapack = True
                     # evaluate the inverse at various solutions and see which entries are always zero
                     isnotzero = zeros((AU.shape[0],AU.shape[1]))
+                    epsilon = 1e-15
+                    epsilondet = 1e-30
                     for itest,subs in enumerate(self.testconsistentvalues):
                         AUvalue = AU.subs(subs)
-                        AUdetvalue = AUvalue.det().evalf()
-                        if AUdetvalue != S.Zero:
-                            AUinvvalue = AUvalue.inv()
+                        AUdetvalue = AUvalue.evalf().det().evalf()
+                        if abs(AUdetvalue) > epsilondet:# != S.Zero:
+                            AUinvvalue = AUvalue.evalf().inv()
                             for i in range(AUinvvalue.shape[0]):
                                 for j in range(AUinvvalue.shape[1]):
-                                    if AUinvvalue[i,j] != S.Zero:
+                                    # since making numerical approximations, need a good value for zero
+                                    if abs(AUinvvalue[i,j]) > epsilon:#!= S.Zero:
                                         isnotzero[i,j] = 1
                     AUinv = zeros((AU.shape[0],AU.shape[1]))
                     for i in range(AUinvvalue.shape[0]):
@@ -3998,7 +4528,7 @@ class IKFastSolver(AutoReloader):
                     for c in C:
                         reducedeqs.append(c)
             log.info('computed non-singular AU matrix')
-                
+        
         if len(reducedeqs) == 0:
             raise self.CannotSolveError('reduced equations are zero')
         
@@ -4030,7 +4560,7 @@ class IKFastSolver(AutoReloader):
         
         if haszeroequations:
             log.info('special structure in equations detected, try to solve through elimination')
-            AllEquations = [eq.subs(self.invsubs) for eq in reducedeqs]
+            AllEquations = [eq.subs(self.invsubs) for eq in reducedeqs if self.codeComplexity(eq) < 2000]
             for curvar in usedvars[:-1]:
                 try:
                     unknownvars = usedvars[:]
@@ -4096,7 +4626,7 @@ class IKFastSolver(AutoReloader):
                                 usedvars.append(Symbol(jointname))
                             except Exception, e:
                                 log.warn(e)
-
+                                
                         jointcheckeqs = []
                         for i,monom in enumerate(allmonoms):
                             if not i in indices:
@@ -4105,7 +4635,7 @@ class IKFastSolver(AutoReloader):
                                     eq *= symbols[isymbol]**ipower
                                 jointcheckeqs.append(eq-X[i])
                         # threshold can be a little more loose since just a sanity check
-                        jointtrees3.append(AST.SolverCheckZeros('sanitycheck',jointcheckeqs,zerobranch=endbranchtree,nonzerobranch=[AST.SolverBreak()],anycondition=False,thresh=0.001))
+                        jointtrees3.append(AST.SolverCheckZeros('sanitycheck',jointcheckeqs,zerobranch=endbranchtree,nonzerobranch=[AST.SolverBreak('sanitycheck for solveLiWoernleHiller')],anycondition=False,thresh=0.001))
                         return preprocesssolutiontree+solutiontree+treefirst,usedvars
                     else:
                         log.warn('AUinv not initialized, perhaps missing important equations')
@@ -4115,10 +4645,11 @@ class IKFastSolver(AutoReloader):
                 
             try:
                 log.info('try to solve first two variables pairwise')
+                
                 #solution = self.SolvePairVariables(AllEquations,usedvars[0],usedvars[1],self.freejointvars,maxcomplexity=50)
                 jointtrees=[]
                 raweqns=[eq for eq in AllEquations if not eq.has(tvar)]
-                if len(raweqns) > 0:
+                if len(raweqns) > 1:
                     halfanglesolution = self.SolvePairVariablesHalfAngle(raweqns=raweqns,var0=usedvars[0],var1=usedvars[1],othersolvedvars=self.freejointvars)[0]
                     halfanglevar = usedvars[0] if halfanglesolution.jointname==usedvars[0].name else usedvars[1]
                     unknownvar = usedvars[1] if halfanglesolution.jointname==usedvars[0].name else usedvars[0]
@@ -4136,13 +4667,45 @@ class IKFastSolver(AutoReloader):
                         return preprocesssolutiontree+[halfanglesolution]+nexttree,usedvars[0:2]
                 
             except self.CannotSolveError,e:
-                log.debug(e)
-
+                log.debug(u'failed solving first two variables pairwise: %s', e)
+                
         log.info('reducing equations')
         newreducedeqs = []
         hassinglevariable = False
         for eq in reducedeqs:
-            peq = Poly(eq,*othersymbols)
+            complexity = self.codeComplexity(eq)
+            if complexity > 4000:
+                raise self.CannotSolveError('equation way too complex (%d), looking for another solution'%complexity)
+            
+            if complexity > 4000:
+                log.info('equation way too complex (%d), so try breaking it down', complexity)
+                # don't support this yet...
+                eq2 = eq.expand()
+                assert(eq2.is_Add)
+                log.info('equation has %d additions', len(eq2.args))
+                indices = list(range(0, len(eq2.args), 100))
+                indices[-1] = len(eq2.args)
+                testpolyeqs = []
+                startvalue = 0
+                for nextvalue in indices[1:]:
+                    log.info('computing up to %d', nextvalue)
+                    testadd = S.Zero
+                    for i in range(startvalue,nextvalue):
+                        testadd += eq2.args[i]
+                    testpolyeqs.append(Poly(testadd,*othersymbols))
+                    startvalue = nextvalue
+                # convert each poly's coefficients to symbols
+                peq = Poly(S.Zero, *othersymbols)
+                for itest, testpolyeq in enumerate(testpolyeqs):
+                    log.info('adding equation %d', itest)
+                    newpeq = Poly(S.Zero, *othersymbols)
+                    for monom, coeff in newpeq.iteritems():
+                        sym = self.gsymbolgen.next()
+                        dictequations.append((sym,coeff))
+                        newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
+                    peq += newpeq
+            else:
+                peq = Poly(eq,*othersymbols)
             maxdenom = [0]*len(htvarcossinoffsets)
             for monoms in peq.monoms():
                 for i,ioffset in enumerate(htvarcossinoffsets):
@@ -4170,7 +4733,7 @@ class IKFastSolver(AutoReloader):
             newpeq = Poly(eqnew,htvars+nonhtvars)
             newreducedeqs.append(newpeq)
             hassinglevariable |= any([all([__builtin__.sum(monom)==monom[i] for monom in newpeq.monoms()]) for i in range(3)])
-        
+                    
         if hassinglevariable:
             log.info('hassinglevariable, trying with raw equations')
             AllEquations = []
@@ -4189,18 +4752,31 @@ class IKFastSolver(AutoReloader):
                         neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree(0)-monoms[0]))
                     AllEquations.append(neweq0.subs(self.invsubs).expand())
                     AllEquations.append(neweq1.subs(self.invsubs).expand())
+            unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
+            for eq in AllEquationsExtra:
+                if eq.has(*usedvars) and not eq.has(*unusedvars):
+                    AllEquations.append(eq)
             self.sortComplexity(AllEquations)
+            
+            # first try to solve all the variables at once
+            try:
+                solutiontree = self.SolveAllEquations(AllEquations,curvars=usedvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:], unknownvars=unusedvars, endbranchtree=endbranchtree)
+                return solutiontree, usedvars
+            except self.CannotSolveError, e:
+                log.debug(u'failed solving all variables: %s', e)
+                
             for ivar in range(3):
                 try:
                     unknownvars = usedvars[:]
                     unknownvars.pop(ivar)
                     endbranchtree2 = []
-                    solutiontree = self.SolveAllEquations(AllEquations,curvars=[usedvars[ivar]],othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([endbranchtree2])],unknownvars=unknownvars)
-                    endbranchtree2 += self.SolveAllEquations(AllEquations,curvars=unknownvars[0:2],othersolvedvars=self.freejointvars[:]+[usedvars[ivar]],solsubs=self.freevarsubs[:]+self.Variable(usedvars[ivar]).subs,endbranchtree=endbranchtree)
-                    return preprocesssolutiontree+solutiontree, usedvars
-                except self.CannotSolveError:
-                    pass
-
+                    if 1:
+                        solutiontree = self.SolveAllEquations(AllEquations,curvars=[usedvars[ivar]],othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([endbranchtree2])],unknownvars=unknownvars+unusedvars)
+                        endbranchtree2 += self.SolveAllEquations(AllEquations,curvars=unknownvars[0:2],othersolvedvars=self.freejointvars[:]+[usedvars[ivar]],solsubs=self.freevarsubs[:]+self.Variable(usedvars[ivar]).subs, unknownvars=unusedvars, endbranchtree=endbranchtree)
+                    return preprocesssolutiontree+solutiontree, usedvars#+unusedvars#[unknownvars[1], usedvars[ivar]]#
+                except self.CannotSolveError, e:
+                    log.debug(u'single variable %s failed: %s', usedvars[ivar], e)
+                    
 #         try:
 #             testvars = [Symbol(othersymbols[0].name[1:]),Symbol(othersymbols[2].name[1:]),Symbol(varname)]
 #             AllEquations = [(peq[0].as_expr()-peq[1].as_expr()).expand() for peq in polyeqs if not peq[0].has(*symbols)]
@@ -4226,7 +4802,7 @@ class IKFastSolver(AutoReloader):
             
         if exportcoeffeqs is None:
             if len(nonhtvars) > 0:
-                # try to solve one variable in terms of the others
+                log.info('try to solve one variable in terms of the others')
                 usedvar0solution = solve(newreducedeqs[0],nonhtvars[0])[0]
                 num,denom = fraction(usedvar0solution)
                 igenoffset = len(htvars)
@@ -4283,7 +4859,10 @@ class IKFastSolver(AutoReloader):
                         Apoly = Poly(A,leftoverhtvars)
                         Bpoly = Poly(B,leftoverhtvars)
                         singlepolyequations = []
-                        for peq in linearequations[1:]+higherequations:
+                        useequations = linearequations[1:]
+                        if len(useequations) == 0:
+                            useequations += higherequations
+                        for peq in useequations:
                             peqnew = Poly(S.Zero,leftoverhtvars)
                             maxhtvardegree = peq.degree(ihtvar)
                             for monoms,c in peq.terms():
@@ -4299,21 +4878,61 @@ class IKFastSolver(AutoReloader):
                             jointname = leftoverhtvars[0].name[2:]
                             firstsolution = AST.SolverPolynomialRoots(jointname=jointname,poly=singlepolyequations[0],jointeval=[jointsol],isHinge=self.IsHinge(jointname))
                             firstsolution.checkforzeros = []
-                            # fail if the denom evaluations to 0
-                            firstsolution.postcheckforzeros = [A.as_expr()]
+                            firstsolution.postcheckforzeros = []
                             firstsolution.postcheckfornonzeros = []
                             firstsolution.postcheckforrange = []
+                            # in Ax=B, if A is 0 and B is non-zero, then equation is invalid
+                            # however if both A and B evaluate to 0, then equation is still valid
+                            # therefore equation is invalid only if A==0&&B!=0
+                            firstsolution.postcheckforNumDenom = [(A.as_expr(), B.as_expr())]
                             firstsolution.AddHalfTanValue = True
-
-                            secondsolution = AST.SolverSolution(htvar.name[2:], isHinge=self.IsHinge(htvar.name[2:]))
-                            secondsolution.jointeval = [2*atan2(B.as_expr(), A.as_expr())]
-                            secondsolution.AddHalfTanValue = True
+                    
+                            # actually both A and B can evaluate to zero, in which case we have to use a different method to solve them
+                            AllEquations = []
+                            for eq in reducedeqs:
+                                if self.codeComplexity(eq) > 500:
+                                    continue
+                                peq = Poly(eq, tvar)
+                                if sum(peq.degree_list()) == 0:
+                                    AllEquations.append(peq.TC().subs(self.invsubs).expand())
+                                elif sum(peq.degree_list()) == 1 and peq.TC() == S.Zero:
+                                    AllEquations.append(peq.LC().subs(self.invsubs).expand())
+                                else:
+                                    # two substitutions: sin/(1+cos), (1-cos)/sin
+                                    neweq0 = S.Zero
+                                    neweq1 = S.Zero
+                                    for monoms,c in peq.terms():
+                                        neweq0 += c*(svar**monoms[0])*((1+cvar)**(peq.degree(0)-monoms[0]))
+                                        neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree(0)-monoms[0]))
+                                    if self.codeComplexity(neweq0) > 1000 or self.codeComplexity(neweq1) > 1000:
+                                        break
+                                    AllEquations.append(neweq0.subs(self.invsubs).expand())
+                                    AllEquations.append(neweq1.subs(self.invsubs).expand())
+                                
+                            #oldmaxcasedepth = self.maxcasedepth                            
+                            try:
+                                #self.maxcasedepth = min(self.maxcasedepth, 2)
+                                solvevar = Symbol(jointname)
+                                curvars = list(usedvars)
+                                curvars.remove(solvevar)
+                                unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
+                                solutiontree = self.SolveAllEquations(AllEquations+AllEquationsExtra,curvars=curvars+unusedvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
+                                #secondSolutionComplexity = self.codeComplexity(B) + self.codeComplexity(A)
+                                #if secondSolutionComplexity > 500:
+                                #    log.info('solution for %s is too complex, so delaying its solving')
+                                #solutiontree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
+                                return preprocesssolutiontree+[firstsolution]+solutiontree,usedvars+unusedvars
                             
-                            thirdsolution = AST.SolverSolution(nonhtvars[0].name, isHinge=self.IsHinge(nonhtvars[0].name))
-                            thirdsolution.jointeval = [usedvar0solution]
-                            
-                            return preprocesssolutiontree+[firstsolution, secondsolution, thirdsolution]+endbranchtree, usedvars
-
+                            except self.CannotSolveError, e:
+                                log.debug('could not solve full variables from scratch, so use existing solution: %s', e)
+                                secondsolution = AST.SolverSolution(htvar.name[2:], isHinge=self.IsHinge(htvar.name[2:]))
+                                secondsolution.jointeval = [2*atan2(B.as_expr(), A.as_expr())]
+                                secondsolution.AddHalfTanValue = True
+                                thirdsolution = AST.SolverSolution(nonhtvars[0].name, isHinge=self.IsHinge(nonhtvars[0].name))
+                                thirdsolution.jointeval = [usedvar0solution]
+                                return preprocesssolutiontree+[firstsolution, secondsolution, thirdsolution]+endbranchtree, usedvars
+#                             finally:
+#                                 self.maxcasedepth = oldmaxcasedepth
             # try to factor the equations manually
             if newreducedeqs[0].degree(2) == 1:
                 # try to solve one variable in terms of the others
@@ -4389,7 +5008,7 @@ class IKFastSolver(AutoReloader):
                     shape=Mall[0].shape
                     Malltemp = [None]*len(Mall)
                     M = zeros(shape)
-                    dictequations = []
+                    dictequations2 = list(dictequations)
                     for idegree in range(len(Mall)):
                         Malltemp[idegree] = zeros(shape)
                         for i in range(shape[0]):
@@ -4397,7 +5016,7 @@ class IKFastSolver(AutoReloader):
                                 if Mall[idegree][i,j] != S.Zero:
                                     sym = self.gsymbolgen.next()
                                     Malltemp[idegree][i,j] = sym
-                                    dictequations.append((sym,Mall[idegree][i,j]))
+                                    dictequations2.append((sym,Mall[idegree][i,j]))
                         M += Malltemp[idegree]*leftvar**idegree
                     tempsymbols = [self.gsymbolgen.next() for i in range(len(M))]
                     tempsubs = []
@@ -4433,7 +5052,7 @@ class IKFastSolver(AutoReloader):
                     firstsolution.postcheckforzeros = []
                     firstsolution.postcheckfornonzeros = []
                     firstsolution.postcheckforrange = []
-                    firstsolution.dictequations = dictequations
+                    firstsolution.dictequations = dictequations2
                     firstsolution.AddHalfTanValue = True
                     
                     # just solve the lowest degree one
@@ -4468,7 +5087,94 @@ class IKFastSolver(AutoReloader):
         self.usinglapack = True
         return preprocesssolutiontree+solutiontree+endbranchtree,usedvars
 
-    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree):
+    def ConvertSinCosEquationToHalfTan(self, eq, convertvars):
+        """converts all the sin/cos of variables to half-tangents. Returns two equations (poly, denominator)
+        """
+        cossinvars = []
+        htvarsubs = []
+        htvars = []
+        htvarsubsinv = []
+        for varsym in convertvars:
+            var = self.Variable(varsym) 
+            cossinvars.append(var.cvar)
+            cossinvars.append(var.svar)
+            htvar = Symbol('ht%s'%varsym.name)
+            htvarsubs += [(var.cvar,(1-htvar**2)/(1+htvar**2)),(var.svar,2*htvar/(1+htvar**2))]
+            htvarsubsinv.append((htvar, (1-var.cvar)/var.svar))
+            htvars.append(htvar)
+        peq = Poly(eq,*cossinvars)
+        maxdenom = [0]*len(convertvars)
+        for monoms in peq.monoms():
+            for i in range(len(convertvars)):
+                maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
+        eqnew = S.Zero
+        for monoms,c in peq.terms():
+            term = c
+            for i in range(len(convertvars)):
+                # for cos
+                num, denom = fraction(htvarsubs[2*i][1])
+                term *= num**monoms[2*i]
+                # for sin
+                num, denom = fraction(htvarsubs[2*i+1][1])
+                term *= num**monoms[2*i+1]
+            # the denoms for sin/cos of the same joint variable are the same
+            for i in range(len(convertvars)):
+                denom = fraction(htvarsubs[2*i][1])[1]
+                exp = maxdenom[i] - monoms[2*i] - monoms[2*i+1]
+                if exp > 0:
+                    term *= denom**exp
+            eqnew += term
+        #newpeq = Poly(eqnew,htvars)
+        othereq = S.One
+        for i in range(len(convertvars)):
+            othereq *= (1+htvars[i]**2)**maxdenom[i]
+        return eqnew, othereq, htvarsubsinv
+
+    def ConvertHalfTanEquationToSinCos(self, eq, convertvars):
+        """converts all the sin/cos of variables to half-tangents. Returns two equations (poly, denominator)
+        """
+        assert(0)
+        cossinvars = []
+        htvarsubs = []
+        htvars = []
+        htvarsubsinv = []
+        for varsym in convertvars:
+            var = self.Variable(varsym) 
+            cossinvars.append(var.cvar)
+            cossinvars.append(var.svar)
+            htvar = Symbol('ht%s'%varsym.name)
+            htvarsubs += [(var.cvar,(1-htvar**2)/(1+htvar**2)),(var.svar,2*htvar/(1+htvar**2))]
+            htvarsubsinv.append((htvar, (1-var.cvar)/var.svar))
+            htvars.append(htvar)
+        peq = Poly(eq,*cossinvars)
+        maxdenom = [0]*len(convertvars)
+        for monoms in peq.monoms():
+            for i in range(len(convertvars)):
+                maxdenom[i] = max(maxdenom[i],monoms[2*i]+monoms[2*i+1])
+        eqnew = S.Zero
+        for monoms,c in peq.terms():
+            term = c
+            for i in range(len(convertvars)):
+                # for cos
+                num, denom = fraction(htvarsubs[2*i][1])
+                term *= num**monoms[2*i]
+                # for sin
+                num, denom = fraction(htvarsubs[2*i+1][1])
+                term *= num**monoms[2*i+1]
+            # the denoms for sin/cos of the same joint variable are the same
+            for i in range(len(convertvars)):
+                denom = fraction(htvarsubs[2*i][1])[1]
+                exp = maxdenom[i] - monoms[2*i] - monoms[2*i+1]
+                if exp > 0:
+                    term *= denom**exp
+            eqnew += term
+        #newpeq = Poly(eqnew,htvars)
+        othereq = S.One
+        for i in range(len(convertvars)):
+            othereq *= (1+htvars[i]**2)**maxdenom[i]
+        return eqnew, othereq, htvarsubsinv
+    
+    def solveKohliOsvatic(self,rawpolyeqs,solvejointvars,endbranchtree, AllEquationsExtra=None):
         """Find a 16x16 matrix where the entries are linear with respect to the tan half-angle of one of the variables [Kohli1993]_. Takes in the 14 raghavan/roth equations.
         
         .. [Kohli1993] Dilip Kohli and M. Osvatic, "Inverse Kinematics of General 6R and 5R,P Serial Manipulators", Journal of Mechanical Design, Volume 115, Issue 4, Dec 1993.
@@ -4786,7 +5492,8 @@ class IKFastSolver(AutoReloader):
                     # have to explicitly evaluate since testsubs can be very complex
                     subsvals = [(s,v.evalf()) for s,v in subs]
                     subs = subsvals+getsubs(subsvals)
-                A = Mall[maxdegree].subs(subs).subs(self.globalsymbols).evalf()
+                # have to sub at least twice with the global symbols
+                A = Mall[maxdegree].subs(subs).subs(self.globalsymbols).subs(subs).evalf()
                 eps = 10**-(self.precision-3)
                 Anumpy = numpy.array(numpy.array(A), numpy.float64)
                 if numpy.isnan(numpy.sum(Anumpy)):
@@ -4868,157 +5575,152 @@ class IKFastSolver(AutoReloader):
             retvalues.append((var,newvalue))
         return retvalues
     
-    def simplifyTransformPoly(self,peq):
+    def SimplifyTransformPoly(self,peq):
         """simplifies the coefficients of the polynomial with simplifyTransform and returns the new polynomial
         """
-        return peq.termwise(lambda m,c: self.simplifyTransform(c))
+        return peq.termwise(lambda m,c: self.SimplifyTransform(c))
 
-    def simplifyTransform(self,eq,othervars=None):
+    def SimplifyTransform(self,eq,othervars=None):
         """Attemps to simplify an equation given that variables from a rotation matrix have been used. There are 12 constraints that are tested:
         - lengths of rows and colums are 1
         - dot products of combinations of rows/columns are 0
         - cross products of combinations of rows/columns yield the left over row/column
         :param othervars: optional list of the unknown variables inside the equations. Help simplify depending on the terms of these variables
         """
+        if self._iktype != 'transform6d':
+            return eq
+        
         if othervars is not None:
             peq = Poly(eq,*othervars)
             if peq == S.Zero:
                 return S.Zero
             
-            peqnew = peq.termwise(lambda m,c: self.simplifyTransform(c))
+            peqnew = peq.termwise(lambda m,c: self.SimplifyTransform(c))
             return peqnew.as_expr()
         
-        # first simplify just rotations (since they don't add any new variables)
-        allsymbols = list(self.Tee[0:3,0:3])
-        # check normals
-        normgroups = []
-        for i in range(3):
-            normgroups.append([self.Tee[i,0],self.Tee[i,1],self.Tee[i,2],S.One])
-            normgroups.append([self.Tee[0,i],self.Tee[1,i],self.Tee[2,i],S.One])
-        def _simplifynorm(eq):
-            neweq = None
-            for group in normgroups:
-                p = Poly(eq,group[0],group[1],group[2])
+        origeq = eq
+        # first simplify just rotations since they don't add any new variables
+        changed = True
+        while changed and eq.has(*self._rotsymbols):
+            changed = False
+            neweq = self._SimplifyRotationNorm(eq, self._rotnormgroups)
+            if neweq is not None:
+                eq = neweq
+                changed = True
+            neweq = self._SimplifyRotationDot(eq, self._rotsymbols, self._rotdotgroups)
+            if neweq is not None:
+                eq = neweq
+                changed = True
+            neweq = self._SimplifyRotationCross(eq, self._rotsymbols, self._rotcrossgroups)
+            if neweq is not None:
+                eq = neweq
+                changed = True
+                    
+        # check if full 3D position is available
+        if self.pp is not None:
+            changed = True
+            while changed and eq.has(*self._rotpossymbols):
                 changed = False
-                if len(p.terms()) == 1:
-                    continue
-                for (m0,c0),(m1,c1) in combinations(p.terms(),2):
-                    if self.equal(c0,c1):
-                        for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:
-                            if ((m0[i] == 2 and m1[j] == 2) or (m0[j]==2 and m1[i]==2)) and m0[k]==m1[k]:
-                                p = p + c0*(group[3]-group[0]**2-group[1]**2-group[2]**2)*group[k]**(m0[k])
-                                neweq = p.as_expr()
-                                eq = neweq
-                                changed = True
-                                break
-                        if changed:
+                neweq = self._SimplifyRotationNorm(eq, self._rotposnormgroups)
+                if neweq is not None:
+                    eq = neweq
+                    changed = True
+                neweq = self._SimplifyRotationDot(eq, self._rotpossymbols, self._rotposdotgroups)
+                if neweq is not None:
+                    eq = neweq
+                    changed = True
+                neweq = self._SimplifyRotationCross(eq, self._rotpossymbols, self._rotposcrossgroups)
+                if neweq is not None:
+                    eq = neweq
+                    changed = True
+                        
+        if isinstance(eq, Poly):
+            eq = eq.as_expr()
+        #log.info("simplify eq:\n%r\n->new eq:\n%r", origeq, eq)
+        return eq
+    
+    def _SimplifyRotationNorm(self, eq, groups):
+        """simplify equation using self._rotnormgroups
+        """
+        neweq = None
+        for group in groups:
+            try:
+                p = Poly(eq,group[0],group[1],group[2])
+            except PolynomialError:
+                continue
+            changed = False
+            if len(p.terms()) == 1:
+                continue
+            for (m0,c0),(m1,c1) in combinations(p.terms(),2):
+                if self.equal(c0,c1):
+                    for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:
+                        if ((m0[i] == 2 and m1[j] == 2) or (m0[j]==2 and m1[i]==2)) and m0[k]==m1[k]:
+                            p = p + c0*(group[3]-group[0]**2-group[1]**2-group[2]**2)*group[k]**(m0[k])
+                            neweq = p#.as_expr()
+                            eq = neweq
+                            changed = True
                             break
-            return neweq
-
-        # check for dot products between rows and columns
-        dotgroups = []
-        for i,j in combinations(range(3),2):
-            # dot product of rotations is always 0
-            dotgroups.append([[i,j],[i+3,j+3],[i+6,j+6],S.Zero])
-            dotgroups.append([[3*i,3*j],[3*i+1,3*j+1],[3*i+2,3*j+2],S.Zero])
-        def _simplifydot(eq):
-            p = Poly(eq,*allsymbols)
-            changed = False
-            for dg in dotgroups:
-                for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:
-                    for comb in combinations(p.terms(),2):
-                        if self.equal(comb[0][1],comb[1][1]):
-                            for (m0,c0),(m1,c1) in [comb,comb[::-1]]:
-                                if m0[dg[i][0]] == 1 and m0[dg[i][1]] == 1 and m1[dg[j][0]] == 1 and m1[dg[j][1]] == 1:
-                                    # make sure the left over terms are also the same
-                                    m0l = list(m0); m0l[dg[i][0]] = 0; m0l[dg[i][1]] = 0
-                                    m1l = list(m1); m1l[dg[j][0]] = 0; m1l[dg[j][1]] = 0
-                                    if tuple(m0l) == tuple(m1l):
-                                        m2 = list(m0l); m2[dg[k][0]] += 1; m2[dg[k][1]] += 1
-                                        # there is a bug in sympy v0.6.7 polynomial adding here!
-                                        p = p.sub(Poly.from_dict({m0:c0},*p.gens)).sub(Poly.from_dict({m1:c1},*p.gens)).sub(Poly.from_dict({tuple(m2):c0},*p.gens))
-                                        if dg[3] != S.Zero:
-                                            p = p.add(Poly(dg[3],*p.gens)*Poly.from_dict({tuple(m0l):c0},*p.gens))
-                                        changed = True
-                                        break
-                            if changed:
-                                break
-            return p.as_expr() if changed else None
-
-        # add cross products
-        crossgroups = []
-        for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:
-            # column
-            crossgroups.append([[i+3,j+6],[i+6,j+3],k])
-            crossgroups.append([[i+6,j],[i,j+6],k+3])
-            crossgroups.append([[i,j+3],[i+3,j],k+6])
-            # row
-            crossgroups.append([[3*i+1,3*j+2],[3*i+2,3*j+1],3*k])
-            crossgroups.append([[3*i+2,3*j],[3*i,3*j+2],3*k+1])
-            crossgroups.append([[3*i,3*j+1],[3*i+1,3*j],3*k+2])
-            # swap if sign is negative: if j!=1+i
-            if j!=1+i:
-                for crossgroup in crossgroups[-6:]:
-                    crossgroup[0],crossgroup[1] = crossgroup[1],crossgroup[0]
-        def _simplifycross(eq):
-            # check cross products
-            changed = False
-            p = Poly(eq,*allsymbols)
-            for cg in crossgroups:
+                    if changed:
+                        break
+        return neweq
+    
+    def _SimplifyRotationDot(self, eq, symbols, groups):
+        """check for dot products between rows and columns
+        """
+        try:
+            p = Poly(eq,*symbols)
+        except PolynomialError:
+            return None
+        
+        changed = False
+        for dg in groups:
+            for i,j,k in [(0,1,2),(0,2,1),(1,2,0)]:
                 for comb in combinations(p.terms(),2):
-                    if self.equal(comb[0][1],-comb[1][1]):
+                    if self.equal(comb[0][1],comb[1][1]):
                         for (m0,c0),(m1,c1) in [comb,comb[::-1]]:
-                            if m0[cg[0][0]] == 1 and m0[cg[0][1]] == 1 and m1[cg[1][0]] == 1 and m1[cg[1][1]] == 1:
+                            if m0[dg[i][0]] == 1 and m0[dg[i][1]] == 1 and m1[dg[j][0]] == 1 and m1[dg[j][1]] == 1:
                                 # make sure the left over terms are also the same
-                                m0l = list(m0); m0l[cg[0][0]] = 0; m0l[cg[0][1]] = 0
-                                m1l = list(m1); m1l[cg[1][0]] = 0; m1l[cg[1][1]] = 0
+                                m0l = list(m0); m0l[dg[i][0]] = 0; m0l[dg[i][1]] = 0
+                                m1l = list(m1); m1l[dg[j][0]] = 0; m1l[dg[j][1]] = 0
                                 if tuple(m0l) == tuple(m1l):
-                                    m2 = m0l; m2[cg[2]] += 1
-                                    # there is a bug in sympy polynomial caching here! (0.6.7)
-                                    p = p.sub(Poly.from_dict({m0:c0},*p.gens)).sub(Poly.from_dict({m1:c1},*p.gens)).add(Poly.from_dict({tuple(m2):c0},*p.gens))
+                                    m2 = list(m0l); m2[dg[k][0]] += 1; m2[dg[k][1]] += 1
+                                    # there is a bug in sympy v0.6.7 polynomial adding here!
+                                    p = p.sub(Poly.from_dict({m0:c0},*p.gens)).sub(Poly.from_dict({m1:c1},*p.gens)).sub(Poly.from_dict({tuple(m2):c0},*p.gens))
+                                    if dg[3] != S.Zero:
+                                        p = p.add(Poly(dg[3],*p.gens)*Poly.from_dict({tuple(m0l):c0},*p.gens))
                                     changed = True
                                     break
                         if changed:
                             break
-            return p.as_expr() if changed else None
-
-        fns = [_simplifynorm,_simplifydot,_simplifycross]
-        changed = True
-        while changed and eq.has(*allsymbols):
-            changed = False
-            for fn in fns:
-                neweq = fn(eq)
-                if neweq is not None:
-                    eq = neweq
-                    changed = True
-
-        # check if full 3D position is available
-        if self.pp is not None:
-            # add positions
-            ip = 9
-            inp = 12
-            ipp = 15
-            irxp = 16
-            allsymbols += list(self.Tee[0:3,3])+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
-            normgroups.append([self.Tee[0,3],self.Tee[1,3],self.Tee[2,3],self.pp])
-            for i in range(3):
-                dotgroups.append([[i,ip],[i+3,ip+1],[i+6,ip+2],self.npxyz[i]])
-                dotgroups.append([[3*i+0,inp],[3*i+1,inp+1],[3*i+2,inp+2],self.Tee[i,3]])
-                # column i cross position
-                crossgroups.append([[i+3,ip+2],[i+6,ip+1],irxp+3*i+0])
-                crossgroups.append([[i+6,ip+0],[i,ip+2],irxp+3*i+1])
-                crossgroups.append([[i,ip+1],[i+3,ip+0],irxp+3*i+2])
-            changed = True
-            while changed and eq.has(*allsymbols):
-                changed = False
-                for fn in fns:
-                    neweq = fn(eq)
-                    if neweq is not None:
-                        eq = neweq
-                        changed = True
-
-        return eq
-
+        return p if changed else None
+    
+    def _SimplifyRotationCross(self, eq, symbols, groups):
+        """simplify rotations using cross products
+        """
+        changed = False
+        try:
+            p = Poly(eq,*symbols)
+        except PolynomialError:
+            return None
+        
+        for cg in groups:
+            for comb in combinations(p.terms(),2):
+                if self.equal(comb[0][1],-comb[1][1]):
+                    for (m0,c0),(m1,c1) in [comb,comb[::-1]]:
+                        if m0[cg[0][0]] == 1 and m0[cg[0][1]] == 1 and m1[cg[1][0]] == 1 and m1[cg[1][1]] == 1:
+                            # make sure the left over terms are also the same
+                            m0l = list(m0); m0l[cg[0][0]] = 0; m0l[cg[0][1]] = 0
+                            m1l = list(m1); m1l[cg[1][0]] = 0; m1l[cg[1][1]] = 0
+                            if tuple(m0l) == tuple(m1l):
+                                m2 = m0l; m2[cg[2]] += 1
+                                # there is a bug in sympy polynomial caching here! (0.6.7)
+                                p = p.sub(Poly.from_dict({m0:c0},*p.gens)).sub(Poly.from_dict({m1:c1},*p.gens)).add(Poly.from_dict({tuple(m2):c0},*p.gens))
+                                changed = True
+                                break
+                    if changed:
+                        break
+        return p if changed else None
+    
     def CheckExpressionUnique(self, exprs, expr, checknegative=True):
         """checks if expr is inside exprs.
         :param checknegative: if True, then also check if -expr is inside exprs
@@ -5050,7 +5752,7 @@ class IKFastSolver(AutoReloader):
             if not expr.has(*unsolvedvars) and self.CheckExpressionUnique(extrazerochecks,expr):
                 extrazerochecks.append(self.removecommonexprs(expr.subs(solsubs).evalf(),onlygcd=False,onlynumbers=True))
         if len(extrazerochecks) > 0:
-            return [AST.SolverCheckZeros(None,extrazerochecks,tree,[AST.SolverBreak()],anycondition=False)]
+            return [AST.SolverCheckZeros(None,extrazerochecks,tree,[AST.SolverBreak('verifyAllEquations')],anycondition=False)]
         return tree
 
     def PropagateSolvedConstants(self, AllEquations, othersolvedvars, unknownvars, constantSymbols=None):
@@ -5070,23 +5772,27 @@ class IKFastSolver(AutoReloader):
                 constantSymbols.append(sin(othersolvedvar))
         newsubsdict = {}
         for eq in AllEquations:
-            if not eq.has(*unknownvars) and eq.has(*constantSymbols):        
-                reducedeq = self.simplifyTransform(eq)
-                for constantSymbol in constantSymbols:
-                    if eq.has(constantSymbol):
-                        try:
-                            peq = Poly(eq,constantSymbol)
-                            if peq.degree(0) == 1:
-                                # equation is only degree 1 in the variable, and doesn't have any solvevars multiplied with it
-                                newsolution = solve(peq,constantSymbol)[0]
-                                if constantSymbol in newsubsdict:
-                                    if self.codeComplexity(newsolution) < self.codeComplexity(newsubsdict[constantSymbol]):
+            if not eq.has(*unknownvars) and eq.has(*constantSymbols):
+                try:
+                    reducedeq = self.SimplifyTransform(eq)
+                    for constantSymbol in constantSymbols:
+                        if eq.has(constantSymbol):
+                            try:
+                                peq = Poly(eq,constantSymbol)
+                                if peq.degree(0) == 1:
+                                    # equation is only degree 1 in the variable, and doesn't have any solvevars multiplied with it
+                                    newsolution = solve(peq,constantSymbol)[0]
+                                    if constantSymbol in newsubsdict:
+                                        if self.codeComplexity(newsolution) < self.codeComplexity(newsubsdict[constantSymbol]):
+                                            newsubsdict[constantSymbol] = newsolution
+                                    else:
                                         newsubsdict[constantSymbol] = newsolution
-                                else:
-                                    newsubsdict[constantSymbol] = newsolution
-                        except PolynomialError:
-                            pass
-                        
+                            except PolynomialError:
+                                pass
+                except PolynomialError, e:
+                    # expected from simplifyTransform if eq is too complex
+                    pass
+                
         # first substitute everything that doesn't have othersolvedvar or unknownvars
         numberSubstitutions = []
         otherSubstitutions = []
@@ -5112,14 +5818,16 @@ class IKFastSolver(AutoReloader):
                         NewEquations.append(neweq)
         return NewEquations
     
-    def SolveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None,unknownvars=None):
+    def SolveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None,unknownvars=None, currentcasesubs=None):
         if len(curvars) == 0:
             return endbranchtree
         
         if unknownvars is None:
             unknownvars = []
             
-        log.info('%s %s',othersolvedvars,curvars)
+        self._scopecounter+=1
+        scopecounter = int(self._scopecounter)
+        log.info('c=%d, %s %s',self._scopecounter, othersolvedvars,curvars)
         
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
@@ -5139,7 +5847,7 @@ class IKFastSolver(AutoReloader):
                 try:
                     rawsolutions=self.solveSingleVariable(self.sortComplexity(raweqns),curvar,othersolvedvars, unknownvars=curvars+unknownvars)
                     for solution in rawsolutions:
-                        self.solutionComplexity(solution,othersolvedvars,curvars)
+                        self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                         solutions.append((solution,curvar))
                 except self.CannotSolveError:
                     pass
@@ -5151,7 +5859,7 @@ class IKFastSolver(AutoReloader):
         # This cannot be known at compile time, so the equation is selected and any other possibilities are rejected.
         # In the bertold robot case, the next possibility is a pair-wise solution involving two variables
         if any([s[0].numsolutions()==1 for s in solutions]):
-            return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
+            return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
         
         curvarsubssol = []
         for var0,var1 in combinations(curvars,2):
@@ -5170,31 +5878,42 @@ class IKFastSolver(AutoReloader):
         
         if len(curvars) == 2 and self.IsHinge(curvars[0].name) and self.IsHinge(curvars[1].name) and len(curvarsubssol) > 0:
             # there's only two variables left, it might be the case that the axes are aligning and the two variables are dependent on each other
+            # note that the axes's anchors also have to be along the direction!
             var0,var1,raweqns,complexity = curvarsubssol[0]
-            dummyvar = Symbol('dummy') # curvars[0] + curvars[1]
+            dummyvar = Symbol('dummy')
+            dummyvalue = var0 + var1
             NewEquations = []
-            dummyvalue = curvars[0] + curvars[1]
+            hasExtraConstraints = False
             for eq in raweqns:
-                neweq = self.trigsimp(eq.subs(curvars[0],dummyvar-curvars[1]).expand(trig=True),curvars)
-                if not neweq.has(*(othervars+curvars)) and neweq.has(dummyvar):
-                    eq = neweq.subs(self.freevarsubs+solsubs)
-                    if self.CheckExpressionUnique(NewEquations,eq):
-                        NewEquations.append(eq)
-            if len(NewEquations) == 0:
-                # try subtracting
-                dummyvalue = curvars[0] - curvars[1]
-                for eq in raweqns:
-                    neweq = self.trigsimp(eq.subs(curvars[0],dummyvar-curvars[1]).expand(trig=True),curvars)
-                    if not neweq.has(*(othervars+curvars)) and neweq.has(dummyvar):
+                neweq = self.trigsimp(eq.subs(var0,dummyvar-var1).expand(trig=True),curvars)
+                if neweq.has(dummyvar):
+                    if neweq.has(*(othervars+curvars)):
+                        hasExtraConstraints = True
+                        break
+                    else:
                         eq = neweq.subs(self.freevarsubs+solsubs)
                         if self.CheckExpressionUnique(NewEquations,eq):
                             NewEquations.append(eq)
-            if len(NewEquations) > 0:
+            if len(NewEquations) == 0 or hasExtraConstraints:
+                # try subtracting
+                hasExtraConstraints = False
+                dummyvalue = var0 - var1
+                for eq in raweqns:
+                    neweq = self.trigsimp(eq.subs(var0,dummyvar-var1).expand(trig=True),curvars)
+                    if neweq.has(dummyvar):
+                        if neweq.has(*(othervars+curvars)):
+                            hasExtraConstraints = True
+                            break
+                        else:
+                            eq = neweq.subs(self.freevarsubs+solsubs)
+                            if self.CheckExpressionUnique(NewEquations,eq):
+                                NewEquations.append(eq)
+            if not hasExtraConstraints and len(NewEquations) > 0:
                 dummysolutions = []
                 try:
                     rawsolutions=self.solveSingleVariable(NewEquations,dummyvar,othersolvedvars, unknownvars=curvars+unknownvars)
                     for solution in rawsolutions:
-                        self.solutionComplexity(solution,othersolvedvars,curvars)
+                        self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                         dummysolutions.append(solution)
                 except self.CannotSolveError:
                     pass
@@ -5207,49 +5926,48 @@ class IKFastSolver(AutoReloader):
                             log.warn('dummy solution should not have sin/cos parts!')
                         solution=AST.SolverSolution(curvars[0].name, isHinge=self.IsHinge(curvars[0].name))
                         solution.jointeval = [dummysolution.jointeval[0] - dummyvalue + curvars[0]]
-                        self.solutionComplexity(solution,othersolvedvars,curvars)
+                        self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                         solutions.append((solution,curvars[0]))
-                    tree = self.AddSolution(solutions,raweqns,curvars[0:1],othersolvedvars+curvars[1:2],solsubs+self.Variable(curvars[1]).subs,endbranchtree,currentcases=currentcases)
+                    tree = self.AddSolution(solutions,raweqns,curvars[0:1],othersolvedvars+curvars[1:2],solsubs+self.Variable(curvars[1]).subs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
                     if tree is None:
                         return None
                     
                     return [AST.SolverFreeParameter(curvars[1].name, tree)]
                 else:
                     log.warn('almost found two axes but num solutions was: %r', [s.numsolutions()==1 for s in dummysolutions])
-
+                    
         for var0,var1,raweqns,complexity in curvarsubssol:
             try:
                 rawsolutions=self.SolvePrismaticHingePairVariables(raweqns,var0,var1,othersolvedvars,unknownvars=curvars+unknownvars)
                 for solution in rawsolutions:
                     #solution.subs(freevarinvsubs)
-                    self.solutionComplexity(solution,othersolvedvars,curvars)
+                    self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                     solutions.append((solution,Symbol(solution.jointname)))
                 if len(rawsolutions) > 0: # solving a pair is rare, so any solution will do
                     break
             except self.CannotSolveError:
                 pass
-                    
+            
         for var0,var1,raweqns,complexity in curvarsubssol:
             try:
                 rawsolutions=self.SolvePairVariables(raweqns,var0,var1,othersolvedvars,unknownvars=curvars+unknownvars)
             except self.CannotSolveError, e:
                 log.debug(e)
-                try:
-                    rawsolutions=self.SolvePrismaticHingePairVariables(raweqns,var0,var1,othersolvedvars,unknownvars=curvars+unknownvars)
-                except self.CannotSolveError, e:
-                    log.debug(e)
-                    rawsolutions = []
+#                 try:
+#                     rawsolutions=self.SolvePrismaticHingePairVariables(raweqns,var0,var1,othersolvedvars,unknownvars=curvars+unknownvars)
+#                 except self.CannotSolveError, e:
+#                     log.debug(e)
+                rawsolutions = []
             for solution in rawsolutions:
                 #solution.subs(freevarinvsubs)
-                self.solutionComplexity(solution,othersolvedvars,curvars)
+                self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                 solutions.append((solution,Symbol(solution.jointname)))
             if len(rawsolutions) > 0: # solving a pair is rare, so any solution will do
                 break
-
-            
+                        
         # take the least complex solution and go on
         if len(solutions) > 0:
-            return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
+            return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
         
         # test with higher degrees, necessary?
         for curvar in curvars:
@@ -5264,26 +5982,56 @@ class IKFastSolver(AutoReloader):
                 try:
                     log.info('testing with higher degrees')
                     solution=self.solveHighDegreeEquationsHalfAngle([raweqn],self.Variable(curvar))
-                    self.solutionComplexity(solution,othersolvedvars,curvars)
+                    self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
                     solutions.append((solution,curvar))
                 except self.CannotSolveError:
                     pass
-                
+               
         if len(solutions) > 0:
-            return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases)
+            return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
         
-        # solve with all 3 variables together
+        # solve with all 3 variables together?
         
-        # have got this far, so perhaps two axes are aligned?
-        raise self.CannotSolveError('SolveAllEquations failed to find a variable to solve')
-
-    def AddSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None):
+        # perhaps there's a degree of freedom that is not trivial to compute?
+       # take the highest hinge variable and set it
+        return self.GuessValuesAndSolveEquations(AllEquations, curvars, othersolvedvars, solsubs, endbranchtree, currentcases, unknownvars, currentcasesubs)
+    
+#         # have got this far, so perhaps two axes are aligned?
+#         raise self.CannotSolveError('SolveAllEquations failed to find a variable to solve')
+    
+    def _SubstituteGlobalSymbols(self, eq, globalsymbols=None):
+        if globalsymbols is None:
+            globalsymbols = self.globalsymbols
+        preveq = eq
+        neweq = preveq.subs(globalsymbols)
+        while preveq != neweq:
+            if not self.isValidSolution(neweq):
+                raise self.CannotSolveError('equation %r is not valid'%neweq)
+            
+            preveq = neweq
+            neweq = preveq.subs(globalsymbols)    
+        return neweq
+    
+    def _AddToGlobalSymbols(self, var, eq):
+        """adds to the global symbols, returns True if replaced with an existing entry
+        """
+        for iglobal, gvarexpr in enumerate(self.globalsymbols):
+            if var == gvarexpr[0]:
+                self.globalsymbols[iglobal] = (var, eq)
+                return True
+        self.globalsymbols.append((var, eq))
+        return False
+        
+    def AddSolution(self,solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree, currentcases=None, currentcasesubs=None, unknownvars=None):
         """Take the least complex solution of a set of solutions and resume solving
         """
+        self._scopecounter += 1
+        scopecounter = int(self._scopecounter)
         solutions = [s for s in solutions if s[0].score < oo and s[0].checkValidSolution()] # remove infinite scores
         if len(solutions) == 0:
             raise self.CannotSolveError('no valid solutions')
-        
+        if unknownvars is None:
+            unknownvars = []
         solutions.sort(lambda x, y: x[0].score-y[0].score)
         hasonesolution = False
         for solution in solutions:
@@ -5294,7 +6042,7 @@ class IKFastSolver(AutoReloader):
                 var = solution[1]
                 newvars=curvars[:]
                 newvars.remove(var)
-                return [solution[0].subs(solsubs)]+self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases)
+                return [solution[0].subs(solsubs)]+self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree, currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
             
         if not hasonesolution:
             # check again except without the number of solutions requirement
@@ -5305,8 +6053,9 @@ class IKFastSolver(AutoReloader):
                     var = solution[1]
                     newvars=curvars[:]
                     newvars.remove(var)
-                    return [solution[0].subs(solsubs)]+self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases)
-        
+                    return [solution[0].subs(solsubs)]+self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
+
+        originalGlobalSymbols = self.globalsymbols        
         # all solutions have check for zero equations
         # choose the variable with the shortest solution and compute (this is a conservative approach)
         usedsolutions = []
@@ -5339,6 +6088,8 @@ class IKFastSolver(AutoReloader):
         prevbranch=lastbranch
         if currentcases is None:
             currentcases = set()
+        if currentcasesubs is None:
+            currentcasesubs = list()
         if self.degeneratecases is None:
             self.degeneratecases = self.DegenerateCases()
         handledconds = self.degeneratecases.gethandledconds(currentcases)
@@ -5362,12 +6113,20 @@ class IKFastSolver(AutoReloader):
                     continue
                 
                 # bother trying to extract something if too complex (takes a lot of computation time to check and most likely nothing will be extracted). 100 is an arbitrary value
-                if self.codeComplexity(checkzero) > 120: 
-                    log.warn('checkforzero too big (%d): %s',self.codeComplexity(checkzero),checkzero)
-                    checkforzeros.append(checkzero)#self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True))
+                checkzeroComplexity = self.codeComplexity(checkzero)
+                if checkzeroComplexity > 120: 
+                    log.warn('checkforzero too big (%d): %s', checkzeroComplexity, checkzero)
+                    # don't even add it if it is too big
+                    if checkzeroComplexity < 500:
+                        checkforzeros.append(checkzero)#self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True))
                 else:
+                    checkzero = self._SubstituteGlobalSymbols(checkzero)
                     # fractions could get big, so evaluate directly
-                    checkforzeros.append(checkzero.evalf())#self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True)
+                    checkzeroeval = checkzero.evalf()
+                    if checkzeroComplexity < self.codeComplexity(checkzeroeval):
+                        checkforzeros.append(checkzero)
+                    else:
+                        checkforzeros.append(checkzero.evalf())#self.removecommonexprs(checkzero.evalf(),onlygcd=False,onlynumbers=True)
                     checksimplezeroexprs = [checkzero]
                     if not checkzero.has(*allothersolvedvars):
                         sumsquaresexprs = self._GetSumSquares(checkzero)
@@ -5393,8 +6152,8 @@ class IKFastSolver(AutoReloader):
                                 s = AST.SolverSolution(othervar.name,jointeval=[],isHinge=self.IsHinge(othervar.name))
                                 for value in [S.Zero,pi/2,pi,-pi/2]:
                                     try:
-                                        checkzerosub=checksimplezeroexpr.subs([(othervar,value),(sothervar,sin(value).evalf()),(cothervar,cos(value).evalf())])
-                                        if self.isValidSolution(checkzerosub) and checkzerosub.evalf() == S.Zero:
+                                        checkzerosub=checksimplezeroexpr.subs([(othervar,value),(sothervar,sin(value).evalf(n=30)),(cothervar,cos(value).evalf(n=30))])
+                                        if self.isValidSolution(checkzerosub) and checkzerosub.evalf(n=30) == S.Zero:
                                             if s.jointeval is None:
                                                 s.jointeval = []
                                             s.jointeval.append(S.One*value)
@@ -5423,29 +6182,30 @@ class IKFastSolver(AutoReloader):
                                     # can actually simplify Positions and possibly get a new solution!
                                     if s.jointeval is not None:
                                         for eq in s.jointeval:
+                                            eq = self._SubstituteGlobalSymbols(eq)
                                             # why checking for just number? ok to check if solution doesn't contain any other variableS?
                                             # if the equation is non-numerical, make sure it isn't deep in the degenerate cases
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 # TODO should use the fact that eq is imaginary
                                                 if isimaginary:
                                                     log.warn('eq %s is imaginary, but currently do not support this', eq)
                                                     continue
-
+                                                
                                                 dictequations = []
                                                 if not eq.is_number and not eq.has(*allothersolvedvars):
                                                     # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
                                                     sym = self.gsymbolgen.next()
                                                     dictequations.append((sym,eq))
-                                                    eq = sym
+                                                    #eq = sym
                                                     sineq = self.gsymbolgen.next()
-                                                    dictequations.append((sineq,sin(eq)))
+                                                    dictequations.append((sineq,self.SimplifyAtan2(sin(eq))))
                                                     coseq = self.gsymbolgen.next()
-                                                    dictequations.append((coseq,cos(eq)))
+                                                    dictequations.append((coseq,self.SimplifyAtan2(cos(eq))))
                                                 else:
-                                                    sineq = sin(eq).evalf()
-                                                    coseq = cos(eq).evalf()
-                                                cond=Abs(othervar-eq.evalf())
+                                                    sineq = sin(eq).evalf(n=30)
+                                                    coseq = cos(eq).evalf(n=30)
+                                                cond=Abs(othervar-eq.evalf(n=30))
                                                 if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
@@ -5454,22 +6214,23 @@ class IKFastSolver(AutoReloader):
                                                     localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sineq),(sin(othervar),sineq),(cothervar,coseq),(cos(othervar),coseq),(othervar,eq)], dictequations])
                                     elif s.jointevalsin is not None:
                                         for eq in s.jointevalsin:
+                                            eq = self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
                                                 dictequations = []
                                                 # test when cos(othervar) > 0
                                                 # don't use asin(eq)!! since eq = (-pz**2/py**2)**(1/2), which would produce imaginary numbers
-                                                #cond=othervar-asin(eq).evalf()
+                                                #cond=othervar-asin(eq).evalf(n=30)
                                                 # test if eq is imaginary, if yes, then only solution is when sothervar==0 and eq==0
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 if isimaginary:
-                                                    cond = abs(sothervar) + abs((eq**2).evalf()) + abs(sign(cothervar)-1)
+                                                    cond = abs(sothervar) + abs((eq**2).evalf(n=30)) + abs(sign(cothervar)-1)
                                                 else:
                                                     if not eq.is_number and not eq.has(*allothersolvedvars):
                                                         # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
                                                         sym = self.gsymbolgen.next()
                                                         dictequations.append((sym,eq))
-                                                        eq = sym
-                                                    cond=abs(sothervar-eq.evalf()) + abs(sign(cothervar)-1)
+                                                        #eq = sym
+                                                    cond=abs(sothervar-eq.evalf(n=30)) + abs(sign(cothervar)-1)
                                                 if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
@@ -5478,76 +6239,80 @@ class IKFastSolver(AutoReloader):
                                                     if isimaginary:
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,S.One),(cos(othervar),S.One),(othervar,S.One)], dictequations])
                                                     else:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf()),(cos(othervar),sqrt(1-eq*eq).evalf()),(othervar,asin(eq).evalf())], dictequations])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf(n=30)),(cos(othervar),sqrt(1-eq*eq).evalf(n=30)),(othervar,asin(eq).evalf(n=30))], dictequations])
                                                 # test when cos(othervar) < 0
                                                 if isimaginary:
-                                                    cond = abs(sothervar) + abs((eq**2).evalf()) + abs(sign(cothervar)+1)
+                                                    cond = abs(sothervar) + abs((eq**2).evalf(n=30)) + abs(sign(cothervar)+1)
                                                 else:
-                                                    cond=abs(sothervar-eq.evalf())+abs(sign(cothervar)+1)
-                                                #cond=othervar-(pi-asin(eq).evalf())
+                                                    cond=abs(sothervar-eq.evalf(n=30))+abs(sign(cothervar)+1)
+                                                #cond=othervar-(pi-asin(eq).evalf(n=30))
                                                 if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,-S.One),(cos(othervar),-S.One),(othervar,pi.evalf())], dictequations])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,-S.One),(cos(othervar),-S.One),(othervar,pi.evalf(n=30))], dictequations])
                                                     else:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf()),(cos(othervar),-sqrt(1-eq*eq).evalf()),(othervar,(pi-asin(eq)).evalf())], dictequations])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf(n=30)),(cos(othervar),-sqrt(1-eq*eq).evalf(n=30)),(othervar,(pi-asin(eq)).evalf(n=30))], dictequations])
                                     elif s.jointevalcos is not None:
                                         for eq in s.jointevalcos:
+                                            eq = self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
                                                 dictequations = []
                                                 # test when sin(othervar) > 0
                                                 # don't use acos(eq)!! since eq = (-pz**2/px**2)**(1/2), which would produce imaginary numbers
-                                                #cond=othervar-acos(eq).evalf()
-                                                isimaginary = self.IsImaginaryByEval(eq)
+                                                #cond=othervar-acos(eq).evalf(n=30)
+                                                isimaginary = self.AreAllImaginaryByEval(eq)
                                                 if isimaginary:
-                                                    cond=abs(cothervar)+abs((eq**2).evalf()) + abs(sign(sothervar)-1)
+                                                    cond=abs(cothervar)+abs((eq**2).evalf(n=30)) + abs(sign(sothervar)-1)
                                                 else:
                                                     if not eq.is_number and not eq.has(*allothersolvedvars):
                                                         # not dependent on variables, so it could be in the form of atan(px,py), so convert to a global symbol since it never changes
                                                         sym = self.gsymbolgen.next()
-                                                        self.globalsymbols.append((sym,eq))
+                                                        originalGlobalSymbols.append((sym,eq))
                                                         eq = sym
-                                                    cond=abs(cothervar-eq.evalf()) + abs(sign(sothervar)-1)
+                                                    cond=abs(cothervar-eq.evalf(n=30)) + abs(sign(sothervar)-1)
                                                 if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.One),(sin(othervar),S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(pi/2).evalf())], dictequations])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.One),(sin(othervar),S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(pi/2).evalf(n=30))], dictequations])
                                                     else:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sqrt(1-eq*eq).evalf()),(sin(othervar),sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf())], dictequations])
-                                                #cond=othervar+acos(eq).evalf()
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sqrt(1-eq*eq).evalf(n=30)),(sin(othervar),sqrt(1-eq*eq).evalf(n=30)),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf(n=30))], dictequations])
+                                                #cond=othervar+acos(eq).evalf(n=30)
                                                 if isimaginary:
-                                                    cond=abs(cothervar)+abs((eq**2).evalf()) + abs(sign(sothervar)+1)
+                                                    cond=abs(cothervar)+abs((eq**2).evalf(n=30)) + abs(sign(sothervar)+1)
                                                 else:
-                                                    cond=abs(cothervar-eq.evalf()) + abs(sign(sothervar)+1)
+                                                    cond=abs(cothervar-eq.evalf(n=30)) + abs(sign(sothervar)+1)
                                                 if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     if isimaginary:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-S.One),(sin(othervar),-S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(-pi/2).evalf())], dictequations])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-S.One),(sin(othervar),-S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(-pi/2).evalf(n=30))], dictequations])
                                                     else:
-                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-sqrt(1-eq*eq).evalf()),(sin(othervar),-sqrt(1-eq*eq).evalf()),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf())], dictequations])
+                                                        localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-sqrt(1-eq*eq).evalf(n=30)),(sin(othervar),-sqrt(1-eq*eq).evalf(n=30)),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf(n=30))], dictequations])
             flatzerosubstitutioneqs += localsubstitutioneqs
             zerosubstitutioneqs.append(localsubstitutioneqs)
             if not var in nextsolutions:
-                newvars=curvars[:]
-                newvars.remove(var)
-                olddegeneratecases = self.degeneratecases
-                self.degeneratecases = olddegeneratecases.clone()
-                nextsolutions[var] = self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases)
-                self.degeneratecases = olddegeneratecases
+                try:
+                    newvars=curvars[:]
+                    newvars.remove(var)
+                    olddegeneratecases = self.degeneratecases
+                    self.degeneratecases = olddegeneratecases.clone()
+                    nextsolutions[var] = self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
+                finally:
+                    self.degeneratecases = olddegeneratecases
             if len(checkforzeros) > 0:
-                hascheckzeros = True
-                solvercheckzeros = AST.SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True,thresh=solution.thresh)
+                hascheckzeros = True                
+                solvercheckzeros = AST.SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True,thresh=solution.GetZeroThreshold())
                 # have to transfer the dictionary!
-                solvercheckzeros.dictequations = solution.dictequations
+                solvercheckzeros.dictequations = originalGlobalSymbols + solution.dictequations
+                solvercheckzeros.equationsused = AllEquations
                 solution.dictequations = []
                 prevbranch=[solvercheckzeros]
             else:
@@ -5556,13 +6321,22 @@ class IKFastSolver(AutoReloader):
         if len(prevbranch) == 0:
             raise self.CannotSolveError('failed to add solution!')
         
-        if len(currentcases) >= 4:
-            log.warn('4 levels deep in checking degenerate cases, skipping...')
-            lastbranch.append(AST.SolverBreak())
+        if len(currentcases) >= self.maxcasedepth:
+            log.warn('c=%d, %d levels deep in checking degenerate cases, skipping...: %r', scopecounter, self.maxcasedepth, AllEquations)
+            lastbranch.append(AST.SolverBreak('%d cases reached'%self.maxcasedepth, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
             return prevbranch
         
         # fill the last branch with all the zero conditions
         if hascheckzeros:
+            # count the number of rotation symbols seen in the current cases
+            numRotSymbolsInCases = 0
+            if self._iktype == 'transform6d' or self._iktype == 'rotation3d':
+                rotsymbols = set(self.Tee[:3,:3]).union([Symbol('new_r00'), Symbol('new_r01'), Symbol('new_r02'), Symbol('new_r10'), Symbol('new_r11'), Symbol('new_r12'), Symbol('new_r20'), Symbol('new_r21'), Symbol('new_r22')])
+                for var, eq in currentcasesubs:
+                    if var in rotsymbols:
+                        numRotSymbolsInCases += 1
+            else:
+                rotsymbols = []
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
             # sometimes can get the following: cj3**2*sj4**2 + cj4**2
@@ -5579,46 +6353,65 @@ class IKFastSolver(AutoReloader):
                     
                     possiblesubs = []
                     ishinge = []
-                    for preal in [Symbol('px'),Symbol('py'),Symbol('pz')]:
+                    for preal in self.Tee[:3,3]:
                         if checkzero.has(preal):
                             possiblesubs.append([(preal,S.Zero)])
                             ishinge.append(False)
+                    # have to be very careful with the rotations since they are dependent on each other. For example if r00 and r01 are both 0, then r02 and r20 can never be 0 and either r10 or r11 has to be non-zero.
+                    if numRotSymbolsInCases < 2:
+                        for preal in rotsymbols:
+                            if checkzero.has(preal):
+                                possiblesubs.append([(preal,S.Zero)])
+                                ishinge.append(False)
                     for othervar in othersolvedvars:
-                        if not self.IsHinge(othervar.name):
-                            possiblesubs.append([(othervar,S.Zero)])
-                            ishinge.append(False)
-                            continue
-                        else:
-                            sothervar = Symbol('s%s'%othervar.name)
-                            cothervar = Symbol('c%s'%othervar.name)
-                            if checkzero.has(othervar,sothervar,cothervar):
+                        othervarobj = self.Variable(othervar)
+                        if checkzero.has(*othervarobj.vars):
+                            if not self.IsHinge(othervar.name):
+                                possiblesubs.append([(othervar,S.Zero)])
+                                ishinge.append(False)
+                                continue
+                            else:
+                                sothervar = othervarobj.svar
+                                cothervar = othervarobj.cvar
                                 for value in [S.Zero,pi/2,pi,-pi/2]:
-                                    possiblesubs.append([(othervar,value),(sothervar,sin(value).evalf()),(sin(othervar),sin(value).evalf()), (cothervar,cos(value).evalf()), (cos(othervar),cos(value).evalf())])
+                                    possiblesubs.append([(othervar,value),(sothervar,sin(value).evalf(n=30)),(sin(othervar),sin(value).evalf(n=30)), (cothervar,cos(value).evalf(n=30)), (cos(othervar),cos(value).evalf(n=30))])
                                     ishinge.append(True)
                     # all possiblesubs are present in checkzero
                     for ipossiblesub, possiblesub in enumerate(possiblesubs):
-                        eq = checkzero.subs(possiblesub).evalf()
+                        eq = checkzero.subs(possiblesub).evalf(n=30)
+                        if not self.isValidSolution(eq):
+                            continue
                         # only take the first index
                         possiblevar,possiblevalue = possiblesub[0]
-                        cond = Abs(possiblevar-possiblevalue.evalf())
+                        cond = Abs(possiblevar-possiblevalue.evalf(n=30))
                         if ishinge[ipossiblesub]:
                             evalcond = Abs(fmod(possiblevar-possiblevalue+pi,2*pi)-pi)
                         else:
                             evalcond = cond
                         if eq == S.Zero:
                             if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
+                                log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)
+                                # if the variable is 1 and part of the rotation matrix, can deduce other variables
+                                if possiblevar in rotsymbols and (possiblevalue == S.One or possiblevalue == -S.One):
+                                    row1 = int(possiblevar.name[-2])
+                                    col1 = int(possiblevar.name[-1])
+                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], row1, (col1+1)%3)), S.Zero))
+                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], row1, (col1+2)%3)), S.Zero))
+                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+1)%3, col1)), S.Zero))
+                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+2)%3, col1)), S.Zero))
                                 checkexpr = [[cond],evalcond,possiblesub, []]
                                 flatzerosubstitutioneqs.append(checkexpr)
                                 localsubstitutioneqs.append(checkexpr)
-                                log.info('%s=%s in %s',possiblevar, possiblevalue,checkzero)
                             continue
                         
                         # try another possiblesub
                         for ipossiblesub2, possiblesub2 in enumerate(possiblesubs[ipossiblesub+1:]):
-                            eq2 = eq.subs(possiblesub2).evalf()
+                            eq2 = eq.subs(possiblesub2).evalf(n=30)
+                            if not self.isValidSolution(eq2):
+                                continue
                             if eq2 == S.Zero:
                                 possiblevar2,possiblevalue2 = possiblesub2[0]
-                                cond2 = Abs(possiblevar2-possiblevalue2.evalf())
+                                cond2 = Abs(possiblevar2-possiblevalue2.evalf(n=30))
                                 if ishinge[ipossiblesub+ipossiblesub2+1]:
                                     evalcond2 = Abs(fmod(possiblevar2-possiblevalue2+pi,2*pi)-pi) + evalcond
                                 else:
@@ -5628,7 +6421,57 @@ class IKFastSolver(AutoReloader):
                                     checkexpr = [[cond2],evalcond2,possiblesub+possiblesub2, []]
                                     flatzerosubstitutioneqs.append(checkexpr)
                                     localsubstitutioneqs.append(checkexpr)
-                                    log.info('%s=%s,%s=%s in %s', possiblevar,possiblevalue,possiblevar2,possiblevalue2,checkzero)
+                                    # if the variables are both part of the rotation matrix and both zeros, can deduce other rotation variables
+                                    if self._iktype == 'transform6d' and possiblevar in rotsymbols and possiblevalue == S.Zero and possiblevar2 in rotsymbols and possiblevalue2 == S.Zero:
+                                        row1 = int(possiblevar.name[-2])
+                                        col1 = int(possiblevar.name[-1])
+                                        row2 = int(possiblevar2.name[-2])
+                                        col2 = int(possiblevar2.name[-1])
+                                        row3 = 3 - row1 - row2
+                                        col3 = 3 - col1 - col2
+                                        if row1 == row2:
+                                            # (row1, col3) is either 1 or -1, but don't know which.
+                                            # know that (row1+1,col3) and (row1+2,col3) are zero though...
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row2+1)%3, col3)), S.Zero))
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+2)%3, col3)), S.Zero))
+                                            # furthermore can defer that the left over 4 values are [cos(ang), sin(ang), cos(ang), -sin(ang)] = abcd
+                                            if row1 == 1:
+                                                minrow = 0
+                                                maxrow = 2
+                                            else:
+                                                minrow = (row1+1)%3
+                                                maxrow = (row1+2)%3
+                                            ra = Symbol('%s%d%d'%(possiblevar.name[:-2], minrow, col1))
+                                            rb = Symbol('%s%d%d'%(possiblevar.name[:-2], minrow, col2))
+                                            rc = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col1))
+                                            rd = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col2))
+                                            checkexpr[2].append((rb**2, S.One-ra**2))
+                                            checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
+                                            checkexpr[2].append((rc**2, S.One-ra**2))
+                                            checkexpr[2].append((rc, -rb))
+                                            checkexpr[2].append((rd, ra))
+                                        elif col1 == col2:
+                                            # (row3, col1) is either 1 or -1, but don't know which.
+                                            # know that (row3,col1+1) and (row3,col1+2) are zero though...
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], row3, (col1+1)%3)), S.Zero))
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], row3, (col1+2)%3)), S.Zero))
+                                            # furthermore can defer that the left over 4 values are [cos(ang), sin(ang), cos(ang), -sin(ang)] = abcd
+                                            if col1 == 1:
+                                                mincol = 0
+                                                maxcol = 2
+                                            else:
+                                                mincol = (col1+1)%3
+                                                maxcol = (col1+2)%3
+                                            ra = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, mincol))
+                                            rb = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, mincol))
+                                            rc = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, maxcol))
+                                            rd = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, maxcol))
+                                            checkexpr[2].append((rb**2, S.One-ra**2))
+                                            checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
+                                            checkexpr[2].append((rc**2, S.One-ra**2))
+                                            checkexpr[2].append((rc, -rb))
+                                            checkexpr[2].append((rd, ra))
+                                    log.info('dual constraint %r in %s', checkexpr[2],checkzero)
                 zerosubstitutioneqs.append(localsubstitutioneqs)
         # test the solutions
         # have to take the cross product of all the zerosubstitutioneqs in order to form stronger constraints on the equations because the following condition will be executed only if all SolverCheckZeros evalute to 0
@@ -5661,6 +6504,10 @@ class IKFastSolver(AutoReloader):
                     dictequations += subdictequations
                 if not duplicatesub:
                     flatzerosubstitutioneqs.append([cond,evalcond,othervarsubs,dictequations])
+        if self._iktype == 'transform6d' or self._iktype == 'rotation3d':
+            trysubstitutions = self.ppsubs+self.npxyzsubs+self.rxpsubs
+        else:
+            trysubstitutions = self.ppsubs
         for cond, evalcond, othervarsubs, dictequations in flatzerosubstitutioneqs:
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
@@ -5668,8 +6515,8 @@ class IKFastSolver(AutoReloader):
             othervarsubs = [(s,self.ConvertRealToRationalEquation(v)) for s,v in othervarsubs]
             NewEquations = [eq.subs(othervarsubs) for eq in AllEquations]
             NewEquationsClean = self.PropagateSolvedConstants(NewEquations, othersolvedvars, curvars)
+            
             try:
-                self.globalsymbols += dictequations
                 # forcing a value, so have to check if all equations in NewEquations that do not contain
                 # unknown variables are really 0
                 extrazerochecks=[]
@@ -5680,14 +6527,38 @@ class IKFastSolver(AutoReloader):
                         extrazerochecks=None
                         break
                     if not expr.has(*allvars) and self.CheckExpressionUnique(extrazerochecks,expr):
-                        extrazerochecks.append(expr.subs(solsubs).evalf())
+                        extrazerochecks.append(expr.subs(solsubs).evalf(n=30))
                 if extrazerochecks is not None:
                     newcases = set(currentcases)
                     for singlecond in cond:
                         newcases.add(singlecond)
                     if not self.degeneratecases.hascases(newcases):
+                        log.info('c=%d, starting newcases: %r', scopecounter, newcases)
                         if len(NewEquationsClean) > 0:
-                            newtree = self.SolveAllEquations(NewEquationsClean,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases)
+                            newcasesubs = currentcasesubs+othervarsubs
+                            self.globalsymbols = []
+                            for casesub in newcasesubs:
+                                self._AddToGlobalSymbols(casesub[0], casesub[1])
+                            extradictequations = []
+                            for s,v in trysubstitutions:
+                                neweq = v.subs(newcasesubs)
+                                if neweq != v:
+                                    # should we make sure we're not adding it a second time?
+                                    newcasesubs.append((s, neweq))
+                                    extradictequations.append((s, neweq))
+                                    self._AddToGlobalSymbols(s, neweq)
+                            for var, eq in chain(originalGlobalSymbols, dictequations):
+                                neweq = eq.subs(othervarsubs)
+                                if not self.isValidSolution(neweq):
+                                    raise self.CannotSolveError('equation %s is invalid because of the following substitutions: %s'%(eq, othervarsubs))
+                                
+                                if neweq == S.Zero:
+                                    extradictequations.append((var, S.Zero))
+                                self._AddToGlobalSymbols(var, neweq)
+                            if len(extradictequations) > 0:
+                                # have to re-substitute since some equations evaluated to zero
+                                NewEquationsClean = [eq.subs(extradictequations) for eq in NewEquationsClean]
+                            newtree = self.SolveAllEquations(NewEquationsClean,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases, currentcasesubs=newcasesubs, unknownvars=unknownvars)
                             accumequations.append(NewEquationsClean) # store the equations for debugging purposes
                         else:
                             log.info('there are no new equations, so most likely the following variables can be freely determined: %r', curvars)
@@ -5698,25 +6569,88 @@ class IKFastSolver(AutoReloader):
                                 newtree.append(AST.SolverSolution(curvar.name, jointeval=[S.Zero,pi/2,pi,-pi/2], isHinge=self.IsHinge(curvar.name)))
                             newtree += endbranchtree
                         zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations))
+                        log.info('c=%d, adding newcases: %r', scopecounter, newcases)
                         self.degeneratecases.addcases(newcases)
                     else:
                         log.warn('already has handled cases %r', newcases)                        
-            except self.CannotSolveError:
+            except self.CannotSolveError, e:
+                log.debug(e)
                 continue
             finally:
-                # remove the symbols just added
-                removesymbols = set([var for var,value in dictequations])
-                self.globalsymbols = [g for g in self.globalsymbols if not g[0] in removesymbols]
+                # restore the global symbols
+                self.globalsymbols = originalGlobalSymbols
                 
         if len(zerobranches) > 0:
-            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak()],[])])
+            branchconds = AST.SolverBranchConds(zerobranches+[(None,[AST.SolverBreak('branch miss %r'%curvars, [(var,self._SubstituteGlobalSymbols(eq)) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree)],[])])
             branchconds.accumequations = accumequations
             lastbranch.append(branchconds)
-        else:
-            lastbranch.append(AST.SolverBreak())
-
+        else:            
+            # add GuessValuesAndSolveEquations?
+            lastbranch.append(AST.SolverBreak('no branches %r'%curvars, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
+            
         return prevbranch
-
+    
+    def GuessValuesAndSolveEquations(self, AllEquations, curvars, othersolvedvars, solsubs, endbranchtree, currentcases=None, unknownvars=None, currentcasesubs=None):
+        # perhaps there's a degree of freedom that is not trivial to compute?
+        # take the highest hinge variable and set it
+        scopecounter = int(self._scopecounter)
+        hingevariables = [curvar for curvar in sorted(curvars,reverse=True) if self.IsHinge(curvar.name)]
+        if len(hingevariables) > 0 and len(curvars) >= 2:
+            curvar = hingevariables[0]
+            leftovervars = list(curvars)
+            leftovervars.remove(curvar)
+            newtree = [AST.SolverConditionedSolution([])]
+            zerovalues = []
+            for jointeval in [S.Zero,pi/2,pi,-pi/2]:
+                checkzeroequations = []
+                NewEquations = []
+                for eq in AllEquations:
+                    neweq = eq.subs(curvar, jointeval)
+                    neweqeval = neweq.evalf()
+                    if neweq.is_number:
+                        # if zero, then can ignore
+                        if neweq == S.Zero:
+                            continue
+                        # if not zero, then a contradiciton, so jointeval is bad
+                        NewEquations = None
+                        break                        
+                    if neweq.has(*leftovervars):
+                        NewEquations.append(neweq)
+                    else:
+                        checkzeroequations.append(neweq)
+                if NewEquations is None:
+                    continue
+                # check to make sure all leftover vars are in scope
+                cansolve = True
+                for leftovervar in leftovervars:
+                    if not any([eq.has(leftovervar) for eq in NewEquations]):
+                        cansolve = False
+                        break
+                if not cansolve:
+                    continue
+                if len(checkzeroequations) > 0:
+                    solution = AST.SolverSolution(curvar.name, jointeval=[jointeval], isHinge=self.IsHinge(curvar.name))
+                    solution.checkforzeros = checkzeroequations
+                    solution.FeasibleIsZeros = True
+                    newtree[0].solversolutions.append(solution)
+                else:
+                    # one value is enough
+                    zerovalues.append(jointeval)
+            if len(zerovalues) > 0:
+                # prioritize these solutions since they don't come with any extra checks
+                solution = AST.SolverSolution(curvar.name, jointeval=zerovalues, isHinge=self.IsHinge(curvar.name))
+                solution.FeasibleIsZeros = True
+                newtree = [solution]
+            elif len(newtree[0].solversolutions) == 0:
+                # nothing found so remove the condition node
+                newtree = []
+            if len(newtree) > 0:
+                log.warn('c=%d, think there is a free variable, but cannot solve relationship, so setting variable %s', scopecounter, curvar)
+                newtree += self.SolveAllEquations(AllEquations, leftovervars, othersolvedvars+[curvar], solsubs+self.Variable(curvar).subs, endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
+                return newtree
+            
+        raise self.CannotSolveError('cannot find a good variable')
+    
     def SolvePairVariablesHalfAngle(self,raweqns,var0,var1,othersolvedvars,subs=None):
         """solves equations of two variables in sin and cos
         """
@@ -5858,7 +6792,7 @@ class IKFastSolver(AutoReloader):
                             try:
                                 linearsolutions = self.solveVariablesLinearly(possibilities,othersolvedvars)
                                 # if can solve for a unique solution linearly, then prioritize this over anything
-                                prevsolution = AST.SolverBreak()
+                                prevsolution = AST.SolverBreak('SolvePairVariablesHalfAngle fail')
                                 for divisor,linearsolution in linearsolutions:
                                     assert(len(linearsolution)==1)
                                     divisorsymbol = self.gsymbolgen.next()
@@ -5900,7 +6834,7 @@ class IKFastSolver(AutoReloader):
         elif solutions[1] is not None:
             pfinals = solutions[1]
             ileftvar = 1
-
+        
         dictequations = []
         if pfinals is None:
             #simplifyfn = self._createSimplifyFn(self.freejointvars,self.freevarsubs,self.freevarsubsinv)
@@ -5929,9 +6863,12 @@ class IKFastSolver(AutoReloader):
                         for i in range(shape[0]):
                             for j in range(shape[1]):
                                 if Mall[idegree][i,j] != S.Zero:
-                                    sym = self.gsymbolgen.next()
-                                    Malltemp[idegree][i,j] = sym
-                                    dictequations.append((sym,Mall[idegree][i,j]))
+                                    if self.codeComplexity(Mall[idegree][i,j])>5:
+                                        sym = self.gsymbolgen.next()
+                                        Malltemp[idegree][i,j] = sym
+                                        dictequations.append((sym,Mall[idegree][i,j]))
+                                    else:
+                                        Malltemp[idegree][i,j] = Mall[idegree][i,j]
                         M += Malltemp[idegree]*leftvar**idegree
                     tempsymbols = [self.gsymbolgen.next() for i in range(16)]
                     tempsubs = []
@@ -5960,29 +6897,42 @@ class IKFastSolver(AutoReloader):
                     det = Poly(S.Zero,leftvar)
                     for eq in eqadds:
                         det += eq
-#                     if len(Mall) == 2:
-#                         log.info('attempting to simplify determinant...')
-#                         newdet = Poly(S.Zero,leftvar)
-#                         for m,c in det.terms():
-#                             newc = self.trigsimp(c.subs(dictequations),othersolvedvars)
-#                             newdet += newc*leftvar**m[0]
-#                         dictequations = []
-#                         det = newdet
+                    if len(Mall) <= 3:
+                        # need to simplify further since self.globalsymbols can have important substitutions that can yield the entire determinant to zero
+                        log.info('attempting to simplify determinant...')
+                        newdet = Poly(S.Zero,leftvar)
+                        for m,c in det.terms():
+                            origComplexity = self.codeComplexity(c)
+                            # 100 is a guess
+                            if origComplexity < 100:
+                                neweq = c.subs(dictequations)
+                                if self.codeComplexity(neweq) < 100:
+                                    neweq = self._SubstituteGlobalSymbols(neweq).expand()
+                                    newComplexity = self.codeComplexity(neweq)
+                                    if newComplexity < origComplexity:
+                                        c = neweq
+                            newdet += c*leftvar**m[0]
+                        det = newdet
+                    if det.degree(0) <= 0:
+                        continue
                     pfinals = [det]
                     break
                 except self.CannotSolveError,e:
                     log.debug(e)
-
+                    
         if pfinals is None:
-            raise self.CannotSolveError('SolvePairVariablesHalfAngle: solve dialytically with %d equations'%(len(polyeqs)))
-
+            raise self.CannotSolveError('SolvePairVariablesHalfAngle: failed to solve dialytically with %d equations'%(len(polyeqs)))
+        
         jointsol = 2*atan(varsyms[ileftvar].htvar)
         solution = AST.SolverPolynomialRoots(jointname=varsyms[ileftvar].name,poly=pfinals[0],jointeval=[jointsol],isHinge=self.IsHinge(varsyms[ileftvar].name))
         solution.checkforzeros = []
         solution.postcheckforzeros = []
-        solution.postcheckfornonzeros = [peq.as_expr() for peq in pfinals[1:]]
+        if len(pfinals) > 1:
+            # verify with at least one solution
+            solution.postcheckfornonzeros = [peq.as_expr() for peq in pfinals[1:2]]
         solution.postcheckforrange = []
         solution.dictequations = dictequations
+        solution.thresh = 1e-9 # depending on the degree, can expect small coefficients to be still valid
         solution.AddHalfTanValue = True
         return [solution]
 
@@ -6132,9 +7082,13 @@ class IKFastSolver(AutoReloader):
         polyeqs = []
         for eq in lineareqs:
             trigsubs = [(varsym.svar**2,1-varsym.cvar**2), (varsym.svar**3,varsym.svar*(1-varsym.cvar**2))]
-            peq = Poly(eq.subs(varsym.subs).subs(trigsubs),varsym.cvar,varsym.svar)
+            try:
+                peq = Poly(eq.subs(varsym.subs).subs(trigsubs),varsym.cvar,varsym.svar)
+            except PolynomialError, e:
+                raise self.CannotSolveError('solveHighDegreeEquationsHalfAngle: poly error (%r)'%eq)
+            
             if peq.has(varsym.var):
-                raise self.CannotSolveError('expecting only sin and cos! %s'%peq)
+                raise self.CannotSolveError('solveHighDegreeEquationsHalfAngle: expecting only sin and cos! %s'%peq)
             
             if sum(peq.degree_list()) == 0:
                 continue
@@ -6164,7 +7118,7 @@ class IKFastSolver(AutoReloader):
             finaleq = simplify(peq.as_expr()).expand()
             pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),varsym.htvar)
             pfinal = self.checkFinalEquation(pfinal,subs)
-            if pfinal is not None:
+            if pfinal is not None and pfinal.degree(0) > 0:
                 jointsol = 2*atan(varsym.htvar)
                 solution = AST.SolverPolynomialRoots(jointname=varsym.name,poly=pfinal,jointeval=[jointsol],isHinge=self.IsHinge(varsym.name))
                 solution.AddHalfTanValue = True
@@ -6244,6 +7198,7 @@ class IKFastSolver(AutoReloader):
         
 
         # prioritize finding a solution when var is alone
+        returnfirstsolutions = []
         for eq in eqns:
             symbolgen = cse_main.numbered_symbols('const')
             eqnew, symbols = self.groupTerms(eq.subs(varsym.subs), vars, symbolgen)
@@ -6260,15 +7215,26 @@ class IKFastSolver(AutoReloader):
                 tempsolutions = solve(eqnew,var)
                 jointsolutions = [self.trigsimp(s.subs(symbols),othersolvedvars) for s in tempsolutions]
                 if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
-                    return [AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name))]
+                    # check if any solutions don't have divide by zero problems
+                    returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                    hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
+                    if not hasdividebyzero:
+                        return returnfirstsolutions
             
             numvar = self.countVariables(eqnew,varsym.htvar)
             if Poly(eqnew,varsym.htvar).TC() != S.Zero and numvar >= 1 and numvar <= 2:
                 tempsolutions = solve(eqnew,varsym.htvar)
                 jointsolutions = [2*atan(self.trigsimp(s.subs(symbols),othersolvedvars)) for s in tempsolutions]
                 if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
-                    return [AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name))]
+                    returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                    hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
+                    if not hasdividebyzero:
+                        return returnfirstsolutions
                 
+        if len(returnfirstsolutions) > 0:
+            # already computed some solutions, so return them, note that this means that all solutions have a divide-by-zero condition
+            return returnfirstsolutions
+        
         solutions = []
         if len(eqns) > 1:
             neweqns = []
@@ -6276,19 +7242,25 @@ class IKFastSolver(AutoReloader):
             symbolgen = cse_main.numbered_symbols('const')
             for e in eqns:
                 enew, symbols = self.groupTerms(e.subs(varsym.subs),[varsym.cvar,varsym.svar,var], symbolgen)
-                # remove coupled equations
-                if any([(m[0]>0)+(m[1]>0)+(m[2]>0)>1 for m in Poly(enew,varsym.cvar,varsym.svar,var).monoms()]):
+                try:
+                    # remove coupled equations
+                    if any([(m[0]>0)+(m[1]>0)+(m[2]>0)>1 for m in Poly(enew,varsym.cvar,varsym.svar,var).monoms()]):
+                        continue
+                except PolynomialError:
                     continue
-                
-                # ignore any equations with degree 3 or more
-                if max(Poly(enew,varsym.svar).degree_list()) > maxdegree or max(Poly(enew,varsym.cvar).degree_list()) > maxdegree:
-                    log.debug('ignoring equation: ',enew)
+                try:
+                    # ignore any equations with degree 3 or more
+                    if max(Poly(enew,varsym.svar).degree_list()) > maxdegree or max(Poly(enew,varsym.cvar).degree_list()) > maxdegree:
+                        log.debug('ignoring equation: ',enew)
+                        continue
+                except PolynomialError:
                     continue
-                
-                if Poly(enew,varsym.svar).TC() == S.Zero or Poly(enew,varsym.cvar) == S.Zero or Poly(enew,varsym.var) == S.Zero:
-                    log.debug('equation %s is allowing trivial solution for variable %s, ignoring ',e,varsym.name)
+                try:
+                    if Poly(enew,varsym.svar).TC() == S.Zero or Poly(enew,varsym.cvar) == S.Zero or Poly(enew,varsym.var) == S.Zero:
+                        log.debug('equation %s is allowing trivial solution for variable %s, ignoring ',e,varsym.name)
+                        continue
+                except PolynomialError:
                     continue
-                
                 rank = self.codeComplexity(enew)
                 for s in symbols:
                     rank += self.codeComplexity(s[1])
@@ -6327,11 +7299,15 @@ class IKFastSolver(AutoReloader):
                     goodsolution = 0
                     for svarsol,cvarsol in sollist:
                         # solutions cannot be trivial
-                        if (svarsol-cvarsol).subs(listsymbols).expand() == S.Zero:
+                        soldiff = (svarsol-cvarsol).subs(listsymbols)
+                        soldiffComplexity = self.codeComplexity(soldiff)
+                        if soldiffComplexity < 1000 and soldiff.expand() == S.Zero:
                             break
-                        if svarsol.subs(listsymbols).expand() == S.Zero and Abs(cvarsol.subs(listsymbols).expand()) - S.One != S.Zero:
+                        svarComplexity = self.codeComplexity(svarsol.subs(listsymbols))
+                        cvarComplexity = self.codeComplexity(cvarsol.subs(listsymbols))
+                        if (svarComplexity < 600 and svarsol.subs(listsymbols).expand() == S.Zero) and (cvarComplexity < 600 and Abs(cvarsol.subs(listsymbols).expand()) - S.One != S.Zero):
                             break
-                        if cvarsol.subs(listsymbols).expand() == S.Zero and Abs(svarsol.subs(listsymbols).expand()) - S.One != S.Zero:
+                        if (cvarComplexity < 600 and cvarsol.subs(listsymbols).expand() == S.Zero) and (svarComplexity < 600 and Abs(svarsol.subs(listsymbols).expand()) - S.One != S.Zero):
                             break
                         # check the numerator and denominator if solutions are the same or for possible divide by zeros
                         svarfrac=fraction(svarsol)
@@ -6370,7 +7346,7 @@ class IKFastSolver(AutoReloader):
                         # sometimes the returned simplest solution makes really gross approximations
                         svarfracsimp_denom = self.trigsimp(svarfrac[1],othersolvedvars)
                         cvarfracsimp_denom = self.trigsimp(cvarfrac[1],othersolvedvars)
-                        # self.simplifyTransform could help in reducing denoms further...
+                        # self.SimplifyTransform could help in reducing denoms further...
                         denomsequal = False
                         if self.equal(svarfracsimp_denom,cvarfracsimp_denom):
                             denomsequal = True
@@ -6411,7 +7387,7 @@ class IKFastSolver(AutoReloader):
                                 solversolution.equationsused = eqns
                             if len(solversolution.equationsused) > 0:
                                 log.info('%s solution: equations used for atan2: %s',var.name, str(solversolution.equationsused))
-                        if len(self.checkForDivideByZero(expandedsol.subs(solversolution.dictequations))) == 0:
+                        if len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(expandedsol.subs(solversolution.dictequations)))) == 0:
                             goodsolution += 1
                     if len(solversolution.jointeval) == len(sollist) and len(sollist) > 0:
                         solutions.append(solversolution)
@@ -6469,7 +7445,7 @@ class IKFastSolver(AutoReloader):
                 if m is not None:
                     symbols += [(varsym.svar,sin(var)),(varsym.cvar,cos(var))]
                     asinsol = trigsimp(asin(-m[c]/Abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols),deep=True)
-                    constsol = -atan2(m[a],m[b]).subs(symbols).evalf()
+                    constsol = self._SubstituteGlobalSymbols(-atan2(m[a],m[b]).subs(symbols)).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                     if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                         #self.checkForDivideByZero(expandedsol)
@@ -6506,7 +7482,12 @@ class IKFastSolver(AutoReloader):
                     pass
             if numcvar == 0 and numsvar == 0:
                 tempsolutions = solve(eqnew,var)
-                jointsolutions = [self.trigsimp(s.subs(symbols),othersolvedvars) for s in tempsolutions]
+                jointsolutions = []
+                for s in tempsolutions:
+                    eqsub = s.subs(symbols)
+                    if self.codeComplexity(eqsub) < 2000:
+                        eqsub = self.trigsimp(eqsub,othersolvedvars)
+                    jointsolutions.append(eqsub)
                 if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions) > 0:
                     solutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
                     solutions[-1].equationsused = equationsused
@@ -7006,21 +7987,34 @@ class IKFastSolver(AutoReloader):
     def _GetSumSquares(expr):
         """if expr is a sum of squares, returns the list of individual expressions that were squared. otherwise returns None
         """
-        if not expr.is_Add:
-            if expr.is_Pow and expr.args[1].is_number and expr.args[1] > 0 and (expr.args[1]%2) == 0:
-                return [expr.args[0]]
-            
-            return None
-        
         values = []
-        for arg in expr.args:
-            if not arg.is_Pow or not arg.args[1].is_number or not arg.args[1] > 0 or (arg.args[1]%2) != 0:
-                return None
-            values.append(arg.args[0])
+        if expr.is_Add:
+            for arg in expr.args:
+                if arg.is_Pow and arg.exp.is_number and arg.exp > 0 and (arg.exp%2) == 0:
+                    values.append(arg.base)
+                else:
+                    return []
+                
+        elif expr.is_Mul:
+            values = IKFastSolver._GetSumSquares(expr.args[0])
+            for arg in expr.args[1:]:
+                values2 = IKFastSolver._GetSumSquares(arg)
+                if len(values2) > 0:
+                    values = [x*y for x,y in product(values,values2)]
+                else:
+                    values = [x*arg for x in values]
+            return values
+        
+        else:
+            if expr.is_Pow and expr.exp.is_number and expr.exp > 0 and (expr.exp%2) == 0:
+                values.append(expr.base)
+            
         return values
     
     @staticmethod
     def recursiveFraction(expr):
+        """return the numerator and denominator of th eexpression as if it was one fraction
+        """
         if expr.is_Add:
             allpoly = []
             finaldenom = S.One
@@ -7057,7 +8051,11 @@ class IKFastSolver(AutoReloader):
         if symbolgen is None:
             symbolgen = cse_main.numbered_symbols('const')
         symbols = []
-        p = Poly(expr,*vars)
+        try:
+            p = Poly(expr,*vars)
+        except PolynomialError:
+            return expr, symbols
+        
         newexpr = S.Zero
         for m,c in p.terms():
             # make huge numbers into constants too
@@ -7116,15 +8114,25 @@ class IKFastSolver(AutoReloader):
             return n
         return []
 
-    def IsImaginaryByEval(self, eq):
+    def IsAnyImaginaryByEval(self, eq):
         """checks if an equation ever evaluates to an imaginary number
         """
         for testconsistentvalue in self.testconsistentvalues:
             value = eq.subs(testconsistentvalue).evalf()
             if value.is_complex and not value.is_real:
                 return True
-
+            
         return False
+
+    def AreAllImaginaryByEval(self, eq):
+        """checks if an equation ever evaluates to an imaginary number
+        """
+        for testconsistentvalue in self.testconsistentvalues:
+            value = eq.subs(testconsistentvalue).evalf()
+            if not (value.is_complex and not value.is_real):
+                return False
+            
+        return True
     
     def IsDeterminantNonZeroByEval(self, A):
         """checks if a determinant is non-zero by evaluating all the possible solutions.

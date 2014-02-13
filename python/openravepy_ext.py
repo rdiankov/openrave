@@ -111,6 +111,20 @@ class openrave_exception(Exception):
         except AttributeError:
             return super(openrave_exception,self).__getattribute__(attr)
 
+class std_exception(Exception):
+    """wrap up the C++ std_exception"""
+    def __init__( self, app_error ):
+        Exception.__init__( self )
+        self._pimpl = app_error
+    def __str__( self ):
+        return self._pimpl.message()
+    def __getattribute__(self, attr):
+        my_pimpl = super(std_exception, self).__getattribute__("_pimpl")
+        try:
+            return getattr(my_pimpl, attr)
+        except AttributeError:
+            return super(std_exception,self).__getattribute__(attr)
+
 class runtime_error(Exception):
     """wrap up the C++ runtime_error"""
     def __init__( self, app_error ):
@@ -124,7 +138,7 @@ class runtime_error(Exception):
             return getattr(my_pimpl, attr)
         except AttributeError:
             return super(runtime_error,self).__getattribute__(attr)
-
+        
 class PlanningError(Exception):
     def __init__(self,parameter=u'', recoverySuggestions=None):
         """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
@@ -134,13 +148,14 @@ class PlanningError(Exception):
             self.recoverySuggestions = []
         else:
             self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
+            
     def __unicode__(self):
-        s = u'<h3>Planning Error</h3>\n<p>%s</p>'%self.parameter
+        s = u'Planning Error\n%s'%self.parameter
         if len(self.recoverySuggestions) > 0:
-            s += u'\n<p>Recovery Suggestions:</p>\n<ul>'
+            s += u'\nRecovery Suggestions:\n'
             for suggestion in self.recoverySuggestions:
-                s += u'<li>%s</li>\n'%unicode(suggestion)
-            s += u'</ul>\n'
+                s += u'- %s\n'%unicode(suggestion)
+            s += u'\n'
         return s
         
     def __str__(self):
@@ -154,7 +169,7 @@ class PlanningError(Exception):
     
     def __ne__(self, r):
         return self.parameter != r.parameter or self.recoverySuggestions != r.recoverySuggestions
-
+    
 # deprecated
 planning_error = PlanningError
 
@@ -245,12 +260,26 @@ def quatArrayTDist(q,qarray):
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""
     return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))
 
-def transformPoints(T,points):
+def TransformPoints(T,points):
     """Transforms a Nxk array of points by an affine matrix"""
     kminus = T.shape[1]-1
     return numpy.dot(points,numpy.transpose(T[0:kminus,0:kminus]))+numpy.tile(T[0:kminus,kminus],(len(points),1))
 
-def transformInversePoints(T,points):
+transformPoints = TransformPoints # deprecated
+
+def TransformInversePoints(T,points):
     """Transforms a Nxk array of points by the inverse of an affine matrix"""
     kminus = T.shape[1]-1
     return numpy.dot(points-numpy.tile(T[0:kminus,kminus],(len(points),1)),T[0:kminus,0:kminus])
+
+transformInversePoints = TransformInversePoints # deprecated
+
+def ComputePoseArrayDistSqr(pose0, posearray, quatweight=1.0):
+    """computes the squared distance between pose0 and all poses in posearray
+    """
+    pose0tiled = tile(pose0, (len(posearray),1))
+    diff2 = numpy.abs(pose0tiled - posearray)**2
+    qdists0 = numpy.sum(pose0tiled[:,0:4], 1)
+    qdists1 = numpy.sum((pose0tiled[:,0:4]-posearray[:,0:4])**2, 1)
+    return minimum(qdists0, qdists1)*quatweight + numpy.sum(diff2[:, 4:7], 1)
+

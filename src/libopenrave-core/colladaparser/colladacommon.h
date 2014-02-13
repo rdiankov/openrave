@@ -94,7 +94,7 @@ public:
     std::vector<ModelBinding> _bindingModelURIs;
     std::vector<AxisBinding> _bindingAxesSIDs;
     std::list<AxisBinding> _bindingPassiveAxesSIDs;
-    std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node)
+    std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node). same order as link indices
 };
 
 typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
@@ -122,6 +122,8 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaXMLReadable::Binding)
 
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts);
+bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
+bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
 bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
 bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
 bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
@@ -141,6 +143,18 @@ namespace OpenRAVE
 {
 
 inline bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+    return false;
+}
+
+inline bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
+{
+    RAVELOG_ERROR("collada files not supported\n");
+    return false;
+}
+
+inline bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;

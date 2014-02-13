@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#define BOOST_ENABLE_ASSERT_HANDLER
 #include "bindings.h"
 
 namespace mydetail {

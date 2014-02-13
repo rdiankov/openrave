@@ -58,6 +58,21 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     }
 }
 
+RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::AttachedSensorInfo& info)
+{
+    _name = info._name;
+    _probot = probot;
+    pattachedlink = probot->GetLink(info._linkname);
+    trelative = info._trelative;
+    psensor = RaveCreateSensor(probot->GetEnv(), info._sensorname);
+    if( !!psensor ) {
+        if(!!info._sensorgeometry) {
+            psensor->SetSensorGeometry(info._sensorgeometry);
+        }
+        pdata = psensor->CreateSensorData();
+    }
+}
+
 RobotBase::AttachedSensor::~AttachedSensor()
 {
 }
@@ -132,7 +147,9 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
-    _RestoreRobot(_probot);
+    if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentId() != 0 ) {
+        _RestoreRobot(_probot);
+    }
 }
 
 void RobotBase::RobotStateSaver::Restore(boost::shared_ptr<RobotBase> robot)
@@ -254,9 +271,9 @@ void RobotBase::Destroy()
     KinBody::Destroy();
 }
 
-bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos)
+bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::vector<RobotBase::ManipulatorInfoConstPtr>& manipinfos, const std::vector<RobotBase::AttachedSensorInfoConstPtr>& attachedsensorinfos, const std::string& uri)
 {
-    if( !KinBody::Init(linkinfos, jointinfos) ) {
+    if( !KinBody::Init(linkinfos, jointinfos, uri) ) {
         return false;
     }
     _vecManipulators.resize(0);
@@ -310,6 +327,13 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Trans
 void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms)
 {
     KinBody::SetLinkTransformations(transforms);
+    _UpdateGrabbedBodies();
+    _UpdateAttachedSensors();
+}
+
+void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
+{
+    KinBody::SetLinkTransformations(transforms,doflastsetvalues);
     _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
@@ -1413,6 +1437,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
+    _ParametersChanged(Prop_RobotGrabbed);
     return true;
 }
 
@@ -1446,6 +1471,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
+    _ParametersChanged(Prop_RobotGrabbed);
     return true;
 }
 
@@ -1456,6 +1482,7 @@ void RobotBase::Release(KinBodyPtr pbody)
         if( KinBodyPtr(pgrabbed->_pgrabbedbody) == pbody ) {
             _vGrabbedBodies.erase(itgrabbed);
             _RemoveAttachedBody(pbody);
+            _ParametersChanged(Prop_RobotGrabbed);
             return;
         }
     }
@@ -1465,14 +1492,17 @@ void RobotBase::Release(KinBodyPtr pbody)
 
 void RobotBase::ReleaseAllGrabbed()
 {
-    FOREACH(itgrabbed, _vGrabbedBodies) {
-        GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-        KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-        if( !!pbody ) {
-            _RemoveAttachedBody(pbody);
+    if( _vGrabbedBodies.size() > 0 ) {
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pbody ) {
+                _RemoveAttachedBody(pbody);
+            }
         }
+        _vGrabbedBodies.clear();
+        _ParametersChanged(Prop_RobotGrabbed);
     }
-    _vGrabbedBodies.clear();
 }
 
 void RobotBase::RegrabAll()
@@ -1549,31 +1579,34 @@ void RobotBase::GetGrabbedInfo(std::vector<RobotBase::GrabbedInfoPtr>& vgrabbedi
 void RobotBase::ResetGrabbed(const std::vector<RobotBase::GrabbedInfoConstPtr>& vgrabbedinfo)
 {
     ReleaseAllGrabbed();
-    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-    CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
-    FOREACHC(itgrabbedinfo, vgrabbedinfo) {
-        GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
-        KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
-        KinBody::LinkPtr pRobotLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
-        OPENRAVE_ASSERT_FORMAT(!!pbody && !!pRobotLinkToGrabWith, "robot %s invalid grab arguments",GetName(), ORE_InvalidArguments);
-        OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(), "robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
-        if( IsGrabbing(pbody) ) {
-            RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
-            continue;
-        }
+    if( vgrabbedinfo.size() > 0 ) {
+        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
+        FOREACHC(itgrabbedinfo, vgrabbedinfo) {
+            GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
+            KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
+            KinBody::LinkPtr pRobotLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
+            OPENRAVE_ASSERT_FORMAT(!!pbody && !!pRobotLinkToGrabWith, "robot %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+            OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(), "robot %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
+            if( IsGrabbing(pbody) ) {
+                RAVELOG_VERBOSE(str(boost::format("Robot %s: body %s already grabbed\n")%GetName()%pbody->GetName()));
+                continue;
+            }
 
-        GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
-        pgrabbed->_troot = pgrabbedinfo->_trelative;
-        pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
-        Transform tlink = pRobotLinkToGrabWith->GetTransform();
-        Transform tbody = tlink * pgrabbed->_troot;
-        pbody->SetTransform(tbody);
-        // set velocity
-        std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
-        velocity.first += velocity.second.cross(tbody.trans - tlink.trans);
-        pbody->SetVelocity(velocity.first, velocity.second);
-        _vGrabbedBodies.push_back(pgrabbed);
-        _AttachBody(pbody);
+            GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
+            pgrabbed->_troot = pgrabbedinfo->_trelative;
+            pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
+            Transform tlink = pRobotLinkToGrabWith->GetTransform();
+            Transform tbody = tlink * pgrabbed->_troot;
+            pbody->SetTransform(tbody);
+            // set velocity
+            std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
+            velocity.first += velocity.second.cross(tbody.trans - tlink.trans);
+            pbody->SetVelocity(velocity.first, velocity.second);
+            _vGrabbedBodies.push_back(pgrabbed);
+            _AttachBody(pbody);
+        }
+        _ParametersChanged(Prop_RobotGrabbed);
     }
 }
 
@@ -1691,6 +1724,44 @@ void RobotBase::RemoveManipulator(ManipulatorPtr manip)
             return;
         }
     }
+}
+
+RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::AttachedSensorInfo& attachedsensorinfo, bool removeduplicate)
+{
+    OPENRAVE_ASSERT_OP(attachedsensorinfo._name.size(),>,0);
+    int iremoveindex = -1;
+    for(int iasensor = 0; iasensor < (int)_vecSensors.size(); ++iasensor) {
+        if( _vecSensors[iasensor]->GetName() == attachedsensorinfo._name ) {
+            if( removeduplicate ) {
+                iremoveindex = iasensor;
+                break;
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT("attached sensor with name %s already exists",attachedsensorinfo._name,ORE_InvalidArguments);
+            }
+        }
+    }
+    AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),attachedsensorinfo));
+    //newattachedsensor->_ComputeInternalInformation();
+    if( iremoveindex >= 0 ) {
+        // replace the old one
+        _vecSensors[iremoveindex] = newattachedsensor;
+    }
+    else {
+        _vecSensors.push_back(newattachedsensor);
+    }
+    __hashrobotstructure.resize(0);
+    return newattachedsensor;
+}
+
+RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& name) const
+{
+    FOREACHC(itsensor, _vecSensors) {
+        if( (*itsensor)->GetName() == name ) {
+            return *itsensor;
+        }
+    }
+    return RobotBase::AttachedSensorPtr();
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.

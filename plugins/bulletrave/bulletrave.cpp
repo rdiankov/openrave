@@ -14,18 +14,26 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
-
+#include "bulletphysics.h"
+#include "bulletcollision.h"
 #include <openrave/plugin.h>
 
 CollisionCheckerBasePtr CreateBulletCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
-PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);
+
+static std::list< OpenRAVE::UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
+    if( !s_listRegisteredReaders ) {
+        s_listRegisteredReaders = new list< OpenRAVE::UserDataPtr >();
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"bulletproperties",BulletPhysicsEngine::CreateXMLReader));
+    }
+
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "bullet") {
             return CreateBulletCollisionChecker(penv,sinput);
+	     
         }
         break;
     case OpenRAVE::PT_PhysicsEngine:
@@ -47,4 +55,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
+	delete s_listRegisteredReaders;
+	s_listRegisteredReaders = NULL;
 }

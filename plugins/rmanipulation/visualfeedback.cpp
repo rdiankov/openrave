@@ -152,6 +152,18 @@ public:
 
     class VisibilityConstraintFunction
     {
+        class SampleRaysScope
+        {
+public:
+            SampleRaysScope(VisibilityConstraintFunction& vcf) : _vcf(vcf) {
+                _vcf._bSamplingRays = true;
+            }
+            ~SampleRaysScope() {
+                _vcf._bSamplingRays = false;
+            }
+private:
+            VisibilityConstraintFunction& _vcf;
+        };
 public:
         VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
             _report.reset(new CollisionReport());
@@ -168,11 +180,16 @@ public:
                 vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
 
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
-                _ptargetbox->InitFromBoxes(vboxes,false);
+                _ptargetbox->InitFromBoxes(vboxes,true);
                 _ptargetbox->SetName("__visualfeedbacktest__");
-                _ptargetbox->GetEnv()->Add(_ptargetbox,true);
+                _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
                 _ptargetbox->Enable(false);
                 _ptargetbox->SetTransform(_vf->_target->GetTransform());
+            }
+            _ikreturn.reset(new IkReturn(IKRA_Success));
+            _bSamplingRays = false;
+            if( _vf->_bIgnoreSensorCollision && !!_vf->_sensorrobot ) {
+                _collisionfn = _vf->_target->GetEnv()->RegisterCollisionCallback(boost::bind(&VisibilityConstraintFunction::_IgnoreCollisionCallback,this,_1,_2));
             }
         }
         virtual ~VisibilityConstraintFunction() {
@@ -184,7 +201,7 @@ public:
             Transform ttarget = _vf->_target->GetTransform();
             TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
             if( !InConvexHull(tcamera) ) {
-                RAVELOG_DEBUG("box not in camera vision hull (shouldn't happen due to preprocessing\n");
+                RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
             if( IsOccluded(tcamera) ) {
@@ -202,30 +219,31 @@ public:
         }
 
         /// samples the ik
-        /// If camera is attached to robot, assume target is not movable and takes camera position.
-        /// If camera is not attached to robot, assume target is movable and takes in target position.
+        /// If camera is attached to robot, assume target is not movable and t is the camera position.
+        /// If camera is not attached to robot, assume target is movable and t is the target position.
         bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample)
         {
-            Transform tcamera, ttarget;
+            Transform tCameraInTarget, ttarget;
             if( _vf->_robot != _vf->_sensorrobot ) {
                 ttarget = t;
-                tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
+                tCameraInTarget = ttarget.inverse()*_vf->_psensor->GetTransform();
             }
             else {
                 ttarget = _vf->_target->GetTransform();
-                tcamera = ttarget.inverse()*t;
+                tCameraInTarget = ttarget.inverse()*t;
             }
-            if( !InConvexHull(tcamera) ) {
+            if( !InConvexHull(tCameraInTarget) ) {
                 RAVELOG_DEBUG("box not in camera vision hull: %s\n");
                 return false;
             }
 
             // object is inside, find an ik solution
             Transform tgoalee = t*_vf->_ttogripper;
-            if( !_vf->_pmanip->FindIKSolution(tgoalee,_vsolution,true) ) {
-                RAVELOG_VERBOSE("no valid ik\n");
+            if( !_vf->_pmanip->FindIKSolution(tgoalee,IKFO_CheckEnvCollisions, _ikreturn) ) {
+                RAVELOG_VERBOSE_FORMAT("no valid ik 0x%.8x", _ikreturn->_action);
                 return false;
             }
+            _vsolution.swap(_ikreturn->_vsolution); // for now swap until this->_vsolution is removed
 
             // convert the solution into active dofs
             _vf->_robot->GetActiveDOFValues(pNewSample);
@@ -236,17 +254,17 @@ public:
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
 
-            return !IsOccluded(tcamera);
+            return !IsOccluded(tCameraInTarget);
         }
 
-        /// \param tcamera in target coordinate system
+        /// \param tCameraInTarget in target coordinate system
         /// \param mindist Minimum distance to keep from the plane (should be non-negative)
-        bool InConvexHull(const TransformMatrix& tcamera, dReal mindist=0)
+        bool InConvexHull(const TransformMatrix& tCameraInTarget, dReal mindist=0)
         {
             _vconvexplanes3d.resize(_vf->_vconvexplanes.size());
             for(size_t i = 0; i < _vf->_vconvexplanes.size(); ++i) {
-                _vconvexplanes3d[i] = tcamera.rotate(_vf->_vconvexplanes[i]);
-                _vconvexplanes3d[i].w = -tcamera.trans.dot3(_vconvexplanes3d[i]) - mindist;
+                _vconvexplanes3d[i] = tCameraInTarget.rotate(_vf->_vconvexplanes[i]);
+                _vconvexplanes3d[i].w = -tCameraInTarget.trans.dot3(_vconvexplanes3d[i]) - mindist;
             }
             FOREACH(itobb,_vTargetOBBs) {
                 if( !geometry::IsOBBinConvexHull(*itobb,_vconvexplanes3d) ) {
@@ -258,45 +276,25 @@ public:
 
         /// check if any part of the environment or robot is in front of the camera blocking the object
         /// sample object's surface and shoot rays
-        /// \param tcameras in target coordinate system
-        bool IsOccluded(const TransformMatrix& tcamera)
+        /// \param tCameraInTarget in target coordinate system
+        bool IsOccluded(const TransformMatrix& tCameraInTarget)
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target,KinBody::Save_LinkEnable);
-            TransformMatrix tcamerainv = tcamera.inverse();
+            TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
             Transform ttarget = _vf->_target->GetTransform();
             _ptargetbox->SetTransform(ttarget);
-            Transform tworldcamera = ttarget*tcamera;
+            Transform tworldcamera = ttarget*tCameraInTarget;
             _ptargetbox->Enable(true);
-            _vf->_target->Enable(false);
+            //_vf->_target->Enable(false);
+            SampleRaysScope srs(*this);
             FOREACH(itobb,_vTargetOBBs) {
-                OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
+                OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
                     return true;
                 }
             }
             return false;
-        }
-
-        bool TestRay(const Vector& v, const TransformMatrix& tcamera)
-        {
-            RAY r;
-            dReal filen = 1/RaveSqrt(v.lengthsqr3());
-            r.dir = tcamera.rotate((2.0f*filen)*v);
-            r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
-            if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
-                return true;         // not supposed to happen, but it is OK
-            }
-
-            //            RaveVector<float> vpoints[2];
-            //            vpoints[0] = r.pos;
-            //            vpoints[1] = _report.contacts[0].pos;
-            //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
-            if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
-                Vector v = _report->contacts.at(0).pos;
-                RAVELOG_VERBOSE(str(boost::format("bad collision: %s: %f %f %f\n")%_report->__str__()%v.x%v.y%v.z));
-            }
-            return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
         }
 
         /// check if just the rigidly attached links of the gripper are in the way
@@ -320,17 +318,45 @@ public:
             _ptargetbox->SetTransform(ttarget);
             Transform tworldcamera = ttarget*tcamera;
             _ptargetbox->Enable(true);
-            _vf->_target->Enable(false);
+            //_vf->_target->Enable(false);
+            SampleRaysScope srs(*this);
             FOREACH(itobb,_vTargetOBBs) {
                 OBB cameraobb = geometry::TransformOBB(tcamerainv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), 0.0f) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRayRigid, this, _1, boost::ref(tworldcamera),boost::ref(vattachedlinks)), 0.0f) ) {
                     return true;
                 }
             }
             return false;
         }
 
-        bool TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
+private:
+        bool _TestRay(const Vector& v, const TransformMatrix& tcamera)
+        {
+            RAY r;
+            dReal filen = 1/RaveSqrt(v.lengthsqr3());
+            r.dir = tcamera.rotate((2.0f*filen)*v);
+            r.pos = tcamera.trans + 0.5f*_vf->_fRayMinDist*r.dir;         // move the rays a little forward
+            if( !_vf->_robot->GetEnv()->CheckCollision(r,_report) ) {
+                return true;         // not supposed to happen, but it is OK
+            }
+
+            //            RaveVector<float> vpoints[2];
+            //            vpoints[0] = r.pos;
+            //            vpoints[1] = _report.contacts[0].pos;
+            //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
+            if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
+                if( _report->contacts.size() > 0 ) {
+                    Vector v = _report->contacts.at(0).pos;
+                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%v.x%v.y%v.z);
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("bad collision: %s", _report->__str__());
+                }
+            }
+            return !!_report->plink1 && _report->plink1->GetParent() == _ptargetbox;
+        }
+
+        bool _TestRayRigid(const Vector& v, const TransformMatrix& tcamera, const vector<KinBody::LinkPtr>& vattachedlinks)
         {
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
             RAY r((_vf->_fRayMinDist*filen)*v,(2.0f*filen)*v);
@@ -341,12 +367,38 @@ public:
             return true;
         }
 
-private:
+        CollisionAction _IgnoreCollisionCallback(CollisionReportPtr preport, bool IsCalledFromPhysicsEngine)
+        {
+            if( _bSamplingRays ) {
+                if( !!preport->plink1 ) {
+                    if(  !preport->plink1->IsVisible() || preport->plink1->GetParent() == _vf->_sensorrobot ) {
+                        return CA_Ignore;
+                    }
+                    // replaced the real target with convex hull
+                    if( preport->plink1->GetParent() == _vf->_target ) {
+                        return CA_Ignore;
+                    }
+                }
+                if( !!preport->plink2 ) {
+                    if( !preport->plink2->IsVisible() || preport->plink2->GetParent() == _vf->_sensorrobot ) {
+                        return CA_Ignore;
+                    }
+                    // replaced the real target with convex hull
+                    if( preport->plink2->GetParent() == _vf->_target ) {
+                        return CA_Ignore;
+                    }
+                }
+            }
+            return CA_DefaultAction;
+        }
+        bool _bSamplingRays;
         boost::shared_ptr<VisualFeedback> _vf;
         KinBodyPtr _ptargetbox;         ///< box to represent the target for simulating ray collisions
+        UserDataPtr _collisionfn;
 
         vector<OBB> _vTargetOBBs;         // object links local AABBs
         vector<dReal> _vsolution;
+        IkReturnPtr _ikreturn;
         CollisionReportPtr _report;
         AABB _abTarget;         // target aabb
         vector<Vector> _vconvexplanes3d;
@@ -414,6 +466,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
   :height: 200\n\
 ";
         _fMaxVelMult=1;
+        _bIgnoreSensorCollision = false;
         _bCameraOnManip = false;
         _fSampleRayDensity = 0.001;
         _fAllowableOcclusion = 0.1;
@@ -455,6 +508,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         string robotname;
         _fMaxVelMult=1;
         ss >> robotname;
+        _bIgnoreSensorCollision = false;
         string cmd;
         while(!ss.eof()) {
             ss >> cmd;
@@ -464,7 +518,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
             if( cmd == "maxvelmult" ) {
                 ss >> _fMaxVelMult;
             }
-
+            else if( cmd == "ignoresensorcollision" ) {
+                ss >> _bIgnoreSensorCollision;
+            }
             if( ss.fail() || !ss ) {
                 break;
             }
@@ -1268,6 +1324,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
 protected:
     RobotBasePtr _robot, _sensorrobot;
+    bool _bIgnoreSensorCollision; ///< if true will ignore any collisions with vf->_sensorrobot
     KinBodyPtr _target;
     dReal _fMaxVelMult;
     RobotBase::AttachedSensorPtr _psensor;

@@ -233,8 +233,6 @@ public:
             return PS_Failed;
         }
 
-        _inittraj = ptraj;
-
         //Writing the incoming traj
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
@@ -261,28 +259,21 @@ public:
         vector<dReal> vtrajpoints;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,posspec);
 
+        ParabolicRamp::Vector tol = _parameters->_vConfigResolution;
+        FOREACH(it,tol) {
+            *it *= _parameters->_pointtolerance;
+        }
+        ParabolicRamp::RampFeasibilityChecker checker(this,tol);
+        checker.constraintsmask = CFO_CheckEnvCollisions|CFO_CheckSelfCollisions|CFO_CheckTimeBasedConstraints|CFO_CheckUserConstraints;
+        RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
+
         try {
-            ParabolicRamp::Vector tol = _parameters->_vConfigResolution;
-            FOREACH(it,tol) {
-                *it *= _parameters->_pointtolerance;
-            }
-            ParabolicRamp::RampFeasibilityChecker checker(this,tol);
-            checker.constraintsmask = CFO_CheckEnvCollisions|CFO_CheckSelfCollisions|CFO_CheckTimeBasedConstraints|CFO_CheckUserConstraints;
-            RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
-
-
-            /////////////////////////////////////////////////////////////////////////
-            /////////////////////////  Convert to ramps /////////////////////////////
-            /////////////////////////////////////////////////////////////////////////
-
+            //  Convert to ramps
             std::list<ParabolicRamp::ParabolicRampND> ramps,ramps2;
-
             std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posspec._vgroups.at(0), false);
             OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "failed to find group %s in passed in trajectory", posspec._vgroups.at(0).name, ORE_InvalidArguments);
 
-
-            ////////////////// Case 1 : Initial traj is quadratic ////////////////////
-
+            // Case 1 : Initial traj is quadratic
             // assumes that the traj has velocity data and is consistent, so convert the original trajectory in a sequence of ramps, and preserve velocity
             if (_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
                 RAVELOG_VERBOSE("Initial traj is piecewise quadratic\n");
@@ -324,16 +315,15 @@ public:
                     res = mergewaypoints::IterativeMergeRampsNoDichotomy(ramps,ramps2, _parameters, upperbound, stepsize, _bCheckControllerTimeStep, _uniformsampler,checker,options);
                 }
                 if(!res) {
-                    throw OPENRAVE_EXCEPTION_FORMAT0("Could not obtain a feasible trajectory from initial quadratic trajectory",ORE_Assert);
+                    std::string filename = _DumpTrajectory(ptraj, Level_Verbose);
+                    RAVELOG_WARN("Could not obtain a feasible trajectory from initial quadratic trajectory\n");
+                    return PS_Failed;
                 }
                 RAVELOG_DEBUG("Cool: obtained a feasible trajectory from initial quadratic trajectory\n");
                 ramps.swap(ramps2);
             }
-
-
-            ////////////////// Case 2 : Initial traj is linear ////////////////////////
-
             else {
+                // Case 2 : Initial traj is linear
                 RAVELOG_VERBOSE("Initial traj is piecewise linear\n");
                 ParabolicRamp::Vector q(_parameters->GetDOF());
                 vector<ParabolicRamp::Vector> path;
@@ -378,14 +368,13 @@ public:
                 // and guarantees that that two waypoints are at least _parameters->minswitchtime away
                 // Note that this should never fail if initial traj is collision-free
                 // and if dynamics is always satisfied at zero velocity
-                SetMilestones(ramps, path,checker);
+                if( !SetMilestones(ramps, path,checker) ) {
+                    _DumpTrajectory(ptraj, Level_Verbose);
+                    return PS_Failed;
+                }
             }
 
-
-            /////////////////////////////////////////////////////////////////////////
-            ////////////////////////////  Shortcutting //////////////////////////////
-            /////////////////////////////////////////////////////////////////////////
-
+            //  Shortcutting
             // Break into unitary ramps
             mergewaypoints::BreakIntoUnitaryRamps(ramps);
 
@@ -396,12 +385,9 @@ public:
                 int iramp = 0;
                 FOREACHC(itramp,ramps){
                     if(!checker.Check(*itramp,options)) {
-                        string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                        RAVELOG_WARN(str(boost::format("Ramp %d/%d of original traj invalid, writing to %s")%iramp%ramps.size()%filename));
-                        ofstream f(filename.c_str());
-                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ptraj->serialize(f);
-                        throw OPENRAVE_EXCEPTION_FORMAT0("Original ramps invalid!", ORE_Assert);
+                        _DumpTrajectory(ptraj, Level_Verbose);
+                        RAVELOG_WARN_FORMAT("Ramp %d/%d of original traj invalid", iramp%ramps.size());
+                        return PS_Failed;
                     }
                     ++iramp;
                 }
@@ -453,10 +439,7 @@ public:
                 }
                 totaltime = mergewaypoints::ComputeRampsDuration(ramps);
 
-
-                //////////////////////////////////////////////////////////////////////////
-                //////////////////////  Further merge if possible ////////////////////////
-                //////////////////////////////////////////////////////////////////////////
+                //  Further merge if possible
 
                 int options = 0xffff;
                 dReal upperbound = 1.05;
@@ -489,6 +472,10 @@ public:
             if( status == PS_Interrupted ) {
                 return PS_Interrupted;
             }
+            else if( !(status & PS_HasSolution) ) {
+                _DumpTrajectory(ptraj, Level_Verbose);
+                return status;
+            }
 
             if( _dummytraj->GetNumWaypoints() == 0 ) {
                 // most likely a trajectory with the same start and end points were given, so return a similar trajectory
@@ -503,20 +490,32 @@ public:
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
-                ofstream f(filename.c_str());
-                f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                ptraj->serialize(f);
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
-            }
+            _DumpTrajectory(ptraj, Level_Verbose);
+            RAVELOG_WARN_FORMAT("parabolic planner failed: %s", ex.what());
             return PS_Failed;
         }
+
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return PS_HasSolution;
+    }
+
+    std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level)
+    {
+        if( IS_DEBUGLEVEL(level) ) {
+            std::string filename = _DumpTrajectory(traj);
+            RavePrintfA(str(boost::format("wrote parabolicsmoothing trajectory to %s")%filename), level);
+            return filename;
+        }
+        return std::string();
+    }
+    std::string _DumpTrajectory(TrajectoryBasePtr traj)
+    {
+        // store the trajectory
+        string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        traj->serialize(f);
+        return filename;
     }
 
     /// \brief converts ramps to an openrave trajectory structure. If return is PS_HasSolution, _dummytraj has the converted result
@@ -567,7 +566,9 @@ public:
                 // part of original trajectory which might not have been processed with perturbations, so ignore them
                 int options = 0xffff; // no perturbation
                 if( !pchecker->Check(*itrampnd,options)) {
-                    throw OPENRAVE_EXCEPTION_FORMAT0("original ramp does not satisfy constraints!", ORE_Assert);
+                    // unfortunately happens sometimes when the robot is close to corners.. not sure if returning is failing is the right solution here..
+                    RAVELOG_WARN("original ramp does not satisfy constraints!\n");
+                    return PS_Failed;
                 }
                 _progress._iteration+=1;
                 if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -575,11 +576,13 @@ public:
                 }
             }
 
-            if( itrampnd->ramps.at(0).tswitch1 > 0 && itrampnd->ramps.at(0).tswitch1 < itrampnd->endTime-g_fEpsilonLinear ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
+            if( itrampnd->ramps.at(0).tswitch1 > 0 && itrampnd->ramps.at(0).tswitch1 < itrampnd->endTime-ParabolicRamp::EpsilonT ) {
+                RAVELOG_WARN("ramp is not unitary\n");
+                return PS_Failed;
             }
-            if( itrampnd->ramps.at(0).tswitch2 > 0 && itrampnd->ramps.at(0).tswitch2 < itrampnd->endTime-g_fEpsilonLinear ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("ramp is not unitary", ORE_Assert);
+            if( itrampnd->ramps.at(0).tswitch2 > 0 && itrampnd->ramps.at(0).tswitch2 < itrampnd->endTime-ParabolicRamp::EpsilonT ) {
+                RAVELOG_WARN("ramp is not unitary\n");
+                return PS_Failed;
             }
 
             _vtrajpointscache.resize(newspec.GetDOF());
@@ -595,7 +598,7 @@ public:
         return PS_HasSolution;
     }
 
-    void SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
+    bool SetMilestones(std::list<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& x, ParabolicRamp::RampFeasibilityChecker& check){
 
         ramps.clear();
         if(x.size()==1) {
@@ -612,14 +615,8 @@ public:
                 std::list<ParabolicRamp::ParabolicRampND> tmpramps0, tmpramps1;
                 bool cansetmilestone = mergewaypoints::ComputeLinearRampsWithConstraints(tmpramps0,x[i],x[i+1],_parameters,check,options);
                 if( !cansetmilestone ) {
-                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                        string filename = str(boost::format("%s/inittraj%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                        RAVELOG_VERBOSE_FORMAT("Writing original traj to %s", filename);
-                        ofstream f(filename.c_str());
-                        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        _inittraj->serialize(f);
-                    }
-                    throw OPENRAVE_EXCEPTION_FORMAT("linear ramp %d-%d (of %d) failed to pass constraints", i%(i+1)%x.size(), ORE_Assert);
+                    RAVELOG_INFO_FORMAT("linear ramp %d-%d (of %d) failed to pass constraints", i%(i+1)%x.size());
+                    return false;
                 }
                 dReal tmpduration = mergewaypoints::ComputeRampsDuration(tmpramps0);
                 if( tmpduration > 0 ) {
@@ -634,6 +631,7 @@ public:
                 }
             }
         }
+        return true;
     }
 
 // Check whether the shortcut end points (t1,t2) are similar to already attempted shortcut end points
@@ -1097,7 +1095,7 @@ protected:
     std::vector<dReal> _vtrajpointscache;
 
     std::list< ManipConstraintInfo > _listCheckManips;
-    TrajectoryBasePtr _dummytraj,_inittraj;
+    TrajectoryBasePtr _dummytraj;
     bool _bCheckControllerTimeStep; ///< if set to true (default), then constraints all switch points to be a multiple of _parameters->_fStepLength
     bool _bmanipconstraints; /// if true, check workspace manip constraints
     PlannerProgress _progress;

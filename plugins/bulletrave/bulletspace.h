@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Contributors: 2010 Nick Hillier, Katrina Monkley CSIRO Autonomous Systems Lab, 2010-2011 Max Argus
+// 		 2013 Theodoros Stouraitis and Praveen Ramanujam
+
 #ifndef OPENRAVE_BULLET_SPACE
 #define OPENRAVE_BULLET_SPACE
 
@@ -59,7 +61,7 @@ public:
             virtual void setWorldTransform(const btTransform& centerOfMassWorldTrans)
             {
                 //m_graphicsWorldTrans = centerOfMassWorldTrans * m_centerOfMassOffset;
-                RAVELOG_INFO(plink->GetName());
+                //RAVELOG_INFO(plink->GetName()); //This info is eats up the terminal
                 plink->SetTransform(GetTransform(centerOfMassWorldTrans)*tlocal.inverse());
             }
 
@@ -141,7 +143,7 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.000001)
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the values needs to be changed. There will be an XML interface for fmargin.
     {
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -157,7 +159,7 @@ private:
 
             btCompoundShape* pshapeparent = new btCompoundShape();
             link->shape.reset(pshapeparent);
-            pshapeparent->setMargin(fmargin);     // need to set margin very small (we're not simulating anyway)
+            pshapeparent->setMargin(fmargin);     // need to set margin very small for collision : 0.000001
 
             // add all the correct geometry objects
             FOREACHC(itgeom, (*itlink)->GetGeometries()) {
@@ -233,8 +235,13 @@ private:
             if( _bPhysics ) {
                 // set the mass and inertia and extract the eigenvectors of the tensor
                 btVector3 localInertia = GetBtVector((*itlink)->GetPrincipalMomentsOfInertia());
+		
                 dReal mass = (*itlink)->GetMass();
-                if( mass <= 0 ) {
+                // -> bullet expects static objects to have zero mass                
+		if((*itlink)->IsStatic()){
+			mass = 0;
+		}
+                if( mass < 0 ) {
                     RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass));
                     mass = 1e-7;
                 }
@@ -257,8 +264,8 @@ private:
             // Static rigidbodies: zero mass, cannot move but just collide
             // Kinematic rigidbodies: zero mass, can be animated by the user, but there will be only one-way interaction
             link->obj->setCollisionFlags((*itlink)->IsStatic() ? btCollisionObject::CF_KINEMATIC_OBJECT : 0);
-
-            if( _bPhysics ) {
+           // --> check for static
+           if( _bPhysics && !(*itlink)->IsStatic() ) {
                 _worlddynamics->addRigidBody(link->_rigidbody.get());
             }
             else {
@@ -299,6 +306,12 @@ private:
                     btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
                     btVector3 axisInB = GetBtVector(t1inv.rotate((*itjoint)->GetAxis(0)));
                     boost::shared_ptr<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
+                    //hinge->setParam(BT_CONSTRAINT_STOP_ERP,0.8);
+                    //hinge->setParam(BT_CONSTRAINT_STOP_CFM,0);
+                    //hinge->setParam(BT_CONSTRAINT_CFM,0);
+                    vector<dReal> vupper,vlower;
+                    (*itjoint)->GetLimits(vlower,vupper);
+                    hinge->setLimit(vlower.at(0),vupper.at(0),0.9f,0.9f,1.0f);
                     if( !(*itjoint)->IsCircular(0) ) {
                         vector<dReal> vlower, vupper;
                         (*itjoint)->GetLimits(vlower,vupper);
@@ -389,7 +402,7 @@ private:
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
         KinBodyInfo::MAPJOINTS::const_iterator it;
-        pinfo->_mapjoints.find(pjoint);
+        it =  pinfo->_mapjoints.find(pjoint);   //  --> fixed bug
         BOOST_ASSERT(it != pinfo->_mapjoints.end());
         return it->second;
     }
@@ -412,6 +425,10 @@ private:
     static inline btVector3 GetBtVector(const Vector &v)
     {
         return btVector3(v.x,v.y,v.z);
+    }
+    bool IsInitialized() {
+       		// return !!_world;
+		return !!_worlddynamics;
     }
 
 

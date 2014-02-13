@@ -233,7 +233,7 @@ class GraspingModel(DatabaseGenerator):
         self.translationstepmult = None
         self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices())}
         self.graspindices = dict()
         self.totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -498,6 +498,7 @@ class GraspingModel(DatabaseGenerator):
                     self.env.UpdatePublishedBodies()
                 grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                 grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                grasp[self.graspindices.get('igraspfinalfingers')] = finalconfig[0][self.manip.GetGripperIndices()]
                 grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
                 self.robot.SetTransform(Trobotorig) # transform back to original position for checkgraspfn
                 if not forceclosure or mindist >= forceclosurethreshold:
@@ -602,6 +603,7 @@ class GraspingModel(DatabaseGenerator):
 
                     grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                     grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                    grasp[self.graspindices.get('igraspfinalfingers')] = finalshape[self.manip.GetGripperIndices()]
                     grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
                     if not forceclosurethreshold or mindist >= forceclosurethreshold:
                         grasp[self.graspindices.get('performance')] = self._ComputeGraspPerformance(grasp)

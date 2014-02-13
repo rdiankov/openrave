@@ -13,6 +13,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+// shouldn't include openrave.h!
 #ifndef OPENRAVE_BOOST_PYTHON_BINDINGS
 #define OPENRAVE_BOOST_PYTHON_BINDINGS
 
@@ -51,9 +53,11 @@
 #include <stdexcept>
 #include <typeinfo>
 
+// apparently there's a problem with higher versions of C++
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-#define FOREACH(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); )
+#include <typeinfo>
+#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
 #else
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
@@ -105,6 +109,9 @@ public:
 template <typename T>
 inline std::vector<T> ExtractArray(const object& o)
 {
+    if( o == object() ) {
+        return std::vector<T>();
+    }
     std::vector<T> v(len(o));
     for(size_t i = 0; i < v.size(); ++i) {
         v[i] = extract<T>(o[i]);

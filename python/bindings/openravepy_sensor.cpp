@@ -19,6 +19,76 @@
 
 namespace openravepy {
 
+class PyCameraIntrinsics
+{
+public:
+    PyCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics = SensorBase::CameraIntrinsics())
+    {
+        numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
+        arr.resize(3,3);
+        K = arr;
+        distortion_model = intrinsics.distortion_model;
+        distortion_coeffs = toPyArray(intrinsics.distortion_coeffs);
+        focal_length = intrinsics.focal_length;
+    }
+    virtual ~PyCameraIntrinsics() {
+    }
+
+    virtual SensorBase::CameraIntrinsics GetCameraIntrinsics()
+    {
+        SensorBase::CameraIntrinsics intrinsics;
+        if( K == object() ) {
+            intrinsics.fx = 0;
+            intrinsics.fy = 0;
+            intrinsics.cx = 0;
+            intrinsics.cy = 0;
+        }
+        else {
+            intrinsics.fx = boost::python::extract<dReal>(K[0][0]);
+            intrinsics.fy = boost::python::extract<dReal>(K[1][1]);
+            intrinsics.cx = boost::python::extract<dReal>(K[0][2]);
+            intrinsics.cy = boost::python::extract<dReal>(K[1][2]);
+        }
+        intrinsics.distortion_model = distortion_model;
+        intrinsics.distortion_coeffs = ExtractArray<dReal>(distortion_coeffs);
+        intrinsics.focal_length = focal_length;
+        return intrinsics;
+    }
+    object K;
+    string distortion_model;
+    object distortion_coeffs;
+    dReal focal_length;
+};
+
+class PyCameraGeomData : public PySensorGeometry
+{
+public:
+    PyCameraGeomData() {
+        width = 0;
+        height = 0;
+    }
+    PyCameraGeomData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : intrinsics(pgeom->intrinsics)
+    {
+        width = pgeom->width;
+        height = pgeom->height;
+    }
+    virtual ~PyCameraGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_Camera;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::CameraGeomData> geom(new SensorBase::CameraGeomData());
+        geom->width = width;
+        geom->height = height;
+        geom->intrinsics = intrinsics.GetCameraIntrinsics();
+        return geom;
+    }
+
+    PyCameraIntrinsics intrinsics;
+    int width, height;
+};
+
 class PySensorBase : public PyInterfaceBase
 {
 protected:
@@ -40,6 +110,7 @@ public:
         virtual ~PySensorData() {
         }
 
+
         SensorBase::SensorType type;
         uint64_t stamp;
         object transform;
@@ -58,35 +129,13 @@ public:
         }
         virtual ~PyLaserSensorData() {
         }
-
         object positions, ranges, intensity;
-    };
-
-    class PyCameraIntrinsics
-    {
-public:
-        PyCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics = SensorBase::CameraIntrinsics())
-        {
-            numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
-            arr.resize(3,3);
-            K = arr;
-            distortion_model = intrinsics.distortion_model;
-            distortion_coeffs = toPyArray(intrinsics.distortion_coeffs);
-            focal_length = intrinsics.focal_length;
-        }
-        virtual ~PyCameraIntrinsics() {
-        }
-
-        object K;
-        string distortion_model;
-        object distortion_coeffs;
-        dReal focal_length;
     };
 
     class PyCameraSensorData : public PySensorData
     {
 public:
-        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->KK)
+        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom, boost::shared_ptr<SensorBase::CameraSensorData> pdata) : PySensorData(pdata), intrinsics(pgeom->intrinsics)
         {
             if( (int)pdata->vimagedata.size() != pgeom->height*pgeom->width*3 ) {
                 throw openrave_exception("bad image data");
@@ -99,7 +148,6 @@ public:
                 }
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
-            KK = intrinsics.K;
         }
         PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : PySensorData(SensorBase::ST_Camera)
         {
@@ -110,7 +158,7 @@ public:
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
             {
-                numeric::array arr(boost::python::make_tuple(pgeom->KK.fx,0,pgeom->KK.cx,0,pgeom->KK.fy,pgeom->KK.cy,0,0,1));
+                numeric::array arr(boost::python::make_tuple(pgeom->intrinsics.fx,0,pgeom->intrinsics.cx,0,pgeom->intrinsics.fy,pgeom->intrinsics.cy,0,0,1));
                 arr.resize(3,3);
                 KK = arr;
             }
@@ -423,6 +471,16 @@ PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& 
     return PySensorBasePtr(new PySensorBase(p,pyenv));
 }
 
+PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr pgeom)
+{
+    if( !!pgeom ) {
+        if( pgeom->GetType() == SensorBase::ST_Camera ) {
+            return PySensorGeometryPtr(new PyCameraGeomData(boost::static_pointer_cast<SensorBase::CameraGeomData>(pgeom)));
+        }
+    }
+    return PySensorGeometryPtr();
+}
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
 
 void init_openravepy_sensor()
@@ -447,11 +505,11 @@ void init_openravepy_sensor()
                        .def("__repr__",&PySensorBase::__repr__)
         ;
 
-        class_<PySensorBase::PyCameraIntrinsics, boost::shared_ptr<PySensorBase::PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
-        .def_readonly("K",&PySensorBase::PyCameraIntrinsics::K)
-        .def_readonly("distortion_model",&PySensorBase::PyCameraIntrinsics::distortion_model)
-        .def_readonly("distortion_coeffs",&PySensorBase::PyCameraIntrinsics::distortion_coeffs)
-        .def_readonly("focal_length",&PySensorBase::PyCameraIntrinsics::focal_length)
+        class_<PyCameraIntrinsics, boost::shared_ptr<PyCameraIntrinsics> >("CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
+        .def_readwrite("K",&PyCameraIntrinsics::K)
+        .def_readwrite("distortion_model",&PyCameraIntrinsics::distortion_model)
+        .def_readwrite("distortion_coeffs",&PyCameraIntrinsics::distortion_coeffs)
+        .def_readwrite("focal_length",&PyCameraIntrinsics::focal_length)
         ;
 
         class_<PySensorBase::PySensorData, boost::shared_ptr<PySensorBase::PySensorData> >("SensorData", DOXY_CLASS(SensorBase::SensorData),no_init)
@@ -467,6 +525,7 @@ void init_openravepy_sensor()
         .def_readonly("transform",&PySensorBase::PyCameraSensorData::transform)
         .def_readonly("imagedata",&PySensorBase::PyCameraSensorData::imagedata)
         .def_readonly("KK",&PySensorBase::PyCameraSensorData::KK)
+        .def_readonly("intrinsics",&PySensorBase::PyCameraSensorData::intrinsics)
         ;
         class_<PySensorBase::PyJointEncoderSensorData, boost::shared_ptr<PySensorBase::PyJointEncoderSensorData>, bases<PySensorBase::PySensorData> >("JointEncoderSensorData", DOXY_CLASS(SensorBase::JointEncoderSensorData),no_init)
         .def_readonly("encoderValues",&PySensorBase::PyJointEncoderSensorData::encoderValues)
@@ -546,6 +605,16 @@ void init_openravepy_sensor()
         .value("RenderGeometryCheck",SensorBase::CC_RenderGeometryCheck)
         ;
     }
+
+    class_<PySensorGeometry, boost::shared_ptr<PySensorGeometry>, boost::noncopyable >("SensorGeometry", DOXY_CLASS(PySensorGeometry),no_init)
+    .def("GetType",boost::python::pure_virtual(&PySensorGeometry::GetType))
+    ;
+    class_<PyCameraGeomData, boost::shared_ptr<PyCameraGeomData>, bases<PySensorGeometry> >("CameraGeomData", DOXY_CLASS(SensorBase::CameraGeomData))
+    .def_readwrite("intrinsics",&PyCameraGeomData::intrinsics)
+    .def_readwrite("width",&PyCameraGeomData::width)
+    .def_readwrite("height",&PyCameraGeomData::height)
+    .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
+    ;
 
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));
 }

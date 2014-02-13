@@ -226,6 +226,11 @@ KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::Geomet
 {
 }
 
+bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
+{
+    return _info.InitCollisionMesh(fTessellation);
+}
+
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
 {
     AABB ab;

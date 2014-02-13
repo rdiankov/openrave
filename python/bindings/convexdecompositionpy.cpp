@@ -12,8 +12,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
 #define BOOST_ENABLE_ASSERT_HANDLER
-
+#endif
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
@@ -54,13 +55,22 @@ private:
     std::string _s;
 };
 
+#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && defined(BOOST_ENABLE_ASSERT_HANDLER)
 namespace boost
 {
 inline void assertion_failed(char const * expr, char const * function, char const * file, long line)
 {
-    throw cdpy_exception(str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr));
+    throw cdpy_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s")%file%line%function%expr));
 }
+#if BOOST_VERSION>104600
+inline void assertion_failed_msg(char const * expr, char const * msg, char const * function, char const * file, long line)
+{
+    throw cdpy_exception(boost::str(boost::format("[%s:%d] -> %s, expr: %s, msg: %s")%file%line%function%expr%msg));
 }
+#endif
+
+}
+#endif
 
 object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, const boost::multi_array<int, 2>& indices,
                                   NxF32 skinWidth=0, NxU32 decompositionDepth=8, NxU32 maxHullVertices=64, NxF32 concavityThresholdPercent=0.1f, NxF32 mergeThresholdPercent=30.0f, NxF32 volumeSplitThresholdPercent=0.1f, bool useInitialIslandGeneration=true, bool useIslandGeneration=false)

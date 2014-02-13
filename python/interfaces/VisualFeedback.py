@@ -25,13 +25,15 @@ log = logging.getLogger('openravepy.interfaces.VisualFeedback')
 class VisualFeedback:
     """Interface wrapper for :ref:`module-visualfeedback`
     """
-    def __init__(self,robot,maxvelmult=None):
+    def __init__(self,robot,maxvelmult=None, ignoresensorcollision=None):
         env = robot.GetEnv()
         self.prob = RaveCreateModule(env,'VisualFeedback')
         self.robot = robot
         self.args = self.robot.GetName()
         if maxvelmult is not None:
             self.args += ' maxvelmult %.15e '%maxvelmult
+        if ignoresensorcollision is not None:
+            self.args += ' ignoresensorcollision %d '%ignoresensorcollision
         env.Add(self.prob,True,self.args)
     def  __del__(self):
         # need to lock the environment since Remove locks it

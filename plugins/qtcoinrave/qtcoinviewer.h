@@ -341,6 +341,7 @@ public:
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
     bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
     bool _CommandResize(ostream& sout, istream& sinput);
+    bool _SaveBodyLinkToVRMLCommand(ostream& sout, istream& sinput);
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *);

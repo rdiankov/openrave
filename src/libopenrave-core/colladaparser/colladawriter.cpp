@@ -192,7 +192,7 @@ public:
     {
         KinBodyPtr pbody; ///< the body written for
         domPhysics_modelRef pmodel;
-        std::vector<std::string > vrigidbodysids;     ///< same ordering as the physics indices
+        std::vector<std::string > vrigidbodysids;     ///< same ordering as the physics indices (and openrave link indices)
     };
 
     struct kinematics_model_output
@@ -243,7 +243,7 @@ public:
     {
         KinBodyPtr pbody; ///< the body written for
         domInstance_articulated_systemRef ias;
-        boost::shared_ptr<instance_physics_model_output> ipmout;
+        boost::shared_ptr<instance_physics_model_output> ipmout; // this needs to be an array to support full spec
         std::vector<axis_sids> vaxissids;
         std::vector<std::string > vlinksids;
         std::vector<std::pair<std::string,std::string> > vkinematicsbindings;
@@ -547,16 +547,15 @@ private:
     daeURI _ComputeExternalURI(const daeURI& uri)
     {
         // check if it comes from same document
-        if( uri.getReferencedDocument() == _doc ) {
-            return uri;
-        }
-        if( _vForceResolveOpenRAVEScheme.size() > 0 && uri.scheme() == "file" ) {
-            // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
-            std::string filename;
-            if( RaveInvertFileLookup(filename,uri.path()) ) {
-                daeURI newuri(*_dae);
-                newuri.set(_vForceResolveOpenRAVEScheme, "", string("/")+filename, uri.query(), uri.fragment());
-                return newuri;
+        daeURI newuri(*_dae);
+        if( uri.getReferencedDocument() != _doc ) {
+            if( _vForceResolveOpenRAVEScheme.size() > 0 && uri.scheme() == "file" ) {
+                // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
+                std::string filename;
+                if( RaveInvertFileLookup(filename,cdom::uriToFilePath(uri.path())) ) {
+                    newuri.set(_vForceResolveOpenRAVEScheme, "", string("/")+filename, uri.query(), uri.fragment());
+                    return newuri;
+                }
             }
         }
         return uri;
@@ -624,6 +623,12 @@ private:
                 domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 param->setSid(sparamref.c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(pcolladainfo->_bindingAxesSIDs[idof].kmodelaxissidref.c_str());
+
+                std::string sparamrefvalue = str(boost::format("ias_extern_param%d_value")%idof);
+                domKinematics_newparamRef paramvalue = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
+                paramvalue->setSid(sparamrefvalue.c_str());
+                paramvalue->add(COLLADA_TYPE_FLOAT)->setCharData(boost::lexical_cast<std::string>(vjointvalues.at(idof)));
+                
                 std::string sidref = str(boost::format("%s/%s")%_GetNodeId(pbody)%pcolladainfo->_bindingAxesSIDs[idof].nodesid);
                 if( ias != ias_external ) {
                     BOOST_ASSERT(!!articulated_system_motion);
@@ -636,6 +641,7 @@ private:
                 iasout->vaxissids.at(idof).jointnodesid = sidref;
                 iasout->vaxissids.at(idof).axissid = sparamref;
                 iasout->vaxissids.at(idof).value = vjointvalues.at(idof);
+                iasout->vaxissids.at(idof).valuesid = sparamrefvalue;
             }
             size_t index = pcolladainfo->_bindingAxesSIDs.size();
             FOREACH(itpassive,pcolladainfo->_bindingPassiveAxesSIDs) {
@@ -747,21 +753,26 @@ private:
                 }
                 ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
                 ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%pbody->GetEnvironmentId()).c_str());
+                ipmout->pmout.reset(new physics_model_output()); // need a physics model output in case this is a robot and is grabbing links
+                ipmout->pmout->pbody = pbody;
+                ipmout->pmout->vrigidbodysids.resize(pbody->GetLinks().size());
+                ipmout->pmout->pmodel; // need to initialize?
 
                 // only write the links that are in this model
-                FOREACH(itlink,pcolladainfo->_bindingLinkSIDs) {
-                    if( itlink->index == imodel ) {
+                for(size_t ilink = 0; ilink < pcolladainfo->_bindingLinkSIDs.size(); ++ilink) {
+                    ColladaXMLReadable::Binding& linkbinding = pcolladainfo->_bindingLinkSIDs[ilink];
+                    if( linkbinding.index == imodel ) {
                         domInstance_rigid_bodyRef pirb = daeSafeCast<domInstance_rigid_body>(ipmout->ipm->add(COLLADA_ELEMENT_INSTANCE_RIGID_BODY));
-                        pirb->setBody(itlink->pmodel.c_str());
-                        pirb->setSid(itlink->pmodel.c_str());
-
+                        pirb->setBody(linkbinding.pmodel.c_str());
+                        pirb->setSid(linkbinding.pmodel.c_str());
+                        ipmout->pmout->vrigidbodysids.at(ilink) = linkbinding.pmodel;
                         if( IsWrite("visual") ) {
-                            size_t fragmentindex = itlink->vmodel.find_last_of('#');
+                            size_t fragmentindex = linkbinding.vmodel.find_last_of('#');
                             if( fragmentindex != std::string::npos ) {
-                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel.substr(fragmentindex)+string(".")+nodeid)));
+                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,linkbinding.vmodel.substr(fragmentindex)+string(".")+nodeid)));
                             }
                             else {
-                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,itlink->vmodel)));
+                                pirb->setTarget(_ComputeExternalURI(daeURI(*pnoderoot,linkbinding.vmodel)));
                             }
                         }
                     }
@@ -1449,7 +1460,11 @@ private:
             string rigidsid = str(boost::format("rigid%d")%(*itlink)->GetIndex());
             pmout->vrigidbodysids.push_back(rigidsid);
             rigid_body->setSid(rigidsid.c_str());
-            rigid_body->setName((*itlink)->GetName().c_str());
+            std::string linkname = (*itlink)->GetName();
+            if( linkname.size() == 0 ) {
+                linkname = str(boost::format("_dummylink%d_")%(*itlink)->GetIndex());
+            }
+            rigid_body->setName(linkname.c_str());
             domRigid_body::domTechnique_commonRef ptec = daeSafeCast<domRigid_body::domTechnique_common>(rigid_body->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
             domTargetable_floatRef mass = daeSafeCast<domTargetable_float>(ptec->add(COLLADA_ELEMENT_MASS));
             mass->setValue((*itlink)->GetMass());
@@ -1703,10 +1718,12 @@ private:
         LINKOUTPUT out;
         string linksid = _GetLinkSid(plink);
         domLinkRef pdomlink = daeSafeCast<domLink>(pkinparent->add(COLLADA_ELEMENT_LINK));
-        if( plink->GetName().size() == 0 ) {
-            RAVELOG_WARN(str(boost::format("body %s link %d has empty name!")%plink->GetParent()->GetName()%plink->GetIndex()));
+        std::string linkname = plink->GetName();
+        if( linkname.size() == 0 ) {
+            linkname = str(boost::format("_dummylink%d_")%plink->GetIndex());
+            RAVELOG_WARN_FORMAT("body %s link %d has empty name, so setting to %s!", plink->GetParent()->GetName()%plink->GetIndex()%linkname);
         }
-        pdomlink->setName(plink->GetName().c_str());
+        pdomlink->setName(linkname.c_str());
         pdomlink->setSid(linksid.c_str());
 
         domNodeRef pnode;
@@ -1716,7 +1733,7 @@ private:
             pnode->setId( nodeid.c_str() );
             string nodesid = _GetNodeSid(plink);
             pnode->setSid(nodesid.c_str());
-            pnode->setName(plink->GetName().c_str());
+            pnode->setName(linkname.c_str());
 
             if( IsWrite("geometry") ) {
                 int igeom = 0;
@@ -1862,6 +1879,10 @@ private:
             if( (*itias)->pbody->IsRobot() ) {
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>((*itias)->pbody);
                 probot->GetGrabbed(vGrabbedBodies);
+                if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
+                    RAVELOG_DEBUG_FORMAT("physics info is not written to robot %s, so cannot write any grabbed bodies", probot->GetName());
+                    continue;
+                }
                 FOREACHC(itgrabbed,vGrabbedBodies) {
                     boost::shared_ptr<instance_articulated_system_output> grabbedias;
                     FOREACHC(itias2,listModelDatabase) {

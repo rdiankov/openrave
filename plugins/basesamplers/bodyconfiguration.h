@@ -23,9 +23,9 @@ public:
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 Samples a kinbody configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\
-  RobotConfiguration [robot name] [sampler name]\n\n\
+BodyConfiguration [robot name] [sampler name]\n\n\
 The sampler needs to return values in the range [0,1]. Default sampler is 'mt19937'.\n\
-By default will sample the entire body space, can you 'SetDOFs' command to set a new set of dof indices\n\
+By default will sample the entire body space, can use 'SetDOFs' command to set a new set of dof indices\n\
 ";
         RegisterCommand("SetDOFs",boost::bind(&BodyConfigurationSampler::SetDOFsCommand,this,_1,_2),
                         "set new indices to sample from.");

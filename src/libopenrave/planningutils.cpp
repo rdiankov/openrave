@@ -618,6 +618,9 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicsmoother";
     _robot = robot;
     EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    _vRobotActiveIndices = _robot->GetActiveDOFIndices();
+    _nRobotAffineDOF = _robot->GetAffineDOF();
+    _vRobotRotationAxis = _robot->GetAffineRotationAxis();
     _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(_robot);
@@ -628,6 +631,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
         throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
@@ -653,6 +657,21 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
         }
     }
     return status;
+}
+
+void ActiveDOFTrajectorySmoother::_UpdateParameters()
+{
+    RobotBase::RobotStateSaver saver(_robot, KinBody::Prop_RobotActiveDOFs);
+    _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetRobotActiveJoints(_robot);
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+    params->_hastimestamps = false;
+    params->_sExtraParameters = _parameters->_sExtraParameters;
+    if( !_planner->InitPlan(_robot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+    }
+    _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
 ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
@@ -1159,7 +1178,7 @@ PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal
     return _PlanTrajectory(traj,hastimestamps,fmaxvelmult,fmaxaccelmult,GetPlannerFromInterpolation(traj,plannername), false,plannerparameters);
 }
 
-void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
@@ -1175,7 +1194,7 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         }
         if( diff <= g_fEpsilon ) {
             // not that much has changed
-            return;
+            return waypointindex;
         }
         RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (init) = %f", diff);
         traj->Remove(waypointindex,waypointindex+1);
@@ -1189,7 +1208,7 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
         }
         if( diff <= g_fEpsilon ) {
             // not that much has changed
-            return;
+            return waypointindex;
         }
         RAVELOG_VERBOSE_FORMAT("Jitter distance^2 (goal) = %f", diff);
         traj->Remove(waypointindex-1,waypointindex);
@@ -1198,10 +1217,10 @@ void ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofval
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
-    InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
+    return InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
 
-void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -1250,7 +1269,6 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     trajinitial->Insert(0,vwaypointstart);
     trajinitial->Insert(1,vwaypointend);
 
-
     std::string newplannername = plannername;
 
     if( newplannername.size() == 0 ) {
@@ -1268,7 +1286,7 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         int ran = RaveRandomInt()%10000;
         string filename = str(boost::format("/var/www/.openrave/beforeretime-%d.xml")%ran);
-        RAVELOG_DEBUG_FORMAT("Writing before retime traj to %s", filename);
+        RAVELOG_VERBOSE_FORMAT("Writing before retime traj to %s", filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         trajinitial->serialize(f);
@@ -1278,15 +1296,16 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
     RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
 
     // retiming is done, now merge the two trajectories
+    size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();
     size_t targetdof = vtargetvalues.size();
-    vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
+    vtargetvalues.resize(targetdof*nInitialNumWaypoints);
     for(size_t i = targetdof; i < vtargetvalues.size(); i += targetdof) {
         std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vtargetvalues.begin()+i);
     }
-    trajinitial->GetWaypoints(0,trajinitial->GetNumWaypoints(),vwaypointstart);
+    trajinitial->GetWaypoints(0, nInitialNumWaypoints, vwaypointstart);
 
     // copy to the target values while preserving other data
-    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), trajinitial->GetNumWaypoints(), traj->GetEnv(), false);
+    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), nInitialNumWaypoints, traj->GetEnv(), false);
 
     if( waypointindex == 0 ) {
         // have to insert the first N-1 and overwrite the Nth
@@ -1303,9 +1322,10 @@ void InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dR
         vtargetvalues.erase(vtargetvalues.begin(), vtargetvalues.begin()+targetdof);
         traj->Insert(waypointindex,vtargetvalues,false);
     }
+    return waypointindex+nInitialNumWaypoints-1;
 }
 
-void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
+size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0("trajectory is void",ORE_InvalidArguments);
     }
@@ -1323,10 +1343,10 @@ void ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, cons
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot extend waypoints in middle of trajectories",ORE_InvalidArguments);
     }
     // Run Insertwaypoint
-    InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
+    return InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
 }
 
-void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
     PlannerBase::PlannerParametersConstPtr parameters = planner->GetParameters();
     BOOST_ASSERT((int)dofvalues.size()==parameters->GetDOF());
@@ -1367,15 +1387,16 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
     }
 
     // retiming is done, now merge the two trajectories
+    size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();
     size_t targetdof = vtargetvalues.size();
-    vtargetvalues.resize(targetdof*trajinitial->GetNumWaypoints());
+    vtargetvalues.resize(targetdof*nInitialNumWaypoints);
     for(size_t i = targetdof; i < vtargetvalues.size(); i += targetdof) {
         std::copy(vtargetvalues.begin(),vtargetvalues.begin()+targetdof,vtargetvalues.begin()+i);
     }
-    trajinitial->GetWaypoints(0,trajinitial->GetNumWaypoints(),vwaypointstart);
+    trajinitial->GetWaypoints(0, nInitialNumWaypoints, vwaypointstart);
 
     // copy to the target values while preserving other data
-    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), trajinitial->GetNumWaypoints(), traj->GetEnv(), false);
+    ConfigurationSpecification::ConvertData(vtargetvalues.begin(), traj->GetConfigurationSpecification(), vwaypointstart.begin(), trajinitial->GetConfigurationSpecification(), nInitialNumWaypoints, traj->GetEnv(), false);
 
     if( waypointindex == 0 ) {
         // have to insert the first N-1 and overwrite the Nth
@@ -1392,9 +1413,10 @@ void InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dof
         vtargetvalues.erase(vtargetvalues.begin(), vtargetvalues.begin()+targetdof);
         traj->Insert(waypointindex,vtargetvalues,false);
     }
+    return waypointindex+nInitialNumWaypoints-1;
 }
 
-void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
@@ -1418,7 +1440,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
     return InsertWaypointWithSmoothing(index, dofvalues, dofvelocities, traj, planner);
 }
 
-void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
 {
     if( index != (int)traj->GetNumWaypoints() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("InsertWaypointWithSmoothing only supports adding waypoints at the end",ORE_InvalidArguments);
@@ -1529,6 +1551,7 @@ void InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues,
     traj->Insert(iBestInsertionWaypoint+1,vwaypoint);
     dReal fNewDuration = traj->GetDuration();
     OPENRAVE_ASSERT_OP( RaveFabs(fNewDuration-fBestDuration), <=, 0.001 );
+    return iBestInsertionWaypoint+pBestTrajectory->GetNumWaypoints();
 }
 
 void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)
@@ -1678,15 +1701,30 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     if( starttime > 0 ) {
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
         if( startindex > 0 ) {
-            traj->Sample(values, startindex);
-            traj->Insert(startindex-1, values, true);
-            traj->Remove(0, startindex-1);
+            ConfigurationSpecification deltatimespec;
+            deltatimespec.AddDeltaTimeGroup();
+            std::vector<dReal> vdeltatime;
+            traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
+            traj->Sample(values, starttime);
+            dReal fSampleDeltaTime;
+            traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
+            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
+            int endremoveindex = startindex;
+            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
+                traj->Insert(startindex-1, values, true);
+                // have to write the new delta time
+                vdeltatime[0] -= fSampleDeltaTime;
+                traj->Insert(startindex, vdeltatime, deltatimespec, true);
+                endremoveindex -= 1;
+            }
+            traj->Remove(0, endremoveindex);
         }
     }
 }
 
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
 {
+    // merge both deltatime and iswaypoint groups
     TrajectoryBasePtr presulttraj;
     if( listtrajectories.size() == 0 ) {
         return presulttraj;
@@ -1753,7 +1791,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
                 (*ittraj)->Sample(vtemp,vtimes[i],spec);
                 vnewdata.insert(vnewdata.end(),vtemp.begin(),vtemp.end());
                 if( waypointoffset >= 0 ) {
-                    vwaypoints[i] += vtemp[waypointoffset];
+                    vwaypoints[i] += vtemp[itwaypointgroup->offset]; // have to use the final spec's offset
                 }
             }
         }
@@ -1763,7 +1801,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
                 (*ittraj)->Sample(vtemp,vtimes[i]);
                 vpointdata.insert(vpointdata.end(),vtemp.begin(),vtemp.end());
                 if( waypointoffset >= 0 ) {
-                    vwaypoints[i] += vtemp[waypointoffset];
+                    vwaypoints[i] += vtemp[itwaypointgroup->offset]; // have to use the final spec's offset
                 }
             }
             ConfigurationSpecification::ConvertData(vnewdata.begin(),spec,vpointdata.begin(),(*ittraj)->GetConfigurationSpecification(),vtimes.size(),presulttraj->GetEnv(),false);
@@ -1957,7 +1995,9 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
     options &= _filtermask;
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[0] ) {
         if( !_usercheckfns[0]() ) {
-            _PrintOnFailure("pre usercheckfn failed");
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure("pre usercheckfn failed");
+            }
             return CFO_CheckUserConstraints;
         }
     }
@@ -1991,7 +2031,9 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
                     int index = it->first;
                     dReal fmaxtorque = it->second;
                     if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
-                        _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                        }
                         return CFO_CheckTimeBasedConstraints;
                     }
                 }
@@ -2000,17 +2042,23 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
     }
     FOREACHC(itbody, _listCheckBodies) {
         if( (options&CFO_CheckEnvCollisions) && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
-            _PrintOnFailure(std::string("collision failed ")+_report->__str__());
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure(std::string("collision failed ")+_report->__str__());
+            }
             return CFO_CheckEnvCollisions;
         }
         if( (options&CFO_CheckSelfCollisions) && (*itbody)->CheckSelfCollision(_report) ) {
-            _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
+            }
             return CFO_CheckSelfCollisions;
         }
     }
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[1] ) {
         if( !_usercheckfns[1]() ) {
-            _PrintOnFailure("post usercheckfn failed");
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                _PrintOnFailure("post usercheckfn failed");
+            }
             return CFO_CheckUserConstraints;
         }
     }
@@ -2105,10 +2153,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 filterreturn->_returncode = nstateret;
                 filterreturn->_invalidvalues = q1;
                 filterreturn->_invalidvelocities = dq1;
-                filterreturn->_fTimeWhenInvalid = timeelapsed;
+                filterreturn->_fTimeWhenInvalid = timeelapsed > 0 ? timeelapsed : dReal(1.0);
                 if( options & CFO_FillCheckedConfiguration ) {
                     filterreturn->_configurations = q1;
-                    filterreturn->_configurationtimes.push_back(timeelapsed);
+                    filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
                 }
             }
             return nstateret;
@@ -2148,7 +2196,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         if( !!filterreturn ) {
             if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
                 filterreturn->_configurations = q1;
-                filterreturn->_configurationtimes.push_back(timeelapsed);
+                filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
             }
         }
         return 0;
@@ -2232,6 +2280,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 filterreturn->_configurationtimes.push_back(timestep);
             }
             if( nstateret != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = nstateret;
+                    filterreturn->_invalidvalues = _vtempconfig;
+                    filterreturn->_invalidvelocities = _vtempvelconfig;
+                    filterreturn->_fTimeWhenInvalid = timestep;
+                }
                 return nstateret;
             }
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
@@ -2271,14 +2325,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
                 filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-                filterreturn->_configurationtimes.push_back(0);
+                filterreturn->_configurationtimes.push_back(f*fisteps);
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = nstateret;
                     filterreturn->_invalidvalues = _vtempconfig;
                     filterreturn->_invalidvelocities = _vtempvelconfig;
-                    filterreturn->_fTimeWhenInvalid = 0;
+                    filterreturn->_fTimeWhenInvalid = f*fisteps;
                 }
                 return nstateret;
             }
@@ -2409,35 +2463,43 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
-        bool bCheckEndEffector = itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
+        int numRedundantSamplesForEEChecking = 0;
+        if( (int)_pmanip->GetArmIndices().size() > itsample->_ikparam.GetDOF() ) {
+            numRedundantSamplesForEEChecking = 40;
+        }
+        bool bCheckEndEffector = true; //itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
         if( _ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions ) {
             // use requested end effector to be always ignored
             bCheckEndEffector = false;
         }
         // if first grasp, quickly prune grasp is end effector is in collision
         IkParameterization ikparam = itsample->_ikparam;
-        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) {
+        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) { //!(_ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+            // because a goal can be colliding, have to always go in this loop and check if the end effector
+            // could be jittered.
+            // if bCheckEndEffector is true, then should call CheckEndEffectorCollision to quickly prune samples; otherwise, have to rely on calling FindIKSolution
             try {
-                if( _pmanip->CheckEndEffectorCollision(ikparam,_report) ) {
+                if( _pmanip->CheckEndEffectorCollision(ikparam,_report, numRedundantSamplesForEEChecking) ) {
                     bool bcollision=true;
                     if( _fjittermaxdist > 0 ) {
                         // try jittering the end effector out
-                        RAVELOG_VERBOSE("starting jitter transform...\n");
+                        RAVELOG_VERBOSE_FORMAT("starting jitter transform %f...", _fjittermaxdist);
                         // randomly add small offset to the ik until it stops being in collision
                         Transform tjitter;
                         // before random sampling, first try sampling along the axes. try order z,y,x since z is most likely gravity
+                        int N = 4;
+                        dReal delta = _fjittermaxdist/N;
                         for(int iaxis = 2; iaxis >= 0; --iaxis) {
                             tjitter.trans = Vector();
-                            dReal delta = 0.25;
-                            for(int iiter = 2; iiter < 10; ++iiter) {
-                                tjitter.trans[iaxis] = _fjittermaxdist*delta*(iiter/2);
+                            for(int iiter = 0; iiter < 2*N; ++iiter) {
+                                tjitter.trans[iaxis] = _fjittermaxdist*delta*(1+iiter/2);
                                 if( iiter & 1 ) {
                                     // revert sign
                                     tjitter.trans[iaxis] = -tjitter.trans[iaxis];
                                 }
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking) ) {
                                         // make sure at least one ik solution exists...
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered.reset(new IkReturn(IKRA_Success));
@@ -2449,7 +2511,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                             break;
                                         }
                                         else {
-                                            RAVELOG_VERBOSE_FORMAT("jitter succed position, but ik failed: 0x%.8x", ikreturnjittered->_action);
+                                            RAVELOG_VERBOSE_FORMAT("jitter succeed position, but ik failed: 0x%.8x", ikreturnjittered->_action);
                                         }
                                     }
                                 }
@@ -2466,12 +2528,13 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                             // try random samples, most likely will fail...
                             int nMaxIterations = 100;
                             std::vector<dReal> xyzsamples(3);
-                            for(int iiter = 0; iiter < nMaxIterations; ++iiter) {
+                            dReal delta = (_fjittermaxdist*2)/nMaxIterations;
+                            for(int iiter = 1; iiter <= nMaxIterations; ++iiter) {
                                 _pindexsampler->SampleSequence(xyzsamples,3,IT_Closed);
-                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (_fjittermaxdist*2);
+                                tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (delta*iiter);
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report) ) {
+                                    if( !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking) ) {
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered.reset(new IkReturn(IKRA_Success));
                                         }

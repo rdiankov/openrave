@@ -95,6 +95,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         "Sets the robot.");
         _fMaxVelMult=1;
         _minimumgoalpaths=1;
+        _report.reset(new CollisionReport());
     }
     virtual ~TaskManipulation()
     {
@@ -339,7 +340,7 @@ public:
         void SwitchRegular() {
             if( _bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to regular robot\n");
-                _pbody->SetLinkGeometriesFromGroup(std::string());
+                _pbody->SetLinkGeometriesFromGroup("self");
                 _bPadded = false;
             }
         }
@@ -377,7 +378,7 @@ protected:
         dReal fRRTStepLength = 0; // if > 0, then user set
 
         // indices into the grasp table
-        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1;
+        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1, iGraspFinalFingers=-1;
         int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
         int iGraspTransformNoCol = -1;
         int iStartCountdown = 40;
@@ -428,6 +429,9 @@ protected:
             else if( cmd == "imanipulatordirection" ) {
                 sinput >> imanipulatordirection;
             }
+            else if( cmd == "igraspfinalfingers" ) {
+                sinput >> iGraspFinalFingers;
+            }
             else if( cmd == "steplength" ) {
                 sinput >> fRRTStepLength;
             }
@@ -467,7 +471,7 @@ protected:
                     *ittrans = m;
                 }
             }
-            else if( cmd == "posedests" ) {
+            else if( cmd == "destposes" || cmd == "posedests" ) {
                 int numdests = 0; sinput >> numdests;
                 vObjDestinations.resize(numdests);
                 FOREACH(ittrans, vObjDestinations) {
@@ -609,7 +613,7 @@ protected:
         if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
             // if 5D, have to set a filter
             ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget));
-            fApproachOffset = 0; // cannot approach
+            //fApproachOffset = 0; // cannot approach?
         }
 
         for(int igraspperm = 0; igraspperm < (int)vgrasppermuation.size(); ++igraspperm) {
@@ -882,17 +886,30 @@ protected:
 
                 ptarget->SetTransform(transTarg);
                 if( bTargetCollision ) {
-                    RAVELOG_VERBOSE(str(boost::format("target collision at dest %d: %s")%vdestpermuation[idestperm]%report->__str__()));
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << str(boost::format("target collision at dest %d, %s, pose=")%vdestpermuation[idestperm]%report->__str__());
+                        ss << transDestTarget;
+                        ss << std::endl;
+                        RAVELOG_VERBOSE(ss.str());
+                    }
                     continue;
                 }
 
                 if( !nMobileAffine ) {
-                    if( pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions) ) {
+                    bool bSuccess = pmanip->FindIKSolution(tDestEndEffector, vikgoal, IKFO_CheckEnvCollisions);
+                    if( bSuccess ) {
                         listDests.push_back(tDestEndEffector);
                     }
-                    else if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ss << "failed dest IkParameterization('" << tDestEndEffector << "')";
+                        if( bSuccess ) {
+                            ss << "succeeded ";
+                        }
+                        else {
+                            ss << "failed ";
+                        }
+                        ss << "dest IkParameterization('" << tDestEndEffector << "')";
                         RAVELOG_VERBOSE(ss.str());
 
                     }
@@ -1592,12 +1609,11 @@ protected:
         return ptraj;
     }
 
-    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding, dReal fRRTStepLength)
+    TrajectoryBasePtr _MoveArm(const vector<int>&activejoints, planningutils::ManipulatorIKGoalSampler& goalsampler, int& nGoalIndex, int nMaxIterations, dReal fPadding, dReal fRRTStepLength, int nMaxTries = 1)
     {
         int nSeedIkSolutions = 8;
         int nJitterIterations = 5000;
         dReal jitter = 0.03;
-        int nMaxTries = 3;
         dReal fGoalSamplingProb = 0.05;
         RAVELOG_DEBUG("Starting MoveArm...\n");
         BOOST_ASSERT( !!_pRRTPlanner );
@@ -1630,13 +1646,14 @@ protected:
         vector<dReal> vgoal;
         params->vgoalconfig.reserve(nSeedIkSolutions*_robot->GetActiveDOF());
         goalsampler.SetSamplingProb(1);
-        goalsampler.SetJitter(fPadding*1.5);
+        goalsampler.SetJitter(fPadding*2.5);
         while(nSeedIkSolutions > 0) {
             if( goalsampler.Sample(vgoal) ) {
                 params->vgoalconfig.insert(params->vgoalconfig.end(), vgoal.begin(), vgoal.end());
                 --nSeedIkSolutions;
             }
             else {
+                RAVELOG_VERBOSE("could not sample goal\n");
                 --nSeedIkSolutions;
             }
         }
@@ -1655,9 +1672,16 @@ protected:
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
         switch( planningutils::JitterActiveDOF(_robot,nJitterIterations,jitter) ) {
-        case 0:
-            RAVELOG_WARN("jitter failed for initial\n");
+        case 0: {
+            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "jitter failed for initial=[";
+            FOREACHC(it, params->vinitialconfig) {
+                ss << *it << ", ";
+            }
+            ss << "]";
+            RAVELOG_WARN(ss.str());
             return TrajectoryBasePtr();
+        }
         case 1:
             RAVELOG_DEBUG("original robot position in collision, so jittered out of it\n");
             vinsertconfiguration = params->vinitialconfig;
@@ -1709,20 +1733,35 @@ protected:
         return ptraj;
     }
 
-    IkReturn _FilterIkForGrasping(std::vector<dReal>&vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
+    IkReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
     {
         if( _robot->IsGrabbing(ptarget) ) {
             return IKRA_Success;
         }
         if( ikparam.GetType() != IKP_Transform6D ) {
             // only check end effector if not trasform 6d
-            if( pmanip->CheckEndEffectorCollision(pmanip->GetEndEffectorTransform()) ) {
-                RAVELOG_DEBUG("grasper planner CheckEndEffectorCollision\n");
-                return IKRA_Reject;
+            if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), _report) ) {
+                // if any of the collisions is the target
+                if( (!!_report->plink1 && _report->plink1->GetParent() == ptarget) || (!!_report->plink2 && _report->plink2->GetParent() == ptarget) ) {
+                    // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
+                }
+                else {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "grasper planner CheckEndEffectorCollision: " << _report->__str__() << ", manipvalues=[";
+                        FOREACHC(it, vsolution) {
+                            ss << *it << ", ";
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE(ss.str());
+                    }
+                    return IKRA_Reject;
+                }
             }
+            return IKRA_Success;
         }
 
-        if( pmanip->GetGripperIndices().size() > 0 ) {
+        if( pmanip->GetGripperIndices().size() > 0 && !!_pGrasperPlanner) {
             RobotBase::RobotStateSaver saver(_robot);
             _robot->SetActiveDOFs(pmanip->GetGripperIndices());
             if( !_phandtraj ) {
@@ -1780,6 +1819,7 @@ protected:
     std::vector< std::vector<dReal> > _vcachedsolutions;
     std::string _sPostProcessingParameters;
     int _minimumgoalpaths;
+    CollisionReportPtr _report;
 };
 
 ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) {

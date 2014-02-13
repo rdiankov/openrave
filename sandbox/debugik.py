@@ -1098,14 +1098,21 @@ def test_ik():
     jointvalues[2] = possibleangles[2]
     jointvalues[3] = possibleangles[3]
     jointvalues[4] = possibleangles[3]
+    
     valsubs = []
-    for var,value in izip(jointvars,jointvalues):
-        valsubs += [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
+    freevalsubs = []
+    for var,value in izip(self._jointvars,jointvalues):
+        newsubs = [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
+        valsubs += newsubs
+        if not var in self._solvejointvars:
+            freevalsubs += newsubs
     psubs = []
     for i in range(12):
         psubs.append((self.Tee[i],self.convertRealToRational(self.Tfinal[i].subs(valsubs).evalf())))
     for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
         psubs.append((s,v.subs(psubs)))
+
+
     if len(self.globalsymbols) > 0:
         psubs += [(s,v.subs(psubs+valsubs)) for s,v in self.globalsymbols]    
     if len(raghavansolutiontree) > 0:

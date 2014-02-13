@@ -100,8 +100,6 @@ namespace OpenRAVE
 class ColladaReader;
 class ColladaWriter;
 
-bool RaveInvertFileLookup(std::string& newfilename, const std::string& filename);
-
 RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
 MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput);
 TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);

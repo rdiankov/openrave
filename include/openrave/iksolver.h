@@ -55,6 +55,14 @@ enum IkReturnAction
     IKRA_RejectCustomFilter = (IKRA_Reject|0x00008000), // the reason should be set in the upper 16 bits
 };
 
+/// \brief priorities for what an ik solver checks. Should be a signed int
+enum IkSolverPriority
+{
+    IKSP_Default = 0,
+    IKSP_MinPriority = 0x80000000,
+    IKSP_MaxPriority = 0x7fffffff,
+};
+
 /// \deprecated (12/04/29)
 static const IkReturnAction IKFR_Success RAVE_DEPRECATED = IKRA_Success;
 static const IkReturnAction IKFR_Reject RAVE_DEPRECATED = IKRA_Reject;
@@ -96,7 +104,7 @@ public:
 class OPENRAVE_API IkSolverBase : public InterfaceBase
 {
 public:
-    /** Inverse kinematics filter callback function.
+    /** \brief Inverse kinematics filter callback function that can decide to accept or reject the ik.
 
         The filter is of the form <tt>return = filterfn(solution, manipulator, param)</tt>.
         The solution is guaranteed to be set on the robot's joint values before this function is called. The active dof values of the robot will be set to the manipulator's arms.
@@ -109,6 +117,10 @@ public:
         \return \ref IkReturn outputs the action to take for the current ik solution and any custom parameters the filter should pass to the user.
      */
     typedef boost::function<IkReturn(std::vector<dReal>&, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFilterCallbackFn;
+
+    /** \brief gets called when an ik solution is accepted.
+     */
+    typedef boost::function<void (IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFinishCallbackFn;
 
     IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {
     }
@@ -131,11 +143,17 @@ public:
     /** \brief Sets an ik solution filter that is called for every ik solution.
 
         Multiple filters can be set at once, each filter will be called according to its priority; higher values get called first. The default implementation of IkSolverBase manages the filters internally. Users implementing their own IkSolverBase should call \ref _CallFilters to run the internally managed filters.
-        \param priority - The priority of the filter that controls the order in which filters get called. Higher priority filters get called first. If not certain what to set, use 0.
+        \param priority - The priority of the filter that controls the order in which filters get called. Higher priority filters get called first. If not certain what to set, use IKSP_Default. If set to IKSP_MinPriority, then the callback gets called at the very end when the solution is accepted.
         \param filterfn - an optional filter function to be called, see \ref IkFilterCallbackFn.
         \return a managed handle to the filter. If this handle is released, then the fitler will be removed. Release operation is <b>[multi-thread safe]</b>.
      */
-    virtual UserDataPtr RegisterCustomFilter(int priority, const IkFilterCallbackFn& filterfn);
+    virtual UserDataPtr RegisterCustomFilter(int32_t priority, const IkFilterCallbackFn& filterfn);
+
+    /** \brief sets a finish callback for every ik solution.
+
+        Most useful when calling SolveAll in order to process notifications while the ik solver is still working.
+     */
+    virtual UserDataPtr RegisterFinishCallback(const IkFinishCallbackFn& finishfn);
 
     /// \deprecated (11/09/21)
     virtual void SetCustomFilter(const IkFilterCallbackFn& filterfn) RAVE_DEPRECATED
@@ -264,9 +282,11 @@ public:
         to be optimized away.
 
         \param param The paramterization that currently reflects the robot's configuration state, can also contain custom parameters. This is in the manipulator base link's coordinate system (which is not necessarily the world coordinate system).
+        \param minpriority the minimum inclusive priority to consider
+        \param maxpriority the maximum inclusive priority to consider
         \return \ref IkReturn outputs the action to take for the current ik solution and any custom parameters the filter should pass to the user.
      */
-    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority) OPENRAVE_DUMMY_IMPLEMENTATION;
 
 protected:
     inline IkSolverBasePtr shared_iksolver() {
@@ -276,7 +296,12 @@ protected:
         return boost::static_pointer_cast<IkSolverBase const>(shared_from_this());
     }
 
-    virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr());
+    virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority);
+
+    /// \brief returns true if there's registered filters within the priority range (inclusive)
+    virtual bool _HasFilterInRange(int32_t minpriority, int32_t maxpriority) const;
+
+    virtual void _CallFinishCallbacks(IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization &);
 
 private:
     virtual const char* GetHash() const {
@@ -284,8 +309,10 @@ private:
     }
 
     std::list<UserDataWeakPtr> __listRegisteredFilters; ///< internally managed filters
+    std::list<UserDataWeakPtr> __listRegisteredFinishCallbacks; ///< internally managed callbacks
 
     friend class CustomIkSolverFilterData;
+    friend class IkSolverFinishCallbackData;
 };
 
 } // end namespace OpenRAVE

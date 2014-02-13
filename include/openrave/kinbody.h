@@ -74,6 +74,7 @@ public:
         Prop_RobotManipulatorName = 0x00200000, ///< [robot only] the manipulator name
         Prop_RobotManipulatorSolver = 0x00400000,
         Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
+        Prop_RobotGrabbed = 0x01000000, ///< [robot only] if grabbed bodies changed
     };
 
     /// \brief used for specifying the type of limit checking and the messages associated with it
@@ -276,6 +277,8 @@ public:
             inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
             }
+
+            virtual bool InitCollisionMesh(float fTessellation=1);
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
@@ -510,7 +513,7 @@ protected:
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        virtual void SetGroupGeometries(const std::string& name, std::vector<KinBody::GeometryInfoPtr>& geometries);
+        virtual void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
         /// \brief returns the number of geometries stored from a particular key
         ///
@@ -1129,7 +1132,7 @@ protected:
         /// \brief Return the velocity of the specified joint axis only.
         virtual dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
-        boost::array<int,3> _dofbranches; ///< the branch that identified joints are on. +1 means one loop around the identification. For revolute joints, the actual joint value incremented by 2*pi*branch. Branches are important for maintaining joint ranges greater than 2*pi. For circular joints, the branches can be ignored or not.
+        boost::array<dReal,3> _doflastsetvalues; ///< the last set value by the kinbody (_voffsets not applied). For revolute joints that have a range greater than 2*pi, it is only possible to recover the joint value from the link positions mod 2*pi. In order to recover the branch, multiplies of 2*pi are added/subtracted to this value that is closest to _doflastsetvalues. For circular joints, the last set value can be ignored since they always return a value from [-pi,pi)
 
 private:
         /// Sensitive variables that should not be modified.
@@ -1264,14 +1267,18 @@ public:
         ///
         /// After this call, it will still be possible to use \ref Restore.
         virtual void Release();
+
+        /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
+        virtual void SetRestoreOnDestructor(bool restore);
 protected:
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
         std::vector<uint8_t> _vEnabledLinks;
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
-        std::vector<int> _vdofbranches;
+        std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vDOFWeights, _vDOFLimits[2];
         KinBodyPtr _pbody;
+        bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
     };
@@ -1291,32 +1298,44 @@ private:
     ///
     /// \param boxes the array of aligned bounding boxes that will comprise of the body
     /// \param visible if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromBoxes(const std::vector<AABB>& boxes, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of an array of oriented bounding boxes.
     ///
     /// \param boxes the array of oriented bounding boxes that will comprise of the body
     /// \param visible if true, the boxes will be rendered in the scene
-    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromBoxes(const std::vector<OBB>& boxes, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of an array of spheres
     ///
     /// \param spheres the XYZ position of the spheres with the W coordinate representing the individual radius
     /// \param visible if true, the boxes will be rendered in the scene
-    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromSpheres(const std::vector<Vector>& spheres, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of a triangle mesh surface
     ///
     /// \param trimesh the triangle mesh
     /// \param visible if true, will be rendered in the scene
-    virtual bool InitFromTrimesh(const TriMesh& trimesh, bool visible);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromTrimesh(const TriMesh& trimesh, bool visible=true, const std::string& uri=std::string());
 
     /// \brief Create a kinbody with one link composed of a list of geometries
     ///
     /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
     /// \param visible if true, will be rendered in the scene
-    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries);
-    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries);
+    /// \param uri the new URI to set for the interface
+    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri=std::string());
+    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
+
+    /// \brief initializes an complex kinematics body with links and joints
+    ///
+    /// \param linkinfos information for all the links. Links will be created in this order
+    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
+    /// \param uri the new URI to set for the interface
+    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos, const std::string& uri=std::string());
 
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
@@ -1325,12 +1344,6 @@ private:
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     /// \throw If any links do not have the particular geometry, an exception will be raised.
     virtual void SetLinkGeometriesFromGroup(const std::string& name);
-
-    /// \brief initializes an complex kinematics body with links and joints
-    ///
-    /// \param linkinfos information for all the links. Links will be created in this order
-    /// \param jointinfos information for all the joints. Joints might be rearranged depending on their mimic properties
-    virtual bool Init(const std::vector<LinkInfoConstPtr>& linkinfos, const std::vector<JointInfoConstPtr>& jointinfos);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
@@ -1414,6 +1427,11 @@ private:
     ///
     /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
     virtual void SetDOFWeights(const std::vector<dReal>& weights, const std::vector<int>& dofindices = std::vector<int>());
+
+    /// \brief sets dof resolutoins
+    ///
+    /// \param dofindices the dof indices to set the values for. If empty, will use all the dofs
+    virtual void SetDOFResolutions(const std::vector<dReal>& resolutions, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief \see GetDOFLimits
     virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
@@ -1529,7 +1547,10 @@ private:
     /// \brief get the transformations of all the links and the dof branches at once.
     ///
     /// Knowing the dof branches allows the robot to recover the full state of the joints with SetLinkTransformations
-    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const;
+    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<dReal>& doflastsetvalues) const;
+
+    /// \deprecated (14/05/26)
+    virtual void GetLinkTransformations(std::vector<Transform>& transforms, std::vector<int>& dofbranches) const RAVE_DEPRECATED;
 
     /// \deprecated (11/05/26)
     virtual void GetBodyTransformations(std::vector<Transform>& transforms) const RAVE_DEPRECATED {
@@ -1650,7 +1671,17 @@ private:
     /// \brief sets the transformations of all the links and dof branches at once.
     ///
     /// Using dof branches allows the full joint state to be recovered
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
+
+    /// \deprecated (14/01/15)
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches) RAVE_DEPRECATED
+    {
+        std::vector<dReal> doflastsetvalues(dofbranches.size());
+        for(size_t i = 0; i < dofbranches.size(); ++i) {
+            doflastsetvalues[i] = dofbranches[i]*2*PI;
+        }
+        SetLinkTransformations(transforms, doflastsetvalues);
+    }
 
     /// \deprecated (11/05/26)
     virtual void SetBodyTransformations(const std::vector<Transform>& transforms) RAVE_DEPRECATED {
