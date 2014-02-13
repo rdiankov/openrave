@@ -86,38 +86,6 @@ OPENRAVE_API size_t ExtendActiveDOFWaypoint(int index, const std::vector<dReal>&
 
 OPENRAVE_API PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
-/** \brief Smoother planner for the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot.
-
-    Caches all the planners and parameters so PlanPath can be called multiple times without creating new objects.
-    Only initial and goal configurations are preserved.
-    The velocities for the current trajectory are overwritten.
-    The returned trajectory will contain data only for the currenstly set active dofs of the robot.
- */
-class OPENRAVE_API ActiveDOFTrajectorySmoother
-{
-public:
-    /**
-       \param robot use the robot's active dofs to initialize the trajectory space
-       \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
-       \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
-     **/
-    ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& plannername="", const std::string& plannerparameters="");
-    virtual ~ActiveDOFTrajectorySmoother() {
-    }
-
-    /// \brief Executes smoothing. <b>[multi-thread safe]</b>
-    ///
-    /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
-    /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
-
-protected:
-    RobotBasePtr _robot;
-    PlannerBasePtr _planner;
-    PlannerBase::PlannerParametersPtr _parameters;
-};
-
-typedef boost::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmootherPtr;
 
 /** \brief Smooth the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -157,6 +125,45 @@ OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxve
  */
 OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
+/** \brief Smoother planner for the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot.
+
+    Caches all the planners and parameters so PlanPath can be called multiple times without creating new objects.
+    Only initial and goal configurations are preserved.
+    The velocities for the current trajectory are overwritten.
+    The returned trajectory will contain data only for the currenstly set active dofs of the robot.
+ */
+class OPENRAVE_API ActiveDOFTrajectorySmoother
+{
+public:
+    /**
+       \param robot use the robot's active dofs to initialize the trajectory space
+       \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
+       \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
+     **/
+    ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& plannername="", const std::string& plannerparameters="");
+    virtual ~ActiveDOFTrajectorySmoother() {
+    }
+
+    /// \brief Executes smoothing. <b>[multi-thread safe]</b>
+    ///
+    /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
+    /// \return PlannerStatus of the status of the smoothing planner
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj);
+
+protected:
+    void _UpdateParameters();
+    
+    RobotBasePtr _robot;
+    PlannerBasePtr _planner;
+    PlannerBase::PlannerParametersPtr _parameters;
+    std::vector<int> _vRobotActiveIndices;
+    int _nRobotAffineDOF;
+    Vector _vRobotRotationAxis;
+    UserDataPtr _changehandler; ///< tracks changes for the robot and re-initializes parameters
+};
+
+typedef boost::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmootherPtr;
+
 /** \brief Retimer planner the trajectory points by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
     Caches all the planners and parameters so PlanPath can be called multiple times without creating new objects.
@@ -187,6 +194,10 @@ protected:
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;
+    std::vector<int> _vRobotActiveIndices;
+    int _nRobotAffineDOF;
+    Vector _vRobotRotationAxis;
+    UserDataPtr _changehandler; ///< tracks changes for the robot and re-initializes parameters
 };
 
 typedef boost::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimerPtr;

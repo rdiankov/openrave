@@ -618,6 +618,9 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicsmoother";
     _robot = robot;
     EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    _vRobotActiveIndices = _robot->GetActiveDOFIndices();
+    _nRobotAffineDOF = _robot->GetAffineDOF();
+    _vRobotRotationAxis = _robot->GetAffineRotationAxis();
     _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(_robot);
@@ -628,6 +631,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
         throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
@@ -653,6 +657,21 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
         }
     }
     return status;
+}
+
+void ActiveDOFTrajectorySmoother::_UpdateParameters()
+{
+    RobotBase::RobotStateSaver saver(_robot, KinBody::Prop_RobotActiveDOFs);
+    _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetRobotActiveJoints(_robot);
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+    params->_hastimestamps = false;
+    params->_sExtraParameters = _parameters->_sExtraParameters;
+    if( !_planner->InitPlan(_robot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+    }
+    _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
 ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
