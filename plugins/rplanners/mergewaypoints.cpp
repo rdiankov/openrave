@@ -194,9 +194,9 @@ bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const st
 bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::ParabolicRampND& ramp1,ParabolicRamp::ParabolicRampND& resramp0,ParabolicRamp::ParabolicRampND& resramp1, dReal Ta, dReal Tb, ConstraintTrajectoryTimingParametersPtr params)
 {
     vector<dReal> q0 = ramp0.x0, v0=ramp0.dx0, q2=ramp1.x1, v2=ramp1.dx1, qres, vres;
-    dReal T0,T1;
-    T0 = ramp0.endTime;
-    T1 = ramp1.endTime;
+    //dReal T0,T1;
+    //T0 = ramp0.endTime;
+    //T1 = ramp1.endTime;
 
     //printf("Try fixing: T0=%f, T1=%f, Ta=%f, Tb=%f...  ",T0,T1,Ta,Tb);
     bool res = CheckValidity(Ta,Tb,q0,v0,q2,v2,qres,vres,params);
@@ -817,8 +817,119 @@ bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRamp
     return false;
 }
 
+// Add two Ramp Vectors (not sure whether it has been implemented somewhere else)
+ParabolicRamp::Vector ScaleVector(ParabolicRamp::Vector a,dReal ca){
+    ParabolicRamp::Vector res(a.size(),0.0);
+    for(size_t i=0; i<a.size(); i++) {
+        res[i] = ca*a[i];
+    }
+    return res;
+}
+
+// Add two Ramp Vectors (not sure whether it has been implemented somewhere else)
+ParabolicRamp::Vector AddVectors(ParabolicRamp::Vector a,ParabolicRamp::Vector b,dReal ca,dReal cb){
+    ParabolicRamp::Vector res(a.size(),0.0);
+    for(size_t i=0; i<a.size(); i++) {
+        res[i] = ca*a[i]+cb*b[i];
+    }
+    return res;
+}
+
 
 bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check,int options)
+{
+    ParabolicRamp::Vector zero(x0.size(),0.0);
+    ParabolicRamp::Vector dx = AddVectors(x1,x0,1,-1);
+
+    dReal vmaxs = INF, amaxs = INF;
+    dReal delta = params->minswitchtime;
+    int numdof = params->GetDOF();
+    for(int i=0; i<numdof; i++) {
+        vmaxs = min(vmaxs,params->_vConfigVelocityLimit[i]/dx[i]);
+        amaxs = min(amaxs,params->_vConfigAccelerationLimit[i]/dx[i]);
+    }
+
+    dReal tp = sqrt(1/amaxs);
+
+    // Two ramps are OK
+    if(amaxs*tp <= vmaxs) {
+        dReal t_,v_;
+        if(tp >= delta) {
+            t_ = tp;
+            v_ = amaxs*tp;
+        }
+        else{
+            t_ = delta;
+            v_ = 1/delta;
+        }
+        // Create two new ramps and insert into resramps
+        ParabolicRamp::ParabolicRampND newramp1, newramp2;
+        ParabolicRamp::Vector xmid = AddVectors(x0,x1,0.5,0.5);
+        ParabolicRamp::Vector vinter = ScaleVector(dx,v_);
+        newramp1.SetPosVelTime(x0,zero,xmid,vinter,t_);
+        newramp2.SetPosVelTime(xmid,vinter,x1,zero,t_);
+        resramps.push_back(newramp1);
+        resramps.push_back(newramp2);
+    }
+
+    // Require three ramps
+    else{
+        dReal t1 = vmaxs/amaxs;
+        dReal t2 = 1/vmaxs - vmaxs/amaxs;
+        dReal t1_,t2_,a_;
+        if(t1 >= delta && t2 >= delta) {
+            t1_ = t1;
+            t2_ = t2;
+            a_ = amaxs;
+        }
+        else{
+            // Try first case delta,delta,delta
+            if(1/delta < vmaxs && 1/(delta*delta)<amaxs) {
+                t1_ = delta;
+                t2_ = delta;
+                a_ = 1/(delta*delta);
+            }
+            else{
+                // case delta,ta,delta
+                dReal tmpmax = max(delta,1/vmaxs-delta);
+                dReal ta = max(tmpmax,1/(delta*amaxs)-delta);
+                // case tb,delta,tb
+                dReal tb = max(tmpmax,(sqrt(delta*delta+4/amaxs)-delta)/2);
+                if(ta+delta*2<tb*2+delta) {
+                    t1_ = delta;
+                    t2_ = ta;
+                    a_ = 1/(delta*delta+delta*ta);
+                }
+                else{
+                    t1_ = tb;
+                    t2_ = delta;
+                    a_ = 1/(tb*tb+tb*delta);
+                }
+            }
+        }
+        // Create three new ramps and insert into resramps
+        ParabolicRamp::ParabolicRampND newramp1, newramp2, newramp3;
+        dReal v_ = a_*t1_;
+        dReal s1 = 0.5*a_*t1_*t1_;
+        dReal s2 = s1+v_*t2_;
+        ParabolicRamp::Vector xinter1 = AddVectors(x0,dx,1,s1);
+        ParabolicRamp::Vector xinter2 = AddVectors(x0,dx,1,s2);
+        ParabolicRamp::Vector vinter = ScaleVector(dx,v_);
+        newramp1.SetPosVelTime(x0,zero,xinter1,vinter,t1_);
+        newramp2.SetPosVelTime(xinter1,vinter,xinter2,vinter,t2_);
+        newramp3.SetPosVelTime(xinter2,vinter,x1,zero,t1_);
+        resramps.push_back(newramp1);
+        resramps.push_back(newramp2);
+        resramps.push_back(newramp3);
+    }
+
+    // Last check just to make sure
+    return resramps.size() > 0 && DetermineMinswitchtime(resramps) >= delta && CheckRamps(resramps,check,options);
+}
+
+
+
+bool ComputeLinearRampsWithConstraints2(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check,int options)
 {
     ParabolicRamp::Vector zero(x0.size(),0.0);
     ParabolicRamp::ParabolicRampND newramp;
