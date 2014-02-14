@@ -191,6 +191,8 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false);
 
 protected:
+    void _UpdateParameters();
+    
     RobotBasePtr _robot;
     PlannerBasePtr _planner;
     PlannerBase::PlannerParametersPtr _parameters;

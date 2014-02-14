@@ -5578,6 +5578,9 @@ class IKFastSolver(AutoReloader):
     def SimplifyTransformPoly(self,peq):
         """simplifies the coefficients of the polynomial with simplifyTransform and returns the new polynomial
         """
+        if peq == S.Zero:
+            return peq
+        
         return peq.termwise(lambda m,c: self.SimplifyTransform(c))
 
     def SimplifyTransform(self,eq,othervars=None):
