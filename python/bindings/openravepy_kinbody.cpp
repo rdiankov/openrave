@@ -2411,7 +2411,13 @@ PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr pykinbody)
 
 PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
 {
-    return !pkinbody ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyKinBody(pkinbody,pyenv));
+    if( !pkinbody ) {
+        return PyInterfaceBasePtr();
+    }
+    if( pkinbody->IsRobot() ) {
+        return toPyRobot(RaveInterfaceCast<RobotBase>(pkinbody), pyenv);
+    }
+    return PyInterfaceBasePtr(new PyKinBody(pkinbody,pyenv));
 }
 
 object toPyKinBody(KinBodyPtr pkinbody, object opyenv)

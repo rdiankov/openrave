@@ -562,59 +562,58 @@ void ConfigurationCache::SetWeights(const std::vector<dReal>& weights)
     _cachetree.SetWeights(weights);
 }
 
-int ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, CollisionReportPtr report, dReal distin)
+bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, CollisionReportPtr report, dReal distin)
 {
-    if( !!report->plink2 && report->plink2->GetParent() == _pstaterobot ) {
-        std::swap(report->plink1, report->plink2);
-    }
-    //CacheTreeNodePtr vptr(new CacheTreeNode(conf, report));
-    RAVELOG_VERBOSE_FORMAT("%s","about to insert");
-    // tree is not initialized yet
-    if (_cachetree.GetNumNodes() == 0) {
-        _cachetree.InsertNode(conf, report, _insertiondistance);
-        return 1;
-    }
-    else{
-
-        // if distance to nearest has not been computed, calculate the distance
-        dReal dist;
-        if (distin > 0 ) {
-            dist = distin;
-        }
-        else{
-            std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf);
-            dist = knn.second;
-        }
-
-        // check if configuration is at least _insertiondistance from the nearest node
-        RAVELOG_VERBOSE_FORMAT("dist %e insertiondistance %e\n",dist%_insertiondistance);
-        if( dist > _insertiondistance ) {
-
-            if (IS_DEBUGLEVEL(Level_Verbose)) {
-                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                ss << "Inserted (InsertConfiguration) [ ";
-                FOREACHC(itvalue, conf) {
-                    ss << *itvalue << ", ";
-                }
-                ss << "]\n";
-                RAVELOG_VERBOSE(ss.str());
-            }
-
-            if(_profile) {
-                uint64_t start = utils::GetNanoPerformanceTime();
-                _cachetree.InsertNode(conf, report, _insertiondistance);
-                uint64_t end = utils::GetNanoPerformanceTime();
-                _itime = end - start;
-            }
-            else {
-                _cachetree.InsertNode(conf, report, _insertiondistance);
-            }
-
-            return 1;
+    if( !!report ) {
+        if( !!report->plink2 && report->plink2->GetParent() == _pstaterobot ) {
+            std::swap(report->plink1, report->plink2);
         }
     }
-
-    return 0;
+    return _cachetree.InsertNode(conf, report, _insertiondistance);
+    
+//    //CacheTreeNodePtr vptr(new CacheTreeNode(conf, report));
+//    RAVELOG_VERBOSE_FORMAT("%s","about to insert");
+//    // tree is not initialized yet
+//    if (_cachetree.GetNumNodes() == 0) {
+//        
+//    }
+//    else{
+//        // if distance to nearest has not been computed, calculate the distance
+//        dReal dist;
+//        if (distin > 0 ) {
+//            dist = distin;
+//        }
+//        else{
+//            std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf);
+//            dist = knn.second;
+//        }
+//
+//        // check if configuration is at least _insertiondistance from the nearest node
+//        RAVELOG_VERBOSE_FORMAT("dist %e insertiondistance %e\n",dist%_insertiondistance);
+//        if( dist > _insertiondistance ) {
+//            if (IS_DEBUGLEVEL(Level_Verbose)) {
+//                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//                ss << "Inserted (InsertConfiguration) [ ";
+//                FOREACHC(itvalue, conf) {
+//                    ss << *itvalue << ", ";
+//                }
+//                ss << "]\n";
+//                RAVELOG_VERBOSE(ss.str());
+//            }
+//
+//            if(_profile) {
+//                uint64_t start = utils::GetNanoPerformanceTime();
+//                _cachetree.InsertNode(conf, report, _insertiondistance);
+//                uint64_t end = utils::GetNanoPerformanceTime();
+//                _itime = end - start;
+//            }
+//            else {
+//                return _cachetree.InsertNode(conf, report, _insertiondistance);
+//            }
+//        }
+//    }
+//
+//    return false;
 }
 
 void ConfigurationCache::GetDOFValues(std::vector<dReal>& values)

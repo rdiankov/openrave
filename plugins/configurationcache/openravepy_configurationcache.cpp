@@ -42,6 +42,7 @@ KinBody::LinkPtr GetKinBodyLink(object);
 RobotBasePtr GetRobot(object o);
 RobotBase::ManipulatorPtr GetRobotManipulator(object);
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object);
+CollisionReportPtr GetCollisionReport(object);
 
 EnvironmentBasePtr GetEnvironment(object o);
 }
@@ -215,57 +216,75 @@ class PyConfigurationCache
 public:
     PyConfigurationCache(object pyrobot)
     {
+        _pyenv = openravepy::toPyEnvironment(pyrobot);
         _cache.reset(new configurationcache::ConfigurationCache(openravepy::GetRobot(pyrobot)));
     }
     virtual ~PyConfigurationCache(){
     }
 
-//    void SetManipulatorBias(object pymanip, object biasdir, dReal nullsampleprob = 0.50, dReal nullbiassampleprob = 0.50, dReal deltasampleprob = 0.30)
-//    {
-//        _jitterer->SetManipulatorBias(openravepy::GetRobotManipulator(pymanip), ExtractVector3Type<dReal>(biasdir), nullsampleprob, nullbiassampleprob, deltasampleprob);
-//    }
-//
-//    int Jitter(int maxiterations = 5000, dReal maxjitter=0.3, dReal perturbation=1e-5, dReal linkdistthresh=0.05)
-//    {
-//        return _jitterer->Jitter(maxiterations, maxjitter, perturbation, linkdistthresh);
-//    }
-//
-//    void SetUseNeighborFunction(bool useneighfn)
-//    {
-//        _jitterer->SetUseNeighborFunction(useneighfn);
-//    }
-//
-//    void SetUseCache(bool usecache)
-//    {
-//        _jitterer->SetUseCache(usecache);
-//    }
-//
-//    void SetCollisionThresh(dReal colthresh)
-//    {
-//        _jitterer->SetCollisionThresh(colthresh);
-//    }
-//
-//    dReal GetResultJitterDist()
-//    {
-//        return _jitterer->GetResultJitterDist();
-//    }
-//
-//    int GetCacheSize()
-//    {
-//        return _jitterer->GetCacheSize();
-//    }
+    bool InsertConfiguration(object ovalues, object pyreport)
+    {
+        return _cache->InsertConfiguration(ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport));
+    }
 
+    object CheckCollision()
+    {
+        KinBody::LinkConstPtr crobotlink, ccollidinglink;
+        dReal closestdist=0;
+        int ret = _cache->CheckCollision(crobotlink, ccollidinglink, closestdist);
+        KinBody::LinkPtr robotlink, collidinglink;
+        if( !!crobotlink ) {
+            robotlink = crobotlink->GetParent()->GetLinks().at(crobotlink->GetIndex());
+        }
+        if( !!ccollidinglink ) {
+            collidinglink = ccollidinglink->GetParent()->GetLinks().at(ccollidinglink->GetIndex());
+        }
+        return boost::python::make_tuple(ret, openravepy::toPyKinBodyLink(robotlink, _pyenv), openravepy::toPyKinBodyLink(collidinglink, _pyenv), closestdist);
+    }
+
+    void Reset()
+    {
+        _cache->Reset();
+    }
+
+    object GetDOFValues()
+    {
+        std::vector<dReal> values;
+        _cache->GetDOFValues(values);
+        return toPyArray(values);
+    }
+
+    int GetNumNodes() {
+        return _cache->GetNumNodes();
+    }
+
+    void SetCollisionThresh(dReal colthresh)
+    {
+        _cache->SetCollisionThresh(colthresh);
+    }
+
+    void SetWeights(object oweights)
+    {
+        _cache->SetWeights(ExtractArray<dReal>(oweights));
+    }
+
+    void SetInsertionDistance(dReal indist)
+    {
+        _cache->SetInsertionDistance(indist);
+    }
+
+    object GetRobot() {
+        return openravepy::toPyKinBody(_cache->GetRobot(), _pyenv);
+    }
+
+protected:
+    object _pyenv;
     configurationcache::ConfigurationCachePtr _cache;
 };
 
 typedef boost::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
 
 } // end namespace configurationcachepy_int
-
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetManipulatorBias_overloads, configurationcachepy::PyConfigurationCache::SetManipulatorBias, 2, 5)
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetUseNeighborFunction_overloads, configurationcachepy::PyConfigurationCache::SetUseNeighborFunction, 1, 1)
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCollisionThresh_overloads, configurationcachepy::PyConfigurationCache::SetCollisionThresh, 1, 1)
-//BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Jitter_overloads, configurationcachepy::PyConfigurationCache::Jitter, 0, 4)
 
 BOOST_PYTHON_MODULE(openravepy_configurationcache)
 {
@@ -275,12 +294,15 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
 
     class_<PyConfigurationCache, PyConfigurationCachePtr >("ConfigurationCache", no_init)
     .def(init<object>(args("robot")))
+    .def("InsertConfiguration",&PyConfigurationCache::InsertConfiguration, args("values","report"))
+    .def("CheckCollision",&PyConfigurationCache::CheckCollision)
+    .def("Reset",&PyConfigurationCache::Reset)
+    .def("GetDOFValues",&PyConfigurationCache::GetDOFValues)
+    .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
+    .def("SetCollisionThresh",&PyConfigurationCache::SetCollisionThresh, args("colthresh"))
+    .def("SetWeights",&PyConfigurationCache::SetWeights, args("weights"))
+    .def("SetInsertionDistance",&PyConfigurationCache::SetInsertionDistance, args("indist"))
+    .def("GetRobot",&PyConfigurationCache::GetRobot)
+    .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
     ;
-//    .def("SetManipulatorBias",&configurationcachepy::PyConfigurationCache::SetManipulatorBias, SetManipulatorBias_overloads(args("manip","biasdirection", "nullsampleprob", "nulldeltasampleprob", "deltasampleprob")))
-//    .def("SetUseNeighborFunction",&configurationcachepy::PyConfigurationCache::SetUseNeighborFunction, SetUseNeighborFunction_overloads(args("useneighfn")))
-//    .def("SetUseCache",&configurationcachepy::PyConfigurationCache::SetUseCache)
-//    .def("Jitter",&configurationcachepy::PyConfigurationCache::Jitter, Jitter_overloads(args("maxiterations","maxjitter","perturbation","linkdistthresh")))
-//    .def("GetResultJitterDist",&configurationcachepy::PyConfigurationCache::GetResultJitterDist)
-//    .def("GetCacheSize",&configurationcachepy::PyConfigurationCache::GetCacheSize)
-//    .def("SetCollisionThresh",&configurationcachepy::PyConfigurationCache::SetCollisionThresh, SetCollisionThresh_overloads(args("colthresh")));
 }
