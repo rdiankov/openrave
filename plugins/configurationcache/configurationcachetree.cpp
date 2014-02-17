@@ -40,7 +40,6 @@ CacheTreeNode::CacheTreeNode(dReal* pcstate, Vector* plinkspheres)
 //    _approxnn.second = std::numeric_limits<float>::infinity();
     _conftype = CNT_Unknown;
     _robotlinkindex = -1;
-//    SetCollisionInfo(report);
 }
 
 void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
@@ -79,20 +78,6 @@ void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
 //    }
 //}
 
-
-//void CacheTreeNode::RemoveChild(CacheTreeNodePtr child, int level)
-//{
-//    std::vector<CacheTreeNodePtr>:: iterator it = _children[level].begin();
-//    for (; it != _children[level].end(); ) {
-//        if (*it == child) {
-//            it = _children[level].erase(it);
-//        }
-//        else{
-//            ++it;
-//        }
-//    }
-//}
-
 CacheTree::CacheTree(int statedof) : _poolNodes(sizeof(CacheTreeNode)+sizeof(dReal)*statedof)
 {
     _statedof=statedof;
@@ -118,7 +103,6 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
     _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
     _minlevel = _maxlevel - 1;
     _fMaxLevelBound = RavePow(_base, _maxlevel);
-    //_insertiondistance = 0;
     int enclevel = _EncodeLevel(_maxlevel);
     if( enclevel >= (int)_vmapNodeChildren.size() ) {
         _vmapNodeChildren.resize(enclevel+1);
@@ -149,7 +133,9 @@ void CacheTree::Reset()
             }
         }
     }
-    _vmapNodeChildren.resize(0);
+    FOREACH(itchildren, _vmapNodeChildren) {
+        itchildren->clear();
+    }
     _poolNodes.purge_memory();
 }
 
@@ -195,6 +181,20 @@ dReal CacheTree::_ComputeDistance(const dReal* cstatei, const dReal* cstatef) co
         distance += RaveFabs(cstatei[i] - cstatef[i]) * _weights[i];
     }
     return distance;
+}
+
+void CacheTree::SetWeights(const std::vector<dReal>& weights)
+{
+    OPENRAVE_ASSERT_OP((int)weights.size(),==,_statedof);
+    Reset();
+    _weights = weights;
+}
+
+void CacheTree::SetMaxDistance(dReal maxdistance)
+{
+    Reset();
+    _maxdistance = maxdistance;
+    // have to update the max level?
 }
 
 std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::vector<dReal>& vquerystate, dReal distancebound, ConfigurationNodeType conftype) const
@@ -264,11 +264,10 @@ bool CacheTree::InsertNode(const std::vector<dReal>& cs, CollisionReportPtr repo
     }
     _vmapNodeChildren.at(_EncodeLevel(_maxlevel));
 
-    dReal fLevelBound = _fMaxLevelBound;
     _vCurrentLevelNodes.resize(1);
     _vCurrentLevelNodes[0].first = _root;
     _vCurrentLevelNodes[0].second = _ComputeDistance(_root->GetConfigurationState(), &cs[0]);
-    return _Insert(nodein, _vCurrentLevelNodes, _maxlevel, fLevelBound, fMaxSeparationDist);
+    return _Insert(nodein, _vCurrentLevelNodes, _maxlevel, _fMaxLevelBound, fMaxSeparationDist);
 }
 
 bool CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int currentlevel, dReal fLevelBound, dReal fMaxSeparationDist)
@@ -347,95 +346,127 @@ bool CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Ca
     return true;
 }
 
-//int CacheTree::RemoveNode(CacheTreeNodePtr nodein)
-//{
-//    // todo: if there is no root, make this the root
-//    // otherwise call the lowlevel  insert
-//
-//    std::vector<CacheTreeNodePtr> nodesin;
-//    std::vector<dReal> distin;
-//
-//    distin.push_back(ComputeDistance(_root, nodein));
-//    nodesin.push_back(_root); //this is always the same, perhaps keep make this vector at construction?
-//
-//    _Remove(nodein, nodesin, distin, _maxlevel);
-//
-//    return 1;
-//}
-
-void CacheTree::SetWeights(const std::vector<dReal>& weights)
+bool CacheTree::RemoveNode(CacheTreeNodePtr removenode)
 {
-    OPENRAVE_ASSERT_OP((int)weights.size(),==,_statedof);
-    Reset();
-    _weights = weights;
+    if( !_root ) {
+        return false;
+    }
+
+    if( _numnodes == 1 && removenode == _root ) {
+        Reset();
+        return true;
+    }
+    
+    //_vCurrentLevelNodes.resize(1);
+    //_vCurrentLevelNodes[0].first = _root;
+    //_vCurrentLevelNodes[0].second = _ComputeDistance(_root->GetConfigurationState(), removenode->GetConfigurationState());
+    if( _maxlevel-_minlevel < (int)_vvCacheNodes.size() ) {
+        _vvCacheNodes.resize(_maxlevel-_minlevel+1);
+    }
+    FOREACH(it, _vvCacheNodes) {
+        it->resize(0);
+    }
+    _vvCacheNodes.at(0).push_back(_root);
+    bool bRemoved = _Remove(removenode, _vvCacheNodes, _maxlevel, _fMaxLevelBound);
+    if( bRemoved ) {
+        _DeleteCacheTreeNode(removenode);
+    }
+    if( removenode == _root ) {
+        BOOST_ASSERT(_vvCacheNodes.at(0).size()==2); // instead of root, another node should have been added
+        _root = _vvCacheNodes.at(0).at(1);
+        bRemoved = true;
+    }
+
+    return bRemoved;
 }
 
-void CacheTree::SetMaxDistance(dReal maxdistance)
+bool CacheTree::_Remove(CacheTreeNodePtr removenode, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int currentlevel, dReal fLevelBound)
 {
-    Reset();
-    _maxdistance = maxdistance;
-    // have to update the max level?
-}
+    int enclevel = _EncodeLevel(currentlevel);
+    if( enclevel >= (int)_vmapNodeChildren.size() ) {
+        return false;
+    }
 
-int CacheTree::_Remove(CacheTreeNodePtr in, const std::vector<CacheTreeNodePtr>& nodesin, const std::vector<dReal>& leveldists,  int level)
-{
-    // 2^{i}
-    /*dReal qleveldistance = RavePow(_base, level);
+    // build the level below
+    std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> >::iterator itchildren;
+    std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> >& mapLevelRawChildren = _vmapNodeChildren.at(enclevel);
+    int coverindex = _maxlevel-(currentlevel-1);
+    if( coverindex >= (int)vvCoverSetNodes.size() ) {
+        vvCoverSetNodes.resize(coverindex+(_maxlevel-_minlevel)+1);
+    }
+    std::vector<CacheTreeNodePtr>& vNextLevelNodes = vvCoverSetNodes[coverindex];
+    vNextLevelNodes.resize(0);
 
-       dReal minimumdistance = std::numeric_limits<float>::infinity();
-       CacheTreeNodePtr minimumdistancev;
-       dReal localmindist = std::numeric_limits<float>::infinity();
-
-       std::vector<CacheTreeNodePtr> nextlevelnodes;
-       std::vector<dReal> nextleveldists;
-       CacheTreeNodePtr parent;
-
-       for (size_t i = 0; i < nodesin.size(); ++i) {
-
-        if (leveldists[i] < minimumdistance) {
-            minimumdistance = leveldists[i];
-            minimumdistancev = nodesin[i];
-        }
-
-        if (leveldists[i] <= qleveldistance) {
-            nextleveldists.push_back(leveldists[i]);
-            nextlevelnodes.push_back(nodesin[i]);
-        }
-
-        // now consider children
-        const std::vector<CacheTreeNodePtr>& levelchildren = nodesin[i]->GetChildren(level);
-
-        for (size_t j = 0; j < levelchildren.size(); ++j) {
-
-            dReal curdist = ComputeDistance(in, levelchildren[j]);
-
-            if (curdist < minimumdistance) {
-                minimumdistance = curdist;
-                minimumdistancev = levelchildren[j];
-                if (curdist == 0) {
-                    parent = levelchildren[j];
+    bool bfound = false;
+    FOREACH(itcurrentnode, vvCoverSetNodes.at(coverindex-1)) {
+        // only take the children whose distances are within the bound
+        itchildren = mapLevelRawChildren.find(*itcurrentnode);
+        if( itchildren != mapLevelRawChildren.end() ) {
+            std::vector<CacheTreeNodePtr>::iterator itchild = itchildren->second.begin();
+            while(itchild != itchildren->second.end() ) {
+                dReal curdist = _ComputeDistance(removenode->GetConfigurationState(), (*itchild)->GetConfigurationState());
+                if( curdist <= fLevelBound ) {
+                    vNextLevelNodes.push_back(*itchild);
+                }
+                if( *itchild == removenode ) {
+                    itchild = itchildren->second.erase(itchild);
+                    bfound = true;
+                }
+                else {
+                    ++itchild;
                 }
             }
-
-            if (curdist <= qleveldistance)
-            {
-                nextleveldists.push_back(curdist);
-                nextlevelnodes.push_back(levelchildren[j]);
+            if( bfound ) {
+                break;
             }
         }
-       }
+    }
 
-       if (level > _minlevel) {
-        _Remove(in, nextlevelnodes, nextleveldists, level-1);
-       }
-
-       if (!!parent) {
-        //parent->removeChild(level, minimumdistancev);
-       }
-
-       const std::vector<CacheTreeNodePtr>& minchildren = minimumdistancev->GetChildren(level-1);*/
-
-    return 0;
+    bool bRemoved = _Remove(removenode, vvCoverSetNodes, currentlevel-1, fLevelBound*_fBaseInv);
+    
+    itchildren = mapLevelRawChildren.find(removenode);
+    if( itchildren != mapLevelRawChildren.end() ) {
+        // for each child, find a more suitable parent
+        FOREACH(itchild, itchildren->second) {
+            const dReal* pchildstate = (*itchild)->GetConfigurationState();
+            int parentlevel = currentlevel-1;
+            dReal fParentLevelBound = fLevelBound*_fBaseInv;
+            dReal closestdist=0;
+            CacheTreeNodePtr closestNode = NULL;
+            //int maxaddlevel = currentlevel-1;
+            while(parentlevel <= _maxlevel && vvCoverSetNodes.at(_maxlevel-parentlevel).size() > 0 ) {
+                FOREACHC(itnode, vvCoverSetNodes.at(_maxlevel-parentlevel)) {
+                    if( *itnode == removenode ) {
+                        continue;
+                    }
+                    dReal curdist = _ComputeDistance(pchildstate, (*itnode)->GetConfigurationState());
+                    if( curdist < fParentLevelBound ) {
+                        if( !closestNode || curdist < closestdist ) {
+                            closestdist = curdist;
+                            closestNode = *itnode;
+                        }
+                    }
+                }
+                if( !!closestNode ) {
+                    // closest node was found in parentlevel, so add to the children
+                    _vmapNodeChildren[_EncodeLevel(parentlevel)][closestNode].push_back(*itchild);
+                    // should also add to vvCoverSetNodes..?
+                    //vvCoverSetNodes.at(_maxlevel-(parentlevel-1)).push_back(*itchild);
+                    break;
+                }
+                // try a higher level
+                parentlevel += 1;
+                fParentLevelBound *= _base;
+            }
+            if( !closestNode ) {
+                // occurs when root node is being removed and new children have no where to go
+                vvCoverSetNodes.at(0).push_back(*itchild);
+            }
+        }
+        // remove the children from node
+        mapLevelRawChildren.erase(itchildren);
+    }
+    return bRemoved;
 }
 
 void CacheTree::UpdateTree()

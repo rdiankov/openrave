@@ -144,7 +144,10 @@ public:
     /// \return true if node is inserted
     bool InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMaxSeparationDist);
 
-    //int RemoveNode(CacheTreeNodePtr in);
+    /// \brief removes node from the tree
+    ///
+    /// \return true if node is removed
+    bool RemoveNode(CacheTreeNodePtr nodein);
 
     /// \brief distance a configuration must have from the nearest configuration in the tree in order for it be inserted
 //    void SetInsertionDistance(dReal dist){
@@ -192,7 +195,8 @@ private:
     /// \return true if point is inserted and parent found.
     bool _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound, dReal fMaxSeparationDist);
 
-    int _Remove(CacheTreeNodePtr in, const std::vector<CacheTreeNodePtr>& vs, const std::vector<dReal>& leveldists, int level);
+    /// \param[inout] coversetnodes for every level starting at the max, the parent cover sets. coversetnodes[i] is the _maxlevel-i level
+    bool _Remove(CacheTreeNodePtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
 
     inline int _EncodeLevel(int level) const {
         if( level <= 0 ) {
@@ -218,30 +222,19 @@ private:
     std::vector< std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> > > _vmapNodeChildren; ///< _vmapNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector.
 
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
-
-    //std::deque<CacheTreeNode> _poolNodes;
-    //std::vector< std::vector<int32_t> > _vLevelNodeIndices; ///< for every level, holds the indices of the nodes that comprise that level.
-    //typedef std::pair<int32_t, CacheTreeNodePtr> NodeKey; ///< (level, node pointer)
-    //std::map<NodeKey, std::vector<CacheTreeNodePtr> > _mapNodeChildren; ///< holds the indices of the children of a node given the level and that node's index
-
-//    std::vector<dReal> _nextleveldists;
-//    std::vector<dReal> _currentleveldists;
-//    std::vector<CacheTreeNodePtr> _currentlevelnodes;
-//    std::vector<CacheTreeNodePtr> _levelchildren;
-//    std::list< std::pair<dReal, CacheTreeNodePtr> > _listDistanceNodes;
-
+    
     dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree.
     dReal _base, _fBaseInv; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base
-    //dReal _fMaxInsertionColDist, _fMaxInsertionFreeDist; ///< distance a configuration must have from the nearest configuration in the tree of the same type in order for it to be inserted
-
+    
     int _statedof; ///< the state space DOF tree is configured for
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
     int _numnodes; ///< the number of nodes in the current tree starting at _root
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
-
+    
     // cache cache
     mutable std::vector< std::pair<CacheTreeNodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
+    mutable std::vector< std::vector<CacheTreeNodePtr> > _vvCacheNodes;
 };
 
 typedef boost::shared_ptr<CacheTree> CacheTreePtr;
