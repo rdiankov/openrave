@@ -25,7 +25,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       return 0;
     }"
     HAVE_ALL_PYTHON_HEADERS)
-
+    set(HAVE_ALL_PYTHON_HEADERS ${HAVE_ALL_PYTHON_HEADERS} PARENT_SCOPE)
     if( HAVE_ALL_PYTHON_HEADERS )
       message(STATUS "python and boost-python found")
       include_directories(${PYTHON_INCLUDE_DIRS} ${OPENRAVE_INCLUDE_LOCAL_DIRS} ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS})

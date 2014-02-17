@@ -134,9 +134,9 @@ public:
 
     /// \brief finds the nearest neighbor in the cover tree of a particular type.
     ///
-    /// \param distancebound the distance bound such that any points as close as distancebound will be immediately returned
+    /// \param distancebound If > 0, the distance bound such that any points as close as distancebound will be immediately returned
     /// \param conftype the type of node to find. If CNT_Any, will return any type.
-    std::pair<CacheTreeNodeConstPtr, dReal> FindNearestNode(const std::vector<dReal>& cs, dReal distancebound=g_fEpsilonLinear, ConfigurationNodeType conftype = CNT_Any) const;
+    std::pair<CacheTreeNodeConstPtr, dReal> FindNearestNode(const std::vector<dReal>& cs, dReal distancebound=-1, ConfigurationNodeType conftype = CNT_Any) const;
 
     /// \brief inserts node in the tree. If node is too close to other nodes in the tree, then does not insert.
     ///
@@ -258,7 +258,7 @@ public:
     /// returns 1 if configuration was inserted and 0 otherwise
     /// \param indist, nearest distance for this configuration; optional parameter if it has already been computed
     int InsertConfiguration(const std::vector<dReal>& cs, CollisionReportPtr report = CollisionReportPtr(), dReal distin = -1);
-
+    
     /// \brief determine if current configuration is whithin threshold of a collision in the cache (_collisionthresh), known to be in collision, or requires an explicit collision check
     /// \return 1 if in collision, 0 if not in collision, -1 if unknown
     int CheckCollision(KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist);

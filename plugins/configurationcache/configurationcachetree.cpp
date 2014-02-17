@@ -214,7 +214,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
     if( conftype == CNT_Any || _root->GetType() == conftype ) {
         bestdist = curdist;
         pbestnode = _root;
-        if( bestdist <= distancebound ) {
+        if( distancebound > 0 && bestdist <= distancebound ) {
             return make_pair(pbestnode, bestdist);
         }
     }
@@ -235,7 +235,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
                         if( curdist < bestdist ) {
                             bestdist = curdist;
                             pbestnode = *itchild;
-                            if( bestdist <= distancebound ) {
+                            if( distancebound > 0 && bestdist <= distancebound ) {
                                 return make_pair(pbestnode, bestdist);
                             }
                         }
