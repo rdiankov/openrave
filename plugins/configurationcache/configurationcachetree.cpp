@@ -1,4 +1,4 @@
-// -*- coding: utf-8 -*-
+// -*- Coding: utf-8 -*-
 // Copyright (C) 2014 Alejandro Perez & Rosen Diankov
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,213 +30,342 @@
 //std::map<KinBodyPtr, std::pair<std::vector<dReal>, std::vector<uint8_t> > > mapEnvironmentState;
 namespace configurationcache {
 
-CacheTreeVertex::CacheTreeVertex(const std::vector<dReal>& cs, CollisionReportPtr report)
+CacheTreeNode::CacheTreeNode(dReal* pcstate, Vector* plinkspheres)
 {
-    _cstate = cs;
-    _approxdispersion.first = CacheTreeVertexPtr();
-    _approxdispersion.second = std::numeric_limits<float>::infinity();
-    _approxnn.first = CacheTreeVertexPtr();
-    _approxnn.second = std::numeric_limits<float>::infinity();
-    _conftype = CT_Unknown;
+    _pcstate = pcstate;
+    _plinkspheres = plinkspheres;
+//    _approxdispersion.first = CacheTreeNodePtr();
+//    _approxdispersion.second = std::numeric_limits<float>::infinity();
+//    _approxnn.first = CacheTreeNodePtr();
+//    _approxnn.second = std::numeric_limits<float>::infinity();
+    _conftype = CNT_Unknown;
     _robotlinkindex = -1;
-    SetCollisionInfo(report);
+//    SetCollisionInfo(report);
 }
 
-void CacheTreeVertex::SetCollisionInfo(CollisionReportPtr report)
+void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
 {
     if(!!report && report->numCols > 0) {
         _collidinglinktrans = report->plink1->GetTransform();
         _robotlinkindex = report->plink1->GetIndex();
         _collidinglink = report->plink2;
-        _conftype = CT_Collision;
+        _conftype = CNT_Collision;
     }
-    _conftype = CT_Free;
-    _collidinglink.reset();
-    _robotlinkindex = -1;
-}
-
-void CacheTreeVertex::UpdateApproximates(dReal distance, CacheTreeVertexPtr v)
-{
-    // if both are same type, update nn
-    if (v->GetConfigurationType() == _conftype) {
-        if (distance < _approxnn.second) {
-            _approxnn.first = v;
-            _approxnn.second = distance;
-        }
-
-    }
-    // if they are different types, update dispersion
-    else{
-        if ( distance < _approxdispersion.second) {
-            _approxdispersion.first = v;
-            //dReal oldd = _approxdispersion.second;
-            //RAVELOG_DEBUG_FORMAT("dispersion %f to %f\n",oldd%distance);
-            _approxdispersion.second = distance;
-        }
+    else {
+        _conftype = CNT_Free;
+        _collidinglink.reset();
+        _robotlinkindex = -1;
     }
 }
 
-void CacheTreeVertex::RemoveChild(CacheTreeVertexPtr child, int level)
+//void CacheTreeNode::UpdateApproximates(dReal distance, CacheTreeNodePtr v)
+//{
+//    // if both are same type, update nn
+//    if (v->GetType() == _conftype) {
+//        if (distance < _approxnn.second) {
+//            _approxnn.first = v;
+//            _approxnn.second = distance;
+//        }
+//
+//    }
+//    // if they are different types, update dispersion
+//    else{
+//        if ( distance < _approxdispersion.second) {
+//            _approxdispersion.first = v;
+//            //dReal oldd = _approxdispersion.second;
+//            //RAVELOG_DEBUG_FORMAT("dispersion %f to %f\n",oldd%distance);
+//            _approxdispersion.second = distance;
+//        }
+//    }
+//}
+
+
+//void CacheTreeNode::RemoveChild(CacheTreeNodePtr child, int level)
+//{
+//    std::vector<CacheTreeNodePtr>:: iterator it = _children[level].begin();
+//    for (; it != _children[level].end(); ) {
+//        if (*it == child) {
+//            it = _children[level].erase(it);
+//        }
+//        else{
+//            ++it;
+//        }
+//    }
+//}
+
+CacheTree::CacheTree(int statedof) : _poolNodes(sizeof(CacheTreeNode)+sizeof(dReal)*statedof)
 {
-    std::vector<CacheTreeVertexPtr>:: iterator it = _children[level].begin();
-    for (; it != _children[level].end(); ) {
-        if (*it == child) {
-            it = _children[level].erase(it);
-        }
-        else{
-            ++it;
-        }
-    }
+    _statedof=statedof;
+    _weights.resize(_statedof, 1.0);
+    Init(_weights, 1);
 }
 
-CacheTree::CacheTree(const std::vector<dReal>& weights, dReal maxdistance)
+CacheTree::~CacheTree()
 {
+    Reset();
+    _weights.clear();
+}
+
+void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
+{
+    OPENRAVE_ASSERT_OP((int)weights.size(),==,_statedof);
+    Reset();
     _weights = weights;
-    _numvertices = 0;
+    _numnodes = 0;
     _base = 2.0;
+    _fBaseInv = 1/_base;
     _maxdistance = maxdistance;
     _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
     _minlevel = _maxlevel - 1;
-    _numvertices = 0;
-    _insertiondistance = 0;
+    _fMaxLevelBound = RavePow(_base, _maxlevel);
+    //_insertiondistance = 0;
+    int enclevel = _EncodeLevel(_maxlevel);
+    if( enclevel >= (int)_vmapNodeChildren.size() ) {
+        _vmapNodeChildren.resize(enclevel+1);
+    }
 }
 
 void CacheTree::Reset()
 {
-    BOOST_ASSERT(0);
+    // make sure all children are deleted
+    std::set<CacheTreeNodePtr> _setdeleted;
+    if( !!_root ) {
+        _root->~CacheTreeNode();
+        _setdeleted.insert(_root);
+        _root = NULL;
+    }
+
+    for(size_t ilevel = 0; ilevel < _vmapNodeChildren.size(); ++ilevel) {
+        FOREACH(itnodes, _vmapNodeChildren[ilevel]) {
+            if( _setdeleted.find(itnodes->first) != _setdeleted.end() ) {
+                itnodes->first->~CacheTreeNode();
+                _setdeleted.insert(itnodes->first);
+            }
+            FOREACH(itchild, itnodes->second) {
+                if( _setdeleted.find(*itchild) != _setdeleted.end() ) {
+                    (*itchild)->~CacheTreeNode();
+                    _setdeleted.insert(*itchild);
+                }
+            }
+        }
+    }
+    _vmapNodeChildren.resize(0);
+    _poolNodes.purge_memory();
 }
 
-dReal CacheTree::ComputeDistance(CacheTreeVertexPtr vi, CacheTreeVertexPtr vf)
+CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, CollisionReportPtr report)
 {
-    dReal distance = _ComputeDistance(vi->GetConfigurationState(), vf->GetConfigurationState());
-
-    // use this distance information to update the upper bounds stored on the vertex
-    vi->UpdateApproximates(distance,vf);
-    vf->UpdateApproximates(distance,vi);
-
-    return distance;
+    // allocate memory for the structur and the internal state vectors
+    void* pmemory = _poolNodes.malloc();
+    dReal* pcstate = (dReal*)((uint8_t*)pmemory + sizeof(CacheTreeNode));
+    std::copy(cs.begin(), cs.end(), pcstate);
+    CacheTreeNodePtr newnode = new (pmemory) CacheTreeNode(pcstate, NULL);
+    if( !!report ) {
+        newnode->SetCollisionInfo(report);
+    }
+    return newnode;
 }
 
-dReal CacheTree::_ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef)
+void CacheTree::_DeleteCacheTreeNode(CacheTreeNodePtr pnode)
+{
+    pnode->~CacheTreeNode();
+    _poolNodes.free(pnode);
+}
+
+//dReal CacheTree::ComputeDistance(CacheTreeNodePtr vi, CacheTreeNodePtr vf)
+//{
+//    dReal distance = _ComputeDistance(vi->GetConfigurationState(), vf->GetConfigurationState());
+//
+//    // use this distance information to update the upper bounds stored on the node
+//    vi->UpdateApproximates(distance,vf);
+//    vf->UpdateApproximates(distance,vi);
+//
+//    return distance;
+//}
+
+dReal CacheTree::ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef) const
+{
+    return _ComputeDistance(&cstatei[0], &cstatef[0]);
+}
+
+dReal CacheTree::_ComputeDistance(const dReal* cstatei, const dReal* cstatef) const
 {
     dReal distance = 0;
-    for (size_t i = 0; i < cstatef.size(); ++i) {
+    for (size_t i = 0; i < _weights.size(); ++i) {
         distance += RaveFabs(cstatei[i] - cstatef[i]) * _weights[i];
     }
     return distance;
 }
 
-int CacheTree::InsertVertex(CacheTreeVertexPtr vertexin)
+std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::vector<dReal>& vquerystate, dReal distancebound, ConfigurationNodeType conftype) const
 {
-    // todo: if there is no root, make this the root
-    // otherwise call the lowlevel  insert
+    CacheTreeNodeConstPtr pbestnode=NULL;
+    dReal bestdist = std::numeric_limits<dReal>::infinity();
     if( !_root ) {
-        _root = vertexin;
-        return 1;
+        return make_pair(pbestnode, bestdist);
+    }
+    OPENRAVE_ASSERT_OP(vquerystate.size(),==,_weights.size());
+    // first localmax is distance from this node to the root
+    const dReal* pquerystate = &vquerystate[0];
+
+    dReal curdist = _ComputeDistance(pquerystate, _root->GetConfigurationState());
+    _vCurrentLevelNodes.resize(1);
+    _vCurrentLevelNodes[0] = make_pair(_root, curdist);
+    if( conftype == CNT_Any || _root->GetType() == conftype ) {
+        bestdist = curdist;
+        pbestnode = _root;
+        if( bestdist <= distancebound ) {
+            return make_pair(pbestnode, bestdist);
+        }
+    }
+    int currentlevel = _maxlevel; // where the root node is
+    // traverse all levels gathering up the children at each level
+    dReal fLevelBound = _fMaxLevelBound;
+    std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> >::const_iterator itchildren;
+    while(_vCurrentLevelNodes.size() > 0 ) {
+        const std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> >& mapLevelRawChildren = _vmapNodeChildren.at(_EncodeLevel(currentlevel));
+        _vNextLevelNodes.resize(0);
+        FOREACH(itcurrentnode, _vCurrentLevelNodes) {
+            // only take the children whose distances are within the bound
+            itchildren = mapLevelRawChildren.find(itcurrentnode->first);
+            if( itchildren != mapLevelRawChildren.end() ) {
+                FOREACHC(itchild, itchildren->second) {
+                    dReal curdist = _ComputeDistance(pquerystate, (*itchild)->GetConfigurationState());
+                    if( conftype == CNT_Any || (*itchild)->GetType() == conftype ) {
+                        if( curdist < bestdist ) {
+                            bestdist = curdist;
+                            pbestnode = *itchild;
+                            if( bestdist <= distancebound ) {
+                                return make_pair(pbestnode, bestdist);
+                            }
+                        }
+                    }
+                    if( curdist < itcurrentnode->second + fLevelBound ) {
+                        _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                    }
+                }
+            }
+        }
+        _vCurrentLevelNodes.swap(_vNextLevelNodes);
+        currentlevel -= 1;
+        fLevelBound *= _fBaseInv;
+    }
+    return make_pair(pbestnode, bestdist);
+}
+
+bool CacheTree::InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMaxSeparationDist)
+{
+    OPENRAVE_ASSERT_OP(cs.size(),==,_weights.size());
+    CacheTreeNodePtr nodein = _CreateCacheTreeNode(cs, report);
+    // if there is no root, make this the root, otherwise call the lowlevel  insert
+    if( !_root ) {
+        _root = nodein;
+        return true;
+    }
+    _vmapNodeChildren.at(_EncodeLevel(_maxlevel));
+
+    dReal fLevelBound = _fMaxLevelBound;
+    _vCurrentLevelNodes.resize(1);
+    _vCurrentLevelNodes[0].first = _root;
+    _vCurrentLevelNodes[0].second = _ComputeDistance(_root->GetConfigurationState(), &cs[0]);
+    return _Insert(nodein, _vCurrentLevelNodes, _maxlevel, fLevelBound, fMaxSeparationDist);
+}
+
+bool CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int currentlevel, dReal fLevelBound, dReal fMaxSeparationDist)
+{
+    dReal closestDist=0;
+    CacheTreeNodePtr closestNodeInRange=NULL; /// one of the nodes in nodesin such that its distance to nodein is <= fLevelBound
+    int enclevel = _EncodeLevel(currentlevel);
+    if( enclevel < (int)_vmapNodeChildren.size() ) {
+        // build the level below
+        std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> >::const_iterator itchildren;
+        const std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> >& mapLevelRawChildren = _vmapNodeChildren.at(enclevel);
+        _vNextLevelNodes.resize(0);
+
+        FOREACH(itcurrentnode, nodesin) {
+            if( itcurrentnode->second <= fLevelBound ) {
+                if(  !closestNodeInRange || itcurrentnode->second < closestDist ) {
+                    closestNodeInRange = itcurrentnode->first;
+                    closestDist = itcurrentnode->second;
+                    if( closestDist < fMaxSeparationDist ) {
+                        // pretty close, so return as if node was added
+                        return true;
+                    }
+                }
+            }
+            // only take the children whose distances are within the bound
+            itchildren = mapLevelRawChildren.find(itcurrentnode->first);
+            if( itchildren != mapLevelRawChildren.end() ) {
+                FOREACHC(itchild, itchildren->second) {
+                    dReal curdist = _ComputeDistance(nodein->GetConfigurationState(), (*itchild)->GetConfigurationState());
+                    if( curdist <= fLevelBound ) {
+                        _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                    }
+                }
+            }
+        }
+
+        if( _vNextLevelNodes.size() == 0 ) {
+            return false;
+        }
+
+        _vCurrentLevelNodes.swap(_vNextLevelNodes);
+        // note that after _Insert call, _vCurrentLevelNodes could be complete lost/reset
+        bool bParentFound = _Insert(nodein, _vCurrentLevelNodes, currentlevel-1, fLevelBound*_fBaseInv, fMaxSeparationDist);
+        if( bParentFound ) {
+            return true;
+        }
     }
     else {
-        std::vector<CacheTreeVertexPtr> verticesin;
-        std::vector<dReal> distin;
-
-        distin.push_back(ComputeDistance(_root, vertexin));
-        verticesin.push_back(_root); //this is always the same, perhaps keep make this vector at construction?
-
-        return _Insert(vertexin, verticesin, distin, _maxlevel);
-    }
-}
-
-int CacheTree::_Insert(CacheTreeVertexPtr in, const std::vector<CacheTreeVertexPtr>& verticesin, const std::vector<dReal>& leveldists,  int level)
-{
-    if (level < _minlevel-1) {
-        return 1;
-    }
-
-    // 2^{i}
-    dReal qleveldistance = RavePow(_base, level);
-
-    dReal minimumdistance = std::numeric_limits<float>::infinity();
-    int minimumdistancev = 0;
-    dReal localmindist = std::numeric_limits<float>::infinity();
-
-    std::vector<CacheTreeVertexPtr> nextlevelvertices;
-    std::vector<dReal> nextleveldists;
-
-    for (size_t i = 0; i < verticesin.size(); ++i) {
-        if (leveldists[i] < minimumdistance) {
-            minimumdistance = leveldists[i];
-            minimumdistancev = i;
-        }
-
-        if (leveldists[i] < localmindist) {
-            localmindist = leveldists[i];
-        }
-
-        if (leveldists[i] <= qleveldistance) {
-            nextleveldists.push_back(leveldists[i]);
-            nextlevelvertices.push_back(verticesin[i]);
-        }
-
-        // now consider children
-        const std::vector<CacheTreeVertexPtr>& levelchildren = verticesin[i]->GetChildren(level);
-
-        int cz = levelchildren.size();
-        RAVELOG_VERBOSE_FORMAT("%d children at level %d\n",cz%level);
-        for (size_t j = 0; j < levelchildren.size(); ++j) {
-
-            dReal curdist = ComputeDistance(in, levelchildren[j]);
-
-            if (curdist < localmindist) {
-                localmindist = curdist;
-            }
-
-            if (curdist <= qleveldistance)
-            {
-                nextleveldists.push_back(curdist);
-                nextlevelvertices.push_back(levelchildren[j]);
+        FOREACH(itcurrentnode, nodesin) {
+            if( itcurrentnode->second <= fLevelBound ) {
+                if(  !closestNodeInRange || itcurrentnode->second < closestDist ) {
+                    closestNodeInRange = itcurrentnode->first;
+                    closestDist = itcurrentnode->second;
+                    if( closestDist < fMaxSeparationDist ) {
+                        // pretty close, so return as if node was added
+                        return true;
+                    }
+                }
             }
         }
     }
 
-    if (localmindist > qleveldistance) {
-        return 1;
+    if( !closestNodeInRange ) {
+        return false;
     }
-    else{
 
-        int parent = _Insert(in, nextlevelvertices, nextleveldists, level-1);
-
-        if ((parent == 1) && (minimumdistance <= qleveldistance) && (minimumdistancev != -1)) {
-            if (level-1 < _minlevel) {
-                _minlevel = level-1;
-            }
-
-            _numvertices++;
-            verticesin[minimumdistancev]->AddChildVertex(in, level);
-            return 0;
-        }
-        else{
-            return parent;
-        }
+    // insert nodein into children of currentNodeInRange
+    if( enclevel >= (int)_vmapNodeChildren.size() ) {
+        _vmapNodeChildren.resize(enclevel+1);
     }
+
+    _vmapNodeChildren[enclevel][closestNodeInRange].push_back(nodein);
+    if( _minlevel > currentlevel-1 ) {
+        _minlevel = currentlevel-1;
+    }
+    return true;
 }
 
-int CacheTree::RemoveVertex(CacheTreeVertexPtr vertexin)
-{
-    // todo: if there is no root, make this the root
-    // otherwise call the lowlevel  insert
-
-    std::vector<CacheTreeVertexPtr> verticesin;
-    std::vector<dReal> distin;
-
-    distin.push_back(ComputeDistance(_root, vertexin));
-    verticesin.push_back(_root); //this is always the same, perhaps keep make this vector at construction?
-
-    _Remove(vertexin, verticesin, distin, _maxlevel);
-
-    return 1;
-}
+//int CacheTree::RemoveNode(CacheTreeNodePtr nodein)
+//{
+//    // todo: if there is no root, make this the root
+//    // otherwise call the lowlevel  insert
+//
+//    std::vector<CacheTreeNodePtr> nodesin;
+//    std::vector<dReal> distin;
+//
+//    distin.push_back(ComputeDistance(_root, nodein));
+//    nodesin.push_back(_root); //this is always the same, perhaps keep make this vector at construction?
+//
+//    _Remove(nodein, nodesin, distin, _maxlevel);
+//
+//    return 1;
+//}
 
 void CacheTree::SetWeights(const std::vector<dReal>& weights)
 {
+    OPENRAVE_ASSERT_OP((int)weights.size(),==,_statedof);
     Reset();
     _weights = weights;
 }
@@ -245,35 +374,36 @@ void CacheTree::SetMaxDistance(dReal maxdistance)
 {
     Reset();
     _maxdistance = maxdistance;
+    // have to update the max level?
 }
 
-int CacheTree::_Remove(CacheTreeVertexPtr in, const std::vector<CacheTreeVertexPtr>& verticesin, const std::vector<dReal>& leveldists,  int level)
+int CacheTree::_Remove(CacheTreeNodePtr in, const std::vector<CacheTreeNodePtr>& nodesin, const std::vector<dReal>& leveldists,  int level)
 {
     // 2^{i}
     /*dReal qleveldistance = RavePow(_base, level);
 
        dReal minimumdistance = std::numeric_limits<float>::infinity();
-       CacheTreeVertexPtr minimumdistancev;
+       CacheTreeNodePtr minimumdistancev;
        dReal localmindist = std::numeric_limits<float>::infinity();
 
-       std::vector<CacheTreeVertexPtr> nextlevelvertices;
+       std::vector<CacheTreeNodePtr> nextlevelnodes;
        std::vector<dReal> nextleveldists;
-       CacheTreeVertexPtr parent;
+       CacheTreeNodePtr parent;
 
-       for (size_t i = 0; i < verticesin.size(); ++i) {
+       for (size_t i = 0; i < nodesin.size(); ++i) {
 
         if (leveldists[i] < minimumdistance) {
             minimumdistance = leveldists[i];
-            minimumdistancev = verticesin[i];
+            minimumdistancev = nodesin[i];
         }
 
         if (leveldists[i] <= qleveldistance) {
             nextleveldists.push_back(leveldists[i]);
-            nextlevelvertices.push_back(verticesin[i]);
+            nextlevelnodes.push_back(nodesin[i]);
         }
 
         // now consider children
-        const std::vector<CacheTreeVertexPtr>& levelchildren = verticesin[i]->GetChildren(level);
+        const std::vector<CacheTreeNodePtr>& levelchildren = nodesin[i]->GetChildren(level);
 
         for (size_t j = 0; j < levelchildren.size(); ++j) {
 
@@ -290,138 +420,30 @@ int CacheTree::_Remove(CacheTreeVertexPtr in, const std::vector<CacheTreeVertexP
             if (curdist <= qleveldistance)
             {
                 nextleveldists.push_back(curdist);
-                nextlevelvertices.push_back(levelchildren[j]);
+                nextlevelnodes.push_back(levelchildren[j]);
             }
         }
        }
 
        if (level > _minlevel) {
-        _Remove(in, nextlevelvertices, nextleveldists, level-1);
+        _Remove(in, nextlevelnodes, nextleveldists, level-1);
        }
 
        if (!!parent) {
         //parent->removeChild(level, minimumdistancev);
        }
 
-       const std::vector<CacheTreeVertexPtr>& minchildren = minimumdistancev->GetChildren(level-1);*/
+       const std::vector<CacheTreeNodePtr>& minchildren = minimumdistancev->GetChildren(level-1);*/
 
     return 0;
 }
 
-std::list<std::pair<dReal, CacheTreeVertexPtr> > CacheTree::GetNearestKVertices(CacheTreeVertexPtr in, int k, ConfigurationType conftype)
-{
-    // first localmax is distance from this vertex to the root
-    dReal localmax = ComputeDistance(_root, in);
-
-    // create the first level with only the root
-
-    _listDistanceVertices.resize(0);
-    _nextleveldists.resize(0);
-    _nextlevelvertices.resize(0);
-    _currentleveldists.resize(0);
-    _currentlevelvertices.resize(0);
-    _currentleveldists.push_back(localmax);
-    _currentlevelvertices.push_back(_root);
-
-    dReal qbound = std::numeric_limits<float>::infinity();
-
-    // traverse all levels
-    for (int qi = _maxlevel; qi >= _minlevel; --qi)
-    {
-        RAVELOG_VERBOSE_FORMAT("level %d qbound %e localmax %e _maxlevel %d _minlevel %d vertices %d\n", qi%qbound%localmax%_maxlevel%_minlevel%_numvertices);
-
-        // current level loop
-        for (size_t i = 0; i < _currentleveldists.size(); ++i) {
-
-            const std::vector<CacheTreeVertexPtr>& levelchildren = _currentlevelvertices[i]->GetChildren(qi);
-
-            // children at this level
-            for (size_t j = 0; j < levelchildren.size(); ++j) {
-
-
-                dReal curdist = ComputeDistance(in, levelchildren[j]);
-
-
-                if ((curdist < localmax) && (curdist > 0)) {
-
-                    // only return neighbors of the same time, check all if type is unknown
-                    if (levelchildren[j]->GetConfigurationType() != conftype) {
-                        continue;
-                    }
-                    // if below localmax, insert into knn
-                    _listDistanceVertices.push_back(make_pair(curdist, levelchildren[j]));
-                    if (curdist < localmax) {
-                        localmax = curdist;
-                    }
-
-                    // if over k, delete the vertex with the largest distance (should be the first one)
-                    if ((int)_listDistanceVertices.size() > k) {
-                        _listDistanceVertices.pop_front();
-                    }
-                }
-
-                // possibly consider this vertex, to be checked against bound later
-                if (curdist < qbound) {
-                    _currentlevelvertices.push_back(levelchildren[j]);
-                    _currentleveldists.push_back(curdist);
-                }
-            }
-        }
-
-        // update distance bound
-        qbound = localmax + RavePow(_base,qi); //d(p,q) + 2^{i}
-
-
-        for (size_t q = 0; q < _currentleveldists.size(); ++q) {
-            if (_currentleveldists[q] < qbound) {
-                _nextlevelvertices.push_back(_currentlevelvertices[q]);
-                _nextleveldists.push_back(_currentleveldists[q]);
-            }
-        }
-
-        // next iteration only considers vertices below this bound
-        _currentleveldists.resize(0);
-        _currentlevelvertices.resize(0);
-
-        _currentleveldists = _nextleveldists;
-        _currentlevelvertices = _nextlevelvertices;
-
-        _nextleveldists.resize(0);
-        _nextlevelvertices.resize(0);
-
-    }
-
-    int ksize = _listDistanceVertices.size();
-
-    if (ksize > 0) {
-
-        if (IS_DEBUGLEVEL(Level_Verbose)) {
-            RAVELOG_VERBOSE_FORMAT("k size %d\n", ksize);
-            stringstream ss;
-            size_t index = 0;
-            FOREACH(itdistvertex, _listDistanceVertices) {
-                ss << "\nk" << index << "[";
-                FOREACHC(itvalue, itdistvertex->second->GetConfigurationState()) {
-                    ss << *itvalue << ", ";
-                }
-                ss << "] dist: " << itdistvertex->first << "\n";
-            }
-
-            RAVELOG_VERBOSE(ss.str());
-        }
-
-    }
-
-    return _listDistanceVertices;
-}
-
 void CacheTree::UpdateTree()
 {
- 
 
 }
 
-ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot)
+ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot) : _cachetree(pstaterobot->GetActiveDOF())
 {
     _userdatakey = std::string("configurationcache") + boost::lexical_cast<std::string>(this);
     _qtime = 0;
@@ -443,7 +465,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot)
             (*itbody)->SetUserData(_userdatakey, pinfo);
         }
     }
-    
+
     _vRobotActiveIndices = pstaterobot->GetActiveDOFIndices();
     _nRobotAffineDOF = pstaterobot->GetAffineDOF();
     _vRobotRotationAxis = pstaterobot->GetAffineRotationAxis();
@@ -472,15 +494,15 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot)
     _jointchangehandle = pstaterobot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, boost::bind(&ConfigurationCache::_UpdateRobotGrabbed, this));
 
     // using L1, get the maximumdistance
-    // distance has to be computed in the same way as CacheTreeVertex.GetDistance()
+    // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
     dReal bound = 0;
     for (size_t i = 0; i < _lowerlimit.size(); ++i) {
         bound += RaveFabs(_upperlimit[i] - _lowerlimit[i]) * vweights[i];
     }
 
-    _cachetree = CacheTree(vweights, bound);
-    _cachetree.SetInsertionDistance(_insertiondistance);
+    _cachetree.Init(vweights, bound);
+    //_cachetree.SetInsertionDistance(_insertiondistance);
 
     if (IS_DEBUGLEVEL(Level_Debug)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -514,11 +536,11 @@ int ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Coll
     if( !!report->plink2 && report->plink2->GetParent() == _pstaterobot ) {
         std::swap(report->plink1, report->plink2);
     }
-    CacheTreeVertexPtr vptr(new CacheTreeVertex(conf, report));
+    //CacheTreeNodePtr vptr(new CacheTreeNode(conf, report));
     RAVELOG_VERBOSE_FORMAT("%s","about to insert");
     // tree is not initialized yet
-    if (_cachetree.GetNumVertices() == 0) {
-        _cachetree.InsertVertex(vptr);
+    if (_cachetree.GetNumNodes() == 0) {
+        _cachetree.InsertNode(conf, report, _insertiondistance);
         return 1;
     }
     else{
@@ -529,7 +551,8 @@ int ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Coll
             dist = distin;
         }
         else{
-            std::list<std::pair<dReal, CacheTreeVertexPtr> > knn = _cachetree.GetNearestKVertices(vptr, 1);
+            std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf);
+            dist = knn.second;
         }
 
         // check if configuration is at least _insertiondistance from the nearest node
@@ -548,12 +571,12 @@ int ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Coll
 
             if(_profile) {
                 uint64_t start = utils::GetNanoPerformanceTime();
-                _cachetree.InsertVertex(vptr);
+                _cachetree.InsertNode(conf, report, _insertiondistance);
                 uint64_t end = utils::GetNanoPerformanceTime();
                 _itime = end - start;
             }
             else {
-                _cachetree.InsertVertex(vptr);
+                _cachetree.InsertNode(conf, report, _insertiondistance);
             }
 
             return 1;
@@ -575,27 +598,27 @@ void ConfigurationCache::GetDOFValues(std::vector<dReal>& values)
 
 int ConfigurationCache::CheckCollision(KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist)
 {
-    if( _cachetree.GetNumVertices() == 0 ) {
+    if( _cachetree.GetNumNodes() == 0 ) {
         return -1;
     }
     std::vector<dReal> conf;
     GetDOFValues(conf);
-    CacheTreeVertex testconf(conf, CollisionReportPtr());
-    CacheTreeVertexPtr ptestconf(&testconf, utils::null_deleter());
-    std::list<std::pair<dReal, CacheTreeVertexPtr> > knn;
+    //CacheTreeNode testconf(conf, CollisionReportPtr());
+    //CacheTreeNodePtr ptestconf(&testconf, utils::null_deleter());
+    //std::list<std::pair<dReal, CacheTreeNodePtr> > knn;
 
     uint64_t start = utils::GetNanoPerformanceTime();
     // should also do radius search
-    knn = _cachetree.GetNearestKVertices(ptestconf, 1);
+    std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf);
     _qtime += utils::GetNanoPerformanceTime() - start;
 
-    if( knn.size() == 0 ) {
+    if( !knn.first ) {
         return -1;
     }
 
-    dReal dist = knn.front().first;
+    dReal dist = knn.second;
     closestdist = dist;
-    CacheTreeVertexPtr vfound = knn.front().second;
+    CacheTreeNodeConstPtr vfound = knn.first;
     //RAVELOG_VERBOSE_FORMAT("dist %e colllisionthresh %e\n",dist%_collisionthresh);
 
     if( vfound->IsInCollision() && dist <= _collisionthresh ) {
@@ -609,13 +632,6 @@ int ConfigurationCache::CheckCollision(KinBody::LinkConstPtr& robotlink, KinBody
     return -1;
 }
 
-std::list<std::pair<dReal, CacheTreeVertexPtr> > ConfigurationCache::GetNearestKVertices(CacheTreeVertexPtr in, int k, ConfigurationType conftype)
-{
-    // sync before the query
-    return _cachetree.GetNearestKVertices(in, k, conftype);
-
-}
-
 void ConfigurationCache::Reset()
 {
     _cachetree.Reset();
@@ -624,7 +640,7 @@ void ConfigurationCache::Reset()
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
-    
+
     //SynchronizeAll(_pstaterobot);
 }
 
@@ -650,7 +666,7 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 
     // compute new max distance for cache
     // using L1, get the maximumdistance
-    // distance has to be computed in the same way as CacheTreeVertex.GetDistance()
+    // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
     dReal bound = 0;
     for (size_t i = 0; i < _lowerlimit.size(); ++i) {
