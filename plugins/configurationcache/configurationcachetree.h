@@ -73,6 +73,7 @@ public:
     //void UpdateApproximates(dReal distance, CacheTreeNodePtr v);
 
 protected:
+    std::vector<CacheTreeNode*> _vchildren; ///< direct children of this node (for the next level down)
     ConfigurationNodeType _conftype;
     KinBody::LinkConstPtr _collidinglink;
     Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
@@ -126,6 +127,13 @@ public:
     /// \param distancebound If > 0, the distance bound such that any points as close as distancebound will be immediately returned
     /// \param conftype the type of node to find. If CNT_Any, will return any type.
     std::pair<CacheTreeNodeConstPtr, dReal> FindNearestNode(const std::vector<dReal>& cs, dReal distancebound=-1, ConfigurationNodeType conftype = CNT_Any) const;
+
+    /// \brief finds the nearest node searching both collision and free nodes.
+    ///
+    /// if it is a collision node, it is within collisionthresh. If it is a freespace node, distance is within freespacethresh
+    /// \param collisionthresh assumes > 0
+    /// \param freespacethresh assumes > 0
+    std::pair<CacheTreeNodeConstPtr, dReal> FindNearestNode(const std::vector<dReal>& cs, dReal collisionthresh, dReal freespacethresh) const;
 
     /// \brief inserts node in the tree. If node is too close to other nodes in the tree, then does not insert.
     ///
@@ -183,7 +191,7 @@ private:
     int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound, dReal fMaxSeparationDist);
 
     /// \param[inout] coversetnodes for every level starting at the max, the parent cover sets. coversetnodes[i] is the _maxlevel-i level
-    bool _Remove(CacheTreeNodeConstPtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
+    bool _Remove(CacheTreeNodePtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
 
     inline int _EncodeLevel(int level) const {
         if( level <= 0 ) {
@@ -205,8 +213,8 @@ private:
 
     std::vector<dReal> _weights; ///< weights used by the distance function
 
-    CacheTreeNodePtr _root; // root node
-    std::vector< std::map<CacheTreeNodeConstPtr, std::vector<CacheTreeNodePtr> > > _vmapNodeChildren; ///< _vmapNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree.
+    //CacheTreeNodePtr _root; // root node
+    std::vector< std::set<CacheTreeNodePtr> > _vsetNodeChildren; ///< _vsetNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetNodeChildren.at(_EncodeLevel(_maxlevel)) is the root.
 
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
@@ -216,7 +224,7 @@ private:
     int _statedof; ///< the state space DOF tree is configured for
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
-    int _numnodes; ///< the number of nodes in the current tree starting at _root
+    int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetNodeChildren.at(_EncodeLevel(_maxlevel))
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
     // cache cache

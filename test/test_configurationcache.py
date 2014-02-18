@@ -41,10 +41,11 @@ class TestConfigurationCache(EnvironmentSetup):
         values[1] = pi/2
         inserted=cache.InsertConfiguration(values, None)
         assert(inserted and cache.GetNumNodes()==2)
-        
+        assert(cache.Validate())
+                
         values[1] = pi/2-0.0001
         robot.SetActiveDOFValues(values)
-        ret, closestdist, collisioninfo = cache.CheckCollision()
+        ret, closestdist, collisioninfo = cache.CheckCollision(values)
         assert(ret==0)
 
         originalvalues = array([0,pi/2,0,pi/6,0,0,0])
@@ -60,13 +61,24 @@ class TestConfigurationCache(EnvironmentSetup):
                 incollision = env.CheckCollision(robot, report=report)
                 inserted = cache.InsertConfiguration(samplevalues, report if incollision else None)
             self.log.info('cache has %d nodes', cache.GetNumNodes())
+            assert(cache.Validate())
+        
+        with env:
             numspurious = 0
             nummisses = 0
-            for iter in range(0, 10000):
+            numtests = 1000
+            collisiontimes = []
+            cachetimes = []
+            for iter in range(0, numtests):
                 robot.SetActiveDOFValues(originalvalues + 0.05*(sampler.SampleSequence(SampleDataType.Real,1)-0.5))
                 samplevalues = robot.GetActiveDOFValues()
-                ret, closestdist, collisioninfo = cache.CheckCollision()
+                starttime=time.time()
+                ret, closestdist, collisioninfo = cache.CheckCollision(samplevalues)
+                midtime=time.time()
                 incollision = env.CheckCollision(robot, report=report)
+                endtime=time.time()
+                cachetimes.append(midtime-starttime)
+                collisiontimes.append(endtime-midtime)
                 if ret != -1:
                     assert(closestdist <= 1)
                     # might give spurious collision since cache is being conservative
@@ -78,5 +90,8 @@ class TestConfigurationCache(EnvironmentSetup):
                             assert(0)
                 else:
                     nummisses += 1
-            self.log.info('num spurious colisions=%d, num misses = %d', numspurious, nummisses)
-            assert(numspurious<=900)
+            self.log.info('num spurious colisions=%d/%d, num misses = %d/%d, meancache=%fs, meancollision=%fs', numspurious, numtests, nummisses, numtests, mean(cachetimes), mean(collisiontimes))
+        assert(float(numspurious)/float(numtests)<=0.001)
+        assert(float(nummisses)/float(numtests)>0.5) # space is pretty big
+        assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
+        
