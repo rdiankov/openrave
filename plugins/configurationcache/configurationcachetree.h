@@ -46,7 +46,7 @@ public:
     inline int GetRobotLinkIndex() const {
         return _robotlinkindex;
     }
-    
+
     bool IsInCollision() const {
         return _conftype == CNT_Collision; //!!_collidinglink;
     }
@@ -87,7 +87,7 @@ protected:
     // managed by pool
     Vector* _plinkspheres; ///< xyz is center, w is radius^2 of every link on the robot, pointer managed by outside pool so do not delete
     dReal _pcstate[0]; ///< the state values, pointer managed by outside pool so do not delete. The values always follow the allocation of the structure.
-    
+
 private:
     /// \brief cache tree node needs to be created by a separte memory pool in order to initialize correct pointers
     CacheTreeNode(const std::vector<dReal>& cs, Vector* plinkspheres);
@@ -159,6 +159,9 @@ public:
 
     dReal ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef) const;
 
+    /// \brief for debug purposes, validates the tree
+    bool Validate();
+
 private:
     /// \brief creates new node on the pool
     CacheTreeNodePtr _CreateCacheTreeNode(const std::vector<dReal>& cs, CollisionReportPtr report);
@@ -203,7 +206,7 @@ private:
     std::vector<dReal> _weights; ///< weights used by the distance function
 
     CacheTreeNodePtr _root; // root node
-    std::vector< std::map<CacheTreeNodeConstPtr, std::vector<CacheTreeNodePtr> > > _vmapNodeChildren; ///< _vmapNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector.
+    std::vector< std::map<CacheTreeNodeConstPtr, std::vector<CacheTreeNodePtr> > > _vmapNodeChildren; ///< _vmapNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree.
 
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
@@ -242,7 +245,7 @@ public:
     /// \param indist, If > 0, nearest distance for this configuration already computed by CheckCollision
     /// \return true if configuration was inserted
     bool InsertConfiguration(const std::vector<dReal>& cs, CollisionReportPtr report = CollisionReportPtr(), dReal indist = -1);
-    
+
     /// \brief removes all configurations within radius of cs
     ///
     /// \return number of configurations removed
@@ -250,6 +253,8 @@ public:
 
     /// \brief determine if current configuration is whithin threshold of a collision in the cache (_collisionthresh), known to be in collision, or requires an explicit collision check
     /// \return 1 if in collision, 0 if not in collision, -1 if unknown
+    int CheckCollision(const std::vector<dReal>& cs, KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist);
+
     int CheckCollision(KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist);
 
     /// \brief invalidate the entire cache
@@ -275,6 +280,11 @@ public:
         _collisionthresh = colthresh;
     }
 
+    void SetFreeSpaceThresh(dReal freespacethresh)
+    {
+        _freespacethresh = freespacethresh;
+    }
+
     void SetWeights(const std::vector<dReal>& weights);
     /// \brief the cache will not insert configuration if their distance from the nearest node in the tree is not larger than this value
     void SetInsertionDistanceMult(dReal indist)
@@ -285,6 +295,9 @@ public:
     RobotBasePtr GetRobot() const {
         return _pstaterobot;
     }
+
+    /// \brief for debug purposes, validates the tree
+    bool Validate();
 
 private:
     /// \brief called when body has changed state.

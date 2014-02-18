@@ -28,7 +28,7 @@ class TestConfigurationCache(EnvironmentSetup):
         assert(cachepath is not None)
         self.openravepy_configurationcache = imp.load_dynamic('openravepy_configurationcache',cachepath)
         
-    def test_simple(self):
+    def test_insertandquery(self):
         self.LoadEnv('data/lab1.env.xml')
         env=self.env
         robot=env.GetRobots()[0]
@@ -49,11 +49,11 @@ class TestConfigurationCache(EnvironmentSetup):
 
         originalvalues = array([0,pi/2,0,pi/6,0,0,0])
         
+        sampler = RaveCreateSpaceSampler(env, u'MT19937')
+        sampler.SetSpaceDOF(robot.GetActiveDOF())
+        report=CollisionReport()
+        
         with env:
-            robotsampler = RaveCreateSpaceSampler(env, u'RobotConfiguration %s'%robot.GetName())
-            sampler = RaveCreateSpaceSampler(env, u'MT19937')
-            sampler.SetSpaceDOF(robot.GetActiveDOF())
-            report=CollisionReport()
             for iter in range(0, 10000):
                 robot.SetActiveDOFValues(originalvalues + 0.05*(sampler.SampleSequence(SampleDataType.Real,1)-0.5))
                 samplevalues = robot.GetActiveDOFValues()
@@ -68,6 +68,7 @@ class TestConfigurationCache(EnvironmentSetup):
                 ret, closestdist, collisioninfo = cache.CheckCollision()
                 incollision = env.CheckCollision(robot, report=report)
                 if ret != -1:
+                    assert(closestdist <= 1)
                     # might give spurious collision since cache is being conservative
                     if incollision != ret:
                         if ret == 1:
@@ -78,4 +79,4 @@ class TestConfigurationCache(EnvironmentSetup):
                 else:
                     nummisses += 1
             self.log.info('num spurious colisions=%d, num misses = %d', numspurious, nummisses)
-            assert(numspurious==0)
+            assert(numspurious<=900)

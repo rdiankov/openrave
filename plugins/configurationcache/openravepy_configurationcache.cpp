@@ -242,11 +242,11 @@ public:
         return _cache->RemoveConfigurations(ExtractArray<dReal>(ovalues), radius);
     }
 
-    object CheckCollision()
+    object CheckCollision(object ovalues)
     {
         KinBody::LinkConstPtr crobotlink, ccollidinglink;
         dReal closestdist=0;
-        int ret = _cache->CheckCollision(crobotlink, ccollidinglink, closestdist);
+        int ret = _cache->CheckCollision(ExtractArray<dReal>(ovalues), crobotlink, ccollidinglink, closestdist);
         KinBody::LinkPtr robotlink, collidinglink;
         if( !!crobotlink ) {
             robotlink = crobotlink->GetParent()->GetLinks().at(crobotlink->GetIndex());
@@ -278,6 +278,11 @@ public:
         _cache->SetCollisionThresh(colthresh);
     }
 
+    void SetFreeSpaceThresh(dReal freespacethresh)
+    {
+        _cache->SetFreeSpaceThresh(freespacethresh);
+    }
+
     void SetWeights(object oweights)
     {
         _cache->SetWeights(ExtractArray<dReal>(oweights));
@@ -290,6 +295,10 @@ public:
 
     object GetRobot() {
         return openravepy::toPyKinBody(_cache->GetRobot(), _pyenv);
+    }
+
+    bool Validate() {
+        return _cache->Validate();
     }
 
 protected:
@@ -311,14 +320,16 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
     .def(init<object>(args("robot")))
     .def("InsertConfiguration",&PyConfigurationCache::InsertConfiguration, args("values","report"))
     .def("RemoveConfigurations",&PyConfigurationCache::RemoveConfigurations, args("values","radius"))
-    .def("CheckCollision",&PyConfigurationCache::CheckCollision)
+    .def("CheckCollision",&PyConfigurationCache::CheckCollision, args("values"))
     .def("Reset",&PyConfigurationCache::Reset)
     .def("GetDOFValues",&PyConfigurationCache::GetDOFValues)
     .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
     .def("SetCollisionThresh",&PyConfigurationCache::SetCollisionThresh, args("colthresh"))
+    .def("SetFreeSpaceThresh",&PyConfigurationCache::SetFreeSpaceThresh, args("freespacethresh"))
     .def("SetWeights",&PyConfigurationCache::SetWeights, args("weights"))
     .def("SetInsertionDistanceMult",&PyConfigurationCache::SetInsertionDistanceMult, args("indist"))
     .def("GetRobot",&PyConfigurationCache::GetRobot)
     .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
+    .def("Validate", &PyConfigurationCache::Validate)
     ;
 }
