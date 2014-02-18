@@ -23,7 +23,9 @@
 #include <boost/numeric/bindings/lapack/gesdd.hpp>
 #endif
 
-namespace basesamplers {
+#include "configurationcachetree.h"
+
+namespace configurationcache {
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {

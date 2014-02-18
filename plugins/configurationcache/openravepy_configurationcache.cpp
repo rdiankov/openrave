@@ -1,7 +1,17 @@
-// -*- coding: utf-8 --*
-// Copyright (C) 2011-2013 MUJIN Inc. <rosen.diankov@mujin.co.jp>
-// Do not distribute this file outside of Mujin
-// \author Rosen Diankov
+// -*- Coding: utf-8 -*-
+// Copyright (C) 2014 Rosen Diankov
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+/// \author Rosen Diankov
 #include "configurationcachetree.h"
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
@@ -227,6 +237,11 @@ public:
         return _cache->InsertConfiguration(ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport));
     }
 
+    int RemoveConfigurations(object ovalues, dReal radius)
+    {
+        return _cache->RemoveConfigurations(ExtractArray<dReal>(ovalues), radius);
+    }
+
     object CheckCollision()
     {
         KinBody::LinkConstPtr crobotlink, ccollidinglink;
@@ -239,7 +254,7 @@ public:
         if( !!ccollidinglink ) {
             collidinglink = ccollidinglink->GetParent()->GetLinks().at(ccollidinglink->GetIndex());
         }
-        return boost::python::make_tuple(ret, openravepy::toPyKinBodyLink(robotlink, _pyenv), openravepy::toPyKinBodyLink(collidinglink, _pyenv), closestdist);
+        return boost::python::make_tuple(ret, closestdist, boost::python::make_tuple(openravepy::toPyKinBodyLink(robotlink, _pyenv), openravepy::toPyKinBodyLink(collidinglink, _pyenv)));
     }
 
     void Reset()
@@ -268,9 +283,9 @@ public:
         _cache->SetWeights(ExtractArray<dReal>(oweights));
     }
 
-    void SetInsertionDistance(dReal indist)
+    void SetInsertionDistanceMult(dReal indist)
     {
-        _cache->SetInsertionDistance(indist);
+        _cache->SetInsertionDistanceMult(indist);
     }
 
     object GetRobot() {
@@ -284,7 +299,7 @@ protected:
 
 typedef boost::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
 
-} // end namespace configurationcachepy_int
+} // end namespace configurationcachepy
 
 BOOST_PYTHON_MODULE(openravepy_configurationcache)
 {
@@ -295,13 +310,14 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
     class_<PyConfigurationCache, PyConfigurationCachePtr >("ConfigurationCache", no_init)
     .def(init<object>(args("robot")))
     .def("InsertConfiguration",&PyConfigurationCache::InsertConfiguration, args("values","report"))
+    .def("RemoveConfigurations",&PyConfigurationCache::RemoveConfigurations, args("values","radius"))
     .def("CheckCollision",&PyConfigurationCache::CheckCollision)
     .def("Reset",&PyConfigurationCache::Reset)
     .def("GetDOFValues",&PyConfigurationCache::GetDOFValues)
     .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
     .def("SetCollisionThresh",&PyConfigurationCache::SetCollisionThresh, args("colthresh"))
     .def("SetWeights",&PyConfigurationCache::SetWeights, args("weights"))
-    .def("SetInsertionDistance",&PyConfigurationCache::SetInsertionDistance, args("indist"))
+    .def("SetInsertionDistanceMult",&PyConfigurationCache::SetInsertionDistanceMult, args("indist"))
     .def("GetRobot",&PyConfigurationCache::GetRobot)
     .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
     ;

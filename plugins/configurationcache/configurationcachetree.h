@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+/// \author Alejandro Perez & Rosen Diankov
 #ifndef OPENRAVE_CACHETREE_H
 #define OPENRAVE_CACHETREE_H
 
@@ -32,16 +33,6 @@ enum ConfigurationNodeType {
 class CacheTreeNode
 {
 public:
-//    void AddChildNode(CacheTreeNodePtr child, int level){
-//        _children[level].push_back(child);
-//    }
-
-//    const std::vector<CacheTreeNodePtr>& GetChildren(int level) {
-//        return _children[level];
-//    }
-
-    //void RemoveChild(CacheTreeNodePtr child, int level);
-
     const dReal* GetConfigurationState() const {
         return _pcstate;
     }
@@ -55,7 +46,7 @@ public:
     inline int GetRobotLinkIndex() const {
         return _robotlinkindex;
     }
-
+    
     bool IsInCollision() const {
         return _conftype == CNT_Collision; //!!_collidinglink;
     }
@@ -82,12 +73,6 @@ public:
     //void UpdateApproximates(dReal distance, CacheTreeNodePtr v);
 
 protected:
-    //int maxlevel; // the max level where this node is a parent
-
-    // managed by pool
-    dReal* _pcstate; ///< the state values, pointer managed by outside pool so do not delete
-    Vector* _plinkspheres; ///< xyz is center, w is radius^2 of every link on the robot, pointer managed by outside pool so do not delete
-
     ConfigurationNodeType _conftype;
     KinBody::LinkConstPtr _collidinglink;
     Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
@@ -99,10 +84,14 @@ protected:
 
     // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree
 
+    // managed by pool
+    Vector* _plinkspheres; ///< xyz is center, w is radius^2 of every link on the robot, pointer managed by outside pool so do not delete
+    dReal _pcstate[0]; ///< the state values, pointer managed by outside pool so do not delete. The values always follow the allocation of the structure.
+    
 private:
     /// \brief cache tree node needs to be created by a separte memory pool in order to initialize correct pointers
-    CacheTreeNode(dReal* pcstate, Vector* plinkspheres);
-    //virtual ~CacheTreeNode();
+    CacheTreeNode(const std::vector<dReal>& cs, Vector* plinkspheres);
+    //~CacheTreeNode();
 
     friend class CacheTree;
 };
@@ -140,19 +129,14 @@ public:
 
     /// \brief inserts node in the tree. If node is too close to other nodes in the tree, then does not insert.
     ///
-    /// \param[in] fMaxSeparationDist the max distance a node should be separated from its closest neighbor
-    /// \return true if node is inserted
-    bool InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMaxSeparationDist);
+    /// \param[in] fMaxSeparationDist the max distance a node should be separated from its closest neighbor. If node is collision, then only applies to collision neighbors, free neighbors are ignored.
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMaxSeparationDist
+    int InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMaxSeparationDist);
 
     /// \brief removes node from the tree
     ///
     /// \return true if node is removed
-    bool RemoveNode(CacheTreeNodePtr nodein);
-
-    /// \brief distance a configuration must have from the nearest configuration in the tree in order for it be inserted
-//    void SetInsertionDistance(dReal dist){
-//        _insertiondistance = dist;
-//    }
+    bool RemoveNode(CacheTreeNodeConstPtr nodein);
 
     /// \brief number of nodes in the tree; todo: also count nodes by type
     int GetNumNodes() const {
@@ -192,11 +176,11 @@ private:
     /// \param[in] level the current level traversing
     /// \param[in] levelbound pow(_base, level)
     /// \param[in] fMaxSeparationDist the max distance a node should be separated from its closest neighbor
-    /// \return true if point is inserted and parent found.
-    bool _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound, dReal fMaxSeparationDist);
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMaxSeparationDist
+    int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound, dReal fMaxSeparationDist);
 
     /// \param[inout] coversetnodes for every level starting at the max, the parent cover sets. coversetnodes[i] is the _maxlevel-i level
-    bool _Remove(CacheTreeNodePtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
+    bool _Remove(CacheTreeNodeConstPtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
 
     inline int _EncodeLevel(int level) const {
         if( level <= 0 ) {
@@ -219,7 +203,7 @@ private:
     std::vector<dReal> _weights; ///< weights used by the distance function
 
     CacheTreeNodePtr _root; // root node
-    std::vector< std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> > > _vmapNodeChildren; ///< _vmapNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector.
+    std::vector< std::map<CacheTreeNodeConstPtr, std::vector<CacheTreeNodePtr> > > _vmapNodeChildren; ///< _vmapNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector.
 
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
@@ -247,17 +231,22 @@ class ConfigurationCache
 public:
     /// \brief start tracking the active DOFs of the robot
     ConfigurationCache(RobotBasePtr probotstate);
-    virtual ~ConfigurationCache(){
+    virtual ~ConfigurationCache() {
     }
 
     /// \brief insert a configuration into the cache
-    /// function verifies if the configuration is at least _insertiondistance
+    /// function verifies if the configuration is at least _insertiondistancemult
     /// from the closest node in the cache
     /// \param cs, configuration
     /// \param ndists, a vector with the distances from the nearest nodes to cs
-    /// \param indist, nearest distance for this configuration; optional parameter if it has already been computed
+    /// \param indist, If > 0, nearest distance for this configuration already computed by CheckCollision
     /// \return true if configuration was inserted
-    bool InsertConfiguration(const std::vector<dReal>& cs, CollisionReportPtr report = CollisionReportPtr(), dReal distin = -1);
+    bool InsertConfiguration(const std::vector<dReal>& cs, CollisionReportPtr report = CollisionReportPtr(), dReal indist = -1);
+    
+    /// \brief removes all configurations within radius of cs
+    ///
+    /// \return number of configurations removed
+    int RemoveConfigurations(const std::vector<dReal>& cs, dReal radius);
 
     /// \brief determine if current configuration is whithin threshold of a collision in the cache (_collisionthresh), known to be in collision, or requires an explicit collision check
     /// \return 1 if in collision, 0 if not in collision, -1 if unknown
@@ -288,9 +277,9 @@ public:
 
     void SetWeights(const std::vector<dReal>& weights);
     /// \brief the cache will not insert configuration if their distance from the nearest node in the tree is not larger than this value
-    void SetInsertionDistance(dReal indist)
+    void SetInsertionDistanceMult(dReal indist)
     {
-        _insertiondistance = indist;
+        _insertiondistancemult = indist;
     }
 
     RobotBasePtr GetRobot() const {
@@ -341,8 +330,7 @@ public:
 
     dReal _collisionthresh; //collision in this distance range will be assumed to be in collision
     dReal _freespacethresh;
-    dReal _insertiondistance; ///< only insert nodes if they are at least this far from the nearest node in the tree
-                              ///< distance a configuration must have from the nearest configuration in the tree in order for it be inserted
+    dReal _insertiondistancemult; ///< only insert nodes if they are far from the nearest node in the tree. The distance is computed by multiplying this number of _collisionthresh or _freespacethresh. Distance a configuration must have from the nearest configuration in the tree in order for it be inserted
     std::string _userdatakey;
     UserDataPtr _jointchangehandle;
     UserDataPtr _handleBodyAddRemove;
