@@ -1474,6 +1474,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     ;
     exception_translator<std::runtime_error>();
     //exception_translator<std::exception>();
+    class_< boost::bad_function_call, bases<std::runtime_error> >( "_boost_bad_function_call_");
     exception_translator<boost::bad_function_call>();
 
     class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));

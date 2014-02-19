@@ -84,14 +84,18 @@ protected:
     //std::pair<CacheTreeNodePtr, dReal> _approxnn; //nearest distance and neighbor seen so far (same type)
 
     // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree
-
+    int _level;
     // managed by pool
+#ifdef _DEBUG
+    int id;
+#endif
     Vector* _plinkspheres; ///< xyz is center, w is radius^2 of every link on the robot, pointer managed by outside pool so do not delete
     dReal _pcstate[0]; ///< the state values, pointer managed by outside pool so do not delete. The values always follow the allocation of the structure.
 
 private:
     /// \brief cache tree node needs to be created by a separte memory pool in order to initialize correct pointers
     CacheTreeNode(const std::vector<dReal>& cs, Vector* plinkspheres);
+    CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres);
     //~CacheTreeNode();
 
     friend class CacheTree;
@@ -128,7 +132,7 @@ public:
     /// \param conftype the type of node to find. If CNT_Any, will return any type.
     std::pair<CacheTreeNodeConstPtr, dReal> FindNearestNode(const std::vector<dReal>& cs, dReal distancebound=-1, ConfigurationNodeType conftype = CNT_Any) const;
 
-    /// \brief finds the nearest node searching both collision and free nodes.
+    /// \brief finds the nearest node searching both collision and free nodes. collision nodes takes priority.
     ///
     /// if it is a collision node, it is within collisionthresh. If it is a freespace node, distance is within freespacethresh
     /// \param collisionthresh assumes > 0
@@ -173,6 +177,7 @@ public:
 private:
     /// \brief creates new node on the pool
     CacheTreeNodePtr _CreateCacheTreeNode(const std::vector<dReal>& cs, CollisionReportPtr report);
+    CacheTreeNodePtr _CloneCacheTreeNode(CacheTreeNodeConstPtr refnode);
 
     /// \brief deletes the node from the pool and calls its destructor.
     void _DeleteCacheTreeNode(CacheTreeNodePtr pnode);
@@ -214,7 +219,7 @@ private:
     std::vector<dReal> _weights; ///< weights used by the distance function
 
     //CacheTreeNodePtr _root; // root node
-    std::vector< std::set<CacheTreeNodePtr> > _vsetNodeChildren; ///< _vsetNodeChildren[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetNodeChildren.at(_EncodeLevel(_maxlevel)) is the root.
+    std::vector< std::set<CacheTreeNodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
@@ -224,7 +229,7 @@ private:
     int _statedof; ///< the state space DOF tree is configured for
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
-    int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetNodeChildren.at(_EncodeLevel(_maxlevel))
+    int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
     // cache cache
