@@ -98,7 +98,7 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
     Reset();
     _weights = weights;
     _numnodes = 0;
-    _base = 2; // setting to 1.5 makes it faster
+    _base = 1.5; // optimal is sqrt(1.3)?
     _fBaseInv = 1/_base;
     _maxdistance = maxdistance;
     _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));

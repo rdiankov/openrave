@@ -2332,7 +2332,9 @@ protected:
         }
         FOREACH(it, listRegisteredBodyCallbacks) {
             BodyCallbackDataPtr pdata = boost::dynamic_pointer_cast<BodyCallbackData>(it->lock());
-            pdata->_callback(pbody, action);
+            if( !!pdata ) {
+                pdata->_callback(pbody, action);
+            }
         }
     }
 
