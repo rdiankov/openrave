@@ -42,6 +42,7 @@ CacheTreeNode::CacheTreeNode(const std::vector<dReal>& cs, Vector* plinkspheres)
     _conftype = CNT_Unknown;
     _robotlinkindex = -1;
     _level = 0;
+    _hasselfchild = 0;
 }
 
 CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
@@ -51,6 +52,7 @@ CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
     _conftype = CNT_Unknown;
     _robotlinkindex = -1;
     _level = 0;
+    _hasselfchild = 0;
 }
 
 void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
@@ -110,6 +112,7 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
     _numnodes = 0;
     _base = 1.5; // optimal is sqrt(1.3)?
     _fBaseInv = 1/_base;
+    _fBaseChildMult = 1/(_base-1);
     _maxdistance = maxdistance;
     _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
     _minlevel = _maxlevel - 1;
@@ -402,11 +405,15 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
                     return -1;
                 }
             }
+            if( itcurrentnode->second <= fLevelBound*_fBaseChildMult ) {
+                // node is part of all sets below its level
+                _vNextLevelNodes.push_back(*itcurrentnode);
+            }
             // only take the children whose distances are within the bound
             if( itcurrentnode->first->_level == currentlevel ) {
                 FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                     dReal curdist = _ComputeDistance(nodein->GetConfigurationState(), (*itchild)->GetConfigurationState());
-                    if( curdist <= fLevelBound ) {
+                    if( curdist <= fLevelBound*_fBaseChildMult ) {
                         _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
                     }
                 }
@@ -425,13 +432,24 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
     else {
         FOREACHC(itcurrentnode, vCurrentLevelNodes) {
             if( itcurrentnode->second <= fLevelBound ) {
-                if(  !closestNodeInRange || itcurrentnode->second < closestDist ) {
+                if( !closestNodeInRange ) {
                     closestNodeInRange = itcurrentnode->first;
                     closestDist = itcurrentnode->second;
-                    if( closestDist < fMaxSeparationDist && (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
-                        // pretty close, so return as if node was added
-                        return -1;
+                }
+                else {
+                    if(  itcurrentnode->second < closestDist-g_fEpsilonLinear ) {
+                        closestNodeInRange = itcurrentnode->first;
+                        closestDist = itcurrentnode->second;
                     }
+                    // if distances are close, get the node on the lowest level...
+                    else if( itcurrentnode->second < closestDist+g_fEpsilonLinear && itcurrentnode->first->_level < closestNodeInRange->_level ) {
+                        closestNodeInRange = itcurrentnode->first;
+                        closestDist = itcurrentnode->second;
+                    }
+                }
+                if( closestDist < fMaxSeparationDist && (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
+                    // pretty close, so return as if node was added
+                    return -1;
                 }
             }
         }
@@ -441,34 +459,54 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
         return 0;
     }
 
-    // have to add at currentlevel-1, unfortunately if currentNodeInRange->_level is > currentlevel, will have to clone it. note that it will still represent the same RRT node with same rrtparent
-    while( closestNodeInRange->_level > currentlevel ) {
-        CacheTreeNodePtr clonenode = _CloneCacheTreeNode(closestNodeInRange);
-        clonenode->_level = closestNodeInRange->_level-1;
-        closestNodeInRange->_vchildren.push_back(clonenode);
+    _InsertDirectly(nodein, closestNodeInRange, closestDist, currentlevel-1, fLevelBound*_fBaseInv);
+    _numnodes += 1;
+    return 1;
+}
+
+void CacheTree::_InsertDirectly(CacheTreeNodePtr nodein, CacheTreeNodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsetLevelBound)
+{
+    int insertlevel = maxinsertlevel;
+    if( parentdist <= g_fEpsilonLinear ) {
+        // pretty close, so notify parent that there's a similar child already underneath it
+        parentnode->_hasselfchild = 1;
+    }
+    else {
+        // depending on parentdist, might have to insert at a lower level in order to keep the sibling invariant
+        dReal fChildLevelBound = fInsetLevelBound;
+        while(parentdist < fChildLevelBound) {
+            fChildLevelBound *= _fBaseInv;
+            insertlevel--;
+        }
+    }
+
+    // have to add at insertlevel. If currentNodeInRange->_level is > insertlevel+1, will have to clone it. note that it will still represent the same RRT node with same rrtparent
+    while( parentnode->_level > insertlevel+1 ) {
+        CacheTreeNodePtr clonenode = _CloneCacheTreeNode(parentnode);
+        clonenode->_level = parentnode->_level-1;
+        parentnode->_vchildren.push_back(clonenode);
+        parentnode->_hasselfchild = 1;
         int encclonelevel = _EncodeLevel(clonenode->_level);
         if( encclonelevel >= (int)_vsetLevelNodes.size() ) {
             _vsetLevelNodes.resize(encclonelevel+1);
         }
         _vsetLevelNodes.at(encclonelevel).insert(clonenode);
         _numnodes +=1;
-        closestNodeInRange = clonenode;
+        parentnode = clonenode;
     }
 
     // add directly below currentNodeInRange
-    nodein->_level = currentlevel-1;
+    nodein->_level = insertlevel;
     int enclevel2 = _EncodeLevel(nodein->_level);
     if( enclevel2 >= (int)_vsetLevelNodes.size() ) {
         _vsetLevelNodes.resize(enclevel2+1);
     }
 
-    closestNodeInRange->_vchildren.push_back(nodein);
+    parentnode->_vchildren.push_back(nodein);
     _vsetLevelNodes.at(enclevel2).insert(nodein);
     if( _minlevel > nodein->_level ) {
         _minlevel = nodein->_level;
     }
-    _numnodes += 1;
-    return 1;
 }
 
 bool CacheTree::RemoveNode(CacheTreeNodeConstPtr _removenode)
@@ -630,28 +668,19 @@ bool CacheTree::Validate()
         return false;
     }
 
-    dReal fLevelBound = RavePow(_base, _minlevel);
-    std::vector<CacheTreeNodeConstPtr> vnodes;
-    std::set<CacheTreeNodePtr> setallnodes;
+    dReal fLevelBound = _fMaxLevelBound;
+    std::vector<CacheTreeNodePtr> vAccumNodes; vAccumNodes.reserve(_numnodes);
     size_t nallchildren = 0;
-    std::map<CacheTreeNodePtr, std::vector<CacheTreeNodePtr> > mapNodeChildren;
-    for(int currentlevel = _minlevel; currentlevel <= _maxlevel; ++currentlevel, fLevelBound *= _fBaseInv ) {
+    size_t numnodes = 0;
+    for(int currentlevel = _maxlevel; currentlevel >= _minlevel; --currentlevel, fLevelBound *= _fBaseInv ) {
         int enclevel = _EncodeLevel(currentlevel);
         if( enclevel >= (int)_vsetLevelNodes.size() ) {
             continue;
         }
 
         const std::set<CacheTreeNodePtr>& setLevelRawChildren = _vsetLevelNodes.at(enclevel);
-        vnodes.resize(0);
         FOREACHC(itnode, setLevelRawChildren) {
-            // have to get all the children
-            std::vector<CacheTreeNodePtr> vchildren = (*itnode)->_vchildren;
             FOREACH(itchild, (*itnode)->_vchildren) {
-                if( mapNodeChildren.find(*itchild) != mapNodeChildren.end() ) {
-                    vchildren.insert(vchildren.end(), mapNodeChildren[*itchild].begin(), mapNodeChildren[*itchild].end());
-                }
-            }
-            FOREACH(itchild, vchildren) {
                 dReal curdist = _ComputeDistance((*itnode)->GetConfigurationState(), (*itchild)->GetConfigurationState());
                 if( curdist > fLevelBound+g_fEpsilonLinear ) {
 #ifdef _DEBUG
@@ -662,21 +691,19 @@ bool CacheTree::Validate()
                     return false;
                 }
             }
-            mapNodeChildren[*itnode].swap(vchildren);
             nallchildren += (*itnode)->_vchildren.size();
-
-            nallchildren += (*itnode)->_vchildren.size();
+            if( !(*itnode)->_hasselfchild ) {
+                vAccumNodes.push_back(*itnode);
+            }
         }
-        vnodes.resize(0);
-        vnodes.insert(vnodes.end(), setLevelRawChildren.begin(), setLevelRawChildren.end());
-        setallnodes.insert(setLevelRawChildren.begin(), setLevelRawChildren.end());
+        numnodes += setLevelRawChildren.size();
 
-        for(size_t i = 0; i < vnodes.size(); ++i) {
-            for(size_t j = i+1; j < vnodes.size(); ++j) {
-                dReal curdist = _ComputeDistance(vnodes[i]->GetConfigurationState(), vnodes[j]->GetConfigurationState());
+        for(size_t i = 0; i < vAccumNodes.size(); ++i) {
+            for(size_t j = i+1; j < vAccumNodes.size(); ++j) {
+                dReal curdist = _ComputeDistance(vAccumNodes[i]->GetConfigurationState(), vAccumNodes[j]->GetConfigurationState());
                 if( curdist <= fLevelBound ) {
 #ifdef _DEBUG
-                    RAVELOG_WARN_FORMAT("invalid sibling nodes %d, %d  at level %d (%f), dist=%f", vnodes[i]->id%vnodes[j]->id%currentlevel%fLevelBound%curdist);
+                    RAVELOG_WARN_FORMAT("invalid sibling nodes %d, %d  at level %d (%f), dist=%f", vAccumNodes[i]->id%vAccumNodes[j]->id%currentlevel%fLevelBound%curdist);
 #else
                     RAVELOG_WARN_FORMAT("invalid sibling nodes %d, %d  at level %d (%f), dist=%f", i%j%currentlevel%fLevelBound%curdist);
 #endif
@@ -686,8 +713,8 @@ bool CacheTree::Validate()
         }
     }
 
-    if( _numnodes != (int)setallnodes.size() ) {
-        RAVELOG_WARN_FORMAT("num predicted nodes (%d) does not match computed nodes (%d)", _numnodes%setallnodes.size());
+    if( _numnodes != (int)numnodes ) {
+        RAVELOG_WARN_FORMAT("num predicted nodes (%d) does not match computed nodes (%d)", _numnodes%numnodes);
         return false;
     }
     if( _numnodes != (int)nallchildren+1 ) {

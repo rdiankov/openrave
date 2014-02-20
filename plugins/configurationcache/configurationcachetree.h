@@ -79,12 +79,14 @@ protected:
     Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
     int _robotlinkindex; ///< the robot link index that is colliding with _collidinglink. Valid if _conftype is CNT_Collision
 
+    // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree?
     //std::map<int,std::vector<CacheTreeNodePtr> > _children; //maybe use a vector for each level somehow
     //std::pair<CacheTreeNodePtr, dReal> _approxdispersion; //minimum distance and configuration of the opposite type seen so far
     //std::pair<CacheTreeNodePtr, dReal> _approxnn; //nearest distance and neighbor seen so far (same type)
 
-    // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree
-    int _level;
+    int16_t _level; ///< the level the node belongs to
+    uint16_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
+
     // managed by pool
 #ifdef _DEBUG
     int id;
@@ -195,6 +197,12 @@ private:
     /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMaxSeparationDist
     int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound, dReal fMaxSeparationDist);
 
+    /// \brief inerts a node directly to parentnode
+    ///
+    /// If parentnode's configuration is too close to nodein, or parentnode's level is too high, will create dummy child nodes
+    /// \param fInsetLevelBound pow(_base,maxinsertlevel)
+    void _InsertDirectly(CacheTreeNodePtr nodein, CacheTreeNodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsetLevelBound);
+
     /// \param[inout] coversetnodes for every level starting at the max, the parent cover sets. coversetnodes[i] is the _maxlevel-i level
     bool _Remove(CacheTreeNodePtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
 
@@ -224,7 +232,7 @@ private:
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
     dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree.
-    dReal _base, _fBaseInv; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base
+    dReal _base, _fBaseInv, _fBaseChildMult; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseChildMult=1/(_base-1)
 
     int _statedof; ///< the state space DOF tree is configured for
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)

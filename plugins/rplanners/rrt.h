@@ -71,7 +71,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
                 continue;
             }
-            _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig));
+            _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig, _vecInitialNodes.size()));
         }
 
         if( _treeForward.GetNumNodes() == 0 && !params->_sampleinitialfn ) {
@@ -123,7 +123,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof,==,0);
             for(std::vector<dReal>::iterator itvalues = _filterreturn->_configurations.begin(); itvalues != _filterreturn->_configurations.end(); itvalues += dof) {
                 // not sure if *startNode should be parent...
-                NodeBase* pnode = _treeForward.InsertNode(*startNode, std::vector<dReal>(itvalues,itvalues+dof));
+                NodeBase* pnode = _treeForward.InsertNode(*startNode, std::vector<dReal>(itvalues,itvalues+dof), 0);
                 path.insert(startNode, (Node*)pnode);
             }
             // splice out in-between nodes in path
@@ -217,7 +217,7 @@ Some python code to display data::\n\
         for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
             std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
             if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
-                _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal));
+                _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                 _nValidGoals++;
             }
             else {
@@ -282,7 +282,7 @@ Some python code to display data::\n\
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
                     RAVELOG_VERBOSE(str(boost::format("inserting new goal index %d")%_vecGoalNodes.size()));
-                    _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal));
+                    _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                     _nValidGoals++;
                 }
             }
@@ -290,7 +290,7 @@ Some python code to display data::\n\
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
                     RAVELOG_VERBOSE(str(boost::format("inserting new initial %d")%_vecInitialNodes.size()));
-                    _vecInitialNodes.push_back(_treeForward.InsertNode(NULL,vinitial));
+                    _vecInitialNodes.push_back(_treeForward.InsertNode(NULL,vinitial, _vecInitialNodes.size()));
                 }
             }
 
@@ -364,7 +364,7 @@ Some python code to display data::\n\
                 }
                 bSampleGoal = true;
                 // more goals requested, so make sure to remove all the nodes pointing to the current found goal
-                _treeBackward.DeleteNodesWithParent(_vecGoalNodes.at(goalindex));
+                _treeBackward.InvalidateNodesWithParent(_vecGoalNodes.at(goalindex));
             }
 
             swap(TreeA, TreeB);
@@ -417,13 +417,7 @@ Some python code to display data::\n\
         while(1) {
             vecnodes.push_front(pforward);
             if(!pforward->rrtparent) {
-                std::vector< NodeBase* >::iterator itnode = find(_vecInitialNodes.begin(), _vecInitialNodes.end(), pforward);
-                if( itnode != _vecInitialNodes.end() ) {
-                    goalpath.startindex = (int)(itnode-_vecInitialNodes.begin());
-                }
-                else {
-                    RAVELOG_WARN("could not find inital node index\n");
-                }
+                goalpath.startindex = pforward->_userdata;
                 break;
             }
             pforward = pforward->rrtparent;
@@ -435,13 +429,7 @@ Some python code to display data::\n\
         while(1) {
             vecnodes.push_back(pbackward);
             if(!pbackward->rrtparent) {
-                std::vector< NodeBase* >::iterator itnode = find(_vecGoalNodes.begin(), _vecGoalNodes.end(), pbackward);
-                if( itnode != _vecGoalNodes.end() ) {
-                    goalpath.goalindex = (int)(itnode-_vecGoalNodes.begin());
-                }
-                else {
-                    RAVELOG_WARN("could not find goal node index\n");
-                }
+                goalpath.goalindex = pbackward->_userdata;
                 break;
             }
             pbackward = pbackward->rrtparent;
@@ -603,7 +591,7 @@ public:
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
                     RAVELOG_VERBOSE("found initial\n");
-                    _vecInitialNodes.push_back(_treeForward.InsertNode(NULL,vinitial));
+                    _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitial, _vecInitialNodes.size()));
                 }
             }
 
@@ -807,7 +795,7 @@ protected:
                     return PS_Failed;
                 }
                 if( GetParameters()->CheckPathAllConstraints(_treeForward.GetVectorConfig(pnode), vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
-                    _treeForward.InsertNode(pnode,vSampleConfig);
+                    _treeForward.InsertNode(pnode, vSampleConfig, 0);
                     GetEnv()->UpdatePublishedBodies();
                     RAVELOG_DEBUG_FORMAT("size %d", _treeForward.GetNumNodes());
                 }

@@ -536,7 +536,7 @@ DefineRavePrintfA(_WARNLEVEL)
 DefineRavePrintfA(_DEBUGLEVEL)
 DefineRavePrintfA(_VERBOSELEVEL)
 
-#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d] (%s) ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__)
+#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d %s] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.

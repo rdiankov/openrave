@@ -75,17 +75,27 @@ public:
     SimpleNode(SimpleNode* parent, const vector<dReal>& config) : rrtparent(parent) {
         std::copy(config.begin(), config.end(), q);
         _level = 0;
+        _hasselfchild = 0;
+        _usenn = 1;
+        _userdata = 0;
     }
     SimpleNode(SimpleNode* parent, const dReal* pconfig, int dof) : rrtparent(parent) {
         std::copy(pconfig, pconfig+dof, q);
         _level = 0;
+        _hasselfchild = 0;
+        _usenn = 1;
+        _userdata = 0;
     }
     ~SimpleNode() {
     }
 
     SimpleNode* rrtparent; ///< pointer to the RRT tree parent
     std::vector<SimpleNode*> _vchildren; ///< cache tree direct children of this node (for the next cache level down). Has nothing to do with the RRT tree.
-    int _level; ///< the level the node belongs to
+    int16_t _level; ///< the level the node belongs to
+    uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
+    uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
+    uint32_t _userdata; ///< user specified data tagging this node
+    
 #ifdef _DEBUG
     int id;
 #endif
@@ -98,7 +108,7 @@ public:
     virtual void Init(boost::weak_ptr<PlannerBase> planner, int dof, boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance) = 0;
 
     /// inserts a node in the try
-    virtual NodeBasePtr InsertNode(NodeBasePtr parent, const vector<dReal>& config) = 0;
+    virtual NodeBasePtr InsertNode(NodeBasePtr parent, const vector<dReal>& config, uint32_t userdata) = 0;
 
     /// returns the nearest neighbor
     virtual std::pair<NodeBasePtr, dReal> FindNearestNode(const vector<dReal>& q) const = 0;
@@ -119,8 +129,8 @@ public:
 
     virtual int GetNumNodes() const = 0;
 
-    /// not executed often, so could be slow
-    virtual void DeleteNodesWithParent(NodeBasePtr parentbase) = 0;
+    /// invalidates any nodes that point to parentbase. nodes can still be references from outside, but just won't be used as part of the nearest neighbor search
+    virtual void InvalidateNodesWithParent(NodeBasePtr parentbase) = 0;
 };
 
 /// Cache stores configuration information in a data structure based on the Cover Tree (Beygelzimer et al. 2006 http://hunch.net/~jl/projects/cover_tree/icml_final/final-icml.pdf)
@@ -135,10 +145,11 @@ public:
         _fStepLength = 0.04f;
         _dof = 0;
         _numnodes = 0;
-        _base = 0;
-        _fBaseInv = 0;
-        _fBaseChildMult = 0;
+        _base = 1.5; // optimal is sqrt(1.3)?
+        _fBaseInv = 1/_base;
+        _fBaseChildMult = 1/(_base-1);
         _maxdistance = 0;
+        _mindistance = 0;
         _maxlevel = 0;
         _minlevel = 0;
         _fMaxLevelBound = 0;
@@ -166,10 +177,8 @@ public:
         _vNewConfig.resize(dof);
         _vDeltaConfig.resize(dof);
         _vTempConfig.resize(dof);
-        _base = 2; // optimal is sqrt(1.3)?
-        _fBaseInv = 1/_base;
-        _fBaseChildMult = 1/(_base-1);
         _maxdistance = maxdistance;
+        _mindistance = 0.001*fStepLength; ///< is it ok?
         _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
         _minlevel = _maxlevel - 1;
         _fMaxLevelBound = RavePow(_base, _maxlevel);
@@ -216,13 +225,39 @@ public:
         return _FindNearestNode(vquerystate);
     }
 
-    virtual NodeBasePtr InsertNode(NodeBasePtr parent, const vector<dReal>& config)
+    virtual NodeBasePtr InsertNode(NodeBasePtr parent, const vector<dReal>& config, uint32_t userdata)
     {
-        return _InsertNode((NodePtr)parent, config);
+        return _InsertNode((NodePtr)parent, config, userdata);
+    }
+
+    virtual void InvalidateNodesWithParent(NodeBasePtr parentbase)
+    {
+        //BOOST_ASSERT(Validate());
+        uint64_t starttime = utils::GetNanoPerformanceTime();
+        // first gather all the nodes, and then delete them in reverse order they were originally added in
+        NodePtr parent = (NodePtr)parentbase;
+        parent->_usenn = 0;
+        _setchildcache.clear(); _setchildcache.insert(parent);
+        int numruns=0;
+        bool bchanged=true;
+        while(bchanged) {
+            bchanged=false;
+            FOREACHC(itchildren, _vsetLevelNodes) {
+                FOREACHC(itchild, *itchildren) {
+                    if( _setchildcache.find(*itchild) == _setchildcache.end() && _setchildcache.find((*itchild)->rrtparent) != _setchildcache.end() ) {
+                        (*itchild)->_usenn = 0;
+                        _setchildcache.insert(*itchild);
+                        bchanged=true;
+                    }
+                }
+            }
+            ++numruns;
+        }
+        RAVELOG_VERBOSE("computed in %fs", (1e-9*(utils::GetNanoPerformanceTime()-starttime)));
     }
 
     /// deletes all nodes that have parentindex as their parent
-    virtual void DeleteNodesWithParent(NodeBasePtr parentbase)
+    virtual void _DeleteNodesWithParent(NodeBasePtr parentbase)
     {
         BOOST_ASSERT(Validate());
         uint64_t starttime = utils::GetNanoPerformanceTime();
@@ -250,17 +285,14 @@ public:
             ++numruns;
         }
 
-        int numnodes = _numnodes;
-        int nremove=1;
+        int nremove=0;
         // systematically remove backwards
         for(typename vector<NodePtr>::reverse_iterator itnode = _vchildcache.rbegin(); itnode != _vchildcache.rend(); ++itnode) {
-            _RemoveNode(*itnode);
-            if( --nremove <= 0 ) {
-                break;
-            }
+            bool bremoved = _RemoveNode(*itnode);
+            BOOST_ASSERT(bremoved);
+            ++nremove;
         }
         BOOST_ASSERT(Validate());
-        OPENRAVE_ASSERT_OP(_numnodes,==,numnodes-(int)_vchildcache.size());
         RAVELOG_VERBOSE("computed in %fs", (1e-9*(utils::GetNanoPerformanceTime()-starttime)));
     }
 
@@ -329,7 +361,7 @@ public:
                 }
             }
 
-            pnode = _InsertNode(pnode, _vNewConfig);
+            pnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
             lastnode = pnode;
             bHasAdded = true;
             if( bOneStep ) {
@@ -375,51 +407,54 @@ public:
             return false;
         }
 
-        dReal fLevelBound = RavePow(_base, _minlevel);
-        std::vector<NodePtr> vnodes;
-        std::set<NodePtr> setallnodes;
+        dReal fLevelBound = _fMaxLevelBound;
+        std::vector<NodePtr> vAccumNodes; vAccumNodes.reserve(_numnodes);
         size_t nallchildren = 0;
-        std::map<NodePtr, std::vector<NodePtr> > mapNodeChildren;
-        for(int currentlevel = _minlevel; currentlevel <= _maxlevel; ++currentlevel, fLevelBound *= _base ) {
+        size_t numnodes = 0;
+        for(int currentlevel = _maxlevel; currentlevel >= _minlevel; --currentlevel, fLevelBound *= _fBaseInv ) {
             int enclevel = _EncodeLevel(currentlevel);
             if( enclevel >= (int)_vsetLevelNodes.size() ) {
                 continue;
             }
 
-            dReal fChildLevelBound = fLevelBound*_fBaseChildMult;
             const std::set<NodePtr>& setLevelRawChildren = _vsetLevelNodes.at(enclevel);
             FOREACHC(itnode, setLevelRawChildren) {
-                // have to get all the children
-                std::vector<NodePtr> vchildren = (*itnode)->_vchildren;
                 FOREACH(itchild, (*itnode)->_vchildren) {
-                    if( mapNodeChildren.find(*itchild) != mapNodeChildren.end() ) {
-                        vchildren.insert(vchildren.end(), mapNodeChildren[*itchild].begin(), mapNodeChildren[*itchild].end());
-                    }
-                }
-                FOREACH(itchild, vchildren) {
                     dReal curdist = _ComputeDistance(*itnode, *itchild);
-                    if( curdist > fChildLevelBound+g_fEpsilonLinear ) {
+                    if( curdist > fLevelBound+g_fEpsilonLinear ) {
 #ifdef _DEBUG
-                        RAVELOG_WARN_FORMAT("invalid parent child nodes %d, %d at level %d (%f), dist=%f", (*itnode)->id%(*itchild)->id%currentlevel%fChildLevelBound%curdist);
+                        RAVELOG_WARN_FORMAT("invalid parent child nodes %d, %d at level %d (%f), dist=%f", (*itnode)->id%(*itchild)->id%currentlevel%fLevelBound%curdist);
 #else
-                        RAVELOG_WARN_FORMAT("invalid parent child nodes at level %d (%f), dist=%f", currentlevel%fChildLevelBound%curdist);
+                        RAVELOG_WARN_FORMAT("invalid parent child nodes at level %d (%f), dist=%f", currentlevel%fLevelBound%curdist);
 #endif
                         return false;
                     }
                 }
-                mapNodeChildren[*itnode].swap(vchildren);
                 nallchildren += (*itnode)->_vchildren.size();
-            }
-            vnodes.resize(0);
-            vnodes.insert(vnodes.end(), setLevelRawChildren.begin(), setLevelRawChildren.end());
-            setallnodes.insert(setLevelRawChildren.begin(), setLevelRawChildren.end());
+                if( !(*itnode)->_hasselfchild ) {
+                    vAccumNodes.push_back(*itnode);
+                }
 
-            for(size_t i = 0; i < vnodes.size(); ++i) {
-                for(size_t j = i+1; j < vnodes.size(); ++j) {
-                    dReal curdist = _ComputeDistance(vnodes[i], vnodes[j]);
+                if( currentlevel < _maxlevel ) {
+                    // find its parents
+                    int nfound = 0;
+                    FOREACH(ittestnode, _vsetLevelNodes.at(_EncodeLevel(currentlevel+1))) {
+                        if( find((*ittestnode)->_vchildren.begin(), (*ittestnode)->_vchildren.end(), *itnode) != (*ittestnode)->_vchildren.end() ) {
+                            ++nfound;
+                        }
+                    }
+                    BOOST_ASSERT(nfound==1);
+                }
+            }
+
+            numnodes += setLevelRawChildren.size();
+
+            for(size_t i = 0; i < vAccumNodes.size(); ++i) {
+                for(size_t j = i+1; j < vAccumNodes.size(); ++j) {
+                    dReal curdist = _ComputeDistance(vAccumNodes[i], vAccumNodes[j]);
                     if( curdist <= fLevelBound ) {
 #ifdef _DEBUG
-                        RAVELOG_WARN_FORMAT("invalid sibling nodes %d, %d  at level %d (%f), dist=%f", vnodes[i]->id%vnodes[j]->id%currentlevel%fLevelBound%curdist);
+                        RAVELOG_WARN_FORMAT("invalid sibling nodes %d, %d  at level %d (%f), dist=%f", vAccumNodes[i]->id%vAccumNodes[j]->id%currentlevel%fLevelBound%curdist);
 #else
                         RAVELOG_WARN_FORMAT("invalid sibling nodes %d, %d  at level %d (%f), dist=%f", i%j%currentlevel%fLevelBound%curdist);
 #endif
@@ -429,8 +464,8 @@ public:
             }
         }
 
-        if( _numnodes != (int)setallnodes.size() ) {
-            RAVELOG_WARN_FORMAT("num predicted nodes (%d) does not match computed nodes (%d)", _numnodes%setallnodes.size());
+        if( _numnodes != (int)numnodes ) {
+            RAVELOG_WARN_FORMAT("num predicted nodes (%d) does not match computed nodes (%d)", _numnodes%numnodes);
             return false;
         }
         if( _numnodes != (int)nallchildren+1 ) {
@@ -494,18 +529,19 @@ public:
     }
 
 private:
-    static int GetNewStatic() {
+    static int GetNewStaticId() {
         static int s_id = 0;
         int retid = s_id++;
         return retid;
     }
-    inline NodePtr _CreateNode(NodePtr rrtparent, const vector<dReal>& config)
+    inline NodePtr _CreateNode(NodePtr rrtparent, const vector<dReal>& config, uint32_t userdata)
     {
         // allocate memory for the structur and the internal state vectors
         void* pmemory = _pNodesPool->malloc();
         NodePtr node = new (pmemory) Node(rrtparent, config);
+        node->_userdata = userdata;
 #ifdef _DEBUG
-        node->id = GetNewStatic();
+        node->id = GetNewStaticId();
 #endif
         return node;
     }
@@ -515,8 +551,9 @@ private:
         // allocate memory for the structur and the internal state vectors
         void* pmemory = _pNodesPool->malloc();
         NodePtr node = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
+        node->_userdata = refnode->_userdata;
 #ifdef _DEBUG
-        node->id = GetNewStatic();
+        node->id = GetNewStaticId();
 #endif
         return node;
     }
@@ -554,7 +591,9 @@ private:
         _vCurrentLevelNodes.resize(1);
         _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
         _vCurrentLevelNodes[0].second = _ComputeDistance(_vCurrentLevelNodes[0].first->q, vquerystate);
-        bestnode = _vCurrentLevelNodes[0];
+        if( _vCurrentLevelNodes[0].first->_usenn ) {
+            bestnode = _vCurrentLevelNodes[0];
+        }
         while(_vCurrentLevelNodes.size() > 0 ) {
             _vNextLevelNodes.resize(0);
             RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
@@ -563,7 +602,7 @@ private:
                 // only take the children whose distances are within the bound
                 FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                     dReal curdist = _ComputeDistance((*itchild)->q, vquerystate);
-                    if( curdist < bestnode.second ) {
+                    if( curdist < bestnode.second && bestnode.first->_usenn) {
                         bestnode = make_pair(*itchild, curdist);
                     }
                     _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
@@ -587,9 +626,9 @@ private:
         return bestnode;
     }
 
-    NodePtr _InsertNode(NodePtr parent, const vector<dReal>& config)
+    NodePtr _InsertNode(NodePtr parent, const vector<dReal>& config, uint32_t userdata)
     {
-        NodePtr newnode = _CreateNode(parent,config);
+        NodePtr newnode = _CreateNode(parent, config, userdata);
         if( _numnodes == 0 ) {
             // no root
             _vsetLevelNodes.at(_EncodeLevel(_maxlevel)).insert(newnode); // add to the level
@@ -603,7 +642,7 @@ private:
             int nParentFound = _InsertRecursive(newnode, _vCurrentLevelNodes, _maxlevel, _fMaxLevelBound);
             BOOST_ASSERT(nParentFound!=0);
         }
-        BOOST_ASSERT(Validate());
+        //BOOST_ASSERT(Validate());
         return newnode;
     }
 
@@ -631,7 +670,7 @@ private:
                             closestDist = itcurrentnode->second;
                         }
                         // if distances are close, get the node on the lowest level...
-                        else if( itcurrentnode->second < closestDist+g_fEpsilonLinear && itcurrentnode->first->_level < closestNodeInRange->_level ) {
+                        else if( itcurrentnode->second < closestDist+_mindistance && itcurrentnode->first->_level < closestNodeInRange->_level ) {
                             closestNodeInRange = itcurrentnode->first;
                             closestDist = itcurrentnode->second;
                         }
@@ -664,9 +703,20 @@ private:
         else {
             FOREACHC(itcurrentnode, vCurrentLevelNodes) {
                 if( itcurrentnode->second <= fLevelBound ) {
-                    if(  !closestNodeInRange || itcurrentnode->second < closestDist ) {
+                    if( !closestNodeInRange ) {
                         closestNodeInRange = itcurrentnode->first;
                         closestDist = itcurrentnode->second;
+                    }
+                    else {
+                        if(  itcurrentnode->second < closestDist-g_fEpsilonLinear ) {
+                            closestNodeInRange = itcurrentnode->first;
+                            closestDist = itcurrentnode->second;
+                        }
+                        // if distances are close, get the node on the lowest level...
+                        else if( itcurrentnode->second < closestDist+_mindistance && itcurrentnode->first->_level < closestNodeInRange->_level ) {
+                            closestNodeInRange = itcurrentnode->first;
+                            closestDist = itcurrentnode->second;
+                        }
                     }
                 }
             }
@@ -676,32 +726,70 @@ private:
             return 0;
         }
 
-        // have to add at currentlevel-1, unfortunately if currentNodeInRange->_level is > currentlevel, will have to clone it. note that it will still represent the same RRT node with same rrtparent
-        while( closestNodeInRange->_level > currentlevel ) {
-            NodePtr clonenode = _CloneNode(closestNodeInRange);
-            clonenode->_level = closestNodeInRange->_level-1;
-            closestNodeInRange->_vchildren.push_back(clonenode);
+        _InsertDirectly(nodein, closestNodeInRange, closestDist, currentlevel-1, fLevelBound*_fBaseInv);
+        _numnodes += 1;
+        return 1;
+    }
+
+    /// \brief inerts a node directly to parentnode
+    ///
+    /// If parentnode's configuration is too close to nodein, or parentnode's level is too high, will create dummy child nodes
+    bool _InsertDirectly(NodePtr nodein, NodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsertLevelBound)
+    {
+        int insertlevel = maxinsertlevel;
+        if( parentdist <= _mindistance ) {
+            // pretty close, so notify parent that there's a similar child already underneath it
+            if( parentnode->_hasselfchild ) {
+                // already has a similar child, so go one level below...?
+                FOREACH(itchild, parentnode->_vchildren) {
+                    dReal childdist = _ComputeDistance(nodein, *itchild);
+                    if( childdist <= _mindistance ) {
+                        return _InsertDirectly(nodein, *itchild, childdist, maxinsertlevel-1, fInsertLevelBound*_fBaseInv);
+                    }
+                }
+                RAVELOG_WARN("inconsistent node found\n");
+                return false;
+            }
+        }
+        else {
+            // depending on parentdist, might have to insert at a lower level in order to keep the sibling invariant
+            dReal fChildLevelBound = fInsertLevelBound;
+            while(parentdist < fChildLevelBound) {
+                fChildLevelBound *= _fBaseInv;
+                insertlevel--;
+            }
+        }
+
+        // have to add at insertlevel. If currentNodeInRange->_level is > insertlevel+1, will have to clone it. note that it will still represent the same RRT node with same rrtparent
+        while( parentnode->_level > insertlevel+1 ) {
+            NodePtr clonenode = _CloneNode(parentnode);
+            clonenode->_level = parentnode->_level-1;
+            parentnode->_vchildren.push_back(clonenode);
+            parentnode->_hasselfchild = 1;
             int encclonelevel = _EncodeLevel(clonenode->_level);
             if( encclonelevel >= (int)_vsetLevelNodes.size() ) {
                 _vsetLevelNodes.resize(encclonelevel+1);
             }
             _vsetLevelNodes.at(encclonelevel).insert(clonenode);
             _numnodes +=1;
-            closestNodeInRange = clonenode;
+            parentnode = clonenode;
         }
 
-        nodein->_level = currentlevel-1;
+        if( parentdist <= _mindistance ) {
+            parentnode->_hasselfchild = 1;
+        }
+        nodein->_level = insertlevel;
         int enclevel2 = _EncodeLevel(nodein->_level);
         if( enclevel2 >= (int)_vsetLevelNodes.size() ) {
             _vsetLevelNodes.resize(enclevel2+1);
         }
         _vsetLevelNodes.at(enclevel2).insert(nodein);
-        closestNodeInRange->_vchildren.push_back(nodein);
+        parentnode->_vchildren.push_back(nodein);
+
         if( _minlevel > nodein->_level ) {
             _minlevel = nodein->_level;
         }
-        _numnodes += 1;
-        return 1;
+        return true;
     }
 
     bool _RemoveNode(NodePtr removenode)
@@ -709,6 +797,23 @@ private:
         if( _numnodes == 0 ) {
             return false;
         }
+
+#ifdef _DEBUG
+        std::vector<NodePtr> vchain;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            vchain.push_back(removenode);
+            for(int querylevel = removenode->_level+1; querylevel <= _maxlevel; ++querylevel) {
+                int nfound = 0;
+                FOREACH(ittestnode, _vsetLevelNodes.at(_EncodeLevel(querylevel))) {
+                    if( find((*ittestnode)->_vchildren.begin(), (*ittestnode)->_vchildren.end(), vchain.front()) != (*ittestnode)->_vchildren.end() ) {
+                        vchain.insert(vchain.begin(), *ittestnode);
+                        ++nfound;
+                    }
+                }
+                BOOST_ASSERT(nfound==1);
+            }
+        }
+#endif
 
         NodePtr proot = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
         if( _numnodes == 1 && removenode == proot ) {
@@ -762,48 +867,50 @@ private:
                 while(itchild != (*itcurrentnode)->_vchildren.end() ) {
                     dReal curdist = _ComputeDistance(removenode, *itchild);
                     if( *itchild == removenode ) {
-                        vNextLevelNodes.resize(0);
+                        //vNextLevelNodes.resize(0);
                         vNextLevelNodes.push_back(*itchild);
                         itchild = (*itcurrentnode)->_vchildren.erase(itchild);
+                        if( (*itcurrentnode)->_hasselfchild && _ComputeDistance(*itcurrentnode, *itchild) <= _mindistance) {
+                            (*itcurrentnode)->_hasselfchild = 0;
+                        }
                         bfound = true;
-                        break;
+                        //break;
                     }
                     else {
-                        if( curdist <= fLevelBound ) {
+                        if( curdist <= fLevelBound*_fBaseChildMult ) {
                             vNextLevelNodes.push_back(*itchild);
                         }
                         ++itchild;
                     }
                 }
-                if( bfound ) {
-                    break;
-                }
+//                if( bfound ) {
+//                    break;
+//                }
             }
         }
 
         bool bRemoved = _Remove(removenode, vvCoverSetNodes, currentlevel-1, fLevelBound*_fBaseInv);
 
-        typename std::set<NodePtr>::iterator itremove = setLevelRawChildren.find(removenode);
-        if( itremove != setLevelRawChildren.end() ) {
-            int encchildlevel = _EncodeLevel(currentlevel-1);
+        if( !bRemoved && removenode->_level == currentlevel && find(vvCoverSetNodes.at(coverindex-1).begin(), vvCoverSetNodes.at(coverindex-1).end(), removenode) != vvCoverSetNodes.at(coverindex-1).end() ) {
+            //int encchildlevel = _EncodeLevel(currentlevel-1);
 
             // remove all removenode->_vchildren from vNextLevelNodes since have to assign parents to them
-            FOREACH(itchild, removenode->_vchildren) {
-                typename std::vector<NodePtr>::iterator itchildremove = find(vNextLevelNodes.begin(), vNextLevelNodes.end(), *itchild);
-                if( itchildremove != vNextLevelNodes.end() ) {
-                    vNextLevelNodes.erase(itchildremove);
-                }
-                _vsetLevelNodes.at(encchildlevel).erase(*itchild);
-            }
+//            FOREACH(itchild, removenode->_vchildren) {
+//                typename std::vector<NodePtr>::iterator itchildremove = find(vNextLevelNodes.begin(), vNextLevelNodes.end(), *itchild);
+//                if( itchildremove != vNextLevelNodes.end() ) {
+//                    vNextLevelNodes.erase(itchildremove);
+//                }
+//                _vsetLevelNodes.at(encchildlevel).erase(*itchild);
+//            }
 
             // for each child, find a more suitable parent
             FOREACH(itchild, removenode->_vchildren) {
-                int parentlevel = currentlevel-1;
-                dReal fParentLevelBound = fLevelBound*_fBaseInv;
+                int parentlevel = currentlevel; //-1;
+                dReal fParentLevelBound = fLevelBound; //*_fBaseInv;
                 dReal closestdist=0;
                 NodePtr closestNode = NULL;
                 //int maxaddlevel = currentlevel-1;
-                while(parentlevel <= _maxlevel && vvCoverSetNodes.at(_maxlevel-parentlevel).size() > 0 ) {
+                while(parentlevel <= _maxlevel  ) {
                     FOREACHC(itnode, vvCoverSetNodes.at(_maxlevel-parentlevel)) {
                         if( *itnode == removenode ) {
                             continue;
@@ -817,33 +924,81 @@ private:
                         }
                     }
                     if( !!closestNode ) {
+                        // force inserting at exactly _level
+                        //_InsertDirectly(*itchild, closestNode, closestdist, parentlevel-1, fParentLevelBound*_fBaseInv);
+//                        while( closestNode->_level > currentlevel ) {
+//                            NodePtr clonenode = _CloneNode(closestNode);
+//                            clonenode->_level = closestNode->_level-1;
+//                            closestNode->_vchildren.push_back(clonenode);
+//                            closestNode->_hasselfchild = 1;
+//                            int encclonelevel = _EncodeLevel(clonenode->_level);
+//                            if( encclonelevel >= (int)_vsetLevelNodes.size() ) {
+//                                _vsetLevelNodes.resize(encclonelevel+1);
+//                            }
+//                            _vsetLevelNodes.at(encclonelevel).insert(clonenode);
+//                            _numnodes +=1;
+//                            closestNode = clonenode;
+//                        }
+
+                        NodePtr nodechild = *itchild;
+                        while( nodechild->_level < closestNode->_level-1 ) {
+                            NodePtr clonenode = _CloneNode(nodechild);
+                            clonenode->_level = nodechild->_level+1;
+                            clonenode->_vchildren.push_back(nodechild);
+                            clonenode->_hasselfchild = 1;
+                            int encclonelevel = _EncodeLevel(clonenode->_level);
+                            if( encclonelevel >= (int)_vsetLevelNodes.size() ) {
+                                _vsetLevelNodes.resize(encclonelevel+1);
+                            }
+                            _vsetLevelNodes.at(encclonelevel).insert(clonenode);
+                            _numnodes +=1;
+                            vvCoverSetNodes.at(_maxlevel-clonenode->_level).push_back(clonenode);
+                            nodechild = clonenode;
+                        }
+                        
+                        if( closestdist <= _mindistance ) {
+                            closestNode->_hasselfchild = 1;
+                        }
+
+//                        nodechild->_level = currentlevel-1; // need to change?
+                        //int enclevel2 = _EncodeLevel(nodechild->_level);
+//                        if( enclevel2 >= (int)_vsetLevelNodes.size() ) {
+//                            _vsetLevelNodes.resize(enclevel2+1);
+//                        }
+                        //_vsetLevelNodes.at(enclevel2).insert(nodechild);
+                        closestNode->_vchildren.push_back(nodechild);
+//
+//                        if( _minlevel > nodechild->_level ) {
+//                            _minlevel = nodechild->_level;
+//                        }
+
                         // closest node was found in parentlevel, so add to the children
-                        closestNode->_vchildren.push_back(*itchild);
-                        _vsetLevelNodes.at(_EncodeLevel(parentlevel-1)).insert(*itchild);
+                        //closestNode->_vchildren.push_back(*itchild);
+                        //_vsetLevelNodes.at(_EncodeLevel(parentlevel-1)).insert(*itchild);
                         // should also add to vvCoverSetNodes..?
-                        vvCoverSetNodes.at(_maxlevel-(parentlevel-1)).push_back(*itchild);
+                        //vvCoverSetNodes.at(_maxlevel-nodechild->_level).push_back(nodechild);
                         break;
                     }
+
                     // try a higher level
                     parentlevel += 1;
                     fParentLevelBound *= _base;
                 }
                 if( !closestNode ) {
-                    _vsetLevelNodes.at(_EncodeLevel(parentlevel-1)).insert(*itchild);
-                    vvCoverSetNodes.at(_maxlevel-(parentlevel-1)).push_back(*itchild);
+                    BOOST_ASSERT(parentlevel>_maxlevel);
 //                    if( parentlevel <= _maxlevel ) {
 //                        vvCoverSetNodes.at(_maxlevel-parentlevel).push_back(*itchild);
-//                        _vsetLevelNodes.at(_EncodeLevel().erase(*itchild);
+//                        _vsetLevelNodes.at(_EncodeLevel(parentlevel)).insert(*itchild);
 //                    }
 //                    else {
-//                        // occurs when root node is being removed and new children have no where to go?
-//                        BOOST_ASSERT(vvCoverSetNodes.at(0).size()==0);
-//                        vvCoverSetNodes.at(0).push_back(*itchild);
-//                    }
+                    // occurs when root node is being removed and new children have no where to go?
+                    _vsetLevelNodes.at(_EncodeLevel(_maxlevel)).insert(*itchild);
+                    vvCoverSetNodes.at(0).push_back(*itchild);
                 }
             }
             // remove the node
-            setLevelRawChildren.erase(itremove);
+            size_t erased = setLevelRawChildren.erase(removenode);
+            BOOST_ASSERT(erased==1);
             bRemoved = true;
             _numnodes--;
         }
@@ -862,7 +1017,8 @@ private:
 
     std::vector< std::set<NodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
-    dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree.
+    dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree. Has to be > 0.
+    dReal _mindistance; ///< minimum possible distance between two states until they are declared the same
     dReal _base, _fBaseInv, _fBaseChildMult; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseChildMult=1/(_base-1)
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
