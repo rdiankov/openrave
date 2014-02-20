@@ -112,7 +112,8 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
             // check if the nodes can be connected by a straight line
             _filterreturn->Clear();
-            if ( params->CheckPathAllConstraints(VectorWrapper<dReal>((*startNode)->q, dof), VectorWrapper<dReal>((*endNode)->q, dof), std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
+            //if ( params->CheckPathAllConstraints(VectorWrapper<dReal>((*startNode)->q, dof), VectorWrapper<dReal>((*endNode)->q, dof), std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
+            if ( params->CheckPathAllConstraints(std::vector<dReal>((*startNode)->q, (*startNode)->q+dof), std::vector<dReal>((*endNode)->q, (*endNode)->q+dof), std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
                 if( nrejected++ > (int)path.size()+8 ) {
                     break;
                 }
@@ -122,8 +123,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             ++startNode;
             OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof,==,0);
             for(std::vector<dReal>::iterator itvalues = _filterreturn->_configurations.begin(); itvalues != _filterreturn->_configurations.end(); itvalues += dof) {
-                // not sure if *startNode should be parent...
-                NodeBase* pnode = _treeForward.InsertNode(*startNode, std::vector<dReal>(itvalues,itvalues+dof), 0);
+                NodeBase* pnode = _treeForward.InsertNode(NULL, std::vector<dReal>(itvalues,itvalues+dof), 0);
                 path.insert(startNode, (Node*)pnode);
             }
             // splice out in-between nodes in path
@@ -133,6 +133,8 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             if( path.size() <= 2 ) {
                 return;
             }
+
+            break;
         }
     }
 
@@ -403,6 +405,10 @@ Some python code to display data::\n\
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(),itbest->qall,_parameters->_configurationspecification);
+        {
+            ofstream f("test.traj.xml");
+            ptraj->serialize(f);
+        }
         RAVELOG_DEBUG_FORMAT("plan success, iters=%d, path=%d points, computation time=%fs\n", progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         return _ProcessPostPlanners(_robot,ptraj);
     }
@@ -437,7 +443,7 @@ Some python code to display data::\n\
 
         BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < (int)_vecGoalNodes.size() );
         _SimpleOptimizePath(vecnodes,10);
-        int dof = _parameters->GetDOF();
+        const int dof = _parameters->GetDOF();
         goalpath.qall.resize(vecnodes.size()*dof);
         list<SimpleNode*>::iterator itprev = vecnodes.begin();
         list<SimpleNode*>::iterator itnext = itprev; itnext++;
