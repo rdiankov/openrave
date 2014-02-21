@@ -19,6 +19,8 @@
 #include "rplanners.h"
 #include <boost/algorithm/string.hpp>
 
+static const dReal g_fEpsilonDotProduct = RavePow(g_fEpsilon,0.8);
+
 template <typename Node>
 class RrtPlanner : public PlannerBase
 {
@@ -82,59 +84,147 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         return true;
     }
 
-    // simple path optimization
-    virtual void _SimpleOptimizePath(list<Node*>& path, int numiterations)
+//    /// \brief simple path optimization given a path of dof values
+//    virtual void _SimpleOptimizePath(std::deque<dReal>& path, int numiterations)
+//    {
+//        if( path.size() <= 2 ) {
+//            return;
+//        }
+//        PlannerParametersConstPtr params = GetParameters();
+//
+//        typename list<Node*>::iterator startNode, endNode;
+//        if( !_filterreturn ) {
+//            _filterreturn.reset(new ConstraintFilterReturn());
+//        }
+//        int dof = GetParameters()->GetDOF();
+//        int nrejected = 0;
+//        int i = numiterations;
+//        while(i > 0 && nrejected < (int)path.size()+4 ) {
+//            --i;
+//
+//            // pick a random node on the path, and a random jump ahead
+//            int endIndex = 2+(_uniformsampler->SampleSequenceOneUInt32()%((int)path.size()-2));
+//            int startIndex = _uniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
+//
+//            startNode = path.begin();
+//            advance(startNode, startIndex);
+//            endNode = startNode;
+//            advance(endNode, endIndex-startIndex);
+//            nrejected++;
+//
+//            // check if the nodes can be connected by a straight line
+//            _filterreturn->Clear();
+//            if ( params->CheckPathAllConstraints(*startNode, *endNode, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
+//                if( nrejected++ > (int)path.size()+8 ) {
+//                    break;
+//                }
+//                continue;
+//            }
+//
+//            ++startNode;
+//            OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof,==,0);
+//            for(std::vector<dReal>::iterator itvalues = _filterreturn->_configurations.begin(); itvalues != _filterreturn->_configurations.end(); itvalues += dof) {
+//                path.insert(startNode, std::vector<dReal>(itvalues,itvalues+dof));
+//            }
+//            // splice out in-between nodes in path
+//            path.erase(startNode, endNode);
+//            nrejected = 0;
+//
+//            if( path.size() <= 2 ) {
+//                return;
+//            }
+//        }
+//    }
+
+    /// \brief simple path optimization given a path of dof values. Every _parameters->GetDOF() are one point in the path
+    virtual void _SimpleOptimizePath(std::deque<dReal>& path, int numiterations)
     {
-        if( path.size() <= 2 ) {
+        PlannerParametersConstPtr params = GetParameters();
+        const int dof = params->GetDOF();
+        if( (int)path.size() <= 2*dof ) {
             return;
         }
-        PlannerParametersConstPtr params = GetParameters();
 
-        typename list<Node*>::iterator startNode, endNode;
+        deque<dReal>::iterator startNode, endNode, itconfig;
         if( !_filterreturn ) {
             _filterreturn.reset(new ConstraintFilterReturn());
         }
-        int dof = GetParameters()->GetDOF();
         int nrejected = 0;
-        int i = numiterations;
-        while(i > 0 && nrejected < (int)path.size()+4 ) {
-            --i;
+        int curiter = numiterations;
+        std::vector<dReal> vstart(dof), vend(dof), vdiff0(dof), vdiff1(dof);
+        while(curiter > 0 && nrejected < (int)path.size()+4*dof ) {
+            --curiter;
 
             // pick a random node on the path, and a random jump ahead
-            int endIndex = 2+(_uniformsampler->SampleSequenceOneUInt32()%((int)path.size()-2));
+            int endIndex = 2+(_uniformsampler->SampleSequenceOneUInt32()%((int)path.size()/dof-2));
             int startIndex = _uniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
 
             startNode = path.begin();
-            advance(startNode, startIndex);
+            advance(startNode, startIndex*dof);
             endNode = startNode;
-            advance(endNode, endIndex-startIndex);
+            advance(endNode, (endIndex-startIndex)*dof);
             nrejected++;
+
+            // check if the nodes are in a straight line and if yes, then check different node
+            std::copy(startNode, startNode+dof, vstart.begin());
+            std::copy(endNode-dof, endNode, vend.begin());
+            vdiff0 = vend;
+            params->_diffstatefn(vdiff0, vstart);
+            bool bcolinear = true;
+            // take the midpoint since that is the most stable and check if it is collinear
+            {
+                itconfig = startNode + ((endIndex-startIndex)/2)*dof;
+                std::copy(itconfig, itconfig+dof, vdiff1.begin());
+                params->_diffstatefn(vdiff1, vstart);
+                dReal dotproduct=0,x0length2=0,x1length2=0;
+                for(int idof = 0; idof < dof; ++idof) {
+                    dotproduct += vdiff0[idof]*vdiff1[idof];
+                    x0length2 += vdiff0[idof]*vdiff0[idof];
+                    x1length2 += vdiff1[idof]*vdiff1[idof];
+                }
+                if( RaveFabs(dotproduct * dotproduct - x0length2*x1length2) > g_fEpsilonDotProduct ) {
+                    //RAVELOG_INFO_FORMAT("colinear: %.15e, %.15e", RaveFabs(dotproduct * dotproduct - x0length2*x1length2)%(dotproduct/RaveSqrt(x0length2*x1length2)));
+                    bcolinear = false;
+                    break;
+                }
+            }
+
+            if( bcolinear ) {
+                continue;
+            }
 
             // check if the nodes can be connected by a straight line
             _filterreturn->Clear();
-            //if ( params->CheckPathAllConstraints(VectorWrapper<dReal>((*startNode)->q, dof), VectorWrapper<dReal>((*endNode)->q, dof), std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
-            if ( params->CheckPathAllConstraints(std::vector<dReal>((*startNode)->q, (*startNode)->q+dof), std::vector<dReal>((*endNode)->q, (*endNode)->q+dof), std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
+            if ( params->CheckPathAllConstraints(vstart, vend, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
                 if( nrejected++ > (int)path.size()+8 ) {
                     break;
                 }
                 continue;
             }
 
-            ++startNode;
+            startNode += dof;
             OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof,==,0);
-            for(std::vector<dReal>::iterator itvalues = _filterreturn->_configurations.begin(); itvalues != _filterreturn->_configurations.end(); itvalues += dof) {
-                NodeBase* pnode = _treeForward.InsertNode(NULL, std::vector<dReal>(itvalues,itvalues+dof), 0);
-                path.insert(startNode, (Node*)pnode);
+            // need to copy _filterreturn->_configurations between startNode and endNode
+            size_t ioffset=endNode-startNode;
+            if( ioffset > 0 ) {
+                if( ioffset <= _filterreturn->_configurations.size() ) {
+                    std::copy(_filterreturn->_configurations.begin(), _filterreturn->_configurations.begin()+ioffset, startNode);
+                }
+                else {
+                    std::copy(_filterreturn->_configurations.begin(), _filterreturn->_configurations.end(), startNode);
+                    // have to remove nodes
+                    path.erase(startNode+_filterreturn->_configurations.size(), endNode);
+                }
             }
-            // splice out in-between nodes in path
-            path.erase(startNode, endNode);
-            nrejected = 0;
+            if( ioffset < _filterreturn->_configurations.size() ) {
+                // insert the rest of the continue
+                path.insert(endNode, _filterreturn->_configurations.begin()+ioffset, _filterreturn->_configurations.end());
+            }
 
-            if( path.size() <= 2 ) {
+            nrejected = 0;
+            if( (int)path.size() <= 2*dof ) {
                 return;
             }
-
-            break;
         }
     }
 
@@ -156,6 +246,7 @@ protected:
     int _goalindex, _startindex;
     SpaceSamplerBasePtr _uniformsampler;
     ConstraintFilterReturnPtr _filterreturn;
+    std::deque<dReal> _cachedpath;
 
     SpatialTree< Node > _treeForward;
     std::vector< NodeBase* > _vecInitialNodes;
@@ -189,6 +280,15 @@ Some python code to display data::\n\
     }
     virtual ~BirrtPlanner() {
     }
+
+    struct GOALPATH
+    {
+        GOALPATH() : startindex(-1), goalindex(-1), length(0) {
+        }
+        vector<dReal> qall;
+        int startindex, goalindex;
+        dReal length;
+    };
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
@@ -238,18 +338,13 @@ Some python code to display data::\n\
             _parameters->_nMaxIterations = 10000;
         }
 
+        _vgoalpaths.resize(0);
+        if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
+            _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
+        }
         RAVELOG_DEBUG_FORMAT("BiRRT Planner Initialized, initial=%d, goal=%d", _vecInitialNodes.size()%_treeBackward.GetNumNodes());
         return true;
     }
-
-    struct GOALPATH
-    {
-        GOALPATH() : startindex(-1), goalindex(-1), length(0) {
-        }
-        vector<dReal> qall;
-        int startindex, goalindex;
-        dReal length;
-    };
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
@@ -272,11 +367,10 @@ Some python code to display data::\n\
         NodeBase* iConnectedA=NULL, *iConnectedB=NULL;
         int iter = 0;
 
-        list<GOALPATH> listgoalpaths;
         bool bSampleGoal = true;
         PlannerProgress progress;
         PlannerAction callbackaction=PA_None;
-        while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
+        while(_vgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
             RAVELOG_VERBOSE_FORMAT("iter=%d, forward=%d, backward=%d", (iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
             ++iter;
 
@@ -309,7 +403,7 @@ Some python code to display data::\n\
                     }
                     // make sure goal is not already found
                     bool bfound = false;
-                    FOREACHC(itgoalpath,listgoalpaths) {
+                    FOREACHC(itgoalpath,_vgoalpaths) {
                         if( goalindex == (uint32_t)itgoalpath->goalindex ) {
                             bfound = true;
                             break;
@@ -348,20 +442,20 @@ Some python code to display data::\n\
 
             if( et == ET_Connected ) {
                 // connected, process goal
-                listgoalpaths.push_back(GOALPATH());
-                _ExtractPath(listgoalpaths.back(), TreeA == &_treeForward ? iConnectedA : iConnectedB, TreeA == &_treeBackward ? iConnectedA : iConnectedB);
-                int goalindex = listgoalpaths.back().goalindex;
-                int startindex = listgoalpaths.back().startindex;
+                _vgoalpaths.push_back(GOALPATH());
+                _ExtractPath(_vgoalpaths.back(), TreeA == &_treeForward ? iConnectedA : iConnectedB, TreeA == &_treeBackward ? iConnectedA : iConnectedB);
+                int goalindex = _vgoalpaths.back().goalindex;
+                int startindex = _vgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << listgoalpaths.back().length << ", values=[";
+                    ss << "found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", values=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
-                        ss << listgoalpaths.back().qall.at(listgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
+                        ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
                     }
                     ss << "]";
                     RAVELOG_DEBUG(ss.str());
                 }
-                if( listgoalpaths.size() >= _parameters->_minimumgoalpaths || listgoalpaths.size() >= _nValidGoals ) {
+                if( _vgoalpaths.size() >= _parameters->_minimumgoalpaths || _vgoalpaths.size() >= _nValidGoals ) {
                     break;
                 }
                 bSampleGoal = true;
@@ -382,19 +476,19 @@ Some python code to display data::\n\
                 return PS_Interrupted;
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
-                if( listgoalpaths.size() > 0 ) {
+                if( _vgoalpaths.size() > 0 ) {
                     break;
                 }
             }
         }
 
-        if( listgoalpaths.size() == 0 ) {
+        if( _vgoalpaths.size() == 0 ) {
             RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
             return PS_Failed;
         }
 
-        list<GOALPATH>::iterator itbest = listgoalpaths.begin();
-        FOREACH(itpath,listgoalpaths) {
+        vector<GOALPATH>::iterator itbest = _vgoalpaths.begin();
+        FOREACH(itpath,_vgoalpaths) {
             if( itpath->length < itbest->length ) {
                 itbest = itpath;
             }
@@ -404,24 +498,72 @@ Some python code to display data::\n\
         if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
-        ptraj->Insert(ptraj->GetNumWaypoints(),itbest->qall,_parameters->_configurationspecification);
-        {
-            ofstream f("test.traj.xml");
-            ptraj->serialize(f);
-        }
+        ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
         RAVELOG_DEBUG_FORMAT("plan success, iters=%d, path=%d points, computation time=%fs\n", progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         return _ProcessPostPlanners(_robot,ptraj);
     }
 
     virtual void _ExtractPath(GOALPATH& goalpath, NodeBase* iConnectedForward, NodeBase* iConnectedBackward)
     {
-        list<SimpleNode*> vecnodes;
+//        list< std::vector<dReal> > vecnodes;
+//
+//        // add nodes from the forward tree
+//        SimpleNode* pforward = (SimpleNode*)iConnectedForward;
+//        goalpath.startindex = -1;
+//        while(1) {
+//            vecnodes.push_front(pforward);
+//            if(!pforward->rrtparent) {
+//                goalpath.startindex = pforward->_userdata;
+//                break;
+//            }
+//            pforward = pforward->rrtparent;
+//        }
+//
+//        // add nodes from the backward tree
+//        goalpath.goalindex = -1;
+//        SimpleNode *pbackward = (SimpleNode*)iConnectedBackward;
+//        while(1) {
+//            vecnodes.push_back(pbackward);
+//            if(!pbackward->rrtparent) {
+//                goalpath.goalindex = pbackward->_userdata;
+//                break;
+//            }
+//            pbackward = pbackward->rrtparent;
+//        }
+//
+//        BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < (int)_vecGoalNodes.size() );
+//        _SimpleOptimizePath(vecnodes,10);
+//        const int dof = _parameters->GetDOF();
+//        goalpath.qall.resize(vecnodes.size()*dof);
+//        list<SimpleNode*>::iterator itprev = vecnodes.begin();
+//        list<SimpleNode*>::iterator itnext = itprev; itnext++;
+//        goalpath.length = 0;
+//        vector<dReal>::iterator itq = goalpath.qall.begin();
+//        std::copy((*itprev)->q, (*itprev)->q+dof, itq);
+//        itq += dof;
+//        vector<dReal> vivel(dof,1.0);
+//        for(size_t i = 0; i < vivel.size(); ++i) {
+//            if( _parameters->_vConfigVelocityLimit.at(i) != 0 ) {
+//                vivel[i] = 1/_parameters->_vConfigVelocityLimit.at(i);
+//            }
+//        }
+//
+//        while(itnext != vecnodes.end()) {
+//            std::copy((*itnext)->q, (*itnext)->q+dof, itq);
+//            itprev=itnext;
+//            ++itnext;
+//            itq += dof;
+//        }
+
+        const int dof = _parameters->GetDOF();
+        _cachedpath.resize(0);
 
         // add nodes from the forward tree
         SimpleNode* pforward = (SimpleNode*)iConnectedForward;
         goalpath.startindex = -1;
         while(1) {
-            vecnodes.push_front(pforward);
+            _cachedpath.insert(_cachedpath.begin(), pforward->q, pforward->q+dof);
+            //vecnodes.push_front(pforward);
             if(!pforward->rrtparent) {
                 goalpath.startindex = pforward->_userdata;
                 break;
@@ -433,7 +575,8 @@ Some python code to display data::\n\
         goalpath.goalindex = -1;
         SimpleNode *pbackward = (SimpleNode*)iConnectedBackward;
         while(1) {
-            vecnodes.push_back(pbackward);
+            //vecnodes.push_back(pbackward);
+            _cachedpath.insert(_cachedpath.end(), pbackward->q, pbackward->q+dof);
             if(!pbackward->rrtparent) {
                 goalpath.goalindex = pbackward->_userdata;
                 break;
@@ -442,15 +585,10 @@ Some python code to display data::\n\
         }
 
         BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < (int)_vecGoalNodes.size() );
-        _SimpleOptimizePath(vecnodes,10);
-        const int dof = _parameters->GetDOF();
-        goalpath.qall.resize(vecnodes.size()*dof);
-        list<SimpleNode*>::iterator itprev = vecnodes.begin();
-        list<SimpleNode*>::iterator itnext = itprev; itnext++;
+        _SimpleOptimizePath(_cachedpath,10);
+        goalpath.qall.resize(_cachedpath.size());
+        std::copy(_cachedpath.begin(), _cachedpath.end(), goalpath.qall.begin());
         goalpath.length = 0;
-        vector<dReal>::iterator itq = goalpath.qall.begin();
-        std::copy((*itprev)->q, (*itprev)->q+dof, itq);
-        itq += dof;
         vector<dReal> vivel(dof,1.0);
         for(size_t i = 0; i < vivel.size(); ++i) {
             if( _parameters->_vConfigVelocityLimit.at(i) != 0 ) {
@@ -458,17 +596,10 @@ Some python code to display data::\n\
             }
         }
 
-        while(itnext != vecnodes.end()) {
-            std::copy((*itnext)->q, (*itnext)->q+dof, itq);
-            itprev=itnext;
-            ++itnext;
-            itq += dof;
-        }
-
         // take distance scaled with respect to velocities with the first and last points only!
         // this is because rrt paths can initially be very complex but simplify down to something simpler.
-        std::vector<dReal> vdiff(vecnodes.front()->q, vecnodes.front()->q+dof);
-        _parameters->_diffstatefn(vdiff, VectorWrapper<dReal>(vecnodes.back()->q, dof));
+        std::vector<dReal> vdiff(goalpath.qall.begin(), goalpath.qall.begin()+dof);
+        _parameters->_diffstatefn(vdiff, std::vector<dReal>(goalpath.qall.end()-dof, goalpath.qall.end()));
         for(size_t i = 0; i < vdiff.size(); ++i) {
             goalpath.length += RaveFabs(vdiff.at(i))*vivel.at(i);
         }
@@ -496,6 +627,7 @@ protected:
     dReal _fGoalBiasProb;
     std::vector< NodeBase* > _vecGoalNodes;
     size_t _nValidGoals; ///< num valid goals
+    std::vector<GOALPATH> _vgoalpaths;
 };
 
 class BasicRrtPlanner : public RrtPlanner<SimpleNode>
@@ -655,25 +787,25 @@ public:
             return PS_Failed;
         }
 
-        list<SimpleNode*> vecnodes;
+        const int dof = _parameters->GetDOF();
+        _cachedpath.resize(0);
 
         // add nodes from the forward tree
         SimpleNode* pforward = (SimpleNode*)lastnode;
         while(1) {
-            vecnodes.push_front(pforward);
+            _cachedpath.insert(_cachedpath.begin(), pforward->q, pforward->q+dof);
             if(!pforward->rrtparent) {
                 break;
             }
             pforward = pforward->rrtparent;
         }
 
-        _SimpleOptimizePath(vecnodes,10);
+        _SimpleOptimizePath(_cachedpath,10);
         if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             ptraj->Init(_parameters->_configurationspecification);
         }
-        FOREACH(itnode, vecnodes) {
-            ptraj->Insert(ptraj->GetNumWaypoints(), VectorWrapper<dReal>((*itnode)->q, _parameters->GetDOF()), _parameters->_configurationspecification);
-        }
+        std::vector<dReal> vinsertvalues(_cachedpath.begin(), _cachedpath.end());
+        ptraj->Insert(ptraj->GetNumWaypoints(), vinsertvalues, _parameters->_configurationspecification);
 
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
         RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
