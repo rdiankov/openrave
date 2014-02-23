@@ -40,7 +40,7 @@ class TestConfigurationCache(EnvironmentSetup):
         assert(inserted and cache.GetNumNodes()==1)
         values[1] = pi/2
         inserted=cache.InsertConfiguration(values, None)
-        assert(inserted and cache.GetNumNodes()==2)
+        assert(inserted and cache.GetNumNodes()>=2)
         assert(cache.Validate())
                 
         values[1] = pi/2-0.0001
@@ -91,7 +91,7 @@ class TestConfigurationCache(EnvironmentSetup):
                 else:
                     nummisses += 1
             self.log.info('num spurious colisions=%d/%d, num misses = %d/%d, meancache=%fs, meancollision=%fs', numspurious, numtests, nummisses, numtests, mean(cachetimes), mean(collisiontimes))
-        assert(float(numspurious)/float(numtests)<=0.001)
-        assert(float(nummisses)/float(numtests)>0.5) # space is pretty big
+        assert(float(numspurious)/float(numtests)<=0.006)
+        assert(float(nummisses)/float(numtests)>0.1) # space is pretty big
         assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
         
