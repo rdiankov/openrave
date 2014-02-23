@@ -95,3 +95,5 @@ class TestConfigurationCache(EnvironmentSetup):
         assert(float(nummisses)/float(numtests)>0.1) # space is pretty big
         assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
         
+    def test_cacheplan(self):
+        pass

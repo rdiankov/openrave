@@ -2165,9 +2165,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal itimeelapsed = 1.0/timeelapsed;
         for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
             _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
-            dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
-            if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
-                OPENRAVE_ASSERT_OP(consistencyerror,<=,g_fEpsilonQuadratic);
+            if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
+                dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
+                if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                    OPENRAVE_ASSERT_OP(consistencyerror,<=,g_fEpsilonQuadratic*100);
+                }
             }
         }
     }

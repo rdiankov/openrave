@@ -24,12 +24,16 @@ public:
     {
         RegisterCommand("TrackRobotState",boost::bind(&CacheCollisionChecker::_TrackRobotStateCommand,this,_1,_2),
                         "set up the cache to track a body state. [bodyname affinedofs]");
+        RegisterCommand("GetCacheStatistics",boost::bind(&CacheCollisionChecker::_GetCacheStatisticsCommand,this,_1,_2),
+                        "get the cache statistics: cachecollisions, cachehits");
 
         std::string collisionname="ode";
         sinput >> collisionname;
         _pintchecker = RaveCreateCollisionChecker(GetEnv(), collisionname);
         OPENRAVE_ASSERT_FORMAT(!!_pintchecker, "internal checker %s is not valid", collisionname, ORE_Assert);
-        _cachedcollisionchecks = 0;
+        _cachedcollisionchecks=0;
+        _cachedcollisionhits=0;
+        _cachedfreehits = 0;
     }
     virtual ~CacheCollisionChecker() {
     }
@@ -101,7 +105,8 @@ public:
         dReal closestdist=0;
         int ret = _cache->CheckCollision(robotlink, collidinglink, closestdist);
         ++_cachedcollisionchecks;
-        if( ret > 1 ) {
+        if( ret == 1 ) {
+            ++_cachedcollisionhits;
             // in collision
             if( !!report ) {
                 report->plink1 = robotlink;
@@ -111,27 +116,18 @@ public:
             return true;
         }
         else if( ret == 0 ) {
+            ++_cachedfreehits;
             // free space
             return false;
         }
 
+        // cache miss
         if( !report ) {
             report.reset(new CollisionReport());
         }
         bool col = _pintchecker->CheckCollision(pbody1, report);
-        
-        if( col ) {
-            _cache->GetDOFValues(_dofvals);
-            _cache->InsertConfiguration(_dofvals, CollisionReportPtr(), closestdist);
-        }
-        else {
-            // if not, compute before inserting
-            _cache->InsertConfiguration(_dofvals, report, closestdist);
-        }
-//        else{
-//            int csize = _cache->GetSize();
-//            RAVELOG_DEBUG_FORMAT("cache size %d cached ccs %d\n",csize%_cachedcollisionchecks);
-//        }
+        _cache->GetDOFValues(_dofvals);
+        _cache->InsertConfiguration(_dofvals, !col ? CollisionReportPtr() : report, closestdist);
         return col;
     }
 
@@ -195,7 +191,16 @@ protected:
         }
         // always recreate?
         _cache.reset(new ConfigurationCache(_probot));
-        RAVELOG_WARN_FORMAT("Now tracking robot %s", bodyname);
+        RAVELOG_DEBUG_FORMAT("Now tracking robot %s", bodyname);
+        _cachedcollisionchecks=0;
+        _cachedcollisionhits=0;
+        _cachedfreehits=0;
+        return true;
+    }
+
+    virtual bool _GetCacheStatisticsCommand(std::ostream& sout, std::istream& sinput)
+    {
+        sout << _cachedcollisionchecks << " " << _cachedcollisionhits << " " << _cachedfreehits;
         return true;
     }
 
@@ -203,7 +208,7 @@ protected:
     ConfigurationCachePtr _cache;
     CollisionCheckerBasePtr _pintchecker;
     RobotBasePtr _probot;
-    int _cachedcollisionchecks;
+    int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits;
 };
 
 CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)

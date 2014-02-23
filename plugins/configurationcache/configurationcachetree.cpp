@@ -116,7 +116,7 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
     Reset();
     _weights = weights;
     _numnodes = 0;
-    _base = 1.3; // optimal is sqrt(1.3)?
+    _base = 2; // optimal is 1.3?
     _fBaseInv = 1/_base;
     _fBaseInv2 = 1/Sqr(_base);
     _fBaseChildMult = 1/(_base-1);
@@ -243,20 +243,20 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
     _vCurrentLevelNodes.resize(1);
     _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
     _vCurrentLevelNodes[0].second = _ComputeDistance(pquerystate, _vCurrentLevelNodes[0].first->GetConfigurationState());
-    if( conftype == CNT_Any || _vCurrentLevelNodes[0].first->GetType() == conftype ) {
+    if( (conftype == CNT_Any || _vCurrentLevelNodes[0].first->GetType() == conftype) && _vCurrentLevelNodes[0].first->_usenn ) {
         pbestnode = _vCurrentLevelNodes[0].first;
         bestdist = _vCurrentLevelNodes[0].second;
     }
     while(_vCurrentLevelNodes.size() > 0 ) {
         _vNextLevelNodes.resize(0);
-        RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
+        //RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
         dReal minchilddist=std::numeric_limits<dReal>::infinity();
         FOREACH(itcurrentnode, _vCurrentLevelNodes) {
             // only take the children whose distances are within the bound
             FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                 dReal curdist = _ComputeDistance(pquerystate, (*itchild)->GetConfigurationState());
                 if( curdist < bestdist ) {
-                    if( conftype == CNT_Any || (*itchild)->GetType() == conftype ) {
+                    if( (*itchild)->_usenn && (conftype == CNT_Any || (*itchild)->GetType() == conftype) ) {
                         bestdist = curdist;
                         pbestnode = *itchild;
                         if( distancebound > 0 && bestdist <= distancebound ) {
@@ -281,7 +281,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
         currentlevel -= 1;
         fLevelBound *= _fBaseInv;
     }
-    RAVELOG_VERBOSE_FORMAT("query went through %d levels", (_maxlevel-currentlevel));
+    //RAVELOG_VERBOSE_FORMAT("query went through %d levels", (_maxlevel-currentlevel));
     if( !!pbestnode && (distancebound <= 0 || bestdist <= distancebound) ) {
         return make_pair(pbestnode, RaveSqrt(bestdist));
     }
@@ -308,14 +308,16 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
     dReal fLevelBound = _fMaxLevelBound;
     {
         CacheTreeNodePtr proot = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
-        dReal curdist = _ComputeDistance(pquerystate, _vCurrentLevelNodes[0].first->GetConfigurationState());
-        ConfigurationNodeType cntype = proot->GetType();
-        if( cntype == CNT_Collision && curdist <= collisionthresh2 ) {
-            return make_pair(proot,curdist);
-        }
-        else if( cntype == CNT_Free && curdist <= freespacethresh2 ) {
-            // there still could be a node lower in the hierarchy whose collision is closer...
-            bestnode = make_pair(proot,curdist);
+        dReal curdist = _ComputeDistance(pquerystate, proot->GetConfigurationState());
+        if( proot->_usenn ) {
+            ConfigurationNodeType cntype = proot->GetType();
+            if( cntype == CNT_Collision && curdist <= collisionthresh2 ) {
+                return make_pair(proot,curdist);
+            }
+            else if( cntype == CNT_Free && curdist <= freespacethresh2 ) {
+                // there still could be a node lower in the hierarchy whose collision is closer...
+                bestnode = make_pair(proot,curdist);
+            }
         }
         _vCurrentLevelNodes.resize(1);
         _vCurrentLevelNodes[0].first = proot;
@@ -324,7 +326,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
     dReal pruneradius = Sqr(_maxdistance); // the radius to prune all _vCurrentLevelNodes when going through them. Equivalent to min(query,children) + levelbound from the previous iteration
     while(_vCurrentLevelNodes.size() > 0 ) {
         _vNextLevelNodes.resize(0);
-        RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
+        //RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
         dReal minchilddist=_maxdistance;
         FOREACH(itcurrentnode, _vCurrentLevelNodes) {
             if( itcurrentnode->second > pruneradius ) {
@@ -334,14 +336,16 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
             // only take the children whose distances are within the bound
             FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                 dReal curdist = _ComputeDistance(pquerystate, (*itchild)->GetConfigurationState());
-                ConfigurationNodeType cntype = (*itchild)->GetType();
-                if( cntype == CNT_Collision && curdist <= collisionthresh2 ) {
-                    return make_pair(*itchild, RaveSqrt(curdist));
-                }
-                else if( cntype == CNT_Free && curdist <= freespacethresh2 ) {
-                    // there still could be a node lower in the hierarchy whose collision is closer...
-                    if( curdist < bestnode.second ) {
-                        bestnode = make_pair(*itchild, curdist);
+                if( (*itchild)->_usenn ) {
+                    ConfigurationNodeType cntype = (*itchild)->GetType();
+                    if( cntype == CNT_Collision && curdist <= collisionthresh2 ) {
+                        return make_pair(*itchild, RaveSqrt(curdist));
+                    }
+                    else if( cntype == CNT_Free && curdist <= freespacethresh2 ) {
+                        // there still could be a node lower in the hierarchy whose collision is closer...
+                        if( curdist < bestnode.second ) {
+                            bestnode = make_pair(*itchild, curdist);
+                        }
                     }
                 }
                 if( curdist < comparedist ) {
@@ -978,8 +982,7 @@ bool ConfigurationCache::Validate()
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
-
-    //SynchronizeAll(_pstaterobot);
+    _cachetree.Reset();
 }
 
 void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
@@ -1006,14 +1009,14 @@ void ConfigurationCache::_UpdateRobotJointLimits()
     // using L1, get the maximumdistance
     // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
-    dReal bound = 0;
+    dReal maxdistance = 0;
     for (size_t i = 0; i < _lowerlimit.size(); ++i) {
         dReal f = (_upperlimit[i] - _lowerlimit[i]) * _cachetree.GetWeights().at(i);
-        bound += f*f;
+        maxdistance += f*f;
     }
-
-    if( bound > _cachetree.GetMaxDistance()+g_fEpsilonLinear ) {
-        _cachetree.SetMaxDistance(bound);
+    maxdistance = RaveSqrt(maxdistance);
+    if( maxdistance > _cachetree.GetMaxDistance()+g_fEpsilonLinear ) {
+        _cachetree.SetMaxDistance(maxdistance);
     }
 }
 
