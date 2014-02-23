@@ -144,9 +144,9 @@ public:
 
     /// \brief inserts node in the tree. If node is too close to other nodes in the tree, then does not insert.
     ///
-    /// \param[in] fMaxSeparationDist the max distance a node should be separated from its closest neighbor. If node is collision, then only applies to collision neighbors, free neighbors are ignored.
-    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMaxSeparationDist
-    int InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMaxSeparationDist);
+    /// \param[in] fMinSeparationDist the max distance a node should be separated from its closest neighbor. If node is collision, then only applies to collision neighbors, free neighbors are ignored.
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMinSeparationDist
+    int InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMinSeparationDist);
 
     /// \brief removes node from the tree
     ///
@@ -188,7 +188,7 @@ private:
     /// \brief takes in the configurations of two nodes and returns the distance, currently returning square of L2 norm.
     ///
     /// note the distance metric has to satisfy triangle inequality
-    dReal _ComputeDistance(const dReal* cstatei, const dReal* cstatef) const;
+    dReal _ComputeDistance2(const dReal* cstatei, const dReal* cstatef) const;
 
     /// \brief inserts a configuration into the cache tree
     ///
@@ -196,9 +196,9 @@ private:
     /// \param[in] nodesin the tree nodes at "level" with the respecitve distances computed for them
     /// \param[in] level the current level traversing
     /// \param[in] levelbound pow(_base, level)
-    /// \param[in] fMaxSeparationDist the max distance a node should be separated from its closest neighbor
-    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMaxSeparationDist
-    int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound2, dReal fMaxSeparationDist2);
+    /// \param[in] fMinSeparationDist the min distance a node should be separated from its closest neighbor
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMinSeparationDist
+    int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound2, dReal fMinSeparationDist2);
 
     /// \brief inerts a node directly to parentnode
     ///
