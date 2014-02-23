@@ -85,7 +85,8 @@ protected:
     //std::pair<CacheTreeNodePtr, dReal> _approxnn; //nearest distance and neighbor seen so far (same type)
 
     int16_t _level; ///< the level the node belongs to
-    uint16_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
+    uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
+    uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
 
     // managed by pool
 #ifdef _DEBUG
@@ -184,7 +185,9 @@ private:
     /// \brief deletes the node from the pool and calls its destructor.
     void _DeleteCacheTreeNode(CacheTreeNodePtr pnode);
 
-    /// \brief takes in the configurations of two nodes and returns the distance, currently using an L1 weighted metric
+    /// \brief takes in the configurations of two nodes and returns the distance, currently returning square of L2 norm.
+    ///
+    /// note the distance metric has to satisfy triangle inequality
     dReal _ComputeDistance(const dReal* cstatei, const dReal* cstatef) const;
 
     /// \brief inserts a configuration into the cache tree
@@ -195,16 +198,16 @@ private:
     /// \param[in] levelbound pow(_base, level)
     /// \param[in] fMaxSeparationDist the max distance a node should be separated from its closest neighbor
     /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMaxSeparationDist
-    int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound, dReal fMaxSeparationDist);
+    int _Insert(CacheTreeNodePtr node, const std::vector< std::pair<CacheTreeNodePtr, dReal> >& nodesin, int level, dReal levelbound2, dReal fMaxSeparationDist2);
 
     /// \brief inerts a node directly to parentnode
     ///
     /// If parentnode's configuration is too close to nodein, or parentnode's level is too high, will create dummy child nodes
     /// \param fInsetLevelBound pow(_base,maxinsertlevel)
-    void _InsertDirectly(CacheTreeNodePtr nodein, CacheTreeNodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsetLevelBound);
+    bool _InsertDirectly(CacheTreeNodePtr nodein, CacheTreeNodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsetLevelBound2);
 
     /// \param[inout] coversetnodes for every level starting at the max, the parent cover sets. coversetnodes[i] is the _maxlevel-i level
-    bool _Remove(CacheTreeNodePtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound);
+    bool _Remove(CacheTreeNodePtr node, std::vector< std::vector<CacheTreeNodePtr> >& vvCoverSetNodes, int level, dReal levelbound2);
 
     inline int _EncodeLevel(int level) const {
         if( level <= 0 ) {
@@ -232,7 +235,7 @@ private:
     boost::pool<> _poolNodes; ///< the dynamically growing memory pool of nodes. Since each node's size is determined during run-time, the pool constructor has to be called with the correct node size
 
     dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree.
-    dReal _base, _fBaseInv, _fBaseChildMult; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseChildMult=1/(_base-1)
+    dReal _base, _fBaseInv, _fBaseInv2, _fBaseChildMult; ///< a constant used to control the max level of traversion. _fBaseInv = 1/_base, _fBaseInv2=Sqr(_fBaseInv), _fBaseChildMult=1/(_base-1)
 
     int _statedof; ///< the state space DOF tree is configured for
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)

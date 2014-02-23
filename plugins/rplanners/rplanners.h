@@ -95,7 +95,7 @@ public:
     uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
     uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
     uint32_t _userdata; ///< user specified data tagging this node
-    
+
 #ifdef _DEBUG
     int id;
 #endif
@@ -145,7 +145,7 @@ public:
         _fStepLength = 0.04f;
         _dof = 0;
         _numnodes = 0;
-        _base = 1.5; // optimal is sqrt(1.3)?
+        _base = 1.5; // optimal is 1.3?
         _fBaseInv = 1/_base;
         _fBaseChildMult = 1/(_base-1);
         _maxdistance = 0;
@@ -798,23 +798,6 @@ private:
             return false;
         }
 
-#ifdef _DEBUG
-        std::vector<NodePtr> vchain;
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            vchain.push_back(removenode);
-            for(int querylevel = removenode->_level+1; querylevel <= _maxlevel; ++querylevel) {
-                int nfound = 0;
-                FOREACH(ittestnode, _vsetLevelNodes.at(_EncodeLevel(querylevel))) {
-                    if( find((*ittestnode)->_vchildren.begin(), (*ittestnode)->_vchildren.end(), vchain.front()) != (*ittestnode)->_vchildren.end() ) {
-                        vchain.insert(vchain.begin(), *ittestnode);
-                        ++nfound;
-                    }
-                }
-                BOOST_ASSERT(nfound==1);
-            }
-        }
-#endif
-
         NodePtr proot = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
         if( _numnodes == 1 && removenode == proot ) {
             Reset();
@@ -892,21 +875,10 @@ private:
         bool bRemoved = _Remove(removenode, vvCoverSetNodes, currentlevel-1, fLevelBound*_fBaseInv);
 
         if( !bRemoved && removenode->_level == currentlevel && find(vvCoverSetNodes.at(coverindex-1).begin(), vvCoverSetNodes.at(coverindex-1).end(), removenode) != vvCoverSetNodes.at(coverindex-1).end() ) {
-            //int encchildlevel = _EncodeLevel(currentlevel-1);
-
-            // remove all removenode->_vchildren from vNextLevelNodes since have to assign parents to them
-//            FOREACH(itchild, removenode->_vchildren) {
-//                typename std::vector<NodePtr>::iterator itchildremove = find(vNextLevelNodes.begin(), vNextLevelNodes.end(), *itchild);
-//                if( itchildremove != vNextLevelNodes.end() ) {
-//                    vNextLevelNodes.erase(itchildremove);
-//                }
-//                _vsetLevelNodes.at(encchildlevel).erase(*itchild);
-//            }
-
             // for each child, find a more suitable parent
             FOREACH(itchild, removenode->_vchildren) {
-                int parentlevel = currentlevel; //-1;
-                dReal fParentLevelBound = fLevelBound; //*_fBaseInv;
+                int parentlevel = currentlevel;
+                dReal fParentLevelBound = fLevelBound;
                 dReal closestdist=0;
                 NodePtr closestNode = NULL;
                 //int maxaddlevel = currentlevel-1;
@@ -924,22 +896,6 @@ private:
                         }
                     }
                     if( !!closestNode ) {
-                        // force inserting at exactly _level
-                        //_InsertDirectly(*itchild, closestNode, closestdist, parentlevel-1, fParentLevelBound*_fBaseInv);
-//                        while( closestNode->_level > currentlevel ) {
-//                            NodePtr clonenode = _CloneNode(closestNode);
-//                            clonenode->_level = closestNode->_level-1;
-//                            closestNode->_vchildren.push_back(clonenode);
-//                            closestNode->_hasselfchild = 1;
-//                            int encclonelevel = _EncodeLevel(clonenode->_level);
-//                            if( encclonelevel >= (int)_vsetLevelNodes.size() ) {
-//                                _vsetLevelNodes.resize(encclonelevel+1);
-//                            }
-//                            _vsetLevelNodes.at(encclonelevel).insert(clonenode);
-//                            _numnodes +=1;
-//                            closestNode = clonenode;
-//                        }
-
                         NodePtr nodechild = *itchild;
                         while( nodechild->_level < closestNode->_level-1 ) {
                             NodePtr clonenode = _CloneNode(nodechild);
@@ -955,28 +911,12 @@ private:
                             vvCoverSetNodes.at(_maxlevel-clonenode->_level).push_back(clonenode);
                             nodechild = clonenode;
                         }
-                        
+
                         if( closestdist <= _mindistance ) {
                             closestNode->_hasselfchild = 1;
                         }
 
-//                        nodechild->_level = currentlevel-1; // need to change?
-                        //int enclevel2 = _EncodeLevel(nodechild->_level);
-//                        if( enclevel2 >= (int)_vsetLevelNodes.size() ) {
-//                            _vsetLevelNodes.resize(enclevel2+1);
-//                        }
-                        //_vsetLevelNodes.at(enclevel2).insert(nodechild);
                         closestNode->_vchildren.push_back(nodechild);
-//
-//                        if( _minlevel > nodechild->_level ) {
-//                            _minlevel = nodechild->_level;
-//                        }
-
-                        // closest node was found in parentlevel, so add to the children
-                        //closestNode->_vchildren.push_back(*itchild);
-                        //_vsetLevelNodes.at(_EncodeLevel(parentlevel-1)).insert(*itchild);
-                        // should also add to vvCoverSetNodes..?
-                        //vvCoverSetNodes.at(_maxlevel-nodechild->_level).push_back(nodechild);
                         break;
                     }
 
@@ -986,11 +926,6 @@ private:
                 }
                 if( !closestNode ) {
                     BOOST_ASSERT(parentlevel>_maxlevel);
-//                    if( parentlevel <= _maxlevel ) {
-//                        vvCoverSetNodes.at(_maxlevel-parentlevel).push_back(*itchild);
-//                        _vsetLevelNodes.at(_EncodeLevel(parentlevel)).insert(*itchild);
-//                    }
-//                    else {
                     // occurs when root node is being removed and new children have no where to go?
                     _vsetLevelNodes.at(_EncodeLevel(_maxlevel)).insert(*itchild);
                     vvCoverSetNodes.at(0).push_back(*itchild);
