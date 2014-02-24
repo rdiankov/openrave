@@ -87,8 +87,9 @@ public:
         \param sample the values of the samples. This is a num*GetNumberOfValues() array.
         \param num number of samples to return
         \param interval the sampling intervel for each of the dimensions.
+        \return the number of samples completed or an error code. Error codes are <= 0.
      */
-    virtual void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief samples the real next value on the sequence, only valid for 1 DOF sequences.
     ///
@@ -107,8 +108,9 @@ public:
         The sampler can fail by returning an array of size 0.
         \param sample the values of the samples. This is a num*GetNumberOfValues() array.
         \param num number of samples to return
+        \return the number of samples completed or an error code. Error codes are <= 0.
      */
-    virtual void SampleSequence(std::vector<uint32_t>& sample, size_t num=1) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual int SampleSequence(std::vector<uint32_t>& sample, size_t num=1) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief samples the unsigned integer next value on the sequence, only valid for 1 DOF sequences.
     ///
@@ -125,12 +127,14 @@ public:
     /// \brief returns N samples that best approximate the entire sampling space.
     ///
     /// The sampler can fail by returning an array of size 0.
-    virtual void SampleComplete(std::vector<dReal>& samples, size_t num,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \return the number of samples completed or an error code. Error codes are <= 0.
+    virtual int SampleComplete(std::vector<dReal>& samples, size_t num,IntervalType interval=IT_Closed) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief returns N samples that best approximate the entire sampling space.
     ///
     /// The sampler can fail by returning an array of size 0.
-    virtual void SampleComplete(std::vector<uint32_t>& samples, size_t num) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \return the number of samples completed or an error code. Error codes are <= 0.
+    virtual int SampleComplete(std::vector<uint32_t>& samples, size_t num) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Sets a distance metric for measuring samples. Used when computing neighborhood sampling
     //virtual void SetDistanceMetric(const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) OPENRAVE_DUMMY_IMPLEMENTATION;

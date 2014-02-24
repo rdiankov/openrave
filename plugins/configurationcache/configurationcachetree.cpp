@@ -223,7 +223,13 @@ void CacheTree::SetMaxDistance(dReal maxdistance)
 {
     Reset();
     _maxdistance = maxdistance;
-    // have to update the max level?
+    _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
+    _minlevel = _maxlevel - 1;
+    _fMaxLevelBound = RavePow(_base, _maxlevel);
+    int enclevel = _EncodeLevel(_maxlevel);
+    if( enclevel >= (int)_vsetLevelNodes.size() ) {
+        _vsetLevelNodes.resize(enclevel+1);
+    }
 }
 
 std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::vector<dReal>& vquerystate, dReal distancebound, ConfigurationNodeType conftype) const

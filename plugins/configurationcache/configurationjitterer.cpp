@@ -50,6 +50,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         "set a new perturbation");
         RegisterCommand("SetResultOnRobot",boost::bind(&ConfigurationJitterer::SetResultOnRobotCommand,this,_1,_2),
                         "set a new result on a robot");
+        RegisterCommand("SetDistThresh",boost::bind(&ConfigurationJitterer::SetDistThreshCommand,this,_1,_2),
+                        "sets a distance threshold between nodes");
         RegisterCommand("SetManipulatorBias",boost::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
@@ -71,6 +73,21 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
+
+        std::vector<dReal> vweights;
+        _probot->GetActiveDOFResolutions(vweights);
+
+        // if weights are zero, used a default value
+        FOREACH(itweight, vweights) {
+            if( *itweight > 0 ) {
+                *itweight = 1 / *itweight;
+            }
+            else {
+                *itweight = 100;
+            }
+        }
+        _cache.reset(new CacheTree(_probot->GetActiveDOF()));
+        _cache->Init(vweights, 1);
 
         _bSetResultOnRobot = true;
         _busebiasing = false;
@@ -98,11 +115,14 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _perturbation=1e-5;
         _linkdistthresh=0.02;
         _linkdistthresh2 = _linkdistthresh*_linkdistthresh;
+        _neighdistthresh = 1;
 
         _UpdateLimits();
         _limitscallback = _probot->RegisterChangeCallback(RobotBase::Prop_JointLimits, boost::bind(&ConfigurationJitterer::_UpdateLimits,this));
         _UpdateGrabbed();
         _grabbedcallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotGrabbed, boost::bind(&ConfigurationJitterer::_UpdateGrabbed,this));
+
+        _SetCacheMaxDistance();
     }
 
     virtual ~ConfigurationJitterer(){
@@ -141,6 +161,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return false;
         }
         _maxjitter = maxjitter;
+        _SetCacheMaxDistance();
         return true;
     }
 
@@ -189,15 +210,30 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         return true;
     }
 
-    virtual void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
+    bool SetDistThreshCommand(std::ostream& sout, std::istream& sinput)
+    {
+        dReal neighdistthresh = 0;
+        sinput >> neighdistthresh;
+        if( neighdistthresh <= 0 ) {
+            return false;
+        }
+        _neighdistthresh = neighdistthresh;
+        return true;
+    }
+
+    virtual int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(0);
         for(size_t i = 0; i < num; ++i) {
             int ret = Sample(_vonesample, interval);
-            if( ret != 0 ) {
+            if( ret == 1 ) {
                 samples.insert(samples.end(), _vonesample.begin(), _vonesample.end());
             }
+            else {
+                return ret;
+            }
         }
+        return (int)num;
     }
 
     virtual dReal SampleSequenceOneReal(IntervalType interval) {
@@ -210,14 +246,15 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         return 0;
     }
 
-    virtual void SampleComplete(std::vector<dReal>& samples, size_t num, IntervalType interval=IT_Closed) {
+    virtual int SampleComplete(std::vector<dReal>& samples, size_t num, IntervalType interval=IT_Closed) {
         // have to reset the seed
         _ssampler->SetSeed(_nRandomGeneratorSeed);
-        SampleSequence(samples, num, interval);
+        return SampleSequence(samples, num, interval);
     }
 
-    virtual void SampleComplete(std::vector<uint32_t>& samples, size_t num) {
+    virtual int SampleComplete(std::vector<uint32_t>& samples, size_t num) {
         BOOST_ASSERT(0);
+        return 0;
     }
 
     virtual bool SetManipulatorBiasCommand(std::ostream& sout, std::istream& sinput)
@@ -388,7 +425,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return -1;
         }
 
-
+        CacheTree& cache = *_cache;
+        cache.InsertNode(_curdof, CollisionReportPtr(), _neighdistthresh);
+        _cachehit = 0;
         bool bUsingBias = _vbiasdofdirection.size() > 0;
         const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
 
@@ -396,7 +435,6 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
         uint64_t starttime = utils::GetNanoPerformanceTime();
         for(int iter = 0; iter < _maxiterations; ++iter) {
-
             if( bUsingBias && iter < (int)rayincs.size() ) {
                 // start by checking samples directly above the current configuration
                 for (size_t j = 0; j < vnewdof.size(); ++j)
@@ -433,20 +471,15 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         if( RaveFabs(f) < 0.2 ) {
                             _deltadof[j] = 0;
                         }
+                        else if( f < -0.8 ) {
+                            _deltadof[j] = -jitter;
+                        }
+                        else if( f > 0.8 ) {
+                            _deltadof[j] = jitter;
+                        }
                         else {
                             _deltadof[j] = jitter*f;
                         }
-//                        if( f < 0.33 ) {
-//                            _deltadof[j] = -jitter;
-//                            deltasuccess = true;
-//                        }
-//                        else if( f > 0.66 ) {
-//                            _deltadof[j] = jitter;
-//                            deltasuccess = true;
-//                        }
-//                        else {
-//                            _deltadof[j] = 0;
-//                        }
                     }
                 }
 
@@ -486,11 +519,19 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
             }
 
-            _probot->SetActiveDOFValues(vnewdof);
+            if( !!cache.FindNearestNode(vnewdof, _neighdistthresh).first ) {
+                _cachehit++;
+                continue;
+            }
+            int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
+            BOOST_ASSERT(ret==1);
 
+            _probot->SetActiveDOFValues(vnewdof);
+#ifdef _DEBUG
+            dReal fmaxtransdist = 0;
+#endif
             bool bSuccess = true;
             if( linkdistthresh > 0 ) {
-                _fmaxtransdist = 0;
                 for (size_t ilink = 0; ilink < _vLinkAABBs.size(); ++ilink) {
                     // check for an elipse
                     // L^2 (b*v)^2 + |v|^2|b|^4 - (b*v)^2 |b|^2 <= |b|^4 * L^2
@@ -533,8 +574,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
                                 if( ellipdist < flen2 ) {
                                     ellipdist = flen2;
-                                    _fmaxtransdist = flen2;
-
+#ifdef _DEBUG
+                                    fmaxtransdist = flen2;
+#endif
                                     if (ellipdist > rhs) {
                                         bSuccess = false;
                                         break;
@@ -618,7 +660,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     _probot->GetActiveDOFValues(vnewdof);
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "jitter iter=" << iter << " maxtrans=" << _fmaxtransdist << " ";
+                    ss << "jitter iter=" << iter << " ";
+#ifdef _DEBUG
+                    ss << "maxtrans=" << fmaxtransdist << " ";
+#endif
                     for(size_t i = 0; i < vnewdof.size(); ++i ) {
                         if( i > 0 ) {
                             ss << "," << vnewdof[i];
@@ -635,12 +680,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     // have to release the saver so it does not restore the old configuration
                     robotsaver.Release();
                 }
-                RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, computation=%fs\n",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+                RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
         }
 
-        RAVELOG_VERBOSE_FORMAT("failed jitter time %fs", (1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+        RAVELOG_VERBOSE_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
 
@@ -658,6 +703,7 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
+        _cache->Reset();
     }
 
     void _UpdateGrabbed()
@@ -686,6 +732,21 @@ protected:
         for(size_t i = 0; i < _range.size(); ++i) {
             _range[i] = _upper[i] - _lower[i];
         }
+        _SetCacheMaxDistance();
+    }
+
+    /// sets the cache's max configuration distance
+    void _SetCacheMaxDistance()
+    {
+        dReal maxdistance=0;
+        for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
+            dReal f = _maxjitter*2*_cache->GetWeights()[i];
+            maxdistance += f*f;
+        }
+        maxdistance = RaveSqrt(maxdistance);
+        if( maxdistance > _cache->GetMaxDistance()+g_fEpsilonLinear ) {
+            _cache->SetMaxDistance(maxdistance);
+        }
     }
 
     RobotBasePtr _probot;
@@ -713,8 +774,9 @@ protected:
 
     std::vector<dReal> _curdof, _newdof2, _deltadof, _deltadof2, _vonesample;
 
-    // for caching results
-    dReal _fmaxtransdist;
+    CacheTreePtr _cache; ///< caches the visisted configurations
+    int _cachehit;
+    dReal _neighdistthresh; ///< the minimum distance that nodes can be with respect to each other.
 
     // for biasing
     SpaceSamplerBasePtr _ssampler;
