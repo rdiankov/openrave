@@ -119,16 +119,21 @@ protected:
         }
     }
 
-    bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+    bool _CheckJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions) {
         dReal deltatime = *(itdata+_timeoffset);
         for(int i=0; i < info->gvel.dof; ++i) {
             dReal fvel = *(itdata+info->gvel.offset+i);
-            if( RaveFabs(fvel) > info->_vConfigVelocityLimit.at(i) + ParabolicRamp::EpsilonV ) {
-                return false;
+            if( checkoptions & 2 ) {
+
+                if( RaveFabs(fvel) > info->_vConfigVelocityLimit.at(i) + ParabolicRamp::EpsilonV ) {
+                    return false;
+                }
             }
-            dReal diff = RaveFabs(*(itdataprev+info->gvel.offset+i)-fvel);
-            if( RaveFabs(diff) > info->_vConfigAccelerationLimit.at(i) * deltatime + ParabolicRamp::EpsilonA ) {
-                return false;
+            if( checkoptions & 4 ) {
+                dReal diff = RaveFabs(*(itdataprev+info->gvel.offset+i)-fvel);
+                if( RaveFabs(diff) > info->_vConfigAccelerationLimit.at(i) * deltatime + ParabolicRamp::EpsilonA ) {
+                    return false;
+                }
             }
         }
         return true;
@@ -255,8 +260,8 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesAffine not implemented", ORE_NotImplemented);
     }
 
-    bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_CheckVelocitiesAffine not implemented", ORE_NotImplemented);
+    bool _CheckAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("not implemented", ORE_NotImplemented);
     }
 
     bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
@@ -371,7 +376,8 @@ protected:
         }
     }
 
-    bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+    bool _CheckIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions)
+    {
         dReal deltatime = *(itdata+_timeoffset);
         int transoffset = -1;
         IkParameterization ikparamprev;
