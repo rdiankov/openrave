@@ -50,8 +50,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         "set a new perturbation");
         RegisterCommand("SetResultOnRobot",boost::bind(&ConfigurationJitterer::SetResultOnRobotCommand,this,_1,_2),
                         "set a new result on a robot");
-        RegisterCommand("SetDistThresh",boost::bind(&ConfigurationJitterer::SetDistThreshCommand,this,_1,_2),
-                        "sets a distance threshold between nodes");
+        RegisterCommand("SetNeighDistThresh",boost::bind(&ConfigurationJitterer::SetNeighDistThreshCommand,this,_1,_2),
+                        "sets a distance threshold between nodes in the cache");
         RegisterCommand("SetManipulatorBias",boost::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
@@ -210,7 +210,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         return true;
     }
 
-    bool SetDistThreshCommand(std::ostream& sout, std::istream& sinput)
+    bool SetNeighDistThreshCommand(std::ostream& sout, std::istream& sinput)
     {
         dReal neighdistthresh = 0;
         sinput >> neighdistthresh;
@@ -415,7 +415,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             // don't need to set state since CheckPathAllConstraints does it
             _probot->SetActiveDOFValues(vnewdof);
-            if( GetEnv()->CheckCollision(_probot, _report) ) {
+            if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report) ) {
                 bCollision = true;
                 break;
             }
@@ -431,24 +431,29 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         bool bUsingBias = _vbiasdofdirection.size() > 0;
         const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
 
-        dReal imaxiterations = 1.0/dReal(_maxiterations);
-
+        const int nMaxIterRadiusThresh=_maxiterations/2;
+        const dReal imaxiterations = 2.0/dReal(_maxiterations);
+        const dReal fJitterLowerThresh=0.2, fJitterHigherThresh=0.8;
+        dReal fBias = _vbiasdirection.lengthsqr3();
+        if( fBias > g_fEpsilon ) {
+            fBias = RaveSqrt(fBias);
+        }
+        
         uint64_t starttime = utils::GetNanoPerformanceTime();
         for(int iter = 0; iter < _maxiterations; ++iter) {
             if( bUsingBias && iter < (int)rayincs.size() ) {
                 // start by checking samples directly above the current configuration
-                for (size_t j = 0; j < vnewdof.size(); ++j)
-                {
+                for (size_t j = 0; j < vnewdof.size(); ++j) {
                     vnewdof[j] = _curdof[j] + (rayincs[iter] * _vbiasdofdirection.at(j));
                 }
             }
             else {
                 // ramp of the jitter as iterations increase
                 dReal jitter = _maxjitter;
-                if( iter < _maxiterations/2 ) {
-                    jitter = _maxjitter*dReal(iter)*(2.0*imaxiterations);
+                if( iter < nMaxIterRadiusThresh ) {
+                    jitter = _maxjitter*dReal(iter)*imaxiterations;
                 }
-
+                
                 bool samplebiasdir = false;
                 bool samplenull = false;
                 bool sampledelta = false;
@@ -467,14 +472,14 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( sampledelta ) {
                     // check which third the sampled dof is in
                     for(size_t j = 0; j < vnewdof.size(); ++j) {
-                        dReal f = 2*_ssampler->SampleSequenceOneReal(interval)-1;
-                        if( RaveFabs(f) < 0.2 ) {
+                        dReal f = 2*_ssampler->SampleSequenceOneReal(interval)-1; // f in [-1,1]
+                        if( RaveFabs(f) < fJitterLowerThresh ) {
                             _deltadof[j] = 0;
                         }
-                        else if( f < -0.8 ) {
+                        else if( f < -fJitterHigherThresh ) {
                             _deltadof[j] = -jitter;
                         }
-                        else if( f > 0.8 ) {
+                        else if( f > fJitterHigherThresh ) {
                             _deltadof[j] = jitter;
                         }
                         else {
@@ -489,7 +494,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 // (lambda * biasdir) + (Nx) + delta + _curdofs
                 dReal fNullspaceMultiplier = linkdistthresh*2;
                 if( fNullspaceMultiplier <= 0 ) {
-                    fNullspaceMultiplier = RaveSqrt(_vbiasdirection.lengthsqr3())*2*0.5;
+                    fNullspaceMultiplier = fBias;
                 }
                 for (size_t j = 0; j < _vbiasnullspace.size(); ++j) {
                     for (size_t k = 0; k < vnewdof.size(); ++k)
@@ -630,13 +635,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         }
                     }
                 }
-
-
-                // don't need to set state since CheckPathAllConstraints does it
+                
                 _probot->SetActiveDOFValues(_newdof2);
-                if( GetEnv()->CheckCollision(_probot, _report) ) {
+                if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report)) {
                     bCollision = true;
-
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                         ss << "constraints failed, ";
