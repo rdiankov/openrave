@@ -68,10 +68,11 @@ References:\n\n\
         }
     }
 
-    void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
+    int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(halton_dim_num_get()*num);
         halton_sequence(num,&samples[0]);
+        return (int)num;
     }
 
     dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
