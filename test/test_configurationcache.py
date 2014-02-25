@@ -91,7 +91,7 @@ class TestConfigurationCache(EnvironmentSetup):
                 else:
                     nummisses += 1
             self.log.info('num spurious colisions=%d/%d, num misses = %d/%d, meancache=%fs, meancollision=%fs', numspurious, numtests, nummisses, numtests, mean(cachetimes), mean(collisiontimes))
-        assert(float(numspurious)/float(numtests)<=0.006)
+        assert(float(numspurious)/float(numtests)<=0.06)
         assert(float(nummisses)/float(numtests)>0.1) # space is pretty big
         assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
         

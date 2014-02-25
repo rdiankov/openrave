@@ -26,7 +26,9 @@ public:
                         "set up the cache to track a body state. [bodyname affinedofs]");
         RegisterCommand("GetCacheStatistics",boost::bind(&CacheCollisionChecker::_GetCacheStatisticsCommand,this,_1,_2),
                         "get the cache statistics: cachecollisions, cachehits");
-
+        RegisterCommand("GetSelfCacheStatistics",boost::bind(&CacheCollisionChecker::_GetSelfCacheStatisticsCommand,this,_1,_2),
+                        "get the self collision cache statistics: selfcachecollisions, selfcachehits");
+        // TODO Reset command
         std::string collisionname="ode";
         sinput >> collisionname;
         _pintchecker = RaveCreateCollisionChecker(GetEnv(), collisionname);
@@ -34,6 +36,10 @@ public:
         _cachedcollisionchecks=0;
         _cachedcollisionhits=0;
         _cachedfreehits = 0;
+
+        _selfcachedcollisionchecks=0;
+        _selfcachedcollisionhits=0;
+        _selfcachedfreehits = 0;
     }
     virtual ~CacheCollisionChecker() {
     }
@@ -58,6 +64,9 @@ public:
             if( !!_cache ) {
                 _cache->Reset();
             }
+            if( !!_selfcache) {
+                _selfcache->Reset();
+            }
         }
         _pintchecker->SetGeometryGroup(groupname);
     }
@@ -73,8 +82,14 @@ public:
 
     virtual void DestroyEnvironment() {
         if( !!_cache ) {
+
             _cache->Reset();
         }
+
+        if( !!_selfcache ) {
+            _selfcache->Reset();
+        }
+
         _pintchecker->DestroyEnvironment();
     }
 
@@ -96,14 +111,12 @@ public:
         if( !!report ) {
             report->Reset();
         }
-        // comments:
-        // everytime there is a collision, the update stamp gets updated
-        // cache should be able to tell when a collision checking procedure is for an 'edge', i.e., from qi to qf, and store the information
 
         // see if cache contains the result
         KinBody::LinkConstPtr robotlink, collidinglink;
         dReal closestdist=0;
         int ret = _cache->CheckCollision(robotlink, collidinglink, closestdist);
+
         ++_cachedcollisionchecks;
         if( ret == 1 ) {
             ++_cachedcollisionhits;
@@ -172,10 +185,49 @@ public:
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
-        return _pintchecker->CheckStandaloneSelfCollision(pbody, report);
+        //return _pintchecker->CheckStandaloneSelfCollision(pbody, report);
+
+        if( !_selfcache || pbody != _selfcache->GetRobot() ) {
+            return _pintchecker->CheckStandaloneSelfCollision(pbody, report);
+        }
+        if( !!report ) {
+            report->Reset();
+        }
+
+        // see if cache contains the result
+        KinBody::LinkConstPtr robotlink, collidinglink;
+        dReal closestdist=0;
+        int ret = _selfcache->CheckCollision(robotlink, collidinglink, closestdist);
+
+        ++_selfcachedcollisionchecks;
+        if( ret == 1 ) {
+            ++_selfcachedcollisionhits;
+            // in collision
+            if( !!report ) {
+                report->plink1 = robotlink;
+                report->plink2 = collidinglink;
+                report->numCols = 1;
+            }
+            return true;
+        }
+        else if( ret == 0 ) {
+            ++_selfcachedfreehits;
+            // free space
+            return false;
+        }
+
+        // cache miss
+        if( !report ) {
+            report.reset(new CollisionReport());
+        }
+        bool col = _pintchecker->CheckStandaloneSelfCollision(pbody, report);
+        _selfcache->GetDOFValues(_dofvals);
+        _selfcache->InsertConfiguration(_dofvals, !col ? CollisionReportPtr() : report, closestdist);
+        return col;
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) {
+
         return _pintchecker->CheckStandaloneSelfCollision(plink, report);
     }
 
@@ -191,6 +243,7 @@ protected:
         }
         // always recreate?
         _cache.reset(new ConfigurationCache(_probot));
+        _selfcache.reset(new ConfigurationCache(_probot));
         RAVELOG_DEBUG_FORMAT("Now tracking robot %s", bodyname);
         _cachedcollisionchecks=0;
         _cachedcollisionhits=0;
@@ -200,15 +253,31 @@ protected:
 
     virtual bool _GetCacheStatisticsCommand(std::ostream& sout, std::istream& sinput)
     {
-        sout << _cachedcollisionchecks << " " << _cachedcollisionhits << " " << _cachedfreehits;
+        sout << _cachedcollisionchecks << " " << _cachedcollisionhits << " " << _cachedfreehits << " " << _cache->GetNumNodes();
+
+        _cachedcollisionchecks=0;
+        _cachedcollisionhits=0;
+        _cachedfreehits=0;
+        return true;
+    }
+
+    virtual bool _GetSelfCacheStatisticsCommand(std::ostream& sout, std::istream& sinput)
+    {
+        sout << _selfcachedcollisionchecks << " " << _selfcachedcollisionhits << " " << _selfcachedfreehits << " " << _selfcache->GetNumNodes();
+
+        _selfcachedcollisionchecks=0;
+        _selfcachedcollisionhits=0;
+        _selfcachedfreehits=0;
         return true;
     }
 
     std::vector<dReal> _dofvals;
     ConfigurationCachePtr _cache;
+    ConfigurationCachePtr _selfcache;
     CollisionCheckerBasePtr _pintchecker;
     RobotBasePtr _probot;
     int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits;
+    int _selfcachedcollisionchecks, _selfcachedcollisionhits, _selfcachedfreehits;
 };
 
 CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)

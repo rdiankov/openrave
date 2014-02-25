@@ -158,6 +158,9 @@ public:
         return _numnodes;
     }
 
+    /// \brief return the configuration values for all nodes in the tree
+    void GetNodeValues(std::vector<dReal>& vals) const;
+
     // TODO: take in information regarding what changed in the environment and update nodes accordingly (i.e., change nodes no longer known to be in collision to CNT_Unknown, remove nodes in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
     /// \brief update the tree when the environment changes
     void UpdateTree();
@@ -298,6 +301,19 @@ public:
         return _cachetree.GetNumNodes();
     }
 
+    /// \brief return configuration values for all nodes in the tree, calls cachetree's function
+    void GetNodeValues(std::vector<dReal>& vals) const {
+        _cachetree.GetNodeValues(vals);
+    }
+
+    /// \brief return nearest configuration and distance 
+    std::pair<std::vector<dReal>, dReal> FindNearestNode(const std::vector<dReal>& conf);
+
+    /// \brief return distance between two configurations as computed by the tree (for testing)
+    dReal ComputeDistance(const std::vector<dReal>& qi, const std::vector<dReal>& qf) const {
+        return _cachetree.ComputeDistance(qi,qf);
+    }
+
     /// \brief the cache will assume a new configuration is in collision if the nearest node in the tree is below this distance
     void SetCollisionThresh(dReal colthresh)
     {
@@ -314,6 +330,21 @@ public:
     void SetInsertionDistanceMult(dReal indist)
     {
         _insertiondistancemult = indist;
+    }
+
+    dReal GetCollisionThresh()
+    {
+        return _collisionthresh;
+    }
+
+    dReal GetFreeSpaceThresh()
+    {
+        return _freespacethresh;
+    }
+
+    dReal GetInsertionDistanceMult()
+    {
+        return _insertiondistancemult;
     }
 
     RobotBasePtr GetRobot() const {
