@@ -286,8 +286,6 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
     }
 
-    // speed of rotations is always the speed of the angle along the minimum rotation
-    // speed of translations is always the combined xyz speed
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
         throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeMinimumTimeIk not implemented", ORE_NotImplemented);
     }
