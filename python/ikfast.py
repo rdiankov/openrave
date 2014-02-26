@@ -7161,7 +7161,11 @@ class IKFastSolver(AutoReloader):
             coeffs = []
             globalsymbols = [(s,v.subs(self.globalsymbols).subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
             for degree in range(pfinal.degree(0),-1,-1):
-                coeffs.append(pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf())
+                value = pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf()
+                if value.has(I): # check if has imaginary number
+                    coeffs = None
+                    break
+                coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
                 if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
                     coeffs = None
