@@ -4193,7 +4193,7 @@ class IKFastSolver(AutoReloader):
                     monomkey = peq0dict.keys()[0]
                     monomcoeff = peq0dict[monomkey]
                     monomvalue = peq[1].as_expr()
-                    monomexpr = Monomial(*monomkey).as_expr(*peq[0].gens)
+                    monomexpr = Monomial(monomkey).as_expr(*peq[0].gens)
                     # for every equation that has this monom, substitute it
                     for ipeq2, peq2 in enumerate(neweqs):
                         if ipeq == ipeq2:
@@ -4498,7 +4498,7 @@ class IKFastSolver(AutoReloader):
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
-                            eq += sym*Monomial(*monom).as_expr(*othersymbols)
+                            eq += sym*Monomial(monom).as_expr(*othersymbols)
                         res2.append(eq)
                         gres2[icol] = GinacUtils.ConvertToGinac(eq,localsymbolmap)
                         
@@ -4515,7 +4515,7 @@ class IKFastSolver(AutoReloader):
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
-                            eq += sym*Monomial(*monom).as_expr(*othersymbols)
+                            eq += sym*Monomial(monom).as_expr(*othersymbols)
                         res3.append(eq)
                     BUresult = Matrix(gres3.rows(),gres3.cols(),res3)
                     C = AL*BUresult-BL
@@ -4702,7 +4702,7 @@ class IKFastSolver(AutoReloader):
                     for monom, coeff in newpeq.iteritems():
                         sym = self.gsymbolgen.next()
                         dictequations.append((sym,coeff))
-                        newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
+                        newpeq += sym*Monomial(monom).as_expr(*othersymbols)
                     peq += newpeq
             else:
                 peq = Poly(eq,*othersymbols)
