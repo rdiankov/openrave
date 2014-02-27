@@ -237,7 +237,10 @@ class InverseKinematicsModel(DatabaseGenerator):
                 if rigidlyattached.IsStatic():
                     raise InverseKinematicsError(u'link %s part of IK chain cannot be declared static'%link)
         try:
-            self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
+            if sympy_version >= '0.7.4':
+                self.ikfast = __import__('openravepy.ikfast_sympy0_7_4',fromlist=['openravepy'])
+            else:
+              self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
         except ImportError,e:
             log.warn('failed to import ikfast, so reverting to older version: %s',e)
             self.ikfast = __import__('openravepy.ikfast_sympy0_6',fromlist=['openravepy'])
