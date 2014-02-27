@@ -282,32 +282,32 @@ except ImportError:
 # changes to sympy:
 
 # core/power.py Pow
-def Pow_eval_subs(self, old, new):
-    if self == old:
-        return new
-    
-    if old.func is self.func and self.base == old.base:
-        coeff1, terms1 = self.exp.as_coeff_mul()
-        coeff2, terms2 = old.exp.as_coeff_mul()
-        if terms1==terms2:
-#             pow = coeff1/coeff2
-#             if pow.is_Integer or self.base.is_commutative:
-#                 return Pow(new, pow) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3)
-            # only divide if coeff2 is a divisor of coeff1
-            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
-                return new ** (coeff1/coeff2) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3*y)
-            
-    if old.func is C.exp:
-        coeff1, terms1 = old.args[0].as_coeff_mul()
-        coeff2, terms2 = (self.exp*C.log(self.base)).as_coeff_mul()
-        if terms1==terms2:
-            # only divide if coeff2 is a divisor of coeff1
-            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
-                return new ** (coeff1/coeff2) # (x**(2*y)).subs(exp(3*y*log(x)),z) -> z**(2/3*y)
-            
-    return Pow(self.base._eval_subs(old, new), self.exp._eval_subs(old, new))
-
-power.Pow._eval_subs = Pow_eval_subs
+#def Pow_eval_subs(self, old, new):
+#    if self == old:
+#        return new
+#    
+#    if old.func is self.func and self.base == old.base:
+#        coeff1, terms1 = self.exp.as_coeff_mul()
+#        coeff2, terms2 = old.exp.as_coeff_mul()
+#        if terms1==terms2:
+##             pow = coeff1/coeff2
+##             if pow.is_Integer or self.base.is_commutative:
+##                 return Pow(new, pow) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3)
+#            # only divide if coeff2 is a divisor of coeff1
+#            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
+#                return new ** (coeff1/coeff2) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3*y)
+#            
+#    if old.func is C.exp:
+#        coeff1, terms1 = old.args[0].as_coeff_mul()
+#        coeff2, terms2 = (self.exp*C.log(self.base)).as_coeff_mul()
+#        if terms1==terms2:
+#            # only divide if coeff2 is a divisor of coeff1
+#            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
+#                return new ** (coeff1/coeff2) # (x**(2*y)).subs(exp(3*y*log(x)),z) -> z**(2/3*y)
+#            
+#    return Pow(self.base._eval_subs(old, new), self.exp._eval_subs(old, new))
+#
+#power.Pow._eval_subs = Pow_eval_subs
 
 # simplify/simplify.py
 # def custom_trigsimp_nonrecursive(expr, deep=False):
