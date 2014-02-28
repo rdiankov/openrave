@@ -28,7 +28,23 @@ public:
                         "get the cache statistics: cachecollisions, cachehits");
         RegisterCommand("GetSelfCacheStatistics",boost::bind(&CacheCollisionChecker::_GetSelfCacheStatisticsCommand,this,_1,_2),
                         "get the self collision cache statistics: selfcachecollisions, selfcachehits");
-        // TODO Reset command
+        RegisterCommand("SetSelfCacheParameters",boost::bind(&CacheCollisionChecker::_SetSelfCacheParametersCommand,this,_1,_2),
+                        "set the self collision cache parameters: collisionthreshold, freespacethreshold, insertiondistancemultiplier, base");
+        RegisterCommand("SetCacheParameters",boost::bind(&CacheCollisionChecker::_SetCacheParametersCommand,this,_1,_2),
+                        "set the collision cache parameters: collisionthreshold, freespacethreshold, insertiondistancemultiplier, base");
+        RegisterCommand("ValidateCache",boost::bind(&CacheCollisionChecker::_ValidateCacheCommand,this,_1,_2),
+                        "test the validity of the cache");
+        RegisterCommand("ValidateSelfCache",boost::bind(&CacheCollisionChecker::_ValidateSelfCacheCommand,this,_1,_2),
+                        "test the validity of the self collision cache");
+        RegisterCommand("ResetCache",boost::bind(&CacheCollisionChecker::_ResetCacheCommand,this,_1,_2),
+                        "reset collision cache");
+        RegisterCommand("ResetSelfCache",boost::bind(&CacheCollisionChecker::_ResetSelfCacheCommand,this,_1,_2),
+                        "reset self collision cache");
+        RegisterCommand("UpdateCollisionConfigurations",boost::bind(&CacheCollisionChecker::_UpdateCollisionConfigurations,this,_1,_2),
+                        "remove all nodes in collision with this body. [bodyname]");
+        RegisterCommand("UpdateFreeConfigurations",boost::bind(&CacheCollisionChecker::_UpdateFreeConfigurations,this,_1,_2),
+                        "remove all free nodes that overlap with this body. [bodyname]");
+
         std::string collisionname="ode";
         sinput >> collisionname;
         _pintchecker = RaveCreateCollisionChecker(GetEnv(), collisionname);
@@ -92,6 +108,44 @@ public:
 
         _pintchecker->DestroyEnvironment();
     }
+
+    /*virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        ModuleBase::Clone(preference, cloningoptions);
+        boost::shared_ptr<CollisionCheckerBasePtr const > clone = boost::dynamic_pointer_cast<CollisionCheckerBasePtr const> (preference);
+
+
+        _probot = clone->_probot;
+        _dofvals = clone->_dofvals;
+        _cache = clone->_cache;
+        _selfcache = clone->_selfcache;
+        _pinterchecker = clone->_pinterchecker;
+        _cachedcollisionchecks = clone->_cachecollisionchecks;
+        _cachedcollisionhits = clone->_cachedcollisionhits;
+        _cachedfreehits = clone->_cachedfreehits;
+
+        if( !_probot ) {
+            return false;
+        }
+        // always recreate?
+        _cache.reset(new ConfigurationCache(_probot));
+        _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
+
+        _cache->SetCollisionThresh(1.0);
+        _cache->SetFreeSpaceThresh(0.2);
+        _cache->SetInsertionDistanceMult(0.5);
+        _cache->SetBase(2.0);
+
+        _selfcache->SetCollisionThresh(1.0);
+        _selfcache->SetFreeSpaceThresh(0.2);
+        _selfcache->SetInsertionDistanceMult(0.5);
+        _selfcache->SetBase(2.0);
+
+        RAVELOG_DEBUG_FORMAT("Cloning cache collision checker for %s", _probot->GetName());
+        _cachedcollisionchecks=0;
+        _cachedcollisionhits=0;
+        _cachedfreehits=0;
+    }*/
 
     virtual bool InitKinBody(KinBodyPtr pbody) {
         // reset cache for pbody (remove from free configurations since body has been added)
@@ -243,7 +297,18 @@ protected:
         }
         // always recreate?
         _cache.reset(new ConfigurationCache(_probot));
-        _selfcache.reset(new ConfigurationCache(_probot));
+        _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
+
+        _cache->SetCollisionThresh(1.0);
+        _cache->SetFreeSpaceThresh(0.2);
+        _cache->SetInsertionDistanceMult(0.5);
+        _cache->SetBase(2.0);
+
+        _selfcache->SetCollisionThresh(1.0);
+        _selfcache->SetFreeSpaceThresh(0.2);
+        _selfcache->SetInsertionDistanceMult(0.5);
+        _selfcache->SetBase(2.0);
+
         RAVELOG_DEBUG_FORMAT("Now tracking robot %s", bodyname);
         _cachedcollisionchecks=0;
         _cachedcollisionhits=0;
@@ -271,6 +336,89 @@ protected:
         return true;
     }
 
+    virtual bool _SetCacheParametersCommand(std::ostream& sout, std::istream& sinput)
+    {
+
+        dReal colthresh, freethresh, indist, base;
+
+        sinput >> colthresh >> freethresh >> indist >> base;
+
+        _cache->SetCollisionThresh(colthresh);
+        _cache->SetFreeSpaceThresh(freethresh);
+        _cache->SetInsertionDistanceMult(indist);
+        _cache->SetBase(base);
+
+        sout << " " << _cache->GetCollisionThresh() << " " << _cache->GetFreeSpaceThresh() << " " << _cache->GetInsertionDistanceMult() << " " << _cache->GetBase(); 
+        return true;
+    }
+
+    virtual bool _SetSelfCacheParametersCommand(std::ostream& sout, std::istream& sinput)
+    {
+
+        dReal selfcolthresh, selffreethresh, selfindist, selfbase;
+
+        sinput >> selfcolthresh >> selffreethresh >> selfindist >> selfbase;
+
+        _selfcache->SetCollisionThresh(selfcolthresh);
+        _selfcache->SetFreeSpaceThresh(selffreethresh);
+        _selfcache->SetInsertionDistanceMult(selfindist);
+        _selfcache->SetBase(selfbase);
+
+        sout << " " << _selfcache->GetCollisionThresh() << " " << _selfcache->GetFreeSpaceThresh() << " " << _selfcache->GetInsertionDistanceMult() << " " << _selfcache->GetBase(); 
+        return true;
+    }
+
+    virtual bool _ValidateCacheCommand(std::ostream& sout, std::istream& sinput)
+    {
+        sout << _cache->Validate();
+        return true;
+    }
+
+    virtual bool _ValidateSelfCacheCommand(std::ostream& sout, std::istream& sinput)
+    {
+        sout << _selfcache->Validate();
+        return true;
+    }
+
+    virtual bool _ResetCacheCommand(std::ostream& sout, std::istream& sinput)
+    {
+        _cache->Reset();
+
+        _cachedcollisionchecks=0;
+        _cachedcollisionhits=0;
+        _cachedfreehits=0;
+        return true;
+    }
+
+    virtual bool _ResetSelfCacheCommand(std::ostream& sout, std::istream& sinput)
+    {
+        _selfcache->Reset();
+
+        _selfcachedcollisionchecks=0;
+        _selfcachedcollisionhits=0;
+        _selfcachedfreehits=0;
+        return true;
+    }
+
+    virtual bool _UpdateCollisionConfigurations(std::ostream& sout, std::istream& sinput)
+    {
+        string bodyname;
+        sinput >> bodyname;
+
+        _cache->UpdateCollisionConfigurations(_probot->GetEnv()->GetKinBody(bodyname));
+        return true;
+
+    }
+
+    virtual bool _UpdateFreeConfigurations(std::ostream& sout, std::istream& sinput)
+    {
+        string bodyname;
+        sinput >> bodyname;
+
+        _cache->UpdateFreeConfigurations(_probot->GetEnv()->GetKinBody(bodyname));
+        return true;
+
+    }
     std::vector<dReal> _dofvals;
     ConfigurationCachePtr _cache;
     ConfigurationCachePtr _selfcache;

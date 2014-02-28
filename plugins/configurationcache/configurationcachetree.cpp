@@ -17,18 +17,6 @@
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 
-// High
-// find a way to lose the map for children
-
-//Low
-
-//KinBodyPtr body;
-//std::vector<dReal> values;
-//std::vector<uint8_t> venablestates;
-//body->GetConfigurationValues(values);
-//body->GetLinkEnables(venablestates);
-
-//std::map<KinBodyPtr, std::pair<std::vector<dReal>, std::vector<uint8_t> > > mapEnvironmentState;
 namespace configurationcache {
 
 inline dReal Sqr(dReal x) {
@@ -116,7 +104,7 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
     Reset();
     _weights = weights;
     _numnodes = 0;
-    _base = 2; // optimal is 1.3?
+    _base = 2.0; // optimal is 1.3?
     _fBaseInv = 1/_base;
     _fBaseInv2 = 1/Sqr(_base);
     _fBaseChildMult = 1/(_base-1);
@@ -151,7 +139,7 @@ static int s_CacheTreeId = 0;
 
 CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, CollisionReportPtr report)
 {
-    // allocate memory for the structur and the internal state vectors
+    // allocate memory for the structure and the internal state vectors
     void* pmemory = _poolNodes.malloc();
     //Vector* plinkspheres = (Vector*)((uint8_t*)pmemory + sizeof(CacheTreeNode) + sizeof(dReal)*_statedof);
     CacheTreeNodePtr newnode = new (pmemory) CacheTreeNode(cs, NULL);
@@ -164,7 +152,7 @@ CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, C
 
 CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
 {
-    // allocate memory for the structur and the internal state vectors
+    // allocate memory for the structure and the internal state vectors
     void* pmemory = _poolNodes.malloc();
     //Vector* plinkspheres = (Vector*)((uint8_t*)pmemory + sizeof(CacheTreeNode) + sizeof(dReal)*_statedof);
     CacheTreeNodePtr clonenode = new (pmemory) CacheTreeNode(refnode->GetConfigurationState(), _statedof, refnode->_plinkspheres);
@@ -223,6 +211,22 @@ void CacheTree::SetMaxDistance(dReal maxdistance)
 {
     Reset();
     _maxdistance = maxdistance;
+    _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
+    _minlevel = _maxlevel - 1;
+    _fMaxLevelBound = RavePow(_base, _maxlevel);
+    int enclevel = _EncodeLevel(_maxlevel);
+    if( enclevel >= (int)_vsetLevelNodes.size() ) {
+        _vsetLevelNodes.resize(enclevel+1);
+    }
+}
+
+void CacheTree::SetBase(dReal base)
+{
+    Reset();
+    _base = base;
+    _fBaseInv = 1/_base;
+    _fBaseInv2 = 1/Sqr(_base);
+    _fBaseChildMult = 1/(_base-1);
     _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
     _minlevel = _maxlevel - 1;
     _fMaxLevelBound = RavePow(_base, _maxlevel);
@@ -756,6 +760,15 @@ void CacheTree::GetNodeValues(std::vector<dReal>& vals) const
     }
 }
 
+void CacheTree::GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals) const
+{
+    FOREACH(itlevelnodes, _vsetLevelNodes) {
+        FOREACH(itnode, *itlevelnodes) {
+            lvals.push_back((*itnode));
+        }
+    }
+}
+
 void CacheTree::UpdateTree()
 {
 
@@ -858,7 +871,7 @@ bool CacheTree::Validate()
     return true;
 }
 
-ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot) : _cachetree(pstaterobot->GetActiveDOF())
+ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates) : _cachetree(pstaterobot->GetActiveDOF())
 {
     _userdatakey = std::string("configurationcache") + boost::lexical_cast<std::string>(this);
     _qtime = 0;
@@ -866,8 +879,12 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot) : _cachetree(ps
     _profile = false;
     _pstaterobot = pstaterobot;
     _penv = pstaterobot->GetEnv();
-    _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
 
+    _envupdates = envupdates;
+    //if (_envupdates){
+        _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
+    //}
+    
     std::vector<KinBodyPtr> vGrabbedBodies;
     _pstaterobot->GetGrabbed(vGrabbedBodies);
     _setGrabbedBodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
@@ -898,17 +915,17 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot) : _cachetree(ps
         }
     }
 
+    // threshparams
     // set default values for collisionthresh and insertiondistance
     _collisionthresh = 1.0; // discretization distance used by the original collisionchecker
-    _freespacethresh = 0.4; // half disc. distance used by the original collisionchecker
-    _insertiondistancemult = 0.5; //0.5
+    _freespacethresh = 0.2; // half disc. distance used by the original collisionchecker
+    _insertiondistancemult = 0.5;
 
     _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
 
     _jointchangehandle = pstaterobot->RegisterChangeCallback(KinBody::Prop_JointLimits, boost::bind(&ConfigurationCache::_UpdateRobotJointLimits, this));
     _jointchangehandle = pstaterobot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, boost::bind(&ConfigurationCache::_UpdateRobotGrabbed, this));
 
-    // using L1, get the maximumdistance
     // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
     dReal maxdistance = 0;
@@ -948,6 +965,9 @@ void ConfigurationCache::SetWeights(const std::vector<dReal>& weights)
 
 bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, CollisionReportPtr report, dReal distin)
 {
+
+    //int nc = _cachetree.GetNumNodes();
+    //RAVELOG_WARN_FORMAT("%d nodes\n",nc);
     if( !!report ) {
         if( !!report->plink2 && report->plink2->GetParent() == _pstaterobot ) {
             std::swap(report->plink1, report->plink2);
@@ -958,12 +978,46 @@ bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Col
     return ret==1;
 }
 
-int ConfigurationCache::RemoveConfigurations(const std::vector<dReal>& cs, dReal radius)
+int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
+{
+    // slow implementation for now
+    _cachetree.Reset();
+    return 1;
+    /*std::vector<CacheTreeNodePtr> list;
+    _cachetree.GetNodeValuesList(list);
+
+    int nremoved=0;
+    FOREACH(itnode, list){
+        if (((*itnode)->GetType() == CNT_Free)){ // todo, check overlap with linkspheres
+            _cachetree.RemoveNode((*itnode));
+            nremoved += 1;
+        }
+    }
+    return nremoved;*/
+}
+
+int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
+{
+    // slow implementation for now
+    std::vector<CacheTreeNodePtr> list;
+    _cachetree.GetNodeValuesList(list);
+
+    int nremoved=0;
+    FOREACH(itnode, list){
+        if (((*itnode)->GetType() == CNT_Collision) && (pbody == (*itnode)->GetCollidingLink()->GetParent())){
+            _cachetree.RemoveNode((*itnode));
+            nremoved += 1;
+        }
+    }
+    return nremoved;
+}
+
+int ConfigurationCache::RemoveConfigurations(const std::vector<dReal>& cs, dReal radius, ConfigurationNodeType conftype)
 {
     // slow implementation for now
     int nremoved=0;
     while(1) {
-        std::pair<CacheTreeNodeConstPtr, dReal> neigh = _cachetree.FindNearestNode(cs, radius, CNT_Any);
+        std::pair<CacheTreeNodeConstPtr, dReal> neigh = _cachetree.FindNearestNode(cs, radius, conftype);
         if( !neigh.first ) {
             break;
         }
@@ -1030,21 +1084,33 @@ bool ConfigurationCache::Validate()
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
+    /*if(_envupdates){
+        UpdateFreeConfigurations(pbody);
+        UpdateCollisionConfigurations(pbody);
+    }*/
     _cachetree.Reset();
 }
 
 void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
 {
+    //int nc = _cachetree.GetNumNodes();
+    //RAVELOG_WARN_FORMAT("%d nodes\n",nc);
     if( action == 1 ) {
+        if (_envupdates){
+            // invalidate the freespace of a cache given a new body in the scene
+            UpdateFreeConfigurations(pbody);
+        }
         KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
         pinfo->_changehandle = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, pbody));
         pbody->SetUserData(_userdatakey, pinfo);
-
-        // TODO invalide the freespace of a cache given a new body in the scene
     }
     else if( action == 0 ) {
+
+        if (_envupdates){
+            // remove all configurations that collide with this body
+            UpdateCollisionConfigurations(pbody); 
+        }
         pbody->RemoveUserData(_userdatakey);
-        // TODO invalidate the collision space of a cache given a body has been removed
     }
 }
 
@@ -1054,7 +1120,6 @@ void ConfigurationCache::_UpdateRobotJointLimits()
     _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
 
     // compute new max distance for cache
-    // using L1, get the maximumdistance
     // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
     dReal maxdistance = 0;
