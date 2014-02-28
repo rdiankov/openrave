@@ -1423,7 +1423,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         }
         RAVELOG_VERBOSE_FORMAT("Robot %s: body %s already grabbed, but transforms differ by %f \n", GetName()%pbody->GetName()%disterror);
         _RemoveAttachedBody(pbody);
-        CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
+        CallOnDestruction destructigonhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
         pPreviousGrabbed->_plinkrobot = plink;
         pPreviousGrabbed->_troot = t.inverse() * tbody;
         pPreviousGrabbed->_ProcessCollidingLinks(pPreviousGrabbed->_setRobotLinksToIgnore);
@@ -1436,7 +1436,15 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     pgrabbed->_ProcessCollidingLinks(std::set<int>());
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
-    _AttachBody(pbody);
+    try {
+        // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+        _AttachBody(pbody);
+    }
+    catch(...) {
+        BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        _vGrabbedBodies.pop_back();
+        throw;
+    }
     _PostprocessChangedParameters(Prop_RobotGrabbed);
     return true;
 }
@@ -1471,6 +1479,16 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
+    _AttachBody(pbody);
+    try {
+        // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+        _AttachBody(pbody);
+    }
+    catch(...) {
+        BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        _vGrabbedBodies.pop_back();
+        throw;
+    }
     _PostprocessChangedParameters(Prop_RobotGrabbed);
     return true;
 }

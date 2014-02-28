@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+# Copyright (C) 2011-2014 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -834,3 +834,4 @@ class TestTrajectory(EnvironmentSetup):
             planningutils.ExtendWaypoint(traj.GetNumWaypoints(),jitteredgoal,zeros(len(jitteredgoal)), traj, planner)
             assert( sum(abs(traj.GetWaypoint(-1, robot.GetActiveConfigurationSpecification())-jitteredgoal)) <= g_epsilon)
             planningutils.VerifyTrajectory(parameters, traj,0.01)
+            

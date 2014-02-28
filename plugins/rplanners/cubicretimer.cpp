@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -16,12 +16,9 @@
 #include "trajectoryretimer.h"
 #include <openrave/planningutils.h>
 
-#include "ParabolicPathSmooth/ParabolicRamp.h"
-
 #include <openrave/mathextra.h>
 
-/*
-
+/**
    t,dt,v0,v1,px = symbols('t,dt,v0,v1,px')
 
    c3 = (v1*dt + v0*dt - 2*px)/(dt**3)
@@ -46,7 +43,7 @@ public:
 
     CubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nSimple cubic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
+        __description = ":Interface Author: Rosen Diankov\n\nSingle cubic trajectory re-timing while passing through the waypoints, waypoints will not be modified. Computing fastest time is slow";
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
