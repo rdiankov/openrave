@@ -2328,7 +2328,7 @@ protected:
         std::list<UserDataWeakPtr> listRegisteredBodyCallbacks;
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-            listRegisteredBodyCallbacks = _listRegisteredCollisionCallbacks;
+            listRegisteredBodyCallbacks = _listRegisteredBodyCallbacks;
         }
         FOREACH(it, listRegisteredBodyCallbacks) {
             BodyCallbackDataPtr pdata = boost::dynamic_pointer_cast<BodyCallbackData>(it->lock());

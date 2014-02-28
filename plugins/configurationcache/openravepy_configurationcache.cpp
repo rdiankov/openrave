@@ -293,12 +293,43 @@ public:
         _cache->SetInsertionDistanceMult(indist);
     }
 
+    dReal GetCollisionThresh()
+    {
+        return _cache->GetCollisionThresh();
+    }
+
+    dReal GetFreeSpaceThresh()
+    {
+        return _cache->GetFreeSpaceThresh();
+    }
+
+
+    dReal GetInsertionDistanceMult()
+    {
+        return _cache->GetInsertionDistanceMult();
+    }
+
     object GetRobot() {
         return openravepy::toPyKinBody(_cache->GetRobot(), _pyenv);
     }
 
     bool Validate() {
         return _cache->Validate();
+    }
+
+    object GetNodeValues() {
+        std::vector<dReal> values;
+        _cache->GetNodeValues(values);
+        return toPyArray(values);
+    }
+
+    object FindNearestNode(object ovalues) {
+        std::pair<std::vector<dReal>, dReal> nn = _cache->FindNearestNode(ExtractArray<dReal>(ovalues));
+        return boost::python::make_tuple(toPyArray(nn.first), nn.second);
+    }
+    
+    dReal ComputeDistance(object oconfi, object oconff) {
+        return _cache->ComputeDistance(ExtractArray<dReal>(oconfi), ExtractArray<dReal>(oconff));
     }
 
 protected:
@@ -331,5 +362,12 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
     .def("GetRobot",&PyConfigurationCache::GetRobot)
     .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
     .def("Validate", &PyConfigurationCache::Validate)
+    .def("GetNodeValues", &PyConfigurationCache::GetNodeValues)
+    .def("FindNearestNode", &PyConfigurationCache::FindNearestNode)
+    .def("ComputeDistance", &PyConfigurationCache::ComputeDistance)
+
+    .def("GetCollisionThresh", &PyConfigurationCache::GetCollisionThresh)
+    .def("GetFreeSpaceThresh", &PyConfigurationCache::GetFreeSpaceThresh)
+    .def("GetInsertionDistanceMult", &PyConfigurationCache::GetInsertionDistanceMult)
     ;
 }

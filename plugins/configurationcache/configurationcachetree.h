@@ -60,6 +60,9 @@ public:
         return _conftype;
     }
 
+    void SetType(ConfigurationNodeType conftype) {
+        _conftype = conftype;
+    }
     // returns closest distance to a configuration of the opposite type seen so far
 //    dReal GetUpperBound() const {
 //        return _approxdispersion.second;
@@ -87,7 +90,7 @@ protected:
     int16_t _level; ///< the level the node belongs to
     uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
     uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
-
+    
     // managed by pool
 #ifdef _DEBUG
     int id;
@@ -153,24 +156,39 @@ public:
     /// \return true if node is removed
     bool RemoveNode(CacheTreeNodeConstPtr nodein);
 
+    /// \brief remove all nodes that were in collision with pbody
+    void UpdateCollisionNodes(KinBodyPtr pbody);
+
     /// \brief number of nodes in the tree; todo: also count nodes by type
     int GetNumNodes() const {
         return _numnodes;
     }
 
-    // TODO: take in information regarding what changed in the environment and update nodes accordingly (i.e., change nodes no longer known to be in collision to CNT_Unknown, remove nodes in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
+    /// \brief return the configuration values for all nodes in the tree
+    void GetNodeValues(std::vector<dReal>& vals) const;
+
+    void GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals) const;
+    // todo: take in information regarding what changed in the environment and update nodes accordingly (i.e., change nodes no longer known to be in collision to CNT_Unknown, remove nodes in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
     /// \brief update the tree when the environment changes
     void UpdateTree();
 
     void SetWeights(const std::vector<dReal>& weights);
+
     const std::vector<dReal>& GetWeights() const {
         return _weights;
     }
 
     void SetMaxDistance(dReal maxdistance);
+
     dReal GetMaxDistance() const {
         return _maxdistance;
     }
+
+    dReal GetBase() const {
+        return _base;
+    }
+
+    void SetBase(dReal base);
 
     dReal ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef) const;
 
@@ -257,7 +275,7 @@ class ConfigurationCache
 {
 public:
     /// \brief start tracking the active DOFs of the robot
-    ConfigurationCache(RobotBasePtr probotstate);
+    ConfigurationCache(RobotBasePtr probotstate, bool envupdates = true);
     virtual ~ConfigurationCache() {
     }
 
@@ -273,8 +291,14 @@ public:
     /// \brief removes all configurations within radius of cs
     ///
     /// \return number of configurations removed
-    int RemoveConfigurations(const std::vector<dReal>& cs, dReal radius);
+    int RemoveConfigurations(const std::vector<dReal>& cs, dReal radius, ConfigurationNodeType conftype = CNT_Any);
 
+    /// \brief removes all collision configurations colliding with pbody, used to update cache when bodies are removed or moved
+    int UpdateCollisionConfigurations(KinBodyPtr pbody);
+
+    /// \brief removes all free configurations, to be updated to only remove those with linkspheres that overlap with the body
+    int UpdateFreeConfigurations(KinBodyPtr pbody);
+    
     /// \brief determine if current configuration is whithin threshold of a collision in the cache (_collisionthresh), known to be in collision, or requires an explicit collision check
     /// \return 1 if in collision, 0 if not in collision, -1 if unknown
     int CheckCollision(const std::vector<dReal>& cs, KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist);
@@ -298,6 +322,19 @@ public:
         return _cachetree.GetNumNodes();
     }
 
+    /// \brief return configuration values for all nodes in the tree, calls cachetree's function
+    void GetNodeValues(std::vector<dReal>& vals) const {
+        _cachetree.GetNodeValues(vals);
+    }
+
+    /// \brief return nearest configuration and distance 
+    std::pair<std::vector<dReal>, dReal> FindNearestNode(const std::vector<dReal>& conf);
+
+    /// \brief return distance between two configurations as computed by the tree (for testing)
+    dReal ComputeDistance(const std::vector<dReal>& qi, const std::vector<dReal>& qf) const {
+        return _cachetree.ComputeDistance(qi,qf);
+    }
+
     /// \brief the cache will assume a new configuration is in collision if the nearest node in the tree is below this distance
     void SetCollisionThresh(dReal colthresh)
     {
@@ -309,11 +346,47 @@ public:
         _freespacethresh = freespacethresh;
     }
 
+    void SetBase(dReal base)
+    {
+        _cachetree.SetBase(base);
+    }
+
+    void DisableEnvUpdates()
+    {
+        _envupdates = false;
+    }
+
+    void EnableEnvUpdates()
+    {
+        _envupdates = true;
+    }
+
     void SetWeights(const std::vector<dReal>& weights);
+
     /// \brief the cache will not insert configuration if their distance from the nearest node in the tree is not larger than this value
     void SetInsertionDistanceMult(dReal indist)
     {
         _insertiondistancemult = indist;
+    }
+
+    dReal GetCollisionThresh() const
+    {
+        return _collisionthresh;
+    }
+
+    dReal GetFreeSpaceThresh() const
+    {
+        return _freespacethresh;
+    }
+
+    dReal GetInsertionDistanceMult() const 
+    {
+        return _insertiondistancemult;
+    }
+
+    dReal GetBase() const 
+    {
+        return _cachetree.GetBase();
     }
 
     RobotBasePtr GetRobot() const {
@@ -322,6 +395,12 @@ public:
 
     /// \brief for debug purposes, validates the tree
     bool Validate();
+
+    /// \brief remove all nodes in collision with pbody, for testing
+    void UpdateCollisionNodes(KinBodyPtr pbody)
+    {
+        _cachetree.UpdateCollisionNodes(pbody);
+    }
 
 private:
     /// \brief called when body has changed state.
@@ -378,7 +457,7 @@ public:
     uint64_t _itime; //total insertion time
 
     bool _profile;
-
+    bool _envupdates;
 };
 
 typedef boost::shared_ptr<ConfigurationCache> ConfigurationCachePtr;
