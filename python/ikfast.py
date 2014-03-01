@@ -178,7 +178,7 @@ from __future__ import with_statement # for python 2.5
 from sympy import __version__ as sympy_version
 if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
-sympy_smaller_074 = sympy_version < '0.7.4'
+sympy_smaller_073 = sympy_version < '0.7.3'
 
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
@@ -308,7 +308,7 @@ def Pow_eval_subs(self, old, new):
             
     return Pow(self.base._eval_subs(old, new), self.exp._eval_subs(old, new))
 
-if sympy_smaller_074:
+if sympy_smaller_073:
     power.Pow._eval_subs = Pow_eval_subs
 
 # simplify/simplify.py
@@ -4195,7 +4195,7 @@ class IKFastSolver(AutoReloader):
                     monomkey = peq0dict.keys()[0]
                     monomcoeff = peq0dict[monomkey]
                     monomvalue = peq[1].as_expr()
-                    if sympy_smaller_074:
+                    if sympy_smaller_073:
                         monomexpr = Monomial(*monomkey).as_expr(*peq[0].gens)
                     else:
                         monomexpr = Monomial(monomkey).as_expr(*peq[0].gens)
@@ -4503,7 +4503,7 @@ class IKFastSolver(AutoReloader):
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
-                            if sympy_smaller_074:
+                            if sympy_smaller_073:
                                 eq += sym*Monomial(*monom).as_expr(*othersymbols)
                             else:
                                 eq += sym*Monomial(monom).as_expr(*othersymbols)
@@ -4523,7 +4523,7 @@ class IKFastSolver(AutoReloader):
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
-                            if sympy_smaller_074:
+                            if sympy_smaller_073:
                                 eq += sym*Monomial(*monom).as_expr(*othersymbols)
                             else:
                                 eq += sym*Monomial(monom).as_expr(*othersymbols)
@@ -4713,7 +4713,7 @@ class IKFastSolver(AutoReloader):
                     for monom, coeff in newpeq.iteritems():
                         sym = self.gsymbolgen.next()
                         dictequations.append((sym,coeff))
-                        if sympy_smaller_074:
+                        if sympy_smaller_073:
                             newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
                         else:
                             newpeq += sym*Monomial(monom).as_expr(*othersymbols)
