@@ -981,9 +981,9 @@ bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Col
 int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
 {
     // slow implementation for now
-    //_cachetree.Reset();
-    //return 1;
-    std::vector<CacheTreeNodePtr> list;
+    _cachetree.Reset();
+    return 1;
+    /*std::vector<CacheTreeNodePtr> list;
     _cachetree.GetNodeValuesList(list);
 
     int nremoved=0;
@@ -993,7 +993,7 @@ int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
             nremoved += 1;
         }
     }
-    return nremoved;
+    return nremoved;*/
 }
 
 int ConfigurationCache::RemoveCollisionConfigurations()
@@ -1104,9 +1104,9 @@ void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
         UpdateFreeConfigurations(pbody);
         UpdateCollisionConfigurations(pbody);
     }*/
-    if (_envupdates){
+    //if (_envupdates){
       _cachetree.Reset();
-    }
+    //}
 }
 
 void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
