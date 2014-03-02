@@ -882,9 +882,9 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     _envupdates = envupdates;
     //if (_envupdates){
-        _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
+    _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
     //}
-    
+
     std::vector<KinBodyPtr> vGrabbedBodies;
     _pstaterobot->GetGrabbed(vGrabbedBodies);
     _setGrabbedBodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
@@ -984,16 +984,16 @@ int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
     _cachetree.Reset();
     return 1;
     /*std::vector<CacheTreeNodePtr> list;
-    _cachetree.GetNodeValuesList(list);
+       _cachetree.GetNodeValuesList(list);
 
-    int nremoved=0;
-    FOREACH(itnode, list){
-        if (((*itnode)->GetType() == CNT_Free)){ // todo, check overlap with linkspheres
+       int nremoved=0;
+       FOREACH(itnode, list){
+        if (((*itnode)->GetType() == CNT_Free)) { // todo, check overlap with linkspheres
             _cachetree.RemoveNode((*itnode));
             nremoved += 1;
         }
-    }
-    return nremoved;*/
+       }
+       return nremoved;*/
 }
 
 int ConfigurationCache::RemoveCollisionConfigurations()
@@ -1004,7 +1004,7 @@ int ConfigurationCache::RemoveCollisionConfigurations()
 
     int nremoved=0;
     FOREACH(itnode, list){
-        if ((*itnode)->GetType() == CNT_Collision){
+        if ((*itnode)->GetType() == CNT_Collision) {
             _cachetree.RemoveNode((*itnode));
             nremoved += 1;
         }
@@ -1020,7 +1020,7 @@ int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
 
     int nremoved=0;
     FOREACH(itnode, list){
-        if (((*itnode)->GetType() == CNT_Collision) && (pbody == (*itnode)->GetCollidingLink()->GetParent())){
+        if (((*itnode)->GetType() == CNT_Collision) && (pbody == (*itnode)->GetCollidingLink()->GetParent())) {
             _cachetree.RemoveNode((*itnode));
             nremoved += 1;
         }
@@ -1103,10 +1103,13 @@ void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
     /*if(_envupdates){
         UpdateFreeConfigurations(pbody);
         UpdateCollisionConfigurations(pbody);
-    }*/
+       }*/
     //if (_envupdates){
-      _cachetree.Reset();
+    _cachetree.Reset();
     //}
+    if (_envupdates) {
+        _cachetree.Reset();
+    }
 }
 
 void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
@@ -1114,7 +1117,7 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
     //int nc = _cachetree.GetNumNodes();
     //RAVELOG_WARN_FORMAT("%d nodes\n",nc);
     if( action == 1 ) {
-        if (_envupdates){
+        if (_envupdates) {
             // invalidate the freespace of a cache given a new body in the scene
             UpdateFreeConfigurations(pbody);
         }
@@ -1124,9 +1127,9 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
     }
     else if( action == 0 ) {
 
-        if (_envupdates){
+        if (_envupdates) {
             // remove all configurations that collide with this body
-            UpdateCollisionConfigurations(pbody); 
+            UpdateCollisionConfigurations(pbody);
         }
         pbody->RemoveUserData(_userdatakey);
     }
