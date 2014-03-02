@@ -60,6 +60,16 @@ public:
     virtual ~CacheCollisionChecker() {
     }
 
+    ConfigurationCachePtr GetCache()
+    {
+        return _cache;
+    }
+
+    ConfigurationCachePtr GetSelfCache()
+    {
+        return _selfcache;
+    }
+
     virtual bool SetCollisionOptions(int collisionoptions)
     {
         return _pintchecker->SetCollisionOptions(collisionoptions);
@@ -109,43 +119,40 @@ public:
         _pintchecker->DestroyEnvironment();
     }
 
-    /*virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
-        ModuleBase::Clone(preference, cloningoptions);
-        boost::shared_ptr<CollisionCheckerBasePtr const > clone = boost::dynamic_pointer_cast<CollisionCheckerBasePtr const> (preference);
+        CollisionCheckerBase::Clone(preference, cloningoptions);
+        boost::shared_ptr<CacheCollisionChecker const> clone = boost::dynamic_pointer_cast<CacheCollisionChecker const> (preference);
 
+        if(!!clone->_pintchecker){
+            CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),clone->_pintchecker->GetXMLId());
+            p->Clone(clone->_pintchecker,cloningoptions);
 
-        _probot = clone->_probot;
-        _dofvals = clone->_dofvals;
-        _cache = clone->_cache;
-        _selfcache = clone->_selfcache;
-        _pinterchecker = clone->_pinterchecker;
-        _cachedcollisionchecks = clone->_cachecollisionchecks;
-        _cachedcollisionhits = clone->_cachedcollisionhits;
-        _cachedfreehits = clone->_cachedfreehits;
-
-        if( !_probot ) {
-            return false;
+            if (!!_pintchecker){
+                _pintchecker->DestroyEnvironment();
+            }
+            _pintchecker = p;
+            _pintchecker->InitEnvironment();
         }
-        // always recreate?
-        _cache.reset(new ConfigurationCache(_probot));
-        _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
+        else{
+            std::string collisionname="ode";
+            _pintchecker = RaveCreateCollisionChecker(GetEnv(), collisionname);
+        }
+        OPENRAVE_ASSERT_FORMAT(!!_pintchecker, "internal checker %s is not valid", _pintchecker->GetXMLId(), ORE_Assert);
+        
+        _strRobotName = clone->_probot->GetName();
+        _probot = GetRobot();
 
-        _cache->SetCollisionThresh(1.0);
-        _cache->SetFreeSpaceThresh(0.2);
-        _cache->SetInsertionDistanceMult(0.5);
-        _cache->SetBase(2.0);
+        _cachedcollisionchecks=clone->_cachedcollisionchecks;
+        _cachedcollisionhits=clone->_cachedcollisionhits;
+        _cachedfreehits=clone->_cachedfreehits;
 
-        _selfcache->SetCollisionThresh(1.0);
-        _selfcache->SetFreeSpaceThresh(0.2);
-        _selfcache->SetInsertionDistanceMult(0.5);
-        _selfcache->SetBase(2.0);
+        _selfcachedcollisionchecks=clone->_selfcachedcollisionchecks;
+        _selfcachedcollisionhits=clone->_selfcachedcollisionhits;
+        _selfcachedfreehits = clone->_selfcachedfreehits;
 
-        RAVELOG_DEBUG_FORMAT("Cloning cache collision checker for %s", _probot->GetName());
-        _cachedcollisionchecks=0;
-        _cachedcollisionhits=0;
-        _cachedfreehits=0;
-    }*/
+        RAVELOG_DEBUG_FORMAT("Cloning cache collision checker for %s", clone->_probot->GetName());
+    }
 
     virtual bool InitKinBody(KinBodyPtr pbody) {
         // reset cache for pbody (remove from free configurations since body has been added)
@@ -157,8 +164,9 @@ public:
         _pintchecker->RemoveKinBody(pbody);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr()) {
-
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
+    {
+        RobotBasePtr probot = GetRobot();
         if( !_cache || pbody1 != _cache->GetRobot() ) {
             return _pintchecker->CheckCollision(pbody1, report);
         }
@@ -239,8 +247,8 @@ public:
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
-        //return _pintchecker->CheckStandaloneSelfCollision(pbody, report);
 
+        RobotBasePtr probot = GetRobot();
         if( !_selfcache || pbody != _selfcache->GetRobot() ) {
             return _pintchecker->CheckStandaloneSelfCollision(pbody, report);
         }
@@ -291,7 +299,8 @@ protected:
         string bodyname;
         int affinedofs = 0;
         sinput >> bodyname >> affinedofs;
-        _probot = GetEnv()->GetRobot(bodyname);
+        _strRobotName = bodyname;
+        _probot = GetRobot();
         if( !_probot ) {
             return false;
         }
@@ -299,20 +308,17 @@ protected:
         _cache.reset(new ConfigurationCache(_probot));
         _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
 
-        _cache->SetCollisionThresh(1.0);
-        _cache->SetFreeSpaceThresh(0.2);
-        _cache->SetInsertionDistanceMult(0.5);
-        _cache->SetBase(2.0);
-
-        _selfcache->SetCollisionThresh(1.0);
-        _selfcache->SetFreeSpaceThresh(0.2);
-        _selfcache->SetInsertionDistanceMult(0.5);
-        _selfcache->SetBase(2.0);
+        _SetParams();
 
         RAVELOG_DEBUG_FORMAT("Now tracking robot %s", bodyname);
+
         _cachedcollisionchecks=0;
         _cachedcollisionhits=0;
         _cachedfreehits=0;
+        _selfcachedcollisionchecks=0;
+        _selfcachedcollisionhits=0;
+        _selfcachedfreehits=0;
+
         return true;
     }
 
@@ -348,7 +354,7 @@ protected:
         _cache->SetInsertionDistanceMult(indist);
         _cache->SetBase(base);
 
-        sout << " " << _cache->GetCollisionThresh() << " " << _cache->GetFreeSpaceThresh() << " " << _cache->GetInsertionDistanceMult() << " " << _cache->GetBase(); 
+        sout << " " << _cache->GetCollisionThresh() << " " << _cache->GetFreeSpaceThresh() << " " << _cache->GetInsertionDistanceMult() << " " << _cache->GetBase();
         return true;
     }
 
@@ -364,7 +370,7 @@ protected:
         _selfcache->SetInsertionDistanceMult(selfindist);
         _selfcache->SetBase(selfbase);
 
-        sout << " " << _selfcache->GetCollisionThresh() << " " << _selfcache->GetFreeSpaceThresh() << " " << _selfcache->GetInsertionDistanceMult() << " " << _selfcache->GetBase(); 
+        sout << " " << _selfcache->GetCollisionThresh() << " " << _selfcache->GetFreeSpaceThresh() << " " << _selfcache->GetInsertionDistanceMult() << " " << _selfcache->GetBase();
         return true;
     }
 
@@ -405,7 +411,7 @@ protected:
         string bodyname;
         sinput >> bodyname;
 
-        _cache->UpdateCollisionConfigurations(_probot->GetEnv()->GetKinBody(bodyname));
+        _cache->UpdateCollisionConfigurations(GetEnv()->GetKinBody(bodyname));
         return true;
 
     }
@@ -415,15 +421,59 @@ protected:
         string bodyname;
         sinput >> bodyname;
 
-        _cache->UpdateFreeConfigurations(_probot->GetEnv()->GetKinBody(bodyname));
+        _cache->UpdateFreeConfigurations(GetEnv()->GetKinBody(bodyname));
         return true;
 
     }
+
+    RobotBasePtr GetRobot()
+    {
+        if( !_probot && _strRobotName.size() > 0 ) {
+            _probot = GetEnv()->GetRobot(_strRobotName);
+            if( !!_probot ) {
+                // initialized! so also initialize the cache
+                _InitializeCache();
+            }
+        }
+        return _probot;
+    }
+
+    // for testing, will remove soon (cloning collision checkers resets all parameters)
+    void _SetParams()
+    {
+        _cache->SetCollisionThresh(0.6);
+        _cache->SetFreeSpaceThresh(0.2);
+        _cache->SetInsertionDistanceMult(0.5);
+        _cache->SetBase(1.6);
+
+        _selfcache->SetCollisionThresh(0.5);
+        _selfcache->SetFreeSpaceThresh(0.2);
+        _selfcache->SetInsertionDistanceMult(0.5);
+        _selfcache->SetBase(1.4);
+    }
+
+    void _InitializeCache()
+    {
+        _cache.reset(new ConfigurationCache(_probot));
+        _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
+
+        _SetParams();
+
+        _cachedcollisionchecks=0;
+        _cachedcollisionhits=0;
+        _cachedfreehits=0;
+
+        _selfcachedcollisionchecks=0;
+        _selfcachedcollisionhits=0;
+        _selfcachedfreehits=0;
+    }
+
     std::vector<dReal> _dofvals;
     ConfigurationCachePtr _cache;
     ConfigurationCachePtr _selfcache;
     CollisionCheckerBasePtr _pintchecker;
-    RobotBasePtr _probot;
+    std::string _strRobotName; ///< the robot name to track
+    RobotBasePtr _probot; ///< robot pointer
     int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits;
     int _selfcachedcollisionchecks, _selfcachedcollisionhits, _selfcachedfreehits;
 };

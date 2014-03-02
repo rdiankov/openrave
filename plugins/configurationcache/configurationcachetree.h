@@ -296,6 +296,9 @@ public:
     /// \brief removes all collision configurations colliding with pbody, used to update cache when bodies are removed or moved
     int UpdateCollisionConfigurations(KinBodyPtr pbody);
 
+    /// \brief removes all collision configurations 
+    int RemoveCollisionConfigurations();
+
     /// \brief removes all free configurations, to be updated to only remove those with linkspheres that overlap with the body
     int UpdateFreeConfigurations(KinBodyPtr pbody);
     
