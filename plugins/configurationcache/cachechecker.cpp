@@ -106,41 +106,38 @@ public:
         return _pintchecker->InitEnvironment();
     }
 
-    virtual void DestroyEnvironment() {
+    virtual void DestroyEnvironment()
+    {
         if( !!_cache ) {
-
             _cache->Reset();
         }
-
         if( !!_selfcache ) {
             _selfcache->Reset();
         }
-
-        _pintchecker->DestroyEnvironment();
+        if( !!_pintchecker ) {
+            _pintchecker->DestroyEnvironment();
+        }
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
         boost::shared_ptr<CacheCollisionChecker const> clone = boost::dynamic_pointer_cast<CacheCollisionChecker const> (preference);
+        
+        DestroyEnvironment();
 
-        if(!!clone->_pintchecker){
+        if(!!clone->_pintchecker) {
             CollisionCheckerBasePtr p = RaveCreateCollisionChecker(GetEnv(),clone->_pintchecker->GetXMLId());
             p->Clone(clone->_pintchecker,cloningoptions);
 
-            if (!!_pintchecker){
-                _pintchecker->DestroyEnvironment();
-            }
             _pintchecker = p;
             _pintchecker->InitEnvironment();
         }
         else{
-            std::string collisionname="ode";
-            _pintchecker = RaveCreateCollisionChecker(GetEnv(), collisionname);
+            _pintchecker.reset();
         }
-        OPENRAVE_ASSERT_FORMAT(!!_pintchecker, "internal checker %s is not valid", _pintchecker->GetXMLId(), ORE_Assert);
-        
-        _strRobotName = clone->_probot->GetName();
+
+        _strRobotName = clone->_strRobotName;
         _probot = GetRobot();
 
         _cachedcollisionchecks=clone->_cachedcollisionchecks;
@@ -473,7 +470,7 @@ protected:
     ConfigurationCachePtr _selfcache;
     CollisionCheckerBasePtr _pintchecker;
     std::string _strRobotName; ///< the robot name to track
-    RobotBasePtr _probot; ///< robot pointer
+    RobotBasePtr _probot; ///< robot pointer, shouldn't be used directly, use with GetRobot()
     int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits;
     int _selfcachedcollisionchecks, _selfcachedcollisionhits, _selfcachedfreehits;
 };
