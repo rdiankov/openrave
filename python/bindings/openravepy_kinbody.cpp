@@ -1898,16 +1898,25 @@ void PyKinBody::SetDOFResolutions(object o)
     _pbody->SetDOFResolutions(values);
 }
 
-void PyKinBody::SetDOFLimits(object olower, object oupper)
+void PyKinBody::SetDOFLimits(object olower, object oupper, object oindices)
 {
     if( _pbody->GetDOF() == 0 ) {
         return;
     }
     vector<dReal> vlower = ExtractArray<dReal>(olower), vupper = ExtractArray<dReal>(oupper);
-    if( (int)vlower.size() != GetDOF() || (int)vupper.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+    if( oindices == object() ) {
+        if( (int)vlower.size() != GetDOF() || (int)vupper.size() != GetDOF() ) {
+            throw openrave_exception("values do not equal to body degrees of freedom");
+        }
+        _pbody->SetDOFLimits(vlower,vupper);
     }
-    _pbody->SetDOFLimits(vlower,vupper);
+    else {
+        if( len(oindices) == 0 ) {
+            return;
+        }
+        vector<int> vindices = ExtractArray<int>(oindices);
+        _pbody->SetDOFLimits(vlower, vupper, vindices);
+    }
 }
 
 void PyKinBody::SetDOFVelocityLimits(object o)
@@ -2542,6 +2551,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetDOFLimits_overloads, SetDOFLimits, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SubtractDOFValues_overloads, SubtractDOFValues, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianTranslation_overloads, ComputeJacobianTranslation, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeJacobianAxisAngle_overloads, ComputeJacobianAxisAngle, 1, 2)
@@ -2644,7 +2654,7 @@ void init_openravepy_kinbody()
                         .def("GetDOFWeights",getdofweights2, DOXY_FN(KinBody,GetDOFWeights))
                         .def("SetDOFWeights",&PyKinBody::SetDOFWeights, args("weights"), DOXY_FN(KinBody,SetDOFWeights))
                         .def("SetDOFResolutions",&PyKinBody::SetDOFResolutions, args("resolutions"), DOXY_FN(KinBody,SetDOFResolutions))
-                        .def("SetDOFLimits",&PyKinBody::SetDOFLimits, args("lower","upper"), DOXY_FN(KinBody,SetDOFLimits))
+                        .def("SetDOFLimits",&PyKinBody::SetDOFLimits, SetDOFLimits_overloads(args("lower","upper","indices"), DOXY_FN(KinBody,SetDOFLimits)))
                         .def("SetDOFVelocityLimits",&PyKinBody::SetDOFVelocityLimits, args("limits"), DOXY_FN(KinBody,SetDOFVelocityLimits))
                         .def("SetDOFAccelerationLimits",&PyKinBody::SetDOFAccelerationLimits, args("limits"), DOXY_FN(KinBody,SetDOFAccelerationLimits))
                         .def("SetDOFTorqueLimits",&PyKinBody::SetDOFTorqueLimits, args("limits"), DOXY_FN(KinBody,SetDOFTorqueLimits))

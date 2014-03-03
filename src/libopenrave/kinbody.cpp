@@ -762,34 +762,58 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
     _PostprocessChangedParameters(Prop_JointProperties);
 }
 
-void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper)
+void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper, const std::vector<int>& dofindices)
 {
-    OPENRAVE_ASSERT_OP((int)lower.size(),==,GetDOF());
-    OPENRAVE_ASSERT_OP((int)upper.size(),==,GetDOF());
     bool bChanged = false;
-    std::vector<dReal>::const_iterator itlower = lower.begin(), itupper = upper.begin();
-    FOREACHC(it, _vDOFOrderedJoints) {
-        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-            if( (*it)->_info._vlowerlimit.at(i) != *(itlower+i) || (*it)->_info._vupperlimit.at(i) != *(itupper+i) ) {
-                bChanged = true;
-                std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info._vlowerlimit.begin());
-                std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info._vupperlimit.begin());
-                for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                    if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
-                        // TODO, necessary to set wrap?
-                        if( (*it)->_info._vlowerlimit.at(i) < -PI || (*it)->_info._vupperlimit.at(i) > PI) {
-                            (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(i) + (*it)->_info._vupperlimit.at(i)),i);
-                        }
-                        else {
-                            (*it)->SetWrapOffset(0,i);
+    if( dofindices.size() == 0 ) {
+        OPENRAVE_ASSERT_OP((int)lower.size(),==,GetDOF());
+        OPENRAVE_ASSERT_OP((int)upper.size(),==,GetDOF());
+        std::vector<dReal>::const_iterator itlower = lower.begin(), itupper = upper.begin();
+        FOREACHC(it, _vDOFOrderedJoints) {
+            for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                if( (*it)->_info._vlowerlimit.at(i) != *(itlower+i) || (*it)->_info._vupperlimit.at(i) != *(itupper+i) ) {
+                    bChanged = true;
+                    std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info._vlowerlimit.begin());
+                    std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info._vupperlimit.begin());
+                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                        if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
+                            // TODO, necessary to set wrap?
+                            if( (*it)->_info._vlowerlimit.at(i) < -PI || (*it)->_info._vupperlimit.at(i) > PI) {
+                                (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(i) + (*it)->_info._vupperlimit.at(i)),i);
+                            }
+                            else {
+                                (*it)->SetWrapOffset(0,i);
+                            }
                         }
                     }
+                    break;
                 }
-                break;
             }
+            itlower += (*it)->GetDOF();
+            itupper += (*it)->GetDOF();
         }
-        itlower += (*it)->GetDOF();
-        itupper += (*it)->GetDOF();
+    }
+    else {
+        OPENRAVE_ASSERT_OP(lower.size(),==,dofindices.size());
+        OPENRAVE_ASSERT_OP(upper.size(),==,dofindices.size());
+        for(size_t index = 0; index < dofindices.size(); ++index) {
+            JointPtr pjoint = GetJointFromDOFIndex(dofindices[index]);
+            int iaxis = dofindices[index]-pjoint->GetDOFIndex();
+            if( pjoint->_info._vlowerlimit.at(iaxis) != lower[index] || pjoint->_info._vupperlimit.at(iaxis) != upper[index] ) {
+                bChanged = true;
+                pjoint->_info._vlowerlimit.at(iaxis) = lower[index];
+                pjoint->_info._vupperlimit.at(iaxis) = upper[index];
+                if( pjoint->IsRevolute(iaxis) && !pjoint->IsCircular(iaxis) ) {
+                    // TODO, necessary to set wrap?
+                    if( pjoint->_info._vlowerlimit.at(iaxis) < -PI || pjoint->_info._vupperlimit.at(iaxis) > PI) {
+                        pjoint->SetWrapOffset(0.5f * (pjoint->_info._vlowerlimit.at(iaxis) + pjoint->_info._vupperlimit.at(iaxis)),iaxis);
+                    }
+                    else {
+                        pjoint->SetWrapOffset(0,iaxis);
+                    }
+                }
+            }
+        }        
     }
     if( bChanged ) {
         _PostprocessChangedParameters(Prop_JointLimits);

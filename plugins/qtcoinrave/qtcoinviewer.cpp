@@ -3327,7 +3327,7 @@ void QtCoinViewer::_UpdateCollisionChecker()
                     return;
                 }
             }
-            RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
+            //RAVELOG_VERBOSE(str(boost::format("cannot find collision checker menu item %s\n")%p->GetXMLId()));
         }
 
         // set to default

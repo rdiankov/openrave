@@ -762,10 +762,9 @@ void CacheTree::GetNodeValues(std::vector<dReal>& vals) const
 
 void CacheTree::GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals) const
 {
+    lvals.resize(0);
     FOREACH(itlevelnodes, _vsetLevelNodes) {
-        FOREACH(itnode, *itlevelnodes) {
-            lvals.push_back((*itnode));
-        }
+        lvals.insert(lvals.end(), itlevelnodes->begin(), itlevelnodes->end());
     }
 }
 
