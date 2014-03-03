@@ -148,7 +148,6 @@ public:
         _selfcachedcollisionhits=clone->_selfcachedcollisionhits;
         _selfcachedfreehits = clone->_selfcachedfreehits;
 
-        //RAVELOG_DEBUG("Cloning cache collision checker\n");
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody) {
@@ -164,7 +163,7 @@ public:
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
         RobotBasePtr probot = GetRobot();
-        if( !_cache || pbody1 != _cache->GetRobot() ) {
+        if( !_cache || pbody1 != probot ) {
             return _pintchecker->CheckCollision(pbody1, report);
         }
         if( !!report ) {
@@ -246,7 +245,7 @@ public:
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
 
         RobotBasePtr probot = GetRobot();
-        if( !_selfcache || pbody != _selfcache->GetRobot() ) {
+        if( !_selfcache || pbody != probot ) {
             return _pintchecker->CheckStandaloneSelfCollision(pbody, report);
         }
         if( !!report ) {
@@ -443,7 +442,7 @@ protected:
         _cache->SetInsertionDistanceMult(0.5);
         _cache->SetBase(1.6);
 
-        _selfcache->SetCollisionThresh(0.1);
+        _selfcache->SetCollisionThresh(0.3);
         _selfcache->SetFreeSpaceThresh(0.3);
         _selfcache->SetInsertionDistanceMult(0.5);
         _selfcache->SetBase(1.5);

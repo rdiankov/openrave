@@ -888,18 +888,18 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _envupdates = envupdates;
     if (_envupdates){
     _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
-    }
 
-    std::vector<KinBodyPtr> vGrabbedBodies;
-    _pstaterobot->GetGrabbed(vGrabbedBodies);
-    _setGrabbedBodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
-    std::vector<KinBodyPtr> vnewenvbodies;
-    _penv->GetBodies(vnewenvbodies);
-    FOREACHC(itbody, vnewenvbodies) {
-        if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
-            KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
-            pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
-            (*itbody)->SetUserData(_userdatakey, pinfo);
+        std::vector<KinBodyPtr> vGrabbedBodies;
+        _pstaterobot->GetGrabbed(vGrabbedBodies);
+        _setGrabbedBodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
+        std::vector<KinBodyPtr> vnewenvbodies;
+        _penv->GetBodies(vnewenvbodies);
+        FOREACHC(itbody, vnewenvbodies) {
+            if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
+                KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
+                pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
+                (*itbody)->SetUserData(_userdatakey, pinfo);
+            }
         }
     }
 
@@ -997,8 +997,6 @@ int ConfigurationCache::GetNumKnownNodes() const
 
 int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
 {
-
-    RAVELOG_WARN("Updating free confs\n");
     // slow implementation for now
     std::vector<CacheTreeNodePtr> list;
     _cachetree.GetNodeValuesList(list);
@@ -1016,8 +1014,6 @@ int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
 
 int ConfigurationCache::RemoveFreeConfigurations()
 {
-
-    RAVELOG_WARN("Removing free confs\n");
     // slow implementation for now
     std::vector<CacheTreeNodePtr> list;
     _cachetree.GetNodeValuesList(list);
@@ -1052,8 +1048,6 @@ int ConfigurationCache::RemoveCollisionConfigurations()
 
 int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
 {
-
-    RAVELOG_WARN("Updating collision confs\n");
     // slow implementation for now
     std::vector<CacheTreeNodePtr> list;
     _cachetree.GetNodeValuesList(list);
