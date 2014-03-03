@@ -321,7 +321,7 @@ protected:
 
     virtual bool _GetCacheStatisticsCommand(std::ostream& sout, std::istream& sinput)
     {
-        sout << _cachedcollisionchecks << " " << _cachedcollisionhits << " " << _cachedfreehits << " " << _cache->GetNumNodes();
+        sout << _cachedcollisionchecks << " " << _cachedcollisionhits << " " << _cachedfreehits << " " << _cache->GetNumKnownNodes();
 
         _cachedcollisionchecks=0;
         _cachedcollisionhits=0;
@@ -331,7 +331,7 @@ protected:
 
     virtual bool _GetSelfCacheStatisticsCommand(std::ostream& sout, std::istream& sinput)
     {
-        sout << _selfcachedcollisionchecks << " " << _selfcachedcollisionhits << " " << _selfcachedfreehits << " " << _selfcache->GetNumNodes();
+        sout << _selfcachedcollisionchecks << " " << _selfcachedcollisionhits << " " << _selfcachedfreehits << " " << _selfcache->GetNumKnownNodes();
 
         _selfcachedcollisionchecks=0;
         _selfcachedcollisionhits=0;
@@ -438,15 +438,15 @@ protected:
     // for testing, will remove soon (cloning collision checkers resets all parameters)
     void _SetParams()
     {
-        _cache->SetCollisionThresh(0.6);
-        _cache->SetFreeSpaceThresh(0.2);
+        _cache->SetCollisionThresh(0.3);
+        _cache->SetFreeSpaceThresh(0.3);
         _cache->SetInsertionDistanceMult(0.5);
         _cache->SetBase(1.6);
 
-        _selfcache->SetCollisionThresh(0.5);
-        _selfcache->SetFreeSpaceThresh(0.2);
+        _selfcache->SetCollisionThresh(0.1);
+        _selfcache->SetFreeSpaceThresh(0.3);
         _selfcache->SetInsertionDistanceMult(0.5);
-        _selfcache->SetBase(1.4);
+        _selfcache->SetBase(1.5);
     }
 
     void _InitializeCache()

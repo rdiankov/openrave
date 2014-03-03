@@ -63,6 +63,7 @@ public:
     void SetType(ConfigurationNodeType conftype) {
         _conftype = conftype;
     }
+
     // returns closest distance to a configuration of the opposite type seen so far
 //    dReal GetUpperBound() const {
 //        return _approxdispersion.second;
@@ -188,6 +189,8 @@ public:
         return _base;
     }
 
+    CacheTreeNodePtr GetRoot();
+
     void SetBase(dReal base);
 
     dReal ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef) const;
@@ -299,6 +302,9 @@ public:
     /// \brief removes all collision configurations 
     int RemoveCollisionConfigurations();
 
+    /// \brief removes all free configurations
+    int RemoveFreeConfigurations();
+
     /// \brief removes all free configurations, to be updated to only remove those with linkspheres that overlap with the body
     int UpdateFreeConfigurations(KinBodyPtr pbody);
     
@@ -324,6 +330,10 @@ public:
     int GetNumNodes() const {
         return _cachetree.GetNumNodes();
     }
+
+
+    /// \brief number of nodes with known type, i.e., != CT_Unknown
+    int GetNumKnownNodes() const;
 
     /// \brief return configuration values for all nodes in the tree, calls cachetree's function
     void GetNodeValues(std::vector<dReal>& vals) const {
