@@ -133,6 +133,12 @@ void CacheTree::Reset()
     _numnodes = 0;
 }
 
+CacheTreeNodePtr CacheTree::GetRoot()
+{
+    CacheTreeNodePtr proot = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
+    return proot;
+}
+
 #ifdef _DEBUG
 static int s_CacheTreeId = 0;
 #endif
@@ -881,9 +887,9 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _penv = pstaterobot->GetEnv();
 
     _envupdates = envupdates;
-    //if (_envupdates){
+    if (_envupdates){
     _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
-    //}
+    }
 
     std::vector<KinBodyPtr> vGrabbedBodies;
     _pstaterobot->GetGrabbed(vGrabbedBodies);
@@ -965,9 +971,6 @@ void ConfigurationCache::SetWeights(const std::vector<dReal>& weights)
 
 bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, CollisionReportPtr report, dReal distin)
 {
-
-    //int nc = _cachetree.GetNumNodes();
-    //RAVELOG_WARN_FORMAT("%d nodes\n",nc);
     if( !!report ) {
         if( !!report->plink2 && report->plink2->GetParent() == _pstaterobot ) {
             std::swap(report->plink1, report->plink2);
@@ -978,22 +981,57 @@ bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Col
     return ret==1;
 }
 
-int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
+int ConfigurationCache::GetNumKnownNodes() const
 {
     // slow implementation for now
-    _cachetree.Reset();
-    return 1;
-    /*std::vector<CacheTreeNodePtr> list;
-       _cachetree.GetNodeValuesList(list);
+    std::vector<CacheTreeNodePtr> list;
+    _cachetree.GetNodeValuesList(list);
 
-       int nremoved=0;
-       FOREACH(itnode, list){
-        if (((*itnode)->GetType() == CNT_Free)) { // todo, check overlap with linkspheres
-            _cachetree.RemoveNode((*itnode));
+    int nknown=0;
+    FOREACH(itnode, list){
+        if (((*itnode)->GetType() != CNT_Unknown) ) { // todo, check overlap with linkspheres
+            nknown += 1;
+        }
+    }
+    return nknown;
+}
+
+int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
+{
+
+    RAVELOG_WARN("Updating free confs\n");
+    // slow implementation for now
+    std::vector<CacheTreeNodePtr> list;
+    _cachetree.GetNodeValuesList(list);
+
+    int nremoved=0;
+    FOREACH(itnode, list){
+        if (((*itnode)->GetType() == CNT_Free) && ((*itnode) != _cachetree.GetRoot())) { // todo, check overlap with linkspheres
+            (*itnode)->SetType(CNT_Unknown);
+            //_cachetree.RemoveNode((*itnode));
             nremoved += 1;
         }
-       }
-       return nremoved;*/
+    }
+    return nremoved;
+}
+
+int ConfigurationCache::RemoveFreeConfigurations()
+{
+
+    RAVELOG_WARN("Removing free confs\n");
+    // slow implementation for now
+    std::vector<CacheTreeNodePtr> list;
+    _cachetree.GetNodeValuesList(list);
+
+    int nremoved=0;
+    FOREACH(itnode, list){
+        if (((*itnode)->GetType() == CNT_Free) && ((*itnode) != _cachetree.GetRoot())) { // todo, check overlap with linkspheres
+            //_cachetree.RemoveNode((*itnode));
+            (*itnode)->SetType(CNT_Unknown);
+            nremoved += 1;
+        }
+    }
+    return nremoved;
 }
 
 int ConfigurationCache::RemoveCollisionConfigurations()
@@ -1005,7 +1043,8 @@ int ConfigurationCache::RemoveCollisionConfigurations()
     int nremoved=0;
     FOREACH(itnode, list){
         if ((*itnode)->GetType() == CNT_Collision) {
-            _cachetree.RemoveNode((*itnode));
+            //_cachetree.RemoveNode((*itnode));
+            (*itnode)->SetType(CNT_Unknown);
             nremoved += 1;
         }
     }
@@ -1014,6 +1053,8 @@ int ConfigurationCache::RemoveCollisionConfigurations()
 
 int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
 {
+
+    RAVELOG_WARN("Updating collision confs\n");
     // slow implementation for now
     std::vector<CacheTreeNodePtr> list;
     _cachetree.GetNodeValuesList(list);
@@ -1021,7 +1062,8 @@ int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
     int nremoved=0;
     FOREACH(itnode, list){
         if (((*itnode)->GetType() == CNT_Collision) && (pbody == (*itnode)->GetCollidingLink()->GetParent())) {
-            _cachetree.RemoveNode((*itnode));
+            //_cachetree.RemoveNode((*itnode));
+            (*itnode)->SetType(CNT_Unknown);
             nremoved += 1;
         }
     }
@@ -1089,6 +1131,7 @@ int ConfigurationCache::CheckCollision(KinBody::LinkConstPtr& robotlink, KinBody
 
 void ConfigurationCache::Reset()
 {
+    RAVELOG_WARN("Resetting cache\n");
     _cachetree.Reset();
 }
 
@@ -1100,34 +1143,29 @@ bool ConfigurationCache::Validate()
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
-    /*if(_envupdates){
-        UpdateFreeConfigurations(pbody);
+    if(_envupdates){
+        RAVELOG_WARN_FORMAT("%s %s","Updating untracked bodies"%pbody->GetName());
+        RemoveFreeConfigurations();
         UpdateCollisionConfigurations(pbody);
-       }*/
-    //if (_envupdates){
-    _cachetree.Reset();
-    //}
-    if (_envupdates) {
-        _cachetree.Reset();
     }
 }
 
 void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
 {
-    //int nc = _cachetree.GetNumNodes();
-    //RAVELOG_WARN_FORMAT("%d nodes\n",nc);
+
     if( action == 1 ) {
         if (_envupdates) {
+            RAVELOG_WARN_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
             // invalidate the freespace of a cache given a new body in the scene
-            UpdateFreeConfigurations(pbody);
+            RemoveFreeConfigurations();
         }
         KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
         pinfo->_changehandle = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, pbody));
         pbody->SetUserData(_userdatakey, pinfo);
     }
     else if( action == 0 ) {
-
         if (_envupdates) {
+            RAVELOG_WARN_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
             // remove all configurations that collide with this body
             UpdateCollisionConfigurations(pbody);
         }
@@ -1137,6 +1175,8 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
 
 void ConfigurationCache::_UpdateRobotJointLimits()
 {
+
+    RAVELOG_WARN("Updating robot joint limits\n");
     _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
     _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
 
@@ -1156,7 +1196,9 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 
 void ConfigurationCache::_UpdateRobotGrabbed()
 {
-    _cachetree.Reset();
+    RAVELOG_WARN("Updating robot grabbed\n");
+    RemoveFreeConfigurations();
+    RemoveCollisionConfigurations();
 }
 
 }
