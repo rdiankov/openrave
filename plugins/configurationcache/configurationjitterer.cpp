@@ -529,7 +529,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 continue;
             }
             int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
-            BOOST_ASSERT(ret==1);
+            //BOOST_ASSERT(ret==1);
 
             _probot->SetActiveDOFValues(vnewdof);
 #ifdef _DEBUG

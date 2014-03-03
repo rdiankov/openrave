@@ -148,7 +148,7 @@ public:
         _selfcachedcollisionhits=clone->_selfcachedcollisionhits;
         _selfcachedfreehits = clone->_selfcachedfreehits;
 
-        RAVELOG_DEBUG_FORMAT("Cloning cache collision checker for %s", clone->_probot->GetName());
+        //RAVELOG_DEBUG("Cloning cache collision checker\n");
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody) {

@@ -399,7 +399,7 @@ public:
 
         _WriteTrajectory(ptraj,_cachednewspec, _vdata);
         // happens too often for debug message?
-        RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
+        //RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
         return PS_HasSolution;
     }
 

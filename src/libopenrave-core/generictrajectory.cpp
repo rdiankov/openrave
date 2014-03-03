@@ -205,7 +205,7 @@ public:
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
-        BOOST_ASSERT(time >= 0);
+        BOOST_ASSERT(time >= -g_fEpsilon);
         _ComputeInternal();
         _VerifySampling();
         data.resize(0);
