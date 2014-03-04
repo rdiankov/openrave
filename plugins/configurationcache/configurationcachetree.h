@@ -62,7 +62,11 @@ public:
 
     void SetType(ConfigurationNodeType conftype) {
         _conftype = conftype;
+        if (_conftype == CNT_Unknown){
+            _usenn = 0;
+        }
     }
+
 
     // returns closest distance to a configuration of the opposite type seen so far
 //    dReal GetUpperBound() const {

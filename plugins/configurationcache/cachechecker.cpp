@@ -440,12 +440,12 @@ protected:
         _cache->SetCollisionThresh(0.3);
         _cache->SetFreeSpaceThresh(0.3);
         _cache->SetInsertionDistanceMult(0.5);
-        _cache->SetBase(1.6);
+        _cache->SetBase(1.5);
 
-        _selfcache->SetCollisionThresh(0.3);
+        _selfcache->SetCollisionThresh(0.2);
         _selfcache->SetFreeSpaceThresh(0.3);
         _selfcache->SetInsertionDistanceMult(0.5);
-        _selfcache->SetBase(1.5);
+        _selfcache->SetBase(1.56);
     }
 
     void _InitializeCache()
