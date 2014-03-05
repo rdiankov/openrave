@@ -308,9 +308,11 @@ public:
         bool bHasAdded = false;
         boost::shared_ptr<PlannerBase> planner(_planner);
         PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
+        _vCurConfig.resize(_dof);
+        std::copy(pnode->q, pnode->q+_dof, _vCurConfig.begin());
         // extend
         for(int iter = 0; iter < 100; ++iter) {     // to avoid infinite loops
-            dReal fdist = _ComputeDistance(pnode->q, vTargetConfig);
+            dReal fdist = _ComputeDistance(&_vCurConfig[0], vTargetConfig);
             if( fdist > _fStepLength ) {
                 fdist = _fStepLength / fdist;
             }
@@ -322,10 +324,9 @@ public:
                 fdist = 1;
             }
 
-            _vNewConfig.resize(0);
-            _vNewConfig.insert(_vNewConfig.end(), pnode->q, pnode->q+_dof);
+            _vNewConfig = _vCurConfig;
             _vDeltaConfig = vTargetConfig;
-            params->_diffstatefn(_vDeltaConfig, VectorWrapper<dReal>(pnode->q, _dof));
+            params->_diffstatefn(_vDeltaConfig, _vCurConfig);
             for(int i = 0; i < _dof; ++i) {
                 _vDeltaConfig[i] *= fdist;
             }
@@ -343,7 +344,7 @@ public:
             }
 
             // it could be the case that the node didn't move anywhere, in which case we would go into an infinite loop
-            if( _ComputeDistance(pnode->q, _vNewConfig) <= dReal(0.01)*_fStepLength ) {
+            if( _ComputeDistance(&_vCurConfig[0], _vNewConfig) <= dReal(0.01)*_fStepLength ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -351,22 +352,26 @@ public:
             }
 
             if( _fromgoal ) {
-                if( params->CheckPathAllConstraints(_vNewConfig, VectorWrapper<dReal>(pnode->q, _dof), std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd) != 0 ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
             else {
-                if( params->CheckPathAllConstraints(VectorWrapper<dReal>(pnode->q, _dof), _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
 
-            pnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-            lastnode = pnode;
-            bHasAdded = true;
-            if( bOneStep ) {
-                return ET_Connected;
+            NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+            if( !!pnewnode ) {
+                pnode = pnewnode;
+                lastnode = pnode;
+                bHasAdded = true;
+                if( bOneStep ) {
+                    return ET_Connected;
+                }
             }
+            _vCurConfig.swap(_vNewConfig);
         }
 
         return bHasAdded ? ET_Sucess : ET_Failed;
@@ -641,6 +646,9 @@ private:
             _vCurrentLevelNodes[0].second = _ComputeDistance(_vCurrentLevelNodes[0].first->q, config);
             int nParentFound = _InsertRecursive(newnode, _vCurrentLevelNodes, _maxlevel, _fMaxLevelBound);
             BOOST_ASSERT(nParentFound!=0);
+            if( nParentFound < 0 ) {
+                return NodePtr();
+            }
         }
         //BOOST_ASSERT(Validate());
         return newnode;
@@ -674,6 +682,10 @@ private:
                             closestNodeInRange = itcurrentnode->first;
                             closestDist = itcurrentnode->second;
                         }
+                    }
+                    if ( (closestDist <= _mindistance) ) {
+                        // pretty close, so return as if node was added
+                        return -1;
                     }
                 }
                 if( itcurrentnode->second <= fLevelBound*_fBaseChildMult ) {
@@ -717,6 +729,10 @@ private:
                             closestNodeInRange = itcurrentnode->first;
                             closestDist = itcurrentnode->second;
                         }
+                    }
+                    if ( (closestDist < _mindistance) ) {
+                        // pretty close, so return as if node was added
+                        return -1;
                     }
                 }
             }
@@ -963,7 +979,7 @@ private:
     // cache
     vector<NodePtr> _vchildcache;
     set<NodePtr> _setchildcache;
-    vector<dReal> _vNewConfig, _vDeltaConfig;
+    vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
     mutable vector<dReal> _vTempConfig;
 
     mutable std::vector< std::pair<NodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;

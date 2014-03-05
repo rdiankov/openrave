@@ -1201,11 +1201,11 @@ void ConfigurationCache::_UpdateRobotGrabbed()
 
     if (newGrab){
         RAVELOG_WARN("Updating robot grabbed\n");
-        RemoveFreeConfigurations();
         FOREACH(newbody, _vnewgrabbedbodies){
             UpdateCollisionConfigurations((*newbody));
         }
         _setgrabbedbodies.insert(_vnewgrabbedbodies.begin(), _vnewgrabbedbodies.end());
+        RemoveFreeConfigurations();
     }
 }
 

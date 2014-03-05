@@ -706,7 +706,8 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
-        
+
+        _cache->Reset();
     }
 
     void _UpdateGrabbed()
