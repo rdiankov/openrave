@@ -438,7 +438,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         if( fBias > g_fEpsilon ) {
             fBias = RaveSqrt(fBias);
         }
-        
+
         uint64_t starttime = utils::GetNanoPerformanceTime();
         for(int iter = 0; iter < _maxiterations; ++iter) {
             if( bUsingBias && iter < (int)rayincs.size() ) {
@@ -453,7 +453,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( iter < nMaxIterRadiusThresh ) {
                     jitter = _maxjitter*dReal(iter)*imaxiterations;
                 }
-                
+
                 bool samplebiasdir = false;
                 bool samplenull = false;
                 bool sampledelta = false;
@@ -528,8 +528,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 _cachehit++;
                 continue;
             }
+
             int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
-            //BOOST_ASSERT(ret==1);
+            BOOST_ASSERT(ret==1);
 
             _probot->SetActiveDOFValues(vnewdof);
 #ifdef _DEBUG
@@ -635,7 +636,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         }
                     }
                 }
-                
+
                 _probot->SetActiveDOFValues(_newdof2);
                 if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report)) {
                     bCollision = true;
@@ -705,7 +706,7 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
-        _cache->Reset();
+        
     }
 
     void _UpdateGrabbed()
@@ -724,6 +725,8 @@ protected:
         for(size_t i = _probot->GetLinks().size(); i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
+
+        _SetCacheMaxDistance();
     }
 
     void _UpdateLimits()
@@ -734,6 +737,7 @@ protected:
         for(size_t i = 0; i < _range.size(); ++i) {
             _range[i] = _upper[i] - _lower[i];
         }
+       
         _SetCacheMaxDistance();
     }
 
@@ -742,7 +746,7 @@ protected:
     {
         dReal maxdistance=0;
         for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
-            dReal f = _maxjitter*2*_cache->GetWeights()[i];
+            dReal f = _range[i] * _cache->GetWeights()[i];//_maxjitter*2*_cache->GetWeights()[i];
             maxdistance += f*f;
         }
         maxdistance = RaveSqrt(maxdistance);

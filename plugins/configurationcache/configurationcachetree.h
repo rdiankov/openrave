@@ -127,6 +127,7 @@ typedef const CacheTreeNode* CacheTreeNodeConstPtr;
 class CacheTree
 {
 public:
+
     CacheTree(int statedof);
 
     virtual ~CacheTree();
@@ -172,7 +173,7 @@ public:
     /// \brief return the configuration values for all nodes in the tree
     void GetNodeValues(std::vector<dReal>& vals) const;
 
-    void GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals) const;
+    void GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals);
     // todo: take in information regarding what changed in the environment and update nodes accordingly (i.e., change nodes no longer known to be in collision to CNT_Unknown, remove nodes in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
     /// \brief update the tree when the environment changes
     void UpdateTree();
@@ -201,6 +202,15 @@ public:
 
     /// \brief for debug purposes, validates the tree
     bool Validate();
+
+    int RemoveCollisionConfigurations();
+
+    int RemoveFreeConfigurations();
+
+    int UpdateCollisionConfigurations(KinBodyPtr pbody);
+
+    int GetNumKnownNodes();
+
 
 private:
     /// \brief creates new node on the pool
@@ -337,7 +347,7 @@ public:
 
 
     /// \brief number of nodes with known type, i.e., != CT_Unknown
-    int GetNumKnownNodes() const;
+    int GetNumKnownNodes();
 
     /// \brief return configuration values for all nodes in the tree, calls cachetree's function
     void GetNodeValues(std::vector<dReal>& vals) const {
@@ -345,7 +355,7 @@ public:
     }
 
     /// \brief return nearest configuration and distance 
-    std::pair<std::vector<dReal>, dReal> FindNearestNode(const std::vector<dReal>& conf);
+    std::pair<std::vector<dReal>, dReal> FindNearestNode(const std::vector<dReal>& conf, dReal dist = 0.0);
 
     /// \brief return distance between two configurations as computed by the tree (for testing)
     dReal ComputeDistance(const std::vector<dReal>& qi, const std::vector<dReal>& qf) const {
@@ -446,8 +456,11 @@ private:
     std::vector<int> _vRobotActiveIndices;
     int _nRobotAffineDOF;
     Vector _vRobotRotationAxis;
-    std::set<KinBodyPtr> _setGrabbedBodies;
+    std::set<KinBodyPtr> _setgrabbedbodies;
+    std::vector<KinBodyPtr> _vnewgrabbedbodies;
+    std::vector<KinBodyPtr> _vnewenvbodies;
     std::vector<dReal> _upperlimit, _lowerlimit; //joint limits, used to calculate maxdistance
+    std::vector<CacheTreeNodePtr> _cachetreenodes;
 
     class KinBodyCachedData : public UserData
     {

@@ -404,6 +404,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
 
 int CacheTree::InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMinSeparationDist)
 {
+
     OPENRAVE_ASSERT_OP(cs.size(),==,_weights.size());
     CacheTreeNodePtr nodein = _CreateCacheTreeNode(cs, report);
     // if there is no root, make this the root, otherwise call the lowlevel  insert
@@ -463,6 +464,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
     int enclevel = _EncodeLevel(currentlevel);
     dReal fChildLevelBound2 = fLevelBound2*Sqr(_fBaseChildMult);
     dReal fEpsilon = g_fEpsilon*_maxdistance;
+
     if( enclevel < (int)_vsetLevelNodes.size() ) {
         // build the level below
         _vNextLevelNodes.resize(0);
@@ -483,7 +485,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
                         closestDist = itcurrentnode->second;
                     }
                 }
-                if( closestDist < fMinSeparationDist2 && (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
+                if( (closestDist < fMinSeparationDist2)  ){//&& (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()))  {
                     // pretty close, so return as if node was added
                     return -1;
                 }
@@ -530,7 +532,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
                         closestDist = itcurrentnode->second;
                     }
                 }
-                if( closestDist < fMinSeparationDist2 && (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
+                if( (closestDist < fMinSeparationDist2 ) ){//&& (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
                     // pretty close, so return as if node was added
                     return -1;
                 }
@@ -544,6 +546,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
 
     _InsertDirectly(nodein, closestNodeInRange, closestDist, currentlevel-1, fLevelBound2*_fBaseInv2);
     _numnodes += 1;
+    
     return 1;
 }
 
@@ -766,17 +769,74 @@ void CacheTree::GetNodeValues(std::vector<dReal>& vals) const
     }
 }
 
-void CacheTree::GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals) const
+void CacheTree::GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals)
 {
     lvals.resize(0);
-    FOREACH(itlevelnodes, _vsetLevelNodes) {
-        lvals.insert(lvals.end(), itlevelnodes->begin(), itlevelnodes->end());
+    if (_numnodes > 0){
+        FOREACH(itlevelnodes, _vsetLevelNodes) {
+            lvals.insert(lvals.end(), itlevelnodes->begin(), itlevelnodes->end());
+        }
     }
 }
-
-void CacheTree::UpdateTree()
+int CacheTree::RemoveCollisionConfigurations()
 {
 
+    int nremoved=0;
+    if (_numnodes > 0){
+        FOREACH(itlevelnodes, _vsetLevelNodes) {
+            FOREACH(itnode, *itlevelnodes) {
+                (*itnode)->SetType(CNT_Unknown);
+                nremoved += 1;
+            }
+        }
+    }
+    return nremoved;
+}
+
+int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
+{
+    int nremoved=0;
+    if (_numnodes > 0){
+        FOREACH(itlevelnodes, _vsetLevelNodes) {
+            FOREACH(itnode, *itlevelnodes) {
+
+                if (((*itnode)->GetType() == CNT_Collision) && (pbody == (*itnode)->GetCollidingLink()->GetParent())) {
+                    (*itnode)->SetType(CNT_Unknown);
+                    nremoved += 1;
+                }
+            }
+        }
+    }
+    return nremoved;
+}
+
+int CacheTree::RemoveFreeConfigurations() //todo only remove those with overlaping linkspheres
+{
+    int nremoved=0;
+    if (_numnodes > 0){
+        FOREACH(itlevelnodes, _vsetLevelNodes) {
+            FOREACH(itnode, *itlevelnodes) {
+                if (((*itnode)->GetType() == CNT_Free)) {
+                    (*itnode)->SetType(CNT_Unknown);
+                    nremoved += 1;
+                }
+            }
+        }
+    }
+    return nremoved;
+}
+
+int CacheTree::GetNumKnownNodes()
+{
+    int nknown=0;
+    FOREACH(itlevelnodes, _vsetLevelNodes) {
+        FOREACH(itnode, *itlevelnodes) {
+            if (((*itnode)->GetType() != CNT_Unknown) ) {
+                nknown += 1;
+            }
+        }
+    }
+    return nknown;
 }
 
 bool CacheTree::Validate()
@@ -886,23 +946,24 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _penv = pstaterobot->GetEnv();
 
     _envupdates = envupdates;
-    if (_envupdates){
-    _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
 
-        std::vector<KinBodyPtr> vGrabbedBodies;
-        _pstaterobot->GetGrabbed(vGrabbedBodies);
-        _setGrabbedBodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
-        std::vector<KinBodyPtr> vnewenvbodies;
-        _penv->GetBodies(vnewenvbodies);
-        FOREACHC(itbody, vnewenvbodies) {
+    std::vector<KinBodyPtr> vGrabbedBodies;
+    _pstaterobot->GetGrabbed(vGrabbedBodies);
+    _setgrabbedbodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
+
+    if (_envupdates){
+        _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
+
+        _penv->GetBodies(_vnewenvbodies);
+        FOREACHC(itbody, _vnewenvbodies) {
             if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
                 KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
                 pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
                 (*itbody)->SetUserData(_userdatakey, pinfo);
             }
         }
-    }
 
+    }
     _vRobotActiveIndices = pstaterobot->GetActiveDOFIndices();
     _nRobotAffineDOF = pstaterobot->GetAffineDOF();
     _vRobotRotationAxis = pstaterobot->GetAffineRotationAxis();
@@ -943,7 +1004,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     if (IS_DEBUGLEVEL(Level_Debug)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        ss << "Initializing cache,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";
+        ss << "Initializing cache";/*,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";*/
         for (size_t i = 0; i < vweights.size(); ++i) {
             ss << vweights[i] << " ";
         }
@@ -980,87 +1041,24 @@ bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Col
     return ret==1;
 }
 
-int ConfigurationCache::GetNumKnownNodes() const
+int ConfigurationCache::GetNumKnownNodes()
 {
-    // slow implementation for now
-    std::vector<CacheTreeNodePtr> list;
-    _cachetree.GetNodeValuesList(list);
-
-    int nknown=0;
-    FOREACH(itnode, list){
-        if (((*itnode)->GetType() != CNT_Unknown) ) { // todo, check overlap with linkspheres
-            nknown += 1;
-        }
-    }
-    return nknown;
-}
-
-int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
-{
-    // slow implementation for now
-    std::vector<CacheTreeNodePtr> list;
-    _cachetree.GetNodeValuesList(list);
-
-    int nremoved=0;
-    FOREACH(itnode, list){
-        if (((*itnode)->GetType() == CNT_Free) && ((*itnode) != _cachetree.GetRoot())) { // todo, check overlap with linkspheres
-            (*itnode)->SetType(CNT_Unknown);
-            //_cachetree.RemoveNode((*itnode));
-            nremoved += 1;
-        }
-    }
-    return nremoved;
-}
-
-int ConfigurationCache::RemoveFreeConfigurations()
-{
-    // slow implementation for now
-    std::vector<CacheTreeNodePtr> list;
-    _cachetree.GetNodeValuesList(list);
-
-    int nremoved=0;
-    FOREACH(itnode, list){
-        if (((*itnode)->GetType() == CNT_Free) && ((*itnode) != _cachetree.GetRoot())) { // todo, check overlap with linkspheres
-            //_cachetree.RemoveNode((*itnode));
-            (*itnode)->SetType(CNT_Unknown);
-            nremoved += 1;
-        }
-    }
-    return nremoved;
+    return _cachetree.GetNumKnownNodes(); 
 }
 
 int ConfigurationCache::RemoveCollisionConfigurations()
 {
-    // slow implementation for now
-    std::vector<CacheTreeNodePtr> list;
-    _cachetree.GetNodeValuesList(list);
-
-    int nremoved=0;
-    FOREACH(itnode, list){
-        if ((*itnode)->GetType() == CNT_Collision) {
-            //_cachetree.RemoveNode((*itnode));
-            (*itnode)->SetType(CNT_Unknown);
-            nremoved += 1;
-        }
-    }
-    return nremoved;
+    return _cachetree.RemoveCollisionConfigurations();
 }
 
 int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
 {
-    // slow implementation for now
-    std::vector<CacheTreeNodePtr> list;
-    _cachetree.GetNodeValuesList(list);
+    return _cachetree.UpdateCollisionConfigurations(pbody);
+}
 
-    int nremoved=0;
-    FOREACH(itnode, list){
-        if (((*itnode)->GetType() == CNT_Collision) && (pbody == (*itnode)->GetCollidingLink()->GetParent())) {
-            //_cachetree.RemoveNode((*itnode));
-            (*itnode)->SetType(CNT_Unknown);
-            nremoved += 1;
-        }
-    }
-    return nremoved;
+int ConfigurationCache::RemoveFreeConfigurations()
+{
+    return _cachetree.RemoveFreeConfigurations();
 }
 
 int ConfigurationCache::RemoveConfigurations(const std::vector<dReal>& cs, dReal radius, ConfigurationNodeType conftype)
@@ -1105,9 +1103,9 @@ int ConfigurationCache::CheckCollision(const std::vector<dReal>& conf, KinBody::
     return -1;
 }
 
-std::pair<std::vector<dReal>, dReal> ConfigurationCache::FindNearestNode(const std::vector<dReal>& conf)
+std::pair<std::vector<dReal>, dReal> ConfigurationCache::FindNearestNode(const std::vector<dReal>& conf, dReal dist)
 {
-    std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf, 0, CNT_Any);
+    std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf, dist, CNT_Any);
 
     if( !!knn.first ) {
         return make_pair(std::vector<dReal>(knn.first->GetConfigurationState(), knn.first->GetConfigurationState()+_lowerlimit.size()), knn.second);
@@ -1189,9 +1187,26 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 
 void ConfigurationCache::_UpdateRobotGrabbed()
 {
-    RAVELOG_WARN("Updating robot grabbed\n");
-    RemoveFreeConfigurations();
-    RemoveCollisionConfigurations();
+
+    bool newGrab = false;
+    _pstaterobot->GetGrabbed(_vnewgrabbedbodies);
+    FOREACH(oldbody, _setgrabbedbodies){
+        FOREACH(newbody, _vnewgrabbedbodies){
+            if ((*oldbody) != (*newbody)){
+                newGrab = true;
+                break;
+            }
+        }
+    }
+
+    if (newGrab){
+        RAVELOG_WARN("Updating robot grabbed\n");
+        RemoveFreeConfigurations();
+        FOREACH(newbody, _vnewgrabbedbodies){
+            UpdateCollisionConfigurations((*newbody));
+        }
+        _setgrabbedbodies.insert(_vnewgrabbedbodies.begin(), _vnewgrabbedbodies.end());
+    }
 }
 
 }

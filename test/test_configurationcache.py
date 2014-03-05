@@ -94,7 +94,35 @@ class TestConfigurationCache(EnvironmentSetup):
         assert(float(numspurious)/float(numtests)<=0.06)
         assert(float(nummisses)/float(numtests)>0.1) # space is pretty big
         assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
-        
+       
+    def test_find_insert(self):
+
+        self.LoadEnv('data/lab1.env.xml')
+        env=self.env
+        robot=env.GetRobots()[0]
+        robot.SetActiveDOFs(range(7))
+        cache=self.openravepy_configurationcache.ConfigurationCache(robot)
+        cache.SetFreeSpaceThresh(1)
+        values = robot.GetActiveDOFValues()
+        inserted = cache.InsertConfiguration(values, None)
+        sampler = RaveCreateSpaceSampler(env, u'MT19937')
+        sampler.SetSpaceDOF(robot.GetActiveDOF())
+        with env:
+             self.log.info('testing exhaustive insertion...')
+             for iter in range(0, 1000000):
+                 if iter%1==0:
+                     self.log.info('%d valid insertions %d nodes...',iter,cache.GetNumNodes())
+
+                 samplevalues = 0.3*(sampler.SampleSequence(SampleDataType.Real,1)-0.5)
+                 nn = cache.FindNearestNode(samplevalues, 4)
+                 if nn is None:
+                     cache.SetFreeSpaceThresh(8)
+                     inserted = cache.InsertConfigurationDist(samplevalues, None, 1)
+                     assert(inserted == 1)
+                     cache.SetFreeSpaceThresh(1)
+
+             self.log.info('exhaustive insertion test passed')
+
     def test_updates(self):
         env = self.env
         with env:
