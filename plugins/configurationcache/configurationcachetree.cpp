@@ -462,7 +462,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
     CacheTreeNodePtr closestNodeInRange=NULL; /// one of the nodes in vCurrentLevelNodes such that its distance to nodein is <= fLevelBound
     int enclevel = _EncodeLevel(currentlevel);
     dReal fChildLevelBound2 = fLevelBound2*Sqr(_fBaseChildMult);
-    dReal fEpsilon = g_fEpsilon*_maxdistance;
+    dReal fEpsilon = g_fEpsilon*_maxdistance; // min distance
     if( enclevel < (int)_vsetLevelNodes.size() ) {
         // build the level below
         _vNextLevelNodes.resize(0);
@@ -550,7 +550,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
 bool CacheTree::_InsertDirectly(CacheTreeNodePtr nodein, CacheTreeNodePtr parentnode, dReal parentdist, int maxinsertlevel, dReal fInsertLevelBound2)
 {
     int insertlevel = maxinsertlevel;
-    dReal fEpsilon = g_fEpsilon*_maxdistance;
+    dReal fEpsilon = g_fEpsilon*_maxdistance; // min distance
     if( parentdist <= fEpsilon ) {
         // pretty close, so notify parent that there's a similar child already underneath it
         if( parentnode->_hasselfchild ) {
@@ -685,7 +685,7 @@ bool CacheTree::_Remove(CacheTreeNodePtr removenode, std::vector< std::vector<Ca
     bool bRemoved = _Remove(removenode, vvCoverSetNodes, currentlevel-1, fLevelBound2*_fBaseInv2);
 
     if( !bRemoved && removenode->_level == currentlevel && find(vvCoverSetNodes.at(coverindex-1).begin(), vvCoverSetNodes.at(coverindex-1).end(), removenode) != vvCoverSetNodes.at(coverindex-1).end() ) {
-        dReal fEpsilon = g_fEpsilon*_maxdistance;
+        dReal fEpsilon = g_fEpsilon*_maxdistance; // min distance
         // for each child, find a more suitable parent
         FOREACH(itchild, removenode->_vchildren) {
             int parentlevel = currentlevel;
@@ -795,7 +795,7 @@ bool CacheTree::Validate()
     std::map<CacheTreeNodePtr, CacheTreeNodePtr> mapNodeParents;
     size_t nallchildren = 0;
     size_t numnodes = 0;
-    dReal fEpsilon = g_fEpsilon*_maxdistance;
+    dReal fEpsilon = g_fEpsilon*_maxdistance; // min distance
     for(int currentlevel = _maxlevel; currentlevel >= _minlevel; --currentlevel, fLevelBound *= _fBaseInv ) {
         int enclevel = _EncodeLevel(currentlevel);
         if( enclevel >= (int)_vsetLevelNodes.size() ) {
