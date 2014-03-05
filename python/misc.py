@@ -605,14 +605,18 @@ class SpaceSamplerExtra:
         if boxdims[maxaxis] > meddimdist:
             # have to copy across the max dimension
             numfullcopies = numpy.floor(boxdims[maxaxis]/meddimdist)
-            oldpts = pts
-            pts = numpy.array(oldpts)
-            for i in range(int(numfullcopies)-1):
-                oldpts[:,maxaxis] += meddimdist
-                pts = numpy.r_[pts,oldpts]
-            if boxdims[maxaxis]/meddimdist > numfullcopies:
-                oldpts[:,maxaxis] += meddimdist
-                pts = numpy.r_[pts,oldpts[oldpts[:,maxaxis]<=boxdims[maxaxis],:]]
+            if len(pts) > 0:
+                oldpts = pts
+                pts = numpy.array(oldpts)
+                for i in range(int(numfullcopies)-1):
+                    oldpts[:,maxaxis] += meddimdist
+                    pts = numpy.r_[pts,oldpts]
+                if boxdims[maxaxis]/meddimdist > numfullcopies:
+                    oldpts[:,maxaxis] += meddimdist
+                    pts = numpy.r_[pts,oldpts[oldpts[:,maxaxis]<=boxdims[maxaxis],:]]
+            else:
+                # sample the center
+                pts = numpy.array([[0.0,0.0,0.0]])
         return pts
 
 def CompareBodies(body0,body1,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=True,comparephysics=True,computeadjacent=True,epsilon=1e-10):
