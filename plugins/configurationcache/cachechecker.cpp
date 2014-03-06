@@ -24,6 +24,8 @@ public:
     {
         RegisterCommand("TrackRobotState",boost::bind(&CacheCollisionChecker::_TrackRobotStateCommand,this,_1,_2),
                         "set up the cache to track a body state. [bodyname affinedofs]");
+        RegisterCommand("GetTrackedRobot",boost::bind(&CacheCollisionChecker::_GetTrackedRobotCommand,this,_1,_2),
+                        "get the robot being tracked by the collisionchecker");
         RegisterCommand("GetCacheStatistics",boost::bind(&CacheCollisionChecker::_GetCacheStatisticsCommand,this,_1,_2),
                         "get the cache statistics: cachecollisions, cachehits");
         RegisterCommand("GetSelfCacheStatistics",boost::bind(&CacheCollisionChecker::_GetSelfCacheStatisticsCommand,this,_1,_2),
@@ -40,9 +42,9 @@ public:
                         "reset collision cache");
         RegisterCommand("ResetSelfCache",boost::bind(&CacheCollisionChecker::_ResetSelfCacheCommand,this,_1,_2),
                         "reset self collision cache");
-        RegisterCommand("UpdateCollisionConfigurations",boost::bind(&CacheCollisionChecker::_UpdateCollisionConfigurations,this,_1,_2),
+        RegisterCommand("UpdateCollisionConfigurations",boost::bind(&CacheCollisionChecker::_UpdateCollisionConfigurationsCommand,this,_1,_2),
                         "remove all nodes in collision with this body. [bodyname]");
-        RegisterCommand("UpdateFreeConfigurations",boost::bind(&CacheCollisionChecker::_UpdateFreeConfigurations,this,_1,_2),
+        RegisterCommand("UpdateFreeConfigurations",boost::bind(&CacheCollisionChecker::_UpdateFreeConfigurationsCommand,this,_1,_2),
                         "remove all free nodes that overlap with this body. [bodyname]");
 
         std::string collisionname="ode";
@@ -86,12 +88,14 @@ public:
     virtual void SetGeometryGroup(const std::string& groupname)
     {
         // reset cache if geometry group is different
-        if( groupname != _pintchecker->GetGeometryGroup() ) {
+        if(  groupname != _pintchecker->GetGeometryGroup() ) {
             if( !!_cache ) {
                 _cache->Reset();
+                //_cache.reset(new ConfigurationCache(GetRobot()));
             }
             if( !!_selfcache) {
                 _selfcache->Reset();
+                //_selfcache.reset(new ConfigurationCache(GetRobot(),false));
             }
         }
         _pintchecker->SetGeometryGroup(groupname);
@@ -199,6 +203,7 @@ public:
         bool col = _pintchecker->CheckCollision(pbody1, report);
         _cache->GetDOFValues(_dofvals);
         _cache->InsertConfiguration(_dofvals, !col ? CollisionReportPtr() : report, closestdist);
+
         return col;
     }
 
@@ -257,6 +262,10 @@ public:
         dReal closestdist=0;
         int ret = _selfcache->CheckCollision(robotlink, collidinglink, closestdist);
 
+        /*stringstream sout;
+        sout << _probot->GetName() << " (self) " << _selfcachedcollisionchecks << " " << _selfcachedcollisionhits << " " << _selfcachedfreehits << " " << _selfcache->GetNumKnownNodes();
+        RAVELOG_WARN(sout.str());*/
+
         ++_selfcachedcollisionchecks;
         if( ret == 1 ) {
             ++_selfcachedcollisionhits;
@@ -280,7 +289,8 @@ public:
         }
         bool col = _pintchecker->CheckStandaloneSelfCollision(pbody, report);
         _selfcache->GetDOFValues(_dofvals);
-        _selfcache->InsertConfiguration(_dofvals, !col ? CollisionReportPtr() : report, closestdist);
+        _selfcache->InsertConfiguration(_dofvals, !col ? CollisionReportPtr() : report, closestdist); 
+
         return col;
     }
 
@@ -300,6 +310,7 @@ protected:
         if( !_probot ) {
             return false;
         }
+
         // always recreate?
         _cache.reset(new ConfigurationCache(_probot));
         _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
@@ -402,7 +413,7 @@ protected:
         return true;
     }
 
-    virtual bool _UpdateCollisionConfigurations(std::ostream& sout, std::istream& sinput)
+    virtual bool _UpdateCollisionConfigurationsCommand(std::ostream& sout, std::istream& sinput)
     {
         string bodyname;
         sinput >> bodyname;
@@ -412,7 +423,7 @@ protected:
 
     }
 
-    virtual bool _UpdateFreeConfigurations(std::ostream& sout, std::istream& sinput)
+    virtual bool _UpdateFreeConfigurationsCommand(std::ostream& sout, std::istream& sinput)
     {
         string bodyname;
         sinput >> bodyname;
@@ -420,6 +431,20 @@ protected:
         _cache->UpdateFreeConfigurations(GetEnv()->GetKinBody(bodyname));
         return true;
 
+    }
+
+    virtual bool _GetTrackedRobotCommand(std::ostream& sout, std::istream& sinput)
+    {
+        GetRobot();
+
+        if (!!_probot){
+            sout << _probot->GetName();
+        }
+        else{
+            sout << " ";
+        }
+
+        return true;
     }
 
     RobotBasePtr GetRobot()
@@ -437,13 +462,13 @@ protected:
     // for testing, will remove soon (cloning collision checkers resets all parameters)
     void _SetParams()
     {
-        _cache->SetCollisionThresh(0.3);
-        _cache->SetFreeSpaceThresh(0.3);
+        _cache->SetCollisionThresh(0.2);
+        _cache->SetFreeSpaceThresh(0.4);
         _cache->SetInsertionDistanceMult(0.5);
-        _cache->SetBase(1.5);
+        _cache->SetBase(1.6);
 
         _selfcache->SetCollisionThresh(0.2);
-        _selfcache->SetFreeSpaceThresh(0.3);
+        _selfcache->SetFreeSpaceThresh(0.4);
         _selfcache->SetInsertionDistanceMult(0.5);
         _selfcache->SetBase(1.56);
     }
