@@ -596,7 +596,7 @@ private:
         }
         while(_vCurrentLevelNodes.size() > 0 ) {
             _vNextLevelNodes.resize(0);
-            RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
+            //RAVELOG_VERBOSE_FORMAT("level %d (%f) has %d nodes", currentlevel%fLevelBound%_vCurrentLevelNodes.size());
             dReal minchilddist=std::numeric_limits<dReal>::infinity();
             FOREACH(itcurrentnode, _vCurrentLevelNodes) {
                 // only take the children whose distances are within the bound

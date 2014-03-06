@@ -706,7 +706,7 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
-        
+        _cache->Reset(); // need this here in order to invalidate cache.
     }
 
     void _UpdateGrabbed()
@@ -734,10 +734,11 @@ protected:
         _probot->SetActiveDOFs(_vActiveIndices, _nActiveAffineDOFs, _vActiveAffineAxis);
         _probot->GetActiveDOFLimits(_lower, _upper);
         _range.resize(_lower.size());
+        // even though jitter is limited, if bias is enabled
         for(size_t i = 0; i < _range.size(); ++i) {
             _range[i] = _upper[i] - _lower[i];
         }
-       
+
         _SetCacheMaxDistance();
     }
 
@@ -746,7 +747,7 @@ protected:
     {
         dReal maxdistance=0;
         for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
-            dReal f = _range[i] * _cache->GetWeights()[i];//_maxjitter*2*_cache->GetWeights()[i];
+            dReal f = _range[i] * _cache->GetWeights()[i];
             maxdistance += f*f;
         }
         maxdistance = RaveSqrt(maxdistance);
