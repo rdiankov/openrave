@@ -1363,7 +1363,7 @@ class IKFastSolver(AutoReloader):
         else:
             neweq=eq
         return neweq
-
+    
     def normalizeRotation(self,M):
         """error from openrave can be on the order of 1e-6 (especially if they are defined diagonal to some axis)
         """
@@ -1382,7 +1382,7 @@ class IKFastSolver(AutoReloader):
             M[3,i] = S.Zero
         M[3,3] = S.One
         return M
-
+    
     def GetMatrixFromNumpy(self,T):
         return Matrix(4,4,[x for x in T.flat])
     
@@ -1430,15 +1430,18 @@ class IKFastSolver(AutoReloader):
                 M[i,3] = self.convertRealToRational(T[i,3],self.precision)
             return M
         
-        return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
-
+        if isinstance(T, Matrix):
+            return self.normalizeRotation(Matrix(4,4,[x for x in T]))
+        else:
+            return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
+        
     def numpyVectorToSympy(self,v,precision=None):
         return Matrix(len(v),1,[self.convertRealToRational(x,precision) for x in v])
-
+    
     @staticmethod
     def rodrigues(axis, angle):
         return IKFastSolver.rodrigues2(axis,cos(angle),sin(angle))
-
+    
     @staticmethod
     def GetMatrixFromQuat(quat):
         """quaternion is [cos(angle/2), v*sin(angle/2)]

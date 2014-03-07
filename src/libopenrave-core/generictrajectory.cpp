@@ -174,7 +174,7 @@ public:
         BOOST_ASSERT(_timeoffset>=0);
         BOOST_ASSERT(time >= 0);
         _ComputeInternal();
-        if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             _VerifySampling();
         }
         data.resize(0);
