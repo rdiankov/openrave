@@ -40,6 +40,8 @@ public:
     /// \param report assumes in the report, plink1 is the robot and plink2 is the colliding link
     void SetCollisionInfo(CollisionReportPtr report);
 
+    void SetCollisionInfo(int index, int type);
+
     inline KinBody::LinkConstPtr GetCollidingLink() const {
         return _collidinglink;
     }
@@ -67,6 +69,21 @@ public:
         }
     }
 
+    int GetNumChildren() {
+        return _vchildren.size();
+    }
+
+    int16_t GetLevel(){
+        return _level;
+    }
+
+    uint8_t HasSelfChild(){
+        return _hasselfchild;
+    }
+
+    uint8_t IsNN(){
+        return _usenn;
+    }
 
     // returns closest distance to a configuration of the opposite type seen so far
 //    dReal GetUpperBound() const {
@@ -95,7 +112,8 @@ protected:
     int16_t _level; ///< the level the node belongs to
     uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
     uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
-    
+    uint8_t index;
+
     // managed by pool
 #ifdef _DEBUG
     int id;
@@ -211,6 +229,9 @@ public:
 
     int GetNumKnownNodes();
 
+    int SaveCache(std::string filename);
+
+    int LoadCache(std::string filename);
 
 private:
     /// \brief creates new node on the pool
@@ -263,7 +284,7 @@ private:
     }
 
     std::vector<dReal> _weights; ///< weights used by the distance function
-
+    std::vector<dReal> _curconf;
     //CacheTreeNodePtr _root; // root node
     std::vector< std::set<CacheTreeNodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
@@ -276,6 +297,7 @@ private:
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
     int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
+    int _nodeindex;
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
     // cache cache
@@ -427,6 +449,16 @@ public:
     void UpdateCollisionNodes(KinBodyPtr pbody)
     {
         _cachetree.UpdateCollisionNodes(pbody);
+    }
+
+    void SaveCache(std::string filename)
+    {
+        _cachetree.SaveCache(filename);
+    }
+
+    void LoadCache(std::string filename)
+    {
+        _cachetree.LoadCache(filename);
     }
 
 private:

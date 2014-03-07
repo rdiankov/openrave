@@ -46,6 +46,10 @@ public:
                         "remove all nodes in collision with this body. [bodyname]");
         RegisterCommand("UpdateFreeConfigurations",boost::bind(&CacheCollisionChecker::_UpdateFreeConfigurationsCommand,this,_1,_2),
                         "remove all free nodes that overlap with this body. [bodyname]");
+        RegisterCommand("SaveCache",boost::bind(&CacheCollisionChecker::_SaveCacheCommand,this,_1,_2),
+                        "save self collision cache");
+        RegisterCommand("LoadCache",boost::bind(&CacheCollisionChecker::_LoadCacheCommand,this,_1,_2),
+                        "load self collision cache");
 
         std::string collisionname="ode";
         sinput >> collisionname;
@@ -262,10 +266,6 @@ public:
         dReal closestdist=0;
         int ret = _selfcache->CheckCollision(robotlink, collidinglink, closestdist);
 
-        /*stringstream sout;
-        sout << _probot->GetName() << " (self) " << _selfcachedcollisionchecks << " " << _selfcachedcollisionhits << " " << _selfcachedfreehits << " " << _selfcache->GetNumKnownNodes();
-        RAVELOG_WARN(sout.str());*/
-
         ++_selfcachedcollisionchecks;
         if( ret == 1 ) {
             ++_selfcachedcollisionhits;
@@ -444,6 +444,21 @@ protected:
             sout << " ";
         }
 
+        return true;
+    }
+
+    virtual bool _SaveCacheCommand(std::ostream& sout, std::istream& sinput)
+    {
+
+        _selfcache->SaveCache(GetRobot()->GetRobotStructureHash());
+        return true;
+    }
+
+
+    virtual bool _LoadCacheCommand(std::ostream& sout, std::istream& sinput)
+    {
+
+        _selfcache->LoadCache(GetRobot()->GetRobotStructureHash());
         return true;
     }
 

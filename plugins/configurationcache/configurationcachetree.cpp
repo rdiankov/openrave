@@ -13,9 +13,14 @@
 // limitations under the License.
 /// \author Alejandro Perez & Rosen Diankov
 #include "configurationcachetree.h"
-
 #include <sstream>
 #include <boost/lexical_cast.hpp>
+
+#include <boost/multi_array.hpp>
+#include <algorithm>
+
+using boost::multi_array;
+using boost::extents;
 
 namespace configurationcache {
 
@@ -64,6 +69,18 @@ void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
     }
 }
 
+void CacheTreeNode::SetCollisionInfo(int robotlinkindex, int type)
+{
+    _robotlinkindex = index;
+    if(type == 1) {
+        _conftype = CNT_Collision;
+    }
+
+    if(type == 2) {
+        _conftype = CNT_Free;
+    }
+}
+
 //void CacheTreeNode::UpdateApproximates(dReal distance, CacheTreeNodePtr v)
 //{
 //    // if both are same type, update nn
@@ -102,6 +119,7 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
 {
     OPENRAVE_ASSERT_OP((int)weights.size(),==,_statedof);
     Reset();
+    _nodeindex = 0;
     _weights = weights;
     _numnodes = 0;
     _base = 2.0; // optimal is 1.3?
@@ -153,6 +171,7 @@ CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, C
     newnode->id = s_CacheTreeId++;
 #endif
     newnode->SetCollisionInfo(report);
+    newnode->index = _nodeindex++;
     return newnode;
 }
 
@@ -171,6 +190,7 @@ CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
         clonenode->_collidinglinktrans = refnode->_collidinglinktrans;
         clonenode->_robotlinkindex = refnode->_robotlinkindex;
     }
+    clonenode->index = _nodeindex++;
     return clonenode;
 }
 
@@ -485,7 +505,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
                         closestDist = itcurrentnode->second;
                     }
                 }
-                if( (closestDist < fMinSeparationDist2)  ){//&& (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()))  {
+                if( (closestDist < fMinSeparationDist2)  ) { //&& (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()))  {
                     // pretty close, so return as if node was added
                     return -1;
                 }
@@ -532,7 +552,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
                         closestDist = itcurrentnode->second;
                     }
                 }
-                if( (closestDist < fMinSeparationDist2 ) ){//&& (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
+                if( (closestDist < fMinSeparationDist2 ) ) { //&& (!nodein->IsInCollision() || closestNodeInRange->IsInCollision()) ) {
                     // pretty close, so return as if node was added
                     return -1;
                 }
@@ -546,7 +566,7 @@ int CacheTree::_Insert(CacheTreeNodePtr nodein, const std::vector< std::pair<Cac
 
     _InsertDirectly(nodein, closestNodeInRange, closestDist, currentlevel-1, fLevelBound2*_fBaseInv2);
     _numnodes += 1;
-    
+
     return 1;
 }
 
@@ -772,7 +792,7 @@ void CacheTree::GetNodeValues(std::vector<dReal>& vals) const
 void CacheTree::GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals)
 {
     lvals.resize(0);
-    if (_numnodes > 0){
+    if (_numnodes > 0) {
         FOREACH(itlevelnodes, _vsetLevelNodes) {
             lvals.insert(lvals.end(), itlevelnodes->begin(), itlevelnodes->end());
         }
@@ -782,7 +802,7 @@ int CacheTree::RemoveCollisionConfigurations()
 {
 
     int nremoved=0;
-    if (_numnodes > 0){
+    if (_numnodes > 0) {
         FOREACH(itlevelnodes, _vsetLevelNodes) {
             FOREACH(itnode, *itlevelnodes) {
                 (*itnode)->SetType(CNT_Unknown);
@@ -793,10 +813,169 @@ int CacheTree::RemoveCollisionConfigurations()
     return nremoved;
 }
 
+int CacheTree::SaveCache(std::string filename)
+{
+    std::map<CacheTreeNodePtr, int> mapNodeIndices;
+    int index=0;
+    FOREACH(itlevelnodes, _vsetLevelNodes) {
+        FOREACH(itnode, *itlevelnodes) {
+            mapNodeIndices[*itnode] = index++;
+        }
+    }
+
+    FILE* pfile;
+    pfile = fopen(filename.c_str(),"wb");
+
+    fwrite(&_statedof, sizeof(_statedof), 1, pfile);
+
+    for (size_t i = 0; i < _weights.size(); ++i) {
+        fwrite(&_weights[i], sizeof(_weights[i]), 1, pfile);
+    }
+
+    fwrite(&_base, sizeof(_base), 1, pfile);
+    fwrite(&_fBaseInv2, sizeof(_fBaseInv2), 1, pfile);
+    fwrite(&_maxlevel, sizeof(_maxlevel), 1, pfile);
+    fwrite(&_minlevel, sizeof(_minlevel), 1, pfile);
+    fwrite(&_numnodes, sizeof(_numnodes), 1, pfile);
+    fwrite(&_fMaxLevelBound, sizeof(_fMaxLevelBound), 1, pfile);
+    
+    _curconf.resize(0);
+    FOREACH(itlevelnodes, _vsetLevelNodes) {
+        FOREACH(itnode, *itlevelnodes) {
+
+
+            int16_t level = (*itnode)->GetLevel();
+            fwrite(&level, sizeof(level), 1, pfile);
+
+            _curconf = std::vector<dReal>((*itnode)->GetConfigurationState(), (*itnode)->GetConfigurationState()+_statedof);
+            for (size_t i = 0; i < _curconf.size(); ++i) {
+                fwrite(&_curconf.at(i), sizeof(_curconf.at(i)), 1, pfile);
+            }
+
+            ConfigurationNodeType conftype = (*itnode)->GetType();
+            fwrite(&conftype, sizeof(conftype), 1, pfile);
+
+            if (!(*itnode)->GetCollidingLink()) {
+                int nolink = -1;
+                fwrite(&nolink, sizeof(nolink), 1, pfile);
+                fwrite(&nolink, sizeof(nolink), 1, pfile);
+            }
+            else{
+                int linkindex = (*itnode)->GetCollidingLink()->GetIndex();
+                fwrite(&linkindex, sizeof(linkindex), 1, pfile);
+
+                int robotlinkindex = (*itnode)->GetRobotLinkIndex();
+                fwrite(&robotlinkindex, sizeof(robotlinkindex), 1, pfile);
+            }
+
+            uint8_t hasselfchild, usenn;
+
+            hasselfchild = (*itnode)->HasSelfChild();
+            fwrite(&hasselfchild, sizeof(hasselfchild), 1, pfile);
+
+            usenn = (*itnode)->IsNN();
+            fwrite(&usenn, sizeof(usenn), 1, pfile);
+
+            int numchildren = (*itnode)->GetNumChildren();
+            fwrite(&numchildren, sizeof(numchildren), 1, pfile);
+
+            int cindex;
+            FOREACHC(itchild, (*itnode)->_vchildren) {
+                cindex = mapNodeIndices[*itchild];
+                fwrite(&cindex, sizeof(cindex), 1, pfile);
+            }
+        }
+    }
+
+    fclose(pfile);
+
+    return 1;
+}
+
+int CacheTree::LoadCache(std::string filename)
+{
+
+    Reset();
+
+    FILE* pfile = fopen(filename.c_str(),"rb");
+    size_t outs;
+
+    outs = fread(&_statedof, sizeof(_statedof), 1, pfile);
+
+    _weights.resize(_statedof,1.0);
+    _curconf.resize(_statedof,1.0);
+    Init(_weights,1);
+
+    for (int i = 0; i < _statedof; ++i) {
+        outs = fread(&_weights[i], sizeof(_weights[i]), 1, pfile);
+    }
+
+    outs = fread(&_base, sizeof(_base), 1, pfile);
+    outs = fread(&_fBaseInv2, sizeof(_fBaseInv2), 1, pfile);
+    outs = fread(&_maxlevel, sizeof(_maxlevel), 1, pfile);
+    outs = fread(&_minlevel, sizeof(_minlevel), 1, pfile);
+    outs = fread(&_numnodes, sizeof(_numnodes), 1, pfile);
+    outs = fread(&_fMaxLevelBound, sizeof(_fMaxLevelBound), 1, pfile);
+
+    int enclevel = _EncodeLevel(_maxlevel);
+    _vsetLevelNodes.resize(enclevel+1);
+
+    std::vector<CacheTreeNodePtr> vnodes(_numnodes);
+    std::vector<dReal> dummycs(_statedof);
+    for(int i = 0; i < _numnodes; ++i) {
+        vnodes[i] = _CreateCacheTreeNode(dummycs, CollisionReportPtr());
+    }
+
+    int16_t level;
+    int collidinglink, robotlinkindex;
+    uint8_t hasselfchild, isnn;
+    int numchildren;
+    ConfigurationNodeType type;
+
+    for (int inode = 0; inode < _numnodes; ++inode)
+    {
+       
+        outs = fread(&level, sizeof(level), 1, pfile);
+        for (int i = 0; i < _statedof; ++i) {
+            outs = fread(&_curconf.at(i), sizeof(_curconf.at(i)), 1, pfile);
+        }
+
+        outs = fread(&type, sizeof(type), 1, pfile);
+        outs = fread(&collidinglink, sizeof(collidinglink), 1, pfile);
+        outs = fread(&robotlinkindex, sizeof(robotlinkindex), 1, pfile);
+        outs = fread(&hasselfchild, sizeof(hasselfchild), 1, pfile);
+        outs = fread(&isnn, sizeof(isnn), 1, pfile);
+        outs = fread(&numchildren, sizeof(numchildren), 1, pfile);
+        
+        CacheTreeNodePtr newnode = vnodes.at(inode);
+        std::copy(_curconf.begin(), _curconf.end(), newnode->_pcstate);
+        newnode->_level = level;
+        newnode->_hasselfchild = hasselfchild;
+        newnode->_usenn = isnn;
+        newnode->SetCollisionInfo(robotlinkindex,type);
+
+        // create the copies of the children and insert them
+        for(int i = 0; i < numchildren; ++i) {
+            int childid;
+            outs = fread(&childid, sizeof(childid), 1, pfile);
+            newnode->_vchildren.push_back(vnodes.at(childid));
+        }
+
+        _vsetLevelNodes.at(_EncodeLevel(newnode->_level)).insert(newnode);
+    }
+
+    fclose(pfile);
+
+    int numloaded = GetNumKnownNodes();
+    _numnodes = numloaded;
+    RAVELOG_WARN_FORMAT("%d loaded\n",numloaded);
+    return 1;
+}
+
 int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
 {
     int nremoved=0;
-    if (_numnodes > 0){
+    if (_numnodes > 0) {
         FOREACH(itlevelnodes, _vsetLevelNodes) {
             FOREACH(itnode, *itlevelnodes) {
 
@@ -813,7 +992,7 @@ int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
 int CacheTree::RemoveFreeConfigurations() //todo only remove those with overlaping linkspheres
 {
     int nremoved=0;
-    if (_numnodes > 0){
+    if (_numnodes > 0) {
         FOREACH(itlevelnodes, _vsetLevelNodes) {
             FOREACH(itnode, *itlevelnodes) {
                 if (((*itnode)->GetType() == CNT_Free)) {
@@ -846,7 +1025,8 @@ bool CacheTree::Validate()
     }
 
     if( _vsetLevelNodes.at(_EncodeLevel(_maxlevel)).size() != 1 ) {
-        RAVELOG_WARN("more than 1 root node\n");
+        int nroots = _vsetLevelNodes.at(_EncodeLevel(_maxlevel)).size();
+        RAVELOG_WARN_FORMAT("more than 1 root node (%d)\n",nroots);
         return false;
     }
 
@@ -951,7 +1131,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _pstaterobot->GetGrabbed(vGrabbedBodies);
     _setgrabbedbodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
 
-    if (_envupdates){
+    if (_envupdates) {
         _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
 
         _penv->GetBodies(_vnewenvbodies);
@@ -1004,7 +1184,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     if (IS_DEBUGLEVEL(Level_Debug)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        ss << "Initializing cache";/*,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";*/
+        ss << "Initializing cache"; /*,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";*/
         for (size_t i = 0; i < vweights.size(); ++i) {
             ss << vweights[i] << " ";
         }
@@ -1043,7 +1223,7 @@ bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, Col
 
 int ConfigurationCache::GetNumKnownNodes()
 {
-    return _cachetree.GetNumKnownNodes(); 
+    return _cachetree.GetNumKnownNodes();
 }
 
 int ConfigurationCache::RemoveCollisionConfigurations()
@@ -1134,7 +1314,7 @@ bool ConfigurationCache::Validate()
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
-    if(_envupdates){
+    if(_envupdates) {
         RAVELOG_WARN_FORMAT("%s %s","Updating untracked bodies"%pbody->GetName());
         RemoveFreeConfigurations();
         UpdateCollisionConfigurations(pbody);
@@ -1192,14 +1372,14 @@ void ConfigurationCache::_UpdateRobotGrabbed()
     _pstaterobot->GetGrabbed(_vnewgrabbedbodies);
     FOREACH(oldbody, _setgrabbedbodies){
         FOREACH(newbody, _vnewgrabbedbodies){
-            if ((*oldbody) != (*newbody)){
+            if ((*oldbody) != (*newbody)) {
                 newGrab = true;
                 break;
             }
         }
     }
 
-    if (newGrab){
+    if (newGrab) {
         RAVELOG_WARN("Updating robot grabbed\n");
         FOREACH(newbody, _vnewgrabbedbodies){
             UpdateCollisionConfigurations((*newbody));
