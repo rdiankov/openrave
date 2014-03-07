@@ -860,7 +860,7 @@ public:
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
     /// \param probot the robot to be created from the system
-    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
+    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope, const std::string& strParentURI=std::string(), const std::string& strParentName=std::string())
     {
         if( !ias ) {
             return false;
@@ -885,32 +885,42 @@ public:
                     return false;
                 }
             }
-            if( !pbody ) {
-                pbody = RaveCreateRobot(_penv,"genericrobot");
-                if( !pbody ) {
-                    pbody = RaveCreateRobot(_penv,"");
-                    RAVELOG_WARN("creating default robot with no controller support\n");
-                }
-            }
+            
             _mapJointUnits.clear();
             _mapJointSids.clear();
         }
-        if( pbody->__struri.size() == 0 ) {
-            pbody->__struri = ias->getUrl().str();
+
+        std::string struri = strParentURI;
+        if( struri.size() == 0 ) {
+            struri = _ResolveInverse(ias->getUrl()).str();
+        }
+        else {
+            // actually ias_new might be pointing to a different document than ias, so check and prioritize ias_new
+            if( _ResolveInverse(*ias->getDocumentURI()).str() != _ResolveInverse(*articulated_system->getDocumentURI()).str() ) {
+                // documents are different, so store the URI
+                struri = _ResolveInverse(ias->getUrl()).str();
+            }
+        }
+        if( !!pbody ) {
+            pbody->__struri = struri;
         }
 
+        std::string strname = strParentName;
         // set the name
-        if(( pbody->GetName().size() == 0) && !!ias->getName() ) {
-            pbody->SetName(ias->getName());
+        if(( strname.size() == 0) && !!ias->getName() ) {
+            strname = ias->getName();
         }
-        if(( pbody->GetName().size() == 0) && !!ias->getSid()) {
-            pbody->SetName(ias->getSid());
+        if(( strname.size() == 0) && !!ias->getSid()) {
+            strname = ias->getSid();
         }
-        if(( pbody->GetName().size() == 0) && !!articulated_system->getName() ) {
-            pbody->SetName(articulated_system->getName());
+        if(( strname.size() == 0) && !!articulated_system->getName() ) {
+            strname = articulated_system->getName();
         }
-        if(( pbody->GetName().size() == 0) && !!articulated_system->getId()) {
-            pbody->SetName(articulated_system->getId());
+        if(( strname.size() == 0) && !!articulated_system->getId()) {
+            strname = articulated_system->getId();
+        }
+        if( !!pbody ) {
+            pbody->SetName(strname);
         }
 
         if( !!articulated_system->getMotion() ) {
@@ -935,7 +945,7 @@ public:
                 }
             }
             listInstanceScope.push_back(ias);
-            bool bsuccess = ExtractArticulatedSystem(pbody,ias_new,bindings, listInstanceScope);
+            bool bsuccess = ExtractArticulatedSystem(pbody, ias_new, bindings, listInstanceScope, struri, strname);
             listInstanceScope.pop_back();
             if( !bsuccess ) {
                 return false;
@@ -1016,6 +1026,7 @@ public:
                 if( !pbody ) {
                     pbody = RaveCreateRobot(_penv, "");
                 }
+                pbody->__struri = struri;
                 _mapJointUnits.clear();
                 _mapJointSids.clear();
             }
@@ -1074,6 +1085,8 @@ public:
         }
         _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listLinkBindings);
         _ExtractExtraData(pbody,articulated_system->getExtra_array());
+        // also collision data state can be dynamic, so process instance_articulated_system too
+        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listLinkBindings);
         return true;
     }
 
@@ -3633,7 +3646,7 @@ private:
         return KinBody::LinkPtr();
     }
 
-    /// \brief extracts collision-specific data info
+    /// \brief extracts collision-specific data infoe
     InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<LinkBinding>& listLinkBindings) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
@@ -4384,6 +4397,19 @@ private:
         if( itindex != _mapInverseResolvedURIList.end() ) {
             // try to resolve again
             return _ResolveInverse(itindex->second);
+        }
+
+        daeURI baseuri(uri);
+        baseuri.query("");
+        baseuri.fragment("");
+        baseuri.id("");
+        itindex = _mapInverseResolvedURIList.find(baseuri.str());
+        if( itindex != _mapInverseResolvedURIList.end() ) {
+            daeURI newuri = _ResolveInverse(itindex->second);
+            newuri.query(uri.query());
+            newuri.fragment(uri.fragment());
+            newuri.id(uri.fragment());
+            return newuri;
         }
         return uri;
     }

@@ -1,6 +1,6 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.3.3)
+COLLADA Robot Extensions (Version 0.3.4)
 ----------------------------------------
 
 OpenRAVE maintains a set of robot-specific extensions to the `COLLADA 1.5 specification <http://www.khronos.org/collada/>`_ in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
@@ -366,7 +366,7 @@ Related Elements
   :class: collada
   :delim: |
   
-  Parent elements | <kinematics_model>, <articulated_system>
+  Parent elements | <kinematics_model>, <articulated_system>, <instance_articulated_system>
 
 Child Elements
 ~~~~~~~~~~~~~~

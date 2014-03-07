@@ -394,6 +394,7 @@ class TestCOLLADA(EnvironmentSetup):
 '''
         env=self.env
         self.LoadDataEnv(xmldata)
+        env.GetKinBody('mug5').Enable(False)
         env.Save('test_externalref_scene.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
         env2 = Environment()
         env2.Load('test_externalref_scene.dae')
@@ -493,6 +494,28 @@ class TestCOLLADA(EnvironmentSetup):
         robot2=env2.GetRobots()[0]
         misc.CompareBodies(robot,robot2)
 
+    def test_external_links(self):
+        self.log.info('test saving extra info along with external references')
+        env=self.env
+        robot=self.LoadRobot('robots/schunk-lwa3.zae')
+        mug=env.ReadKinBodyURI('data/mug1.dae')
+        env.Add(mug)
+        T = eye(4)
+        T[0,3] = 1
+        assert(not mug.IsRobot())
+        env.Save('test_external_links.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'forcewrite':'*'})
+        
+        # reload and check if GetURI is equal to robots/schunk-lwa3.zae and data/mug1.dae
+        env2=Environment()
+        env2.Load('test_external_links.dae')
+        robot2=env2.GetRobot(robot.GetName())
+        mug2=env2.GetKinBody(mug.GetName())
+        assert(not mug2.IsRobot())
+        assert(robot2.GetURI() == robot.GetURI())
+        assert(robot2.GetXMLId() == robot.GetXMLId())
+        assert(mug2.GetURI() == mug.GetURI()) 
+        assert(mug2.GetXMLId() == mug.GetXMLId())
+        
     def test_individualuri(self):
         self.log.info('test loading individual objects from larget collada file')
         env=self.env
@@ -513,7 +536,7 @@ class TestCOLLADA(EnvironmentSetup):
             env3.Add(body3)
             assert(body2.GetName()==body3.GetName())
             misc.CompareBodies(body2,body3,comparegeometries=True,comparesensors=True,comparemanipulators=True,comparegrabbed=False,comparephysics=True,computeadjacent=True,epsilon=1e-10)
-            
+
     def test_externalgrab(self):
         self.log.info('saving grab info when saving robot as external ref')
         env=self.env
