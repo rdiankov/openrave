@@ -319,7 +319,7 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     else if( name.size() >= 19 && name.substr(0,19) == "joint_accelerations" ) {
         derivativename = string("joint_velocities") + name.substr(19);
     }
-    if( name.size() >= 11 && name.substr(0,11) == "joint_jerks" ) {
+    else if( name.size() >= 11 && name.substr(0,11) == "joint_jerks" ) {
         derivativename = string("joint_accelerations") + name.substr(11);
     }
     else if( name.size() >= 17 && name.substr(0,17) == "affine_velocities" ) {

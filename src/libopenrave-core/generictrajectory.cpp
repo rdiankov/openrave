@@ -174,7 +174,9 @@ public:
         BOOST_ASSERT(_timeoffset>=0);
         BOOST_ASSERT(time >= 0);
         _ComputeInternal();
-        _VerifySampling();
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            _VerifySampling();
+        }
         data.resize(0);
         data.resize(_spec.GetDOF(),0);
         if( time >= GetDuration() ) {
@@ -203,7 +205,7 @@ public:
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
-        BOOST_ASSERT(time >= 0);
+        BOOST_ASSERT(time >= -g_fEpsilon);
         _ComputeInternal();
         _VerifySampling();
         data.resize(0);
@@ -629,15 +631,17 @@ protected:
                 for(int i = 0; i < g.dof; ++i) {
                     // c2*t**2 + c1*t + v0
                     // c2*deltatime**2 + c1*deltatime + v0 = v1
-                    // -0.5*c1*deltatime**2 + (v1-4*v0)*deltatime + 3*(p1-p0) = 0
-                    //
+                    // integral: c2/3*deltatime**3 + c1/2*deltatime**2 + v0*deltatime = p1-p0
+                    // mult by (3/deltatime): c2*deltatime**2 + 3/2*c1*deltatime + 3*v0 = 3*(p1-p0)/deltatime
+                    // subtract by original: 0.5*c1*deltatime + 2*v0 - 3*(p1-p0)/deltatime + v1 = 0
+                    // c1*deltatime = 6*(p1-p0)/deltatime - 4*v0 - 2*v1
                     dReal integral0 = _vtrajdata[offset+integraloffset+i];
                     dReal integral1 = _vtrajdata[_spec.GetDOF()+offset+integraloffset+i];
                     dReal value0 = _vtrajdata[offset+g.offset+i];
                     dReal value1 = _vtrajdata[_spec.GetDOF()+offset+g.offset+i];
-                    dReal c1TimesDelta = 6*(integral1-integral0)*ideltatime + 2*(value1-4*value0);
+                    dReal c1TimesDelta = 6*(integral1-integral0)*ideltatime - 4*value0 - 2*value1;
                     dReal c1 = c1TimesDelta*ideltatime;
-                    dReal c2 = (value1 - value0)*ideltatime2 - c1TimesDelta;
+                    dReal c2 = (value1 - value0 - c1TimesDelta)*ideltatime2;
                     data[g.offset+i] = value0 + deltatime * (c1 + deltatime*c2);
                 }
             }
@@ -699,7 +703,37 @@ protected:
 
     void _InterpolateCubic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
-        throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation not supported",ORE_InvalidArguments);
+        // c3 = (v1*dt + v0*dt - 2*px)/(dt**3)
+        // c2 = (3*px - 2*v0*dt - v1*dt)/(dt**2)
+        // c1 = v0
+        // c0 = 0
+        // p = c3*t**3 + c2*t**2 + c1*t + c0
+        size_t offset = ipoint*_spec.GetDOF();
+        if( deltatime > g_fEpsilon ) {
+            int derivoffset = _vderivoffsets[g.offset];
+            if( derivoffset >= 0 ) {
+                dReal ideltatime = _vdeltainvtime.at(ipoint+1);
+                dReal ideltatime2 = ideltatime*ideltatime;
+                dReal ideltatime3 = ideltatime2*ideltatime;
+                for(int i = 0; i < g.dof; ++i) {
+                    // coeff*t^2 + deriv0*t + pos0
+                    dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+                    dReal deriv1 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                    dReal px = _vtrajdata.at(_spec.GetDOF()+offset+g.offset+i) - _vtrajdata[offset+g.offset+i];
+                    dReal c3 = (deriv1+deriv0)*ideltatime2 - 2*px*ideltatime3;
+                    dReal c2 = 3*px*ideltatime2 - (2*deriv0+deriv1)*ideltatime;
+                    data[g.offset+i] = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*(c2 + deltatime*c3));
+                }
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation does not have all data",ORE_InvalidArguments);
+            }
+        }
+        else {
+            for(int i = 0; i < g.dof; ++i) {
+                data[g.offset+i] = _vtrajdata[offset+g.offset+i];
+            }
+        }
     }
 
     void _InterpolateQuadric(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
@@ -733,22 +767,29 @@ protected:
         if( deltatime > g_fEpsilon ) {
             size_t offset = ipoint*_spec.GetDOF();
             int derivoffset = _vderivoffsets[g.offset];
-            for(int i = 0; i < g.dof; ++i) {
-                // coeff*t^2 + deriv0*t + pos0
-                dReal deriv0 = _vtrajdata[offset+derivoffset+i];
-                dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
-                dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
-                dReal error = RaveFabs(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]-expected);
-                if( RaveFabs(error-2*PI) > 1e-6 ) { // TODO, officially track circular joints
-                    OPENRAVE_ASSERT_OP_FORMAT(error,<=,1e-6, "trajectory segment for group %s interpolation %s time %f points %d-%d dof %d is invalid", g.name%g.interpolation%deltatime%ipoint%(ipoint+1)%i, ORE_InvalidState);
+            if( derivoffset >= 0 ) {
+                for(int i = 0; i < g.dof; ++i) {
+                    // coeff*t^2 + deriv0*t + pos0
+                    dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+                    dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
+                    dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+                    dReal error = RaveFabs(_vtrajdata.at(_spec.GetDOF()+offset+g.offset+i)-expected);
+                    if( RaveFabs(error-2*PI) > 1e-6 ) { // TODO, officially track circular joints
+                        OPENRAVE_ASSERT_OP_FORMAT(error,<=,1e-6, "trajectory segment for group %s interpolation %s time %f points %d-%d dof %d is invalid", g.name%g.interpolation%deltatime%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                    }
                 }
+            }
+            else {
+                int integraloffset = _vintegraloffsets[g.offset];
+                BOOST_ASSERT(integraloffset>=0);
+                // cannot verify since there's not enough constraints
             }
         }
     }
 
     void _ValidateCubic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation not supported",ORE_InvalidArguments);
+        // TODO, need 3 groups to verify
     }
 
     void _ValidateQuadric(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)

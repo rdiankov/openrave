@@ -76,7 +76,7 @@ By default will sample the entire body space, can use 'SetDOFs' command to set a
         vUpperLimit = _upper;
     }
 
-    void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
+    int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         _psampler->SampleSequence(samples,num,interval);
         for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
@@ -89,6 +89,7 @@ By default will sample the entire body space, can use 'SetDOFs' command to set a
                 }
             }
         }
+        return (int)num;
     }
 
 protected:

@@ -1434,7 +1434,7 @@ private:
     virtual void SetDOFResolutions(const std::vector<dReal>& resolutions, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief \see GetDOFLimits
-    virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper);
+    virtual void SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dReal>& upper, const std::vector<int>& dofindices = std::vector<int>());
 
     /// \brief Returns the joints making up the controllable degrees of freedom of the body.
     const std::vector<JointPtr>& GetJoints() const {

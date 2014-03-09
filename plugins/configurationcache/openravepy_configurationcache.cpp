@@ -232,7 +232,12 @@ public:
     virtual ~PyConfigurationCache(){
     }
 
-    bool InsertConfiguration(object ovalues, object pyreport)
+    int InsertConfigurationDist(object ovalues, object pyreport, dReal dist)
+    {
+        return _cache->InsertConfiguration(ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport), dist);
+    }
+
+    int InsertConfiguration(object ovalues, object pyreport)
     {
         return _cache->InsertConfiguration(ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport));
     }
@@ -293,12 +298,48 @@ public:
         _cache->SetInsertionDistanceMult(indist);
     }
 
+    dReal GetCollisionThresh()
+    {
+        return _cache->GetCollisionThresh();
+    }
+
+    dReal GetFreeSpaceThresh()
+    {
+        return _cache->GetFreeSpaceThresh();
+    }
+
+
+    dReal GetInsertionDistanceMult()
+    {
+        return _cache->GetInsertionDistanceMult();
+    }
+
     object GetRobot() {
         return openravepy::toPyKinBody(_cache->GetRobot(), _pyenv);
     }
 
     bool Validate() {
         return _cache->Validate();
+    }
+
+    object GetNodeValues() {
+        std::vector<dReal> values;
+        _cache->GetNodeValues(values);
+        return toPyArray(values);
+    }
+
+    object FindNearestNode(object ovalues, dReal dist) {
+        std::pair<std::vector<dReal>, dReal> nn = _cache->FindNearestNode(ExtractArray<dReal>(ovalues), dist);
+        if( nn.first.size() == 0 ) {
+            return object(); // didn't find anything
+        }
+        else {
+           return boost::python::make_tuple(toPyArray(nn.first), nn.second);
+        }
+    }
+    
+    dReal ComputeDistance(object oconfi, object oconff) {
+        return _cache->ComputeDistance(ExtractArray<dReal>(oconfi), ExtractArray<dReal>(oconff));
     }
 
 protected:
@@ -318,7 +359,8 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
 
     class_<PyConfigurationCache, PyConfigurationCachePtr >("ConfigurationCache", no_init)
     .def(init<object>(args("robot")))
-    .def("InsertConfiguration",&PyConfigurationCache::InsertConfiguration, args("values","report"))
+    .def("InsertConfigurationDist",&PyConfigurationCache::InsertConfigurationDist, args("values","report","dist"))
+    .def("InsertConfiguration",&PyConfigurationCache::InsertConfiguration, args("values", "report"))
     .def("RemoveConfigurations",&PyConfigurationCache::RemoveConfigurations, args("values","radius"))
     .def("CheckCollision",&PyConfigurationCache::CheckCollision, args("values"))
     .def("Reset",&PyConfigurationCache::Reset)
@@ -331,5 +373,12 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
     .def("GetRobot",&PyConfigurationCache::GetRobot)
     .def("GetNumNodes",&PyConfigurationCache::GetNumNodes)
     .def("Validate", &PyConfigurationCache::Validate)
+    .def("GetNodeValues", &PyConfigurationCache::GetNodeValues)
+    .def("FindNearestNode", &PyConfigurationCache::FindNearestNode)
+    .def("ComputeDistance", &PyConfigurationCache::ComputeDistance)
+
+    .def("GetCollisionThresh", &PyConfigurationCache::GetCollisionThresh)
+    .def("GetFreeSpaceThresh", &PyConfigurationCache::GetFreeSpaceThresh)
+    .def("GetInsertionDistanceMult", &PyConfigurationCache::GetInsertionDistanceMult)
     ;
 }

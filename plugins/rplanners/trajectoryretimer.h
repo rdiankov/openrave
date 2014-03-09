@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -16,7 +16,7 @@
 #ifndef OPENRAVE_TRAJECTORY_RETIMER
 #define OPENRAVE_TRAJECTORY_RETIMER
 
-#include "plugindefs.h"
+#include "openraveplugindefs.h"
 
 class TrajectoryRetimer : public PlannerBase
 {
@@ -229,7 +229,7 @@ public:
 
                     if( igrouptype == 0 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2));
+                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                         }
                         else {
                             _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
@@ -238,7 +238,7 @@ public:
                     }
                     else if( igrouptype == 1 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2));
+                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                         }
                         else {
                             _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
@@ -247,7 +247,7 @@ public:
                     }
                     else if( igrouptype == 2 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2));
+                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                         }
                         else {
                             _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
@@ -314,50 +314,63 @@ public:
                 for(size_t i = 1; i < numpoints; ++i, itdata += dof, itorgdiff += _cachedoldspec.GetDOF()) {
                     dReal mintime = 0;
                     bool bUseEndVelocity = i+1==numpoints;
-                    FOREACH(itmin,_listmintimefns) {
-                        dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
-                        if( fgrouptime < 0 ) {
-                            RAVELOG_VERBOSE_FORMAT("point %d/%d has uncomputable minimum time, possibly due to boundary constraints", i%numpoints);
-                            return PS_Failed;
-                        }
-
-                        if( _parameters->_fStepLength > 0 ) {
-                            if( fgrouptime < _parameters->_fStepLength ) {
-                                fgrouptime = _parameters->_fStepLength;
-                            }
-                            else {
-                                fgrouptime = std::ceil(fgrouptime/_parameters->_fStepLength-g_fEpsilonJointLimit)*_parameters->_fStepLength;
-                            }
-                        }
-                        if( mintime < fgrouptime ) {
-                            mintime = fgrouptime;
-                        }
-                    }
-                    if( _parameters->_hastimestamps ) {
-                        if( *(itdata+_timeoffset) < mintime-g_fEpsilonJointLimit ) {
-                            // this is a commonly occuring message in planning
-                            RAVELOG_VERBOSE(str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime));
-                            return PS_Failed;
-                        }
-                    }
-                    else {
-                        *(itdata+_timeoffset) = mintime;
-                    }
-                    if( _parameters->_hasvelocities ) {
-                        FOREACH(itfn,_listcheckvelocityfns) {
-                            if( !(*itfn)(itdataprev, itdata) ) {
-                                RAVELOG_WARN(str(boost::format("point %d/%d has unreachable velocity")%i%numpoints));
+                    if( _parameters->_hastimestamps && _parameters->_hasvelocities ) {
+                        // positions, velocities, and timestamps already filled, so check everything
+                        FOREACH(itfn, _listcheckvelocityfns) {
+                            if( !(*itfn)(itdataprev, itdata, 7) ) {
+                                RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable velocity", i%numpoints);
+                                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                                    (*itfn)(itdataprev, itdata, 7);
+                                }
                                 return PS_Failed;
                             }
                         }
                     }
                     else {
-                        // given the mintime, fill the velocities
-                        FOREACH(itfn,_listvelocityfns) {
-                            (*itfn)(itorgdiff, itdataprev, itdata);
+                        FOREACH(itmin, _listmintimefns) {
+                            dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
+                            if( fgrouptime < 0 ) {
+                                RAVELOG_VERBOSE_FORMAT("point %d/%d has uncomputable minimum time, possibly due to boundary constraints", i%numpoints);
+                                return PS_Failed;
+                            }
+
+                            if( _parameters->_fStepLength > 0 ) {
+                                if( fgrouptime < _parameters->_fStepLength ) {
+                                    fgrouptime = _parameters->_fStepLength;
+                                }
+                                else {
+                                    fgrouptime = std::ceil(fgrouptime/_parameters->_fStepLength-g_fEpsilonJointLimit)*_parameters->_fStepLength;
+                                }
+                            }
+                            if( mintime < fgrouptime ) {
+                                mintime = fgrouptime;
+                            }
+                        }
+                        if( _parameters->_hastimestamps ) {
+                            if( *(itdata+_timeoffset) < mintime-g_fEpsilonJointLimit ) {
+                                // this is a commonly occuring message in planning
+                                RAVELOG_VERBOSE(str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime));
+                                return PS_Failed;
+                            }
+                        }
+                        else {
+                            *(itdata+_timeoffset) = mintime;
+                        }
+                        if( _parameters->_hasvelocities ) {
+                            FOREACH(itfn,_listcheckvelocityfns) {
+                                if( !(*itfn)(itdataprev, itdata, 6) ) {
+                                    RAVELOG_WARN(str(boost::format("point %d/%d has unreachable velocity")%i%numpoints));
+                                    return PS_Failed;
+                                }
+                            }
+                        }
+                        else {
+                            // given the mintime, fill the velocities
+                            FOREACH(itfn,_listvelocityfns) {
+                                (*itfn)(itorgdiff, itdataprev, itdata);
+                            }
                         }
                     }
-
                     FOREACH(itfn,_listwritefns) {
                         // because the initial time for each ramp could have been stretched to accomodate other points, it is possible for this to fail
                         if( !(*itfn)(itorgdiff, itdataprev, itdata) ) {
@@ -386,7 +399,7 @@ public:
 
         _WriteTrajectory(ptraj,_cachednewspec, _vdata);
         // happens too often for debug message?
-        RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
+        //RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
         return PS_HasSolution;
     }
 
@@ -402,9 +415,14 @@ protected:
     }
 
     virtual bool _SupportInterpolation() = 0;
+    
+    /// \brief compute the minimum time to achieve the point. returns a mintime>=0 if successeeded, otherwise returns value < 0.
     virtual dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
+    /// \brief given the delta time, compute the velocities in the data
     virtual void _ComputeVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
-    virtual bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+    /// \brief given the computed deltatime and velocities at each point, check position, velocity, and acceleration limits
+    /// checkoptions. If 1 checks positions. If 2, checks velocities, If 4, checks accelerations
+    virtual bool _CheckJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions=0xffffffff) {
         return true;
     }
     virtual bool _WriteJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
@@ -413,16 +431,18 @@ protected:
 
     virtual dReal _ComputeMinimumTimeAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     virtual void _ComputeVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
-    virtual bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+    virtual bool _CheckAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions=0xffffffff) {
         return true;
     }
     virtual bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         return true;
     }
 
+    // speed of rotations is always the speed of the angle along the minimum rotation
+    // speed of translations is always the combined xyz speed
     virtual dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     virtual void _ComputeVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) = 0;
-    virtual bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+    virtual bool _CheckIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions=0xffffffff) {
         return true;
     }
     virtual bool _WriteIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
@@ -441,7 +461,7 @@ protected:
     std::string _cachedposinterpolation;
     std::list< boost::function<dReal(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,bool) > > _listmintimefns;
     std::list< boost::function<void(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listvelocityfns;
-    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listcheckvelocityfns;
+    std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::iterator, int) > > _listcheckvelocityfns;
     std::list< boost::function<bool(std::vector<dReal>::const_iterator,std::vector<dReal>::const_iterator,std::vector<dReal>::iterator) > > _listwritefns;
     std::vector<dReal> _vimaxvel, _vimaxaccel;
     std::vector<dReal> _vdiffdata, _vdata;
