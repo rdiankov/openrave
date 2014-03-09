@@ -1110,7 +1110,7 @@ Converts electrical energy into mechanical energy usually using magnetic fields 
   <nominal_voltage> | Contains a **float_type** that specifies the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**. | 1
   <rotor_inertia> | Contains a **float_type** that specifies the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**. | 1
   <speed_constant> | Contains a **float_type** that specifies the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**. | 1
-  <speed_torque_gradient> | Contains a **float_type** that specifies the slope of the speed-torque curve, approximately equal to the no load speed divided by the stall torque. Units are ** Mass-¹ * Distance-¹ * Time-¹**. | 1
+  <speed_torque_gradient> | Contains a **float_type** that specifies the slope of the speed-torque curve, approximately equal to the no load speed divided by the stall torque. Units are **Mass-¹ * Distance-¹ * Time-¹**. | 1
   <starting_current> | Contains a **float_type** that specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**. | 1
   <terminal_resistance> | Contains a **float_type** that specifies the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**. | 1
   <torque_constant> | Contains a **float_type** that specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**. | 1
