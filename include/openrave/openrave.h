@@ -1127,6 +1127,15 @@ protected:
      */
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
+    /** \brief converts all the groups to the corresponding derivative group and returns the specification
+        
+        The new derivative configuration space will have a one-to-one correspondence with the original configuration.
+        The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
+        Only position specifications will be converted, any other groups will be left untouched.
+        \param timederivative the number of times to take the time derivative of the position
+     */
+    virtual ConfigurationSpecification ConvertToDerivativeSpecification(uint32_t timederivative=1) const;
+
     /// \brief returns a new specification of just particular time-derivative groups.
     ///
     /// \param timederivative the time derivative to query groups from. 0 is positions/joint values, 1 is velocities, 2 is accelerations, etc

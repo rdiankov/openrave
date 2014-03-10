@@ -431,6 +431,54 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToVelocitySpecific
     return vspec;
 }
 
+ConfigurationSpecification ConfigurationSpecification::ConvertToDerivativeSpecification(uint32_t timederivative) const
+{
+    OPENRAVE_ASSERT_OP(timederivative,<,4);
+    ConfigurationSpecification derivspec;
+    std::string searchname;
+    derivspec._vgroups = _vgroups;
+    if( timederivative > 0 ) {
+        FOREACH(itgroup,derivspec._vgroups) {
+            if( itgroup->name.size() >= 12 && itgroup->name.substr(0,12) == "joint_values" ) {
+                switch( timederivative ) {
+                case 0: searchname = "joint_values"; break;
+                case 1: searchname = "joint_velocities"; break;
+                case 2: searchname = "joint_accelerations"; break;
+                case 3: searchname = "joint_jerks"; break;
+                default:
+                    break;
+                }
+                itgroup->name = searchname + itgroup->name.substr(12);
+            }
+            else if( itgroup->name.size() >= 16 && itgroup->name.substr(0,16) == "affine_transform" ) {
+                switch( timederivative ) {
+                case 0: searchname = "affine_transform"; break;
+                case 1: searchname = "affine_velocities"; break;
+                case 2: searchname = "affine_accelerations"; break;
+                case 3: searchname = "affine_jerks"; break;
+                default:
+                    break;
+                }
+                itgroup->name = searchname + itgroup->name.substr(16);
+            }
+            else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
+                switch( timederivative ) {
+                case 0: searchname = "ikparam_values"; break;
+                case 1: searchname = "ikparam_velocities"; break;
+                case 2: searchname = "ikparam_accelerations"; break;
+                case 3: searchname = "ikparam_jerks"; break;
+                default:
+                    break;
+                }
+                itgroup->name = searchname + itgroup->name.substr(14);
+            }
+
+            itgroup->interpolation = GetInterpolationDerivative(itgroup->interpolation, timederivative);
+        }
+    }
+    return derivspec;
+}
+
 ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecification(int timederivative) const
 {
     ConfigurationSpecification vspec;
