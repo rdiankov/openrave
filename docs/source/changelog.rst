@@ -56,6 +56,8 @@ Core
 
 * Added python bindings to MultiControllerBase interface and took steps toward making it an official interface (thanks to Michael Koval).
 
+* Added :class:`ElectricMotorActuatorInfo` and the corresponding python bindings and XML readers.
+
 Collision Checking
 -----------------
 

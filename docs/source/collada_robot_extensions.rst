@@ -1102,20 +1102,20 @@ Converts electrical energy into mechanical energy usually using magnetic fields 
   :class: collada
   :delim: |
   :widths: 20, 70, 10
-  
+ 
+  <gear_ratio> | Contains a **float type** that specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission. | 1 
   <assigned_power_rating> | Contains a **float_type** that specifies the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**. | 1
   <max_speed> | Contains a **float_type** that specifies the maximum speed of the motor. Units are **Time-¹**. | 1
   <no_load_speed> | Contains a **float_type** that specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**. | 0 or 1
   <stall_torque> | Contains a **float type** that specifies the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**. | 1
   <speed_torque_point> | Contains a **float2_array** that specifies the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). | 0 or more
+  <rotor_inertia> | Contains a **float_type** that specifies the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**. | 1
+  <torque_constant> | Contains a **float_type** that specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**. | 1
   <nominal_torque> | Contains a **float_type** that specifies the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**. | 1
   <nominal_voltage> | Contains a **float_type** that specifies the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**. | 1
-  <rotor_inertia> | Contains a **float_type** that specifies the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**. | 1
   <speed_constant> | Contains a **float_type** that specifies the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**. | 1
   <starting_current> | Contains a **float_type** that specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**. | 1
   <terminal_resistance> | Contains a **float_type** that specifies the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**. | 1
-  <torque_constant> | Contains a **float_type** that specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**. | 1
-  <gear_ratio> | Contains a **float type** that specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
 
 Related variables, but not inserted in the electric_motor specification:
 

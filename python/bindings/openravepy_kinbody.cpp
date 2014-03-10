@@ -218,6 +218,81 @@ public:
 };
 typedef boost::shared_ptr<PyLinkInfo> PyLinkInfoPtr;
 
+class PyElectricMotorActuatorInfo
+{
+public:
+    PyElectricMotorActuatorInfo() {
+        gear_ratio = 0;
+        assigned_power_rating = 0;
+        max_speed = 0;
+        no_load_speed = 0;
+        stall_torque = 0;
+        nominal_torque = 0;
+        rotor_inertia = 0;
+        torque_constant = 0;
+        nominal_voltage = 0;
+        speed_constant = 0;
+        starting_current = 0;
+        terminal_resistance = 0;
+    }
+    PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info) {
+        gear_ratio = info.gear_ratio;
+        assigned_power_rating = info.assigned_power_rating;
+        max_speed = info.max_speed;
+        no_load_speed = info.no_load_speed;
+        stall_torque = info.stall_torque;
+        FOREACH(itpoint, info.speed_torque_points) {
+            speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        }
+        nominal_torque = info.nominal_torque;
+        rotor_inertia = info.rotor_inertia;
+        torque_constant = info.torque_constant;
+        nominal_voltage = info.nominal_voltage;
+        speed_constant = info.speed_constant;
+        starting_current = info.starting_current;
+        terminal_resistance = info.terminal_resistance;
+    }
+    
+    ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
+        ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
+        ElectricMotorActuatorInfo& info = *pinfo;
+        info.gear_ratio = gear_ratio;
+        info.assigned_power_rating = assigned_power_rating;
+        info.max_speed = max_speed;
+        info.no_load_speed = no_load_speed;
+        info.stall_torque = stall_torque;
+        if( !(speed_torque_points == boost::python::object()) ) {
+            size_t num = len(speed_torque_points);
+            for(size_t i = 0; i < num; ++i) {
+                info.speed_torque_points.push_back(std::make_pair((dReal)boost::python::extract<dReal>(speed_torque_points[i][0]), (dReal)boost::python::extract<dReal>(speed_torque_points[i][1])));
+            }
+        }
+        info.nominal_torque = nominal_torque;
+        info.rotor_inertia = rotor_inertia;
+        info.torque_constant = torque_constant;
+        info.nominal_voltage = nominal_voltage;
+        info.speed_constant = speed_constant;
+        info.starting_current = starting_current;
+        info.terminal_resistance = terminal_resistance;
+        return pinfo;
+    }
+
+    dReal gear_ratio;
+    dReal assigned_power_rating;
+    dReal max_speed;
+    dReal no_load_speed;
+    dReal stall_torque;
+    boost::python::list speed_torque_points;
+    dReal nominal_torque;
+    dReal rotor_inertia;
+    dReal torque_constant;
+    dReal nominal_voltage;
+    dReal speed_constant;
+    dReal starting_current;
+    dReal terminal_resistance;
+};
+typedef boost::shared_ptr<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
+
 class PyJointInfo
 {
 public:
@@ -287,6 +362,9 @@ public:
         }
         _bIsCircular = bIsCircular;
         _bIsActive = info._bIsActive;
+        if( !!info._infoElectricMotor ) {
+            _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
+        }
     }
 
     KinBody::JointInfoPtr GetJointInfo() {
@@ -390,6 +468,12 @@ public:
             info._bIsCircular.at(i) = boost::python::extract<int>(_bIsCircular[i])!=0;
         }
         info._bIsActive = _bIsActive;
+        if( !!_infoElectricMotor ) {//!(_infoElectricMotor == boost::python::object()) ) {
+            //PyElectricMotorActuatorInfoPtr pinfo = boost::python::extract<PyElectricMotorActuatorInfoPtr>(_infoElectricMotor);
+            //if( !!pinfo ) {
+            info._infoElectricMotor = _infoElectricMotor->GetElectricMotorActuatorInfo();
+            //}
+        }
         return pinfo;
     }
     KinBody::JointType _type;
@@ -397,6 +481,7 @@ public:
     object _linkname0, _linkname1;
     object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
     object _trajfollow;
+    PyElectricMotorActuatorInfoPtr _infoElectricMotor;
     boost::python::list _vmimic;
     boost::python::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular;
@@ -2506,12 +2591,36 @@ public:
     }
 };
 
+class ElectricMotorActuatorInfo_pickle_suite : public pickle_suite
+{
+public:
+    static tuple getstate(const PyElectricMotorActuatorInfo& r)
+    {
+        return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, r.stall_torque, r.speed_torque_points, r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance);
+    }
+    static void setstate(PyElectricMotorActuatorInfo& r, boost::python::tuple state) {
+        r.gear_ratio = boost::python::extract<dReal>(state[0]);
+        r.assigned_power_rating = boost::python::extract<dReal>(state[1]);
+        r.max_speed = boost::python::extract<dReal>(state[2]);
+        r.no_load_speed = boost::python::extract<dReal>(state[3]);
+        r.stall_torque = boost::python::extract<dReal>(state[4]);
+        r.speed_torque_points = boost::python::list(state[5]);
+        r.nominal_torque = boost::python::extract<dReal>(state[6]);
+        r.rotor_inertia = boost::python::extract<dReal>(state[7]);
+        r.torque_constant = boost::python::extract<dReal>(state[8]);
+        r.nominal_voltage = boost::python::extract<dReal>(state[9]);
+        r.speed_constant = boost::python::extract<dReal>(state[10]);
+        r.starting_current = boost::python::extract<dReal>(state[11]);
+        r.terminal_resistance = boost::python::extract<dReal>(state[12]);
+    }
+};
+
 class JointInfo_pickle_suite : public pickle_suite
 {
 public:
     static tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters));
+        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
@@ -2539,6 +2648,9 @@ public:
         r._bIsActive = boost::python::extract<bool>(state[2][5]);
         if( num2 > 6 ) {
             r._mapStringParameters = boost::python::dict(state[2][6]);
+            if( num2 > 7 ) {
+                r._infoElectricMotor = boost::python::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
+            }
         }
     }
 };
@@ -2598,6 +2710,23 @@ void init_openravepy_kinbody()
                           .value("Cylinder",GT_Cylinder)
                           .value("Trimesh",GT_TriMesh)
     ;
+    object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
+        .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
+        .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)
+        .def_readwrite("max_speed",&PyElectricMotorActuatorInfo::max_speed)
+        .def_readwrite("no_load_speed",&PyElectricMotorActuatorInfo::no_load_speed)
+        .def_readwrite("stall_torque",&PyElectricMotorActuatorInfo::stall_torque)
+        .def_readwrite("speed_torque_points",&PyElectricMotorActuatorInfo::speed_torque_points)
+        .def_readwrite("nominal_torque",&PyElectricMotorActuatorInfo::nominal_torque)
+        .def_readwrite("rotor_inertia",&PyElectricMotorActuatorInfo::rotor_inertia)
+        .def_readwrite("torque_constant",&PyElectricMotorActuatorInfo::torque_constant)
+        .def_readwrite("nominal_voltage",&PyElectricMotorActuatorInfo::nominal_voltage)
+        .def_readwrite("speed_constant",&PyElectricMotorActuatorInfo::speed_constant)
+        .def_readwrite("starting_current",&PyElectricMotorActuatorInfo::starting_current)
+        .def_readwrite("terminal_resistance",&PyElectricMotorActuatorInfo::terminal_resistance)
+        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
+        ;
+
     {
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
@@ -2849,6 +2978,7 @@ void init_openravepy_kinbody()
                            .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
                            .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
                            .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
+                           .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
                            .def_pickle(JointInfo_pickle_suite())
         ;
         {
