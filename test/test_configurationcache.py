@@ -95,7 +95,7 @@ class TestConfigurationCache(EnvironmentSetup):
         assert(float(nummisses)/float(numtests)>0.1) # space is pretty big
         assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
 
-    '''def test_io(self):
+    def test_io(self):
         env = self.env
         with env:
             self.LoadEnv('data/hironxtable.env.xml')
@@ -124,38 +124,31 @@ class TestConfigurationCache(EnvironmentSetup):
             sampler.SampleSequence(SampleDataType.Real,1)
             report=CollisionReport()
 
-        stime = time.time()
-        for iter in range(0, 1000):
-            robot.SetActiveDOFValues(sampler.SampleSequence(SampleDataType.Real,1))
-            samplevalues = robot.GetActiveDOFValues()
-            if (iter%1000==0):
-                self.log.info('checking self collisions...')
-            env.GetCollisionChecker().CheckSelfCollision(robot, report=report)
-        rawtime = time.time()-stime
+            stime = time.time()
+            confs = []
+            for iter in range(0, 500):
+                robot.SetActiveDOFValues(sampler.SampleSequence(SampleDataType.Real,1))
+                samplevalues = robot.GetActiveDOFValues()
+                confs.append(samplevalues)
+                if (iter%1000==0):
+                    self.log.info('checking self collisions %s...',iter)
+                env.GetCollisionChecker().CheckSelfCollision(robot, report=report)
+            rawtime = time.time()-stime
 
-        selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
-        self.log.info('selfcollisionhits=%s selffreehits=%s selfcachesize=%s in %ss', selfcachedcollisionhits, selfcachedfreehits, selfcachesize, rawtime)
+            selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
+            self.log.info('selfcollisionhits=%s selffreehits=%s selfcachesize=%s in %ss', selfcachedcollisionhits, selfcachedfreehits, selfcachesize, rawtime)
 
-        self.log.info('writing cache to file...')
-        cachechecker.SendCommand('SaveCache')
+            self.log.info('writing cache to file...')
+            cachechecker.SendCommand('SaveCache')
 
-        self.log.info('loading cache from file...')
-        cachechecker.SendCommand('LoadCache')
+            cachechecker.SendCommand('ResetSelfCache')
 
-        assert(int(cachechecker.SendCommand('ValidateSelfCache')) == 1)
-        self.log.info('cache is valid')
+            self.log.info('loading cache...')
+            cachechecker.SendCommand('LoadCache')
+            
+            assert(int(cachechecker.SendCommand('ValidateSelfCache')) == 1)
+            self.log.info('cache is valid')
 
-        stime = time.time()
-        for iter in range(0, 1000):
-            robot.SetActiveDOFValues(sampler.SampleSequence(SampleDataType.Real,1))
-            samplevalues = robot.GetActiveDOFValues()
-            if (iter%1000==0):
-                self.log.info('checking self collisions...')
-            env.GetCollisionChecker().CheckSelfCollision(robot, report=report)
-        rawtime = time.time()-stime
-
-        selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
-        self.log.info('selfcollisionhits=%s selffreehits=%s selfcachesize=%s in %ss', selfcachedcollisionhits, selfcachedfreehits, selfcachesize, rawtime)'''
 
     def test_find_insert(self):
 
@@ -172,7 +165,7 @@ class TestConfigurationCache(EnvironmentSetup):
         with env:
              self.log.info('testing exhaustive insertion...')
              for iter in range(0, 10000):
-                 if iter%1==0:
+                 if iter%1000==0:
                      self.log.info('%d valid insertions %d nodes...',iter,cache.GetNumNodes())
 
                  samplevalues = 0.3*(sampler.SampleSequence(SampleDataType.Real,1)-0.5)

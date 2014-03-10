@@ -832,7 +832,10 @@ int CacheTree::SaveCache(std::string filename)
     }
 
     fwrite(&_base, sizeof(_base), 1, pfile);
+    fwrite(&_fBaseInv, sizeof(_fBaseInv), 1, pfile);
     fwrite(&_fBaseInv2, sizeof(_fBaseInv2), 1, pfile);
+    fwrite(&_fBaseChildMult, sizeof(_fBaseChildMult), 1, pfile);
+    fwrite(&_maxdistance, sizeof(_maxdistance), 1, pfile);
     fwrite(&_maxlevel, sizeof(_maxlevel), 1, pfile);
     fwrite(&_minlevel, sizeof(_minlevel), 1, pfile);
     fwrite(&_numnodes, sizeof(_numnodes), 1, pfile);
@@ -894,8 +897,8 @@ int CacheTree::SaveCache(std::string filename)
 int CacheTree::LoadCache(std::string filename)
 {
 
-    Reset();
-
+    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+    
     FILE* pfile = fopen(filename.c_str(),"rb");
     size_t outs;
 
@@ -903,18 +906,33 @@ int CacheTree::LoadCache(std::string filename)
 
     _weights.resize(_statedof,1.0);
     _curconf.resize(_statedof,1.0);
-    Init(_weights,1);
 
     for (int i = 0; i < _statedof; ++i) {
         outs = fread(&_weights[i], sizeof(_weights[i]), 1, pfile);
     }
 
-    outs = fread(&_base, sizeof(_base), 1, pfile);
-    outs = fread(&_fBaseInv2, sizeof(_fBaseInv2), 1, pfile);
-    outs = fread(&_maxlevel, sizeof(_maxlevel), 1, pfile);
-    outs = fread(&_minlevel, sizeof(_minlevel), 1, pfile);
-    outs = fread(&_numnodes, sizeof(_numnodes), 1, pfile);
-    outs = fread(&_fMaxLevelBound, sizeof(_fMaxLevelBound), 1, pfile);
+    int maxlevel, minlevel, numnodes;
+    dReal maxdistance, base, fBaseInv, fBaseInv2, fBaseChildMult, fMaxLevelBound;
+
+    outs = fread(&base, sizeof(base), 1, pfile);
+    outs = fread(&fBaseInv, sizeof(fBaseInv), 1, pfile);
+    outs = fread(&fBaseInv2, sizeof(fBaseInv2), 1, pfile);
+    outs = fread(&fBaseChildMult, sizeof(fBaseChildMult), 1, pfile);
+    outs = fread(&maxdistance, sizeof(maxdistance), 1, pfile);
+    outs = fread(&maxlevel, sizeof(maxlevel), 1, pfile);
+    outs = fread(&minlevel, sizeof(minlevel), 1, pfile);
+    outs = fread(&numnodes, sizeof(numnodes), 1, pfile);
+    outs = fread(&fMaxLevelBound, sizeof(fMaxLevelBound), 1, pfile);
+
+    _base = base;
+    _fBaseInv = fBaseInv;
+    _fBaseInv2 = fBaseInv2;
+    _fBaseChildMult = fBaseChildMult;
+    _maxdistance = maxdistance;
+    _maxlevel = maxlevel;
+    _minlevel = minlevel;
+    _numnodes = numnodes;
+    _fMaxLevelBound = fMaxLevelBound;
 
     int enclevel = _EncodeLevel(_maxlevel);
     _vsetLevelNodes.resize(enclevel+1);
@@ -933,7 +951,7 @@ int CacheTree::LoadCache(std::string filename)
 
     for (int inode = 0; inode < _numnodes; ++inode)
     {
-       
+
         outs = fread(&level, sizeof(level), 1, pfile);
         for (int i = 0; i < _statedof; ++i) {
             outs = fread(&_curconf.at(i), sizeof(_curconf.at(i)), 1, pfile);
@@ -945,7 +963,7 @@ int CacheTree::LoadCache(std::string filename)
         outs = fread(&hasselfchild, sizeof(hasselfchild), 1, pfile);
         outs = fread(&isnn, sizeof(isnn), 1, pfile);
         outs = fread(&numchildren, sizeof(numchildren), 1, pfile);
-        
+
         CacheTreeNodePtr newnode = vnodes.at(inode);
         std::copy(_curconf.begin(), _curconf.end(), newnode->_pcstate);
         newnode->_level = level;
@@ -953,11 +971,13 @@ int CacheTree::LoadCache(std::string filename)
         newnode->_usenn = isnn;
         newnode->SetCollisionInfo(robotlinkindex,type);
 
+
         // create the copies of the children and insert them
         for(int i = 0; i < numchildren; ++i) {
             int childid;
             outs = fread(&childid, sizeof(childid), 1, pfile);
             newnode->_vchildren.push_back(vnodes.at(childid));
+            ss << childid << " ";
         }
 
         _vsetLevelNodes.at(_EncodeLevel(newnode->_level)).insert(newnode);
@@ -967,7 +987,6 @@ int CacheTree::LoadCache(std::string filename)
 
     int numloaded = GetNumKnownNodes();
     _numnodes = numloaded;
-    RAVELOG_WARN_FORMAT("%d loaded\n",numloaded);
     return 1;
 }
 
