@@ -1842,6 +1842,12 @@ object PyKinBody::ComputeAABB()
 {
     return toPyAABB(_pbody->ComputeAABB());
 }
+
+object PyKinBody::GetCenterOfMass() const
+{
+    return toPyVector3(_pbody->GetCenterOfMass());
+}
+
 void PyKinBody::Enable(bool bEnable)
 {
     _pbody->Enable(bEnable);
