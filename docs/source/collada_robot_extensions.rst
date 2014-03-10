@@ -1106,11 +1106,12 @@ Converts electrical energy into mechanical energy usually using magnetic fields 
   <assigned_power_rating> | Contains a **float_type** that specifies the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**. | 1
   <max_speed> | Contains a **float_type** that specifies the maximum speed of the motor. Units are **Time-¹**. | 1
   <no_load_speed> | Contains a **float_type** that specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**. | 0 or 1
+  <stall_torque> | Contains a **float type** that specifies the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**. | 1
+  <speed_torque_point> | Contains a **float2_array** that specifies the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). | 0 or more
   <nominal_torque> | Contains a **float_type** that specifies the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**. | 1
   <nominal_voltage> | Contains a **float_type** that specifies the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**. | 1
   <rotor_inertia> | Contains a **float_type** that specifies the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**. | 1
   <speed_constant> | Contains a **float_type** that specifies the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**. | 1
-  <speed_torque_gradient> | Contains a **float_type** that specifies the slope of the speed-torque curve, approximately equal to the no load speed divided by the stall torque. Units are **Mass-¹ * Distance-¹ * Time-¹**. | 1
   <starting_current> | Contains a **float_type** that specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**. | 1
   <terminal_resistance> | Contains a **float_type** that specifies the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**. | 1
   <torque_constant> | Contains a **float_type** that specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**. | 1
@@ -1118,7 +1119,7 @@ Converts electrical energy into mechanical energy usually using magnetic fields 
 
 Related variables, but not inserted in the electric_motor specification:
 
-* Stall torque - The time it takes the unloaded motor to reach 63% of its no load speed under a constant voltage, starting from rest. Proportional to the inertia of the rotor and inversely proportional to the square of the the torque constant. 
+* Mechanical time constant - The time it takes the unloaded motor to reach 63% of its no load speed under a constant voltage, starting from rest. Proportional to the inertia of the rotor and inversely proportional to the square of the the torque constant. 
 * Max. efficiency - The maximum efficiency of the motor in converting electrical power to mechanical power. This maximum efficiency typically occurs at high speed and low torque; the efficiency is zero at zero speed and zero torque, since the mechanical power is τω. 
 * No load current - The current required to spin the motor at the no load condition (i.e., the current needed to provide the torque necessary to overcome friction).
 * Nominal current (max. continuous current) - The current that yields the maximum continuous torque. This maximum is determined by thermal characteristics of the motor. The power dissipated by the motor as heat is i2R. Larger currents are acceptable intermittently, but large continuous currents may cause the motor to overheat. 
@@ -1139,11 +1140,11 @@ Example
         <assigned_power_rating>1.0</assigned_power_rating>
         <max_speed>3000</max_speed>
         <no_load_speed>3990</no_load_speed>
+        <stall_torque>0.012</stall_torque>
         <nominal_torque>0.012</nominal_torque>
         <nominal_voltage>24.0</nominal_voltage>
         <rotor_inertia>0.0000023</rotor_inertia>
         <speed_constant>173.0</speed_constant>
-        <speed_torque_gradient>130000.0</speed_torque_gradient>
         <starting_current>0.578</starting_current>
         <terminal_resistance>41.5</terminal_resistance>
         <torque_constant>0.0552</torque_constant>
