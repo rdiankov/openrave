@@ -317,6 +317,14 @@ protected:
 
         _SetParams();
 
+        std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
+        if (fulldirname != ""){
+            RAVELOG_WARN_FORMAT("Loading selfcache from %s",fulldirname);
+            _selfcache->LoadCache(GetCacheHash());
+            int size = _selfcache->GetNumKnownNodes();
+            RAVELOG_WARN_FORMAT("Loaded %d configurations", size);
+        }
+
         RAVELOG_DEBUG_FORMAT("Now tracking robot %s", bodyname);
 
         _cachedcollisionchecks=0;
@@ -449,8 +457,7 @@ protected:
 
     virtual bool _SaveCacheCommand(std::ostream& sout, std::istream& sinput)
     {
-
-        _selfcache->SaveCache(GetRobot()->GetRobotStructureHash());
+        _selfcache->SaveCache(GetCacheHash());
         return true;
     }
 
@@ -458,7 +465,7 @@ protected:
     virtual bool _LoadCacheCommand(std::ostream& sout, std::istream& sinput)
     {
 
-        _selfcache->LoadCache(GetRobot()->GetRobotStructureHash());
+        _selfcache->LoadCache(GetCacheHash());
         return true;
     }
 
@@ -472,6 +479,23 @@ protected:
             }
         }
         return _probot;
+    }
+
+    std::string GetCacheHash()
+    {
+        std::string robothash = GetRobot()->GetRobotStructureHash();
+
+        std::vector<KinBodyPtr> vGrabbedBodies;
+        GetRobot()->GetGrabbed(vGrabbedBodies);
+        FOREACH(newbody, vGrabbedBodies){
+            robothash += (*newbody)->GetKinematicsGeometryHash();
+        }
+     
+        ostringstream ss;
+        ss << GetRobot()->GetActiveDOF();
+        robothash += ss.str();
+
+        return robothash;
     }
 
     // for testing, will remove soon (cloning collision checkers resets all parameters)
