@@ -65,13 +65,13 @@ void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
     else {
         _conftype = CNT_Free;
         _collidinglink.reset();
-        _robotlinkindex = -1;
+        _robotlinkindex = 0;
     }
 }
 
 void CacheTreeNode::SetCollisionInfo(int robotlinkindex, int type)
 {
-    _robotlinkindex = index;
+    _robotlinkindex = robotlinkindex;
     if(type == 1) {
         _conftype = CNT_Collision;
     }
@@ -119,10 +119,9 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
 {
     OPENRAVE_ASSERT_OP((int)weights.size(),==,_statedof);
     Reset();
-    _nodeindex = 0;
     _weights = weights;
     _numnodes = 0;
-    _base = 2.0; // optimal is 1.3?
+    _base = 2.0; 
     _fBaseInv = 1/_base;
     _fBaseInv2 = 1/Sqr(_base);
     _fBaseChildMult = 1/(_base-1);
@@ -171,7 +170,6 @@ CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, C
     newnode->id = s_CacheTreeId++;
 #endif
     newnode->SetCollisionInfo(report);
-    newnode->index = _nodeindex++;
     return newnode;
 }
 
@@ -190,7 +188,6 @@ CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
         clonenode->_collidinglinktrans = refnode->_collidinglinktrans;
         clonenode->_robotlinkindex = refnode->_robotlinkindex;
     }
-    clonenode->index = _nodeindex++;
     return clonenode;
 }
 
@@ -837,7 +834,7 @@ int CacheTree::SaveCache(std::string filename)
             fwrite(&conftype, sizeof(conftype), 1, pfile);
 
             if (!(*itnode)->GetCollidingLink()) {
-                int nolink = -1;
+                int nolink = 0;
                 fwrite(&nolink, sizeof(nolink), 1, pfile);
                 fwrite(&nolink, sizeof(nolink), 1, pfile);
             }
@@ -987,10 +984,32 @@ int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
             }
         }
     }
+    int knum = GetNumKnownNodes();
+    RAVELOG_WARN_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
     return nremoved;
 }
 
-int CacheTree::RemoveFreeConfigurations() //todo only remove those with overlaping linkspheres
+int CacheTree::UpdateFreeConfigurations(KinBodyPtr pbody) //todo only remove those with overlaping linkspheres
+{
+    int nremoved=0;
+    if (_numnodes > 0) {
+
+        FOREACH(itlevelnodes, _vsetLevelNodes) {
+            FOREACH(itnode, *itlevelnodes) {
+                if (((*itnode)->GetType() == CNT_Free)) {
+                    (*itnode)->SetType(CNT_Unknown);
+                    nremoved += 1;
+                }
+            }
+        }
+    }
+
+    int knum = GetNumKnownNodes();
+    RAVELOG_WARN_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
+    return nremoved;
+}
+
+int CacheTree::RemoveFreeConfigurations() 
 {
     int nremoved=0;
     if (_numnodes > 0) {
@@ -1003,6 +1022,9 @@ int CacheTree::RemoveFreeConfigurations() //todo only remove those with overlapi
             }
         }
     }
+
+    int knum = GetNumKnownNodes();
+    RAVELOG_WARN_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
     return nremoved;
 }
 
@@ -1185,7 +1207,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     if (IS_DEBUGLEVEL(Level_Debug)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        ss << "Initializing cache"; /*,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";*/
+        ss << "Initializing cache,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";
         for (size_t i = 0; i < vweights.size(); ++i) {
             ss << vweights[i] << " ";
         }
@@ -1276,7 +1298,7 @@ int ConfigurationCache::CheckCollision(const std::vector<dReal>& conf, KinBody::
         closestdist = knn.second;
         if( knn.first->IsInCollision()) {
 
-            if (_pstaterobot->GetLinks().size() <= knn.first->GetRobotLinkIndex()){
+            if ((int)_pstaterobot->GetLinks().size() <= knn.first->GetRobotLinkIndex()){
                 robotlink = KinBody::LinkConstPtr(); //patch
             }
             else{
