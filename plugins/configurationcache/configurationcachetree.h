@@ -42,9 +42,13 @@ public:
 
     void SetCollisionInfo(int index, int type);
 
+    inline int GetCollidingLinkIndex() const {
+        return _collidinglink->GetIndex();
+    }
     inline KinBody::LinkConstPtr GetCollidingLink() const {
         return _collidinglink;
     }
+
     inline int GetRobotLinkIndex() const {
         return _robotlinkindex;
     }
@@ -103,6 +107,7 @@ protected:
     KinBody::LinkConstPtr _collidinglink;
     Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
     int _robotlinkindex; ///< the robot link index that is colliding with _collidinglink. Valid if _conftype is CNT_Collision
+    //int _collidinglink;
 
     // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree?
     //std::map<int,std::vector<CacheTreeNodePtr> > _children; //maybe use a vector for each level somehow
