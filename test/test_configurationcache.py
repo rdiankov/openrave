@@ -124,6 +124,7 @@ class TestConfigurationCache(EnvironmentSetup):
             sampler.SampleSequence(SampleDataType.Real,1)
             report=CollisionReport()
 
+            cachechecker.SendCommand('ResetSelfCache')
             stime = time.time()
             confs = []
             for iter in range(0, 500):
@@ -252,7 +253,8 @@ class TestConfigurationCache(EnvironmentSetup):
                 success=cachechecker.SendCommand('TrackRobotState %s'%robot.GetName())
                 assert(success is not None)
                 env.SetCollisionChecker(cachechecker)
-
+                robot.SetSelfCollisionChecker(cachechecker)
+                
                 cachedtimes = []
                 for runs in range(2):
 
