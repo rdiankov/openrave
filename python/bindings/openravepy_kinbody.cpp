@@ -305,6 +305,7 @@ public:
         _vhardmaxvel = toPyVector3(Vector(10,10,10));
         _vmaxaccel = toPyVector3(Vector(50,50,50));
         _vmaxtorque = toPyVector3(Vector(1e5,1e5,1e5));
+        _vmaxinertia = toPyVector3(Vector(1e5,1e5,1e5));
         _vweights = toPyVector3(Vector(1,1,1));
         _voffsets = toPyVector3(Vector(0,0,0));
         _vlowerlimit = toPyVector3(Vector(0,0,0));
@@ -330,6 +331,7 @@ public:
         _vhardmaxvel = toPyArray<dReal,3>(info._vhardmaxvel);
         _vmaxaccel = toPyArray<dReal,3>(info._vmaxaccel);
         _vmaxtorque = toPyArray<dReal,3>(info._vmaxtorque);
+        _vmaxinertia = toPyArray<dReal,3>(info._vmaxinertia);
         _vweights = toPyArray<dReal,3>(info._vweights);
         _voffsets = toPyArray<dReal,3>(info._voffsets);
         _vlowerlimit = toPyArray<dReal,3>(info._vlowerlimit);
@@ -408,6 +410,10 @@ public:
         for(size_t i = 0; i < num; ++i) {
             info._vmaxtorque.at(i) = boost::python::extract<dReal>(_vmaxtorque[i]);
         }
+        num = len(_vmaxinertia);
+        for(size_t i = 0; i < num; ++i) {
+            info._vmaxinertia.at(i) = boost::python::extract<dReal>(_vmaxinertia[i]);
+        }
         num = len(_vweights);
         for(size_t i = 0; i < num; ++i) {
             info._vweights.at(i) = boost::python::extract<dReal>(_vweights[i]);
@@ -479,7 +485,7 @@ public:
     KinBody::JointType _type;
     object _name;
     object _linkname0, _linkname1;
-    object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
+    object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vmaxinertia, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
     object _trajfollow;
     PyElectricMotorActuatorInfoPtr _infoElectricMotor;
     boost::python::list _vmimic;
@@ -919,6 +925,9 @@ public:
     }
     dReal GetMaxTorque(int iaxis=0) const {
         return _pjoint->GetMaxTorque(iaxis);
+    }
+    dReal GetMaxInertia(int iaxis=0) const {
+        return _pjoint->GetMaxInertia(iaxis);
     }
 
     int GetDOFIndex() const {
@@ -2620,7 +2629,7 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor));
+        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
         r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
@@ -2650,6 +2659,9 @@ public:
             r._mapStringParameters = boost::python::dict(state[2][6]);
             if( num2 > 7 ) {
                 r._infoElectricMotor = boost::python::extract<PyElectricMotorActuatorInfoPtr>(state[2][7]);
+                if( num2 > 8 ) {
+                    r._vmaxinertia = state[2][8];
+                }
             }
         }
     }
@@ -2667,6 +2679,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxInertia_overloads, GetMaxInertia, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetDOFLimits_overloads, SetDOFLimits, 2, 3)
@@ -2967,6 +2980,7 @@ void init_openravepy_kinbody()
                            .def_readwrite("_vhardmaxvel",&PyJointInfo::_vhardmaxvel)
                            .def_readwrite("_vmaxaccel",&PyJointInfo::_vmaxaccel)
                            .def_readwrite("_vmaxtorque",&PyJointInfo::_vmaxtorque)
+                           .def_readwrite("_vmaxinertia",&PyJointInfo::_vmaxinertia)
                            .def_readwrite("_vweights",&PyJointInfo::_vweights)
                            .def_readwrite("_voffsets",&PyJointInfo::_voffsets)
                            .def_readwrite("_vlowerlimit",&PyJointInfo::_vlowerlimit)
@@ -3090,6 +3104,7 @@ void init_openravepy_kinbody()
                           .def("GetMaxVel", &PyJoint::GetMaxVel, GetMaxVel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxVel)))
                           .def("GetMaxAccel", &PyJoint::GetMaxAccel, GetMaxAccel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxAccel)))
                           .def("GetMaxTorque", &PyJoint::GetMaxTorque, GetMaxTorque_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxTorque)))
+                          .def("GetMaxInertia", &PyJoint::GetMaxInertia, GetMaxInertia_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxInertia)))
                           .def("GetDOFIndex", &PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                           .def("GetJointIndex", &PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))
                           .def("GetParent", &PyJoint::GetParent, DOXY_FN(KinBody::Joint,GetParent))

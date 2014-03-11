@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -744,7 +744,8 @@ public:
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
+        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
+        boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
 
         /// \brief internal offset parameter that determines the branch the angle centers on
@@ -815,6 +816,9 @@ public:
         }
         inline dReal GetMaxTorque(int iaxis=0) const {
             return _info._vmaxtorque[iaxis];
+        }
+        inline dReal GetMaxInertia(int iaxis=0) const {
+            return _info._vmaxinertia[iaxis];
         }
 
         /// \brief Get the degree of freedom index in the body's DOF array.
@@ -959,6 +963,16 @@ public:
 
         /// \brief \see GetTorqueLimits
         virtual void SetTorqueLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the max inertias of the joint
+
+            \param[out] the max inertia
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        /// \brief \see GetInertiaLimits
+        virtual void SetInertiaLimits(const std::vector<dReal>& vmax);
 
         /// \brief gets all weights for the joint axes
         ///
