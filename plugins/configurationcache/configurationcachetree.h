@@ -107,7 +107,6 @@ protected:
     KinBody::LinkConstPtr _collidinglink;
     Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
     int _robotlinkindex; ///< the robot link index that is colliding with _collidinglink. Valid if _conftype is CNT_Collision
-    //int _collidinglink;
 
     // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree?
     //std::map<int,std::vector<CacheTreeNodePtr> > _children; //maybe use a vector for each level somehow
@@ -117,7 +116,6 @@ protected:
     int16_t _level; ///< the level the node belongs to
     uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
     uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
-    uint8_t index;
 
     // managed by pool
 #ifdef _DEBUG
@@ -197,9 +195,6 @@ public:
     void GetNodeValues(std::vector<dReal>& vals) const;
 
     void GetNodeValuesList(std::vector<CacheTreeNodePtr>& lvals);
-    // todo: take in information regarding what changed in the environment and update nodes accordingly (i.e., change nodes no longer known to be in collision to CNT_Unknown, remove nodes in collision with body no longer in the environment, check enclosing spheres for links to see if they overlap with new bodies in the scene, etc.) Note that parent/child relations must be updated as described in Beygelzimer, et al. 2006.
-    /// \brief update the tree when the environment changes
-    void UpdateTree();
 
     void SetWeights(const std::vector<dReal>& weights);
 
@@ -231,6 +226,8 @@ public:
     int RemoveFreeConfigurations();
 
     int UpdateCollisionConfigurations(KinBodyPtr pbody);
+
+    int UpdateFreeConfigurations(KinBodyPtr pbody);
 
     int GetNumKnownNodes();
 
@@ -302,7 +299,6 @@ private:
     int _maxlevel; ///< the maximum allowed levels in the tree, this is where the root node starts (inclusive)
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
     int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
-    int _nodeindex;
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
     // cache cache
@@ -358,11 +354,6 @@ public:
     /// \brief invalidate the entire cache
     void Reset();
 
-    /// \brief prune certain nodes in the cache tree, possibly takes in link, kinbody or environment as a parameter
-    ///void PruneCache(){}
-
-    //std::list<std::pair<dReal, CacheTreeNodePtr> > GetNearestKnodes(CacheTreeNodePtr in, int k, ConfigurationNodeType conftype = CNT_Collision); //needs to be tested, possibly changed??
-
     void GetDOFValues(std::vector<dReal>& values);
 
     //int SynchronizeAll(KinBodyConstPtr pbody = KinBodyConstPtr());
@@ -371,7 +362,6 @@ public:
     int GetNumNodes() const {
         return _cachetree.GetNumNodes();
     }
-
 
     /// \brief number of nodes with known type, i.e., != CT_Unknown
     int GetNumKnownNodes();
