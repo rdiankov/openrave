@@ -436,32 +436,6 @@ int CacheTree::InsertNode(const std::vector<dReal>& cs, CollisionReportPtr repor
         return 1;
     }
 
-//    std::vector<std::pair<CacheTreeNodePtr, dReal> > vchain;
-//    if( _numnodes > 100 ) {
-//        CacheTreeNodePtr testnode=NULL;
-//        FOREACHC(itnode, _vsetLevelNodes.at(_EncodeLevel(2))) {
-//            if( (*itnode)->id == 125 ) {
-//                testnode = *itnode;
-//                break;
-//            }
-//        }
-//        if( !!testnode ) {
-//            vchain.insert(vchain.begin(), make_pair(testnode, _ComputeDistance2(testnode->GetConfigurationState(), nodein->GetConfigurationState())));
-//            for(int currentlevel=3; currentlevel <= _maxlevel; ++currentlevel) {
-//                // find its parents
-//                int nfound = 0;
-//                FOREACH(ittestnode, _vsetLevelNodes.at(_EncodeLevel(currentlevel))) {
-//                    if( find((*ittestnode)->_vchildren.begin(), (*ittestnode)->_vchildren.end(), testnode) != (*ittestnode)->_vchildren.end() ) {
-//                        nfound++;
-//                        testnode = *ittestnode;
-//                        vchain.insert(vchain.begin(), make_pair(testnode, _ComputeDistance2(testnode->GetConfigurationState(), nodein->GetConfigurationState())));
-//                    }
-//                }
-//                BOOST_ASSERT(nfound==1);
-//            }
-//        }
-//    }
-
     _vCurrentLevelNodes.resize(1);
     _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
     _vCurrentLevelNodes[0].second = _ComputeDistance2(_vCurrentLevelNodes[0].first->GetConfigurationState(), &cs[0]);
@@ -822,8 +796,13 @@ int CacheTree::SaveCache(std::string filename)
         }
     }
 
+    std::string fullname = std::string("selfcache.")+filename;
+    std::string fulldirname = RaveFindDatabaseFile(fullname,false);
+
+    RAVELOG_WARN_FORMAT("Writing to %s",fulldirname);
+    
     FILE* pfile;
-    pfile = fopen(filename.c_str(),"wb");
+    pfile = fopen(fulldirname.c_str(),"wb");
 
     fwrite(&_statedof, sizeof(_statedof), 1, pfile);
 
@@ -897,10 +876,15 @@ int CacheTree::SaveCache(std::string filename)
 int CacheTree::LoadCache(std::string filename)
 {
 
-    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-    
-    FILE* pfile = fopen(filename.c_str(),"rb");
+    std::string fullname = std::string("selfcache.")+filename;
+    std::string fulldirname = RaveFindDatabaseFile(fullname,false);
+
+    FILE* pfile = fopen(fulldirname.c_str(),"rb");
     size_t outs;
+
+    if (!pfile){
+        return 0;
+    }
 
     outs = fread(&_statedof, sizeof(_statedof), 1, pfile);
 
@@ -977,7 +961,6 @@ int CacheTree::LoadCache(std::string filename)
             int childid;
             outs = fread(&childid, sizeof(childid), 1, pfile);
             newnode->_vchildren.push_back(vnodes.at(childid));
-            ss << childid << " ";
         }
 
         _vsetLevelNodes.at(_EncodeLevel(newnode->_level)).insert(newnode);
@@ -1292,7 +1275,13 @@ int ConfigurationCache::CheckCollision(const std::vector<dReal>& conf, KinBody::
     if( !!knn.first ) {
         closestdist = knn.second;
         if( knn.first->IsInCollision()) {
-            robotlink = _pstaterobot->GetLinks().at(knn.first->GetRobotLinkIndex());
+
+            if (_pstaterobot->GetLinks().size() <= knn.first->GetRobotLinkIndex()){
+                robotlink = KinBody::LinkConstPtr(); //patch
+            }
+            else{
+                robotlink = _pstaterobot->GetLinks().at(knn.first->GetRobotLinkIndex());
+            }
             collidinglink = knn.first->GetCollidingLink();
             return 1;
         }
@@ -1364,7 +1353,6 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
 
 void ConfigurationCache::_UpdateRobotJointLimits()
 {
-
     RAVELOG_WARN("Updating robot joint limits\n");
     _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
     _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
@@ -1385,7 +1373,6 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 
 void ConfigurationCache::_UpdateRobotGrabbed()
 {
-
     bool newGrab = false;
     _pstaterobot->GetGrabbed(_vnewgrabbedbodies);
     FOREACH(oldbody, _setgrabbedbodies){
