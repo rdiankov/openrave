@@ -149,7 +149,6 @@ class TestConfigurationCache(EnvironmentSetup):
             assert(int(cachechecker.SendCommand('ValidateSelfCache')) == 1)
             self.log.info('cache is valid')
 
-
     def test_find_insert(self):
 
         self.LoadEnv('data/lab1.env.xml')
