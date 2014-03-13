@@ -551,6 +551,7 @@ private:
     }
 
     std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
+    PlannerBasePtr __cachePostProcessPlanner; ///< cached version of the post process planner
 
     friend class CustomPlannerCallbackData;
 };
