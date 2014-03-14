@@ -68,7 +68,7 @@ public:
 
     void SetType(ConfigurationNodeType conftype) {
         _conftype = conftype;
-        if (_conftype == CNT_Unknown){
+        if (_conftype == CNT_Unknown) {
             _usenn = 0;
         }
     }
@@ -233,7 +233,7 @@ public:
 
     int SaveCache(std::string filename);
 
-    int LoadCache(std::string filename);
+    int LoadCache(std::string filename, EnvironmentBasePtr penv);
 
 private:
     /// \brief creates new node on the pool
@@ -301,6 +301,8 @@ private:
     int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
+    boost::mutex _mutexpool;
+
     // cache cache
     mutable std::vector< std::pair<CacheTreeNodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
     mutable std::vector< std::vector<CacheTreeNodePtr> > _vvCacheNodes;
@@ -316,8 +318,7 @@ class ConfigurationCache
 public:
     /// \brief start tracking the active DOFs of the robot
     ConfigurationCache(RobotBasePtr probotstate, bool envupdates = true);
-    virtual ~ConfigurationCache() {
-    }
+    virtual ~ConfigurationCache();
 
     /// \brief insert a configuration into the cache
     /// function verifies if the configuration is at least _insertiondistancemult
@@ -336,7 +337,7 @@ public:
     /// \brief removes all collision configurations colliding with pbody, used to update cache when bodies are removed or moved
     int UpdateCollisionConfigurations(KinBodyPtr pbody);
 
-    /// \brief removes all collision configurations 
+    /// \brief removes all collision configurations
     int RemoveCollisionConfigurations();
 
     /// \brief removes all free configurations
@@ -344,7 +345,7 @@ public:
 
     /// \brief removes all free configurations, to be updated to only remove those with linkspheres that overlap with the body
     int UpdateFreeConfigurations(KinBodyPtr pbody);
-    
+
     /// \brief determine if current configuration is whithin threshold of a collision in the cache (_collisionthresh), known to be in collision, or requires an explicit collision check
     /// \return 1 if in collision, 0 if not in collision, -1 if unknown
     int CheckCollision(const std::vector<dReal>& cs, KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist);
@@ -371,7 +372,7 @@ public:
         _cachetree.GetNodeValues(vals);
     }
 
-    /// \brief return nearest configuration and distance 
+    /// \brief return nearest configuration and distance
     std::pair<std::vector<dReal>, dReal> FindNearestNode(const std::vector<dReal>& conf, dReal dist = 0.0);
 
     /// \brief return distance between two configurations as computed by the tree (for testing)
@@ -380,27 +381,27 @@ public:
     }
 
     /// \brief the cache will assume a new configuration is in collision if the nearest node in the tree is below this distance
-    void SetCollisionThresh(dReal colthresh)
+    inline void SetCollisionThresh(dReal colthresh)
     {
         _collisionthresh = colthresh;
     }
 
-    void SetFreeSpaceThresh(dReal freespacethresh)
+    inline void SetFreeSpaceThresh(dReal freespacethresh)
     {
         _freespacethresh = freespacethresh;
     }
 
-    void SetBase(dReal base)
+    inline void SetBase(dReal base)
     {
         _cachetree.SetBase(base);
     }
 
-    void DisableEnvUpdates()
+    inline void DisableEnvUpdates()
     {
         _envupdates = false;
     }
 
-    void EnableEnvUpdates()
+    inline void EnableEnvUpdates()
     {
         _envupdates = true;
     }
@@ -408,32 +409,32 @@ public:
     void SetWeights(const std::vector<dReal>& weights);
 
     /// \brief the cache will not insert configuration if their distance from the nearest node in the tree is not larger than this value
-    void SetInsertionDistanceMult(dReal indist)
+    inline void SetInsertionDistanceMult(dReal indist)
     {
         _insertiondistancemult = indist;
     }
 
-    dReal GetCollisionThresh() const
+    inline dReal GetCollisionThresh() const
     {
         return _collisionthresh;
     }
 
-    dReal GetFreeSpaceThresh() const
+    inline dReal GetFreeSpaceThresh() const
     {
         return _freespacethresh;
     }
 
-    dReal GetInsertionDistanceMult() const 
+    inline dReal GetInsertionDistanceMult() const
     {
         return _insertiondistancemult;
     }
 
-    dReal GetBase() const 
+    inline dReal GetBase() const
     {
         return _cachetree.GetBase();
     }
 
-    RobotBasePtr GetRobot() const {
+    inline RobotBasePtr GetRobot() const {
         return _pstaterobot;
     }
 
@@ -441,19 +442,19 @@ public:
     bool Validate();
 
     /// \brief remove all nodes in collision with pbody, for testing
-    void UpdateCollisionNodes(KinBodyPtr pbody)
+    inline void UpdateCollisionNodes(KinBodyPtr pbody)
     {
         _cachetree.UpdateCollisionNodes(pbody);
     }
 
-    void SaveCache(std::string filename)
+    inline void SaveCache(std::string filename)
     {
         _cachetree.SaveCache(filename);
     }
 
-    void LoadCache(std::string filename)
+    inline void LoadCache(std::string filename, EnvironmentBasePtr penv)
     {
-        _cachetree.LoadCache(filename);
+        _cachetree.LoadCache(filename, penv);
     }
 
 private:
@@ -498,6 +499,7 @@ public:
     };
 
     typedef boost::shared_ptr<KinBodyCachedData> KinBodyCachedDataPtr;
+    typedef boost::weak_ptr<KinBodyCachedData> KinBodyCachedDataWeakPtr;
 
     EnvironmentBasePtr _penv;
 
@@ -505,9 +507,10 @@ public:
     dReal _freespacethresh;
     dReal _insertiondistancemult; ///< only insert nodes if they are far from the nearest node in the tree. The distance is computed by multiplying this number of _collisionthresh or _freespacethresh. Distance a configuration must have from the nearest configuration in the tree in order for it be inserted
     std::string _userdatakey;
-    UserDataPtr _jointchangehandle;
+    UserDataPtr _handleJointLimitChange, _handleGrabbedChange;
     UserDataPtr _handleBodyAddRemove;
     //std::vector<UserDataPtr> _bodyhandles;
+    std::list<KinBodyCachedDataWeakPtr> _listCachedData; ///< necessary to keep a list of all the data created in order to force reset the change callbacks
 
     /// \brief used for debugging/profiling
     uint64_t _qtime; //total query time
@@ -515,6 +518,8 @@ public:
 
     bool _profile;
     bool _envupdates;
+ 
+    uint64_t _untrackedup, addremup; 
 };
 
 typedef boost::shared_ptr<ConfigurationCache> ConfigurationCachePtr;
