@@ -242,11 +242,6 @@ public:
         return _cache->InsertConfiguration(ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport));
     }
 
-    int RemoveConfigurations(object ovalues, dReal radius)
-    {
-        return _cache->RemoveConfigurations(ExtractArray<dReal>(ovalues), radius);
-    }
-
     object CheckCollision(object ovalues)
     {
         KinBody::LinkConstPtr crobotlink, ccollidinglink;
@@ -361,7 +356,6 @@ BOOST_PYTHON_MODULE(openravepy_configurationcache)
     .def(init<object>(args("robot")))
     .def("InsertConfigurationDist",&PyConfigurationCache::InsertConfigurationDist, args("values","report","dist"))
     .def("InsertConfiguration",&PyConfigurationCache::InsertConfiguration, args("values", "report"))
-    .def("RemoveConfigurations",&PyConfigurationCache::RemoveConfigurations, args("values","radius"))
     .def("CheckCollision",&PyConfigurationCache::CheckCollision, args("values"))
     .def("Reset",&PyConfigurationCache::Reset)
     .def("GetDOFValues",&PyConfigurationCache::GetDOFValues)

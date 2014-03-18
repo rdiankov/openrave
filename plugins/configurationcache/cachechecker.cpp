@@ -210,10 +210,10 @@ public:
         ++_cachedcollisionchecks;
 
         if (_cachedcollisionchecks % 200 == 0) {
-            stringstream ss;
-            ss << "insert " << _intime << "ms " << "query " << _querytime << "ms " << "raw " << _rawtime << "ms" << " size " << _cache->GetNumKnownNodes() << " hits " << _cachedcollisionhits+_cachedfreehits << "/" << _cachedcollisionchecks;
+            _ss.str(std::string());
+            _ss << "insert " << _intime << "ms " << "query " << _querytime << "ms " << "raw " << _rawtime << "ms" << " size " << _cache->GetNumKnownNodes() << " hits " << _cachedcollisionhits+_cachedfreehits << "/" << _cachedcollisionchecks;
 
-            RAVELOG_DEBUG(ss.str());
+            RAVELOG_DEBUG(_ss.str());
         }
         
         if( ret == 1 ) {
@@ -314,14 +314,21 @@ public:
         ++_selfcachedcollisionchecks;
 
         if (_selfcachedcollisionchecks % 200 == 0) {
-            stringstream ss;
-            ss << "self-insert " << _selfintime << "ms " << "self-query " << _selfquerytime << "ms " << "self-raw " << _selfrawtime << "ms " << "load " << _loadtime << "ms " << "size " << _selfcache->GetNumKnownNodes() << " hits " << _selfcachedcollisionhits+_selfcachedfreehits << "/" << _selfcachedcollisionchecks;
+            _ss.str(std::string());
+            _ss << "self-insert " << _selfintime << "ms " << "self-query " << _selfquerytime << "ms " << "self-raw " << _selfrawtime << "ms " << "load " << _loadtime << "ms " << "size " << _selfcache->GetNumKnownNodes() << " hits " << _selfcachedcollisionhits+_selfcachedfreehits << "/" << _selfcachedcollisionchecks;
 
-            RAVELOG_DEBUG(ss.str());
+            if (_selfrawtime > 0 && (_selfintime+_selfquerytime) > 0){
+                _ss << " avg rawtime " << (_selfcachedcollisionchecks-(_selfcachedcollisionhits+_selfcachedfreehits))/_selfrawtime << "ms " << " avg cachetime " << (_selfcachedcollisionhits+_selfcachedfreehits)/(_selfquerytime+_selfintime) << "ms";
+            }
+
+            RAVELOG_DEBUG(_ss.str());
         }
         
         if (_selfcachedcollisionchecks % 4000 == 0) {
-            _selfcache->SaveCache(GetCacheHash());
+            if (_size*1.5 < _selfcache->GetNumKnownNodes()){
+                _selfcache->SaveCache(GetCacheHash());
+                _size = _selfcache->GetNumKnownNodes();
+            }
         }
         if( ret == 1 ) {
             ++_selfcachedcollisionhits;
@@ -373,20 +380,24 @@ protected:
             return false;
         }
 
-        // always recreate?
-        _cache.reset(new ConfigurationCache(_probot));
-        _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
+        if (_selfcache->GetNumKnownNodes() == 0)
+        {
+            // always recreate?
+            _cache.reset(new ConfigurationCache(_probot));
+            _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
 
-        _SetParams();
+            _SetParams();
+        }
 
         std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
-        if (fulldirname != "") {
+        if (fulldirname != "" && _selfcache->GetNumKnownNodes() == 0) {
+
             RAVELOG_DEBUG_FORMAT("Loading selfcache from %s",fulldirname);
             _stime = utils::GetMilliTime();
             _selfcache->LoadCache(GetCacheHash(), GetEnv());
             _loadtime = utils::GetMilliTime()-_stime;
-            int size = _selfcache->GetNumKnownNodes();
-            RAVELOG_DEBUG_FORMAT("Loaded %d configurations in %d ms", size%_loadtime);
+            _size = _selfcache->GetNumKnownNodes();
+            RAVELOG_WARN_FORMAT("Loaded %d configurations in %d ms", _size%_loadtime);
 
             __cachehash = "";
         }
@@ -566,28 +577,30 @@ protected:
 
     std::string GetCacheHash()
     {
-        std::string robothash = GetRobot()->GetRobotStructureHash();
+        _robothash = GetRobot()->GetRobotStructureHash();
 
-        std::vector<KinBodyPtr> vGrabbedBodies;
-        GetRobot()->GetGrabbed(vGrabbedBodies);
-        FOREACH(newbody, vGrabbedBodies){
-            robothash += (*newbody)->GetKinematicsGeometryHash();
+        _vGrabbedBodies.resize(0);
+        GetRobot()->GetGrabbed(_vGrabbedBodies);
+        FOREACH(newbody, _vGrabbedBodies){
+            _robothash += (*newbody)->GetKinematicsGeometryHash();
         }
 
-        ostringstream ss;
 
-        ss << _selfcache->GetCollisionThresh() << _selfcache->GetFreeSpaceThresh() << _selfcache->GetInsertionDistanceMult() << _selfcache->GetBase();
+        _oss << _selfcache->GetCollisionThresh() << _selfcache->GetFreeSpaceThresh() << _selfcache->GetInsertionDistanceMult() << _selfcache->GetBase();
 
-        robothash += ss.str();
+        _robothash += _oss.str();
 
-        __cachehash = utils::GetMD5HashString(robothash);
+        __cachehash = utils::GetMD5HashString(_robothash);
 
-        ss.str(std::string());
-        ss << GetRobot()->GetDOF();
-        __cachehash += ss.str();
+        _oss.str(std::string());
+        _oss << GetRobot()->GetDOF();
+        __cachehash += _oss.str();
+
+        _oss.str(std::string());
 
         return __cachehash;
     }
+
 
     // for testing, will remove soon (cloning collision checkers resets all parameters)
     void _SetParams()
@@ -620,15 +633,19 @@ protected:
     }
 
     std::vector<dReal> _dofvals;
+    std::vector<KinBodyPtr> _vGrabbedBodies;
     ConfigurationCachePtr _cache;
     ConfigurationCachePtr _selfcache;
     CollisionCheckerBasePtr _pintchecker;
     std::string _strRobotName; ///< the robot name to track
     std::string __cachehash;
+    std::string _robothash;
     RobotBasePtr _probot; ///< robot pointer, shouldn't be used directly, use with GetRobot()
-    int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits;
+    int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits, _size;
     int _selfcachedcollisionchecks, _selfcachedcollisionhits, _selfcachedfreehits;
     uint64_t _stime, _ftime, _intime, _querytime, _loadtime, _savetime, _rawtime, _resettime, _selfintime, _selfquerytime, _selfrawtime;
+    stringstream _ss;
+    ostringstream _oss;
 };
 
 CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)

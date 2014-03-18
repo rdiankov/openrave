@@ -41,6 +41,7 @@ CacheTreeNode::CacheTreeNode(const std::vector<dReal>& cs, Vector* plinkspheres)
     _level = 0;
     _hasselfchild = 0;
     _usenn = 1;
+    _hitcount = 0;
 }
 
 CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
@@ -52,6 +53,7 @@ CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
     _level = 0;
     _hasselfchild = 0;
     _usenn = 1;
+    _hitcount = 0;
 }
 
 void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
@@ -104,6 +106,13 @@ void CacheTreeNode::SetCollisionInfo(int robotlinkindex, int type)
 
 CacheTree::CacheTree(int statedof) : _poolNodes(sizeof(CacheTreeNode)+sizeof(dReal)*statedof)
 {
+
+    _vnodes.resize(0);
+    _dummycs.resize(0);
+    _fulldirname.resize(0);
+    _mapNodeIndices.clear();
+    _collidingbodyname.resize(0);
+
     _statedof=statedof;
     _weights.resize(_statedof, 1.0);
     Init(_weights, 1);
@@ -137,6 +146,13 @@ void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
 
 void CacheTree::Reset()
 {
+
+    _vnodes.resize(0);
+    _dummycs.resize(0);
+    _fulldirname.resize(0);
+    _mapNodeIndices.clear();
+    _collidingbodyname.resize(0);
+
     // make sure all children are deleted
     for(size_t ilevel = 0; ilevel < _vsetLevelNodes.size(); ++ilevel) {
         FOREACH(itnode, _vsetLevelNodes[ilevel]) {
@@ -145,6 +161,9 @@ void CacheTree::Reset()
     }
     FOREACH(itchildren, _vsetLevelNodes) {
         itchildren->clear();
+    }
+    FOREACH(itnode, _vnodes) {
+        (*itnode)->~CacheTreeNode();
     }
     _poolNodes.purge_memory();
     _numnodes = 0;
@@ -191,11 +210,13 @@ CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
     clonenode->id = s_CacheTreeId++;
 #endif
     clonenode->_conftype = refnode->_conftype;
+    clonenode->_hitcount = refnode->_hitcount;
     if( clonenode->IsInCollision() ) {
         clonenode->_collidinglink = refnode->_collidinglink;
         clonenode->_collidinglinktrans = refnode->_collidinglinktrans;
         clonenode->_robotlinkindex = refnode->_robotlinkindex;
     }
+
     return clonenode;
 }
 
@@ -204,17 +225,6 @@ void CacheTree::_DeleteCacheTreeNode(CacheTreeNodePtr pnode)
     pnode->~CacheTreeNode();
     _poolNodes.free(pnode);
 }
-
-//dReal CacheTree::ComputeDistance(CacheTreeNodePtr vi, CacheTreeNodePtr vf)
-//{
-//    dReal distance = _ComputeDistance2(vi->GetConfigurationState(), vf->GetConfigurationState());
-//
-//    // use this distance information to update the upper bounds stored on the node
-//    vi->UpdateApproximates(distance,vf);
-//    vf->UpdateApproximates(distance,vi);
-//
-//    return distance;
-//}
 
 dReal CacheTree::ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef) const
 {
@@ -235,13 +245,11 @@ void CacheTree::SetWeights(const std::vector<dReal>& weights)
 {
     Reset();
     _weights = weights;
-    //_statedof = (int)_weights.size();
 }
 
 void CacheTree::SetMaxDistance(dReal maxdistance)
 {
     Reset();
-    //_statedof = (int)_weights.size();
     _maxdistance = maxdistance;
     _maxlevel = ceilf(RaveLog(_maxdistance)/RaveLog(_base));
     _minlevel = _maxlevel - 1;
@@ -304,6 +312,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
                         bestdist2 = curdist2;
                         pbestnode = *itchild;
                         if( distancebound > 0 && bestdist2 <= distancebound2 ) {
+                            (*itchild)->IncreaseHitCount();
                             return make_pair(pbestnode, RaveSqrt(bestdist2));
                         }
                     }
@@ -370,6 +379,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
         if( proot->_usenn ) {
             ConfigurationNodeType cntype = proot->GetType();
             if( cntype == CNT_Collision && curdist2 <= collisionthresh2 ) {
+                proot->_hitcount++;
                 return make_pair(proot,RaveSqrt(curdist2));
             }
             else if( cntype == CNT_Free && curdist2 <= freespacethresh2 ) {
@@ -397,6 +407,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
                 if( (*itchild)->_usenn ) {
                     ConfigurationNodeType cntype = (*itchild)->GetType();
                     if( cntype == CNT_Collision && curdist2 <= collisionthresh2 ) {
+                        (*itchild)->_hitcount++;
                         return make_pair(*itchild, RaveSqrt(curdist2));
                     }
                     else if( cntype == CNT_Free && curdist2 <= freespacethresh2 ) {
@@ -795,22 +806,26 @@ int CacheTree::RemoveCollisionConfigurations()
 
 int CacheTree::SaveCache(std::string filename)
 {
-    boost::mutex::scoped_lock lock(_mutexpool);
-    std::map<CacheTreeNodePtr, int> mapNodeIndices;
+    //boost::mutex::scoped_lock lock(_mutexpool);
+    _mapNodeIndices.clear();
     int index=0;
+    int knownnodes=0;
     FOREACH(itlevelnodes, _vsetLevelNodes) {
         FOREACH(itnode, *itlevelnodes) {
-            mapNodeIndices[*itnode] = index++;
+            if( (*itnode)->_conftype != CNT_Unknown){
+                knownnodes++;
+            }
+            _mapNodeIndices[*itnode] = index++;
         }
     }
 
-    std::string fullname = std::string("selfcache.")+filename;
-    std::string fulldirname = RaveFindDatabaseFile(fullname,false);
+    _numnodes = knownnodes;
+    _fulldirname = RaveFindDatabaseFile(std::string("selfcache.")+filename,false);
 
-    RAVELOG_WARN_FORMAT("Writing to %s",fulldirname);
+    RAVELOG_WARN_FORMAT("Writing to %s",_fulldirname);
 
     FILE* pfile;
-    pfile = fopen(fulldirname.c_str(),"wb");
+    pfile = fopen(_fulldirname.c_str(),"wb");
 
     fwrite(&_statedof, sizeof(_statedof), 1, pfile);
     fwrite(&_weights[0], sizeof(_weights[0])*_weights.size(), 1, pfile);
@@ -826,30 +841,32 @@ int CacheTree::SaveCache(std::string filename)
 
     FOREACH(itlevelnodes, _vsetLevelNodes) {
         FOREACH(itnode, *itlevelnodes) {
-            CacheTreeNodePtr node = *itnode;
-            fwrite(&node->_level, sizeof(node->_level), 1, pfile);
-            fwrite(node->GetConfigurationState(), sizeof(dReal)*_statedof, 1, pfile);
-            fwrite(&node->_conftype, sizeof(node->_conftype), 1, pfile);
+            _newnode = *itnode;
+            if (_newnode->_conftype != CNT_Unknown) {
+                fwrite(&_newnode->_level, sizeof(_newnode->_level), 1, pfile);
+                fwrite(_newnode->GetConfigurationState(), sizeof(dReal)*_statedof, 1, pfile);
+                fwrite(&_newnode->_conftype, sizeof(_newnode->_conftype), 1, pfile);
 
-            if (node->_conftype == CNT_Collision ) {
-                // note, this assumes the colliding body name never changes across environments, which is a false assumption
-                std::string collidingbodyname = node->GetCollidingLink()->GetParent()->GetName();
-                int namelength = collidingbodyname.size();
-                fwrite(&namelength, sizeof(namelength), 1, pfile);
-                fwrite(collidingbodyname.c_str(), collidingbodyname.size(), 1, pfile);
-                int linkindex = node->GetCollidingLink()->GetIndex();
-                fwrite(&linkindex, sizeof(linkindex), 1, pfile);
-                fwrite(&node->_robotlinkindex, sizeof(node->_robotlinkindex), 1, pfile);
-            }
+                if (_newnode->_conftype == CNT_Collision ) {
+                    // note, this assumes the colliding body name never changes across environments, which is a false assumption
+                    _collidingbodyname = _newnode->GetCollidingLink()->GetParent()->GetName();
+                    int namelength = _collidingbodyname.size();
+                    fwrite(&namelength, sizeof(namelength), 1, pfile);
+                    fwrite(_collidingbodyname.c_str(), _collidingbodyname.size(), 1, pfile);
+                    int linkindex = _newnode->GetCollidingLink()->GetIndex();
+                    fwrite(&linkindex, sizeof(linkindex), 1, pfile);
+                    fwrite(&_newnode->_robotlinkindex, sizeof(_newnode->_robotlinkindex), 1, pfile);
+                }
 
-            fwrite(&node->_hasselfchild, sizeof(node->_hasselfchild), 1, pfile);
-            fwrite(&node->_usenn, sizeof(node->_usenn), 1, pfile);
-            int numchildren = node->_vchildren.size();
-            fwrite(&numchildren, sizeof(numchildren), 1, pfile);
+                fwrite(&_newnode->_hasselfchild, sizeof(_newnode->_hasselfchild), 1, pfile);
+                fwrite(&_newnode->_usenn, sizeof(_newnode->_usenn), 1, pfile);
+                int numchildren = _newnode->_vchildren.size();
+                fwrite(&numchildren, sizeof(numchildren), 1, pfile);
 
-            FOREACHC(itchild, (*itnode)->_vchildren) {
-                int cindex = mapNodeIndices[*itchild];
-                fwrite(&cindex, sizeof(cindex), 1, pfile);
+                FOREACHC(itchild, (*itnode)->_vchildren) {
+                    int cindex = _mapNodeIndices[*itchild];
+                    fwrite(&cindex, sizeof(cindex), 1, pfile);
+                }
             }
         }
     }
@@ -861,18 +878,17 @@ int CacheTree::SaveCache(std::string filename)
 
 int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
 {
-    boost::mutex::scoped_lock lock(_mutexpool);
-    Reset();
-    std::string fullname = std::string("selfcache.")+filename;
-    std::string fulldirname = RaveFindDatabaseFile(fullname,false);
+    //boost::mutex::scoped_lock lock(_mutexpool);
+    _fulldirname = RaveFindDatabaseFile(std::string("selfcache.")+filename,false);
 
-    FILE* pfile = fopen(fulldirname.c_str(),"rb");
+    FILE* pfile = fopen(_fulldirname.c_str(),"rb");
     size_t outs;
 
     if (!pfile) {
         return 0;
     }
 
+    Reset();
     outs = fread(&_statedof, sizeof(_statedof), 1, pfile);
 
     _weights.resize(_statedof,1.0);
@@ -892,53 +908,57 @@ int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
 
     int maxenclevel = max(_EncodeLevel(_maxlevel), _EncodeLevel(_minlevel));
     _vsetLevelNodes.resize(maxenclevel+1);
+    
+    //std::vector<CacheTreeNodePtr> _vnodes(_numnodes);
+    //std::vector<dReal> _dummycs(_statedof, 0);
+    _vnodes.resize(_numnodes);
+    _dummycs.resize(_statedof, 0);
 
-    std::vector<CacheTreeNodePtr> vnodes(_numnodes);
-    std::vector<dReal> dummycs(_statedof, 0);
     for(int i = 0; i < _numnodes; ++i) {
-        vnodes[i] = _CreateCacheTreeNode(dummycs, CollisionReportPtr());
+        _vnodes[i] = _CreateCacheTreeNode(_dummycs, CollisionReportPtr());
     }
 
     for (int inode = 0; inode < _numnodes; ++inode)
     {
-        CacheTreeNodePtr newnode = vnodes.at(inode);
-        outs = fread(&newnode->_level, sizeof(newnode->_level), 1, pfile);
-        outs = fread(newnode->_pcstate, sizeof(dReal)*_statedof, 1, pfile);
-        outs = fread(&newnode->_conftype, sizeof(newnode->_conftype), 1, pfile);
+        _newnode = _vnodes.at(inode);
+        outs = fread(&_newnode->_level, sizeof(_newnode->_level), 1, pfile);
+        outs = fread(_newnode->_pcstate, sizeof(dReal)*_statedof, 1, pfile);
+        outs = fread(&_newnode->_conftype, sizeof(_newnode->_conftype), 1, pfile);
 
-        if( newnode->_conftype == CNT_Collision ) {
+        if( _newnode->_conftype == CNT_Collision ) {
             int namelength;
             outs = fread(&namelength, sizeof(namelength), 1, pfile);
-            std::string collidingbodyname;
-            collidingbodyname.resize(namelength);
-            outs = fread(&collidingbodyname[0], namelength, 1, pfile);
+            _collidingbodyname.resize(namelength);
+            outs = fread(&_collidingbodyname[0], namelength, 1, pfile);
             int collidinglinkindex;
             outs = fread(&collidinglinkindex, sizeof(collidinglinkindex), 1, pfile);
-            KinBodyPtr pcollidingbody = penv->GetKinBody(collidingbodyname);
-            if( !pcollidingbody ) {
-                RAVELOG_WARN_FORMAT("loading cache expected colliding body %s, but none found", collidingbodyname);
+            _pcollidingbody = penv->GetKinBody(_collidingbodyname);
+            if( !_pcollidingbody ) {
+                RAVELOG_WARN_FORMAT("loading cache expected colliding body %s, but none found", _collidingbodyname);
             }
-            newnode->_collidinglink = pcollidingbody->GetLinks().at(collidinglinkindex);
-            outs = fread(&newnode->_robotlinkindex, sizeof(newnode->_robotlinkindex), 1, pfile);
+            _newnode->_collidinglink = _pcollidingbody->GetLinks().at(collidinglinkindex);
+            outs = fread(&_newnode->_robotlinkindex, sizeof(_newnode->_robotlinkindex), 1, pfile);
         }
 
-        outs = fread(&newnode->_hasselfchild, sizeof(newnode->_hasselfchild), 1, pfile);
-        outs = fread(&newnode->_usenn, sizeof(newnode->_usenn), 1, pfile);
+        outs = fread(&_newnode->_hasselfchild, sizeof(_newnode->_hasselfchild), 1, pfile);
+        outs = fread(&_newnode->_usenn, sizeof(_newnode->_usenn), 1, pfile);
         int numchildren;
         outs = fread(&numchildren, sizeof(numchildren), 1, pfile);
-        newnode->_vchildren.resize(numchildren);
+        _newnode->_vchildren.resize(numchildren);
 
         // create the copies of the children and insert them
         for(int i = 0; i < numchildren; ++i) {
             int childid;
             outs = fread(&childid, sizeof(childid), 1, pfile);
-            newnode->_vchildren[i] = vnodes.at(childid);
+            _newnode->_vchildren[i] = _vnodes.at(childid);
         }
 
-        _vsetLevelNodes.at(_EncodeLevel(newnode->_level)).insert(newnode);
+        _vsetLevelNodes.at(_EncodeLevel(_newnode->_level)).insert(_newnode);
     }
 
     fclose(pfile);
+
+    _vnodes.resize(0);
 
     int numloaded = GetNumKnownNodes();
     OPENRAVE_ASSERT_OP(numloaded,==,_numnodes);
@@ -954,9 +974,9 @@ int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
             //for(size_t enclevel = 0; enclevel < _vsetLevelNodes.size(); ++enclevel) {
             //size_t totalnodes = _vsetLevelNodes.at(enclevel).size();
             FOREACH(itnode, *itlevelnodes) { //_vsetLevelNodes.at(enclevel)) {
-                CacheTreeNodePtr node = *itnode;
-                if ((node->GetType() == CNT_Collision) && (pbody == node->GetCollidingLink()->GetParent())) {
-                    node->SetType(CNT_Unknown);
+                _newnode = *itnode;
+                if ((_newnode->GetType() == CNT_Collision) && (pbody == _newnode->GetCollidingLink()->GetParent())) {
+                    _newnode->SetType(CNT_Unknown);
                     nremoved += 1;
                 }
             }
@@ -1134,9 +1154,14 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     _envupdates = envupdates;
 
-    std::vector<KinBodyPtr> vGrabbedBodies;
-    _pstaterobot->GetGrabbed(vGrabbedBodies);
-    _setgrabbedbodies.insert(vGrabbedBodies.begin(), vGrabbedBodies.end());
+    _vgrabbedbodies.resize(0);
+    _vnewenvbodies.resize(0);
+    _vnewgrabbedbodies.resize(0);
+    _vweights.resize(0);
+    _setgrabbedbodies.clear();
+
+    _pstaterobot->GetGrabbed(_vgrabbedbodies);
+    _setgrabbedbodies.insert(_vgrabbedbodies.begin(), _vgrabbedbodies.end());
 
     if (_envupdates) {
         _handleBodyAddRemove = _penv->RegisterBodyCallback(boost::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, _1, _2));
@@ -1153,15 +1178,14 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     }
 
-    std::vector<dReal> vweights;
     if (_envupdates){
         _vRobotActiveIndices = _pstaterobot->GetActiveDOFIndices();
-        _pstaterobot->GetActiveDOFResolutions(vweights);
+        _pstaterobot->GetActiveDOFResolutions(_vweights);
         _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
     }
     else{
         _vRobotActiveIndices = _pstaterobot->GetActiveDOFIndices();
-        _pstaterobot->GetDOFResolutions(vweights);
+        _pstaterobot->GetDOFResolutions(_vweights);
         _pstaterobot->GetDOFLimits(_lowerlimit, _upperlimit);
     }
 
@@ -1169,7 +1193,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _vRobotRotationAxis = pstaterobot->GetAffineRotationAxis();
 
     // if weights are zero, used a default value
-    FOREACH(itweight, vweights) {
+    FOREACH(itweight, _vweights) {
         if( *itweight > 0 ) {
             *itweight = 1 / *itweight;
         }
@@ -1191,18 +1215,18 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
     dReal maxdistance = 0;
-    for (size_t i = 0; i < vweights.size(); ++i) {
-        dReal f = (_upperlimit[i] - _lowerlimit[i]) * vweights[i];
+    for (size_t i = 0; i < _vweights.size(); ++i) {
+        dReal f = (_upperlimit[i] - _lowerlimit[i]) * _vweights[i];
         maxdistance += f*f;
     }
 
-    _cachetree.Init(vweights, RaveSqrt(maxdistance));
+    _cachetree.Init(_vweights, RaveSqrt(maxdistance));
 
     if (IS_DEBUGLEVEL(Level_Debug)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
         ss << "Initializing cache,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";
-        for (size_t i = 0; i < vweights.size(); ++i) {
-            ss << vweights[i] << " ";
+        for (size_t i = 0; i < _vweights.size(); ++i) {
+            ss << _vweights[i] << " ";
         }
         ss << "]\nupperlimit [";
 
@@ -1222,6 +1246,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
 ConfigurationCache::~ConfigurationCache()
 {
+    _cachetree.Reset();
     // have to destroy all the change callbacks!
     FOREACH(it, _listCachedData) {
         KinBodyCachedDataPtr pdata = it->lock();
@@ -1229,6 +1254,7 @@ ConfigurationCache::~ConfigurationCache()
             pdata->_changehandle.reset();
         }
     }
+
 }
 
 void ConfigurationCache::SetWeights(const std::vector<dReal>& weights)
@@ -1268,23 +1294,6 @@ int ConfigurationCache::RemoveFreeConfigurations()
     return _cachetree.RemoveFreeConfigurations();
 }
 
-int ConfigurationCache::RemoveConfigurations(const std::vector<dReal>& cs, dReal radius, ConfigurationNodeType conftype)
-{
-    // slow implementation for now
-    int nremoved=0;
-    while(1) {
-        std::pair<CacheTreeNodeConstPtr, dReal> neigh = _cachetree.FindNearestNode(cs, radius, conftype);
-        if( !neigh.first ) {
-            break;
-        }
-        OPENRAVE_ASSERT_OP(neigh.second,<=,radius);
-        bool bremoved = _cachetree.RemoveNode(neigh.first);
-        BOOST_ASSERT(bremoved);
-        nremoved += 1;
-    }
-    return nremoved;
-}
-
 void ConfigurationCache::GetDOFValues(std::vector<dReal>& values)
 {
     // try to get the values without setting state
@@ -1310,7 +1319,9 @@ void ConfigurationCache::GetDOFValues(std::vector<dReal>& values)
 int ConfigurationCache::CheckCollision(const std::vector<dReal>& conf, KinBody::LinkConstPtr& robotlink, KinBody::LinkConstPtr& collidinglink, dReal& closestdist)
 {
     std::pair<CacheTreeNodeConstPtr, dReal> knn = _cachetree.FindNearestNode(conf, _collisionthresh, _freespacethresh);
+    
     if( !!knn.first ) {
+        
         closestdist = knn.second;
         if( knn.first->IsInCollision()) {
 
@@ -1358,7 +1369,6 @@ bool ConfigurationCache::Validate()
 
 void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
-    //EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
     // body's state has changed, so remove collision space and invalidate free space.
     if(_envupdates) {
         RAVELOG_WARN_FORMAT("%s %s","Updating untracked bodies"%pbody->GetName());
@@ -1369,7 +1379,6 @@ void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 
 void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
 {
-    //EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
     if( action == 1 ) {
         if (_envupdates) {
             // invalidate the freespace of a cache given a new body in the scene
@@ -1397,7 +1406,6 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 {
 
     if (_envupdates){
-        //EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         RAVELOG_WARN("Updating robot joint limits\n");
         _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
         _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
@@ -1419,8 +1427,9 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 
 void ConfigurationCache::_UpdateRobotGrabbed()
 {
-    //EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
     bool newGrab = false;
+
+    _vnewgrabbedbodies.resize(0);
     _pstaterobot->GetGrabbed(_vnewgrabbedbodies);
     FOREACH(oldbody, _setgrabbedbodies){
         FOREACH(newbody, _vnewgrabbedbodies){

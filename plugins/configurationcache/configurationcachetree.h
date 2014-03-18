@@ -89,6 +89,10 @@ public:
         return _usenn;
     }
 
+    inline int IncreaseHitCount(){
+        return _hitcount++;
+    }
+
     // returns closest distance to a configuration of the opposite type seen so far
 //    dReal GetUpperBound() const {
 //        return _approxdispersion.second;
@@ -116,6 +120,7 @@ protected:
     int16_t _level; ///< the level the node belongs to
     uint8_t _hasselfchild; ///< if 1, then _vchildren has contains a clone of this node in the level below it.
     uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
+    int _hitcount; /// number of cache hits 
 
     // managed by pool
 #ifdef _DEBUG
@@ -287,6 +292,13 @@ private:
 
     std::vector<dReal> _weights; ///< weights used by the distance function
     std::vector<dReal> _curconf;
+
+    std::string _fulldirname;
+    CacheTreeNodePtr _newnode; // for loading  
+    std::string _collidingbodyname;
+    KinBodyPtr _pcollidingbody;
+
+    std::map<CacheTreeNodePtr, int> _mapNodeIndices;
     //CacheTreeNodePtr _root; // root node
     std::vector< std::set<CacheTreeNodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
@@ -301,11 +313,14 @@ private:
     int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
 
-    boost::mutex _mutexpool;
+    //boost::mutex _mutexpool;
 
     // cache cache
     mutable std::vector< std::pair<CacheTreeNodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
     mutable std::vector< std::vector<CacheTreeNodePtr> > _vvCacheNodes;
+
+    std::vector<CacheTreeNodePtr> _vnodes; // for loading
+    std::vector<dReal> _dummycs; // for loading
 };
 
 typedef boost::shared_ptr<CacheTree> CacheTreePtr;
@@ -328,11 +343,6 @@ public:
     /// \param indist, If > 0, nearest distance for this configuration already computed by CheckCollision
     /// \return true if configuration was inserted
     bool InsertConfiguration(const std::vector<dReal>& cs, CollisionReportPtr report = CollisionReportPtr(), dReal indist = -1);
-
-    /// \brief removes all configurations within radius of cs
-    ///
-    /// \return number of configurations removed
-    int RemoveConfigurations(const std::vector<dReal>& cs, dReal radius, ConfigurationNodeType conftype = CNT_Any);
 
     /// \brief removes all collision configurations colliding with pbody, used to update cache when bodies are removed or moved
     int UpdateCollisionConfigurations(KinBodyPtr pbody);
@@ -485,11 +495,14 @@ private:
     int _nRobotAffineDOF;
     Vector _vRobotRotationAxis;
     std::set<KinBodyPtr> _setgrabbedbodies;
+
+    std::vector<KinBodyPtr> _vgrabbedbodies;
     std::vector<KinBodyPtr> _vnewgrabbedbodies;
     std::vector<KinBodyPtr> _vnewenvbodies;
     std::vector<dReal> _upperlimit, _lowerlimit; //joint limits, used to calculate maxdistance
     std::vector<CacheTreeNodePtr> _cachetreenodes;
-
+    std::vector<dReal> _vweights;
+    
     class KinBodyCachedData : public UserData
     {
 public:
@@ -511,6 +524,7 @@ public:
     UserDataPtr _handleBodyAddRemove;
     //std::vector<UserDataPtr> _bodyhandles;
     std::list<KinBodyCachedDataWeakPtr> _listCachedData; ///< necessary to keep a list of all the data created in order to force reset the change callbacks
+
 
     /// \brief used for debugging/profiling
     uint64_t _qtime; //total query time
