@@ -158,7 +158,12 @@ void IvDragger::_GetMatrix(SbMatrix &matrix, SoNode *root, SoNode *node)
 
 void IvDragger::_MotionHandler(void *userData, SoDragger *)
 {
-    ((IvDragger *) userData)->UpdateSkeleton();
+    try {
+        ((IvDragger *) userData)->UpdateSkeleton();
+    }
+    catch(const openrave_exception& ex) {
+        RAVELOG_ERROR_FORMAT("unexpected openrave error in gui handler: %s", ex.what());
+    }
 }
 
 IvObjectDragger::IvObjectDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale, bool bAllowRotation)
@@ -487,17 +492,26 @@ void IvJointDragger::UpdateSkeleton()
 
         if( !!lock ) {
             KinBody::JointPtr pjoint = pbody->GetBody()->GetJoints()[_iJointIndex];
+            int d = pjoint->GetDOFIndex();
             vector<dReal> vlower,vupper;
-            pjoint->GetLimits(vlower, vupper);
+            pbody->GetBody()->GetDOFLimits(vlower, vupper);
 
             if( pjoint->GetType() == KinBody::JointSlider ) {
-                fang = fang*(vupper.at(0)-vlower.at(0))+vlower.at(0);
+                fang = fang*(vupper.at(d)-vlower.at(d))+vlower.at(d);
             }
 
             // update the joint's transform
             vector<dReal> vjoints;
             pbody->GetBody()->GetDOFValues(vjoints);
-            int d = pjoint->GetDOFIndex();
+            // double check all the limits
+            for(size_t i = 0; i < vjoints.size(); ++i) {
+                if( vjoints[i] < vlower[i] ) {
+                    vjoints[i] = vlower[i];
+                }
+                else if( vjoints[i] > vupper[i] ) {
+                    vjoints[i] = vupper[i];
+                }
+            }
             if( pjoint->GetType() == KinBody::JointSpherical ) {
                 SbVec3f axis; float angle;
                 _trackball->rotation.getValue(axis,angle);
@@ -508,29 +522,29 @@ void IvJointDragger::UpdateSkeleton()
             else {
                 vjoints.at(d+0) = fang+_jointoffset;
                 if( pjoint->IsRevolute(0) ) {
-                    if( vjoints.at(d) < vlower.at(0) ) {
-                        if( vlower.at(0)-vjoints.at(d) < vjoints.at(d)+2*PI-vupper.at(0) ) {
-                            vjoints[d] = vlower[0];
+                    if( vjoints.at(d) < vlower.at(d) ) {
+                        if( vlower.at(d)-vjoints.at(d) < vjoints.at(d)+2*PI-vupper.at(d) ) {
+                            vjoints[d] = vlower[d];
                         }
                         else {
-                            vjoints[d] = vupper[0];
+                            vjoints[d] = vupper[d];
                         }
                     }
-                    else if( vjoints.at(d) > vupper.at(0) ) {
-                        if( vlower.at(0)-vjoints.at(d)+2*PI < vjoints.at(d)-vupper.at(0) ) {
-                            vjoints[d] = vlower[0];
+                    else if( vjoints.at(d) > vupper.at(d) ) {
+                        if( vlower.at(d)-vjoints.at(d)+2*PI < vjoints.at(d)-vupper.at(d) ) {
+                            vjoints[d] = vlower[d];
                         }
                         else {
-                            vjoints[d] = vupper[0];
+                            vjoints[d] = vupper[d];
                         }
                     }
                 }
                 else {
-                    if( vjoints.at(d) < vlower.at(0) ) {
-                        vjoints[d] = vlower[0];
+                    if( vjoints.at(d) < vlower.at(d) ) {
+                        vjoints[d] = vlower[d];
                     }
-                    else if( vjoints.at(d) > vupper.at(0) ) {
-                        vjoints[d] = vupper[0];
+                    else if( vjoints.at(d) > vupper.at(d) ) {
+                        vjoints[d] = vupper[d];
                     }
                 }
             }
@@ -539,7 +553,7 @@ void IvJointDragger::UpdateSkeleton()
                 probotitem->GetRobot()->GetController()->SetDesired(vjoints);
             }
             else {
-                pbody->GetBody()->SetDOFValues(vjoints,true);
+                pbody->GetBody()->SetDOFValues(vjoints, KinBody::CLA_CheckLimits);
             }
         }
     }

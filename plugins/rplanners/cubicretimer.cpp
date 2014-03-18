@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -16,12 +16,9 @@
 #include "trajectoryretimer.h"
 #include <openrave/planningutils.h>
 
-#include "ParabolicPathSmooth/ParabolicRamp.h"
-
 #include <openrave/mathextra.h>
 
-/*
-
+/**
    t,dt,v0,v1,px = symbols('t,dt,v0,v1,px')
 
    c3 = (v1*dt + v0*dt - 2*px)/(dt**3)
@@ -46,7 +43,7 @@ public:
 
     CubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
-        __description = ":Interface Author: Rosen Diankov\n\nSimple cubic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
+        __description = ":Interface Author: Rosen Diankov\n\nSingle cubic trajectory re-timing while passing through the waypoints, waypoints will not be modified. Computing fastest time is slow";
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
@@ -104,6 +101,14 @@ protected:
             }
             // check velocity limits a1*t + a0 = 0
             dReal a1 = 6*c3, a0 = 2*c2;
+            // check acceleration limits
+            if( RaveFabs(a0) > _parameters->_vConfigAccelerationLimit.at(idof)+g_fEpsilonJointLimit ) {
+                return false;
+            }
+            if( RaveFabs(a0+a1*deltatime) > _parameters->_vConfigAccelerationLimit.at(idof)+g_fEpsilonJointLimit ) {
+                return false;
+            }
+
             if( RaveFabs(a1) > 0 ) {
                 dReal vtime = -a0/a1;
                 if( vtime > 0 && vtime < deltatime ) {
@@ -112,13 +117,6 @@ protected:
                         return false;
                     }
                 }
-            }
-            // check acceleration limits
-            if( RaveFabs(a0) > _parameters->_vConfigAccelerationLimit.at(idof)+g_fEpsilonJointLimit ) {
-                return false;
-            }
-            if( RaveFabs(a0+a1*deltatime) > _parameters->_vConfigAccelerationLimit.at(idof)+g_fEpsilonJointLimit ) {
-                return false;
             }
         }
         return true;
@@ -132,7 +130,7 @@ protected:
             _v0pos[i] = *(itdataprev+info->gpos.offset+i);
             dReal posdiff = *(itorgdiff+info->orgposoffset+i);
             _v1pos[i] = _v0pos[i] + posdiff;
-            dReal testmintime = posdiff / _parameters->_vConfigVelocityLimit.at(i);
+            dReal testmintime = RaveFabs(posdiff) / _parameters->_vConfigVelocityLimit.at(i);
             if( mintime < testmintime ) {
                 mintime = testmintime;
             }
@@ -147,7 +145,7 @@ protected:
             else {
                 _v1vel[i] = 0;
             }
-            dReal testmintime = (_v1vel[i]-_v0vel[i]) / _parameters->_vConfigAccelerationLimit.at(i);
+            dReal testmintime = RaveFabs(_v1vel[i]-_v0vel[i]) / _parameters->_vConfigAccelerationLimit.at(i);
             if( mintime < testmintime ) {
                 mintime = testmintime;
             }
@@ -175,7 +173,7 @@ protected:
         }
     }
 
-    bool _CheckVelocitiesJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
+    bool _CheckJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions=0xffffffff) {
         dReal deltatime = *(itdata+_timeoffset);
         dReal ideltatime = 1/deltatime;
         dReal ideltatime2 = ideltatime*ideltatime;
@@ -187,23 +185,54 @@ protected:
             dReal c2 = (3*px*ideltatime - (2*v0 + v1))*ideltatime;
             dReal c1 = v0;
 
-            // check velocity limits a1*t + a0 = 0
-            dReal a1 = 6*c3, a0 = 2*c2;
-            if( RaveFabs(a1) > 0 ) {
-                dReal vtime = -a0/a1;
-                if( vtime > 0 && vtime < deltatime ) {
-                    dReal vellimit = c1 + vtime * (2*c2 + vtime * 3*c3 );
-                    if( RaveFabs(vellimit) > _parameters->_vConfigVelocityLimit.at(i)+g_fEpsilonJointLimit ) {
-                        return false;
+            if( checkoptions & 1 ) {
+                // check position limits
+                dReal c0 = *(itdataprev+info->gpos.offset+i);
+                dReal times[2];
+                int nroots = mathextra::solvequad(3*c3, 2*c2, c1, times[0], times[1]);
+                for(int iroot = 0; iroot < nroots; ++iroot ) {
+                    if( times[iroot] > 0 && times[iroot] < deltatime ) {
+                        dReal pos = c0 + times[iroot] * (c1 + times[iroot] * (c2 + times[iroot]*c3));
+                        if( pos < info->_vConfigLowerLimit[i]-g_fEpsilonJointLimit || pos > info->_vConfigUpperLimit[i]+g_fEpsilonJointLimit ) {
+                            RAVELOG_VERBOSE_FORMAT("pos constraints dof=%d, %e (limit) < %e < %e (limit)", i%info->_vConfigLowerLimit[i]%pos%info->_vConfigUpperLimit[i]);
+                            return false;
+                        }
                     }
                 }
             }
-            // check acceleration limits
-            if( RaveFabs(a0) > _parameters->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
-                return false;
+
+            // check velocity limits a1*t + a0 = 0
+            dReal a1 = 6*c3, a0 = 2*c2;
+            if(checkoptions&4) {
+                // check acceleration limits
+                if( RaveFabs(a0) > info->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
+                    RAVELOG_VERBOSE_FORMAT("acceleration constraints dof=%d, abs(%e) > %e (limit)", i%a0%(info->_vConfigAccelerationLimit.at(i)));
+                    return false;
+                }
+                if( RaveFabs(a0+a1*deltatime) > info->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
+                    RAVELOG_VERBOSE_FORMAT("acceleration constraints dof=%d, abs(%e) > %e (limit)", i%(a0+a1*deltatime)%(info->_vConfigAccelerationLimit.at(i)));
+                    return false;
+                }
             }
-            if( RaveFabs(a0+a1*deltatime) > _parameters->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
-                return false;
+            if(checkoptions&2) {
+                if( RaveFabs(a1) > 0 ) {
+                    dReal vtime = -a0/a1;
+                    if( vtime > 0 && vtime < deltatime ) {
+                        dReal vellimit = c1 + vtime * (2*c2 + vtime * 3*c3 );
+                        if( RaveFabs(vellimit) > info->_vConfigVelocityLimit.at(i)+g_fEpsilonJointLimit ) {
+                            RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%vellimit%info->_vConfigVelocityLimit.at(i));
+                            return false;
+                        }
+                    }
+                }
+                if( RaveFabs(v0) > info->_vConfigVelocityLimit[i]+g_fEpsilonJointLimit ) {
+                    RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%v0%info->_vConfigVelocityLimit[i]);
+                    return false;
+                }
+                if( RaveFabs(v1) > info->_vConfigVelocityLimit[i]+g_fEpsilonJointLimit ) {
+                    RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%v1%info->_vConfigVelocityLimit[i]);
+                    return false;
+                }
             }
         }
         return true;
@@ -246,16 +275,14 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesAffine not implemented", ORE_NotImplemented);
     }
 
-    bool _CheckVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_CheckVelocitiesAffine not implemented", ORE_NotImplemented);
+    bool _CheckAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("not implemented", ORE_NotImplemented);
     }
 
     bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
         throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
     }
 
-    // speed of rotations is always the speed of the angle along the minimum rotation
-    // speed of translations is always the combined xyz speed
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
         throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeMinimumTimeIk not implemented", ORE_NotImplemented);
     }
@@ -264,8 +291,8 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesIk not implemented", ORE_NotImplemented);
     }
 
-    bool _CheckVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_CheckVelocitiesIk not implemented", ORE_NotImplemented);
+    bool _CheckIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("not implemented", ORE_NotImplemented);
         return true;
     }
 

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -88,7 +88,7 @@ SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
 void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 {
     trelative = t;
-    GetRobot()->_ParametersChanged(Prop_SensorPlacement);
+    GetRobot()->_PostprocessChangedParameters(Prop_SensorPlacement);
 }
 
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
@@ -561,7 +561,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
         _activespec._vgroups.push_back(group);
     }
 
-    _ParametersChanged(Prop_RobotActiveDOFs);
+    _PostprocessChangedParameters(Prop_RobotActiveDOFs);
 }
 
 void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bCheckLimits)
@@ -1423,7 +1423,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         }
         RAVELOG_VERBOSE_FORMAT("Robot %s: body %s already grabbed, but transforms differ by %f \n", GetName()%pbody->GetName()%disterror);
         _RemoveAttachedBody(pbody);
-        CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
+        CallOnDestruction destructigonhook(boost::bind(&RobotBase::_AttachBody,this,pbody));
         pPreviousGrabbed->_plinkrobot = plink;
         pPreviousGrabbed->_troot = t.inverse() * tbody;
         pPreviousGrabbed->_ProcessCollidingLinks(pPreviousGrabbed->_setRobotLinksToIgnore);
@@ -1436,8 +1436,16 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     pgrabbed->_ProcessCollidingLinks(std::set<int>());
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
-    _AttachBody(pbody);
-    _ParametersChanged(Prop_RobotGrabbed);
+    try {
+        // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+        _AttachBody(pbody);
+    }
+    catch(...) {
+        BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        _vGrabbedBodies.pop_back();
+        throw;
+    }
+    _PostprocessChangedParameters(Prop_RobotGrabbed);
     return true;
 }
 
@@ -1471,7 +1479,17 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
     _AttachBody(pbody);
-    _ParametersChanged(Prop_RobotGrabbed);
+    _AttachBody(pbody);
+    try {
+        // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+        _AttachBody(pbody);
+    }
+    catch(...) {
+        BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        _vGrabbedBodies.pop_back();
+        throw;
+    }
+    _PostprocessChangedParameters(Prop_RobotGrabbed);
     return true;
 }
 
@@ -1482,7 +1500,7 @@ void RobotBase::Release(KinBodyPtr pbody)
         if( KinBodyPtr(pgrabbed->_pgrabbedbody) == pbody ) {
             _vGrabbedBodies.erase(itgrabbed);
             _RemoveAttachedBody(pbody);
-            _ParametersChanged(Prop_RobotGrabbed);
+            _PostprocessChangedParameters(Prop_RobotGrabbed);
             return;
         }
     }
@@ -1501,7 +1519,7 @@ void RobotBase::ReleaseAllGrabbed()
             }
         }
         _vGrabbedBodies.clear();
-        _ParametersChanged(Prop_RobotGrabbed);
+        _PostprocessChangedParameters(Prop_RobotGrabbed);
     }
 }
 
@@ -1606,7 +1624,7 @@ void RobotBase::ResetGrabbed(const std::vector<RobotBase::GrabbedInfoConstPtr>& 
             _vGrabbedBodies.push_back(pgrabbed);
             _AttachBody(pbody);
         }
-        _ParametersChanged(Prop_RobotGrabbed);
+        _PostprocessChangedParameters(Prop_RobotGrabbed);
     }
 }
 
@@ -2075,9 +2093,8 @@ void RobotBase::_ComputeInternalInformation()
     }
 }
 
-void RobotBase::_ParametersChanged(int parameters)
+void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
 {
-    KinBody::_ParametersChanged(parameters);
     if( parameters & (Prop_Sensors|Prop_SensorPlacement) ) {
         FOREACH(itsensor,_vecSensors) {
             (*itsensor)->__hashstructure.resize(0);
@@ -2089,6 +2106,7 @@ void RobotBase::_ParametersChanged(int parameters)
             (*itmanip)->__hashkinematicsstructure.resize(0);
         }
     }
+    KinBody::_PostprocessChangedParameters(parameters);
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
         // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled

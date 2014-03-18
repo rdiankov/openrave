@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2013 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2012-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -13,7 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
+#include "openraveplugindefs.h"
 #include <fstream>
 
 #include <openrave/planningutils.h>
@@ -246,27 +246,56 @@ public:
             vector<dReal> vswitchtimes;
             ParabolicRamp::Vector vconfig;
             std::vector<ParabolicRamp::ParabolicRampND> temprampsnd;
+            ParabolicRamp::ParabolicRampND rampndtrimmed;
+            dReal fTrimEdgesTime = parameters->_fStepLength*2; // 2 controller timesteps is enough?
             for(size_t irampindex = 0; irampindex < dynamicpath.ramps.size(); ++irampindex) {
                 const ParabolicRamp::ParabolicRampND& rampnd = dynamicpath.ramps[irampindex];
                 temprampsnd.resize(1);
                 temprampsnd[0] = rampnd;
                 // double-check the current ramps, ignore first and last ramps since they connect to the initial and goal positions, and those most likely they cannot be fixed .
-                if(!rampnd.constraintchecked && (irampindex > 0 && irampindex+1 < dynamicpath.ramps.size()) ) {
-                    // part of original trajectory which might not have been processed with perterbations, so ignore them
+                if(!rampnd.constraintchecked ) {
+                    //(irampindex > 0 && irampindex+1 < dynamicpath.ramps.size())
+                    rampndtrimmed = rampnd;
+                    bool bTrimmed = false;
+                    if( irampindex == 0 ) {
+                        if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
+                            // ramp is too short so ignore
+                            continue;
+                        }
+                        // don't check points close to the initial configuration because of jittering
+                        rampndtrimmed.TrimFront(fTrimEdgesTime);
+                        bTrimmed = true;
+                    }
+                    else if( irampindex+1 == dynamicpath.ramps.size() ) {
+                        if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
+                            // ramp is too short so ignore
+                            continue;
+                        }
+                        // don't check points close to the final configuration because of jittering
+                        rampndtrimmed.TrimBack(fTrimEdgesTime);
+                        bTrimmed = true;
+                    }
+                    // part of original trajectory which might not have been processed with perturbations, so ignore perturbations
                     _bUsePerturbation = false;
-                    if( !checker.Check(rampnd)) {
+                    if( !checker.Check(rampndtrimmed)) {
                         std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
                         // try to time scale, perhaps collision and dynamics will change
                         // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
                         bool bSuccess = false;
                         dReal mult = 1.05;
-                        dReal endTime = rampnd.endTime;
+                        dReal endTime = rampndtrimmed.endTime;
                         for(size_t idilate = 0; idilate < 5; ++idilate ) {
                             tempramps1d.resize(0);
                             endTime *= mult;
-                            if( ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                            if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
                                 temprampsnd.resize(0);
                                 CombineRamps(tempramps1d, temprampsnd);
+                                if( irampindex == 0 ) {
+                                    temprampsnd[0].TrimFront(fTrimEdgesTime);
+                                }
+                                else if( irampindex+1 == dynamicpath.ramps.size() ) {
+                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
+                                }
                                 bool bHasBadRamp=false;
                                 FOREACH(itnewrampnd, temprampsnd) {
                                     if( !checker.Check(*itnewrampnd) ) {
@@ -275,8 +304,15 @@ public:
                                     }
                                 }
                                 if( !bHasBadRamp ) {
+                                    if( bTrimmed ) {
+                                        // have to retime the original ramp without trimming
+                                        if( !ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                            break;
+                                        }
+                                        temprampsnd.resize(0);
+                                        CombineRamps(tempramps1d, temprampsnd);
+                                    }
                                     bSuccess = true;
-                                    temprampsnd = temprampsnd;
                                     break;
                                 }
                                 mult += 0.05;

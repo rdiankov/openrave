@@ -74,7 +74,7 @@ If the robot active DOFs change, can use the 'TrackActiveSpace' command to autom
         vUpperLimit = _upper;
     }
 
-    void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
+    int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         _psampler->SampleSequence(samples,num,interval);
         for (size_t inum = 0; inum < num*_lower.size(); inum += _lower.size()) {
@@ -104,6 +104,7 @@ If the robot active DOFs change, can use the 'TrackActiveSpace' command to autom
                 }
             }
         }
+        return (int)num;
     }
 
 protected:

@@ -583,6 +583,9 @@ PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr pCollisionChecke
 
 CollisionReportPtr GetCollisionReport(object o)
 {
+    if( o == object() ) {
+        return CollisionReportPtr();
+    }
     extract<PyCollisionReportPtr> pyreport(o);
     if( pyreport.check() ) {
         return ((PyCollisionReportPtr)pyreport)->report;

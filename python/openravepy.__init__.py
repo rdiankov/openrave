@@ -27,7 +27,7 @@ except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
 from openravepy_int import *
-from openravepy_int import _openrave_exception_, _std_runtime_error_
+from openravepy_int import _openrave_exception_, _std_runtime_error_, _boost_bad_function_call_
 from openravepy_int import __version__
 from openravepy_int import __author__
 from openravepy_int import __copyright__
@@ -42,6 +42,7 @@ import databases
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
 _openrave_exception_.py_err_class = openrave_exception
 _std_runtime_error_.py_err_class = runtime_error
+_boost_bad_function_call_.py_err_class = runtime_error
 
 # deprecated
 Problem = Module

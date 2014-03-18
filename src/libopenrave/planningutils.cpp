@@ -19,6 +19,10 @@
 #include <openrave/planningutils.h>
 #include <openrave/plannerparameters.h>
 
+//#include <boost/iostreams/device/file_descriptor.hpp>
+//#include <boost/iostreams/stream.hpp>
+//#include <boost/version.hpp>
+
 namespace OpenRAVE {
 namespace planningutils {
 
@@ -618,6 +622,9 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicsmoother";
     _robot = robot;
     EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    _vRobotActiveIndices = _robot->GetActiveDOFIndices();
+    _nRobotAffineDOF = _robot->GetAffineDOF();
+    _vRobotRotationAxis = _robot->GetAffineRotationAxis();
     _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(_robot);
@@ -628,6 +635,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
         throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
@@ -655,11 +663,29 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
     return status;
 }
 
+void ActiveDOFTrajectorySmoother::_UpdateParameters()
+{
+    RobotBase::RobotStateSaver saver(_robot, KinBody::Prop_RobotActiveDOFs);
+    _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetRobotActiveJoints(_robot);
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+    params->_hastimestamps = false;
+    params->_sExtraParameters = _parameters->_sExtraParameters;
+    if( !_planner->InitPlan(_robot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+    }
+    _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+}
+
 ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
 {
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicretimer";
     _robot = robot;
     EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    _vRobotActiveIndices = _robot->GetActiveDOFIndices();
+    _nRobotAffineDOF = _robot->GetAffineDOF();
+    _vRobotRotationAxis = _robot->GetAffineRotationAxis();
     _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(_robot);
@@ -674,6 +700,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
         throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
@@ -698,6 +725,25 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
     }
 
     return _planner->PlanPath(traj);
+}
+
+void ActiveDOFTrajectoryRetimer::_UpdateParameters()
+{
+    RobotBase::RobotStateSaver saver(_robot, KinBody::Prop_RobotActiveDOFs);
+    _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
+    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    params->SetRobotActiveJoints(_robot);
+    params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
+    params->_hastimestamps = false;
+    params->_setstatevaluesfn.clear();
+    params->_setstatefn.clear();
+    params->_checkpathconstraintsfn.clear();
+    params->_checkpathvelocityconstraintsfn.clear();
+    params->_sExtraParameters = _parameters->_sExtraParameters;
+    if( !_planner->InitPlan(_robot,params) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to init planner %s with robot %s", _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
+    }
+    _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
 PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
@@ -1521,13 +1567,13 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
     }
     // splice in the new trajectory. pBestTrajectory's first waypoint matches traj's iBestInsertionWaypoint
     traj->Remove(iBestInsertionWaypoint+1,traj->GetNumWaypoints());
-//    traj->GetWaypoint(iBestInsertionWaypoint,vprevpoint);
-//    pBestTrajectory->GetWaypoint(0,vwaypoint,traj->GetConfigurationSpecification());
-//    for(size_t i = 0; i < vprevpoint.size(); ++i) {
-//        if( RaveFabs(vprevpoint[i]-vwaypoint.at(i)) > 0.0001 ) {
-//            RAVELOG_WARN(str(boost::format("start points differ at %d: %e != %e")%i%vprevpoint[i]%vwaypoint[i]));
-//        }
-//    }
+    //    traj->GetWaypoint(iBestInsertionWaypoint,vprevpoint);
+    //    pBestTrajectory->GetWaypoint(0,vwaypoint,traj->GetConfigurationSpecification());
+    //    for(size_t i = 0; i < vprevpoint.size(); ++i) {
+    //        if( RaveFabs(vprevpoint[i]-vwaypoint.at(i)) > 0.0001 ) {
+    //            RAVELOG_WARN(str(boost::format("start points differ at %d: %e != %e")%i%vprevpoint[i]%vwaypoint[i]));
+    //        }
+    //    }
     pBestTrajectory->GetWaypoints(1,pBestTrajectory->GetNumWaypoints(),vwaypoint,traj->GetConfigurationSpecification());
     traj->Insert(iBestInsertionWaypoint+1,vwaypoint);
     dReal fNewDuration = traj->GetDuration();
@@ -1862,11 +1908,11 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
         Vector zquat = quatFromAxisAngle(Vector(0,0,1),itdh->theta);
         Vector xquat = quatFromAxisAngle(Vector(1,0,0),itdh->alpha);
         bool bflip = false;
-//        if( itdh->a < -g_fEpsilon ) {
-//            // cannot have -a since a lot of formats specify a as positive
-//            bflip = true;
-//        }
-//        else {
+        //        if( itdh->a < -g_fEpsilon ) {
+        //            // cannot have -a since a lot of formats specify a as positive
+        //            bflip = true;
+        //        }
+        //        else {
         Vector worldrotquat = quatMultiply(itdh->transform.rot, quatMultiply(zquat, xquat));
         // always try to have the x-axis pointed positively towards x
         // (worldrotquat * (1,0,0))[0] < 0
@@ -2023,12 +2069,18 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
     }
     FOREACHC(itbody, _listCheckBodies) {
         if( (options&CFO_CheckEnvCollisions) && (*itbody)->GetEnv()->CheckCollision(KinBodyConstPtr(*itbody),_report) ) {
+            if( (options & CFO_FillCollisionReport) && !!filterreturn ) {
+                filterreturn->_report = *_report;
+            }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 _PrintOnFailure(std::string("collision failed ")+_report->__str__());
             }
             return CFO_CheckEnvCollisions;
         }
         if( (options&CFO_CheckSelfCollisions) && (*itbody)->CheckSelfCollision(_report) ) {
+            if( (options & CFO_FillCollisionReport) && !!filterreturn ) {
+                filterreturn->_report = *_report;
+            }
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 _PrintOnFailure(std::string("self-collision failed ")+_report->__str__());
             }
@@ -2113,9 +2165,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal itimeelapsed = 1.0/timeelapsed;
         for(size_t i = 0; i < _vtempaccelconfig.size(); ++i) {
             _vtempaccelconfig[i] = (dq1.at(i)-dq0.at(i))*itimeelapsed;
-            dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
-            if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
-                OPENRAVE_ASSERT_OP(consistencyerror,<=,g_fEpsilonQuadratic);
+            if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
+                dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
+                if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
+                    OPENRAVE_ASSERT_OP(consistencyerror,<=,g_fEpsilonQuadratic*100);
+                }
             }
         }
     }
@@ -2175,10 +2229,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     if( totalsteps == 0 && start > 0 ) {
         if( !!filterreturn ) {
-            if( bCheckEnd && (options & CFO_FillCheckedConfiguration) ) {
-                filterreturn->_configurations = q1;
-                filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
+            if( bCheckEnd ) {
+                if(options & CFO_FillCheckedConfiguration) {
+                    filterreturn->_configurations = q1;
+                    filterreturn->_configurationtimes.push_back(timeelapsed > 0 ? timeelapsed : dReal(1.0));
+                }
             }
+
         }
         return 0;
     }

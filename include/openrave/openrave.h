@@ -536,7 +536,7 @@ DefineRavePrintfA(_WARNLEVEL)
 DefineRavePrintfA(_DEBUGLEVEL)
 DefineRavePrintfA(_VERBOSELEVEL)
 
-#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__)
+#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d %s] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
@@ -1126,6 +1126,15 @@ protected:
         Only position specifications will be converted, any other groups will be left untouched.
      */
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
+
+    /** \brief converts all the groups to the corresponding derivative group and returns the specification
+        
+        The new derivative configuration space will have a one-to-one correspondence with the original configuration.
+        The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
+        Only position specifications will be converted, any other groups will be left untouched.
+        \param timederivative the number of times to take the time derivative of the position
+     */
+    virtual ConfigurationSpecification ConvertToDerivativeSpecification(uint32_t timederivative=1) const;
 
     /// \brief returns a new specification of just particular time-derivative groups.
     ///

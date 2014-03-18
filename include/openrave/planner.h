@@ -35,7 +35,8 @@ enum ConstraintFilterOptions
     CFO_BreakOnFirstValidation=0x8, ///< if set, will break as soon as any constraint is violated (even if more than one are violated, the return code will only show one constraint breaking)
     CFO_CheckUserConstraints=0x00008000, ///< user-defined functions which don't fit any of the above descriptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
-    CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations
+    CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations and \ref ConstraintFilterReturn::_configurationtimes
+    CFO_FillCollisionReport=0x00040000, ///< if set, will fill \ref ConstraintFilterReturn::_report if in environment or self-collision
     CFO_StateSettingError=0x80000000, ///< error when the state setting function (or neighbor function) breaks
     CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
 };
@@ -71,6 +72,7 @@ public:
         _invalidvelocities.resize(0);
         _returncode = 0;
         _fTimeWhenInvalid = 0;
+        _report.Reset();
     }
 
     std::vector<dReal> _configurations; ///< N*dof vector of the configurations used to check constraints. If the constraints were invalid, they stop at the first invalid constraint
@@ -79,6 +81,7 @@ public:
     std::vector<dReal> _invalidvalues, _invalidvelocities; ///< if the constraint returned with an error, contains invalid configuration where it failed
     dReal _fTimeWhenInvalid; ///< if the constraint has an elapsed time, will contain the time when invalidated
     int _returncode; ///< if == 0, the constraint is good. If != 0 means constraint was violated and bitmasks in ConstraintFilterOptions can be used to find what constraint was violated.
+    CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
 };
 
 typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
@@ -548,6 +551,7 @@ private:
     }
 
     std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
+    PlannerBasePtr __cachePostProcessPlanner; ///< cached version of the post process planner
 
     friend class CustomPlannerCallbackData;
 };

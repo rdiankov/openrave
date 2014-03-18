@@ -1365,7 +1365,7 @@ class IKFastSolver(AutoReloader):
         else:
             neweq=eq
         return neweq
-
+    
     def normalizeRotation(self,M):
         """error from openrave can be on the order of 1e-6 (especially if they are defined diagonal to some axis)
         """
@@ -1384,7 +1384,7 @@ class IKFastSolver(AutoReloader):
             M[3,i] = S.Zero
         M[3,3] = S.One
         return M
-
+    
     def GetMatrixFromNumpy(self,T):
         return Matrix(4,4,[x for x in T.flat])
     
@@ -1432,15 +1432,18 @@ class IKFastSolver(AutoReloader):
                 M[i,3] = self.convertRealToRational(T[i,3],self.precision)
             return M
         
-        return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
-
+        if isinstance(T, Matrix):
+            return self.normalizeRotation(Matrix(4,4,[x for x in T]))
+        else:
+            return self.normalizeRotation(Matrix(4,4,[x for x in T.flat]))
+        
     def numpyVectorToSympy(self,v,precision=None):
         return Matrix(len(v),1,[self.convertRealToRational(x,precision) for x in v])
-
+    
     @staticmethod
     def rodrigues(axis, angle):
         return IKFastSolver.rodrigues2(axis,cos(angle),sin(angle))
-
+    
     @staticmethod
     def GetMatrixFromQuat(quat):
         """quaternion is [cos(angle/2), v*sin(angle/2)]
@@ -5592,6 +5595,9 @@ class IKFastSolver(AutoReloader):
     def SimplifyTransformPoly(self,peq):
         """simplifies the coefficients of the polynomial with simplifyTransform and returns the new polynomial
         """
+        if peq == S.Zero:
+            return peq
+        
         return peq.termwise(lambda m,c: self.SimplifyTransform(c))
 
     def SimplifyTransform(self,eq,othervars=None):
@@ -6033,6 +6039,7 @@ class IKFastSolver(AutoReloader):
             if var == gvarexpr[0]:
                 self.globalsymbols[iglobal] = (var, eq)
                 return True
+            
         self.globalsymbols.append((var, eq))
         return False
         
@@ -6200,7 +6207,7 @@ class IKFastSolver(AutoReloader):
                                             # why checking for just number? ok to check if solution doesn't contain any other variableS?
                                             # if the equation is non-numerical, make sure it isn't deep in the degenerate cases
                                             if eq.is_number or (len(currentcases) <= 1 and not eq.has(*allothersolvedvars) and self.codeComplexity(eq) < 100):
-                                                isimaginary = self.AreAllImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq) or  eq.evalf().has(I)
                                                 # TODO should use the fact that eq is imaginary
                                                 if isimaginary:
                                                     log.warn('eq %s is imaginary, but currently do not support this', eq)
@@ -6235,7 +6242,7 @@ class IKFastSolver(AutoReloader):
                                                 # don't use asin(eq)!! since eq = (-pz**2/py**2)**(1/2), which would produce imaginary numbers
                                                 #cond=othervar-asin(eq).evalf(n=30)
                                                 # test if eq is imaginary, if yes, then only solution is when sothervar==0 and eq==0
-                                                isimaginary = self.AreAllImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq) or  eq.evalf().has(I)
                                                 if isimaginary:
                                                     cond = abs(sothervar) + abs((eq**2).evalf(n=30)) + abs(sign(cothervar)-1)
                                                 else:
@@ -6276,8 +6283,9 @@ class IKFastSolver(AutoReloader):
                                                 dictequations = []
                                                 # test when sin(othervar) > 0
                                                 # don't use acos(eq)!! since eq = (-pz**2/px**2)**(1/2), which would produce imaginary numbers
+                                                # that's why check eq.evalf().has(I)
                                                 #cond=othervar-acos(eq).evalf(n=30)
-                                                isimaginary = self.AreAllImaginaryByEval(eq)
+                                                isimaginary = self.AreAllImaginaryByEval(eq) or  eq.evalf().has(I)
                                                 if isimaginary:
                                                     cond=abs(cothervar)+abs((eq**2).evalf(n=30)) + abs(sign(sothervar)-1)
                                                 else:
@@ -6325,7 +6333,7 @@ class IKFastSolver(AutoReloader):
                 hascheckzeros = True                
                 solvercheckzeros = AST.SolverCheckZeros(jointname=var.name,jointcheckeqs=checkforzeros,nonzerobranch=[solution]+nextsolutions[var],zerobranch=prevbranch,anycondition=True,thresh=solution.GetZeroThreshold())
                 # have to transfer the dictionary!
-                solvercheckzeros.dictequations = originalGlobalSymbols + solution.dictequations
+                solvercheckzeros.dictequations = originalGlobalSymbols + solution.dictequations                    
                 solvercheckzeros.equationsused = AllEquations
                 solution.dictequations = []
                 prevbranch=[solvercheckzeros]
@@ -6522,7 +6530,7 @@ class IKFastSolver(AutoReloader):
             trysubstitutions = self.ppsubs+self.npxyzsubs+self.rxpsubs
         else:
             trysubstitutions = self.ppsubs
-        for cond, evalcond, othervarsubs, dictequations in flatzerosubstitutioneqs:
+        for iflatzerosubstitutioneqs, (cond, evalcond, othervarsubs, dictequations) in enumerate(flatzerosubstitutioneqs):
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
                 continue
@@ -6547,7 +6555,7 @@ class IKFastSolver(AutoReloader):
                     for singlecond in cond:
                         newcases.add(singlecond)
                     if not self.degeneratecases.hascases(newcases):
-                        log.info('c=%d, starting newcases: %r', scopecounter, newcases)
+                        log.info('c=%d (iter=%d) starting newcases: %r', scopecounter, iflatzerosubstitutioneqs, newcases)
                         if len(NewEquationsClean) > 0:
                             newcasesubs = currentcasesubs+othervarsubs
                             self.globalsymbols = []
@@ -7170,7 +7178,11 @@ class IKFastSolver(AutoReloader):
             coeffs = []
             globalsymbols = [(s,v.subs(self.globalsymbols).subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
             for degree in range(pfinal.degree(0),-1,-1):
-                coeffs.append(pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf())
+                value = pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf()
+                if value.has(I): # check if has imaginary number
+                    coeffs = None
+                    break
+                coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
                 if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
                     coeffs = None

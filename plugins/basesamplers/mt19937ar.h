@@ -98,7 +98,7 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         }
     }
 
-    void SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
+    int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(_dof*num);
         switch(interval) {
@@ -125,6 +125,7 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         default:
             throw OPENRAVE_EXCEPTION_FORMAT0("invalid interval", ORE_InvalidArguments);
         }
+        return (int)num;
     }
 
     dReal SampleSequenceOneReal(IntervalType interval=IT_Closed)
@@ -145,12 +146,13 @@ Mersenne twister sampling algorithm that is based on matrix linear recurrence ov
         return 0;
     }
 
-    void SampleSequence(std::vector<uint32_t>& samples, size_t num)
+    int SampleSequence(std::vector<uint32_t>& samples, size_t num)
     {
         samples.resize(_dof*num);
         for(size_t i = 0; i < samples.size(); ++i) {
             samples[i] = genrand_int32();
         }
+        return (int)num;
     }
 
     virtual uint32_t SampleSequenceOneUInt32()

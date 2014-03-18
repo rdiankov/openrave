@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -63,7 +63,7 @@ void RobotBase::Manipulator::SetClosingDirection(const std::vector<dReal>& closi
 {
     OPENRAVE_ASSERT_OP((int)closingdirection.size(),==,GetGripperDOF());
     _info._vClosingDirection = closingdirection;
-    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
+    GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
@@ -73,7 +73,7 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
     _info._tLocalTool = t;
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
-    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
+    GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
 void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
@@ -83,7 +83,7 @@ void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
     _info._vdirection = direction;
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
-    GetRobot()->_ParametersChanged(Prop_RobotManipulatorTool);
+    GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
 void RobotBase::Manipulator::SetName(const std::string& name)
@@ -95,7 +95,7 @@ void RobotBase::Manipulator::SetName(const std::string& name)
         }
     }
     _info._name=name;
-    probot->_ParametersChanged(Prop_RobotManipulatorName);
+    probot->_PostprocessChangedParameters(Prop_RobotManipulatorName);
 }
 
 Transform RobotBase::Manipulator::GetTransform() const
@@ -153,7 +153,7 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
     if( iksolver->Init(shared_from_this()) ) {
         __pIkSolver = iksolver;
         _info._sIkSolverXMLId = iksolver->GetXMLId();
-        GetRobot()->_ParametersChanged(Prop_RobotManipulatorSolver);
+        GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorSolver);
         return true;
     }
 

@@ -764,6 +764,7 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   add_subdirectory(python)
 endif()
 
+# plugins have to be after python since they could use openravepy extensions
 if(OPT_PLUGINS)
   add_subdirectory(plugins)
 endif()

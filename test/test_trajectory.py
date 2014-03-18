@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2011 Rosen Diankov <rosen.diankov@gmail.com>
+# Copyright (C) 2011-2014 Rosen Diankov <rosen.diankov@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -370,22 +370,30 @@ class TestTrajectory(EnvironmentSetup):
         robot.SetDOFAccelerationLimits([ 26.1799999999999997,  19.6350000000000016,  14.9600000000000009, 47.1240000000000023,  36.2490000000000023,  41.8879999999999981])
         robot.SetDOFLimits(array([-4.1887902047863905, -2.0943951023931953,  0.                , -3.4906585039886591, -2.0943951023931953, -6.2831853071795862]),
                            array([ 4.1887902047863905,  2.0943951023931953,  2.8099800957108707, 3.4906585039886591,  2.0943951023931953,  6.2831853071795862]))
+        controller_timestep = 0.00711111111111
+        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+        
         traj = RaveCreateTrajectory(robot.GetEnv(),'')
         traj.Init(robot.GetActiveConfigurationSpecification())
         traj.Insert(0,[-1.5707962927971486, -0.5115644004003523,  2.7255228159183407, 3.1415927831636017,  0.6431620887230958,  6.2831852909169683])
         traj.Insert(1, [1.5707962849435657e+00,   2.9701411104634212e-01, 2.3875409344616441e+00,  -3.1415927489387800e+00, 1.1137587187130915e+00,   1.2949949709057725e-07])
-        controller_timestep = 0.00711111111111
         activeretimer = planningutils.ActiveDOFTrajectoryRetimer(robot, plannername='ParabolicTrajectoryRetimer',plannerparameters='<multidofinterp>2</multidofinterp><outputaccelchanges>1</outputaccelchanges><_fsteplength>%.15e</_fsteplength>'%controller_timestep)
         RaveSetDebugLevel(DebugLevel.Verbose)
         ret=activeretimer.PlanPath(traj,False)
         assert(ret == PlannerStatus.HasSolution)
         assert( abs(traj.GetDuration()-0.910222222222) < g_epsilon)
-
+        self.RunTrajectory(robot, traj)
+        
+        traj = RaveCreateTrajectory(robot.GetEnv(),'')
+        traj.Init(robot.GetActiveConfigurationSpecification())
+        traj.Insert(0,[-1.5707962927971486, -0.5115644004003523,  2.7255228159183407, 3.1415927831636017,  0.6431620887230958,  6.2831852909169683])
+        traj.Insert(1, [1.5707962849435657e+00,   2.9701411104634212e-01, 2.3875409344616441e+00,  -3.1415927489387800e+00, 1.1137587187130915e+00,   1.2949949709057725e-07])
         activeretimer = planningutils.ActiveDOFTrajectoryRetimer(robot, plannername='CubicTrajectoryRetimer',plannerparameters='<_fsteplength>%.15e</_fsteplength>'%controller_timestep)
         RaveSetDebugLevel(DebugLevel.Verbose)
         ret=activeretimer.PlanPath(traj,False)
         assert(ret == PlannerStatus.HasSolution)
-        assert( abs(traj.GetDuration()-0.910222222222) < g_epsilon)
+        self.RunTrajectory(robot, traj)
+        assert( abs(traj.GetDuration()-1.01688888888873) < g_epsilon)
         
     def test_ikparamretiming(self):
         self.log.info('retime workspace ikparam')
@@ -826,3 +834,4 @@ class TestTrajectory(EnvironmentSetup):
             planningutils.ExtendWaypoint(traj.GetNumWaypoints(),jitteredgoal,zeros(len(jitteredgoal)), traj, planner)
             assert( sum(abs(traj.GetWaypoint(-1, robot.GetActiveConfigurationSpecification())-jitteredgoal)) <= g_epsilon)
             planningutils.VerifyTrajectory(parameters, traj,0.01)
+            

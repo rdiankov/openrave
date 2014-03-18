@@ -1404,7 +1404,13 @@ public:
         case PE_Ignore: return PE_Ignore;
         }
 
-        static boost::array<string, 23> tags = { { "body", "offsetfrom", "weight", "lostop", "histop", "limits", "limitsrad", "limitsdeg", "maxvel", "maxveldeg", "hardmaxvel", "maxaccel", "maxacceldeg", "maxtorque", "maxforce", "resolution", "anchor", "axis", "axis1", "axis2", "axis3", "mode", "initial" }};
+        if( xmlname == "actuator" ) {
+            _processingtag = "";
+            _pcurreader.reset(new xmlreaders::ElectricMotorActuatorInfoReader(ElectricMotorActuatorInfoPtr(), atts));
+            return PE_Support;
+        }
+
+        static boost::array<string, 24> tags = { { "body", "offsetfrom", "weight", "lostop", "histop", "limits", "limitsrad", "limitsdeg", "maxvel", "maxveldeg", "hardmaxvel", "maxaccel", "maxacceldeg", "maxtorque", "maxinertia", "maxforce", "resolution", "anchor", "axis", "axis1", "axis2", "axis3", "mode", "initial" }};
         if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
             _processingtag = xmlname;
             return PE_Support;
@@ -1419,6 +1425,10 @@ public:
 
         if( !!_pcurreader ) {
             if( _pcurreader->endElement(xmlname) ) {
+                xmlreaders::ElectricMotorActuatorInfoReaderPtr actuatorreader = boost::dynamic_pointer_cast<xmlreaders::ElectricMotorActuatorInfoReader>(_pcurreader);
+                if( !!actuatorreader ) {
+                    _pjoint->_info._infoElectricMotor = actuatorreader->GetActuatorInfo();
+                }
                 _pcurreader.reset();
             }
         }
@@ -1552,6 +1562,11 @@ public:
         else if( xmlname == "maxtorque" ) {
             for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
                 _ss >> _pjoint->_info._vmaxtorque[idof];
+            }
+        }
+        else if( xmlname == "maxinertia" ) {
+            for(int idof = 0; idof < _pjoint->GetDOF(); ++idof) {
+                _ss >> _pjoint->_info._vmaxinertia[idof];
             }
         }
         else if( xmlname == "resolution" ) {

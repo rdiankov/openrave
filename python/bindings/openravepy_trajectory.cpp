@@ -198,6 +198,15 @@ PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr ptrajectory, PyEnvironmentBa
     return !ptrajectory ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyTrajectoryBase(ptrajectory,pyenv));
 }
 
+object toPyTrajectory(TrajectoryBasePtr ptraj, object opyenv)
+{
+    extract<PyEnvironmentBasePtr> pyenv(opyenv);
+    if( pyenv.check() ) {
+        return object(toPyTrajectory(ptraj,(PyEnvironmentBasePtr)pyenv));
+    }
+    return object();
+}
+
 PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr pytraj)
 {
     return pytraj->GetEnv();

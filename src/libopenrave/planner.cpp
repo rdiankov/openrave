@@ -839,22 +839,25 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
 PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPostProcessingPlanner.size() == 0 ) {
+        __cachePostProcessPlanner.reset();
         return PS_HasSolution;
     }
-    PlannerBasePtr planner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPostProcessingPlanner);
-    if( !planner ) {
-        planner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
-        if( !planner ) {
-            return PS_Failed;
+    if( !__cachePostProcessPlanner || __cachePostProcessPlanner->GetXMLId() != GetParameters()->_sPostProcessingPlanner ) {
+        __cachePostProcessPlanner = RaveCreatePlanner(GetEnv(), GetParameters()->_sPostProcessingPlanner);
+        if( !__cachePostProcessPlanner ) {
+            __cachePostProcessPlanner = RaveCreatePlanner(GetEnv(), s_linearsmoother);
+            if( !__cachePostProcessPlanner ) {
+                return PS_Failed;
+            }
         }
     }
-
+        
     // transfer the callbacks?
     list<UserDataPtr> listhandles;
     FOREACHC(it,__listRegisteredCallbacks) {
         CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
         if( !!pitdata) {
-            listhandles.push_back(planner->RegisterPlanCallback(pitdata->_callbackfn));
+            listhandles.push_back(__cachePostProcessPlanner->RegisterPlanCallback(pitdata->_callbackfn));
         }
     }
 
@@ -864,8 +867,8 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingPlanner = "";
     params->_sPostProcessingParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
-    if( planner->InitPlan(probot, params) ) {
-        return planner->PlanPath(ptraj);
+    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+        return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 
     // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable

@@ -266,19 +266,19 @@ class PyManipulatorIKGoalSampler
 {
 public:
     PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, int ikfilteroptions = IKFO_CheckEnvCollisions) {
-        std::list<IkParameterization> listparameterizations;
+        std::list<IkParameterization> listparameterizationsPtr;
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
             IkParameterization ikparam;
             if( ExtractIkParameterization(oparameterizations[i],ikparam) ) {
-                listparameterizations.push_back(ikparam);
+                listparameterizationsPtr.push_back(ikparam);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT0("ManipulatorIKGoalSampler parameterizations need to be all IkParameterization objeccts",ORE_InvalidArguments);
             }
         }
         dReal fsampleprob=1;
-        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizations, nummaxsamples, nummaxtries, fsampleprob, searchfreeparameters, ikfilteroptions));
+        _sampler.reset(new OpenRAVE::planningutils::ManipulatorIKGoalSampler(GetRobotManipulator(pymanip), listparameterizationsPtr, nummaxsamples, nummaxtries, fsampleprob, searchfreeparameters, ikfilteroptions));
         _sampler->SetJitter(jitter);
     }
     virtual ~PyManipulatorIKGoalSampler() {
@@ -328,10 +328,11 @@ public:
 
 typedef boost::shared_ptr<PyManipulatorIKGoalSampler> PyManipulatorIKGoalSamplerPtr;
 
-} // end namespace planningutils
 
+} // end namespace planningutils
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Sample_overloads, Sample, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleAll_overloads, SampleAll, 0, 3)
+
 BOOST_PYTHON_FUNCTION_OVERLOADS(JitterCurrentConfiguration_overloads, planningutils::pyJitterCurrentConfiguration, 1, 4);
 BOOST_PYTHON_FUNCTION_OVERLOADS(JitterTransform_overloads, planningutils::pyJitterTransform, 2, 3);
 BOOST_PYTHON_FUNCTION_OVERLOADS(SmoothActiveDOFTrajectory_overloads, planningutils::pySmoothActiveDOFTrajectory, 2, 6)

@@ -162,7 +162,7 @@ public:
     void SetTransform(object transform);
     void SetDOFWeights(object o);
     void SetDOFResolutions(object o);
-    void SetDOFLimits(object olower, object oupper);
+    void SetDOFLimits(object olower, object oupper, object oindices=object());
     void SetDOFVelocityLimits(object o);
     void SetDOFAccelerationLimits(object o);
     void SetDOFTorqueLimits(object o);

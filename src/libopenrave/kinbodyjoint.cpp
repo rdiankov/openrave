@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov (rosen.diankov@gmail.com)
+// Copyright (C) 2006-2014 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -32,6 +32,7 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
     std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
     std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
+    std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
     std::fill(_vweights.begin(), _vweights.end(), 1);
     std::fill(_voffsets.begin(), _voffsets.end(), 0);
     std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
@@ -563,7 +564,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     for(int i = 0; i < GetDOF(); ++i) {
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxvel[i], >=, 0, "joint %s[%d] max velocity is invalid",_info._name%i, ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxaccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info._name%i, ORE_InvalidArguments);
-        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxtorque[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info._name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxtorque[i], >=, 0, "joint %s[%d] max torque is invalid",_info._name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxinertia[i], >=, 0, "joint %s[%d] max inertia is invalid",_info._name%i, ORE_InvalidArguments);
     }
 
     KinBodyPtr parent(_parent);
@@ -802,7 +804,7 @@ void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std:
         }
     }
     if( bChanged ) {
-        GetParent()->_ParametersChanged(Prop_JointLimits);
+        GetParent()->_PostprocessChangedParameters(Prop_JointLimits);
     }
 }
 
@@ -838,7 +840,7 @@ void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxvel[i] = vmaxvel.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -861,7 +863,7 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxaccel[i] = vmax.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -879,7 +881,25 @@ void KinBody::Joint::SetTorqueLimits(const std::vector<dReal>& vmax)
     for(int i = 0; i < GetDOF(); ++i) {
         _info._vmaxtorque[i] = vmax.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointAccelerationVelocityTorqueLimits);
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+}
+
+void KinBody::Joint::GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend) const
+{
+    if( !bAppend ) {
+        vmax.resize(0);
+    }
+    for(int i = 0; i < GetDOF(); ++i) {
+        vmax.push_back(_info._vmaxinertia[i]);
+    }
+}
+
+void KinBody::Joint::SetInertiaLimits(const std::vector<dReal>& vmax)
+{
+    for(int i = 0; i < GetDOF(); ++i) {
+        _info._vmaxinertia[i] = vmax.at(i);
+    }
+    GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
@@ -908,7 +928,7 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
             }
             _tinvRight = _tRight.inverse();
         }
-        GetParent()->_ParametersChanged(Prop_JointOffset);
+        GetParent()->_PostprocessChangedParameters(Prop_JointOffset);
     }
 }
 
@@ -930,7 +950,7 @@ dReal KinBody::Joint::GetResolution(int iaxis) const
 void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
     _info._vresolution.at(iaxis) = resolution;
-    GetParent()->_ParametersChanged(Prop_JointProperties);
+    GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
 
 void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
@@ -954,7 +974,7 @@ void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
         OPENRAVE_ASSERT_OP(vweights.at(i),>,0);
         _info._vweights[i] = vweights.at(i);
     }
-    GetParent()->_ParametersChanged(Prop_JointProperties);
+    GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
 
 void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
@@ -1216,7 +1236,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         }
     }
     _vmimic.at(iaxis) = mimic;
-    parent->_ParametersChanged(Prop_JointMimic);
+    parent->_PostprocessChangedParameters(Prop_JointMimic);
 }
 
 void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> >& vpartials, int iaxis, std::map< std::pair<MIMIC::DOFFormat, int>, dReal >& mapcachedpartials) const
@@ -1350,7 +1370,7 @@ void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vecto
     else {
         _info._mapFloatParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
@@ -1361,7 +1381,7 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
     else {
         _info._mapIntParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::SetStringParameters(const std::string& key, const std::string& value)
@@ -1372,7 +1392,7 @@ void KinBody::Joint::SetStringParameters(const std::string& key, const std::stri
     else {
         _info._mapStringParameters.erase(key);
     }
-    GetParent()->_ParametersChanged(Prop_JointCustomParameters);
+    GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::UpdateInfo()
@@ -1402,6 +1422,7 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
             SerializeRound(o,_info._vmaxvel[i]);
             SerializeRound(o,_info._vmaxaccel[i]);
             SerializeRound(o,_info._vmaxtorque[i]);
+            SerializeRound(o,_info._vmaxinertia[i]);
             SerializeRound(o,_info._vlowerlimit[i]);
             SerializeRound(o,_info._vupperlimit[i]);
         }

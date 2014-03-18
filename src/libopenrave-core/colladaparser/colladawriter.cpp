@@ -581,9 +581,10 @@ private:
     {
         RAVELOG_DEBUG(str(boost::format("writing body %s as external reference")%pbody->GetName()));
         string asid = str(boost::format("body%d")%pbody->GetEnvironmentId());
+        //string asmid = str(boost::format("%s_motion")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
-        string askid = str(boost::format("%s_kinematics")%asid);
-        string iassid = str(boost::format("%s_inst")%askid);
+        string iasmid = str(boost::format("%s_motion_inst")%asid);
+        string iassid = str(boost::format("%s_kinematics_inst")%asid);
         ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
 
         domArticulated_systemRef articulated_system_motion;
@@ -691,7 +692,7 @@ private:
             _WriteKinBodyExtraInfo(pbody,articulated_system_motion);
         }
         if( IsForceWrite("link_collision_state") ) {
-            _WriteCollisionData(pbody, articulated_system_motion, vlinksids, false);
+            _WriteCollisionData(pbody, ias, vlinksids, false);
         }
 
         Transform tnode = pbody->GetTransform();

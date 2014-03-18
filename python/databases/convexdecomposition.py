@@ -75,7 +75,6 @@ from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMe
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType
 from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
-from .. import convexdecompositionpy
 
 import numpy
 import time
@@ -91,6 +90,11 @@ except:
     
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
+
+try:
+    from .. import convexdecompositionpy
+except Exception, e:
+    print 'failed to import convexdecompositionpy', e
 
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):

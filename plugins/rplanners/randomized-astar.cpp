@@ -13,10 +13,43 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "rplanners.h"
+#include "openraveplugindefs.h"
 
 class RandomizedAStarPlanner : public PlannerBase
 {
+    class SimpleCostMetric
+    {
+public:
+        SimpleCostMetric(RobotBasePtr robot) {
+        }
+        virtual float Eval(const vector<dReal>& pConfiguration) {
+            return 1;
+        }
+    };
+
+    class SimpleGoalMetric
+    {
+public:
+        SimpleGoalMetric(RobotBasePtr robot, dReal thresh=0.01f) : _robot(robot), _thresh(thresh) {
+        }
+
+        //checks if pConf is within this cone (note: only works in 3D)
+        dReal Eval(const vector<dReal>& c1)
+        {
+            _robot->SetActiveDOFValues(c1);
+            Transform cur = _robot->GetActiveManipulator()->GetTransform();
+            dReal f = RaveSqrt((tgoal.trans - cur.trans).lengthsqr3());
+            return f < _thresh ? 0 : f;
+        }
+
+        Transform tgoal;     // workspace goal
+
+private:
+        RobotBasePtr _robot;
+        dReal _thresh;
+    };
+
+
     // sorted by increasing getvalue
     template <class T, class S> class BinarySearchTree
     {
