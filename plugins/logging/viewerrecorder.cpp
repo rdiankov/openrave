@@ -714,7 +714,7 @@ protected:
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 
-#if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(9,11,0)
+#if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55,52,0) // not sure when AVCodecID was introduced
         AVCodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (AVCodecID)codecid;
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
