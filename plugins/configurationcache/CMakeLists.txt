@@ -10,7 +10,7 @@ install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} C
 if(OPT_PYTHON AND PYTHON_EXECUTABLE)
   if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
     if( HAVE_ALL_PYTHON_HEADERS )
-      include_directories(${PYTHON_INCLUDE_PATH})
+      include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS})
       add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
       target_link_libraries(openravepy_configurationcache openravepy_int configurationcache ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} lapack)
       set_target_properties(openravepy_configurationcache PROPERTIES PREFIX "" COMPILE_FLAGS "")
