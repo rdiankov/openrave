@@ -845,8 +845,8 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
     dReal delta = params->minswitchtime;
     int numdof = params->GetDOF();
     for(int i=0; i<numdof; i++) {
-        vmaxs = min(vmaxs,params->_vConfigVelocityLimit[i]/dx[i]);
-        amaxs = min(amaxs,params->_vConfigAccelerationLimit[i]/dx[i]);
+        vmaxs = min(vmaxs,params->_vConfigVelocityLimit[i]/RaveFabs(dx[i]));
+        amaxs = min(amaxs,params->_vConfigAccelerationLimit[i]/RaveFabs(dx[i]));
     }
 
     dReal tp = sqrt(1/amaxs);
