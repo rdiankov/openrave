@@ -209,7 +209,7 @@ public:
 
         ++_cachedcollisionchecks;
 
-        if (_cachedcollisionchecks % 200 == 0) {
+        if (_cachedcollisionchecks % 5000 == 0) {
             _ss.str(std::string());
             _ss << "insert " << _intime << "ms " << "query " << _querytime << "ms " << "raw " << _rawtime << "ms" << " size " << _cache->GetNumKnownNodes() << " hits " << _cachedcollisionhits+_cachedfreehits << "/" << _cachedcollisionchecks;
 
@@ -313,7 +313,7 @@ public:
 
         ++_selfcachedcollisionchecks;
 
-        if (_selfcachedcollisionchecks % 200 == 0) {
+        if (_selfcachedcollisionchecks % 700 == 0) {
             _ss.str(std::string());
             _ss << "self-insert " << _selfintime << "ms " << "self-query " << _selfquerytime << "ms " << "self-raw " << _selfrawtime << "ms " << "load " << _loadtime << "ms " << "size " << _selfcache->GetNumKnownNodes() << " hits " << _selfcachedcollisionhits+_selfcachedfreehits << "/" << _selfcachedcollisionchecks;
 
@@ -605,8 +605,8 @@ protected:
     // for testing, will remove soon (cloning collision checkers resets all parameters)
     void _SetParams()
     {
-        _cache->SetCollisionThresh(0.3);
-        _cache->SetFreeSpaceThresh(0.3);
+        _cache->SetCollisionThresh(0.1);
+        _cache->SetFreeSpaceThresh(0.1);
         _cache->SetInsertionDistanceMult(0.1);
         _cache->SetBase(2.0);
 

@@ -842,7 +842,7 @@ int CacheTree::SaveCache(std::string filename)
     FOREACH(itlevelnodes, _vsetLevelNodes) {
         FOREACH(itnode, *itlevelnodes) {
             _newnode = *itnode;
-            if (_newnode->_conftype != CNT_Unknown) {
+            if (true){//_newnode->_conftype != CNT_Unknown) {
                 fwrite(&_newnode->_level, sizeof(_newnode->_level), 1, pfile);
                 fwrite(_newnode->GetConfigurationState(), sizeof(dReal)*_statedof, 1, pfile);
                 fwrite(&_newnode->_conftype, sizeof(_newnode->_conftype), 1, pfile);
@@ -982,7 +982,7 @@ int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
             }
         }
         int knum = GetNumKnownNodes();
-        RAVELOG_DEBUG_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
+        RAVELOG_VERBOSE_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
    }
    return nremoved;        
 }
@@ -1002,7 +1002,7 @@ int CacheTree::UpdateFreeConfigurations(KinBodyPtr pbody) //todo only remove tho
         }
 
         int knum = GetNumKnownNodes();
-        RAVELOG_DEBUG_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
+        RAVELOG_VERBOSE_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
     }
 
     return nremoved;
@@ -1024,7 +1024,7 @@ int CacheTree::RemoveFreeConfigurations()
         }
 
         int knum = GetNumKnownNodes();
-        RAVELOG_DEBUG_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
+        RAVELOG_VERBOSE_FORMAT("removed %d nodes, %d known nodes left",nremoved%knum);
     }
 
     return nremoved;
@@ -1240,7 +1240,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
             ss << _lowerlimit[i] << " ";
         }
         ss << "]\n";
-        RAVELOG_DEBUG(ss.str());
+        RAVELOG_VERBOSE(ss.str());
     }
 }
 
@@ -1371,7 +1371,7 @@ void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
     if(_envupdates) {
-        RAVELOG_WARN_FORMAT("%s %s","Updating untracked bodies"%pbody->GetName());
+        RAVELOG_VERBOSE_FORMAT("%s %s","Updating untracked bodies"%pbody->GetName());
         UpdateCollisionConfigurations(pbody);
         RemoveFreeConfigurations();
     }
@@ -1383,7 +1383,7 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
         if (_envupdates) {
             // invalidate the freespace of a cache given a new body in the scene
             if (RemoveFreeConfigurations() > 0){
-                RAVELOG_WARN_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
+                RAVELOG_DEBUG_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
             }
         KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
         pinfo->_changehandle = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, boost::bind(&ConfigurationCache::_UpdateUntrackedBody, this, pbody));
@@ -1394,7 +1394,7 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
     else if( action == 0 ) {
         if (_envupdates) {
             if ( UpdateCollisionConfigurations(pbody) > 0){
-                RAVELOG_WARN_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
+                RAVELOG_DEBUG_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
                 // remove all configurations that collide with this body
             }
             pbody->RemoveUserData(_userdatakey);
@@ -1406,7 +1406,7 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 {
 
     if (_envupdates){
-        RAVELOG_WARN("Updating robot joint limits\n");
+        RAVELOG_DEBUG("Updating robot joint limits\n");
         _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
         _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
 
@@ -1441,7 +1441,7 @@ void ConfigurationCache::_UpdateRobotGrabbed()
     }
 
     if (newGrab) {
-        RAVELOG_WARN("Updating robot grabbed\n");
+        RAVELOG_DEBUG("Updating robot grabbed\n");
         FOREACH(newbody, _vnewgrabbedbodies){
             UpdateCollisionConfigurations((*newbody));
         }
