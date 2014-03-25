@@ -2654,7 +2654,7 @@ class IKFastSolver(AutoReloader):
         solsubs = self.freevarsubs[:]
         for v in transvars:
             solsubs += self.Variable(v).subs
-        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)
+        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3].transpose()*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)        
         self.checkSolvability(AllEquations,rotvars,self.freejointvars+transvars)
         localdirtree = self.SolveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
         # make it a function so compiled code is smaller
