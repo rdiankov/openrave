@@ -30,6 +30,7 @@ enum ExtendType {
 /// \brief wraps a static array of T onto a std::vector. Destructor just NULLs out the pointers. Any dynamic resizing operations on this vector wrapper would probably cause the problem to segfault, so use as if it is constant.
 ///
 /// This is an optimization, so if there's a compiler this doesn't compile for, #ifdef it with the regular vector.
+#ifndef __clang__
 template <class T>
 class VectorWrapper : public std::vector<T>
 {
@@ -61,6 +62,9 @@ public:
         this->_M_impl._M_finish = this->_M_impl._M_end_of_storage = sourceArray + arraySize;
     }
 };
+#else // __clang__
+#define VectorWrapper std::vector
+#endif // __clang__
 
 class NodeBase
 {
@@ -212,12 +216,12 @@ public:
 
     inline dReal _ComputeDistance(const dReal* config0, const std::vector<dReal>& config1) const
     {
-        return _distmetricfn(VectorWrapper<dReal>(config0,_dof), config1);
+        return _distmetricfn(VectorWrapper<dReal>(config0,config0+_dof), config1);
     }
 
     inline dReal _ComputeDistance(NodePtr node0, NodePtr node1) const
     {
-        return _distmetricfn(VectorWrapper<dReal>(node0->q,_dof), VectorWrapper<dReal>(node1->q,_dof));
+        return _distmetricfn(VectorWrapper<dReal>(node0->q,node0->q+_dof), VectorWrapper<dReal>(node1->q,node1->q+_dof));
     }
 
     std::pair<NodeBasePtr, dReal> FindNearestNode(const std::vector<dReal>& vquerystate) const
@@ -493,12 +497,12 @@ public:
             for(int i = 0; i < _dof; ++i) {
                 o << vnodes[i] << ",";
             }
-            typename std::vector<NodePtr>::iterator itnode = find(vnodes.begin(), vnodes.end(), (*itnode)->rrtparent);
-            if( itnode == vnodes.end() ) {
+            typename std::vector<NodePtr>::iterator vitnode = find(vnodes.begin(), vnodes.end(), (*itnode)->rrtparent);
+            if( vitnode == vnodes.end() ) {
                 o << "-1" << endl;
             }
             else {
-                o << (size_t)(itnode-vnodes.begin()) << endl;
+                o << (size_t)(vitnode-vnodes.begin()) << endl;
             }
         }
     }

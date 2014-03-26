@@ -714,7 +714,7 @@ protected:
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 
-        CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
+        AVCodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (AVCodecID)codecid;
 #if LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else

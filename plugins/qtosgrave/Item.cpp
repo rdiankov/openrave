@@ -338,7 +338,7 @@ void KinBodyItem::Load()
                     RAVELOG_DEBUG("Normals Calculated!!!\n");
 
                     geom->setNormalArray(normals);
-                    geom->setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE);
+                    geom->setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
 
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);
