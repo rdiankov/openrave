@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2013 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -35,6 +35,30 @@ enum GeometryType {
     GT_Cylinder = 3, ///< oriented towards z-axis
     GT_TriMesh = 4,
 };
+
+/// \brief holds parameters for an electric motor
+///
+/// all speed is in revolutions/second
+class OPENRAVE_API ElectricMotorActuatorInfo
+{
+public:
+    ElectricMotorActuatorInfo();
+    dReal gear_ratio; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
+    dReal assigned_power_rating; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
+    dReal max_speed; ///< the maximum speed of the motor **Time-¹**
+    dReal no_load_speed; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
+    dReal stall_torque; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
+    std::vector<std::pair<dReal, dReal> > speed_torque_points; ///< the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). Should be ordered from increasing speed.
+    dReal nominal_torque; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
+    dReal rotor_inertia; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
+    dReal torque_constant; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
+    dReal nominal_voltage; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
+    dReal speed_constant; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
+    dReal starting_current; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
+    dReal terminal_resistance; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
+};
+
+typedef boost::shared_ptr<ElectricMotorActuatorInfo> ElectricMotorActuatorInfoPtr;
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
@@ -420,7 +444,7 @@ protected:
 
         /// \deprecated (12/1/20)
         inline TransformMatrix GetInertia() const RAVE_DEPRECATED {
-            RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetGlobalInertia\n");
+            RAVELOG_WARN("KinBody::Link::GetInertia is deprecated, use KinBody::Link::GetLocalInertia\n");
             return GetLocalInertia();
         }
 
@@ -720,7 +744,8 @@ public:
         boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
         boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
         boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that can be applied to the joint
+        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
+        boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
         boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
 
         /// \brief internal offset parameter that determines the branch the angle centers on
@@ -737,7 +762,9 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
-
+        
+        ElectricMotorActuatorInfoPtr _infoElectricMotor;
+        
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -789,6 +816,9 @@ public:
         }
         inline dReal GetMaxTorque(int iaxis=0) const {
             return _info._vmaxtorque[iaxis];
+        }
+        inline dReal GetMaxInertia(int iaxis=0) const {
+            return _info._vmaxinertia[iaxis];
         }
 
         /// \brief Get the degree of freedom index in the body's DOF array.
@@ -933,6 +963,16 @@ public:
 
         /// \brief \see GetTorqueLimits
         virtual void SetTorqueLimits(const std::vector<dReal>& vmax);
+
+        /** \brief Returns the max inertias of the joint
+
+            \param[out] the max inertia
+            \param[in] bAppend if true will append to the end of the vector instead of erasing it
+         */
+        virtual void GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend=false) const;
+
+        /// \brief \see GetInertiaLimits
+        virtual void SetInertiaLimits(const std::vector<dReal>& vmax);
 
         /// \brief gets all weights for the joint axes
         ///

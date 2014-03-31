@@ -407,6 +407,134 @@ void GeometryInfoReader::characters(const std::string& ch)
     }
 }
 
+
+ElectricMotorActuatorInfoReader::ElectricMotorActuatorInfoReader(ElectricMotorActuatorInfoPtr pinfo, const AttributesList& atts) : _pinfo(pinfo)
+{
+    string type;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "type") {
+            type = itatt->second;
+        }
+    }
+
+    if( type.size() == 0 ) {
+        RAVELOG_INFOA("no actuator type, defaulting to electric_motor\n");
+        type = "electric_motor";
+    }
+    
+    if( type != "electric_motor" ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("does not support actuator '%s' type", type, ORE_InvalidArguments);
+    }
+    
+    _pinfo.reset(new ElectricMotorActuatorInfo());
+}
+
+BaseXMLReader::ProcessElement ElectricMotorActuatorInfoReader::startElement(const std::string& xmlname, const AttributesList& atts)
+{
+    _ss.str("");
+    if( !!_pcurreader ) {
+        if( _pcurreader->startElement(xmlname, atts) == PE_Support ) {
+            return PE_Support;
+        }
+        return PE_Ignore;
+    }
+
+    if( xmlname == "actuator" ) {
+        _pcurreader.reset(new ElectricMotorActuatorInfoReader(_pinfo, atts));
+        return PE_Support;
+    }
+    
+    static boost::array<string, 13> tags = { { "gear_ratio", "assigned_power_rating", "max_speed", "no_load_speed", "stall_torque", "speed_torque_point", "nominal_torque", "rotor_inertia", "torque_constant", "nominal_voltage", "speed_constant", "starting_current", "terminal_resistance"} };
+    if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
+        return PE_Support;
+    }
+    return PE_Pass;
+}
+
+bool ElectricMotorActuatorInfoReader::endElement(const std::string& xmlname)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->endElement(xmlname) ) {
+            bool bret = !!boost::dynamic_pointer_cast<ElectricMotorActuatorInfoReader>(_pcurreader);
+            _pcurreader.reset();
+            if( bret ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    if( xmlname == "actuator" ) {
+        return true;
+    }
+    else if( xmlname == "gear_ratio" ) {
+        _ss >> _pinfo->gear_ratio;
+    }
+    else if( xmlname == "assigned_power_rating" ) {
+        _ss >> _pinfo->assigned_power_rating;
+    }
+    else if( xmlname == "max_speed" ) {
+        _ss >> _pinfo->max_speed;
+    }
+    else if( xmlname == "no_load_speed" ) {
+        _ss >> _pinfo->no_load_speed;
+    }
+    else if( xmlname == "stall_torque" ) {
+        _ss >> _pinfo->stall_torque;
+    }
+    else if( xmlname == "speed_torque_point" ) {
+        dReal speed=0, torque=0;
+        _ss >> speed >> torque;
+        // should be from increasing speed.
+        size_t insertindex = 0;
+        while(insertindex < _pinfo->speed_torque_points.size()) {
+            if( speed < _pinfo->speed_torque_points.at(insertindex).first ) {
+                break;
+            }
+            ++insertindex;
+        }
+        _pinfo->speed_torque_points.insert(_pinfo->speed_torque_points.begin()+insertindex, make_pair(speed,torque));
+    }
+    else if( xmlname == "nominal_torque" ) {
+        _ss >> _pinfo->nominal_torque;
+    }
+    else if( xmlname == "rotor_inertia" ) {
+        _ss >> _pinfo->rotor_inertia;
+    }
+    else if( xmlname == "torque_constant" ) {
+        _ss >> _pinfo->torque_constant;
+    }
+    else if( xmlname == "nominal_voltage" ) {
+        _ss >> _pinfo->nominal_voltage;
+    }
+    else if( xmlname == "speed_constant" ) {
+        _ss >> _pinfo->speed_constant;
+    }
+    else if( xmlname == "starting_current" ) {
+        _ss >> _pinfo->starting_current;
+    }
+    else if( xmlname == "terminal_resistance" ) {
+        _ss >> _pinfo->terminal_resistance;
+    }
+    else {
+        RAVELOG_WARN_FORMAT("could not process tag %s", xmlname);
+    }
+
+    return false;
+}
+
+void ElectricMotorActuatorInfoReader::characters(const std::string& ch)
+{
+    if( !!_pcurreader ) {
+        _pcurreader->characters(ch);
+    }
+    else {
+        _ss.clear();
+        _ss << ch;
+    }
+}
+
+
 HierarchicalXMLReader::HierarchicalXMLReader(const std::string& xmlid, const AttributesList& atts) : _xmlid(xmlid)
 {
     _readable.reset(new HierarchicalXMLReadable(xmlid,atts));
