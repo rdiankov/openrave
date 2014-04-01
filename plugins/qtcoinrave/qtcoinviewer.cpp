@@ -3597,6 +3597,7 @@ bool QtCoinViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
     sinput >> nearplane;
     EnvMessagePtr pmsg(new SetNearPlaneMessage(shared_viewer(), (void**)NULL, nearplane));
     pmsg->callerexecute(false);
+    return true;
 }
 
 void QtCoinViewer::_SetNearPlane(dReal nearplane)

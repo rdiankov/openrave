@@ -46,6 +46,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     if( (cloningoptions&Clone_Sensors) && !!sensor.psensor ) {
         psensor = RaveCreateSensor(probot->GetEnv(), sensor.psensor->GetXMLId());
         if( !!psensor ) {
+            psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_name)); // need a unique targettable name
             psensor->Clone(sensor.psensor,cloningoptions);
             if( !!psensor ) {
                 pdata = psensor->CreateSensorData();
@@ -66,6 +67,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
     trelative = info._trelative;
     psensor = RaveCreateSensor(probot->GetEnv(), info._sensorname);
     if( !!psensor ) {
+        psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_name)); // need a unique targettable name
         if(!!info._sensorgeometry) {
             psensor->SetSensorGeometry(info._sensorgeometry);
         }
