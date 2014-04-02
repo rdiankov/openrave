@@ -77,6 +77,7 @@ public:
         _selfintime = 0;
         _selfquerytime = 0;
         _selfrawtime = 0;
+
     }
 
     virtual ~CacheCollisionChecker() {
@@ -411,6 +412,11 @@ protected:
         _selfcachedcollisionhits=0;
         _selfcachedfreehits=0;
 
+        _numdofs = _probot->GetActiveDOF();
+        _dofindices = _probot->GetActiveDOFIndices();
+
+        _handleRobotDOFChange = _probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&CacheCollisionChecker::_UpdateRobotDOF, this));
+
         return true;
     }
 
@@ -632,8 +638,22 @@ protected:
         _selfcachedfreehits=0;
     }
 
+    void _UpdateRobotDOF()
+    {
+        if (_probot->GetActiveDOF() != _numdofs || _probot->GetActiveDOFIndices() != _dofindices)
+        {
+            RAVELOG_DEBUG_FORMAT("Updating robot dofs, %d/%d",_numdofs%_probot->GetActiveDOF());
+            _cache.reset(new ConfigurationCache(_probot));
+
+            _numdofs = _probot->GetActiveDOF();
+            _dofindices = _probot->GetActiveDOFIndices();
+
+        }
+    }
+
     std::vector<dReal> _dofvals;
     std::vector<KinBodyPtr> _vGrabbedBodies;
+    std::vector<int> _dofindices;
     ConfigurationCachePtr _cache;
     ConfigurationCachePtr _selfcache;
     CollisionCheckerBasePtr _pintchecker;
@@ -641,11 +661,14 @@ protected:
     std::string __cachehash;
     std::string _robothash;
     RobotBasePtr _probot; ///< robot pointer, shouldn't be used directly, use with GetRobot()
+    int _numdofs;
     int _cachedcollisionchecks, _cachedcollisionhits, _cachedfreehits, _size;
     int _selfcachedcollisionchecks, _selfcachedcollisionhits, _selfcachedfreehits;
     uint64_t _stime, _ftime, _intime, _querytime, _loadtime, _savetime, _rawtime, _resettime, _selfintime, _selfquerytime, _selfrawtime;
     stringstream _ss;
     ostringstream _oss;
+
+    UserDataPtr _handleRobotDOFChange;
 };
 
 CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)
