@@ -500,6 +500,7 @@ private:
     std::vector<KinBodyPtr> _vnewgrabbedbodies;
     std::vector<KinBodyPtr> _vnewenvbodies;
     std::vector<dReal> _upperlimit, _lowerlimit; //joint limits, used to calculate maxdistance
+    std::vector<dReal> _newupperlimit, _newlowerlimit; 
     std::vector<CacheTreeNodePtr> _cachetreenodes;
     std::vector<dReal> _vweights;
     

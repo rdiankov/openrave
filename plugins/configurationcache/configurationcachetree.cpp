@@ -1211,7 +1211,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     _handleJointLimitChange = pstaterobot->RegisterChangeCallback(KinBody::Prop_JointLimits, boost::bind(&ConfigurationCache::_UpdateRobotJointLimits, this));
     _handleGrabbedChange = pstaterobot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, boost::bind(&ConfigurationCache::_UpdateRobotGrabbed, this));
-
+    
     // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
     dReal maxdistance = 0;
@@ -1222,12 +1222,13 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
 
     _cachetree.Init(_vweights, RaveSqrt(maxdistance));
 
-    if (IS_DEBUGLEVEL(Level_Debug)) {
+    if (IS_DEBUGLEVEL(Level_Verbose)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-        ss << "Initializing cache,  maxdistance " << _cachetree.GetMaxDistance() << ", collisionthresh " << _collisionthresh << ", _insertiondistancemult "<< _insertiondistancemult << ", weights [";
+        ss << "Initializing cache,  maxdistance " << _cachetree.GetMaxDistance() << ", weights [";
         for (size_t i = 0; i < _vweights.size(); ++i) {
             ss << _vweights[i] << " ";
         }
+        ss << " (" << _vweights.size() << ") ";
         ss << "]\nupperlimit [";
 
         for (size_t i = 0; i < _upperlimit.size(); ++i) {
@@ -1407,20 +1408,27 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 
     if (_envupdates){
         RAVELOG_DEBUG("Updating robot joint limits\n");
-        _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
-        _pstaterobot->GetActiveDOFLimits(_lowerlimit, _upperlimit);
 
-        // compute new max distance for cache
-        // distance has to be computed in the same way as CacheTreeNode.GetDistance()
-        // otherwise, distances larger than this value could be inserted into the tree
-        dReal maxdistance = 0;
-        for (size_t i = 0; i < _lowerlimit.size(); ++i) {
-            dReal f = (_upperlimit[i] - _lowerlimit[i]) * _cachetree.GetWeights().at(i);
-            maxdistance += f*f;
-        }
-        maxdistance = RaveSqrt(maxdistance);
-        if( maxdistance > _cachetree.GetMaxDistance()+g_fEpsilonLinear ) {
-            _cachetree.SetMaxDistance(maxdistance);
+        _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
+        _pstaterobot->GetActiveDOFLimits(_newlowerlimit, _newupperlimit);
+
+        if (_newlowerlimit != _lowerlimit || _newupperlimit != _upperlimit)
+        {
+            // compute new max distance for cache
+            // distance has to be computed in the same way as CacheTreeNode.GetDistance()
+            // otherwise, distances larger than this value could be inserted into the tree
+            dReal maxdistance = 0;
+            for (size_t i = 0; i < _lowerlimit.size(); ++i) {
+                dReal f = (_upperlimit[i] - _lowerlimit[i]) * _cachetree.GetWeights().at(i);
+                maxdistance += f*f;
+            }
+            maxdistance = RaveSqrt(maxdistance);
+            if( maxdistance > _cachetree.GetMaxDistance()+g_fEpsilonLinear ) {
+                _cachetree.SetMaxDistance(maxdistance);
+            }
+
+            _lowerlimit = _newlowerlimit;
+            _upperlimit = _newupperlimit;
         }
     }
 }
