@@ -342,6 +342,8 @@ public:
     bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
     bool _CommandResize(ostream& sout, istream& sinput);
     bool _SaveBodyLinkToVRMLCommand(ostream& sout, istream& sinput);
+    bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
+    void _SetNearPlane(dReal nearplane);
 
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *);
@@ -488,6 +490,7 @@ public:
     friend class StopPlaybackTimerMessage;
     friend class SetGraphTransformMessage;
     friend class SetGraphShowMessage;
+    friend class SetNearPlaneMessage;
 
     friend class ItemSelectionCallbackData;
     friend class ViewerImageCallbackData;

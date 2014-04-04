@@ -489,11 +489,14 @@ public:
         FOREACHC(itchildren, _vsetLevelNodes) {
             vnodes.insert(vnodes.end(), itchildren->begin(), itchildren->end());
         }
-        FOREACHC(itnode,vnodes) {
+        // there's a bug here when using FOREACHC
+        //FOREACHC(itnode,vnodes) {
+        for(size_t inode = 0; inode < vnodes.size(); ++inode) {
+            NodePtr node = vnodes[inode];
             for(int i = 0; i < _dof; ++i) {
-                o << vnodes[i] << ",";
+                o << node->q[i] << ",";
             }
-            typename std::vector<NodePtr>::iterator itnode = find(vnodes.begin(), vnodes.end(), (*itnode)->rrtparent);
+            typename std::vector<NodePtr>::iterator itnode = find(vnodes.begin(), vnodes.end(), node->rrtparent);
             if( itnode == vnodes.end() ) {
                 o << "-1" << endl;
             }
@@ -627,7 +630,7 @@ private:
             currentlevel -= 1;
             fLevelBound *= _fBaseInv;
         }
-        RAVELOG_VERBOSE_FORMAT("query went through %d levels", (_maxlevel-currentlevel));
+        //RAVELOG_VERBOSE_FORMAT("query went through %d levels", (_maxlevel-currentlevel));
         return bestnode;
     }
 

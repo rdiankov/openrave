@@ -83,7 +83,7 @@ protected:
 
 typedef boost::shared_ptr<TrajectoryReader> TrajectoryReaderPtr;
 
-/// \brief create a xml parser for trajectories
+/// \brief create a xml parser for \ref KinBody::GeometryInfo
 class OPENRAVE_API GeometryInfoReader : public BaseXMLReader
 {
 public:
@@ -117,6 +117,30 @@ protected:
 };
 
 typedef boost::shared_ptr<GeometryInfoReader> GeometryInfoReaderPtr;
+
+/// \brief create a xml parser for \ref ElectricMotorActuatorInfo
+class OPENRAVE_API ElectricMotorActuatorInfoReader : public BaseXMLReader
+{
+public:
+    /// \param env the environment used to create the trajectory
+    /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
+    /// \param atts attributes passed from <trajectory> tag
+    ElectricMotorActuatorInfoReader(ElectricMotorActuatorInfoPtr geom = ElectricMotorActuatorInfoPtr(), const AttributesList& atts=AttributesList());
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
+
+    inline ElectricMotorActuatorInfoPtr GetActuatorInfo() const {
+        return _pinfo;
+    }
+
+protected:
+    ElectricMotorActuatorInfoPtr _pinfo;
+    std::stringstream _ss;
+    BaseXMLReaderPtr _pcurreader;
+};
+
+typedef boost::shared_ptr<ElectricMotorActuatorInfoReader> ElectricMotorActuatorInfoReaderPtr;
 
 /// \brief reads and stores the infromation hierarchically
 class OPENRAVE_API HierarchicalXMLReader : public BaseXMLReader

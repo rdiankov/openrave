@@ -178,6 +178,7 @@ from __future__ import with_statement # for python 2.5
 from sympy import __version__ as sympy_version
 if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
+sympy_smaller_073 = sympy_version < '0.7.3'
 
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
@@ -307,7 +308,8 @@ def Pow_eval_subs(self, old, new):
             
     return Pow(self.base._eval_subs(old, new), self.exp._eval_subs(old, new))
 
-power.Pow._eval_subs = Pow_eval_subs
+if sympy_smaller_073:
+    power.Pow._eval_subs = Pow_eval_subs
 
 # simplify/simplify.py
 # def custom_trigsimp_nonrecursive(expr, deep=False):
@@ -2652,7 +2654,7 @@ class IKFastSolver(AutoReloader):
         solsubs = self.freevarsubs[:]
         for v in transvars:
             solsubs += self.Variable(v).subs
-        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3]*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)
+        AllEquations = self.buildEquationsFromTwoSides([D],[T0[0:3,0:3].transpose()*self.Tee[0,0:3].transpose()],solvejointvars,uselength=False)        
         self.checkSolvability(AllEquations,rotvars,self.freejointvars+transvars)
         localdirtree = self.SolveAllEquations(AllEquations,curvars=rotvars[:],othersolvedvars = self.freejointvars+transvars,solsubs=solsubs,endbranchtree=endbranchtree)
         # make it a function so compiled code is smaller
@@ -4196,7 +4198,10 @@ class IKFastSolver(AutoReloader):
                     monomkey = peq0dict.keys()[0]
                     monomcoeff = peq0dict[monomkey]
                     monomvalue = peq[1].as_expr()
-                    monomexpr = Monomial(*monomkey).as_expr(*peq[0].gens)
+                    if sympy_smaller_073:
+                        monomexpr = Monomial(*monomkey).as_expr(*peq[0].gens)
+                    else:
+                        monomexpr = Monomial(monomkey).as_expr(*peq[0].gens)
                     # for every equation that has this monom, substitute it
                     for ipeq2, peq2 in enumerate(neweqs):
                         if ipeq == ipeq2:
@@ -4501,7 +4506,10 @@ class IKFastSolver(AutoReloader):
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
-                            eq += sym*Monomial(*monom).as_expr(*othersymbols)
+                            if sympy_smaller_073:
+                                eq += sym*Monomial(*monom).as_expr(*othersymbols)
+                            else:
+                                eq += sym*Monomial(monom).as_expr(*othersymbols)
                         res2.append(eq)
                         gres2[icol] = GinacUtils.ConvertToGinac(eq,localsymbolmap)
                         
@@ -4518,7 +4526,10 @@ class IKFastSolver(AutoReloader):
                             sym = self.gsymbolgen.next()
                             dictequations.append((sym,coeff))
                             localsymbolmap[sym.name] = swiginac.symbol(sym.name)
-                            eq += sym*Monomial(*monom).as_expr(*othersymbols)
+                            if sympy_smaller_073:
+                                eq += sym*Monomial(*monom).as_expr(*othersymbols)
+                            else:
+                                eq += sym*Monomial(monom).as_expr(*othersymbols)
                         res3.append(eq)
                     BUresult = Matrix(gres3.rows(),gres3.cols(),res3)
                     C = AL*BUresult-BL
@@ -4705,7 +4716,10 @@ class IKFastSolver(AutoReloader):
                     for monom, coeff in newpeq.iteritems():
                         sym = self.gsymbolgen.next()
                         dictequations.append((sym,coeff))
-                        newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
+                        if sympy_smaller_073:
+                            newpeq += sym*Monomial(*monom).as_expr(*othersymbols)
+                        else:
+                            newpeq += sym*Monomial(monom).as_expr(*othersymbols)
                     peq += newpeq
             else:
                 peq = Poly(eq,*othersymbols)
@@ -7164,7 +7178,11 @@ class IKFastSolver(AutoReloader):
             coeffs = []
             globalsymbols = [(s,v.subs(self.globalsymbols).subs(testconsistentvalue).evalf()) for s,v in self.globalsymbols]
             for degree in range(pfinal.degree(0),-1,-1):
-                coeffs.append(pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf())
+                value = pfinaldict.get((degree,),S.Zero).subs(subs).subs(globalsymbols+testconsistentvalue).evalf()/common.evalf()
+                if value.has(I): # check if has imaginary number
+                    coeffs = None
+                    break
+                coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
                 if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
                     coeffs = None

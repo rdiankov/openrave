@@ -639,6 +639,7 @@ void init_openravepy_trajectory();
 TrajectoryBasePtr GetTrajectory(object);
 TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
 PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
+object toPyTrajectory(TrajectoryBasePtr, object opyenv);
 PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
 // input can be class derived from PyInterfaceBase
 object toPyEnvironment(object opyinterface);

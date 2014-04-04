@@ -173,6 +173,9 @@ public:
     object GetTransform6D() {
         return ReturnTransform(_param.GetTransform6D());
     }
+    object GetTransform6DPose() {
+        return toPyArray(_param.GetTransform6D());
+    }
     object GetRotation3D() {
         return toPyVector4(_param.GetRotation3D());
     }
@@ -426,6 +429,7 @@ void init_openravepy_ikparameterization()
                                    .def("SetTranslationYAxisAngleXNorm4D",&PyIkParameterization::SetTranslationYAxisAngleXNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationYAxisAngleXNorm4D))
                                    .def("SetTranslationZAxisAngleYNorm4D",&PyIkParameterization::SetTranslationZAxisAngleYNorm4D,args("translation","angle"), DOXY_FN(IkParameterization,SetTranslationZAxisAngleYNorm4D))
                                    .def("GetTransform6D",&PyIkParameterization::GetTransform6D, DOXY_FN(IkParameterization,GetTransform6D))
+                                   .def("GetTransform6DPose",&PyIkParameterization::GetTransform6DPose, DOXY_FN(IkParameterization,GetTransform6D))
                                    .def("GetRotation3D",&PyIkParameterization::GetRotation3D, DOXY_FN(IkParameterization,GetRotation3D))
                                    .def("GetTranslation3D",&PyIkParameterization::GetTranslation3D, DOXY_FN(IkParameterization,GetTranslation3D))
                                    .def("GetDirection3D",&PyIkParameterization::GetDirection3D, DOXY_FN(IkParameterization,GetDirection3D))

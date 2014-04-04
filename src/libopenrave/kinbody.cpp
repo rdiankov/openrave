@@ -60,6 +60,22 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
+ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
+{
+    gear_ratio = 0;
+    assigned_power_rating = 0;
+    max_speed = 0;
+    no_load_speed = 0;
+    stall_torque = 0;
+    nominal_torque = 0;
+    rotor_inertia = 0;
+    torque_constant = 0;
+    nominal_voltage = 0;
+    speed_constant = 0;
+    starting_current = 0;
+    terminal_resistance = 0;
+}
+
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
@@ -813,7 +829,7 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
                     }
                 }
             }
-        }        
+        }
     }
     if( bChanged ) {
         _PostprocessChangedParameters(Prop_JointLimits);
@@ -4057,7 +4073,7 @@ void KinBody::_ComputeInternalInformation()
     }
 
     // notify any callbacks of the changes
-    std::list<UserDataWeakPtr> listRegisteredCallbacks;    
+    std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;
     uint32_t parameters = _nParametersChanged;
     while(parameters && index < _vlistRegisteredCallbacks.size()) {
@@ -4434,7 +4450,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         __hashkinematics.resize(0);
     }
 
-    std::list<UserDataWeakPtr> listRegisteredCallbacks;    
+    std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;
     while(parameters && index < _vlistRegisteredCallbacks.size()) {
         if( (parameters & 1) &&  _vlistRegisteredCallbacks.at(index).size() > 0 ) {

@@ -1125,13 +1125,13 @@ dReal DetermineMinswitchtime(const ParabolicRamp::ParabolicRampND& rampnd)
         vector<dReal>::iterator it;
         if( itramp->tswitch1 != 0 ) {
             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-            if( *it != itramp->tswitch1) {
+            if( it != vswitchtimes.end() && *it != itramp->tswitch1) {
                 vswitchtimes.insert(it,itramp->tswitch1);
             }
         }
         if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-            if( *it != itramp->tswitch2 ) {
+            if( it != vswitchtimes.end() && *it != itramp->tswitch2 ) {
                 vswitchtimes.insert(it,itramp->tswitch2);
             }
         }
@@ -1177,13 +1177,13 @@ size_t CountUnitaryRamps(const ParabolicRamp::ParabolicRampND& rampnd)
         vector<dReal>::iterator it;
         if( itramp->tswitch1 != 0 ) {
             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-            if( *it != itramp->tswitch1) {
+            if( it != vswitchtimes.end() && *it != itramp->tswitch1) {
                 vswitchtimes.insert(it,itramp->tswitch1);
             }
         }
         if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-            if( *it != itramp->tswitch2 ) {
+            if( it != vswitchtimes.end() && *it != itramp->tswitch2 ) {
                 vswitchtimes.insert(it,itramp->tswitch2);
             }
         }
@@ -1256,13 +1256,13 @@ void BreakOneRamp(ParabolicRamp::ParabolicRampND ramp,std::list<ParabolicRamp::P
         vector<dReal>::iterator it;
         if( itramp->tswitch1 != 0 ) {
             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-            if( *it != itramp->tswitch1) {
+            if( it != vswitchtimes.end() && *it != itramp->tswitch1) {
                 vswitchtimes.insert(it,itramp->tswitch1);
             }
         }
         if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
             it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-            if( *it != itramp->tswitch2 ) {
+            if( it != vswitchtimes.end() && *it != itramp->tswitch2 ) {
                 vswitchtimes.insert(it,itramp->tswitch2);
             }
         }

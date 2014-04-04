@@ -365,6 +365,11 @@ public:
         return openravepy::toPyConfigurationSpecification(_spec.ConvertToVelocitySpecification());
     }
 
+    PyConfigurationSpecificationPtr ConvertToDerivativeSpecification(uint32_t timederivative) const
+    {
+        return openravepy::toPyConfigurationSpecification(_spec.ConvertToDerivativeSpecification(timederivative));
+    }
+
     PyConfigurationSpecificationPtr GetTimeDerivativeSpecification(int timederivative) const
     {
         return openravepy::toPyConfigurationSpecification(_spec.GetTimeDerivativeSpecification(timederivative));
@@ -1138,6 +1143,7 @@ void init_openravepy_global()
                                            .def("AddGroup",addgroup1,args("name","dof","interpolation"), DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
                                            .def("AddGroup",addgroup2,args("group"), DOXY_FN(ConfigurationSpecification,AddGroup "const"))
                                            .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
+                                           .def("ConvertToDerivativeSpecification",&PyConfigurationSpecification::ConvertToDerivativeSpecification, DOXY_FN(ConfigurationSpecification, ConvertToDerivativeSpecification))
                                            .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
 
                                            .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(args("transform","data","body","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractTransform)))

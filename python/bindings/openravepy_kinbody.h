@@ -152,6 +152,7 @@ public:
     object GetLinkVelocities() const;
     object GetLinkAccelerations(object odofaccelerations, object oexternalaccelerations) const;
     object ComputeAABB();
+    object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
     bool SetVisible(bool visible);
