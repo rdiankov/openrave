@@ -178,6 +178,9 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Accepts width x height to resize internal video frame");
     RegisterCommand("SaveBodyLinkToVRML",boost::bind(&QtCoinViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
                     "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
+    RegisterCommand("SetNearPlane", boost::bind(&QtCoinViewer::_SetNearPlaneCommand, this, _1, _2),
+                    "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
+    
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -3566,4 +3569,38 @@ bool QtCoinViewer::_SaveBodyLinkToVRMLCommand(ostream& sout, istream& sinput)
     newroot->unref();
     RAVELOG_VERBOSE_FORMAT("saved body %s to file %s", pbody->GetName()%filename);
     return true;
+}
+
+class SetNearPlaneMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    SetNearPlaneMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool fnearplane)
+        : EnvMessage(pviewer, ppreturn, false), _fnearplane(fnearplane) {
+    }
+
+    virtual void viewerexecute() {
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_SetNearPlane(_fnearplane);
+        EnvMessage::viewerexecute();
+    }
+
+private:
+    dReal _fnearplane;
+};
+
+bool QtCoinViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
+{
+    dReal nearplane=0.01f;
+    sinput >> nearplane;
+    EnvMessagePtr pmsg(new SetNearPlaneMessage(shared_viewer(), (void**)NULL, nearplane));
+    pmsg->callerexecute(false);
+    return true;
+}
+
+void QtCoinViewer::_SetNearPlane(dReal nearplane)
+{
+    _pviewer->setAutoClippingStrategy(SoQtViewer::CONSTANT_NEAR_PLANE, nearplane);
 }

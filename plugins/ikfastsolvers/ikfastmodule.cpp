@@ -72,8 +72,12 @@
 
 #include "next_combination.h"
 
-#define LOAD_IKFUNCTION(fnname) { \
+#define LOAD_IKFUNCTION0(fnname) { \
         ikfunctions->_ ## fnname = (typename ikfast::IkFastFunctions<T>::fnname ## Fn)SysLoadSym(plib, # fnname); \
+}
+
+#define LOAD_IKFUNCTION(fnname) { \
+        LOAD_IKFUNCTION0(fnname); \
         if( !ikfunctions->_ ## fnname ) { \
             RAVELOG_WARN(str(boost::format("failed to find " # fnname " in %s. If the library is correct, have you compiled with IKFAST_CLIBRARY define that enables extern \"C\"?")%_libraryname)); \
             return false; \
@@ -178,7 +182,8 @@ public:
         template <typename T>
         bool _InitFunctions(boost::shared_ptr<MyFunctions<T> > ikfunctions)
         {
-            LOAD_IKFUNCTION(ComputeIk);
+            LOAD_IKFUNCTION0(ComputeIk);
+            LOAD_IKFUNCTION0(ComputeIk2);
             LOAD_IKFUNCTION(ComputeFk);
             LOAD_IKFUNCTION(GetNumFreeParameters);
             LOAD_IKFUNCTION(GetFreeParameters);
@@ -623,7 +628,7 @@ public:
     template<typename T> bool _PerfTiming(ostream& sout, boost::shared_ptr<ikfast::IkFastFunctions<T> > ikfunctions, int num, dReal maxtime)
     {
         OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(T));
-        BOOST_ASSERT(!!ikfunctions->_ComputeIk && !!ikfunctions->_ComputeFk);
+        BOOST_ASSERT((!!ikfunctions->_ComputeIk || !!ikfunctions->_ComputeIk2) && !!ikfunctions->_ComputeFk);
 
         vector<uint64_t> vtimes(num);
         ikfast::IkSolutionList<T> solutions;
@@ -647,8 +652,15 @@ public:
             solutions.Clear();
             uint64_t numtoaverage=10;
             uint64_t starttime = utils::GetNanoPerformanceTime();
-            for(uint64_t j = 0; j < numtoaverage; ++j) {
-                ikfunctions->_ComputeIk(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,solutions);
+            if( !!ikfunctions->_ComputeIk2 ) {
+                for(uint64_t j = 0; j < numtoaverage; ++j) {
+                    ikfunctions->_ComputeIk2(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL, solutions, NULL);
+                }
+            }
+            else if( !!ikfunctions->_ComputeIk ) {
+                for(uint64_t j = 0; j < numtoaverage; ++j) {
+                    ikfunctions->_ComputeIk(eetrans,eerot,vfree.size() > 0 ? &vfree[0] : NULL,solutions);
+                }
             }
             vtimes[i] = (utils::GetNanoPerformanceTime()-starttime)/numtoaverage;
         }
