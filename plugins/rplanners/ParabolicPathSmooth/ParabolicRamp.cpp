@@ -634,7 +634,7 @@ bool PPRamp::SolveFixedTime(Real amax,Real endTime)
     Real c0 = -0.25*(dx0-dx1)*(dx0-dx1);
     Real aroots[2];
     int numroots = SolveQuadratic(c2, c1, c0, aroots[0], aroots[1]);
-    if( Abs(aroots[0]) > Abs(aroots[1]) ) {
+    if( numroots ==2 && Abs(aroots[0]) > Abs(aroots[1]) ) {
         swap(aroots[0],aroots[1]);
     }
 
@@ -1248,7 +1248,7 @@ bool PLPRamp::SolveMinTime2(Real amax,Real vmax,Real timeLowerBound)
         PARABOLIC_RAMP_PLOG("Acceleration %.15e, vel %.15e, deceleration %.15e\n",a,v,-a);
         PARABOLIC_RAMP_PLOG("Switch times %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
         SaveRamp("PLP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,timeLowerBound);
-        //return false;
+        return false;
     }
     return true;
 }
