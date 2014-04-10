@@ -1407,7 +1407,7 @@ void ConfigurationCache::_UpdateRobotJointLimits()
 {
 
     if (_envupdates){
-        RAVELOG_DEBUG("Updating robot joint limits\n");
+        RAVELOG_VERBOSE("Updating robot joint limits\n");
 
         _pstaterobot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF);
         _pstaterobot->GetActiveDOFLimits(_newlowerlimit, _newupperlimit);
