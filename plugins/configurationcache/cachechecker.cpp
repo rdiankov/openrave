@@ -642,7 +642,7 @@ protected:
     {
         if (_probot->GetActiveDOF() != _numdofs || _probot->GetActiveDOFIndices() != _dofindices)
         {
-            RAVELOG_DEBUG_FORMAT("Updating robot dofs, %d/%d",_numdofs%_probot->GetActiveDOF());
+            //RAVELOG_DEBUG_FORMAT("Updating robot dofs, %d/%d",_numdofs%_probot->GetActiveDOF());
             _cache.reset(new ConfigurationCache(_probot));
 
             _numdofs = _probot->GetActiveDOF();
