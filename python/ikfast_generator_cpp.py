@@ -258,9 +258,9 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==%s);
 #ifndef isinf
 #define isinf _isinf
 #endif
-#ifndef isfinite
-#define isfinite _isfinite
-#endif
+//#ifndef isfinite
+//#define isfinite _isfinite
+//#endif
 #endif // _MSC_VER
 
 // lapack routines
@@ -1574,7 +1574,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     
     def generateCheckZeros(self, node):
         origequations = self.copyequations()
-        name = node.jointname if node.jointname is None else 'dummy'
+        name = node.jointname if node.jointname is not None else 'dummy'
         code = cStringIO.StringIO()
         code.write('{\n')
         code.write('IkReal %seval[%d];\n'%(name,len(node.jointcheckeqs)))
