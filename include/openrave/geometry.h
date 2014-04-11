@@ -985,7 +985,7 @@ inline RaveVector<T> quatInverse(const RaveVector<T>& quat)
 /// \param quat1 quaternion, (s,vx,vy,vz)
 /// \param t real value in [0,1]. 0 returns quat1, 1 returns quat2
 template <typename T>
-inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& quat1, T t)
+inline RaveVector<T> InterpolateQuatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& quat1, T t)
 {
     // quaternion to return
     RaveVector<T> qb, qm;
@@ -1024,10 +1024,24 @@ inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& 
     return qm;
 }
 
+
+/// \brief interpolate quaterion based on spherical spline interpolation (squad method)
 template <typename T>
-inline RaveVector<T> dQSlerp(const RaveVector<T>& qa, const RaveVector<T>& _qb, T t)
+inline RaveVector<T> InterpolateQuatSquad(const RaveVector<T>& quat0, const RaveVector<T>& quat1, const RaveVector<T>& quat2, const RaveVector<T>& quat3, T t)
 {
-    return quatSlerp<T>(qa,_qb,t);
+    return InterpolateQuatSlerp<T>(InterpolateQuatSlerp<T>(quat0, quat3, t), InterpolateQuatSlerp<T>(quat1, quat2, t), 2*t*(1-t));
+}
+
+template <typename T>
+inline RaveVector<T> quatSlerp(const RaveVector<T>& quat0, const RaveVector<T>& quat1, T t)
+{
+    return InterpolateQuatSlerp<T>(quat0,quat1,t);
+}
+
+template <typename T>
+inline RaveVector<T> dQSlerp(const RaveVector<T>& quat0, const RaveVector<T>& quat1, T t)
+{
+    return InterpolateQuatSlerp<T>(quat0, quat1, t);
 }
 
 /// \brief transform a vector by a quaternion
