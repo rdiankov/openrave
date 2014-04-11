@@ -1021,21 +1021,21 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pvalues[i] < vlower.at(dofindex+i) ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %.15e<%.15e")%i%pvalues[i]%vlower.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %.15e<%.15e")%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("dof %d velocity is not in limits %.15e<%.15e", i%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT("dof %d velocity is not in limits %.15e<%.15e", (dofindex+i)%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
                     }
-                    dummyvalues[i] = vlower[i];
+                    dummyvalues[i] = vlower[dofindex+i];
                 }
                 else if( pvalues[i] > vupper.at(dofindex+i) ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %.15e>%.15e")%i%pvalues[i]%vupper.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %.15e>%.15e")%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("dof %d velocity is not in limits %.15e>%.15e", i%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT("dof %d velocity is not in limits %.15e>%.15e", (dofindex+i)%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
                     }
-                    dummyvalues[i] = vupper[i];
+                    dummyvalues[i] = vupper[dofindex+i];
                 }
                 else {
                     dummyvalues[i] = pvalues[i];
