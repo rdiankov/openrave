@@ -3064,8 +3064,6 @@ class IKFastSolver(AutoReloader):
         for var in usedvars:
             curvars.remove(var)
             solsubs += self.Variable(var).subs
-        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
-
         if len(curvars) > 0:
             self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)
             leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
