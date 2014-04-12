@@ -135,10 +135,10 @@ def evalNumbers(expr):
         # (-x)**0.5 unfortunately evalutes to I*x**0.5, so have to take the absolute value no matter what...
         base = evalNumbers(expr.base)
         if abs(expr.exp) < S.One:
-            return RemoveAbsFn(base)**expr.exp, []
+            return RemoveAbsFn(base)**expr.exp
         
         else:
-            return base**expr.exp, []
+            return base**expr.exp
         
     elif expr.is_Function:
         args = []
