@@ -159,10 +159,8 @@ def customcse(rawexprs,symbols=None):
     # fractions can get big, so evaluate as many decimals as possible
     reduced_exprs = []
     allexprs = []
-    checks = []
     for iexpr,expr in enumerate(rawexprs):
-        evalexpr, newchecks = evalNumbers(expr)
-        checks += newchecks
+        evalexpr = evalNumbers(expr)
         complexity = evalexpr.count_ops()
         # need to threshold complexity or otherwise cse will not terminate
         if complexity > 300:
