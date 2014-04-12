@@ -1326,7 +1326,7 @@ class IKFastSolver(AutoReloader):
         self.degeneratecases = None
         self.kinematicshash = kinematicshash
         self.testconsistentvalues = None
-        self.maxcasedepth = 3 # the maximum depth of special/degenerate cases to process before system gives up
+        self.maxcasedepth = 4 # the maximum depth of special/degenerate cases to process before system gives up
         self.globalsymbols = [] # global symbols for substitutions
         self._scopecounter = 0 # a counter for debugging purposes that increaes every time a level changes
         self._dodebug = False
@@ -1503,6 +1503,10 @@ class IKFastSolver(AutoReloader):
 
     @staticmethod
     def equal(eq0,eq1):
+        if isinstance(eq0, Poly):
+            eq0 = eq0.as_expr()
+        if isinstance(eq1, Poly):
+            eq1 = eq1.as_expr()
         return expand(eq0-eq1) == S.Zero
 
     def chop(self,expr,precision=None):
@@ -7610,7 +7614,10 @@ class IKFastSolver(AutoReloader):
                 if m is not None:
                     symbols += [(varsym.svar,sin(var)),(varsym.cvar,cos(var))]
                     asinsol = trigsimp(asin(-m[c]/Abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols),deep=True)
-                    constsol = self._SubstituteGlobalSymbols(-atan(m[a]/m[b]).subs(symbols)).evalf() # can't use atan2().evalf()... maybe only when m[a] or m[b] is complex?
+                    # can't use atan2().evalf()... maybe only when m[a] or m[b] is complex?
+                    if m[a].has(I) or m[b].has(I):
+                        continue
+                    constsol = self._SubstituteGlobalSymbols(-atan2(m[a], m[b]).subs(symbols)).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                     if not constsol.has(I) and all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                         #self.checkForDivideByZero(expandedsol)
