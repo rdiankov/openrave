@@ -6489,7 +6489,11 @@ class IKFastSolver(AutoReloader):
             # if not equations found, try setting two variables at once
             # also try setting px, py, or pz to 0 (barrettwam4 lookat)
             # sometimes can get the following: cj3**2*sj4**2 + cj4**2
+            threshnumsolutions = 1 # # number of solutions to take usedsolutions[:threshnumsolutions] for the dual values
             for isolution,(solution,var) in enumerate(usedsolutions[::-1]):
+                if isolution < len(usedsolutions)-threshnumsolutions and len(flatzerosubstitutioneqs) > 0:
+                    # have at least one zero condition...
+                    continue
                 localsubstitutioneqs = []
                 for checkzero in solution.checkforzeros:
                     if checkzero.has(*allvars):
