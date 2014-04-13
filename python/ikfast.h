@@ -39,7 +39,7 @@
 #define IKFAST_HEADER_COMMON
 
 /// should be the same as ikfast.__version__
-#define IKFAST_VERSION 70
+#define IKFAST_VERSION 71
 
 #ifdef _MSC_VER
 //#ifndef isfinite
