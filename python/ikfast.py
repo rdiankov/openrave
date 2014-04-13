@@ -6642,10 +6642,12 @@ class IKFastSolver(AutoReloader):
                                             checkexpr[2].append((rd, ra))
                                         log.info('dual constraint %r in %s', checkexpr[2],checkzero)
                                     else:
-                                        checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
-                                        flatzerosubstitutioneqs.append(checkexpr)
-                                        localsubstitutioneqs.append(checkexpr)
-                                        handledconds.append(cond+cond2)
+                                        # shouldn't have any rotation vars
+                                        if not possiblevar in rotsymbols and not possiblevar2 in rotsymbols:
+                                            checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
+                                            flatzerosubstitutioneqs.append(checkexpr)
+                                            localsubstitutioneqs.append(checkexpr)
+                                            handledconds.append(cond+cond2)
                 zerosubstitutioneqs[isolution] += localsubstitutioneqs
         # test the solutions
         
