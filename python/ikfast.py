@@ -3070,6 +3070,8 @@ class IKFastSolver(AutoReloader):
             solsubs += self.Variable(var).subs
         if len(curvars) > 0:
             self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)
+            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+            
             leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
             leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
         else:
@@ -6280,6 +6282,7 @@ class IKFastSolver(AutoReloader):
                                             sumsquaresexprstozero.append(arg)
                             if len(sumsquaresexprstozero) > 0:
                                 localsubstitutioneqs.append([sumsquaresexprstozero,checkzero,[(sumsquaresexpr,S.Zero) for sumsquaresexpr in sumsquaresexprstozero], []])
+                                handledconds.append(sumsquaresexprstozero)
                     for checksimplezeroexpr in checksimplezeroexprs:
                         #if checksimplezeroexpr.has(*othersolvedvars): # cannot do this check since sjX,cjX might be used
                         for othervar in othersolvedvars:
@@ -6346,12 +6349,13 @@ class IKFastSolver(AutoReloader):
                                                     sineq = sin(eq).evalf(n=30)
                                                     coseq = cos(eq).evalf(n=30)
                                                 cond=Abs(othervar-eq.evalf(n=30))
-                                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
+                                                if self.CheckExpressionUnique(handledconds, cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
                                                         evalcond=cond
                                                     localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sineq),(sin(othervar),sineq),(cothervar,coseq),(cos(othervar),coseq),(othervar,eq)], dictequations])
+                                                    handledconds.append(cond)
                                     elif s.jointevalsin is not None:
                                         for eq in s.jointevalsin:
                                             eq = self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq, originalGlobalSymbols))
@@ -6371,7 +6375,7 @@ class IKFastSolver(AutoReloader):
                                                         dictequations.append((sym,eq))
                                                         #eq = sym
                                                     cond=abs(sothervar-eq.evalf(n=30)) + abs(sign(cothervar)-1)
-                                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
+                                                if self.CheckExpressionUnique(handledconds, cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
@@ -6380,13 +6384,14 @@ class IKFastSolver(AutoReloader):
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,S.One),(cos(othervar),S.One),(othervar,S.One)], dictequations])
                                                     else:
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,sqrt(1-eq*eq).evalf(n=30)),(cos(othervar),sqrt(1-eq*eq).evalf(n=30)),(othervar,asin(eq).evalf(n=30))], dictequations])
+                                                    handledconds.append(cond)
                                                 # test when cos(othervar) < 0
                                                 if isimaginary:
                                                     cond = abs(sothervar) + abs((eq**2).evalf(n=30)) + abs(sign(cothervar)+1)
                                                 else:
                                                     cond=abs(sothervar-eq.evalf(n=30))+abs(sign(cothervar)+1)
                                                 #cond=othervar-(pi-asin(eq).evalf(n=30))
-                                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
+                                                if self.CheckExpressionUnique(handledconds, cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
@@ -6395,6 +6400,7 @@ class IKFastSolver(AutoReloader):
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.Zero),(sin(othervar),S.Zero),(cothervar,-S.One),(cos(othervar),-S.One),(othervar,pi.evalf(n=30))], dictequations])
                                                     else:
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,eq),(sin(othervar),eq),(cothervar,-sqrt(1-eq*eq).evalf(n=30)),(cos(othervar),-sqrt(1-eq*eq).evalf(n=30)),(othervar,(pi-asin(eq)).evalf(n=30))], dictequations])
+                                                    handledconds.append(cond)
                                     elif s.jointevalcos is not None:
                                         for eq in s.jointevalcos:
                                             eq = self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq, originalGlobalSymbols))
@@ -6414,7 +6420,7 @@ class IKFastSolver(AutoReloader):
                                                         dictequations.append((sym,eq))
                                                         eq = sym
                                                     cond=abs(cothervar-eq.evalf(n=30)) + abs(sign(sothervar)-1)
-                                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
+                                                if self.CheckExpressionUnique(handledconds, cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
@@ -6423,12 +6429,13 @@ class IKFastSolver(AutoReloader):
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,S.One),(sin(othervar),S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(pi/2).evalf(n=30))], dictequations])
                                                     else:
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,sqrt(1-eq*eq).evalf(n=30)),(sin(othervar),sqrt(1-eq*eq).evalf(n=30)),(cothervar,eq),(cos(othervar),eq),(othervar,acos(eq).evalf(n=30))], dictequations])
+                                                    handledconds.append(cond)
                                                 #cond=othervar+acos(eq).evalf(n=30)
                                                 if isimaginary:
                                                     cond=abs(cothervar)+abs((eq**2).evalf(n=30)) + abs(sign(sothervar)+1)
                                                 else:
                                                     cond=abs(cothervar-eq.evalf(n=30)) + abs(sign(sothervar)+1)
-                                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs+localsubstitutioneqs])),cond):
+                                                if self.CheckExpressionUnique(handledconds, cond):
                                                     if self.IsHinge(othervar.name):
                                                         evalcond=fmod(cond+pi,2*pi)-pi
                                                     else:
@@ -6437,6 +6444,7 @@ class IKFastSolver(AutoReloader):
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-S.One),(sin(othervar),-S.One),(cothervar,S.Zero),(cos(othervar),S.Zero),(othervar,(-pi/2).evalf(n=30))], dictequations])
                                                     else:
                                                         localsubstitutioneqs.append([[cond],evalcond,[(sothervar,-sqrt(1-eq*eq).evalf(n=30)),(sin(othervar),-sqrt(1-eq*eq).evalf(n=30)),(cothervar,eq),(cos(othervar),eq),(othervar,-acos(eq).evalf(n=30))], dictequations])
+                                                    handledconds.append(cond)
             flatzerosubstitutioneqs += localsubstitutioneqs
             zerosubstitutioneqs.append(localsubstitutioneqs)
             if not var in nextsolutions:
@@ -6532,7 +6540,7 @@ class IKFastSolver(AutoReloader):
                         # only take the first index
                         possiblevar,possiblevalue = possiblesub[0]
                         cond = Abs(possiblevar-possiblevalue.evalf(n=30))
-                        if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
+                        if not self.CheckExpressionUnique(handledconds, cond):
                             # already present, so don't use it for double expressions
                             continue
                         if ishinge[ipossiblesub]:
@@ -6540,7 +6548,6 @@ class IKFastSolver(AutoReloader):
                         else:
                             evalcond = cond
                         if eq == S.Zero:
-                            #if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
                             log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)
                             # if the variable is 1 and part of the rotation matrix, can deduce other variables
                             if possiblevar in rotsymbols and (possiblevalue == S.One or possiblevalue == -S.One):
@@ -6553,6 +6560,7 @@ class IKFastSolver(AutoReloader):
                             checkexpr = [[cond],evalcond,possiblesub, []]
                             flatzerosubstitutioneqs.append(checkexpr)
                             localsubstitutioneqs.append(checkexpr)
+                            handledconds.append(cond)
                             continue
                         
                         # try another possiblesub
@@ -6569,7 +6577,7 @@ class IKFastSolver(AutoReloader):
                             if eq2 == S.Zero:
                                 possiblevar2,possiblevalue2 = possiblesub2[0]
                                 cond2 = Abs(possiblevar2-possiblevalue2.evalf(n=30))
-                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond2):
+                                if not self.CheckExpressionUnique(handledconds ,cond2):
                                     # already present, so don't use it for double expressions
                                     continue
                                 
@@ -6579,12 +6587,13 @@ class IKFastSolver(AutoReloader):
                                 else:
                                     evalcond2 = cond2# + evalcond
                                 #cond2 += cond
-                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond+cond2):
+                                if self.CheckExpressionUnique(handledconds, cond+cond2):
                                     # if the variables are both part of the rotation matrix and both zeros, can deduce other rotation variables
                                     if self._iktype == 'transform6d' and possiblevar in rotsymbols and possiblevalue == S.Zero and possiblevar2 in rotsymbols and possiblevalue2 == S.Zero:
                                         checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
                                         flatzerosubstitutioneqs.append(checkexpr)
                                         localsubstitutioneqs.append(checkexpr)
+                                        handledconds.append(cond+cond2)
                                         row1 = int(possiblevar.name[-2])
                                         col1 = int(possiblevar.name[-1])
                                         row2 = int(possiblevar2.name[-2])
@@ -6638,17 +6647,7 @@ class IKFastSolver(AutoReloader):
                                         checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
                                         flatzerosubstitutioneqs.append(checkexpr)
                                         localsubstitutioneqs.append(checkexpr)
-                                    # if it's a rotational variable, then don't add it otherwise it will be really difficult to track down compounding rotation constraints
-#                                     listtests = []
-#                                     if not possiblevar in rotsymbols:
-#                                         listtests.append((cond,evalcond, possiblesub))
-#                                     if not possiblevar2 in rotsymbols:
-#                                         listtests.append((cond2,evalcond2,possiblesub2))
-#                                     for testcond, testevalcond, testpossiblesub in listtests:
-#                                         if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),testcond):
-#                                             checkexpr = [[testcond],testevalcond,testpossiblesub, []]
-#                                             flatzerosubstitutioneqs.append(checkexpr)
-#                                             localsubstitutioneqs.append(checkexpr)
+                                        handledconds.append(cond+cond2)
                 zerosubstitutioneqs[isolution] += localsubstitutioneqs
         # test the solutions
         
