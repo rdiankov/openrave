@@ -6508,29 +6508,29 @@ class IKFastSolver(AutoReloader):
                     ishinge = []
                     for preal in self.Tee[:3,3]:
                         if checkzero.has(preal):
-                            possiblesubs.append([(preal,S.Zero)])
+                            possiblesubs.append((preal, [(preal,S.Zero)]))
                             ishinge.append(False)
                     # have to be very careful with the rotations since they are dependent on each other. For example if r00 and r01 are both 0, then r02 is +- 1, and r12 and r22 are 0. Then r10, r12, r20, r21 is a 2D rotation matrix
                     if numRotSymbolsInCases < 2:
                         for preal in rotsymbols:
                             if checkzero.has(preal):
-                                possiblesubs.append([(preal,S.Zero)])
+                                possiblesubs.append((preal, [(preal,S.Zero)]))
                                 ishinge.append(False)
                     for othervar in othersolvedvars:
                         othervarobj = self.Variable(othervar)
                         if checkzero.has(*othervarobj.vars):
                             if not self.IsHinge(othervar.name):
-                                possiblesubs.append([(othervar,S.Zero)])
+                                possiblesubs.append((othervar, [(othervar,S.Zero)]))
                                 ishinge.append(False)
                                 continue
                             else:
                                 sothervar = othervarobj.svar
                                 cothervar = othervarobj.cvar
                                 for value in [S.Zero,pi/2,pi,-pi/2]:
-                                    possiblesubs.append([(othervar,value),(sothervar,sin(value).evalf(n=30)),(sin(othervar),sin(value).evalf(n=30)), (cothervar,cos(value).evalf(n=30)), (cos(othervar),cos(value).evalf(n=30))])
+                                    possiblesubs.append((othervar, [(othervar,value),(sothervar,sin(value).evalf(n=30)),(sin(othervar),sin(value).evalf(n=30)), (cothervar,cos(value).evalf(n=30)), (cos(othervar),cos(value).evalf(n=30))]))
                                     ishinge.append(True)
                     # all possiblesubs are present in checkzero
-                    for ipossiblesub, possiblesub in enumerate(possiblesubs):
+                    for ipossiblesub, (possiblevar, possiblesub) in enumerate(possiblesubs):
                         try:
                             eq = checkzero.subs(possiblesub).evalf(n=30)
                         except RuntimeError, e:
@@ -6566,7 +6566,10 @@ class IKFastSolver(AutoReloader):
                             continue
                         
                         # try another possiblesub
-                        for ipossiblesub2, possiblesub2 in enumerate(possiblesubs[ipossiblesub+1:]):
+                        for ipossiblesub2, (possiblevar2, possiblesub2) in enumerate(possiblesubs[ipossiblesub+1:]):
+                            if possiblevar == possiblevar2:
+                                # same var, so skip
+                                continue
                             try:
                                 eq2 = eq.subs(possiblesub2).evalf(n=30)
                             except RuntimeError, e:
