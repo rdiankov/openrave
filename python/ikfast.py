@@ -5961,10 +5961,6 @@ class IKFastSolver(AutoReloader):
         self._scopecounter+=1
         scopecounter = int(self._scopecounter)
         log.info('c=%d, %s %s',self._scopecounter, othersolvedvars,curvars)
-        if self._scopecounter == 19:
-            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
-            
-        
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
         solinvsubs = [(f[1],f[0]) for f in solsubs]
