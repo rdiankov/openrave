@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 68 generated on 2013-08-05 18:39:16.146288
+/// ikfast version 71 generated on 2014-04-13 19:09:51.044953
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,7 +26,7 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==68);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==71);
 
 #include <cmath>
 #include <vector>
@@ -73,9 +73,9 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==68);
 #ifndef isinf
 #define isinf _isinf
 #endif
-#ifndef isfinite
-#define isfinite _isfinite
-#endif
+//#ifndef isfinite
+//#define isfinite _isfinite
+//#endif
 #endif // _MSC_VER
 
 // lapack routines
@@ -344,11 +344,11 @@ new_pz=((-0.38145)+pz);
 px = new_px; py = new_py; pz = new_pz;
 pp=((px*px)+(py*py)+(pz*pz));
 {
-IkReal dummyeval[1];
-dummyeval[0]=((-1.0)+(((-33.3333333333333)*py)));
-if( IKabs(dummyeval[0]) < 0.0000010000000000  )
+IkReal j13eval[1];
+j13eval[0]=((-1.0)+(((-33.3333333333333)*py)));
+if( IKabs(j13eval[0]) < 0.0000010000000000  )
 {
-continue;
+continue; // no branches [j13, j14]
 
 } else
 {
@@ -404,21 +404,21 @@ if( j13valid[iij13] && IKabs(cj13array[ij13]-cj13array[iij13]) < IKFAST_SOLUTION
 j13 = j13array[ij13]; cj13 = cj13array[ij13]; sj13 = sj13array[ij13];
 
 {
-IkReal dummyeval[2];
+IkReal j14eval[2];
 IkReal x11=sj13*sj13;
-dummyeval[0]=((((4.53333333333333)*cj13*sj13))+(((-151.111111111111)*py*sj13))+(cj13*cj13)+(((1111.11111111111)*x11*(pz*pz)))+(((-66.6666666666667)*cj13*py))+(((5.13777777777778)*x11))+(((1111.11111111111)*(py*py))));
-dummyeval[1]=((IKabs((pz*sj13)))+(IKabs(((((-0.068)*sj13))+py+(((-0.03)*cj13))))));
-if( IKabs(dummyeval[0]) < 0.0000010000000000  || IKabs(dummyeval[1]) < 0.0000010000000000  )
+j14eval[0]=((((4.53333333333333)*cj13*sj13))+(((-151.111111111111)*py*sj13))+(cj13*cj13)+(((1111.11111111111)*x11*(pz*pz)))+(((-66.6666666666667)*cj13*py))+(((5.13777777777778)*x11))+(((1111.11111111111)*(py*py))));
+j14eval[1]=((IKabs((pz*sj13)))+(IKabs(((((-0.068)*sj13))+py+(((-0.03)*cj13))))));
+if( IKabs(j14eval[0]) < 0.0000010000000000  || IKabs(j14eval[1]) < 0.0000010000000000  )
 {
 {
-IkReal dummyeval[1];
+IkReal j14eval[1];
 IkReal x12=cj13*cj13;
 IkReal x13=px*px;
 IkReal x14=((1111.11111111111)*x13);
-dummyeval[0]=((-1.0)+x14+(((1111.11111111111)*x12*(py*py)))+(((-2222.22222222222)*cj13*px*py*sj13))+(((-1.0)*x12*x14)));
-if( IKabs(dummyeval[0]) < 0.0000010000000000  )
+j14eval[0]=((-1.0)+x14+(((1111.11111111111)*x12*(py*py)))+(((-2222.22222222222)*cj13*px*py*sj13))+(((-1.0)*x12*x14)));
+if( IKabs(j14eval[0]) < 0.0000010000000000  )
 {
-continue;
+continue; // no branches [j14]
 
 } else
 {
@@ -557,7 +557,7 @@ IkReal j14array[2], cj14array[2], sj14array[2];
 bool j14valid[2]={false};
 _nj14 = 2;
 IkReal x42=((((-0.068)*sj13))+py+(((-0.03)*cj13)));
-CheckValue<IkReal> x45 = IKatan2WithCheck((pz*sj13),x42,IKFAST_ATAN2_MAGTHRESH);
+CheckValue<IkReal> x45 = IKatan2WithCheck(IkReal((pz*sj13)),x42,IKFAST_ATAN2_MAGTHRESH);
 if(!x45.valid){
 continue;
 }
@@ -678,6 +678,11 @@ return solutions.GetNumSolutions()>0;
 /// solves the inverse kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
 IKFAST_API bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
+IKSolver solver;
+return solver.ComputeIk(eetrans,eerot,pfree,solutions);
+}
+
+IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip) {
 IKSolver solver;
 return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }

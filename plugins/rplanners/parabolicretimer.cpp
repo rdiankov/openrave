@@ -202,16 +202,23 @@ protected:
                     vector<dReal>::iterator it;
                     dReal tswitch1 = curtime+ramp[j].tswitch1;
                     dReal tswitch2 = curtime+ramp[j].tswitch2;
+                    dReal ttotal = curtime+ramp[j].ttotal;
                     if( tswitch1 != 0 ) {
                         it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch1);
-                        if( *it != tswitch1) {
+                        if( it != vswitchtimes.end() && *it != tswitch1) {
                             vswitchtimes.insert(it,tswitch1);
                         }
                     }
                     if( tswitch1 != tswitch2 && tswitch2 != 0 ) {
                         it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch2);
-                        if( *it != tswitch2 ) {
+                        if( it != vswitchtimes.end() && *it != tswitch2 ) {
                             vswitchtimes.insert(it,tswitch2);
+                        }
+                    }
+                    if( tswitch2 != ttotal && ttotal != 0 ) {
+                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),ttotal);
+                        if( it != vswitchtimes.end() && *it != ttotal ) {
+                            vswitchtimes.insert(it,ttotal);
                         }
                     }
 
@@ -229,6 +236,9 @@ protected:
                     for(size_t iramp = 0; iramp < _ramps.at(j).size(); ++iramp) {
                         if( curtime > _ramps[j][iramp].ttotal ) {
                             curtime -= _ramps[j][iramp].ttotal;
+                            // in case of epsilons, set the last point as the values
+                            *(ittargetdata + info->posindex + j) = _ramps[j][iramp].x1;
+                            *(ittargetdata + info->velindex + j) = _ramps[j][iramp].dx1;
                         }
                         else {
                             *(ittargetdata + info->posindex + j) = _ramps[j][iramp].Evaluate(curtime);
@@ -616,16 +626,23 @@ protected:
                     vector<dReal>::iterator it;
                     dReal tswitch1 = curtime+ramp[j].tswitch1;
                     dReal tswitch2 = curtime+ramp[j].tswitch2;
+                    dReal ttotal = curtime+ramp[j].ttotal;
                     if( tswitch1 != 0 ) {
                         it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch1);
-                        if( *it != tswitch1) {
+                        if( it != vswitchtimes.end() && *it != tswitch1) {
                             vswitchtimes.insert(it,tswitch1);
                         }
                     }
                     if( tswitch1 != tswitch2 && tswitch2 != 0 ) {
                         it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch2);
-                        if( *it != tswitch2 ) {
+                        if( it != vswitchtimes.end() && *it != tswitch2 ) {
                             vswitchtimes.insert(it,tswitch2);
+                        }
+                    }
+                    if( tswitch2 != ttotal && ttotal != 0 ) {
+                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),ttotal);
+                        if( it != vswitchtimes.end() && *it != ttotal ) {
+                            vswitchtimes.insert(it,ttotal);
                         }
                     }
 

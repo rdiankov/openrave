@@ -774,8 +774,8 @@ protected:
                     dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(_vtrajdata[_spec.GetDOF()+offset+derivoffset+i]-deriv0);
                     dReal expected = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
                     dReal error = RaveFabs(_vtrajdata.at(_spec.GetDOF()+offset+g.offset+i)-expected);
-                    if( RaveFabs(error-2*PI) > 1e-6 ) { // TODO, officially track circular joints
-                        OPENRAVE_ASSERT_OP_FORMAT(error,<=,1e-6, "trajectory segment for group %s interpolation %s time %f points %d-%d dof %d is invalid", g.name%g.interpolation%deltatime%ipoint%(ipoint+1)%i, ORE_InvalidState);
+                    if( RaveFabs(error-2*PI) > 1e-5 ) { // TODO, officially track circular joints
+                        OPENRAVE_ASSERT_OP_FORMAT(error,<=,1e-4, "trajectory segment for group %s interpolation %s time %f points %d-%d dof %d is invalid", g.name%g.interpolation%deltatime%ipoint%(ipoint+1)%i, ORE_InvalidState);
                     }
                 }
             }

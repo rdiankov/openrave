@@ -257,14 +257,17 @@ public:
                     //(irampindex > 0 && irampindex+1 < dynamicpath.ramps.size())
                     rampndtrimmed = rampnd;
                     bool bTrimmed = false;
+                    bool bCheck = true;
                     if( irampindex == 0 ) {
                         if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
-                            // ramp is too short so ignore
-                            continue;
+                            // ramp is too short so ignore checking
+                            bCheck = false;
                         }
-                        // don't check points close to the initial configuration because of jittering
-                        rampndtrimmed.TrimFront(fTrimEdgesTime);
-                        bTrimmed = true;
+                        else {
+                            // don't check points close to the initial configuration because of jittering
+                            rampndtrimmed.TrimFront(fTrimEdgesTime);
+                            bTrimmed = true;
+                        }
                     }
                     else if( irampindex+1 == dynamicpath.ramps.size() ) {
                         if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
@@ -277,7 +280,7 @@ public:
                     }
                     // part of original trajectory which might not have been processed with perturbations, so ignore perturbations
                     _bUsePerturbation = false;
-                    if( !checker.Check(rampndtrimmed)) {
+                    if( bCheck && !checker.Check(rampndtrimmed)) {
                         std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
                         // try to time scale, perhaps collision and dynamics will change
                         // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
@@ -333,20 +336,26 @@ public:
 
                 FOREACH(itrampnd2, temprampsnd) {
                     vswitchtimes.resize(0);
-                    vswitchtimes.push_back(rampnd.endTime);
+                    vswitchtimes.push_back(itrampnd2->endTime);
                     if( _parameters->_outputaccelchanges ) {
-                        FOREACHC(itramp,rampnd.ramps) {
+                        FOREACHC(itramp,itrampnd2->ramps) {
                             vector<dReal>::iterator it;
                             if( itramp->tswitch1 != 0 ) {
                                 it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                                if( *it != itramp->tswitch1) {
+                                if( it != vswitchtimes.end() && *it != itramp->tswitch1) {
                                     vswitchtimes.insert(it,itramp->tswitch1);
                                 }
                             }
                             if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
                                 it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-                                if( *it != itramp->tswitch2 ) {
+                                if( it != vswitchtimes.end() && *it != itramp->tswitch2 ) {
                                     vswitchtimes.insert(it,itramp->tswitch2);
+                                }
+                            }
+                            if( itramp->ttotal != itramp->tswitch2 && itramp->ttotal != 0 ) {
+                                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->ttotal);
+                                if( it != vswitchtimes.end() && *it != itramp->ttotal ) {
+                                    vswitchtimes.insert(it,itramp->ttotal);
                                 }
                             }
                         }
@@ -368,7 +377,7 @@ public:
                 }
             }
 
-            BOOST_ASSERT(RaveFabs(dynamicpath.GetTotalTime()-_dummytraj->GetDuration())<0.001);
+            OPENRAVE_ASSERT_OP(RaveFabs(dynamicpath.GetTotalTime()-_dummytraj->GetDuration()),<,0.001);
             RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
             ptraj->Swap(_dummytraj);
         }

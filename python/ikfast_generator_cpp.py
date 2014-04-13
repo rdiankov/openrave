@@ -93,17 +93,32 @@ class atan2check(atan2):
     is_real = True
     is_Function = True
 
+class RemoveAbsFn(function.Function):
+    """defines a function that so that things don't get evaluated internally
+    ie protects Pow(-1,0.5) from evaluating to I: RemoveAbsFn(Pow(base,expr.exp,evaluate=False))
+    """
+    nargs = 1
+    is_real = True
+    is_Function = True
+
 def evalNumbers(expr):
-    """Replaces all numbers with symbols, this is to make gcd faster when fractions get too big"""
+    """Replaces all numbers with symbols, this is to make gcd faster when fractions get too big
+    Also returns checks that need to be all >= 0
+    """
     if expr.is_number:
         return expr.evalf()
+    
     elif expr.is_Mul:
         result = S.One
         for arg in expr.args:
-            result *= evalNumbers(arg)
+            newresult = evalNumbers(arg)
+            result *= newresult
     elif expr.is_Add:
         # because the arguments can get to the thousands, do a tree for adding numbers
-        evalexprs = [evalNumbers(arg) for arg in expr.args]
+        evalexprs = []
+        for arg in expr.args:
+            newresult = evalNumbers(arg)
+            evalexprs.append(newresult)
         N = len(evalexprs)
         while N > 1:
             for i in range(N/2):
@@ -114,12 +129,24 @@ def evalNumbers(expr):
                 N += 1
             N /= 2
         return evalexprs[0]
+    
     elif expr.is_Pow:
         # don't replace the exponent
-        result = evalNumbers(expr.base)**expr.exp
+        # (-x)**0.5 unfortunately evalutes to I*x**0.5, so have to take the absolute value no matter what...
+        base = evalNumbers(expr.base)
+        if abs(expr.exp) < S.One:
+            return RemoveAbsFn(base)**expr.exp
+        
+        else:
+            return base**expr.exp
+        
     elif expr.is_Function:
-        args = [evalNumbers(arg) for arg in expr.args]
+        args = []
+        for arg in expr.args:
+            newresult = evalNumbers(arg)
+            args.append(newresult)
         return expr.func(*args)
+    
     else:
         result = expr
     return result
@@ -141,10 +168,14 @@ def customcse(rawexprs,symbols=None):
         else:
             allexprs.append(evalexpr)
             reduced_exprs.append(None)
-
+            
     newreplacements = []
     if len(allexprs)>0:
-        replacements,reduced_exprs2 = cse(allexprs,symbols=symbols)
+        try:
+            replacements,reduced_exprs2 = cse(allexprs,symbols=symbols)
+        except PolynomialError: # non-commutative expressions are not supported
+            reduced_exprs2 = allexprs
+            replacements = []
         # have to maintain the same order
         for expr in reduced_exprs2:
             for i in range(len(reduced_exprs)):
@@ -258,9 +289,9 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==%s);
 #ifndef isinf
 #define isinf _isinf
 #endif
-#ifndef isfinite
-#define isfinite _isfinite
-#endif
+//#ifndef isfinite
+//#define isfinite _isfinite
+//#endif
 #endif // _MSC_VER
 
 // lapack routines
@@ -498,6 +529,11 @@ IKSolver solver;
 return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
+IKFAST_API bool ComputeIk2(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions, void* pOpenRAVEManip) {
+IKSolver solver;
+return solver.ComputeIk(eetrans,eerot,pfree,solutions);
+}
+
 IKFAST_API const char* GetKinematicsHash() { return "%s"; }
 
 IKFAST_API const char* GetIkFastVersion() { return IKFAST_STRINGIZE(IKFAST_VERSION); }
@@ -631,7 +667,7 @@ int main(int argc, char** argv)
         if node.Tfk:
             code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
-            subexprs,reduced_exprs=customcse (node.Tfk[0:3,0:4].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
+            subexprs,reduced_exprs = customcse(node.Tfk[0:3,0:4].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eetrans[0]','eerot[3]','eerot[4]','eerot[5]','eetrans[1]','eerot[6]','eerot[7]','eerot[8]','eetrans[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -686,7 +722,7 @@ int main(int argc, char** argv)
         if node.Rfk:
             code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
-            subexprs,reduced_exprs=customcse (node.Rfk[0:3,0:3].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
+            subexprs,reduced_exprs = customcse(node.Rfk[0:3,0:3].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]','eerot[3]','eerot[4]','eerot[5]','eerot[6]','eerot[7]','eerot[8]']
             fcode = ''
             if len(subexprs) > 0:
@@ -742,7 +778,7 @@ int main(int argc, char** argv)
             eqs = []
             for eq in node.Pfk[0:3]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            subexprs,reduced_exprs = customcse(eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]']
             if node.uselocaltrans:
                 fcode = """
@@ -806,7 +842,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             eqs = []
             for eq in node.Pfk[0:2]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            subexprs,reduced_exprs = customcse(eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]']
             fcode = ''
             if len(subexprs) > 0:
@@ -857,7 +893,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             eqs = []
             for eq in node.Dfk:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            subexprs,reduced_exprs = customcse(eqs,self.symbolgen)
             outputnames = ['eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -912,7 +948,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 eqs.append(eq.subs(allsubs))
             for eq in node.Dfk[0:3]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            subexprs,reduced_exprs = customcse(eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -975,7 +1011,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 eqs.append(eq.subs(allsubs))
             for eq in node.Dfk[0:3]:
                 eqs.append(eq.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            subexprs,reduced_exprs = customcse(eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]','eerot[1]','eerot[2]']
             fcode = ''
             if len(subexprs) > 0:
@@ -1027,7 +1063,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for eq in node.Pfk[0:3]:
                 eqs.append(eq.subs(allsubs))
             eqs.append(node.anglefk.subs(allsubs))
-            subexprs,reduced_exprs=customcse (eqs,self.symbolgen)
+            subexprs,reduced_exprs = customcse(eqs,self.symbolgen)
             outputnames = ['eetrans[0]','eetrans[1]','eetrans[2]','eerot[0]']
             fcode = ''
             if len(subexprs) > 0:
@@ -1569,7 +1605,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
     
     def generateCheckZeros(self, node):
         origequations = self.copyequations()
-        name = node.jointname if node.jointname is None else 'dummy'
+        name = node.jointname if node.jointname is not None else 'dummy'
         code = cStringIO.StringIO()
         code.write('{\n')
         code.write('IkReal %seval[%d];\n'%(name,len(node.jointcheckeqs)))
@@ -1839,6 +1875,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         if code is None:
             code = cStringIO.StringIO()
         replacements,reduced_exprs = customcse(exprs,symbols=self.symbolgen)
+        #for greaterzerocheck in greaterzerochecks:
+        #    code.write('if((%s) < -0.00001)\ncontinue;\n'%exprbase)
         N = len(self.dictequations[0])
         for rep in replacements:
             comparerep = rep[1].subs(self.dictequations[0]).expand()
@@ -1931,9 +1969,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 iktansymbol = self.symbolgen.next()
                 
                 code2 = cStringIO.StringIO()
-                code2.write('CheckValue<IkReal> %s = IKatan2WithCheck('%iktansymbol)
+                code2.write('CheckValue<IkReal> %s = IKatan2WithCheck(IkReal('%iktansymbol)
                 code3,sepcodelist = self._WriteExprCode(expr.args[0], code2)
-                code2.write(',')
+                code2.write('),')
                 code4,sepcodelist2 = self._WriteExprCode(expr.args[1], code2)
                 code2.write(',IKFAST_ATAN2_MAGTHRESH);\nif(!%s.valid){\ncontinue;\n}\n'%iktansymbol)
                 sepcodelist += sepcodelist2
@@ -1941,6 +1979,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 
                 code.write('%s.value'%iktansymbol)
                 return code,sepcodelist
+            
             elif expr.func == sin:
                 code.write('IKsin(')
                 code2,sepcodelist = self._WriteExprCode(expr.args[0], code)
@@ -1953,6 +1992,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 code.write(', ')
                 code3,sepcodelist2 = self._WriteExprCode(expr.args[1], code)
                 sepcodelist += sepcodelist2
+            elif expr.func == RemoveAbsFn:
+                return self._WriteExprCode(expr.args[0], code)
+            
             else:
                 code.write(expr.func.__name__)
                 code.write('(')
@@ -1988,6 +2030,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             return code, sepcodelist
         
         elif expr.is_Pow:
+            if expr.base.is_Function and expr.base.func == RemoveAbsFn:
+                return self._WriteExprCode(Pow(expr.base.args[0], expr.exp, evaluate=False), code)
+            
             if expr.exp.is_number:
                 if expr.exp.is_integer and expr.exp > 0:
                     if expr.base.is_Symbol:
