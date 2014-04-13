@@ -6282,7 +6282,7 @@ class IKFastSolver(AutoReloader):
                                             sumsquaresexprstozero.append(arg)
                             if len(sumsquaresexprstozero) > 0:
                                 localsubstitutioneqs.append([sumsquaresexprstozero,checkzero,[(sumsquaresexpr,S.Zero) for sumsquaresexpr in sumsquaresexprstozero], []])
-                                handledconds.append(sumsquaresexprstozero)
+                                handledconds += sumsquaresexprstozero
                     for checksimplezeroexpr in checksimplezeroexprs:
                         #if checksimplezeroexpr.has(*othersolvedvars): # cannot do this check since sjX,cjX might be used
                         for othervar in othersolvedvars:
