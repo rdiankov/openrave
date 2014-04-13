@@ -1918,7 +1918,7 @@ class IKFastSolver(AutoReloader):
                 while eqtemp.is_Pow:
                     eqtemp = eqtemp.base
                 #self.codeComplexity(eqtemp)
-                if self.codeComplexity(eqtemp) < 1000:
+                if self.codeComplexity(eqtemp) < 500:
                     checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
                     if self.CheckExpressionUnique(newcheckforzeros,checkeq):
                         newcheckforzeros.append(checkeq)
@@ -5961,6 +5961,9 @@ class IKFastSolver(AutoReloader):
         self._scopecounter+=1
         scopecounter = int(self._scopecounter)
         log.info('c=%d, %s %s',self._scopecounter, othersolvedvars,curvars)
+        if self._scopecounter == 19:
+            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+            
         
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
@@ -6526,6 +6529,7 @@ class IKFastSolver(AutoReloader):
                             eq = checkzero.subs(possiblesub).evalf(n=30)
                         except RuntimeError, e:
                             # most likely doing (1/x).subs(x,0) produces a RuntimeError (infinite recursion...)
+                            log.warn(e)
                             continue
                         if not self.isValidSolution(eq):
                             continue
@@ -6561,6 +6565,7 @@ class IKFastSolver(AutoReloader):
                                 eq2 = eq.subs(possiblesub2).evalf(n=30)
                             except RuntimeError, e:
                                 # most likely doing (1/x).subs(x,0) produces a RuntimeError (infinite recursion...)
+                                log.warn(e)
                                 continue
                             
                             if not self.isValidSolution(eq2):
@@ -7632,7 +7637,7 @@ class IKFastSolver(AutoReloader):
                     # can't use atan2().evalf()... maybe only when m[a] or m[b] is complex?
                     if m[a].has(I) or m[b].has(I):
                         continue
-                    constsol = self._SubstituteGlobalSymbols(-atan2(m[a], m[b]).subs(symbols)).evalf()
+                    constsol = (-atan2(m[a], m[b]).subs(symbols)).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
                     if not constsol.has(I) and all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                         #self.checkForDivideByZero(expandedsol)
@@ -7651,8 +7656,8 @@ class IKFastSolver(AutoReloader):
                         continue
                 except self.CannotSolveError,e:
                     log.debug(e)
-                except NotImplementedError:
-                    pass
+                except NotImplementedError, e:
+                    log.warn(e)
             if numsvar > 0:
                 # substitute sin
                 try:
@@ -7665,8 +7670,8 @@ class IKFastSolver(AutoReloader):
                         continue
                 except self.CannotSolveError,e:
                     log.debug(e)
-                except NotImplementedError:
-                    pass
+                except NotImplementedError, e:
+                    log.warn(e)
             if numcvar == 0 and numsvar == 0:
                 tempsolutions = solve(eqnew,var)
                 jointsolutions = []
