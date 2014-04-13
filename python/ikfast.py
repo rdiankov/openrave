@@ -1286,18 +1286,18 @@ class IKFastSolver(AutoReloader):
     class DegenerateCases:
         def __init__(self):
             self.handleddegeneratecases = []
-        def clone(self):
+        def Clone(self):
             clone=IKFastSolver.DegenerateCases()
             clone.handleddegeneratecases = self.handleddegeneratecases[:]
             return clone
-        def addcasesconds(self,newconds,currentcases):
+        def AddCasesWithConditions(self,newconds,currentcases):
             for case in newconds:
                 newcases = set(currentcases)
                 newcases.add(case)
-                assert(not self.hascases(newcases))
+                assert(not self.CheckCases(newcases))
                 self.handleddegeneratecases.append(newcases)
-        def addcases(self,currentcases):
-            if not self.hascases(currentcases):
+        def AddCases(self,currentcases):
+            if not self.CheckCases(currentcases):
                 self.handleddegeneratecases.append(currentcases)
             else:
                 log.warn('case already added') # sometimes this can happen, but it isn't a bug, just bad bookkeeping
@@ -1307,13 +1307,13 @@ class IKFastSolver(AutoReloader):
                     self.handleddegeneratecases.pop(i)
                     return True
             return False
-        def gethandledconds(self,currentcases):
+        def GetHandledConditions(self,currentcases):
             handledconds = []
             for handledcases in self.handleddegeneratecases:
                 if len(currentcases)+1==len(handledcases) and currentcases < handledcases:
                     handledconds.append((handledcases - currentcases).pop())
             return handledconds
-        def hascases(self,currentcases):
+        def CheckCases(self,currentcases):
             for handledcases in self.handleddegeneratecases:
                 if handledcases == currentcases:
                     return True
@@ -5672,6 +5672,9 @@ class IKFastSolver(AutoReloader):
             peqnew = peq.termwise(lambda m,c: self.SimplifyTransform(c))
             return peqnew.as_expr()
         
+        # there can be gobal substitutions like pz=0. get all of them that do not start with gconst
+        transformsubstitutions = [(var,value) for var, value in self.globalsymbols if var.is_Symbol and not var.name.startswith('gconst')]
+        
         simpiter = 0
         origeq = eq
         # first simplify just rotations since they don't add any new variables
@@ -5682,19 +5685,19 @@ class IKFastSolver(AutoReloader):
             changed = False
             neweq = self._SimplifyRotationNorm(eq, self._rotnormgroups)
             if neweq is not None:
-                eq2 = self._SubstituteGlobalSymbols(neweq)
+                eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
                 if not self.equal(eq,eq2):
                     eq = eq2
                     changed = True
             neweq = self._SimplifyRotationDot(eq, self._rotsymbols, self._rotdotgroups)
             if neweq is not None:
-                eq2 = self._SubstituteGlobalSymbols(neweq)
+                eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
                 if not self.equal(eq,eq2):
                     eq = eq2
                     changed = True
             neweq = self._SimplifyRotationCross(eq, self._rotsymbols, self._rotcrossgroups)
             if neweq is not None:
-                eq2 = self._SubstituteGlobalSymbols(neweq)
+                eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
                 if not self.equal(eq,eq2):
                     eq = eq2
                     changed = True
@@ -5706,19 +5709,19 @@ class IKFastSolver(AutoReloader):
                 changed = False
                 neweq = self._SimplifyRotationNorm(eq, self._rotposnormgroups)
                 if neweq is not None:
-                    eq2 = self._SubstituteGlobalSymbols(neweq)
+                    eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
                     if not self.equal(eq,eq2):
                         eq = eq2
                         changed = True
                 neweq = self._SimplifyRotationDot(eq, self._rotpossymbols, self._rotposdotgroups)
                 if neweq is not None:
-                    eq2 = self._SubstituteGlobalSymbols(neweq)
+                    eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
                     if not self.equal(eq,eq2):
                         eq = eq2
                         changed = True
                 neweq = self._SimplifyRotationCross(eq, self._rotpossymbols, self._rotposcrossgroups)
                 if neweq is not None:
-                    eq2 = self._SubstituteGlobalSymbols(neweq)
+                    eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
                     if not self.equal(eq,eq2):
                         eq = eq2
                         changed = True
@@ -6223,13 +6226,15 @@ class IKFastSolver(AutoReloader):
             currentcasesubs = list()
         if self.degeneratecases is None:
             self.degeneratecases = self.DegenerateCases()
-        handledconds = self.degeneratecases.gethandledconds(currentcases)
+        handledconds = self.degeneratecases.GetHandledConditions(currentcases)
         # one to one correspondence with usedsolutions and the SolverCheckZeros hierarchies (used for cross product of equations later on)
-        zerosubstitutioneqs = []
+        zerosubstitutioneqs = [] # indexed by reverse ordering of usedsolutions (len(usedsolutions)-solutionindex-1)
         # zerosubstitutioneqs equations flattened for easier checking
         flatzerosubstitutioneqs = []
         hascheckzeros = False
-                
+
+        addhandleddegeneratecases = [] # for bookkeeping/debugging
+        
         # iterate in reverse order and put the most recently processed solution at the front.
         # There is a problem with this algorithm transferring the degenerate cases correctly.
         # Although the zeros of the first equation are checked, they are not added as conditions
@@ -6439,10 +6444,12 @@ class IKFastSolver(AutoReloader):
                 try:
                     newvars=curvars[:]
                     newvars.remove(var)
+                    # degenreate cases should get restored here since once we go down a particular branch, there's no turning back
                     olddegeneratecases = self.degeneratecases
-                    self.degeneratecases = olddegeneratecases.clone()
+                    self.degeneratecases = olddegeneratecases.Clone()
                     nextsolutions[var] = self.SolveAllEquations(AllEquations,curvars=newvars,othersolvedvars=othersolvedvars+[var],solsubs=solsubs+self.Variable(var).subs,endbranchtree=endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
                 finally:
+                    addhandleddegeneratecases += olddegeneratecases.handleddegeneratecases
                     self.degeneratecases = olddegeneratecases
             if len(checkforzeros) > 0:
                 hascheckzeros = True                
@@ -6454,10 +6461,10 @@ class IKFastSolver(AutoReloader):
                 prevbranch=[solvercheckzeros]
             else:
                 prevbranch = [solution]+nextsolutions[var]
-                
+        
         if len(prevbranch) == 0:
             raise self.CannotSolveError('failed to add solution!')
-        
+            
         if len(currentcases) >= self.maxcasedepth:
             log.warn('c=%d, %d levels deep in checking degenerate cases, skipping. curvars=%r, AllEquations=%r', scopecounter, self.maxcasedepth, curvars, AllEquations)
             lastbranch.append(AST.SolverBreak('%d cases reached'%self.maxcasedepth, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq, originalGlobalSymbols))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
@@ -6525,24 +6532,27 @@ class IKFastSolver(AutoReloader):
                         # only take the first index
                         possiblevar,possiblevalue = possiblesub[0]
                         cond = Abs(possiblevar-possiblevalue.evalf(n=30))
+                        if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
+                            # already present, so don't use it for double expressions
+                            continue
                         if ishinge[ipossiblesub]:
                             evalcond = Abs(fmod(possiblevar-possiblevalue+pi,2*pi)-pi)
                         else:
                             evalcond = cond
                         if eq == S.Zero:
-                            if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
-                                log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)
-                                # if the variable is 1 and part of the rotation matrix, can deduce other variables
-                                if possiblevar in rotsymbols and (possiblevalue == S.One or possiblevalue == -S.One):
-                                    row1 = int(possiblevar.name[-2])
-                                    col1 = int(possiblevar.name[-1])
-                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], row1, (col1+1)%3)), S.Zero))
-                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], row1, (col1+2)%3)), S.Zero))
-                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+1)%3, col1)), S.Zero))
-                                    possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+2)%3, col1)), S.Zero))
-                                checkexpr = [[cond],evalcond,possiblesub, []]
-                                flatzerosubstitutioneqs.append(checkexpr)
-                                localsubstitutioneqs.append(checkexpr)
+                            #if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond):
+                            log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)
+                            # if the variable is 1 and part of the rotation matrix, can deduce other variables
+                            if possiblevar in rotsymbols and (possiblevalue == S.One or possiblevalue == -S.One):
+                                row1 = int(possiblevar.name[-2])
+                                col1 = int(possiblevar.name[-1])
+                                possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], row1, (col1+1)%3)), S.Zero))
+                                possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], row1, (col1+2)%3)), S.Zero))
+                                possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+1)%3, col1)), S.Zero))
+                                possiblesub.append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+2)%3, col1)), S.Zero))
+                            checkexpr = [[cond],evalcond,possiblesub, []]
+                            flatzerosubstitutioneqs.append(checkexpr)
+                            localsubstitutioneqs.append(checkexpr)
                             continue
                         
                         # try another possiblesub
@@ -6558,68 +6568,72 @@ class IKFastSolver(AutoReloader):
                             if eq2 == S.Zero:
                                 possiblevar2,possiblevalue2 = possiblesub2[0]
                                 cond2 = Abs(possiblevar2-possiblevalue2.evalf(n=30))
+                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond2):
+                                    # already present, so don't use it for double expressions
+                                    continue
+                                
                                 # don't combine the conditions like cond+cond2, instead test them individually (this reduces the solution tree)
                                 if ishinge[ipossiblesub+ipossiblesub2+1]:
                                     evalcond2 = Abs(fmod(possiblevar2-possiblevalue2+pi,2*pi)-pi)# + evalcond
                                 else:
                                     evalcond2 = cond2# + evalcond
                                 #cond2 += cond
-                                # if the variables are both part of the rotation matrix and both zeros, can deduce other rotation variables
-                                if self._iktype == 'transform6d' and possiblevar in rotsymbols and possiblevalue == S.Zero and possiblevar2 in rotsymbols and possiblevalue2 == S.Zero and self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond+cond2):
-                                    checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
-                                    flatzerosubstitutioneqs.append(checkexpr)
-                                    localsubstitutioneqs.append(checkexpr)
-                                    row1 = int(possiblevar.name[-2])
-                                    col1 = int(possiblevar.name[-1])
-                                    row2 = int(possiblevar2.name[-2])
-                                    col2 = int(possiblevar2.name[-1])
-                                    row3 = 3 - row1 - row2
-                                    col3 = 3 - col1 - col2
-                                    if row1 == row2:
-                                        # (row1, col3) is either 1 or -1, but don't know which.
-                                        # know that (row1+1,col3) and (row1+2,col3) are zero though...
-                                        checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row2+1)%3, col3)), S.Zero))
-                                        checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+2)%3, col3)), S.Zero))
-                                        # furthermore can defer that the left over 4 values are [cos(ang), sin(ang), cos(ang), -sin(ang)] = abcd
-                                        if row1 == 1:
-                                            minrow = 0
-                                            maxrow = 2
-                                        else:
-                                            minrow = (row1+1)%3
-                                            maxrow = (row1+2)%3
-                                        ra = Symbol('%s%d%d'%(possiblevar.name[:-2], minrow, col1))
-                                        rb = Symbol('%s%d%d'%(possiblevar.name[:-2], minrow, col2))
-                                        rc = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col1))
-                                        rd = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col2))
-                                        checkexpr[2].append((rb**2, S.One-ra**2))
-                                        checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
-                                        checkexpr[2].append((rc**2, S.One-ra**2))
-                                        checkexpr[2].append((rc, -rb))
-                                        checkexpr[2].append((rd, ra))
-                                    elif col1 == col2:
-                                        # (row3, col1) is either 1 or -1, but don't know which.
-                                        # know that (row3,col1+1) and (row3,col1+2) are zero though...
-                                        checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], row3, (col1+1)%3)), S.Zero))
-                                        checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], row3, (col1+2)%3)), S.Zero))
-                                        # furthermore can defer that the left over 4 values are [cos(ang), sin(ang), cos(ang), -sin(ang)] = abcd
-                                        if col1 == 1:
-                                            mincol = 0
-                                            maxcol = 2
-                                        else:
-                                            mincol = (col1+1)%3
-                                            maxcol = (col1+2)%3
-                                        ra = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, mincol))
-                                        rb = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, mincol))
-                                        rc = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, maxcol))
-                                        rd = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, maxcol))
-                                        checkexpr[2].append((rb**2, S.One-ra**2))
-                                        checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
-                                        checkexpr[2].append((rc**2, S.One-ra**2))
-                                        checkexpr[2].append((rc, -rb))
-                                        checkexpr[2].append((rd, ra))
-                                    log.info('dual constraint %r in %s', checkexpr[2],checkzero)
-                                else:
-                                    if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond+cond2):
+                                if self.CheckExpressionUnique(handledconds+list(chain.from_iterable([tempeq[0] for tempeq in flatzerosubstitutioneqs])),cond+cond2):
+                                    # if the variables are both part of the rotation matrix and both zeros, can deduce other rotation variables
+                                    if self._iktype == 'transform6d' and possiblevar in rotsymbols and possiblevalue == S.Zero and possiblevar2 in rotsymbols and possiblevalue2 == S.Zero:
+                                        checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
+                                        flatzerosubstitutioneqs.append(checkexpr)
+                                        localsubstitutioneqs.append(checkexpr)
+                                        row1 = int(possiblevar.name[-2])
+                                        col1 = int(possiblevar.name[-1])
+                                        row2 = int(possiblevar2.name[-2])
+                                        col2 = int(possiblevar2.name[-1])
+                                        row3 = 3 - row1 - row2
+                                        col3 = 3 - col1 - col2
+                                        if row1 == row2:
+                                            # (row1, col3) is either 1 or -1, but don't know which.
+                                            # know that (row1+1,col3) and (row1+2,col3) are zero though...
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row2+1)%3, col3)), S.Zero))
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], (row1+2)%3, col3)), S.Zero))
+                                            # furthermore can defer that the left over 4 values are [cos(ang), sin(ang), cos(ang), -sin(ang)] = abcd
+                                            if row1 == 1:
+                                                minrow = 0
+                                                maxrow = 2
+                                            else:
+                                                minrow = (row1+1)%3
+                                                maxrow = (row1+2)%3
+                                            ra = Symbol('%s%d%d'%(possiblevar.name[:-2], minrow, col1))
+                                            rb = Symbol('%s%d%d'%(possiblevar.name[:-2], minrow, col2))
+                                            rc = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col1))
+                                            rd = Symbol('%s%d%d'%(possiblevar.name[:-2], maxrow, col2))
+                                            checkexpr[2].append((rb**2, S.One-ra**2))
+                                            checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
+                                            checkexpr[2].append((rc**2, S.One-ra**2))
+                                            checkexpr[2].append((rc, -rb))
+                                            checkexpr[2].append((rd, ra))
+                                        elif col1 == col2:
+                                            # (row3, col1) is either 1 or -1, but don't know which.
+                                            # know that (row3,col1+1) and (row3,col1+2) are zero though...
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], row3, (col1+1)%3)), S.Zero))
+                                            checkexpr[2].append((Symbol('%s%d%d'%(possiblevar.name[:-2], row3, (col1+2)%3)), S.Zero))
+                                            # furthermore can defer that the left over 4 values are [cos(ang), sin(ang), cos(ang), -sin(ang)] = abcd
+                                            if col1 == 1:
+                                                mincol = 0
+                                                maxcol = 2
+                                            else:
+                                                mincol = (col1+1)%3
+                                                maxcol = (col1+2)%3
+                                            ra = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, mincol))
+                                            rb = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, mincol))
+                                            rc = Symbol('%s%d%d'%(possiblevar.name[:-2], row1, maxcol))
+                                            rd = Symbol('%s%d%d'%(possiblevar.name[:-2], row2, maxcol))
+                                            checkexpr[2].append((rb**2, S.One-ra**2))
+                                            checkexpr[2].append((rb**3, rb-rb*ra**2)) # need 3rd power since sympy cannot divide out the square
+                                            checkexpr[2].append((rc**2, S.One-ra**2))
+                                            checkexpr[2].append((rc, -rb))
+                                            checkexpr[2].append((rd, ra))
+                                        log.info('dual constraint %r in %s', checkexpr[2],checkzero)
+                                    else:
                                         checkexpr = [[cond+cond2],evalcond+evalcond2, possiblesub+possiblesub2, []]
                                         flatzerosubstitutioneqs.append(checkexpr)
                                         localsubstitutioneqs.append(checkexpr)
@@ -6697,7 +6711,7 @@ class IKFastSolver(AutoReloader):
                     newcases = set(currentcases)
                     for singlecond in cond:
                         newcases.add(singlecond)
-                    if not self.degeneratecases.hascases(newcases):
+                    if not self.degeneratecases.CheckCases(newcases):
                         log.info('depth=%d, c=%d, iter=%d/%d, starting newcases: %r', len(currentcases), scopecounter, iflatzerosubstitutioneqs, len(flatzerosubstitutioneqs), newcases)
                         if len(NewEquationsClean) > 0:
                             newcasesubs = currentcasesubs+othervarsubs
@@ -6735,7 +6749,7 @@ class IKFastSolver(AutoReloader):
                             newtree += endbranchtree
                         zerobranches.append(([evalcond]+extrazerochecks,newtree,dictequations)) # what about extradictequations?
                         log.info('depth=%d, c=%d, iter=%d/%d, adding newcases: %r', len(currentcases), scopecounter, iflatzerosubstitutioneqs, len(flatzerosubstitutioneqs), newcases)
-                        self.degeneratecases.addcases(newcases)
+                        self.degeneratecases.AddCases(newcases)
                     else:
                         log.warn('already has handled cases %r', newcases)                        
             except self.CannotSolveError, e:
@@ -7524,13 +7538,14 @@ class IKFastSolver(AutoReloader):
                             cvarfracsimp_denom = -cvarfracsimp_denom
                         if self.equal(svarfracsimp_denom,cvarfracsimp_denom) and not svarfracsimp_denom.is_number:
                             log.debug('%s solution: denominator is equal %s, doing a global substitution',var.name,svarfracsimp_denom)
-                            denom = self.gsymbolgen.next()
-                            solversolution.dictequations.append((denom,sign(svarfracsimp_denom)))
-                            svarsolsimp = self.SimplifyTransform(self.trigsimp(svarfrac[0],othersolvedvars)*denom)
-                            cvarsolsimp = self.SimplifyTransform(self.trigsimp(cvarfrac[0],othersolvedvars)*denom)
+                            #denom = self.gsymbolgen.next()
+                            #solversolution.dictequations.append((denom,sign(svarfracsimp_denom)))
+                            svarsolsimp = self.SimplifyTransform(self.trigsimp(svarfrac[0],othersolvedvars))#*denom)
+                            cvarsolsimp = self.SimplifyTransform(self.trigsimp(cvarfrac[0],othersolvedvars))#*denom)
                             solversolution.FeasibleIsZeros = False
                             solversolution.presetcheckforzeros.append(svarfracsimp_denom)
-                            expandedsol = atan2(svarsolsimp,cvarsolsimp)
+                            # instead of doing atan2(sign(dummy)*s, sign(dummy)*c), do atan2(s,c) + pi/2*(1-1/sign(dummy)) so equations become simpler
+                            expandedsol = atan2(svarsolsimp,cvarsolsimp) + pi/2*(-S.One + S.One/sign(svarfracsimp_denom))
                         else:
                             svarfracsimp_num = self.SimplifyTransform(self.trigsimp(svarfrac[0],othersolvedvars))
                             cvarfracsimp_num = self.SimplifyTransform(self.trigsimp(cvarfrac[0],othersolvedvars))
