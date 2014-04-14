@@ -39,12 +39,12 @@
 #define IKFAST_HEADER_COMMON
 
 /// should be the same as ikfast.__version__
-#define IKFAST_VERSION 70
+#define IKFAST_VERSION 71
 
 #ifdef _MSC_VER
-#ifndef isfinite
-#define isfinite _isfinite
-#endif
+//#ifndef isfinite
+//#define isfinite _isfinite
+//#endif
 #endif // _MSC_VER
 
 namespace ikfast {
@@ -204,7 +204,7 @@ public:
                     throw std::runtime_error("2nd index >= max solutions for joint");
                 }
             }
-            if( !isfinite(_vbasesol[i].foffset) ) {
+            if( !std::isfinite(_vbasesol[i].foffset) ) {
                 throw std::runtime_error("foffset was not finite");
             }
         }

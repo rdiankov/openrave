@@ -769,9 +769,14 @@ object quatFromRotationMatrix(object R)
     return toPyVector4(quatFromMatrix(t));
 }
 
-object quatSlerp(object q1, object q2, dReal t)
+object InterpolateQuatSlerp(object q1, object q2, dReal t)
 {
-    return toPyVector4(quatSlerp(ExtractVector4(q1),ExtractVector4(q2),t));
+    return toPyVector4(InterpolateQuatSlerp(ExtractVector4(q1),ExtractVector4(q2),t));
+}
+
+object InterpolateQuatSquad(object q0, object q1, object q2, object q3, dReal t)
+{
+    return toPyVector4(InterpolateQuatSquad(ExtractVector4(q0),ExtractVector4(q1),ExtractVector4(q2),ExtractVector4(q3), t));
 }
 
 object axisAngleFromRotationMatrix(object R)
@@ -1229,7 +1234,9 @@ void init_openravepy_global()
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle1, args("axisangle"), DOXY_FN1(quatFromAxisAngle "const RaveVector"));
     def("quatFromAxisAngle",openravepy::quatFromAxisAngle2, args("axis","angle"), DOXY_FN1(quatFromAxisAngle "const RaveVector; T"));
     def("quatFromRotationMatrix",openravepy::quatFromRotationMatrix, args("rotation"), DOXY_FN1(quatFromMatrix "const RaveTransform"));
-    def("quatSlerp",openravepy::quatSlerp, args("quat0","quat1","t"), DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T"));
+    def("InterpolateQuatSlerp",openravepy::InterpolateQuatSlerp, args("quat0","quat1","t"), DOXY_FN1(InterpolateQuatSlerp "const RaveVector; const RaveVector; T"));
+    def("InterpolateQuatSquad",openravepy::InterpolateQuatSquad, args("quat0","quat1","t"), DOXY_FN1(InterpolateQuatSquad "const RaveVector; const RaveVector; T"));
+    def("quatSlerp",openravepy::InterpolateQuatSlerp, args("quat0","quat1","t"), DOXY_FN1(quatSlerp "const RaveVector; const RaveVector; T")); // deprecated
     def("axisAngleFromRotationMatrix",openravepy::axisAngleFromRotationMatrix, args("rotation"), DOXY_FN1(axisAngleFromMatrix "const RaveTransformMatrix"));
     def("axisAngleFromQuat",openravepy::axisAngleFromQuat, args("quat"), DOXY_FN1(axisAngleFromQuat "const RaveVector"));
     def("rotationMatrixFromQuat",openravepy::rotationMatrixFromQuat, args("quat"), DOXY_FN1(matrixFromQuat "const RaveVector"));
