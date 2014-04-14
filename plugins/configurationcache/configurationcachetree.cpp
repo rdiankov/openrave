@@ -895,7 +895,6 @@ int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
     _curconf.resize(_statedof,1.0);
     outs = fread(&_weights[0], sizeof(_weights[0])*_weights.size(), 1, pfile);
 
-    RAVELOG_DEBUG("loading statedof %d\n",_statedof);
     outs = fread(&_base, sizeof(_base), 1, pfile);
     outs = fread(&_fBaseInv, sizeof(_fBaseInv), 1, pfile);
     outs = fread(&_fBaseInv2, sizeof(_fBaseInv2), 1, pfile);
