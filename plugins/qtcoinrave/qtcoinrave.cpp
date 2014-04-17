@@ -50,7 +50,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             boost::mutex::scoped_lock lock(g_mutexsoqt);
             EnsureSoQtInit();
             //SoDBWriteLock dblock;
-            return InterfaceBasePtr(new QtCoinViewer(penv));
+            return InterfaceBasePtr(new QtCoinViewer(penv, sinput));
         }
         else if( interfacename == "qtcameraviewer" ) {
             return InterfaceBasePtr(new QtCameraViewer(penv,sinput));

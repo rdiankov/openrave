@@ -140,16 +140,20 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 }
 
 static QtCoinViewer* s_pviewer = NULL;
-QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
+QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv, std::istream& sinput)
     : QMainWindow(NULL, Qt::Window),
     ViewerBase(penv), _ivOffscreen(SbViewportRegion(_nRenderWidth, _nRenderHeight))
 {
     s_pviewer = this;
-    _InitConstructor();
+    _InitConstructor(sinput);
 }
 
-void QtCoinViewer::_InitConstructor()
+void QtCoinViewer::_InitConstructor(std::istream& sinput)
 {
+    int qtcoinbuild = SoQtExaminerViewer::BUILD_ALL;
+    bool bCreateStatusBar = true, bCreateMenu = true, bAlwaysOnTop = false;
+    sinput >> qtcoinbuild >> bCreateStatusBar >> bCreateMenu >> bAlwaysOnTop;
+    
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
@@ -160,7 +164,9 @@ void QtCoinViewer::_InitConstructor()
     }
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle(_name.c_str());
-    statusBar()->showMessage(tr("Status Bar"));
+    if(  bCreateStatusBar ) {
+        statusBar()->showMessage(tr("Status Bar"));
+    }
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.\n\nIf the current directory contains a filename **environment.iv** when the qtcoin viewer is loaded, then this file will define the scene file all other elements are loaded under. This allows users to define their own lighting model. For example, the following **environment.iv** file will force every object to be draw as wirefire:\n\n\
 .. code-block:: c\n\
@@ -207,7 +213,7 @@ void QtCoinViewer::_InitConstructor()
 
     resize(_nRenderWidth, _nRenderHeight);
 
-    _pviewer = new SoQtExaminerViewer(view1);
+    _pviewer = new SoQtExaminerViewer(view1, "qtcoinopenrave", 1, (SoQtExaminerViewer::BuildFlag)qtcoinbuild, SoQtViewer::BROWSER);
 
     _selectedNode = NULL;
     s_DefaultHandlerCB = SoDebugError::getHandlerCallback();
@@ -325,7 +331,9 @@ void QtCoinViewer::_InitConstructor()
     _bAntialiasing = false;
     _viewGeometryMode = VG_RenderOnly;
 
-    SetupMenus();
+    if( bCreateMenu ) {
+        SetupMenus();
+    }
 
     InitOffscreenRenderer();
 
@@ -343,6 +351,11 @@ void QtCoinViewer::_InitConstructor()
     // set to the classic locale so that number serialization/hashing works correctly
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
     std::locale::global(std::locale::classic());
+
+    if( bAlwaysOnTop ) {
+        Qt::WindowFlags flags = this->windowFlags();
+        this->setWindowFlags(flags | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint);
+    }
 }
 
 QtCoinViewer::~QtCoinViewer()

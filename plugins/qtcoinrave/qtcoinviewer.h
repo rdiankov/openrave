@@ -49,7 +49,7 @@ class QtCoinViewer : public QMainWindow, public ViewerBase
     Q_OBJECT
 
 public:
-    QtCoinViewer(EnvironmentBasePtr penv);
+    QtCoinViewer(EnvironmentBasePtr penv, std::istream& sinput);
     virtual ~QtCoinViewer();
 
     //! the kinds of toggle switches
@@ -238,7 +238,7 @@ protected:
     typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
 
 protected:
-    void _InitConstructor();
+    void _InitConstructor(std::istream& sinput);
     
     class PrivateGraphHandle : public GraphHandle
     {
