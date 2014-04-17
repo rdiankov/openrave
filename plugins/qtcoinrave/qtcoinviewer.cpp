@@ -151,8 +151,9 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv, std::istream& sinput)
 void QtCoinViewer::_InitConstructor(std::istream& sinput)
 {
     int qtcoinbuild = SoQtExaminerViewer::BUILD_ALL;
-    bool bCreateStatusBar = true, bCreateMenu = true, bAlwaysOnTop = false;
-    sinput >> qtcoinbuild >> bCreateStatusBar >> bCreateMenu >> bAlwaysOnTop;
+    bool bCreateStatusBar = true, bCreateMenu = true;
+    int nAlwaysOnTopFlag = 0; // 1 - add on top flag (keep others), 2 - add on top flag (remove others)
+    sinput >> qtcoinbuild >> bCreateStatusBar >> bCreateMenu >> nAlwaysOnTopFlag;
     
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
@@ -352,9 +353,12 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
     std::locale::global(std::locale::classic());
 
-    if( bAlwaysOnTop ) {
-        Qt::WindowFlags flags = this->windowFlags();
-        this->setWindowFlags(flags | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint);
+    if( nAlwaysOnTopFlag != 0 ) {
+        Qt::WindowFlags flags = Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint;
+        if( nAlwaysOnTopFlag == 1 ) {
+            flags |= this->windowFlags();
+        }
+        this->setWindowFlags(flags);
     }
 }
 
