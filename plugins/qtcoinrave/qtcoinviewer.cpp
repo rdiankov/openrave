@@ -139,14 +139,16 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
     }
 }
 
+static QtCoinViewer* s_pviewer = NULL;
 QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
-    :
-#if QT_VERSION >= 0x040000 // check for qt4
-    QMainWindow(NULL, Qt::Window),
-#else
-    QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
-#endif
+    : QMainWindow(NULL, Qt::Window),
     ViewerBase(penv), _ivOffscreen(SbViewportRegion(_nRenderWidth, _nRenderHeight))
+{
+    s_pviewer = this;
+    _InitConstructor();
+}
+
+void QtCoinViewer::_InitConstructor()
 {
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
@@ -180,7 +182,11 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
     RegisterCommand("SetNearPlane", boost::bind(&QtCoinViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
-    
+    RegisterCommand("StartViewerLoop", boost::bind(&QtCoinViewer::_StartViewerLoopCommand, this, _1, _2),
+                    "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
+    RegisterCommand("Show", boost::bind(&QtCoinViewer::_ShowCommand, this, _1, _2),
+                    "show/hide viewer");
+
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -1327,6 +1333,21 @@ geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
     return _camintrinsics;
 }
 
+SensorBase::CameraIntrinsics QtCoinViewer::GetCameraIntrinsics2() const
+{
+    boost::mutex::scoped_lock lock(_mutexMessages);
+    SensorBase::CameraIntrinsics intr;
+    intr.fx = _camintrinsics.fx;
+    intr.fy = _camintrinsics.fy;
+    intr.cx = _camintrinsics.cx;
+    intr.cy = _camintrinsics.cy;
+    intr.distortion_model = _camintrinsics.distortion_model;
+    intr.distortion_coeffs.resize(_camintrinsics.distortion_coeffs.size());
+    std::copy(_camintrinsics.distortion_coeffs.begin(), _camintrinsics.distortion_coeffs.end(), intr.distortion_coeffs.begin());
+    intr.focal_length = _camintrinsics.focal_length;
+    return intr;
+}
+
 void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
 {
     if((handle == NULL)||(numPoints <= 0)) {
@@ -2232,6 +2253,33 @@ void QtCoinViewer::customEvent(QEvent * e)
         pe->_fn();
         e->setAccepted(true);
     }
+}
+
+bool QtCoinViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
+{
+    bool bcallmain = false;
+    sinput >> bcallmain;
+    _nQuitMainLoop = -1;
+    _StartPlaybackTimer();
+    _pviewer->show();
+    if( bcallmain ) {
+        // calls the main GUI loop
+        SoQt::mainLoop();
+    }
+    return true;
+}
+
+bool QtCoinViewer::_ShowCommand(ostream& sout, istream& sinput)
+{
+    bool bshow = true;
+    sinput >> bshow;
+    if( bshow ) {
+        _pviewer->show();
+    }
+    else {
+        _pviewer->hide();
+    }
+    return true;
 }
 
 int QtCoinViewer::main(bool bShow)
@@ -3604,3 +3652,57 @@ void QtCoinViewer::_SetNearPlane(dReal nearplane)
 {
     _pviewer->setAutoClippingStrategy(SoQtViewer::CONSTANT_NEAR_PLANE, nearplane);
 }
+
+ScreenRendererWidget::ScreenRendererWidget()
+{
+
+    std::list<EnvironmentBasePtr> listenvironments;
+    RaveGetEnvironments(listenvironments);
+    if( listenvironments.size() > 0 ) {
+        _penv = listenvironments.front();
+        _openraveviewer = boost::dynamic_pointer_cast<QtCoinViewer>(_penv->GetViewer());
+        if( !!_openraveviewer ) {
+            QTimer *timer = new QTimer(this);
+            connect(timer, SIGNAL(timeout()), this, SLOT(Animate()));
+            timer->start(50); // ms
+        }
+    }
+}
+
+void ScreenRendererWidget::Animate()
+{
+    update();
+}
+
+void ScreenRendererWidget::paintEvent(QPaintEvent *event)
+{
+    if( !!_openraveviewer ) {
+        QPainter painter(this);
+        int width=320, height=240;
+        SensorBase::CameraIntrinsics intr;
+        intr.fx = 320;
+        intr.fy = 320;
+        intr.cx = 160;
+        intr.cy = 120;
+        intr.focal_length = _openraveviewer->GetCameraIntrinsics().focal_length;
+        bool bsuccess = _openraveviewer->_GetCameraImage(_memory, width, height, _openraveviewer->GetCameraTransform(), intr);
+        if( bsuccess ) {
+            //emit image_ready(QImage(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888));
+            QImage image = QImage( width, height, QImage::Format_RGB888 );
+            for (int i = 0; i < height; ++i) {
+                memcpy(image.scanLine(i), &_memory[0] + i * width * 3, width * 3);
+            }
+            painter.drawImage(QRectF(0,0,width,height), image);
+        }
+        else {
+            RAVELOG_WARN("openrave viewer failed to _GetCameraImage\n");
+        }
+    }
+}
+
+QtCoinViewerProxy::QtCoinViewerProxy(QGraphicsItem* parent) : QGraphicsProxyWidget(parent)
+{
+    setWidget(new ScreenRendererWidget());
+}
+
+Q_EXPORT_PLUGIN2(qtcoinrave, QOpenRAVEWidgetsPlugin);

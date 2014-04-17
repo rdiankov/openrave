@@ -36,6 +36,10 @@
 
 #include "qtcoin.h"
 
+#include <QtDeclarative/QDeclarativeExtensionPlugin>
+#include <QtDeclarative/qdeclarative.h>
+#include <QtGui/QGraphicsProxyWidget>
+
 /// Render and GUI engine. Can be used to simulate a camera sensor
 ///
 /// ViewerBase holds __plugin, which is a reference to the shared object that loads the qt4 library. Ideally we
@@ -162,6 +166,7 @@ public:
 
     virtual RaveTransform<float> GetCameraTransform() const;
     virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const;
+    virtual SensorBase::CameraIntrinsics GetCameraIntrinsics2() const;
 
     virtual void customEvent(QEvent * e);
 
@@ -233,6 +238,8 @@ protected:
     typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
 
 protected:
+    void _InitConstructor();
+    
     class PrivateGraphHandle : public GraphHandle
     {
 public:
@@ -343,6 +350,8 @@ public:
     bool _CommandResize(ostream& sout, istream& sinput);
     bool _SaveBodyLinkToVRMLCommand(ostream& sout, istream& sinput);
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
+    bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
+    bool _ShowCommand(ostream& sout, istream& sinput);
     void _SetNearPlane(dReal nearplane);
 
     // selection and deselection handling
@@ -495,6 +504,70 @@ public:
     friend class ItemSelectionCallbackData;
     friend class ViewerImageCallbackData;
     friend class ViewerThreadCallbackData;
+
+    // qml
+    friend class ScreenRendererWidget;
+};
+
+class ScreenRendererWidget : public QWidget
+{
+    Q_OBJECT
+
+public:
+    ScreenRendererWidget();
+
+public slots:
+    void Animate();
+
+protected:
+     void paintEvent(QPaintEvent *event);
+
+private:
+    EnvironmentBasePtr _penv;
+    boost::shared_ptr<QtCoinViewer> _openraveviewer;
+    std::vector<uint8_t> _memory;
+    //QBasicTimer _timer;
+};
+
+class QtCoinViewerProxy : public QGraphicsProxyWidget
+{
+    Q_OBJECT
+    //Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
+
+public:
+    QtCoinViewerProxy(QGraphicsItem* parent = 0);
+    virtual ~QtCoinViewerProxy() {
+    }
+
+
+//    QString text() const
+//    {
+//        return widget->text();
+//    }
+//
+//    void setText(const QString& text)
+//    {
+//        if (text != widget->text()) {
+//            widget->setText(text);
+//            emit textChanged();
+//        }
+//    }
+//
+//Q_SIGNALS:
+//    void clicked(bool);
+//    void textChanged();
+
+};
+
+class QOpenRAVEWidgetsPlugin : public QDeclarativeExtensionPlugin
+{
+    Q_OBJECT
+public:
+    void registerTypes(const char *uri)
+    {
+        //RAVELOG_INFO("registering %s to OpenRAVECoinViewer\n", uri);
+        qmlRegisterType<QtCoinViewerProxy>(uri, 1, 0, "OpenRAVECoinViewer");
+    }
 };
 
 #ifdef RAVE_REGISTER_BOOST
