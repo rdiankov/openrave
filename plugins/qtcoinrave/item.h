@@ -182,7 +182,7 @@ public:
     }
 
     virtual void GetDOFValues(vector<dReal>& vjoint) const;
-    virtual void GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& vdofbranches) const;
+    virtual void GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const;
     virtual void Load();
 protected:
     virtual void GeometryChangedCallback();
@@ -197,7 +197,7 @@ protected:
 
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
-    std::vector<int> _vdofbranches;
+    std::vector<dReal> _vdofbranches;
     mutable boost::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 };

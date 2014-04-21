@@ -28,25 +28,6 @@
 #include <Inventor/actions/SoToVRML2Action.h>
 #include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
-static void SaveToVRML(SoNode * root, const char* filename)
-{
-    root->ref();
-    SoToVRML2Action tovrml2;
-    tovrml2.apply(root);
-    SoVRMLGroup *newroot = tovrml2.getVRML2SceneGraph();
-    newroot->ref();
-    root->unref();
-
-    SoOutput out;
-    out.openFile(filename);
-    out.setHeaderString("#VRML V2.0 utf8");
-
-    SoWriteAction wa(&out);
-    wa.apply(newroot);
-    out.closeFile();
-    newroot->unref();
-}
-
 Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
 {
     // set up the Inventor nodes
@@ -307,9 +288,6 @@ void KinBodyItem::Load()
 
     _bReload = false;
     _bDrawStateChanged = false;
-
-    string name = _pchain->GetName() + string("_save.wrl");
-    //SaveToVRML(_ivGeom,name.c_str());
 }
 
 bool KinBodyItem::UpdateFromIv()
@@ -382,7 +360,7 @@ void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
     vjoints = _vjointvalues;
 }
 
-void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<int>& vdofbranches) const
+void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const
 {
     boost::mutex::scoped_lock lock(_mutexjoints);
     vtrans = _vtrans;

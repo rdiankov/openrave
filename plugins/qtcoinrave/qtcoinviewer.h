@@ -108,7 +108,7 @@ public:
         return _ivBodies;
     }
 
-    virtual void _UpdateCameraTransform();
+    virtual void _UpdateCameraTransform(float fTimeElapsed);
     static void _PlayCB(void *userData, SoSensor *);
 
     virtual void resize ( int w, int h);
@@ -116,6 +116,7 @@ public:
 
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
+    virtual void Show(int showtype);
     virtual void SetName(const string& name);
     virtual const std::string& GetName() const {
         return _name;
@@ -288,6 +289,7 @@ public:
 
     virtual void _SetSize(int w, int h);
     virtual void _Move(int x, int y);
+    virtual void _Show(int showtype);
     virtual void _SetName(const string& ptitle);
 
     virtual bool _GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
@@ -343,7 +345,7 @@ public:
     virtual void InitOffscreenRenderer();
     virtual void SetupMenus();
 
-    virtual void _UpdateEnvironment();
+    virtual void _UpdateEnvironment(float fTimeElapsed);
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
     bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
@@ -352,8 +354,11 @@ public:
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _ShowCommand(ostream& sout, istream& sinput);
+    bool _TrackLinkCommand(ostream& sout, istream& sinput);
+    bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
+    
     void _SetNearPlane(dReal nearplane);
-
+    
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *);
     static void _DeselectHandler(void *, class SoPath *);
@@ -452,6 +457,14 @@ public:
     bool _bManipTracking;
     bool _bAntialiasing;
 
+    /// tracking parameters
+    //@{
+    KinBody::LinkPtr _ptrackinglink; ///< current link tracking
+    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
+    Transform _tTrackingCameraVelocity; ///< camera velocity
+    float  _fTrackingRadius; ///< how far from the coord system camera shoud be
+    //@}
+    
     // data relating to playback
     bool _bStopped;
     bool _bTimeInitialized;
@@ -500,6 +513,7 @@ public:
     friend class SetGraphTransformMessage;
     friend class SetGraphShowMessage;
     friend class SetNearPlaneMessage;
+    friend class ViewerShowMessage;
 
     friend class ItemSelectionCallbackData;
     friend class ViewerImageCallbackData;
@@ -509,7 +523,7 @@ public:
     friend class ScreenRendererWidget;
 };
 
-class ScreenRendererWidget : public QWidget
+/*class ScreenRendererWidget : public QWidget
 {
     Q_OBJECT
 
@@ -568,7 +582,7 @@ public:
         //RAVELOG_INFO("registering %s to OpenRAVECoinViewer\n", uri);
         qmlRegisterType<QtCoinViewerProxy>(uri, 1, 0, "OpenRAVECoinViewer");
     }
-};
+};*/
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

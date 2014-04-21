@@ -171,6 +171,11 @@ public:
         SetName(ptitle);
     }
 
+    /// \brief controls showing the viewer.
+    ///
+    /// \param showtype If zero, will hide all viewers. If != 0, should show viewers (dependent on plugin could have different meanings)
+    virtual void Show(int showtype) OPENRAVE_DUMMY_IMPLEMENTATION;
+    
     virtual const std::string& GetName() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \deprecated (11/06/10)

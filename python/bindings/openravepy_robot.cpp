@@ -385,7 +385,7 @@ public:
                     return numeric::array(boost::python::list());
                 }
 
-                npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+                npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
                 PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
                 dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
                 FOREACH(itsol,vsolutions) {
@@ -432,7 +432,7 @@ public:
                     return numeric::array(boost::python::list());
                 }
 
-                npy_intp dims[] = { vsolutions.size(),_pmanip->GetArmIndices().size() };
+                npy_intp dims[] = { npy_intp(vsolutions.size()), npy_intp(_pmanip->GetArmIndices().size()) };
                 PyObject *pysolutions = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
                 dReal* ppos = (dReal*)PyArray_DATA(pysolutions);
                 FOREACH(itsol,vsolutions) {
