@@ -186,10 +186,13 @@ public:
         _pintchecker->RemoveKinBody(pbody);
     }
 
+    /// \brief collisionchecker checks if there is a configuration in _cache within the threshold, and if so, uses that information, if not, runs standard collisioncheck and stores the result.
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
 
         RobotBasePtr probot = GetRobot();
+
+        // run standard collisioncheck if there is no cache
         if( !_cache || pbody1 != probot ) {
             _stime = utils::GetMilliTime();
             bool ccol = _pintchecker->CheckCollision(pbody1, report);
@@ -200,33 +203,35 @@ public:
             report->Reset();
         }
 
-        // see if cache contains the result
         KinBody::LinkConstPtr robotlink, collidinglink;
         dReal closestdist=0;
 
+        // see if cache contains the result, closestdist is used to determine if the configuration should be inserted into the cache
         _stime = utils::GetMilliTime();
         int ret = _cache->CheckCollision(robotlink, collidinglink, closestdist);
         _querytime += utils::GetMilliTime()-_stime;
 
         ++_cachedcollisionchecks;
 
+        // print stats every now and then
         if (_cachedcollisionchecks % 5000 == 0) {
             _ss.str(std::string());
             _ss << "insert " << _intime << "ms " << "query " << _querytime << "ms " << "raw " << _rawtime << "ms" << " size " << _cache->GetNumKnownNodes() << " hits " << _cachedcollisionhits+_cachedfreehits << "/" << _cachedcollisionchecks;
 
             RAVELOG_DEBUG(_ss.str());
         }
-        
+
+        // cache hit (collision)
         if( ret == 1 ) {
             ++_cachedcollisionhits;
-            // in collision
+            // in collision, create collision report
             if( !!report ) {
                 report->plink1 = robotlink;
                 report->plink2 = collidinglink;
                 report->numCols = 1;
             }
             return true;
-        }
+        } // (free configuration)
         else if( ret == 0 ) {
             ++_cachedfreehits;
             // free space
@@ -235,9 +240,11 @@ public:
 
         // cache miss
         if( !report ) {
+            // create an empty collision report
             report.reset(new CollisionReport());
         }
 
+        // raw collisioncheck
         _stime = utils::GetMilliTime();
         bool col = _pintchecker->CheckCollision(pbody1, report);
         _rawtime += utils::GetMilliTime()-_stime;
@@ -245,6 +252,7 @@ public:
 
         _stime = utils::GetMilliTime();
         _cache->GetDOFValues(_dofvals);
+        // insert collisioncheck result into cache
         _cache->InsertConfiguration(_dofvals, !col ? CollisionReportPtr() : report, closestdist);
         _intime += utils::GetMilliTime()-_stime;
 
@@ -291,6 +299,8 @@ public:
         return _pintchecker->CheckCollision(ray, report);
     }
 
+
+    /// \brief collisionchecker checks if there is a configuration in _selfcache within the threshold, and if so, uses that information, if not, runs standard collisioncheck and stores the result.
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
 
         RobotBasePtr probot = GetRobot();
@@ -318,15 +328,16 @@ public:
             _ss.str(std::string());
             _ss << "self-insert " << _selfintime << "ms " << "self-query " << _selfquerytime << "ms " << "self-raw " << _selfrawtime << "ms " << "load " << _loadtime << "ms " << "size " << _selfcache->GetNumKnownNodes() << " hits " << _selfcachedcollisionhits+_selfcachedfreehits << "/" << _selfcachedcollisionchecks;
 
-            if (_selfrawtime > 0 && (_selfintime+_selfquerytime) > 0){
+            if (_selfrawtime > 0 && (_selfintime+_selfquerytime) > 0) {
                 _ss << " avg rawtime " << (_selfcachedcollisionchecks-(_selfcachedcollisionhits+_selfcachedfreehits))/_selfrawtime << "ms " << " avg cachetime " << (_selfcachedcollisionhits+_selfcachedfreehits)/(_selfquerytime+_selfintime) << "ms";
             }
 
             RAVELOG_DEBUG(_ss.str());
         }
-        
+
+        // save cache every other iteration if its size has increased by 1.5
         if (_selfcachedcollisionchecks % 4000 == 0) {
-            if (_size*1.5 < _selfcache->GetNumKnownNodes()){
+            if (_size*1.5 < _selfcache->GetNumKnownNodes()) {
                 _selfcache->SaveCache(GetCacheHash());
                 _size = _selfcache->GetNumKnownNodes();
             }
@@ -381,15 +392,18 @@ protected:
             return false;
         }
 
+        // if there is no cache, create one
         if (_selfcache->GetNumKnownNodes() == 0)
         {
-            // always recreate?
+            // _cache is the environment collision cache, envupdates is true, i.e., the cache will be updated on changes and it will not save/load
             _cache.reset(new ConfigurationCache(_probot));
+            // _selfcache is the selfcollision cache, envupdates is false, i.e., the cache will not be updated when the environment changes it will save and load the cache
             _selfcache.reset(new ConfigurationCache(_probot, false)); //envupdates should be disabled for self collision cache
 
             _SetParams();
         }
 
+        // check if a selfcache for this robot exists on this disk
         std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
         if (fulldirname != "" && _selfcache->GetNumKnownNodes() == 0) {
 
@@ -415,6 +429,7 @@ protected:
         _numdofs = _probot->GetActiveDOF();
         _dofindices = _probot->GetActiveDOFIndices();
 
+        // callback that resets cache when the robot's DOF are changed
         _handleRobotDOFChange = _probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&CacheCollisionChecker::_UpdateRobotDOF, this));
 
         return true;
@@ -581,6 +596,7 @@ protected:
         return _probot;
     }
 
+    /// \brief generate a string to be used to save/load selfcollision cache. hash considers: robot, grabbed bodies, parameters for the cache, and DOF
     std::string GetCacheHash()
     {
         _robothash = GetRobot()->GetRobotStructureHash();
@@ -640,9 +656,10 @@ protected:
 
     void _UpdateRobotDOF()
     {
+        // if DOF changed, reset environment cache
         if (_probot->GetActiveDOF() != _numdofs || _probot->GetActiveDOFIndices() != _dofindices)
         {
-            //RAVELOG_DEBUG_FORMAT("Updating robot dofs, %d/%d",_numdofs%_probot->GetActiveDOF());
+            RAVELOG_VERBOSE_FORMAT("Updating robot dofs, %d/%d",_numdofs%_probot->GetActiveDOF());
             _cache.reset(new ConfigurationCache(_probot));
 
             _numdofs = _probot->GetActiveDOF();
