@@ -36,9 +36,9 @@
 
 #include "qtcoin.h"
 
-#include <QtDeclarative/QDeclarativeExtensionPlugin>
-#include <QtDeclarative/qdeclarative.h>
-#include <QtGui/QGraphicsProxyWidget>
+//#include <QtDeclarative/QDeclarativeExtensionPlugin>
+//#include <QtDeclarative/qdeclarative.h>
+//#include <QtGui/QGraphicsProxyWidget>
 
 /// Render and GUI engine. Can be used to simulate a camera sensor
 ///
