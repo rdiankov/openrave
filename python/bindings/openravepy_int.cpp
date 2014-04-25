@@ -936,7 +936,8 @@ public:
 #endif
     }
 
-    bool TryLock()
+    /// try locking the environment while releasing the GIL. This can get into a deadlock after env lock is acquired and before gil is re-acquired
+    bool TryLockReleaseGil()
     {
         bool bSuccess = false;
         Py_BEGIN_ALLOW_THREADS;
@@ -955,6 +956,22 @@ public:
         return bSuccess;
     }
 
+    bool TryLock()
+    {
+        bool bSuccess = false;
+#if BOOST_VERSION < 103500
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+        if( !!lockenv->try_lock() ) {
+            bSuccess = true;
+            _listenvlocks.push_back(boost::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        }
+#else
+        if( _penv->GetMutex().try_lock() ) {
+            bSuccess = true;
+        }
+#endif
+        return bSuccess;
+    }
 
 
     bool Lock(float timeout)
