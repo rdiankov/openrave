@@ -1881,7 +1881,7 @@ object PyKinBody::GetLinkVelocities() const
     std::vector<std::pair<Vector,Vector> > velocities;
     _pbody->GetLinkVelocities(velocities);
 
-    npy_intp dims[] = { velocities.size(),6};
+    npy_intp dims[] = {npy_intp(velocities.size()),npy_intp(6)};
     PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
     for(size_t i = 0; i < velocities.size(); ++i) {
@@ -1918,7 +1918,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     std::vector<std::pair<Vector,Vector> > vLinkAccelerations;
     _pbody->GetLinkAccelerations(vDOFAccelerations, vLinkAccelerations, pmapExternalAccelerations);
 
-    npy_intp dims[] = { vLinkAccelerations.size(),6};
+    npy_intp dims[] = {npy_intp(vLinkAccelerations.size()),npy_intp(6)};
     PyObject *pyaccel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pf = (dReal*)PyArray_DATA(pyaccel);
     for(size_t i = 0; i < vLinkAccelerations.size(); ++i) {

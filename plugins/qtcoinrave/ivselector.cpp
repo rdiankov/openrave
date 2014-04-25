@@ -287,7 +287,7 @@ void IvObjectDragger::UpdateSkeleton()
         CheckCollision(_checkCollision);
     }
     // other motion handler calls
-    _viewer.lock()->_UpdateCameraTransform();
+    _viewer.lock()->_UpdateCameraTransform(0);
 }
 
 void IvObjectDragger::GetMessage(ostream& sout)
@@ -558,7 +558,7 @@ void IvJointDragger::UpdateSkeleton()
         }
     }
 
-    _viewer.lock()->_UpdateCameraTransform();
+    _viewer.lock()->_UpdateCameraTransform(0);
 
     UpdateDragger();
 

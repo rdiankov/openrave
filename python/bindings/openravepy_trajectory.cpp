@@ -104,7 +104,7 @@ public:
         vector<dReal> values;
         _ptrajectory->GetWaypoints(startindex,endindex,values);
         int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
-        npy_intp dims[] = { values.size()/numdof, numdof };
+        npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
         PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         if( values.size() > 0 ) {
             memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));
@@ -117,7 +117,7 @@ public:
         vector<dReal> values;
         ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
         _ptrajectory->GetWaypoints(startindex,endindex,values,spec);
-        npy_intp dims[] = { values.size()/spec.GetDOF(), spec.GetDOF() };
+        npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
         PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         if( values.size() > 0 ) {
             memcpy(PyArray_DATA(pypos), &values[0], values.size()*sizeof(values[0]));

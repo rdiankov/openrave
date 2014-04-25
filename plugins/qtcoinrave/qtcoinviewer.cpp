@@ -139,15 +139,22 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
     }
 }
 
-QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
-    :
-#if QT_VERSION >= 0x040000 // check for qt4
-    QMainWindow(NULL, Qt::Window),
-#else
-    QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
-#endif
+static QtCoinViewer* s_pviewer = NULL;
+QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv, std::istream& sinput)
+    : QMainWindow(NULL, Qt::Window),
     ViewerBase(penv), _ivOffscreen(SbViewportRegion(_nRenderWidth, _nRenderHeight))
 {
+    s_pviewer = this;
+    _InitConstructor(sinput);
+}
+
+void QtCoinViewer::_InitConstructor(std::istream& sinput)
+{
+    int qtcoinbuild = SoQtExaminerViewer::BUILD_ALL;
+    bool bCreateStatusBar = true, bCreateMenu = true;
+    int nAlwaysOnTopFlag = 0; // 1 - add on top flag (keep others), 2 - add on top flag (remove others)
+    sinput >> qtcoinbuild >> bCreateStatusBar >> bCreateMenu >> nAlwaysOnTopFlag;
+
     _nQuitMainLoop = 0;
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
@@ -158,7 +165,9 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     }
 #if QT_VERSION >= 0x040000 // check for qt4
     setWindowTitle(_name.c_str());
-    statusBar()->showMessage(tr("Status Bar"));
+    if(  bCreateStatusBar ) {
+        statusBar()->showMessage(tr("Status Bar"));
+    }
 #endif
     __description = ":Interface Author: Rosen Diankov\n\nProvides a GUI using the Qt4, Coin3D, and SoQt libraries. Depending on the version, Coin3D and SoQt might be licensed under GPL.\n\nIf the current directory contains a filename **environment.iv** when the qtcoin viewer is loaded, then this file will define the scene file all other elements are loaded under. This allows users to define their own lighting model. For example, the following **environment.iv** file will force every object to be draw as wirefire:\n\n\
 .. code-block:: c\n\
@@ -180,7 +189,15 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
                     "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
     RegisterCommand("SetNearPlane", boost::bind(&QtCoinViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
-    
+    RegisterCommand("StartViewerLoop", boost::bind(&QtCoinViewer::_StartViewerLoopCommand, this, _1, _2),
+                    "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
+    RegisterCommand("Show", boost::bind(&QtCoinViewer::_ShowCommand, this, _1, _2),
+                    "executs the show directly");
+    RegisterCommand("TrackLink", boost::bind(&QtCoinViewer::_TrackLinkCommand, this, _1, _2),
+                    "camera tracks the link maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
+    RegisterCommand("TrackManipulator", boost::bind(&QtCoinViewer::_TrackManipulatorCommand, this, _1, _2),
+                    "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
+
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -190,6 +207,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _bAutoSetCamera = true;
     _videocodec = -1;
     _bRenderFiguresInCamera = false;
+    _fTrackingRadius = 0.1;
 
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
@@ -201,7 +219,7 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
 
     resize(_nRenderWidth, _nRenderHeight);
 
-    _pviewer = new SoQtExaminerViewer(view1);
+    _pviewer = new SoQtExaminerViewer(view1, "qtcoinopenrave", 1, (SoQtExaminerViewer::BuildFlag)qtcoinbuild, SoQtViewer::BROWSER);
 
     _selectedNode = NULL;
     s_DefaultHandlerCB = SoDebugError::getHandlerCallback();
@@ -319,7 +337,9 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     _bAntialiasing = false;
     _viewGeometryMode = VG_RenderOnly;
 
-    SetupMenus();
+    if( bCreateMenu ) {
+        SetupMenus();
+    }
 
     InitOffscreenRenderer();
 
@@ -337,6 +357,14 @@ QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv)
     // set to the classic locale so that number serialization/hashing works correctly
     // for some reason qt4 resets the locale to the default locale at some point, and openrave stops working
     std::locale::global(std::locale::classic());
+
+    if( nAlwaysOnTopFlag != 0 ) {
+        Qt::WindowFlags flags = Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint;
+        if( nAlwaysOnTopFlag == 1 ) {
+            flags |= this->windowFlags();
+        }
+        this->setWindowFlags(flags);
+    }
 }
 
 QtCoinViewer::~QtCoinViewer()
@@ -535,6 +563,41 @@ void QtCoinViewer::Move(int x, int y)
 void QtCoinViewer::_Move(int x, int y)
 {
     move(x,y);
+}
+
+class ViewerShowMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    ViewerShowMessage(QtCoinViewerPtr pviewer, void** ppreturn, int showtype)
+        : EnvMessage(pviewer, ppreturn, false), _showtype(showtype) {
+    }
+
+    virtual void viewerexecute() {
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !!pviewer ) {
+            pviewer->_Show(_showtype);
+        }
+        EnvMessage::viewerexecute();
+    }
+
+private:
+    int _showtype;
+};
+
+void QtCoinViewer::Show(int showtype)
+{
+    EnvMessagePtr pmsg(new ViewerShowMessage(shared_viewer(), (void**)NULL, showtype));
+    pmsg->callerexecute(false);
+}
+
+void QtCoinViewer::_Show(int showtype)
+{
+    if( showtype ) {
+        _pviewer->show();
+    }
+    else {
+        _pviewer->hide();
+    }
 }
 
 class ViewerSetNameMessage : public QtCoinViewer::EnvMessage
@@ -1261,7 +1324,7 @@ void QtCoinViewer::_SetCamera(const RaveTransform<float>& _t, float focalDistanc
     if( focalDistance > 0 ) {
         GetCamera()->focalDistance = focalDistance;
     }
-    _UpdateCameraTransform();
+    _UpdateCameraTransform(0);
 }
 
 void QtCoinViewer::_SetBkgndColor(const RaveVector<float>& color)
@@ -1299,7 +1362,7 @@ void QtCoinViewer::_SetGraphShow(SoSwitch* handle, bool bshow)
 
 void QtCoinViewer::PrintCamera()
 {
-    _UpdateCameraTransform();
+    _UpdateCameraTransform(0);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     RaveTransform<float> T = _Tcamera*trot;
@@ -1325,6 +1388,21 @@ geometry::RaveCameraIntrinsics<float> QtCoinViewer::GetCameraIntrinsics() const
 {
     boost::mutex::scoped_lock lock(_mutexMessages);
     return _camintrinsics;
+}
+
+SensorBase::CameraIntrinsics QtCoinViewer::GetCameraIntrinsics2() const
+{
+    boost::mutex::scoped_lock lock(_mutexMessages);
+    SensorBase::CameraIntrinsics intr;
+    intr.fx = _camintrinsics.fx;
+    intr.fy = _camintrinsics.fy;
+    intr.cx = _camintrinsics.cx;
+    intr.cy = _camintrinsics.cy;
+    intr.distortion_model = _camintrinsics.distortion_model;
+    intr.distortion_coeffs.resize(_camintrinsics.distortion_coeffs.size());
+    std::copy(_camintrinsics.distortion_coeffs.begin(), _camintrinsics.distortion_coeffs.end(), intr.distortion_coeffs.begin());
+    intr.focal_length = _camintrinsics.focal_length;
+    return intr;
 }
 
 void* QtCoinViewer::_plot3(SoSwitch* handle, const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color)
@@ -2234,6 +2312,71 @@ void QtCoinViewer::customEvent(QEvent * e)
     }
 }
 
+bool QtCoinViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
+{
+    bool bcallmain = false;
+    sinput >> bcallmain;
+    _nQuitMainLoop = -1;
+    _StartPlaybackTimer();
+    _pviewer->show();
+    if( bcallmain ) {
+        // calls the main GUI loop
+        SoQt::mainLoop();
+    }
+    return true;
+}
+
+bool QtCoinViewer::_ShowCommand(ostream& sout, istream& sinput)
+{
+    int showtype=1;
+    sinput >> showtype;
+    if( showtype ) {
+        _pviewer->show();
+    }
+    else {
+        _pviewer->hide();
+    }
+    return true;
+}
+
+bool QtCoinViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
+{
+    bool bresetvelocity = true;
+    std::string bodyname, linkname;
+    sinput >> bodyname >> linkname >> _fTrackingRadius >> bresetvelocity;
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
+    if( !pbody ) {
+        return false;
+    }
+    _ptrackinglink = pbody->GetLink(linkname);
+    if( bresetvelocity ) {
+        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    }
+    return !!_ptrackinglink;
+}
+
+bool QtCoinViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
+{
+    bool bresetvelocity = true;
+    std::string robotname, manipname;
+    sinput >> robotname >> manipname >> _fTrackingRadius >> bresetvelocity;
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    RobotBasePtr probot = GetEnv()->GetRobot(robotname);
+    if( !probot ) {
+        return false;
+    }
+    _ptrackingmanip = probot->GetManipulator(manipname);
+    if( bresetvelocity ) {
+        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    }
+    return !!_ptrackingmanip;
+}
+
 int QtCoinViewer::main(bool bShow)
 {
     _nQuitMainLoop = -1;
@@ -2502,7 +2645,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
             break;
         }
         if( bUpdateEnvironment ) {
-            _UpdateEnvironment();
+            _UpdateEnvironment(0);
         }
     }
 
@@ -2639,7 +2782,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     _UpdateToggleSimulation();
     _UpdateCollisionChecker();
     _UpdatePhysicsEngine();
-    _UpdateEnvironment();
+    _UpdateEnvironment(TIMER_SENSOR_INTERVAL);
 
     {
         std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
@@ -2665,7 +2808,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
     }
 }
 
-void QtCoinViewer::_UpdateEnvironment()
+void QtCoinViewer::_UpdateEnvironment(float fTimeElapsed)
 {
     boost::mutex::scoped_lock lockupd(_mutexUpdating);
 
@@ -2684,7 +2827,7 @@ void QtCoinViewer::_UpdateEnvironment()
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
-        _UpdateCameraTransform();
+        _UpdateCameraTransform(fTimeElapsed);
 
         // this causes the GUI links to jitter when moving the joints, perhaps there is fighting somewhere?
         //        if( !!_pdragger ) {
@@ -2916,17 +3059,89 @@ void QtCoinViewer::_Reset()
     }
 }
 
-void QtCoinViewer::_UpdateCameraTransform()
+void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
     boost::mutex::scoped_lock lock(_mutexMessages);
-    SbVec3f pos = GetCamera()->position.getValue();
 
+    SbVec3f pos = GetCamera()->position.getValue();
     _Tcamera.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
 
     SbVec3f axis;
     float fangle;
     GetCamera()->orientation.getValue(axis, fangle);
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
+
+    if( fTimeElapsed > 0 ) {
+        // animate the camera if necessary
+        bool bTracking=false;
+        Transform tTrack;
+        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
+        if( !!ptrackinglink ) {
+            bTracking = true;
+            tTrack = ptrackinglink->GetTransform();
+            tTrack.trans = ptrackinglink->ComputeAABB().pos;
+        }
+        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
+        if( !!ptrackingmanip ) {
+            bTracking = true;
+            tTrack = ptrackingmanip->GetTransform();
+        }
+
+        if( bTracking ) {
+            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
+            const float angletoup = 0.3; // tilt a little when looking at the point
+            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
+            vlookatdir -= vup*vup.dot3(vlookatdir);
+            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
+            vlookatdir = vlookatdir*cosf(angletoup) + flookatlen*sinf(angletoup)*vup; // flookatlen shouldn't change
+            if( flookatlen > g_fEpsilon ) {
+                vlookatdir *= 1/flookatlen;
+            }
+            else {
+                vlookatdir = Vector(1,0,0);
+            }
+            vup -= vlookatdir*vlookatdir.dot3(vup);
+            vup.normalize3();
+            
+            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
+            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
+            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
+            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
+            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
+            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
+            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
+            
+            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_fTrackingRadius;
+            
+            if(1) {
+                // PID animation
+                float pconst = 0.02;
+                float dconst = 0.2;
+                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
+                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
+                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
+
+                pconst = 0.001;
+                dconst = 0.04;
+                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
+                newquat += pconst*(vDestQuat - _Tcamera.rot);
+                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
+                newquat.normalize4();
+                // have to make sure newquat's y vector aligns with vup
+
+                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
+                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
+                _Tcamera.trans = newtrans;
+                _Tcamera.rot = newquat;
+            }
+            else {
+                _Tcamera.trans = vDestPos;
+                _Tcamera.rot = vDestQuat;
+            }
+            GetCamera()->position.setValue(_Tcamera.trans.x, _Tcamera.trans.y, _Tcamera.trans.z);
+            GetCamera()->orientation.setValue(_Tcamera.rot.y, _Tcamera.rot.z, _Tcamera.rot.w, _Tcamera.rot.x);
+        }
+    }
 
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
@@ -3604,3 +3819,58 @@ void QtCoinViewer::_SetNearPlane(dReal nearplane)
 {
     _pviewer->setAutoClippingStrategy(SoQtViewer::CONSTANT_NEAR_PLANE, nearplane);
 }
+
+/*ScreenRendererWidget::ScreenRendererWidget()
+   {
+
+    std::list<EnvironmentBasePtr> listenvironments;
+    RaveGetEnvironments(listenvironments);
+    if( listenvironments.size() > 0 ) {
+        _penv = listenvironments.front();
+        _openraveviewer = boost::dynamic_pointer_cast<QtCoinViewer>(_penv->GetViewer());
+        if( !!_openraveviewer ) {
+            QTimer *timer = new QTimer(this);
+            connect(timer, SIGNAL(timeout()), this, SLOT(Animate()));
+            timer->start(50); // ms
+        }
+    }
+   }
+
+   void ScreenRendererWidget::Animate()
+   {
+    update();
+   }
+
+   void ScreenRendererWidget::paintEvent(QPaintEvent *event)
+   {
+    if( !!_openraveviewer ) {
+        QPainter painter(this);
+        int width=320, height=240;
+        SensorBase::CameraIntrinsics intr;
+        intr.fx = 320;
+        intr.fy = 320;
+        intr.cx = 160;
+        intr.cy = 120;
+        intr.focal_length = _openraveviewer->GetCameraIntrinsics().focal_length;
+        bool bsuccess = _openraveviewer->_GetCameraImage(_memory, width, height, _openraveviewer->GetCameraTransform(), intr);
+        if( bsuccess ) {
+            //emit image_ready(QImage(frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888));
+            QImage image = QImage( width, height, QImage::Format_RGB888 );
+            for (int i = 0; i < height; ++i) {
+                memcpy(image.scanLine(i), &_memory[0] + i * width * 3, width * 3);
+            }
+            painter.drawImage(QRectF(0,0,width,height), image);
+        }
+        else {
+            RAVELOG_WARN("openrave viewer failed to _GetCameraImage\n");
+        }
+    }
+   }
+
+   QtCoinViewerProxy::QtCoinViewerProxy(QGraphicsItem* parent) : QGraphicsProxyWidget(parent)
+   {
+    setWidget(new ScreenRendererWidget());
+   }
+
+   Q_EXPORT_PLUGIN2(qtcoinrave, QOpenRAVEWidgetsPlugin);
+ */

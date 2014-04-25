@@ -1356,7 +1356,7 @@ bool PLPRamp::SolveFixedTime(Real amax, Real vmax, Real endTime)
             }
         }
     }
-
+    
     // there's ramps that cannot be solved no matter what
     return false;
 }
@@ -2048,6 +2048,30 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         ttotal = plp.ttotal;
     }
     if(IsInf(ttotal)) {
+
+        // finally remove the a2=-a1 constraint
+        Real dx = x1-x0;
+        for(tswitch1 = 0; tswitch1 < endTime; tswitch1 += 0.2*endTime) {
+            for(tswitch2 = tswitch1; tswitch2 < endTime; tswitch2 += 0.2*endTime) {
+                Real c1 = -0.5*Sqr(tswitch1)*tswitch2 + 0.5*Sqr(tswitch1)*endTime + 0.5*tswitch1*Sqr(tswitch2) - 0.5*tswitch1*Sqr(endTime);
+                Real c0 = - 1.0*dx*tswitch2 + 1.0*dx*endTime + 0.5*Sqr(tswitch2)*dx0 - 0.5*Sqr(tswitch2)*dx1 + 1.0*tswitch2*endTime*dx1 - 0.5*Sqr(endTime)*dx0 - 0.5*Sqr(endTime)*dx1;
+                if( Abs(c1) > 1e-8 ) {
+                    a1 = -c0/c1;
+                    if( a1 >= -amax && a1 <= amax ) {
+                        v = dx0 + a1*tswitch1;
+                        if( v >= -vmax && v <= vmax ) {
+                            a2 = (a1*tswitch1 + dx0 - dx1)/(tswitch2 - endTime);
+                            if( a2 >= -amax && a2 <= amax ) {
+                                if(IsValid()) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         PARABOLIC_RAMP_PLOG("No ramp equation could solve for min-time (2)!\n");
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
         PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e, tmax = %.15e\n",vmax,amax,endTime);

@@ -218,6 +218,9 @@ public:
     void Move(int x, int y) {
         _pviewer->Move(x,y);
     }
+    void Show(int showtype) {
+        _pviewer->Show(showtype);
+    }
     void SetName(const string &title) {
         _pviewer->SetName(title);
     }
@@ -317,6 +320,7 @@ void init_openravepy_viewer()
                        .def("quitmainloop",&PyViewerBase::quitmainloop, DOXY_FN(ViewerBase,quitmainloop))
                        .def("SetSize",&PyViewerBase::SetSize, DOXY_FN(ViewerBase,SetSize))
                        .def("Move",&PyViewerBase::Move, DOXY_FN(ViewerBase,Move))
+                       .def("Show",&PyViewerBase::Show, DOXY_FN(ViewerBase,Show))
                        .def("SetTitle",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("SetName",&PyViewerBase::SetName, DOXY_FN(ViewerBase,SetName))
                        .def("GetName",&PyViewerBase::GetName, DOXY_FN(ViewerBase,GetName))

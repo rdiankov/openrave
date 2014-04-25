@@ -199,7 +199,7 @@ public:
     PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
     }
     PyTriMesh(const TriMesh& mesh) {
-        npy_intp dims[] = { mesh.vertices.size(),3};
+        npy_intp dims[] = { npy_intp(mesh.vertices.size()), npy_intp(3)};
         PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
         FOREACHC(itv, mesh.vertices) {

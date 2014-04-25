@@ -302,7 +302,7 @@ def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
 
     """
     if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
-        return DrawAxes(env,ikparam.GetTransform6D(),dist,linewidth,coloradd)
+        return DrawAxes(env,ikparam.GetTransform6DPose(),dist,linewidth,coloradd)
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationDirection5D:
         ray = ikparam.GetTranslationDirection5D()

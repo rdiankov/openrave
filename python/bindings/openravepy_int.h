@@ -274,7 +274,7 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const object& o)
 
 inline object toPyArrayRotation(const TransformMatrix& t)
 {
-    npy_intp dims[] = { 3,3};
+    npy_intp dims[] = {3,3};
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
     pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
@@ -285,7 +285,7 @@ inline object toPyArrayRotation(const TransformMatrix& t)
 
 inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 {
-    npy_intp dims[] = { v.size(),3};
+    npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_FLOAT);
     if( v.size() > 0 ) {
         float* pf = (float*)PyArray_DATA(pyvalues);
@@ -300,7 +300,7 @@ inline object toPyArray3(const std::vector<RaveVector<float> >& v)
 
 inline object toPyArray3(const std::vector<RaveVector<double> >& v)
 {
-    npy_intp dims[] = { v.size(),3};
+    npy_intp dims[] = { npy_intp(v.size()), npy_intp(3) };
     PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_DOUBLE);
     if( v.size() > 0 ) {
         double* pf = (double*)PyArray_DATA(pyvalues);
