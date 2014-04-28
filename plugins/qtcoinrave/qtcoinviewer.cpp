@@ -2336,7 +2336,7 @@ bool QtCoinViewer::_ShowCommand(ostream& sout, istream& sinput)
     else {
         _pviewer->hide();
     }
-
+    return true;
 }
 
 bool QtCoinViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
@@ -3089,18 +3089,22 @@ void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
 
         if( bTracking ) {
             RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-            RaveVector<float> vlookatdir = -(tTrack.trans - _Tcamera.trans);
+            const float angletoup = 0.3; // tilt a little when looking at the point
+            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
             vlookatdir -= vup*vup.dot3(vlookatdir);
             float flookatlen = sqrtf(vlookatdir.lengthsqr3());
+            vlookatdir = vlookatdir*cosf(angletoup) + flookatlen*sinf(angletoup)*vup; // flookatlen shouldn't change
             if( flookatlen > g_fEpsilon ) {
                 vlookatdir *= 1/flookatlen;
             }
             else {
                 vlookatdir = Vector(1,0,0);
             }
+            vup -= vlookatdir*vlookatdir.dot3(vup);
+            vup.normalize3();
             
-            RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
-            RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
+            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
+            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
             //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
             //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
             float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;

@@ -93,7 +93,7 @@ public:
         if( !_pPhysicsEngine->GetLinkVelocities(pbody,velocities) ) {
             return object();
         }
-        npy_intp dims[] = { velocities.size(),6};
+        npy_intp dims[] = { npy_intp(velocities.size()), 6};
         PyObject *pyvel = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pfvel = (dReal*)PyArray_DATA(pyvel);
         for(size_t i = 0; i < velocities.size(); ++i) {
