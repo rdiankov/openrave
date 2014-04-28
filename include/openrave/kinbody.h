@@ -1219,11 +1219,12 @@ public:
         }
         virtual ~BodyState() {
         }
-        KinBodyPtr pbody;
-        std::vector<RaveTransform<dReal> > vectrans;
-        std::vector<dReal> jointvalues;
-        std::string strname;         ///< name of the body
-        int environmentid;
+        KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
+        std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
+        std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
+        std::string strname;         ///< \see KinBody::GetName
+        int updatestamp; ///< \see KinBody::GetUpdateStamp
+        int environmentid; ///< \see KinBody::GetEnvironmentId
     };
     typedef boost::shared_ptr<KinBody::BodyState> BodyStatePtr;
     typedef boost::shared_ptr<KinBody::BodyState const> BodyStateConstPtr;
