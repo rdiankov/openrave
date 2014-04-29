@@ -51,6 +51,7 @@
 #include <set>
 #include <string>
 #include <stdexcept>
+#include <typeinfo>
 
 // apparently there's a problem with higher versions of C++
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
