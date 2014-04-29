@@ -169,6 +169,19 @@ public:
 protected:
     PyThreadState *_save;
 };
+
+/// \brief release and restore the python GIL... no thread state saved..?
+class PythonGILSaver
+{
+public:
+    PythonGILSaver() {
+        PyEval_ReleaseLock();
+    }
+    virtual ~PythonGILSaver() {
+        PyEval_AcquireLock();
+    }
+};
+
 typedef boost::shared_ptr<PythonThreadSaver> PythonThreadSaverPtr;
 
 inline RaveVector<float> ExtractFloat3(const object& o)
@@ -390,6 +403,16 @@ private:
     GraphHandlePtr _handle;
 };
 
+class PyEnvironmentLockSaver
+{
+public:
+    PyEnvironmentLockSaver(PyEnvironmentBasePtr pyenv, bool braw);
+    ~PyEnvironmentLockSaver();
+protected:
+    PyEnvironmentBasePtr _pyenv;
+};
+
+typedef boost::shared_ptr<PyEnvironmentLockSaver> PyEnvironmentLockSaverPtr;
 
 class PyUserData
 {
@@ -512,20 +535,7 @@ public:
     }
     object GetUserData(const std::string& key=std::string()) const;
 
-    object SendCommand(const string& in, bool releasegil=false) {
-        stringstream sin(in), sout;
-        {
-            openravepy::PythonThreadSaverPtr statesaver;
-            if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
-            }
-            sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-            if( !_pbase->SendCommand(sout,sin) ) {
-                return object();
-            }
-        }
-        return object(sout.str());
-    }
+    object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
 
     virtual object GetReadableInterfaces();
     virtual object GetReadableInterface(const std::string& xmltag);
