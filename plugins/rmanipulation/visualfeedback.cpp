@@ -233,7 +233,7 @@ public:
                 tCameraInTarget = ttarget.inverse()*t;
             }
             if( !InConvexHull(tCameraInTarget) ) {
-                RAVELOG_DEBUG("box not in camera vision hull: %s\n");
+                RAVELOG_DEBUG("box not in camera vision hull\n");
                 return false;
             }
 
