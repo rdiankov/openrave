@@ -86,8 +86,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 *itweight = 100;
             }
         }
-        _cache.reset(new CacheTree(_probot->GetActiveDOF()));
-        _cache->Init(vweights, 1);
+        //_cache.reset(new CacheTree(_probot->GetActiveDOF()));
+        //_cache->Init(vweights, 1);
 
         _bSetResultOnRobot = true;
         _busebiasing = false;
@@ -122,7 +122,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _UpdateGrabbed();
         _grabbedcallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotGrabbed, boost::bind(&ConfigurationJitterer::_UpdateGrabbed,this));
 
-        _SetCacheMaxDistance();
+        //_SetCacheMaxDistance();
     }
 
     virtual ~ConfigurationJitterer(){
@@ -161,7 +161,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return false;
         }
         _maxjitter = maxjitter;
-        _SetCacheMaxDistance();
+        //_SetCacheMaxDistance();
         return true;
     }
 
@@ -425,9 +425,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return -1;
         }
 
-        CacheTree& cache = *_cache;
-        cache.InsertNode(_curdof, CollisionReportPtr(), _neighdistthresh);
-        _cachehit = 0;
+        //CacheTree& cache = *_cache;
+        //cache.InsertNode(_curdof, CollisionReportPtr(), _neighdistthresh);
+        //_cachehit = 0;
         bool bUsingBias = _vbiasdofdirection.size() > 0;
         const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
 
@@ -524,13 +524,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
             }
 
-            if( !!cache.FindNearestNode(vnewdof, _neighdistthresh).first ) {
+            /*if( !!cache.FindNearestNode(vnewdof, _neighdistthresh).first ) {
                 _cachehit++;
                 continue;
-            }
+               }*/
 
-            int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
-            BOOST_ASSERT(ret==1);
+            //int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
+            //BOOST_ASSERT(ret==1);
 
             _probot->SetActiveDOFValues(vnewdof);
 #ifdef _DEBUG
@@ -683,12 +683,15 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     // have to release the saver so it does not restore the old configuration
                     robotsaver.Release();
                 }
-                RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+
+                RAVELOG_WARN_FORMAT("succeed iterations=%d, computation=%fs\n",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+                //RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
         }
 
-        RAVELOG_VERBOSE_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+        RAVELOG_WARN_FORMAT("failed iterations=%d, computation=%fs\n",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+        //RAVELOG_WARN_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
 
@@ -706,7 +709,7 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
-        _cache->Reset(); // need this here in order to invalidate cache.
+        //_cache->Reset(); // need this here in order to invalidate cache.
     }
 
     void _UpdateGrabbed()
@@ -726,7 +729,7 @@ protected:
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
 
-        _SetCacheMaxDistance();
+        //_SetCacheMaxDistance();
     }
 
     void _UpdateLimits()
@@ -739,21 +742,21 @@ protected:
             _range[i] = _upper[i] - _lower[i];
         }
 
-        _SetCacheMaxDistance();
+        //_SetCacheMaxDistance();
     }
 
     /// sets the cache's max configuration distance
     void _SetCacheMaxDistance()
     {
-        dReal maxdistance=0;
-        for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
+        /*dReal maxdistance=0;
+           for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
             dReal f = _range[i] * _cache->GetWeights()[i];
             maxdistance += f*f;
-        }
-        maxdistance = RaveSqrt(maxdistance);
-        if( maxdistance > _cache->GetMaxDistance()+g_fEpsilonLinear ) {
+           }
+           maxdistance = RaveSqrt(maxdistance);
+           if( maxdistance > _cache->GetMaxDistance()+g_fEpsilonLinear ) {
             _cache->SetMaxDistance(maxdistance);
-        }
+           }*/
     }
 
     RobotBasePtr _probot;
@@ -781,7 +784,7 @@ protected:
 
     std::vector<dReal> _curdof, _newdof2, _deltadof, _deltadof2, _vonesample;
 
-    CacheTreePtr _cache; ///< caches the visisted configurations
+    //CacheTreePtr _cache; ///< caches the visisted configurations
     int _cachehit;
     dReal _neighdistthresh; ///< the minimum distance that nodes can be with respect to each other.
 

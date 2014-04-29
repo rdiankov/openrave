@@ -27,14 +27,14 @@ class TestConfigurationCache(EnvironmentSetup):
                 break
         assert(cachepath is not None)
         self.openravepy_configurationcache = imp.load_dynamic('openravepy_configurationcache',cachepath)
-        
+
     def test_insertandquery(self):
         self.LoadEnv('data/lab1.env.xml')
         env=self.env
         robot=env.GetRobots()[0]
         robot.SetActiveDOFs(range(7))
         cache=self.openravepy_configurationcache.ConfigurationCache(robot)
-        
+
         values = robot.GetActiveDOFValues()
         inserted = cache.InsertConfiguration(values, None)
         assert(inserted and cache.GetNumNodes()==1)
@@ -42,18 +42,18 @@ class TestConfigurationCache(EnvironmentSetup):
         inserted=cache.InsertConfiguration(values, None)
         assert(inserted and cache.GetNumNodes()>=2)
         assert(cache.Validate())
-                
+
         values[1] = pi/2-0.0001
         robot.SetActiveDOFValues(values)
         ret, closestdist, collisioninfo = cache.CheckCollision(values)
         assert(ret==0)
 
         originalvalues = array([0,pi/2,0,pi/6,0,0,0])
-        
+
         sampler = RaveCreateSpaceSampler(env, u'MT19937')
         sampler.SetSpaceDOF(robot.GetActiveDOF())
         report=CollisionReport()
-        
+
         with env:
             for iter in range(0, 10000):
                 robot.SetActiveDOFValues(originalvalues + 0.05*(sampler.SampleSequence(SampleDataType.Real,1)-0.5))
@@ -62,7 +62,7 @@ class TestConfigurationCache(EnvironmentSetup):
                 inserted = cache.InsertConfiguration(samplevalues, report if incollision else None)
             self.log.info('cache has %d nodes', cache.GetNumNodes())
             assert(cache.Validate())
-        
+
         with env:
             numspurious = 0
             nummisses = 0
@@ -95,7 +95,7 @@ class TestConfigurationCache(EnvironmentSetup):
         assert(float(nummisses)/float(numtests)>0.1) # space is pretty big
         assert(mean(cachetimes) < mean(collisiontimes)) # caching should be faster
 
-    '''def test_io(self):
+    def test_io(self):
         env = self.env
         with env:
             self.LoadEnv('data/hironxtable.env.xml')
@@ -106,7 +106,7 @@ class TestConfigurationCache(EnvironmentSetup):
             if not lmodel.load():
                 lmodel.autogenerate()
             lmodel.setRobotWeights()
-            lmodel.setRobotResolutions(xyzdelta=0.01) 
+            lmodel.setRobotResolutions(xyzdelta=0.04)
             basemanip = interfaces.BaseManipulation(robot)
             robot.SetActiveDOFs(manip.GetArmIndices())
             goal = robot.GetActiveDOFValues()
@@ -114,7 +114,7 @@ class TestConfigurationCache(EnvironmentSetup):
             goal[3] = -1.86
 
             oldchecker = env.GetCollisionChecker()
-           
+
             cachechecker = RaveCreateCollisionChecker(self.env,'CacheChecker')
             success=cachechecker.SendCommand('TrackRobotState %s'%robot.GetName())
             assert(success is not None)
@@ -124,38 +124,26 @@ class TestConfigurationCache(EnvironmentSetup):
             sampler.SampleSequence(SampleDataType.Real,1)
             report=CollisionReport()
 
-        stime = time.time()
-        for iter in range(0, 1000):
-            robot.SetActiveDOFValues(sampler.SampleSequence(SampleDataType.Real,1))
-            samplevalues = robot.GetActiveDOFValues()
-            if (iter%1000==0):
-                self.log.info('checking self collisions...')
-            env.GetCollisionChecker().CheckSelfCollision(robot, report=report)
-        rawtime = time.time()-stime
+            cachechecker.SendCommand('ResetSelfCache')
+            stime = time.time()
+            confs = []
+            for iter in range(0, 500):
+                robot.SetActiveDOFValues(sampler.SampleSequence(SampleDataType.Real,1))
+                samplevalues = robot.GetActiveDOFValues()
+                confs.append(samplevalues)
+                if (iter%10==0):
+                    self.log.info('checking self collisions %s...',iter)
 
-        selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
-        self.log.info('selfcollisionhits=%s selffreehits=%s selfcachesize=%s in %ss', selfcachedcollisionhits, selfcachedfreehits, selfcachesize, rawtime)
+                    self.log.info('writing cache to file...')
+                    cachechecker.SendCommand('SaveCache')
+                env.GetCollisionChecker().CheckSelfCollision(robot, report=report)
+            rawtime = time.time()-stime
 
-        self.log.info('writing cache to file...')
-        cachechecker.SendCommand('SaveCache')
+            selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
+            self.log.info('selfcollisionhits=%s selffreehits=%s selfcachesize=%s in %ss', selfcachedcollisionhits, selfcachedfreehits, selfcachesize, rawtime)
 
-        self.log.info('loading cache from file...')
-        cachechecker.SendCommand('LoadCache')
-
-        assert(int(cachechecker.SendCommand('ValidateSelfCache')) == 1)
-        self.log.info('cache is valid')
-
-        stime = time.time()
-        for iter in range(0, 1000):
-            robot.SetActiveDOFValues(sampler.SampleSequence(SampleDataType.Real,1))
-            samplevalues = robot.GetActiveDOFValues()
-            if (iter%1000==0):
-                self.log.info('checking self collisions...')
-            env.GetCollisionChecker().CheckSelfCollision(robot, report=report)
-        rawtime = time.time()-stime
-
-        selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
-        self.log.info('selfcollisionhits=%s selffreehits=%s selfcachesize=%s in %ss', selfcachedcollisionhits, selfcachedfreehits, selfcachesize, rawtime)'''
+            self.log.info('writing cache to file...')
+            cachechecker.SendCommand('SaveCache')
 
     def test_find_insert(self):
 
@@ -172,7 +160,7 @@ class TestConfigurationCache(EnvironmentSetup):
         with env:
              self.log.info('testing exhaustive insertion...')
              for iter in range(0, 10000):
-                 if iter%1==0:
+                 if iter%1000==0:
                      self.log.info('%d valid insertions %d nodes...',iter,cache.GetNumNodes())
 
                  samplevalues = 0.3*(sampler.SampleSequence(SampleDataType.Real,1)-0.5)
@@ -196,7 +184,7 @@ class TestConfigurationCache(EnvironmentSetup):
             if not lmodel.load():
                 lmodel.autogenerate()
             lmodel.setRobotWeights()
-            lmodel.setRobotResolutions(xyzdelta=0.01) 
+            lmodel.setRobotResolutions(xyzdelta=0.01)
             basemanip = interfaces.BaseManipulation(robot)
             robot.SetActiveDOFs(manip.GetArmIndices())
             goal = robot.GetActiveDOFValues()
@@ -205,11 +193,12 @@ class TestConfigurationCache(EnvironmentSetup):
 
             self.log.info('testing cache updates...')
             oldchecker = env.GetCollisionChecker()
-            
+
             cachechecker = RaveCreateCollisionChecker(self.env,'CacheChecker')
             success=cachechecker.SendCommand('TrackRobotState %s'%robot.GetName())
             assert(success is not None)
             env.SetCollisionChecker(cachechecker)
+            robot.SetSelfCollisionChecker(cachechecker)
 
             traj = basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True)
 
@@ -219,7 +208,7 @@ class TestConfigurationCache(EnvironmentSetup):
             cachedcollisions, cachedcollisionhits, cachedfreehits, cachesize = cachechecker.SendCommand('GetCacheStatistics').split()
             assert(oldcachesize>cachesize)
             self.log.info('environment removebody test passed (%s/%s)',cachesize,oldcachesize)
-            
+
             assert(int(cachechecker.SendCommand('ValidateCache')) == 1)
             assert(int(cachechecker.SendCommand('ValidateSelfCache')) == 1)
             self.log.info('valid tests passed')
@@ -246,7 +235,7 @@ class TestConfigurationCache(EnvironmentSetup):
                 if not lmodel.load():
                     lmodel.autogenerate()
                 lmodel.setRobotWeights()
-                lmodel.setRobotResolutions(xyzdelta=0.008) 
+                lmodel.setRobotResolutions(xyzdelta=0.004)
                 basemanip = interfaces.BaseManipulation(robot)
                 robot.SetActiveDOFs(manip.GetArmIndices())
                 goal = robot.GetActiveDOFValues()
@@ -255,17 +244,27 @@ class TestConfigurationCache(EnvironmentSetup):
 
                 self.log.info('testing planning...')
                 oldchecker = env.GetCollisionChecker()
-                
+
                 cachechecker = RaveCreateCollisionChecker(self.env,'CacheChecker')
                 success=cachechecker.SendCommand('TrackRobotState %s'%robot.GetName())
                 assert(success is not None)
-                env.SetCollisionChecker(cachechecker)
 
+                starttime = time.time()
+                traj = basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True)
+                regtime = time.time()-starttime
+
+                self.log.info('time without cache %s',regtime)
+
+                cachechecker.SendCommand('ResetSelfCache')
+
+                env.SetCollisionChecker(cachechecker)
+                robot.SetSelfCollisionChecker(cachechecker)
                 cachedtimes = []
-                for runs in range(2):
+                prevtime = float('Inf')
+                for runs in range(5):
 
                     starttime = time.time()
-                    traj = basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True)
+                    traj = basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=1,execute=True,outputtrajobj=True)
                     cachetime = time.time()-starttime
                     cachedtimes.append(cachetime)
 
@@ -273,21 +272,29 @@ class TestConfigurationCache(EnvironmentSetup):
                     cacherate = float((float(cachedfreehits)+float(cachedcollisionhits))/float(cachedcollisions))
                     selfcachedcollisions, selfcachedcollisionhits, selfcachedfreehits, selfcachesize = cachechecker.SendCommand('GetSelfCacheStatistics').split()
                     selfcacherate = float((float(selfcachedfreehits)+float(selfcachedcollisionhits))/float(selfcachedcollisions))
-                   
+
                     self.log.info('planning time=%fs collisionhits=%s/%s freehits=%s/%s cachesize=%s selfcollisionhits=%s/%s selffreehits=%s/%s selfcachesize=%s', cachetime, cachedcollisionhits, cachedcollisions, cachedfreehits, cachedcollisions, cachesize, selfcachedcollisionhits, selfcachedcollisions, selfcachedfreehits, selfcachedcollisions, selfcachesize)
                     self.log.info('cacherate=%f selfcacherate=%f',cacherate,selfcacherate)
 
+                    self.log.info('%s',cachechecker.SendCommand('GetCacheTimes'))
 
+                    self.log.info('run %s', runs)
                     with robot:
                         parameters = Planner.PlannerParameters()
                         parameters.SetRobotActiveJoints(robot)
-                        planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.002)
+                        planningutils.VerifyTrajectory(parameters,traj,samplingstep=0.001)
                         self.log.info('trajectory test passed')
-                        
+
+
+                    assert(cachetime < prevtime*1.5)
+                    self.log.info('monotonic decrease test passed (%fs/%fs)',cachetime, prevtime)
+                    prevtime = cachetime
+
                 assert(cacherate > 0.9 and selfcacherate > 0.9)
                 self.log.info('hitrate test passed (%f)(%f)',cacherate,selfcacherate)
-                
+
                 env.SetCollisionChecker(oldchecker)
+
                 starttime = time.time()
                 traj2 = basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.01,maxtries=1,execute=False,outputtrajobj=True)
                 originaltime = time.time()-starttime
@@ -303,7 +310,7 @@ class TestConfigurationCache(EnvironmentSetup):
                 assert(len(usedbodies) == 1 and usedbodies[0] == robot)
                 useddofindices, usedconfigindices = spec.ExtractUsedIndices(robot)
                 assert(sorted(useddofindices) == sorted(manip.GetArmIndices()))
-                
+
                 cachechecker.SendCommand('ResetCache')
                 cachedcollisions, cachedcollisionhits, cachedfreehits, cachesize = cachechecker.SendCommand('GetCacheStatistics').split()
                 assert(int(cachesize)==0)
