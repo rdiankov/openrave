@@ -60,8 +60,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     nullsampleprob, nullbiassampleprob, and deltasampleprob are in [0,1]\n\
  //");
 
+        bool bUseCache = false;
         std::string robotname, samplername = "MT19937";
-        is >> robotname >> samplername;
+        is >> robotname >> samplername >> bUseCache;
         _probot = GetEnv()->GetRobot(robotname);
         OPENRAVE_ASSERT_FORMAT(!!_probot, "could not find robot %s", robotname, ORE_InvalidArguments);
 
@@ -86,8 +87,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 *itweight = 100;
             }
         }
-        //_cache.reset(new CacheTree(_probot->GetActiveDOF()));
-        //_cache->Init(vweights, 1);
+
+        if( !!_cache ) {
+            _cache.reset(new CacheTree(_probot->GetActiveDOF()));
+            _cache->Init(vweights, 1);
+        }
 
         _bSetResultOnRobot = true;
         _busebiasing = false;
@@ -122,7 +126,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _UpdateGrabbed();
         _grabbedcallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotGrabbed, boost::bind(&ConfigurationJitterer::_UpdateGrabbed,this));
 
-        //_SetCacheMaxDistance();
+        if( !!_cache ) {
+            _SetCacheMaxDistance();
+        }
     }
 
     virtual ~ConfigurationJitterer(){
@@ -161,7 +167,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return false;
         }
         _maxjitter = maxjitter;
-        //_SetCacheMaxDistance();
+        if( !!_cache ) {
+            _SetCacheMaxDistance();
+        }
         return true;
     }
 
@@ -425,9 +433,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return -1;
         }
 
-        //CacheTree& cache = *_cache;
-        //cache.InsertNode(_curdof, CollisionReportPtr(), _neighdistthresh);
-        //_cachehit = 0;
+        if( !!_cache ) {
+            _cache->InsertNode(_curdof, CollisionReportPtr(), _neighdistthresh);
+            _cachehit = 0;
+        }
+
         bool bUsingBias = _vbiasdofdirection.size() > 0;
         const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
 
@@ -524,10 +534,12 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
             }
 
-            /*if( !!cache.FindNearestNode(vnewdof, _neighdistthresh).first ) {
-                _cachehit++;
-                continue;
-               }*/
+            if( !!_cache ) {
+                if( !!_cache->FindNearestNode(vnewdof, _neighdistthresh).first ) {
+                    _cachehit++;
+                    continue;
+                }
+            }
 
             //int ret = cache.InsertNode(vnewdof, CollisionReportPtr(), _neighdistthresh);
             //BOOST_ASSERT(ret==1);
@@ -709,7 +721,9 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
-        //_cache->Reset(); // need this here in order to invalidate cache.
+        if( !!_cache ) {
+            _cache->Reset(); // need this here in order to invalidate cache.
+        }
     }
 
     void _UpdateGrabbed()
@@ -748,15 +762,15 @@ protected:
     /// sets the cache's max configuration distance
     void _SetCacheMaxDistance()
     {
-        /*dReal maxdistance=0;
-           for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
+        dReal maxdistance=0;
+        for(size_t i = 0; i < _cache->GetWeights().size(); ++i) {
             dReal f = _range[i] * _cache->GetWeights()[i];
             maxdistance += f*f;
-           }
-           maxdistance = RaveSqrt(maxdistance);
-           if( maxdistance > _cache->GetMaxDistance()+g_fEpsilonLinear ) {
+        }
+        maxdistance = RaveSqrt(maxdistance);
+        if( maxdistance > _cache->GetMaxDistance()+g_fEpsilonLinear ) {
             _cache->SetMaxDistance(maxdistance);
-           }*/
+        }
     }
 
     RobotBasePtr _probot;
@@ -784,7 +798,7 @@ protected:
 
     std::vector<dReal> _curdof, _newdof2, _deltadof, _deltadof2, _vonesample;
 
-    //CacheTreePtr _cache; ///< caches the visisted configurations
+    CacheTreePtr _cache; ///< caches the visisted configurations
     int _cachehit;
     dReal _neighdistthresh; ///< the minimum distance that nodes can be with respect to each other.
 
