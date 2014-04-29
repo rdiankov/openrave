@@ -51,10 +51,9 @@
 #include <set>
 #include <string>
 #include <stdexcept>
-#include <typeinfo>
 
 // apparently there's a problem with higher versions of C++
-#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#if __cplusplus > 199711L || defined(__GXX_EXPERIMENTAL_CXX0X__)
 #include <typeinfo>
 #define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
