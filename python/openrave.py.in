@@ -221,8 +221,6 @@ if __name__ == "__main__":
                         if api_version == '0.10':
                             ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__,exit_msg = 'Leaving Interpreter and closing program.')
                             ipshell(local_ns=locals())
-                        elif api_version == '0.11':
-                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
 #                             from IPython.config.loader import Config
 #                             cfg = Config()
 #                             cfg.InteractiveShellEmbed.local_ns = locals()
@@ -233,8 +231,8 @@ if __name__ == "__main__":
                         elif api_version == '0.12' or api_version == '0.13':
                             from IPython import embed
                             embed()
-                        else:
-                            raise StandardError("no appropriate embed shell to this version of openrave")
+                        else: # later versions of ipython 1.1+
+                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
                     finally:
                         # ipython exited. if viewer is valid, then exit the viewer also
                         if viewer is not None:
