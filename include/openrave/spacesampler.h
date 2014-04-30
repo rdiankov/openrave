@@ -139,11 +139,38 @@ public:
     /// \brief Sets a distance metric for measuring samples. Used when computing neighborhood sampling
     //virtual void SetDistanceMetric(const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /** \brief Callback function during sampling
 
+        \param sampleiteration the sampling iteration of the planner (shows how far the planner has gone)
+        \return return value can be processed by the sampler to modify its behavior. the meaning is user defined.
+     */
+    typedef boost::function<int(int)> StatusCallbackFn;
+    
+    /** \brief register a function that is called periodically during sampling
+        
+        Callback can be used to periodically send status messages from the sampler's thread. It can also throw an exception to "cancel" the sampler if it takes too long.
+     */
+    virtual UserDataPtr RegisterStatusCallback(const StatusCallbackFn& callbackfn);
+
+protected:
+    inline SpaceSamplerBasePtr shared_sampler() {
+        return boost::static_pointer_cast<SpaceSamplerBase>(shared_from_this());
+    }
+    inline SpaceSamplerBaseConstPtr shared_sampler_const() const {
+        return boost::static_pointer_cast<SpaceSamplerBase const>(shared_from_this());
+    }
+
+    /// \brief Calls the registered callbacks in order, returns the bitwise OR of all the functions.
+    virtual int _CallStatusFunctions(int sampleiteration);
+    
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_SPACESAMPLER_HASH;
     }
+    
+    std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
+    
+    friend class CustomSamplerCallbackData;
 };
 
 } // end namespace OpenRAVE

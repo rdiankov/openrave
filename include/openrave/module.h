@@ -58,6 +58,7 @@ public:
     virtual bool SimulationStep(dReal fElapsedTime) {
         return false;
     }
+    
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_MODULE_HASH;

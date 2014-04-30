@@ -214,11 +214,13 @@ public:
         ++_cachedcollisionchecks;
 
         // print stats every now and then
-        if (_cachedcollisionchecks % 5000 == 0) {
-            _ss.str(std::string());
-            _ss << "insert " << _intime << "ms " << "query " << _querytime << "ms " << "raw " << _rawtime << "ms" << " size " << _cache->GetNumKnownNodes() << " hits " << _cachedcollisionhits+_cachedfreehits << "/" << _cachedcollisionchecks;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            if (_cachedcollisionchecks % 5000 == 0) {
+                _ss.str(std::string());
+                _ss << "insert " << _intime << "ms " << "query " << _querytime << "ms " << "raw " << _rawtime << "ms" << " size " << _cache->GetNumKnownNodes() << " hits " << _cachedcollisionhits+_cachedfreehits << "/" << _cachedcollisionchecks;
 
-            RAVELOG_DEBUG(_ss.str());
+                RAVELOG_VERBOSE(_ss.str());
+            }
         }
 
         // cache hit (collision)
@@ -324,15 +326,17 @@ public:
 
         ++_selfcachedcollisionchecks;
 
-        if (_selfcachedcollisionchecks % 700 == 0) {
-            _ss.str(std::string());
-            _ss << "self-insert " << _selfintime << "ms " << "self-query " << _selfquerytime << "ms " << "self-raw " << _selfrawtime << "ms " << "load " << _loadtime << "ms " << "size " << _selfcache->GetNumKnownNodes() << " hits " << _selfcachedcollisionhits+_selfcachedfreehits << "/" << _selfcachedcollisionchecks;
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            if (_selfcachedcollisionchecks % 700 == 0) {
+                _ss.str(std::string());
+                _ss << "self-insert " << _selfintime << "ms " << "self-query " << _selfquerytime << "ms " << "self-raw " << _selfrawtime << "ms " << "load " << _loadtime << "ms " << "size " << _selfcache->GetNumKnownNodes() << " hits " << _selfcachedcollisionhits+_selfcachedfreehits << "/" << _selfcachedcollisionchecks;
 
-            if (_selfrawtime > 0 && (_selfintime+_selfquerytime) > 0) {
-                _ss << " avg rawtime " << (_selfcachedcollisionchecks-(_selfcachedcollisionhits+_selfcachedfreehits))/_selfrawtime << "ms " << " avg cachetime " << (_selfcachedcollisionhits+_selfcachedfreehits)/(_selfquerytime+_selfintime) << "ms";
+                if (_selfrawtime > 0 && (_selfintime+_selfquerytime) > 0) {
+                    _ss << " avg rawtime " << (_selfcachedcollisionchecks-(_selfcachedcollisionhits+_selfcachedfreehits))/_selfrawtime << "ms " << " avg cachetime " << (_selfcachedcollisionhits+_selfcachedfreehits)/(_selfquerytime+_selfintime) << "ms";
+                }
+
+                RAVELOG_VERBOSE(_ss.str());
             }
-
-            RAVELOG_DEBUG(_ss.str());
         }
 
         // save cache every other iteration if its size has increased by 1.5
@@ -393,8 +397,7 @@ protected:
         }
 
         // if there is no cache, create one
-        if (_selfcache->GetNumKnownNodes() == 0)
-        {
+        if (_selfcache->GetNumKnownNodes() == 0) {
             // _cache is the environment collision cache, envupdates is true, i.e., the cache will be updated on changes and it will not save/load
             _cache.reset(new ConfigurationCache(_probot));
             // _selfcache is the selfcollision cache, envupdates is false, i.e., the cache will not be updated when the environment changes it will save and load the cache
@@ -402,17 +405,15 @@ protected:
 
             _SetParams();
         }
-
+        
         // check if a selfcache for this robot exists on this disk
         std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
         if (fulldirname != "" && _selfcache->GetNumKnownNodes() == 0) {
-
-            RAVELOG_DEBUG_FORMAT("Loading selfcache from %s",fulldirname);
             _stime = utils::GetMilliTime();
             _selfcache->LoadCache(GetCacheHash(), GetEnv());
             _loadtime = utils::GetMilliTime()-_stime;
             _size = _selfcache->GetNumKnownNodes();
-            RAVELOG_WARN_FORMAT("Loaded %d configurations in %d ms", _size%_loadtime);
+            RAVELOG_VERBOSE_FORMAT("Loaded %d configurations in %d ms from %s", _size%_loadtime%fulldirname);
 
             __cachehash = "";
         }

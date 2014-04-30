@@ -99,9 +99,15 @@ public:
         if( listpath.size() > 1 ) {
             if( _bUseSingleDOFSmoothing ) {
                 dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations*8/10);
+                if( newdist1 < 0 ) {
+                    return PS_Interrupted;
+                }
                 RAVELOG_DEBUG(str(boost::format("path optimizing first stage - dist %f->%f, computation time=%fs\n")%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))));
                 uint32_t basetime2 = utils::GetMilliTime();
                 dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*2/10);
+                if( newdist2 < 0 ) {
+                    return PS_Interrupted;
+                }
                 RAVELOG_DEBUG(str(boost::format("path optimizing second stage - dist %f->%f computation time=%fs\n")%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2))));
             }
             else {
@@ -147,6 +153,8 @@ protected:
         PlannerParametersConstPtr parameters = GetParameters();
         list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itstartnodeprev, itendnode, itendnodeprev;
         vector<dReal> vstartvalues(parameters->GetDOF()), vendvalues(parameters->GetDOF());
+
+        PlannerProgress progress;
 
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
@@ -219,6 +227,11 @@ protected:
                 continue;
             }
 
+            progress._iteration=curiter;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+
             // check if the nodes can be connected by a straight line
             if (!SegmentFeasible(vstartvalues, vendvalues, IT_Open)) {
                 continue;
@@ -248,6 +261,7 @@ protected:
         list< std::pair< vector<dReal>, dReal> >::iterator itstartnode, itstartnodeprev, itendnode, itendnodeprev, itnode;
         size_t numdof = parameters->GetDOF();
         int nrejected = 0;
+        PlannerProgress progress;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
             if( nrejected >= 20 ) {
                 RAVELOG_VERBOSE("smoothing quitting early\n");
@@ -322,6 +336,11 @@ protected:
                 }
             }
 
+            progress._iteration=curiter;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+            
             dReal fstartdofvalue = vpathvalues.at(0).first.at(ioptdof), flastdofvalue = vpathvalues.at(numnodes+1).first.at(ioptdof);
             dReal fdelta = (flastdofvalue-fstartdofvalue)/(fenddist-fstartdist);
             bool bsuccess = true;
@@ -362,6 +381,12 @@ protected:
                     break;
                 }
             }
+
+            progress._iteration=curiter;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+            
             if( !bsuccess ) {
                 // rejected due to constraints
                 continue;

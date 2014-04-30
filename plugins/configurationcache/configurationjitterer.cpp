@@ -51,7 +51,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         RegisterCommand("SetResultOnRobot",boost::bind(&ConfigurationJitterer::SetResultOnRobotCommand,this,_1,_2),
                         "set a new result on a robot");
         RegisterCommand("SetNeighDistThresh",boost::bind(&ConfigurationJitterer::SetNeighDistThreshCommand,this,_1,_2),
-                        "sets a distance threshold between nodes in the cache");
+                        "sets the minimum distance that nodes can be with respect to each other for the cache");
         RegisterCommand("SetManipulatorBias",boost::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
@@ -451,6 +451,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
         uint64_t starttime = utils::GetNanoPerformanceTime();
         for(int iter = 0; iter < _maxiterations; ++iter) {
+            if( (iter%10) == 0 ) { // not sure what a good rate is...
+                _CallStatusFunctions(iter);
+            }
             if( bUsingBias && iter < (int)rayincs.size() ) {
                 // start by checking samples directly above the current configuration
                 for (size_t j = 0; j < vnewdof.size(); ++j) {
@@ -696,13 +699,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_WARN_FORMAT("succeed iterations=%d, computation=%fs\n",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+                RAVELOG_DEBUG_FORMAT("succeed iterations=%d, computation=%fs\n",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 //RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
         }
 
-        RAVELOG_WARN_FORMAT("failed iterations=%d, computation=%fs\n",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+        RAVELOG_INFO_FORMAT("failed iterations=%d, computation=%fs\n",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         //RAVELOG_WARN_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
@@ -800,7 +803,7 @@ protected:
 
     CacheTreePtr _cache; ///< caches the visisted configurations
     int _cachehit;
-    dReal _neighdistthresh; ///< the minimum distance that nodes can be with respect to each other.
+    dReal _neighdistthresh; ///< the minimum distance that nodes can be with respect to each other for the cache
 
     // for biasing
     SpaceSamplerBasePtr _ssampler;

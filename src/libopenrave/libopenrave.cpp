@@ -1967,6 +1967,44 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }
 
+class CustomSamplerCallbackData : public boost::enable_shared_from_this<CustomSamplerCallbackData>, public UserData
+{
+public:
+    CustomSamplerCallbackData(const SpaceSamplerBase::StatusCallbackFn& callbackfn, SpaceSamplerBasePtr sampler) : _callbackfn(callbackfn), _samplerweak(sampler) {
+    }
+    virtual ~CustomSamplerCallbackData() {
+        SpaceSamplerBasePtr sampler = _samplerweak.lock();
+        if( !!sampler ) {
+            sampler->__listRegisteredCallbacks.erase(_iterator);
+        }
+    }
+
+    SpaceSamplerBase::StatusCallbackFn _callbackfn;
+    SpaceSamplerBaseWeakPtr _samplerweak;
+    std::list<UserDataWeakPtr>::iterator _iterator;
+};
+
+typedef boost::shared_ptr<CustomSamplerCallbackData> CustomSamplerCallbackDataPtr;
+
+UserDataPtr SpaceSamplerBase::RegisterStatusCallback(const StatusCallbackFn& callbackfn)
+{
+    CustomSamplerCallbackDataPtr pdata(new CustomSamplerCallbackData(callbackfn,shared_sampler()));
+    pdata->_iterator = __listRegisteredCallbacks.insert(__listRegisteredCallbacks.end(),pdata);
+    return pdata;
+}
+
+int SpaceSamplerBase::_CallStatusFunctions(int sampleiteration)
+{
+    int ret = 0;
+    FOREACHC(it,__listRegisteredCallbacks) {
+        CustomSamplerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomSamplerCallbackData>(it->lock());
+        if( !!pitdata) {
+            ret |= pitdata->_callbackfn(sampleiteration);
+        }
+    }
+    return ret;
+}
+
 CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
 {
     _oldoptions = p->GetCollisionOptions();
