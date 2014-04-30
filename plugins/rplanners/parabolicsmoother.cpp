@@ -271,12 +271,14 @@ public:
                     }
                     else if( irampindex+1 == dynamicpath.ramps.size() ) {
                         if( rampnd.endTime <= fTrimEdgesTime+g_fEpsilonLinear ) {
-                            // ramp is too short so ignore
-                            continue;
+                            // ramp is too short so ignore checking
+                            bCheck = false;
                         }
-                        // don't check points close to the final configuration because of jittering
-                        rampndtrimmed.TrimBack(fTrimEdgesTime);
-                        bTrimmed = true;
+                        else {
+                            // don't check points close to the final configuration because of jittering
+                            rampndtrimmed.TrimBack(fTrimEdgesTime);
+                            bTrimmed = true;
+                        }
                     }
                     // part of original trajectory which might not have been processed with perturbations, so ignore perturbations
                     _bUsePerturbation = false;
