@@ -176,7 +176,7 @@ public:
 
         daeElementRef pvisualtrans;
         domAxis_constraintRef pkinematicaxis;
-        dReal jointvalue;
+        dReal jointvalue; ///< this value is in degrees/meters
         domNodeRef visualnode;
         domKinematics_axis_infoRef kinematics_axis_info;
         domMotion_axis_infoRef motion_axis_info;
@@ -247,6 +247,7 @@ public:
         _bOpeningZAE = false;
         _bSkipGeometry = false;
         _fGlobalScale = 1;
+        _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
             RAVELOG_WARN("collada-dom compiled with 32-bit floating-point, so there might be precision errors\n");
         }
@@ -364,9 +365,24 @@ public:
     bool _InitPostOpen(const AttributesList& atts)
     {
         _fGlobalScale = 1;
+        _bBackCompatValuesInRadians = false;
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUnit() ) {
                 _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
+            }
+
+            // check the authoring tool
+            for(size_t icontrib = 0; icontrib < _dom->getAsset()->getContributor_array().getCount(); ++icontrib) {
+                domAsset::domContributorRef pcontrib = _dom->getAsset()->getContributor_array()[icontrib];
+                if( !!pcontrib->getAuthoring_tool() ) {
+                    std::string authoring_tool = pcontrib->getAuthoring_tool()->getValue();
+                    // possible there's other old writers that save in radians...
+                    // newest openrave writers should have vX.Y.Z appended
+                    if( authoring_tool == "OpenRAVE Collada Writer" || authoring_tool == "URDF Collada Writer" ) {
+                        _bBackCompatValuesInRadians = true;
+                        RAVELOG_INFO("collada reader backcompat parsing for joint values\n");
+                    }
+                }
             }
         }
         FOREACHC(itatt,atts) {
@@ -617,7 +633,12 @@ public:
         FOREACH(itaxisbinding,bindings.listAxisBindings) {
             if( !!itaxisbinding->_pjoint && itaxisbinding->_pjoint->GetParent() == pbody ) {
                 if( itaxisbinding->_pjoint->GetDOFIndex() >= 0 ) {
-                    values.at(itaxisbinding->_pjoint->GetDOFIndex()+itaxisbinding->_iaxis) = itaxisbinding->jointvalue;
+                    int idof = itaxisbinding->_pjoint->GetDOFIndex()+itaxisbinding->_iaxis;
+                    dReal value = itaxisbinding->jointvalue;
+                    if( !_bBackCompatValuesInRadians && pbody->IsDOFRevolute(idof) ) {
+                        value *= M_PI/180.0;
+                    }
+                    values.at(itaxisbinding->_pjoint->GetDOFIndex()+itaxisbinding->_iaxis) = value;
                 }
             }
         }
@@ -885,7 +906,7 @@ public:
                     return false;
                 }
             }
-            
+
             _mapJointUnits.clear();
             _mapJointSids.clear();
         }
@@ -1758,6 +1779,14 @@ public:
                         vAxes[ic] = Vector(0,0,1);
                     }
 
+                    dReal fjointmult = 1.0;
+                    if( pjoint->IsRevolute(ic) ) {
+                        fjointmult = PI/180.0f;
+                    }
+                    else if( pjoint->IsPrismatic(ic) && !!kinematics_axis_info ) {
+                        fjointmult = _GetUnitScale(kinematics_axis_info,_fGlobalScale);
+                    }
+
                     pjoint->_info._voffsets[ic] = 0;     // to overcome -pi to pi boundary
                     if (pkinbody->IsRobot() && !motion_axis_info) {
                         RAVELOG_WARN(str(boost::format("No motion axis info for joint %s\n")%pjoint->GetName()));
@@ -1767,10 +1796,16 @@ public:
                     if (!!motion_axis_info) {
                         if (!!motion_axis_info->getSpeed()) {
                             pjoint->_info._vmaxvel[ic] = resolveFloat(motion_axis_info->getSpeed(),motion_axis_info);
+                            if( !_bBackCompatValuesInRadians ) {
+                                pjoint->_info._vmaxvel[ic] *= fjointmult;
+                            }
                             RAVELOG_VERBOSE("... Joint Speed: %f...\n",pjoint->GetMaxVel());
                         }
                         if (!!motion_axis_info->getAcceleration()) {
                             pjoint->_info._vmaxaccel[ic] = resolveFloat(motion_axis_info->getAcceleration(),motion_axis_info);
+                            if( !_bBackCompatValuesInRadians ) {
+                                pjoint->_info._vmaxaccel[ic] *= fjointmult;
+                            }
                             RAVELOG_VERBOSE("... Joint Acceleration: %f...\n",pjoint->GetMaxAccel());
                         }
                     }
@@ -1792,9 +1827,8 @@ public:
                         }
                         else if (!!kinematics_axis_info->getLimits()) {     // If there are articulated system kinematics limits
                             has_soft_limits = true;
-                            dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(kinematics_axis_info,_fGlobalScale);
-                            pjoint->_info._vlowerlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
-                            pjoint->_info._vupperlimit.at(ic) = fscale*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
+                            pjoint->_info._vlowerlimit.at(ic) = fjointmult*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMin(),kinematics_axis_info));
+                            pjoint->_info._vupperlimit.at(ic) = fjointmult*(dReal)(resolveFloat(kinematics_axis_info->getLimits()->getMax(),kinematics_axis_info));
                             if( pjoint->IsRevolute(ic) ) {
                                 if(( pjoint->_info._vlowerlimit.at(ic) < -PI) ||( pjoint->_info._vupperlimit[ic] > PI) ) {
                                     // TODO, necessary?
@@ -1850,15 +1884,17 @@ public:
 
                     if (!joint_locked && !!pdomaxis->getLimits() ) {
                         has_hard_limits = true;
-                        // contains the hard limits (prioritize over soft limits)
-                        RAVELOG_VERBOSE(str(boost::format("There are LIMITS in joint %s ...\n")%pjoint->GetName()));
-                        dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(pdomaxis,_fGlobalScale);
-                        pjoint->_info._vlowerlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale;
-                        pjoint->_info._vupperlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
-                        if( pjoint->IsRevolute(ic) ) {
-                            if(( pjoint->_info._vlowerlimit[ic] < -PI) ||( pjoint->_info._vupperlimit[ic] > PI) ) {
-                                // TODO, necessary?
-                                pjoint->_info._voffsets[ic] = 0.5f * (pjoint->_info._vlowerlimit[ic] + pjoint->_info._vupperlimit[ic]);
+                        if( !has_soft_limits ) { // prioritize soft-limits
+                            // contains the hard limits (prioritize over soft limits)
+                            RAVELOG_VERBOSE_FORMAT("There are LIMITS in joint %s", pjoint->GetName());
+                            dReal fscale = pjoint->IsRevolute(ic) ? (PI/180.0f) : _GetUnitScale(pdomaxis,_fGlobalScale);
+                            pjoint->_info._vlowerlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMin()->getValue()*fscale;
+                            pjoint->_info._vupperlimit.at(ic) = (dReal)pdomaxis->getLimits()->getMax()->getValue()*fscale;
+                            if( pjoint->IsRevolute(ic) ) {
+                                if(( pjoint->_info._vlowerlimit[ic] < -PI) ||( pjoint->_info._vupperlimit[ic] > PI) ) {
+                                    // TODO, necessary?
+                                    pjoint->_info._voffsets[ic] = 0.5f * (pjoint->_info._vlowerlimit[ic] + pjoint->_info._vupperlimit[ic]);
+                                }
                             }
                         }
                     }
@@ -2162,7 +2198,7 @@ public:
             primitivecount = triRef->getP_array().getCount();
         }
         for(size_t ip = 0; ip < primitivecount; ++ip) {
-            domList_of_uints indexArray =triRef->getP_array()[ip]->getValue();
+            domList_of_uints indexArray = triRef->getP_array()[ip]->getValue();
             for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
                 domInput_localRef localRef = vertsRef->getInput_array()[i];
                 daeString str = localRef->getSemantic();
@@ -2338,7 +2374,7 @@ public:
             }
         }
         triangleIndexStride++;
-        const domList_of_uints& indexArray =triRef->getP()->getValue();
+        const domList_of_uints& indexArray = triRef->getP()->getValue();
         for (size_t i=0; i<vertsRef->getInput_array().getCount(); ++i) {
             domInput_localRef localRef = vertsRef->getInput_array()[i];
             daeString str = localRef->getSemantic();
@@ -3471,7 +3507,7 @@ private:
                 }
             }
 
-            resolveCommon_float_or_param(pelt,kscene,jointvalue);
+            resolveCommon_float_or_param(pelt,kscene, jointvalue);
             bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
@@ -4468,14 +4504,16 @@ private:
     string _prefix;
     int _nGlobalSensorId, _nGlobalManipulatorId, _nGlobalIndex;
     std::string _filename;
-    bool _bOpeningZAE; ///< true if currently opening a zae
-    bool _bSkipGeometry;
     std::set<KinBody::LinkPtr> _setInitialLinks;
     std::set<KinBody::JointPtr> _setInitialJoints;
     std::set<RobotBase::ManipulatorPtr> _setInitialManipulators;
     std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
     std::vector<std::string> _vOpenRAVESchemeAliases;
     std::map<std::string,daeURI> _mapInverseResolvedURIList; ///< holds a list of inverse resolved relationships file:// -> openrave://
+
+    bool _bOpeningZAE; ///< true if currently opening a zae
+    bool _bSkipGeometry;
+    bool _bBackCompatValuesInRadians; ///< if true, will assume the speed, acceleration, and dofvalues are in radians instead of degrees (for back compat)
 };
 
 bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
