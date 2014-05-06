@@ -2446,7 +2446,7 @@ public:
         if( _processingtag.size() > 0 )
             return PE_Ignore;
 
-        if (( xmlname == "effector") ||( xmlname == "gripperjoints") ||( xmlname == "joints") ||( xmlname == "armjoints") ||( xmlname == "base") ||( xmlname == "iksolver") ||( xmlname == "closingdir") ||( xmlname == "palmdirection") ||( xmlname=="direction") ||( xmlname == "closingdirection") ||( xmlname == "translation") ||( xmlname == "quat") ||( xmlname == "rotationaxis") ||( xmlname == "rotationmat") ) {
+        if (( xmlname == "effector") ||( xmlname == "gripperjoints") ||( xmlname == "joints") ||( xmlname == "armjoints") ||( xmlname == "base") ||( xmlname == "iksolver") ||( xmlname == "closingdir") ||( xmlname == "palmdirection") ||( xmlname=="direction") ||( xmlname == "closingdirection") ||( xmlname == "translation") ||( xmlname == "quat") ||( xmlname == "rotationaxis") ||( xmlname == "rotationmat") || xmlname == "chuckingdirection") {
             _processingtag = xmlname;
             return PE_Support;
         }
@@ -2569,9 +2569,9 @@ public:
                 _manipinfo._sIkSolverXMLId = piksolver->GetXMLId();
             }
         }
-        else if( xmlname == "closingdirection" || xmlname == "closingdir" ) {
-            _manipinfo._vClosingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-            FOREACH(it, _manipinfo._vClosingDirection) {
+        else if( xmlname == "closingdirection" || xmlname == "closingdir" || xmlname == "chuckingdirection" ) {
+            _manipinfo._vChuckingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            FOREACH(it, _manipinfo._vChuckingDirection) {
                 if( *it > 0 ) {
                     *it = 1;
                 }

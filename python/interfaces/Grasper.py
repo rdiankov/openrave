@@ -58,7 +58,7 @@ class Grasper:
         clone.avoidlinks = [clone.robot.GetLink(link.GetName()) for link in self.avoidlinks]
         envother.Add(clone.prob,True,clone.args)
         return clone
-    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None,finestep=None,vintersectplane=None):
+    def Grasp(self,direction=None,roll=None,position=None,standoff=None,target=None,stablecontacts=False,forceclosure=False,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,execute=None,translationstepmult=None,outputfinal=False,manipulatordirection=None,finestep=None,vintersectplane=None,chuckingdirection=None):
         """See :ref:`module-grasper-grasp`
         """
         cmd = 'Grasp '
@@ -83,6 +83,10 @@ class Grasper:
             cmd += 'finestep %.15e '%finestep
         if vintersectplane is not None:
             cmd += 'vintersectplane %.15e %.15e %.15e %.15e '%(vintersectplane[0], vintersectplane[1], vintersectplane[2], vintersectplane[3])
+        if chuckingdirection is not None:
+            cmd += 'chuckingdirection '
+            for value in chuckingdirection:
+                cmd += '%.15e '%value
         if execute is not None:
             cmd += 'execute %d '%execute
         res = self.prob.SendCommand(cmd)

@@ -44,7 +44,7 @@ public:
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
-        std::vector<dReal> _vClosingDirection; ///< the normal direction to move joints to 'close' the hand
+        std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
         Vector _vdirection;
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
@@ -147,13 +147,22 @@ public:
         /// \brief returns the number of DOF for the gripper indices. Equivalent to GetGripperIndices().size()
         virtual int GetGripperDOF() const;
 
-        /// \brief return the normal gripper direction to move joints to close/chuck the hand
-        virtual const std::vector<dReal>& GetClosingDirection() const {
-            return _info._vClosingDirection;
+        /// \deprecated 14/05/06
+        inline const std::vector<dReal>& GetClosingDirection() const RAVE_DEPRECATED {
+            return _info._vChuckingDirection;
+        }
+
+        /// \deprecated 14/05/06
+        inline void SetClosingDirection(const std::vector<dReal>& closingdirection) {
+            SetChuckingDirection(closingdirection);
+        }
+        
+        virtual const std::vector<dReal>& GetChuckingDirection() const {
+            return _info._vChuckingDirection;
         }
 
         /// \brief sets the normal gripper direction to move joints to close/chuck the hand
-        virtual void SetClosingDirection(const std::vector<dReal>& closingdirection);
+        virtual void SetChuckingDirection(const std::vector<dReal>& chuckingdirection);
 
         /// \brief Sets the local tool direction with respect to the end effector link.
         ///

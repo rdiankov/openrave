@@ -1,6 +1,6 @@
 .. _collada_robot_extensions:
 
-COLLADA Robot Extensions (Version 0.3.4)
+COLLADA Robot Extensions (Version 0.3.5)
 ----------------------------------------
 
 OpenRAVE maintains a set of robot-specific extensions to the `COLLADA 1.5 specification <http://www.khronos.org/collada/>`_ in order to exchange data with robotics applications. By default, COLLADA 1.5 handles geometry, visual effects, physical properties, and complex kinematics while the robot-specific extensions include:
@@ -155,9 +155,9 @@ Child Elements for <gripper_joint>
   :widths: 20, 70, 10
   :header: Element, Description, Occurances
   
-  <closing_direction> | **common_float_or_param_type** that contains the default closing direction of an axis on the joint. If a closing direction is not specified for an axis in the joint, it defaults to 0. | 0 or more
+  <chucking_direction> | **common_float_or_param_type** that contains the default chucking direction of an axis on the joint. If a chucking direction is not specified for an axis in the joint, it defaults to 0. | 0 or more
 
-Attributes for <gripper_joint>/<closing_direction>
+Attributes for <gripper_joint>/<chucking_direction>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. csv-table::
@@ -223,9 +223,9 @@ The IK types are meant to be hints as to how a manipulator can be used. Multiple
 
   * Answer: Having a leftright manipulator destroys the one-to-one correspondence between gripper joints and ik solver, and not much is gained. So better to have only have one frame tip and origin and treat two arms as separate. The constraint between the end effectors of the two arms is not always rigid, it very task dependent. Therefore, the user should take care of the dual relation.
 
-* Question: What about closing gripper direction for complex hands? Fingers with many DOF might need special grasping strategies.
+* Question: What about chucking gripper direction for complex hands? Fingers with many DOF might need special grasping strategies.
 
-  * Answer: The closing direction just provide a hint as to the usage. The real gripper movement depends on the grasp strategy, which is beyond the definition of this scope. 
+  * Answer: The chucking direction just provide a hint as to the usage. The real gripper movement depends on the grasp strategy, which is beyond the definition of this scope. 
 
 Example
 ~~~~~~~
@@ -244,14 +244,14 @@ The example defines an arm with an end effector at link wam7 with a local coordi
           <direction>0.0 0.0 1.0</direction>
         </frame_tip>
         <gripper_joint joint="jointname">
-          <closing_direction axis="axis0">
+          <chucking_direction axis="axis0">
             <float>1</float>
-          </closing_direction>
+          </chucking_direction>
         </gripper_joint>
         <gripper_joint joint="jointname2">
-          <closing_direction axis="axis0">
+          <chucking_direction axis="axis0">
             <float>-1</float>
-          </closing_direction>
+          </chucking_direction>
         </gripper_joint>
         <iksolver type="Transform6D">
           <free_joint joint="jointname3"/>

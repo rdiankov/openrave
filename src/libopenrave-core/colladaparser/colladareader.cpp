@@ -2723,18 +2723,18 @@ public:
                                 daeTArray<daeElementRef> children;
                                 pmanipchild->getChildren(children);
                                 for (size_t i = 0; i < children.getCount(); i++) {
-                                    if( children[i]->getElementName() == string("closing_direction") ) {
+                                    if( children[i]->getElementName() == string("closing_direction") || children[i]->getElementName() == string("chucking_direction")) {
                                         domAxis_constraintRef paxis = daeSafeCast<domAxis_constraint>(daeSidRef(children[i]->getAttribute("axis"), pdomjoint).resolve().elt);
-                                        domFloat closing_direction = 0;
+                                        domFloat chucking_direction = 0;
                                         if( !paxis ) {
                                             RAVELOG_WARN(str(boost::format("cannot resolve joint %s axis %s")%pmanipchild->getAttribute("joint")%children[i]->getAttribute("axis")));
                                         }
                                         else {
-                                            if( !resolveCommon_float_or_param(children[i],as,closing_direction) ) {
-                                                RAVELOG_WARN(str(boost::format("gripper joint %s axis %s cannot extract closing_direction\n")%children[i]->getAttribute("axis")%pmanipchild->getAttribute("joint")));
+                                            if( !resolveCommon_float_or_param(children[i],as,chucking_direction) ) {
+                                                RAVELOG_WARN(str(boost::format("gripper joint %s axis %s cannot extract chucking_direction\n")%children[i]->getAttribute("axis")%pmanipchild->getAttribute("joint")));
                                             }
                                         }
-                                        manipinfo._vClosingDirection.push_back((dReal)closing_direction);
+                                        manipinfo._vChuckingDirection.push_back((dReal)chucking_direction);
                                     }
                                 }
                                 continue;

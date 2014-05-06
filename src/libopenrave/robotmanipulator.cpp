@@ -59,10 +59,10 @@ int RobotBase::Manipulator::GetGripperDOF() const
     return static_cast<int>(__vgripperdofindices.size());
 }
 
-void RobotBase::Manipulator::SetClosingDirection(const std::vector<dReal>& closingdirection)
+void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuckingdirection)
 {
-    OPENRAVE_ASSERT_OP((int)closingdirection.size(),==,GetGripperDOF());
-    _info._vClosingDirection = closingdirection;
+    OPENRAVE_ASSERT_OP((int)chuckingdirection.size(),==,GetGripperDOF());
+    _info._vChuckingDirection = chuckingdirection;
     GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
@@ -942,7 +942,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         FOREACHC(it,_info._vGripperJointNames) {
             o << *it << " ";
         }
-        FOREACHC(it,_info._vClosingDirection) {
+        FOREACHC(it,_info._vChuckingDirection) {
             SerializeRound(o,*it);
         }
         SerializeRound(o,_info._tLocalTool);
@@ -1090,13 +1090,13 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     }
 
     // init the gripper dof indices
-    std::vector<dReal> vClosingDirection;
-    size_t iclosingdirection = 0;
+    std::vector<dReal> vChuckingDirection;
+    size_t ichuckingdirection = 0;
     FOREACHC(itjointname,_info._vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);
         if( !pjoint ) {
             RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%GetName()));
-            iclosingdirection++;
+            ichuckingdirection++;
         }
         else {
             if( pjoint->GetDOFIndex() >= 0 ) {
@@ -1106,23 +1106,23 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
                     }
                     else {
                         __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
-                        if( iclosingdirection < _info._vClosingDirection.size() ) {
-                            vClosingDirection.push_back(_info._vClosingDirection[iclosingdirection++]);
+                        if( ichuckingdirection < _info._vChuckingDirection.size() ) {
+                            vChuckingDirection.push_back(_info._vChuckingDirection[ichuckingdirection++]);
                         }
                         else {
-                            vClosingDirection.push_back(0);
-                            RAVELOG_WARN(str(boost::format("manipulator %s closing direction not correct length, might get bad closing/release grasping")%GetName()));
+                            vChuckingDirection.push_back(0);
+                            RAVELOG_WARN(str(boost::format("manipulator %s chucking direction not correct length, might get bad chucking/release grasping")%GetName()));
                         }
                     }
                 }
             }
             else {
-                ++iclosingdirection;
+                ++ichuckingdirection;
                 RAVELOG_WARN(str(boost::format("manipulator %s gripper joint %s is not active, so has no dof index. ignoring.")%GetName()%*itjointname));
             }
         }
     }
-    _info._vClosingDirection.swap(vClosingDirection);
+    _info._vChuckingDirection.swap(vChuckingDirection);
 }
 
 }

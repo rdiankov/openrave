@@ -143,6 +143,8 @@ public:
         params->btightgrasp = false;
         params->vtargetdirection = Vector(0,0,1);
         params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetDirection();
+        
+        std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
         string cmd;
@@ -256,6 +258,12 @@ public:
             else if( cmd == "finestep" ) {
                 sinput >> params->ffinestep;
             }
+            else if( cmd == "chuckingdirection" ) {
+                vchuckingdir.resize(_robot->GetActiveManipulator()->GetGripperDOF());
+                for(size_t i = 0; i < vchuckingdir.size(); ++i) {
+                    sinput >> vchuckingdir.at(i);
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -267,6 +275,21 @@ public:
             }
         }
 
+        if( vchuckingdir.size() == _robot->GetActiveManipulator()->GetGripperDOF() ) {
+            params->vgoalconfig.resize(_robot->GetActiveDOF()); // chucking direction
+            for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
+                params->vgoalconfig[i] = 0;
+                vector<dReal>::const_iterator itchucking = vchuckingdir.begin();
+                FOREACHC(itgripper,_robot->GetActiveManipulator()->GetGripperIndices()) {
+                    if(( *itchucking != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
+                        params->vgoalconfig[i] = *itchucking;
+                        break;
+                    }
+                    itchucking++;
+                }
+            }
+        }
+            
         RobotBase::RobotStateSaver saver(_robot);
         _robot->Enable(true);
 
@@ -1429,12 +1452,12 @@ protected:
             return;
         }
 
-        //make sure we get the right closing direction and don't look at irrelevant joints
-        vector<dReal> closingdir(_robot->GetDOF(),0);
+        //make sure we get the right chucking direction and don't look at irrelevant joints
+        vector<dReal> chuckingdir(_robot->GetDOF(),0);
         FOREACH(itmanip,_robot->GetManipulators()) {
-            vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
+            vector<dReal>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
             FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
-                closingdir.at(*itgripper) = *itclosing++;
+                chuckingdir.at(*itgripper) = *itchucking++;
             }
         }
 
@@ -1461,7 +1484,7 @@ protected:
                         //get the vector of delta xyz induced by a small squeeze for all joints relevant manipulator joints
                         for(int j = 0; j < 3; j++) {
                             for(int k = 0; k < _robot->GetDOF(); k++)
-                                deltaxyz[j] += J.at(j*_robot->GetDOF() + k)*closingdir[k];
+                                deltaxyz[j] += J.at(j*_robot->GetDOF() + k)*chuckingdir.at(k);
                         }
                     }
 

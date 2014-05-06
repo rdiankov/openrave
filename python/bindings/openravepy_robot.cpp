@@ -33,7 +33,7 @@ public:
 public:
         PyManipulatorInfo() {
             _tLocalTool = ReturnTransform(Transform());
-            _vClosingDirection = numeric::array(boost::python::list());
+            _vChuckingDirection = numeric::array(boost::python::list());
             _vdirection = toPyVector3(Vector(0,0,1));
             _vGripperJointNames = boost::python::list();
         }
@@ -42,7 +42,7 @@ public:
             _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
             _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
             _tLocalTool = ReturnTransform(info._tLocalTool);
-            _vClosingDirection = toPyArray(info._vClosingDirection);
+            _vChuckingDirection = toPyArray(info._vChuckingDirection);
             _vdirection = toPyVector3(info._vdirection);
             _sIkSolverXMLId = info._sIkSolverXMLId;
             boost::python::list vGripperJointNames;
@@ -59,7 +59,7 @@ public:
             pinfo->_sBaseLinkName = boost::python::extract<std::string>(_sBaseLinkName);
             pinfo->_sEffectorLinkName = boost::python::extract<std::string>(_sEffectorLinkName);
             pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
-            pinfo->_vClosingDirection = ExtractArray<dReal>(_vClosingDirection);
+            pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
             pinfo->_vdirection = ExtractVector3(_vdirection);
             pinfo->_sIkSolverXMLId = _sIkSolverXMLId;
             pinfo->_vGripperJointNames = ExtractArray<std::string>(_vGripperJointNames);
@@ -68,7 +68,7 @@ public:
 
         object _name, _sBaseLinkName, _sEffectorLinkName;
         object _tLocalTool;
-        object _vClosingDirection;
+        object _vChuckingDirection;
         object _vdirection;
         std::string _sIkSolverXMLId;
         object _vGripperJointNames;
@@ -141,7 +141,12 @@ public:
         }
         void SetClosingDirection(object oclosingdirection)
         {
-            _pmanip->SetClosingDirection(ExtractArray<dReal>(oclosingdirection));
+            RAVELOG_WARN("SetClosingDirection is deprecated, use SetChuckingDirection\n");
+            _pmanip->SetChuckingDirection(ExtractArray<dReal>(oclosingdirection));
+        }
+        void SetChuckingDirection(object ochuckingdirection)
+        {
+            _pmanip->SetChuckingDirection(ExtractArray<dReal>(ochuckingdirection));
         }
         object GetGripperJoints() {
             RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");
@@ -182,7 +187,11 @@ public:
             return _pmanip->GetGripperDOF();
         }
         object GetClosingDirection() {
-            return toPyArray(_pmanip->GetClosingDirection());
+            RAVELOG_WARN("GetClosingDirection is deprecated, use GetChuckingDirection\n");
+            return toPyArray(_pmanip->GetChuckingDirection());
+        }
+        object GetChuckingDirection() {
+            return toPyArray(_pmanip->GetChuckingDirection());
         }
         object GetPalmDirection() {
             RAVELOG_INFO("GetPalmDirection deprecated to GetDirection\n");
@@ -1330,14 +1339,14 @@ class ManipulatorInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyRobotBase::PyManipulatorInfo& r)
     {
-        return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vClosingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
+        return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
     }
     static void setstate(PyRobotBase::PyManipulatorInfo& r, boost::python::tuple state) {
         r._name = state[0];
         r._sBaseLinkName = state[1];
         r._sEffectorLinkName = state[2];
         r._tLocalTool = state[3];
-        r._vClosingDirection = state[4];
+        r._vChuckingDirection = state[4];
         r._vdirection = state[5];
         r._sIkSolverXMLId = boost::python::extract<std::string>(state[6]);
         r._vGripperJointNames = state[7];
@@ -1550,7 +1559,8 @@ void init_openravepy_robot()
                                     .def_readwrite("_sBaseLinkName",&PyRobotBase::PyManipulatorInfo::_sBaseLinkName)
                                     .def_readwrite("_sEffectorLinkName",&PyRobotBase::PyManipulatorInfo::_sEffectorLinkName)
                                     .def_readwrite("_tLocalTool",&PyRobotBase::PyManipulatorInfo::_tLocalTool)
-                                    .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vClosingDirection)
+                                    .def_readwrite("_vChuckingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection)
+                                    .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection) // back compat
                                     .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
                                     .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
                                     .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
@@ -1602,6 +1612,7 @@ void init_openravepy_robot()
         .def("GetLocalToolTransform",&PyRobotBase::PyManipulator::GetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
         .def("SetLocalToolTransform",&PyRobotBase::PyManipulator::SetLocalToolTransform, args("transform"), DOXY_FN(RobotBase::Manipulator,SetLocalToolTransform))
         .def("SetClosingDirection",&PyRobotBase::PyManipulator::SetClosingDirection, args("closingdirection"), DOXY_FN(RobotBase::Manipulator,SetClosingDirection))
+        .def("SetChuckingDirection",&PyRobotBase::PyManipulator::SetChuckingDirection, args("chuckingdirection"), DOXY_FN(RobotBase::Manipulator,SetChuckingDirection))
         .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
         .def("GetGripperIndices",&PyRobotBase::PyManipulator::GetGripperIndices, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
         .def("GetArmJoints",&PyRobotBase::PyManipulator::GetArmJoints, DOXY_FN(RobotBase::Manipulator,GetArmIndices))
@@ -1611,6 +1622,7 @@ void init_openravepy_robot()
         .def("GetArmDOF",&PyRobotBase::PyManipulator::GetArmDOF, DOXY_FN(RobotBase::Manipulator,GetArmDOF))
         .def("GetGripperDOF",&PyRobotBase::PyManipulator::GetGripperDOF, DOXY_FN(RobotBase::Manipulator,GetGripperDOF))
         .def("GetClosingDirection",&PyRobotBase::PyManipulator::GetClosingDirection, DOXY_FN(RobotBase::Manipulator,GetClosingDirection))
+        .def("GetChuckingDirection",&PyRobotBase::PyManipulator::GetChuckingDirection, DOXY_FN(RobotBase::Manipulator,GetChuckingDirection))
         .def("GetPalmDirection",&PyRobotBase::PyManipulator::GetPalmDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("GetDirection",&PyRobotBase::PyManipulator::GetDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))
         .def("GetLocalToolDirection",&PyRobotBase::PyManipulator::GetLocalToolDirection, DOXY_FN(RobotBase::Manipulator,GetLocalToolDirection))

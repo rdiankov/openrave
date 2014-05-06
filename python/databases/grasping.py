@@ -167,7 +167,7 @@ else:
     from numpy import inf, array
 
 import numpy
-from ..openravepy_ext import openrave_exception, planning_error, RobotStateSaver, KinBodyStateSaver, transformPoints
+from ..openravepy_ext import openrave_exception, planning_error, transformPoints
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
@@ -233,7 +233,7 @@ class GraspingModel(DatabaseGenerator):
         self.translationstepmult = None
         self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices())}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices())}
         self.graspindices = dict()
         self.totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -455,6 +455,7 @@ class GraspingModel(DatabaseGenerator):
                           self.env.drawlinelist(points=reshape(c_[gapproachrays[:,0:3],gapproachrays[:,0:3]+0.005*gapproachrays[:,3:6]],(2*N,3)),linewidth=4,colors=array((1,0,0,1)))]
         self.contactgraph = None
         totalgrasps = N*len(preshapes)*len(rolls)*len(standoffs)*len(manipulatordirections)
+        chuckingdirection = self.manip.GetChuckingDirection()
         self.grasps = []
 
         def producer():
@@ -472,6 +473,7 @@ class GraspingModel(DatabaseGenerator):
             grasp[self.graspindices.get('igrasproll')] = roll
             grasp[self.graspindices.get('igraspstandoff')] = standoff
             grasp[self.graspindices.get('igrasppreshape')] = preshape
+            grasp[self.graspindices.get('ichuckingdirection')] = chuckingdirection
             grasp[self.graspindices.get('imanipulatordirection')] = manipulatordirection
             try:
                 contacts,finalconfig,mindist,volume = self.testGrasp(grasp=grasp,graspingnoise=graspingnoise,translate=True,forceclosure=forceclosure,forceclosurethreshold=forceclosurethreshold)
@@ -567,6 +569,7 @@ class GraspingModel(DatabaseGenerator):
         with self.robot: # lock the environment and save the robot state
             Ttarget = self.target.GetTransform()
             Trobotorig = self.robot.GetTransform()
+            chuckingdirection = self.manip.GetChuckingDirection()
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
@@ -584,6 +587,7 @@ class GraspingModel(DatabaseGenerator):
                 mindist = resultgrasp[5]
                 volume = resultgrasp[6]
                 grasp[self.graspindices.get('igrasppreshape')] = resultgrasp[7]
+                grasp[self.graspindices.get('ichuckingdirection')] = chuckingdirection
                 Tfinal = resultgrasp[8]
                 finalshape = resultgrasp[9]
                 contacts = resultgrasp[10]
@@ -616,7 +620,7 @@ class GraspingModel(DatabaseGenerator):
                 self.grasps = self.grasps[order]
 
     def show(self,delay=0.1,options=None,forceclosure=True,showcontacts=True):
-        with RobotStateSaver(self.robot):
+        with self.robot.CreateRobotStateSaver():
             with self.GripperVisibility(self.manip):
                 time.sleep(1.0) # let viewer update?
                 graspingnoise=None
@@ -654,7 +658,7 @@ class GraspingModel(DatabaseGenerator):
                         print 'bad grasp!',e
 
     def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None):
-        with RobotStateSaver(self.robot):
+        with self.robot.CreateRobotStateSaver():
             with self.GripperVisibility(self.manip):
                 time.sleep(0.1) # wait sometime for viewer to process the visibility change
                 with self.env:
@@ -713,8 +717,15 @@ class GraspingModel(DatabaseGenerator):
             self.robot.SetTransform(eye(4)) # have to reset transform in order to remove randomness
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices(),DOFAffine.X+DOFAffine.Y+DOFAffine.Z if translate else 0)
-            return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')], roll=grasp[self.graspindices.get('igrasproll')], position=grasp[self.graspindices.get('igrasppos')], standoff=grasp[self.graspindices.get('igraspstandoff')], manipulatordirection=grasp[self.graspindices.get('imanipulatordirection')], target=self.target,graspingnoise = graspingnoise, forceclosure=forceclosure, execute=False, outputfinal=True,translationstepmult=translationstepmult,finestep=finestep, vintersectplane=grasp[self.graspindices.get('vintersectplane')])
-    def runGraspFromTrans(self,grasp):
+            vintersectplane = None
+            if 'vintersectplane' in self.graspindices:
+                vintersectplane = grasp[self.graspindices.get('vintersectplane')]
+            chuckingdirection = None
+            if 'ichuckingdirection' in self.graspindices:
+                chuckingdirection = grasp[self.graspindices['ichuckingdirection']]
+            return self.grasper.Grasp(direction=grasp[self.graspindices.get('igraspdir')], roll=grasp[self.graspindices.get('igrasproll')], position=grasp[self.graspindices.get('igrasppos')], standoff=grasp[self.graspindices.get('igraspstandoff')], manipulatordirection=grasp[self.graspindices.get('imanipulatordirection')], target=self.target,graspingnoise = graspingnoise, forceclosure=forceclosure, execute=False, outputfinal=True,translationstepmult=translationstepmult,finestep=finestep, vintersectplane=vintersectplane, chuckingdirection=chuckingdirection)
+        
+    def runGraspFromTrans(self,grasp, finestep=None):
         """squeeze the fingers to test whether the completed grasp only collides with the target, throws an exception if it fails. Otherwise returns the Grasp parameters. Uses the grasp transformation directly."""
         with self.robot:
             self.robot.SetActiveManipulator(self.manip)
@@ -724,7 +735,12 @@ class GraspingModel(DatabaseGenerator):
             if len(self.manip.GetGripperIndices()) == 0:
                 return [],[[],self.robot.GetTransform()],None,None
             
-            return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True,translationstepmult=self.translationstepmult,finestep=self.finestep)
+            if finestep is None:
+                finestep = self.finestep
+            chuckingdirection = None
+            if 'ichuckingdirection' in self.graspindices:
+                chuckingdirection = grasp[self.graspindices['ichuckingdirection']]
+            return self.grasper.Grasp(transformrobot=False,target=self.target,onlycontacttarget=True, forceclosure=False, execute=False, outputfinal=True,translationstepmult=self.translationstepmult, finestep=finestep, chuckingdirection=chuckingdirection)
 
     def GetLocalGraspTransform(self,grasp,collisionfree=False):
         Tlocalgrasp = eye(4)
@@ -795,7 +811,7 @@ class GraspingModel(DatabaseGenerator):
                         solution = self.manip.FindIKSolution(ikparam,checkcollision)
                         if solution is None:
                             continue
-                        with RobotStateSaver(self.robot):
+                        with self.robot.CreateRobotStateSaver():
                             self.robot.SetDOFValues(solution, self.manip.GetArmIndices())
                             Tglobalgrasp = self.manip.GetEndEffectorTransform()
                             grasp = array(grasp)

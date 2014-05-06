@@ -383,7 +383,7 @@ private:
 
             domAsset::domContributorRef contrib = daeSafeCast<domAsset::domContributor>( asset->add( COLLADA_TYPE_CONTRIBUTOR ) );
             domAsset::domContributor::domAuthoring_toolRef authoringtool = daeSafeCast<domAsset::domContributor::domAuthoring_tool>( contrib->add( COLLADA_ELEMENT_AUTHORING_TOOL ) );
-            authoringtool->setValue("OpenRAVE Collada Writer v0.3.4");
+            authoringtool->setValue("OpenRAVE Collada Writer v0.3.5");
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
             units->setMeter(1);
@@ -1979,9 +1979,9 @@ private:
                 else {
                     gripper_joint = mapgripper_joints[pjoint];
                 }
-                daeElementRef closing_direction = gripper_joint->add("closing_direction");
-                closing_direction->setAttribute("axis",str(boost::format("./axis%d")%(*itindex-pjoint->GetDOFIndex())).c_str());
-                closing_direction->add("float")->setCharData(boost::lexical_cast<std::string>((*itmanip)->GetClosingDirection().at(i)));
+                daeElementRef chucking_direction = gripper_joint->add("chucking_direction");
+                chucking_direction->setAttribute("axis",str(boost::format("./axis%d")%(*itindex-pjoint->GetDOFIndex())).c_str());
+                chucking_direction->add("float")->setCharData(boost::lexical_cast<std::string>((*itmanip)->GetChuckingDirection().at(i)));
                 ++i;
             }
             //            <iksolver interface="WAM7ikfast" type="Transform6D">

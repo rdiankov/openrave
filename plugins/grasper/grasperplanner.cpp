@@ -391,22 +391,22 @@ public:
 
         std::vector<dReal> vlowerlim, vupperlim;
         _robot->GetActiveDOFLimits(vlowerlim,vupperlim);
-        vector<dReal> vclosingdir(_robot->GetActiveDOF(),0);
+        vector<dReal> vchuckingdir(_robot->GetActiveDOF(),0);
         if( (int)_parameters->vgoalconfig.size() == _robot->GetActiveDOF() ) {
-            vclosingdir = _parameters->vgoalconfig;
+            vchuckingdir = _parameters->vgoalconfig;
         }
         else {
-            // get closing direction from manipulators
+            // get chucking direction from manipulators
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 FOREACHC(itmanip, _robot->GetManipulators()) {
-                    BOOST_ASSERT((*itmanip)->GetClosingDirection().size() == (*itmanip)->GetGripperIndices().size());
-                    vector<dReal>::const_iterator itclosing = (*itmanip)->GetClosingDirection().begin();
+                    BOOST_ASSERT((*itmanip)->GetChuckingDirection().size() == (*itmanip)->GetGripperIndices().size());
+                    vector<dReal>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
-                        if(( *itclosing != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
-                            vclosingdir.at(i) = *itclosing;
+                        if(( *itchucking != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
+                            vchuckingdir.at(i) = *itchucking;
                             break;
                         }
-                        itclosing++;
+                        itchucking++;
                     }
                 }
             }
@@ -414,7 +414,7 @@ public:
 
         //close the fingers one by one
         for(size_t ifing = 0; ifing < _robot->GetActiveDOFIndices().size(); ifing++) {
-            if( vclosingdir.at(ifing) == 0 ) {
+            if( vchuckingdir.at(ifing) == 0 ) {
                 // not a real joint, so skip
                 continue;
             }
@@ -447,11 +447,11 @@ public:
 
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
-                if( (vclosingdir[ifing] > 0 && dofvals[ifing] > vupperlim[ifing]+step_size ) || ( vclosingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]-step_size ) ) {
+                if( (vchuckingdir[ifing] > 0 && dofvals[ifing] > vupperlim[ifing]+step_size ) || ( vchuckingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]-step_size ) ) {
                     break;
                 }
 
-                dofvals[ifing] += vclosingdir[ifing] * step_size;
+                dofvals[ifing] += vchuckingdir[ifing] * step_size;
                 _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
                 _robot->GetActiveDOFValues(dofvals);
                 ct = _CheckCollision(KinBody::JointConstPtr(pjoint),KinBodyPtr());
@@ -460,7 +460,7 @@ public:
                         //coarse step collided, back up and shrink step
                         coarse_pass = false;
                         // move back one step before switching to smaller step size
-                        dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                        dofvals[ifing] -= vchuckingdir[ifing] * step_size;
                         num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
                         step_size = _parameters->ffinestep*fmult;
                         continue;
@@ -484,7 +484,7 @@ public:
                         }
 
                         if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
-                            dofvals[ifing] -= vclosingdir[ifing] * step_size;
+                            dofvals[ifing] -= vchuckingdir[ifing] * step_size;
                             break;
                         }
                         nLinksCollideObstacle++;
