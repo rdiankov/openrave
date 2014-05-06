@@ -75,10 +75,15 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * grasptranslationstepmult\n\
 * graspfinestep\n\
 ");
-        RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::CloseFingers,this,_1,_2),
-                        "Closes the active manipulator fingers using the grasp planner.");
-        RegisterCommand("ReleaseFingers",boost::bind(&TaskManipulation::ReleaseFingers,this,_1,_2),
-                        "Releases the active manipulator fingers using the grasp planner.\n"
+        RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::ChuckFingers,this,_1,_2),
+                        "Chucks the active manipulator fingers using the grasp planner along manip->GetChuckingDirection().");
+        RegisterCommand("ChuckFingers",boost::bind(&TaskManipulation::ChuckFingers,this,_1,_2),
+                        "Chucks the active manipulator fingers using the grasp planner along manip->GetChuckingDirection().");
+        RegisterCommand("ReleaseFingers",boost::bind(&TaskManipulation::UnchuckFingers,this,_1,_2),
+                        "Unchucks the active manipulator fingers using the grasp planner.\n"
+                        "Also releases the given object.");
+        RegisterCommand("UnchuckFingers",boost::bind(&TaskManipulation::UnchuckFingers,this,_1,_2),
+                        "Unchucks the active manipulator fingers using the grasp planner.\n"
                         "Also releases the given object.");
         RegisterCommand("ReleaseActive",boost::bind(&TaskManipulation::ReleaseActive,this,_1,_2),
                         "Moves the active DOF using the grasp planner.");
@@ -1084,7 +1089,7 @@ protected:
         return true;
     }
 
-    bool CloseFingers(ostream& sout, istream& sinput)
+    bool ChuckFingers(ostream& sout, istream& sinput)
     {
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
@@ -1203,7 +1208,7 @@ protected:
         return true;
     }
 
-    bool ReleaseFingers(ostream& sout, istream& sinput)
+    bool UnchuckFingers(ostream& sout, istream& sinput)
     {
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;

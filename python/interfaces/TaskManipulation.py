@@ -157,7 +157,8 @@ class TaskManipulation:
         iters = array([int(s) for s in resvalues[0:len(configs)]])
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
-    def CloseFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
+    
+    def ChuckFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-closefingers`
         """
         cmd = 'CloseFingers '
@@ -196,7 +197,11 @@ class TaskManipulation:
         else:
             traj = None
         return final,traj
-    def ReleaseFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
+    
+    def CloseFingers(self, *args, **kwargs):
+        return self.ChuckFingers(*args, **kwargs)
+    
+    def UnchuckFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-releasefingers`
         """
         cmd = 'ReleaseFingers '
@@ -234,6 +239,10 @@ class TaskManipulation:
         else:
             traj = None
         return final,traj
+
+    def ReleaseFingers(self,*args,**kwargs):
+        return self.UnchuckFingers(*args, **kwargs)
+    
     def ReleaseActive(self,movingdir=None,execute=None,outputtraj=None,outputfinal=None,translationstepmult=None,finestep=None,outputtrajobj=None):
         """See :ref:`module-taskmanipulation-releaseactive`
         """
@@ -267,6 +276,7 @@ class TaskManipulation:
         else:
             traj = None
         return final,traj
+    
     def SwitchModels(self,switchpatterns=None,unregister=None,switchtofat=None,clearpatterns=None,clearmodels=None,update=None):
         """See :ref:`module-taskmanipulation-switchmodels`
         """
