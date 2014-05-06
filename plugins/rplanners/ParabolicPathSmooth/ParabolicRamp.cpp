@@ -3496,7 +3496,13 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         }
         PARABOLIC_RAMP_ASSERT(x0[i] >= xmin[i]-EpsilonX && x0[i] <= xmax[i]+EpsilonX);
         PARABOLIC_RAMP_ASSERT(x1[i] >= xmin[i]-EpsilonX && x1[i] <= xmax[i]+EpsilonX);
+        if( Abs(v0[i]) > vmax[i]+EpsilonV ) {
+            PARABOLIC_RAMP_PERROR("v0[%d] (%.15e) > vmax[%d] (%.15e)\n", i, Abs(v0[i]), i, vmax[i]);
+        }
         PARABOLIC_RAMP_ASSERT(Abs(v0[i]) <= vmax[i]+EpsilonV);
+        if( Abs(v1[i]) > vmax[i]+EpsilonV ) {
+            PARABOLIC_RAMP_PERROR("v1[%d] (%.15e) > vmax[%d] (%.15e)\n", i, Abs(v1[i]), i, vmax[i]);
+        }
         PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     Real endTime = 0;
@@ -3526,13 +3532,44 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         Real bmin,bmax;
         ramps[i][0].Bounds(bmin,bmax);
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) {
-            PARABOLIC_RAMP_PLOG("ramp index %d failed due to boundary constraints (%.15e, %.15e)\n", i, bmin, bmax);
-            return -1;
+            Real originaltime = ramps[i][0].ttotal;
+            bool bSuccess = false;
+            for(Real itimemult = 1; itimemult <= 5; ++itimemult) {
+                Real timemult = 1+itimemult*0.5; // perhaps should test different values?
+                if( SolveMinAccelBounded(x0[i], v0[i], x1[i], v1[i], originaltime*timemult, vmax[i], xmin[i], xmax[i], ramps[i]) ) {
+                    bSuccess = true;
+                    // check acceleration limits
+                    for(size_t j = 0; j < ramps[i].size(); ++j) {
+                        if( Abs(ramps[i][j].a1) > amax[i]+EpsilonA ) {
+                            PARABOLIC_RAMP_PLOG("min accel for joint %d is %.15e (> %.15e)\n",i, Abs(ramps[i][j].a1), amax[i]);
+                            bSuccess = false;
+                            break;
+                        }
+                        if( Abs(ramps[i][j].a2) > amax[i]+EpsilonA ) {
+                            PARABOLIC_RAMP_PLOG("min accel for joint %d is %.15e (> %.15e)\n",i, Abs(ramps[i][j].a2), amax[i]);
+                            bSuccess = false;
+                            break;
+                        }
+                    }
+                    if( bSuccess ) {
+                        break;
+                    }
+                }
+            }
+            if( !bSuccess ) {
+                PARABOLIC_RAMP_PLOG("ramp index %d failed due to boundary constraints (%.15e, %.15e) time=%f\n", i, bmin, bmax, originaltime);
+                return -1;
+            }
         }
-        if(ramps[i][0].ttotal > endTime) {
-            endTime = ramps[i][0].ttotal;
+        Real newtotal = 0;
+        for(size_t j = 0; j < ramps[i].size(); ++j) {
+            newtotal += ramps[i][j].ttotal;
+        }
+        if(newtotal > endTime) {
+            endTime = newtotal;
         }
     }
+    
     //now we have a candidate end time -- repeat looking through solutions
     //until we have solved all ramps
     int numiters = 0;
@@ -3544,6 +3581,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         for(size_t i=0; i<ramps.size(); i++) {
             PARABOLIC_RAMP_ASSERT(ramps[i].size() > 0);
             if(vmax[i]==0 || amax[i]==0) {
+                // ?
                 ramps[i][0].ttotal = endTime;
                 continue;
             }
