@@ -275,7 +275,7 @@ public:
             }
         }
 
-        if( vchuckingdir.size() == _robot->GetActiveManipulator()->GetGripperDOF() ) {
+        if( (int)vchuckingdir.size() == _robot->GetActiveManipulator()->GetGripperDOF() ) {
             params->vgoalconfig.resize(_robot->GetActiveDOF()); // chucking direction
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 params->vgoalconfig[i] = 0;
