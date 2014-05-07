@@ -677,7 +677,7 @@ public:
             return _pattached->GetStructureHash();
         }
         string __repr__() {
-            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetSensor('%s')")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
+            return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetAttachedSensor('%s')")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
         }
         string __str__() {
             return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName());

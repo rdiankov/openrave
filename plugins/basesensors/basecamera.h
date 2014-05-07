@@ -69,6 +69,7 @@ public:
             }
             else if( name == "distortion_coeffs" ) {
                 _psensor->_pgeom->KK.distortion_coeffs = std::vector<dReal>((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
+                ss.clear(); // should clear the error since distortion_coeffs read to the end
             }
             else if( name == "image_dimensions" ) {
                 ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height >> _psensor->_numchannels;

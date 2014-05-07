@@ -520,19 +520,25 @@ The possible properties that can be set are: ";
         FOREACHC(itbody, vbodies) {
             ODESpace::KinBodyInfoPtr pinfo = _odespace->GetInfo(*itbody);
             BOOST_ASSERT( pinfo->vlinks.size() == (*itbody)->GetLinks().size());
-            vector<Transform> vtrans(pinfo->vlinks.size());
-            for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
-                const dReal* prot = dBodyGetQuaternion(pinfo->vlinks[i]->body);
-                Vector vrot(prot[0],prot[1],prot[2],prot[3]);
-                if( vrot.lengthsqr4() == 0 ) {
-                    RAVELOG_ERROR(str(boost::format("odephysics in body %s is returning invalid rotation!")%(*itbody)->GetName()));
-                    continue;
+            if( (*itbody)->IsEnabled() ) {
+                vector<Transform> vtrans(pinfo->vlinks.size());
+                for(size_t i = 0; i < pinfo->vlinks.size(); ++i) {
+                    const dReal* prot = dBodyGetQuaternion(pinfo->vlinks[i]->body);
+                    Vector vrot(prot[0],prot[1],prot[2],prot[3]);
+                    if( vrot.lengthsqr4() == 0 ) {
+                        RAVELOG_ERROR(str(boost::format("odephysics in body %s is returning invalid rotation!")%(*itbody)->GetName()));
+                        continue;
+                    }
+                    const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
+                    vtrans.at(i) = Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2])) * pinfo->vlinks[i]->tlinkmassinv;
                 }
-                const dReal* ptrans = dBodyGetPosition(pinfo->vlinks[i]->body);
-                vtrans.at(i) = Transform(vrot,Vector(ptrans[0],ptrans[1],ptrans[2])) * pinfo->vlinks[i]->tlinkmassinv;
+                (*itbody)->SetLinkTransformations(vtrans,pinfo->_vdofbranches);
+                pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
             }
-            (*itbody)->SetLinkTransformations(vtrans,pinfo->_vdofbranches);
-            pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
+            else {
+                // the body isn't enabled, so set a different timestamp in order for physics to synchornize it on the next run.
+                pinfo->nLastStamp = (*itbody)->GetUpdateStamp()-1;
+            }
         }
 
         _listcallbacks.clear();
