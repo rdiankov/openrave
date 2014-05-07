@@ -228,8 +228,8 @@ public:
     struct instance_kinematics_model_output
     {
         domInstance_kinematics_modelRef ikm;
-        std::vector<axis_sids> vaxissids;
         boost::shared_ptr<kinematics_model_output> kmout;
+        std::vector<axis_sids> vaxissids; /// ordered same as kmout->vaxissids
         std::vector<std::pair<std::string,std::string> > vkinematicsbindings;     // node and kinematics model bindings
     };
 
@@ -624,7 +624,7 @@ private:
                 domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 param->setSid(sparamref.c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(pcolladainfo->_bindingAxesSIDs[idof].kmodelaxissidref.c_str());
-
+                
                 dReal dofvalue = vjointvalues.at(idof);
                 if( pbody->IsDOFRevolute(idof) ) {
                     dofvalue *= 180/M_PI;
@@ -846,12 +846,16 @@ private:
         boost::shared_ptr<instance_kinematics_model_output> ikmout = _WriteInstance_kinematics_model(pbody,kinematics,askid);
 
         std::string kmodelid = _GetKinematicsModelId(pbody);
-        for(size_t idof = 0; idof < ikmout->vaxissids.size(); ++idof) {
-            string kaxis_infosid = str(boost::format("kaxis_info_inst%d")%idof);
-            string maxis_infosid = str(boost::format("maxis_info_inst%d")%idof);
-            KinBody::JointConstPtr pjoint = ikmout->kmout->vaxissids.at(idof).pjoint;
-            int iaxis = ikmout->kmout->vaxissids.at(idof).iaxis;
+        for(size_t iaxissid = 0; iaxissid < ikmout->vaxissids.size(); ++iaxissid) {
+            string kaxis_infosid = str(boost::format("kaxis_info_inst%d")%iaxissid);
+            string maxis_infosid = str(boost::format("maxis_info_inst%d")%iaxissid);
+            KinBody::JointConstPtr pjoint = ikmout->kmout->vaxissids.at(iaxissid).pjoint;
+            int iaxis = ikmout->kmout->vaxissids.at(iaxissid).iaxis;
 
+            int idof = ikmout->kmout->vaxissids.at(iaxissid).pjoint->GetDOFIndex();
+            if( idof >= 0 ) {
+                idof += iaxis;
+            }
             dReal valuemult = 1.0;
             if( pjoint->IsRevolute(iaxis) ) {
                 valuemult = 180.0/M_PI;
@@ -859,7 +863,7 @@ private:
 
             //  Kinematics axis info
             domKinematics_axis_infoRef kai = daeSafeCast<domKinematics_axis_info>(kt->add(COLLADA_ELEMENT_AXIS_INFO));
-            kai->setAxis(str(boost::format("%s/%s")%kmodelid%ikmout->kmout->vaxissids.at(idof).sid).c_str());
+            kai->setAxis(str(boost::format("%s/%s")%kmodelid%ikmout->kmout->vaxissids.at(iaxissid).sid).c_str());
             kai->setSid(kaxis_infosid.c_str());
 
             // create a newparam for every element so that it could be overwritten in the future
@@ -904,7 +908,7 @@ private:
             domKinematics_indexRef index = daeSafeCast<domKinematics_index>(kai->add(COLLADA_ELEMENT_INDEX));
             index->setSemantic("OpenRAVE");
             daeSafeCast<domCommon_int_or_param::domInt>(index->add(COLLADA_ELEMENT_INT))->setValue(idof);
-
+            
             //  Motion axis info
             domMotion_axis_infoRef mai = daeSafeCast<domMotion_axis_info>(mt->add(COLLADA_ELEMENT_AXIS_INFO));
             mai->setSid(maxis_infosid.c_str());
@@ -934,8 +938,8 @@ private:
             daeSafeCast<domKinematics_newparam::domSIDREF>(ab->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%asmid%asmsym).c_str());
             iasout->vkinematicsbindings.push_back(make_pair(string(ab->getSid()), it->second));
         }
-        for(size_t idof = 0; idof < ikmout->vaxissids.size(); ++idof) {
-            const axis_sids& kas = ikmout->vaxissids.at(idof);
+        for(size_t iaxissid = 0; iaxissid < ikmout->vaxissids.size(); ++iaxissid) {
+            const axis_sids& kas = ikmout->vaxissids.at(iaxissid);
             domKinematics_newparamRef abm = daeSafeCast<domKinematics_newparam>(ias_motion->add(COLLADA_ELEMENT_NEWPARAM));
             abm->setSid(str(boost::format("%s_%s")%asmid%kas.axissid).c_str());
             daeSafeCast<domKinematics_newparam::domSIDREF>(abm->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%askid%kas.axissid).c_str());
@@ -944,8 +948,10 @@ private:
             daeSafeCast<domKinematics_newparam::domSIDREF>(ab->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s_%s")%asmid%asmid%kas.axissid).c_str());
             string valuesid;
             if( kas.valuesid.size() > 0 ) {
+                KinBody::JointConstPtr pjoint = ikmout->kmout->vaxissids.at(iaxissid).pjoint;
+                int iaxis = ikmout->kmout->vaxissids.at(iaxissid).iaxis;
                 dReal valuemult = 1.0;
-                if( pbody->IsDOFRevolute(idof) ) {
+                if( pjoint->IsRevolute(iaxis) ) {
                     valuemult = 180.0/M_PI;
                 }
                 

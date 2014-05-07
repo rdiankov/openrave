@@ -92,8 +92,8 @@ public:
 
     std::list<std::string> _articulated_systemURIs; ///< urls of the articulated_system, ordered in the same way as they are read. The first is the top-most level
     std::vector<ModelBinding> _bindingModelURIs;
-    std::vector<AxisBinding> _bindingAxesSIDs;
-    std::list<AxisBinding> _bindingPassiveAxesSIDs;
+    std::vector<AxisBinding> _bindingAxesSIDs; ///< same order as the body DOF
+    std::list<AxisBinding> _bindingPassiveAxesSIDs; ///< same order as body->GetPassiveJoints()
     std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node). same order as link indices
 };
 
