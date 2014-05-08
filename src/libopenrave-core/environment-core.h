@@ -137,7 +137,7 @@ public:
         Destroy();
     }
 
-    virtual void Init()
+    virtual void Init(bool bStartSimulationThread=true)
     {
         boost::mutex::scoped_lock lockinit(_mutexInit);
         if( _bInit ) {
@@ -196,11 +196,10 @@ public:
         else {
             RAVELOG_WARN("failed to find any collision checker.\n");
         }
-        if( !!_threadSimulation ) {
-            _threadSimulation->join();
-        }
 
-        _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
+        if( bStartSimulationThread ) {
+            _StartSimulationThread();
+        }
     }
 
     virtual void Destroy()
@@ -215,10 +214,7 @@ public:
         _bInit = false;
 
         RAVELOG_VERBOSE("Environment destructor\n");
-        if( !!_threadSimulation ) {
-            _threadSimulation->join();     // might not return?
-        }
-        _threadSimulation.reset();
+        _StopSimulationThread();
 
         // destroy the modules (their destructors could attempt to lock environment, so have to do it before global lock)
         // however, do not clear the _listModules yet
@@ -1720,24 +1716,33 @@ public:
 
     virtual void StartSimulation(dReal fDeltaTime, bool bRealTime)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _bEnableSimulation = true;
-        _fDeltaSimTime = fDeltaTime;
-        _bRealTime = bRealTime;
-        //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
-        _nSimStartTime = utils::GetMicroTime()-_nCurSimTime;
+        {
+            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            _bEnableSimulation = true;
+            _fDeltaSimTime = fDeltaTime;
+            _bRealTime = bRealTime;
+            //_nCurSimTime = 0; // don't reset since it is important to keep time monotonic
+            _nSimStartTime = utils::GetMicroTime()-_nCurSimTime;
+        }
+        _StartSimulationThread();
     }
 
     virtual bool IsSimulationRunning() const {
         return _bEnableSimulation;
     }
 
-    virtual void StopSimulation()
+    virtual void StopSimulation(int shutdownthread=1)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        _bEnableSimulation = false;
-        _fDeltaSimTime = 1.0f;
+        {
+            EnvironmentMutex::scoped_lock lockenv(GetMutex());
+            _bEnableSimulation = false;
+            _fDeltaSimTime = 1.0f;
+        }
+        if( shutdownthread ) {
+            _StopSimulationThread();
+        }
     }
+
     virtual uint64_t GetSimulationTime() {
         return _nCurSimTime;
     }
@@ -2184,10 +2189,9 @@ protected:
         listViewers.clear();
 
         if( !bCheckSharedResources ) {
-            if( !!_threadSimulation ) {
-                _threadSimulation->join();
+            if( _bEnableSimulation ) {
+                _StartSimulationThread();
             }
-            _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread,this)));
         }
     }
 
@@ -2244,11 +2248,31 @@ protected:
         pbody->_environmentid = 0;
     }
 
+    void _StartSimulationThread()
+    {
+        if( !_threadSimulation ) {
+            _bShutdownSimulation = false;
+            _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread, this)));
+        }
+    }
+
+    void _StopSimulationThread()
+    {
+        _bShutdownSimulation = true;
+        if( !!_threadSimulation ) {
+            _threadSimulation->join();
+            _threadSimulation.reset();
+        }
+    }
+
     void _SimulationThread()
     {
+        int environmentid = RaveGetEnvironmentId(shared_from_this());
+        
         uint64_t nLastUpdateTime = utils::GetMicroTime();
         uint64_t nLastSleptTime = utils::GetMicroTime();
-        while( _bInit ) {
+        RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
+        while( _bInit && !_bShutdownSimulation ) {
             bool bNeedSleep = true;
             boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv;
             if( _bEnableSimulation ) {
@@ -2483,6 +2507,7 @@ protected:
 
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop
+    bool _bShutdownSimulation; ///< if true, the simulation thread should shutdown
     bool _bRealTime;
 
     friend class EnvironmentXMLReader;

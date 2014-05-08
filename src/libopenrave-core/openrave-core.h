@@ -36,10 +36,15 @@
 namespace OpenRAVE
 {
 
+enum EnvironmentCreateOptions
+{
+    ECO_StartSimulationThread=1, ///< starts the simulation thread in the background.
+};
+
 /// \brief Creates an OpenRAVE environment.
 ///
-/// \param bLoadAllPlugins passed into \ref RaveInitialize
-OPENRAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment();
+/// \param options a set of EnvironmentCreateOptions specifying how the environment is created.
+OPENRAVE_CORE_API EnvironmentBasePtr RaveCreateEnvironment(int options=ECO_StartSimulationThread);
 
 /// \deprecated (10/09/23) see \ref RaveCreateEnvironment
 OPENRAVE_CORE_API EnvironmentBasePtr CreateEnvironment(bool bLoadAllPlugins=true) RAVE_DEPRECATED;

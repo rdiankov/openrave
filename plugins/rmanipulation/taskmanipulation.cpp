@@ -1097,7 +1097,7 @@ protected:
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetClosingDirection();
+        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
 
         vector<dReal> voffset;
         string cmd;
@@ -1197,7 +1197,7 @@ protected:
         ptraj->GetWaypoint(-1,vlastvalues,_robot->GetActiveConfigurationSpecification());
         if(vlastvalues.size() == voffset.size() ) {
             for(size_t i = 0; i < voffset.size(); ++i) {
-                vlastvalues[i] += voffset[i]*pmanip->GetClosingDirection().at(i);
+                vlastvalues[i] += voffset[i]*pmanip->GetChuckingDirection().at(i);
             }
             _robot->SetActiveDOFValues(vlastvalues,true);
             _robot->GetActiveDOFValues(vlastvalues);
@@ -1217,7 +1217,7 @@ protected:
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetClosingDirection();
+        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
         FOREACH(it,graspparams->vgoalconfig) {
             *it = -*it;
         }
@@ -1359,20 +1359,20 @@ protected:
         boost::shared_ptr<ostream> pOutputTrajStream;
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
 
-        // initialize the moving direction as the opposite of the closing direction defined in the manipulators
-        vector<dReal> vclosingsign_full(_robot->GetDOF(), 0);
+        // initialize the moving direction as the opposite of the chucking direction defined in the manipulators
+        vector<dReal> vchuckingsign_full(_robot->GetDOF(), 0);
         FOREACHC(itmanip, _robot->GetManipulators()) {
-            BOOST_ASSERT((*itmanip)->GetClosingDirection().size()==(*itmanip)->GetGripperIndices().size());
-            for(size_t i = 0; i < (*itmanip)->GetClosingDirection().size(); ++i) {
-                if( (*itmanip)->GetClosingDirection()[i] != 0 )
-                    vclosingsign_full[(*itmanip)->GetGripperIndices()[i]] = (*itmanip)->GetClosingDirection()[i];
+            BOOST_ASSERT((*itmanip)->GetChuckingDirection().size()==(*itmanip)->GetGripperIndices().size());
+            for(size_t i = 0; i < (*itmanip)->GetChuckingDirection().size(); ++i) {
+                if( (*itmanip)->GetChuckingDirection()[i] != 0 )
+                    vchuckingsign_full[(*itmanip)->GetGripperIndices()[i]] = (*itmanip)->GetChuckingDirection()[i];
             }
         }
 
         graspparams->vgoalconfig.resize(_robot->GetActiveDOF());
         int i = 0;
         FOREACHC(itindex,_robot->GetActiveDOFIndices()) {
-            graspparams->vgoalconfig[i++] = -vclosingsign_full.at(*itindex);
+            graspparams->vgoalconfig[i++] = -vchuckingsign_full.at(*itindex);
         }
 
         string cmd;

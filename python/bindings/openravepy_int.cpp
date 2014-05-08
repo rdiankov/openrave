@@ -244,12 +244,12 @@ protected:
     }
 
 public:
-    PyEnvironmentBase()
+    PyEnvironmentBase(int options=ECO_StartSimulationThread)
     {
         if( !RaveGlobalState() ) {
             RaveInitialize(true);
         }
-        _penv = RaveCreateEnvironment();
+        _penv = RaveCreateEnvironment(options);
     }
     PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
     }
@@ -924,8 +924,8 @@ public:
     void StartSimulation(dReal fDeltaTime, bool bRealTime=true) {
         _penv->StartSimulation(fDeltaTime,bRealTime);
     }
-    void StopSimulation() {
-        _penv->StopSimulation();
+    void StopSimulation(int shutdownthread=1) {
+        _penv->StopSimulation(shutdownthread);
     }
     uint64_t GetSimulationTime() {
         return _penv->GetSimulationTime();
@@ -972,7 +972,7 @@ public:
         PythonThreadSaver saver;
         LockRaw();
     }
-    
+
     void Unlock()
     {
 #if BOOST_VERSION < 103500
@@ -1478,6 +1478,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
@@ -1584,7 +1585,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("SetUserData",setuserdata4,args("key", "data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("RemoveUserData", &PyInterfaceBase::RemoveUserData, DOXY_FN(InterfaceBase, RemoveUserData))
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
-            .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(args("cmd","releasegil","lockenv"), sSendCommandDoc.c_str()))
+        .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(args("cmd","releasegil","lockenv"), sSendCommandDoc.c_str()))
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
@@ -1648,7 +1649,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshURI;
         object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,object) = &PyEnvironmentBase::ReadTrimeshURI;
         scope env = classenv
-                    .def(init<>())
+                    .def(init<optional<int> >(args("options")))
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
                     .def("Destroy",&PyEnvironmentBase::Destroy, DOXY_FN(EnvironmentBase,Destroy))
                     .def("CloneSelf",&PyEnvironmentBase::CloneSelf,args("options"), DOXY_FN(EnvironmentBase,CloneSelf))
@@ -1732,7 +1733,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("HasRegisteredCollisionCallbacks",&PyEnvironmentBase::HasRegisteredCollisionCallbacks,DOXY_FN(EnvironmentBase,HasRegisteredCollisionCallbacks))
                     .def("StepSimulation",&PyEnvironmentBase::StepSimulation,args("timestep"), DOXY_FN(EnvironmentBase,StepSimulation))
                     .def("StartSimulation",&PyEnvironmentBase::StartSimulation,StartSimulation_overloads(args("timestep","realtime"), DOXY_FN(EnvironmentBase,StartSimulation)))
-                    .def("StopSimulation",&PyEnvironmentBase::StopSimulation, DOXY_FN(EnvironmentBase,StopSimulation))
+                    .def("StopSimulation",&PyEnvironmentBase::StopSimulation, StopSimulation_overloads(args("shutdownthread"), DOXY_FN(EnvironmentBase,StopSimulation)))
                     .def("GetSimulationTime",&PyEnvironmentBase::GetSimulationTime, DOXY_FN(EnvironmentBase,GetSimulationTime))
                     .def("IsSimulationRunning",&PyEnvironmentBase::IsSimulationRunning, DOXY_FN(EnvironmentBase,IsSimulationRunning))
                     .def("Lock",Lock1,"Locks the environment mutex.")

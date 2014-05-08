@@ -2904,6 +2904,25 @@ void QtCoinViewer::UpdateFromModel()
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
     vector<KinBody::BodyState> vecbodies;
 
+
+#if BOOST_VERSION >= 103500
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+#else
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
+#endif
+
+    if( _bLockEnvironment && !lockenv ) {
+        uint64_t basetime = utils::GetMicroTime();
+        while(utils::GetMicroTime()-basetime<1000 ) {
+            lockenv.try_lock();
+            if( !!lockenv ) {
+                // acquired the lock, so update the bodies!
+                GetEnv()->UpdatePublishedBodies();
+                break;
+            }
+        }
+    }
+
     try {
         GetEnv()->GetPublishedBodies(vecbodies,100000); // 0.1s
     }
@@ -2914,12 +2933,6 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(it, _mapbodies) {
         it->second->SetUserData(0);
     }
-
-#if BOOST_VERSION >= 103500
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
-#else
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
-#endif
 
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
@@ -2945,22 +2958,14 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( _bLockEnvironment && !lockenv ) {
-                        //                        boosboost::system_time xt;
-                        //                        boost::xtime_get(&xt,boost::TIME_UTC);
-                        //                        xt.nsec += 100000; // wait 100us
-                        //                        if( xt.nsec >= 1000000000 ) {
-                        //                            xt.nsec -= 1000000000;
-                        //                            xt.sec += 1;
-                        //                        }
-                        //                        lockenv.timed_lock(xt);
                         uint64_t basetime = utils::GetMicroTime();
                         while(utils::GetMicroTime()-basetime<1000 ) {
                             lockenv.try_lock();
-                            if( !!lockenv )
+                            if( !!lockenv )  {
                                 break;
+                            }
                         }
                         if( !lockenv ) {
-                            //RAVELOG_VERBOSE("couldn't acquire viewer lock\n");
                             return; // couldn't acquire the lock, try next time. This prevents deadlock situations
                         }
                     }
@@ -3102,7 +3107,7 @@ void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
             }
             vup -= vlookatdir*vlookatdir.dot3(vup);
             vup.normalize3();
-            
+
             //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
             //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
             //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
@@ -3110,9 +3115,9 @@ void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
             float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
             RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
             //transformLookat(tTrack.trans, _Tcamera.trans, vup);
-            
+
             RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_fTrackingRadius;
-            
+
             if(1) {
                 // PID animation
                 float pconst = 0.02;

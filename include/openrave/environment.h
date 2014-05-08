@@ -170,7 +170,8 @@ public:
     /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules. <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
-    virtual void StopSimulation() = 0;
+    /// \param shutdownthread 
+    virtual void StopSimulation(int shutdownthread=1) = 0;
 
     /// \brief Return true if inner simulation loop is executing. <b>[multi-thread safe]</b>
     ///

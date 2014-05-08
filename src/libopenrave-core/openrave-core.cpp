@@ -17,9 +17,9 @@
 #include "environment-core.h"
 
 namespace OpenRAVE {
-EnvironmentBasePtr RaveCreateEnvironment() {
+EnvironmentBasePtr RaveCreateEnvironment(int options) {
     boost::shared_ptr<Environment> p(new Environment());
-    p->Init();
+    p->Init(!!(options&ECO_StartSimulationThread));
     return p;
 }
 
