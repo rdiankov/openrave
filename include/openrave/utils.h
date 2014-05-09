@@ -121,6 +121,13 @@ inline uint32_t GetMilliTime()
     return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
 }
 
+inline uint64_t GetMilliTime64()
+{
+    uint32_t sec,nsec;
+    GetWallTime(sec,nsec);
+    return (uint64_t)sec*1000 + (uint64_t)nsec/1000000;
+}
+
 inline static uint64_t GetNanoPerformanceTime()
 {
 #if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
