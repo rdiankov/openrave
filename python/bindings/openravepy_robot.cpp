@@ -139,6 +139,9 @@ public:
         void SetLocalToolTransform(object otrans) {
             _pmanip->SetLocalToolTransform(ExtractTransform(otrans));
         }
+        void SetLocalToolDirection(object odirection) {
+            _pmanip->SetLocalToolDirection(ExtractVector3(odirection));
+        }
         void SetClosingDirection(object oclosingdirection)
         {
             RAVELOG_WARN("SetClosingDirection is deprecated, use SetChuckingDirection\n");
@@ -1611,6 +1614,7 @@ void init_openravepy_robot()
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
         .def("GetLocalToolTransform",&PyRobotBase::PyManipulator::GetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
         .def("SetLocalToolTransform",&PyRobotBase::PyManipulator::SetLocalToolTransform, args("transform"), DOXY_FN(RobotBase::Manipulator,SetLocalToolTransform))
+        .def("SetLocalToolDirection",&PyRobotBase::PyManipulator::SetLocalToolDirection, args("direction"), DOXY_FN(RobotBase::Manipulator,SetLocalToolDirection))
         .def("SetClosingDirection",&PyRobotBase::PyManipulator::SetClosingDirection, args("closingdirection"), DOXY_FN(RobotBase::Manipulator,SetClosingDirection))
         .def("SetChuckingDirection",&PyRobotBase::PyManipulator::SetChuckingDirection, args("chuckingdirection"), DOXY_FN(RobotBase::Manipulator,SetChuckingDirection))
         .def("GetGripperJoints",&PyRobotBase::PyManipulator::GetGripperJoints, DOXY_FN(RobotBase::Manipulator,GetGripperIndices))
