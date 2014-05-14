@@ -1330,6 +1330,7 @@ class IKFastSolver(AutoReloader):
         self.globalsymbols = [] # global symbols for substitutions
         self._scopecounter = 0 # a counter for debugging purposes that increaes every time a level changes
         self._dodebug = False
+        self._ikfastoptions = 0
         if precision is None:
             self.precision=8
         else:
@@ -2075,7 +2076,10 @@ class IKFastSolver(AutoReloader):
         log.info('generating %s code...'%lang)
         return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__).generate(chaintree)
     
-    def generateIkSolver(self, baselink, eelink, freeindices=None,solvefn=None):
+    def generateIkSolver(self, baselink, eelink, freeindices=None, solvefn=None, ikfastoptions=0):
+        """
+        :param ikfastoptions: options that control how ikfast.
+        """
         if solvefn is None:
             solvefn = IKFastSolver.solveFullIK_6D
         chainlinks = self.kinbody.GetChain(baselink,eelink,returnjoints=False)
@@ -2091,6 +2095,7 @@ class IKFastSolver(AutoReloader):
             assert(0)
         isolvejointvars = []
         solvejointvars = []
+        self._ikfastoptions = ikfastoptions
         self.ifreejointvars = []
         self.freevarsubs = []
         self.freevarsubsinv = []
@@ -2638,7 +2643,7 @@ class IKFastSolver(AutoReloader):
             if coupledsolutions is None:
                 raise self.CannotSolveError('raghavan roth equations too complex')
             
-            log.info('solved coupled variables: %s',usedvars)       
+            log.info('solved coupled variables: %s',usedvars)
             if len(usedvars) < len(solvejointvars):
                 curvars=solvejointvars[:]
                 solsubs = self.freevarsubs[:]
@@ -2761,17 +2766,32 @@ class IKFastSolver(AutoReloader):
                                 if tree is not None:
                                     break
         if tree is None:
-            linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))            
-            for T0links, T1links in linklist:#[-1::-1]:#[2:]:
+            linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))
+            # first try LiWoernleHiller since it is most robust
+            for ilinklist, (T0links, T1links) in enumerate(linklist):
+                log.info('try group %d/%d', ilinklist, len(linklist))
                 try:
                     # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
                     if not self.has(T1links[-1], *solvejointvars):
                         T0links.append(self.affineInverse(T1links.pop(-1)))
-                    tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree)
+                    tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree, usesolvers=1)
                     break
                 except (self.CannotSolveError,self.IKFeasibilityError), e:
                     log.warn('%s',e)
-                    
+            
+            if tree is None:
+                log.info('trying the rest of the general ik solvers')
+                for ilinklist, (T0links, T1links) in enumerate(linklist):
+                    log.info('try group %d/%d', ilinklist, len(linklist))
+                    try:
+                        # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
+                        if not self.has(T1links[-1], *solvejointvars):
+                            T0links.append(self.affineInverse(T1links.pop(-1)))
+                        tree = self.solveFullIK_6DGeneral(T0links, T1links, solvejointvars, endbranchtree, usesolvers=6)
+                        break
+                    except (self.CannotSolveError,self.IKFeasibilityError), e:
+                        log.warn('%s',e)
+                
         if tree is None:
             raise self.CannotSolveError('cannot solve 6D mechanism!')
         
@@ -2997,8 +3017,8 @@ class IKFastSolver(AutoReloader):
                 for j in range(3):
                     removesymbols.add(Ree[i,j])
             self.globalsymbols = [g for g in self.globalsymbols if not g[0] in removesymbols]
-
-    def solveFullIK_6DGeneral(self, T0links, T1links, solvejointvars, endbranchtree):
+            
+    def solveFullIK_6DGeneral(self, T0links, T1links, solvejointvars, endbranchtree, usesolvers=7):
         """Solve 6D equations of a general kinematics structure.
         This method only works if there exists 3 consecutive joints in that do not always intersect!
         """
@@ -3007,7 +3027,14 @@ class IKFastSolver(AutoReloader):
         coupledsolutions = None
         leftovervarstree = []
         origendbranchtree = endbranchtree
-        for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic, self.solveManochaCanny]:
+        solvemethods = []
+        if usesolvers & 1:
+            solvemethods.append(self.solveLiWoernleHiller)
+        if usesolvers & 2:
+            solvemethods.append(self.solveKohliOsvatic)
+        if usesolvers & 4:
+            solvemethods.append(self.solveManochaCanny)
+        for solvemethod in solvemethods:
             if coupledsolutions is not None:
                 break
             complexities = [0,0]
@@ -3062,13 +3089,13 @@ class IKFastSolver(AutoReloader):
             raise self.CannotSolveError('6D general method failed, raghavan roth equations might be too complex')
         
         log.info('solved coupled variables: %s',usedvars)
-        self.sortComplexity(AllEquationsExtra)
         curvars=solvejointvars[:]
         solsubs = self.freevarsubs[:]
         for var in usedvars:
             curvars.remove(var)
             solsubs += self.Variable(var).subs
         if len(curvars) > 0:
+            self.sortComplexity(AllEquationsExtra)
             self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)            
             leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
             leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
@@ -4818,16 +4845,22 @@ class IKFastSolver(AutoReloader):
                     AllEquations.append(neweq1.subs(self.invsubs).expand())
             unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
             for eq in AllEquationsExtra:
-                if eq.has(*usedvars) and not eq.has(*unusedvars):
-                    AllEquations.append(eq)
+                #if eq.has(*usedvars) and not eq.has(*unusedvars):
+                AllEquations.append(eq)
             self.sortComplexity(AllEquations)
             
             # first try to solve all the variables at once
             try:
+                solutiontree = self.SolveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars=self.freejointvars[:], solsubs=self.freevarsubs[:], endbranchtree=endbranchtree)
+                return solutiontree, solvejointvars
+            except self.CannotSolveError, e:
+                log.debug(u'failed solving all variables: %s', e)
+                
+            try:
                 solutiontree = self.SolveAllEquations(AllEquations,curvars=usedvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:], unknownvars=unusedvars, endbranchtree=endbranchtree)
                 return solutiontree, usedvars
             except self.CannotSolveError, e:
-                log.debug(u'failed solving all variables: %s', e)
+                log.debug(u'failed solving used variables: %s', e)
                 
             for ivar in range(3):
                 try:
@@ -7403,25 +7436,32 @@ class IKFastSolver(AutoReloader):
             
             numvar = self.countVariables(eqnew,var)
             if numvar >= 1 and numvar <= 2:
-                tempsolutions = solve(eqnew,var)
-                jointsolutions = [self.SimplifyTransform(self.trigsimp(s.subs(symbols),othersolvedvars)) for s in tempsolutions]
-                if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
-                    # check if any solutions don't have divide by zero problems
-                    returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
-                    hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
-                    if not hasdividebyzero:
-                        return returnfirstsolutions
+                try:
+                    tempsolutions = solve(eqnew,var)
+                    jointsolutions = [self.SimplifyTransform(self.trigsimp(s.subs(symbols),othersolvedvars)) for s in tempsolutions]
+                    if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
+                        # check if any solutions don't have divide by zero problems
+                        returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                        hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
+                        if not hasdividebyzero:
+                            return returnfirstsolutions
+                except NotImplementedError, e:
+                    # when solve cannot solve an equation
+                    log.warn(e)
             
             numvar = self.countVariables(eqnew,varsym.htvar)
             if Poly(eqnew,varsym.htvar).TC() != S.Zero and numvar >= 1 and numvar <= 2:
-                tempsolutions = solve(eqnew,varsym.htvar)
-                jointsolutions = [2*atan(self.SimplifyTransform(self.trigsimp(s.subs(symbols),othersolvedvars))) for s in tempsolutions]
-                if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
-                    returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
-                    hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
-                    if not hasdividebyzero:
-                        return returnfirstsolutions
-                
+                try:
+                    tempsolutions = solve(eqnew,varsym.htvar)
+                    jointsolutions = [2*atan(self.SimplifyTransform(self.trigsimp(s.subs(symbols),othersolvedvars))) for s in tempsolutions]
+                    if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
+                        returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                        hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
+                        if not hasdividebyzero:
+                            return returnfirstsolutions
+                except NotImplementedError, e:
+                    # when solve cannot solve an equation
+                    log.warn(e)
         if len(returnfirstsolutions) > 0:
             # already computed some solutions, so return them, note that this means that all solutions have a divide-by-zero condition
             return returnfirstsolutions
@@ -7660,6 +7700,7 @@ class IKFastSolver(AutoReloader):
                 except self.CannotSolveError,e:
                     log.debug(e)
                 except NotImplementedError, e:
+                    # when solve cannot solve an equation
                     log.warn(e)
             if numsvar > 0:
                 # substitute sin
@@ -7674,18 +7715,24 @@ class IKFastSolver(AutoReloader):
                 except self.CannotSolveError,e:
                     log.debug(e)
                 except NotImplementedError, e:
+                    # when solve cannot solve an equation
                     log.warn(e)
+
             if numcvar == 0 and numsvar == 0:
-                tempsolutions = solve(eqnew,var)
-                jointsolutions = []
-                for s in tempsolutions:
-                    eqsub = s.subs(symbols)
-                    if self.codeComplexity(eqsub) < 2000:
-                        eqsub = self.SimplifyTransform(self.trigsimp(eqsub,othersolvedvars))
-                    jointsolutions.append(eqsub)
-                if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions) > 0:
-                    solutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
-                    solutions[-1].equationsused = equationsused
+                try:
+                    tempsolutions = solve(eqnew,var)
+                    jointsolutions = []
+                    for s in tempsolutions:
+                        eqsub = s.subs(symbols)
+                        if self.codeComplexity(eqsub) < 2000:
+                            eqsub = self.SimplifyTransform(self.trigsimp(eqsub,othersolvedvars))
+                        jointsolutions.append(eqsub)
+                    if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions) > 0:
+                        solutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
+                        solutions[-1].equationsused = equationsused
+                except NotImplementedError, e:
+                    # when solve cannot solve an equation
+                    log.warn(e)
                 continue
             try:
                 solution = self.solveHighDegreeEquationsHalfAngle([eqnew],varsym,symbols)

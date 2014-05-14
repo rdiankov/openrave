@@ -1085,7 +1085,7 @@ def test_ik():
     rawbasedir=dot(ikmodel.manip.GetLocalToolTransform()[0:3,0:3],ikmodel.manip.GetDirection())
     rawbasepos=ikmodel.manip.GetLocalToolTransform()[0:3,3]
     
-    chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
+    chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn,ikfastoptions=1)
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator().generate(chaintree)
     open(sourcefilename,'w').write(code)
     

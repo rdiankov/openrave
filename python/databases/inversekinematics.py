@@ -660,8 +660,10 @@ class InverseKinematicsModel(DatabaseGenerator):
         print 'getIndicesFromJointNames',freeindices,freejoints
         return freeindices
 
-    def generate(self,iktype=None,freejoints=None,freeinc=None,freeindices=None,precision=None,forceikbuild=True,outputlang=None,avoidPrismaticAsFree=False,ipython=False):
+    def generate(self,iktype=None, freejoints=None, freeinc=None, freeindices=None, precision=None, forceikbuild=True, outputlang=None, avoidPrismaticAsFree=False, ipython=False, ikfastoptions=0, ikfastmaxcasedepth=4):
         """
+        :param ikfastoptions: see IKFastSolver.generateIkSolver
+        :param ikfastmaxcasedepth: the max level of degenerate cases to solve for
         :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints.
         """
         self.iksolver = None
@@ -840,6 +842,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 pass
             
             solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
+            solver.maxcasedepth = ikfastmaxcasedepth
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False
             baselink=self.manip.GetBase().GetIndex()

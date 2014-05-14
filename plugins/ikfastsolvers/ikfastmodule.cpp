@@ -143,7 +143,8 @@ public:
 
         bool Init(const string& ikname, const string& libraryname)
         {
-            _viknames.resize(1); _viknames[0] = ikname;
+            _viknames.resize(0);
+            AddIkName(ikname);
             _libraryname = libraryname;
             plib = SysLoadLibrary(_libraryname.c_str());
             if( plib == NULL ) {
@@ -220,12 +221,19 @@ public:
         const vector<string>& GetIkNames() const {
             return _viknames;
         }
+        
+        /// \brief adds ikname entry in lower case since all interface types are case insensitive
         void AddIkName(const string& ikname) {
-            _viknames.push_back(ikname);
+            size_t index = _viknames.size();
+            _viknames.resize(index+1);
+            _viknames.back().resize(ikname.size());
+            std::transform(ikname.begin(), ikname.end(), _viknames.back().begin(), ::tolower);
         }
+        
         const string& GetLibraryName() const {
             return _libraryname;
         }
+        
         int GetIKType() {
 #ifdef OPENRAVE_IKFAST_FLOAT32
             if( !!_ikfloat ) {
@@ -447,7 +455,7 @@ public:
             int generateexit = MYPCLOSE(pipe);
             if( generateexit != 0 ) {
                 usleep(100000);
-                RAVELOG_DEBUG("failed to close pipe\n");
+                RAVELOG_VERBOSE("failed to close pipe\n"); // not sure how critical this error is
             }
             boost::trim(output);
             size_t index = output.find_first_of(' ');
@@ -468,7 +476,7 @@ public:
             if( ikdof > (int)pmanip->GetArmIndices().size() ) {
                 RAVELOG_WARN(str(boost::format("not enough joints (%d) for ik %s")%pmanip->GetArmIndices().size()%striktype));
             }
-            if( ikdof < (int)pmanip->GetArmIndices().size() ) {
+            if( ikdof < pmanip->GetArmDOF() ) {
                 std::vector<int> vindices = pmanip->GetArmIndices();
                 std::vector<int> vsolveindices(ikdof), vfreeindices(vindices.size()-ikdof);
                 while (next_combination(&vindices[0], &vindices[ikdof], &vindices[vindices.size()])) {
