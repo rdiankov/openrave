@@ -496,6 +496,11 @@ protected:
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
             }
+            else if( interpolation == "" ) {
+                // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            }
+
 
             if( nNeedNeighboringInfo ) {
                 std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
