@@ -252,7 +252,7 @@ public:
         starting_current = info.starting_current;
         terminal_resistance = info.terminal_resistance;
     }
-    
+
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
         ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
         ElectricMotorActuatorInfo& info = *pinfo;
@@ -264,7 +264,7 @@ public:
         if( !(speed_torque_points == boost::python::object()) ) {
             size_t num = len(speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.speed_torque_points.push_back(std::make_pair((dReal)boost::python::extract<dReal>(speed_torque_points[i][0]), (dReal)boost::python::extract<dReal>(speed_torque_points[i][1])));
+                info.speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(speed_torque_points[i][1])));
             }
         }
         info.nominal_torque = nominal_torque;
@@ -474,7 +474,7 @@ public:
             info._bIsCircular.at(i) = boost::python::extract<int>(_bIsCircular[i])!=0;
         }
         info._bIsActive = _bIsActive;
-        if( !!_infoElectricMotor ) {//!(_infoElectricMotor == boost::python::object()) ) {
+        if( !!_infoElectricMotor ) { //!(_infoElectricMotor == boost::python::object()) ) {
             //PyElectricMotorActuatorInfoPtr pinfo = boost::python::extract<PyElectricMotorActuatorInfoPtr>(_infoElectricMotor);
             //if( !!pinfo ) {
             info._infoElectricMotor = _infoElectricMotor->GetElectricMotorActuatorInfo();
@@ -2724,21 +2724,21 @@ void init_openravepy_kinbody()
                           .value("Trimesh",GT_TriMesh)
     ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
-        .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
-        .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)
-        .def_readwrite("max_speed",&PyElectricMotorActuatorInfo::max_speed)
-        .def_readwrite("no_load_speed",&PyElectricMotorActuatorInfo::no_load_speed)
-        .def_readwrite("stall_torque",&PyElectricMotorActuatorInfo::stall_torque)
-        .def_readwrite("speed_torque_points",&PyElectricMotorActuatorInfo::speed_torque_points)
-        .def_readwrite("nominal_torque",&PyElectricMotorActuatorInfo::nominal_torque)
-        .def_readwrite("rotor_inertia",&PyElectricMotorActuatorInfo::rotor_inertia)
-        .def_readwrite("torque_constant",&PyElectricMotorActuatorInfo::torque_constant)
-        .def_readwrite("nominal_voltage",&PyElectricMotorActuatorInfo::nominal_voltage)
-        .def_readwrite("speed_constant",&PyElectricMotorActuatorInfo::speed_constant)
-        .def_readwrite("starting_current",&PyElectricMotorActuatorInfo::starting_current)
-        .def_readwrite("terminal_resistance",&PyElectricMotorActuatorInfo::terminal_resistance)
-        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
-        ;
+                                       .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
+                                       .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)
+                                       .def_readwrite("max_speed",&PyElectricMotorActuatorInfo::max_speed)
+                                       .def_readwrite("no_load_speed",&PyElectricMotorActuatorInfo::no_load_speed)
+                                       .def_readwrite("stall_torque",&PyElectricMotorActuatorInfo::stall_torque)
+                                       .def_readwrite("speed_torque_points",&PyElectricMotorActuatorInfo::speed_torque_points)
+                                       .def_readwrite("nominal_torque",&PyElectricMotorActuatorInfo::nominal_torque)
+                                       .def_readwrite("rotor_inertia",&PyElectricMotorActuatorInfo::rotor_inertia)
+                                       .def_readwrite("torque_constant",&PyElectricMotorActuatorInfo::torque_constant)
+                                       .def_readwrite("nominal_voltage",&PyElectricMotorActuatorInfo::nominal_voltage)
+                                       .def_readwrite("speed_constant",&PyElectricMotorActuatorInfo::speed_constant)
+                                       .def_readwrite("starting_current",&PyElectricMotorActuatorInfo::starting_current)
+                                       .def_readwrite("terminal_resistance",&PyElectricMotorActuatorInfo::terminal_resistance)
+                                       .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
+    ;
 
     {
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
@@ -2909,6 +2909,7 @@ void init_openravepy_kinbody()
         .value("ActiveDOF",KinBody::Save_ActiveDOF)
         .value("ActiveManipulator",KinBody::Save_ActiveManipulator)
         .value("GrabbedBodies",KinBody::Save_GrabbedBodies)
+        .value("ActiveManipulatorToolTransform",KinBody::Save_ActiveManipulatorToolTransform)
         ;
         enum_<KinBody::CheckLimitsAction>("CheckLimitsAction" DOXY_ENUM(CheckLimitsAction))
         .value("Nothing",KinBody::CLA_Nothing)

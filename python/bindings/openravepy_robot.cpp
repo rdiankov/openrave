@@ -136,6 +136,9 @@ public:
         object GetLocalToolTransform() {
             return ReturnTransform(_pmanip->GetLocalToolTransform());
         }
+        object GetLocalToolTransformPose() {
+            return toPyArray(_pmanip->GetLocalToolTransform());
+        }
         void SetLocalToolTransform(object otrans) {
             _pmanip->SetLocalToolTransform(ExtractTransform(otrans));
         }
@@ -1613,6 +1616,7 @@ void init_openravepy_robot()
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
         .def("GetLocalToolTransform",&PyRobotBase::PyManipulator::GetLocalToolTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))
+        .def("GetLocalToolTransformPose",&PyRobotBase::PyManipulator::GetLocalToolTransformPose, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransformPose))
         .def("SetLocalToolTransform",&PyRobotBase::PyManipulator::SetLocalToolTransform, args("transform"), DOXY_FN(RobotBase::Manipulator,SetLocalToolTransform))
         .def("SetLocalToolDirection",&PyRobotBase::PyManipulator::SetLocalToolDirection, args("direction"), DOXY_FN(RobotBase::Manipulator,SetLocalToolDirection))
         .def("SetClosingDirection",&PyRobotBase::PyManipulator::SetClosingDirection, args("closingdirection"), DOXY_FN(RobotBase::Manipulator,SetClosingDirection))

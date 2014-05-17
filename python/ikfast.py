@@ -1515,6 +1515,10 @@ class IKFastSolver(AutoReloader):
 
     def IsHinge(self,axisname):
         if axisname[0]!='j' or not axisname in self.axismap:
+            if axisname == 'j100':
+                # always revolute!
+                return True
+            
             log.info('IsHinge returning false for variable %s'%axisname)
             return False # dummy joint most likely for angles
         
@@ -2548,9 +2552,28 @@ class IKFastSolver(AutoReloader):
         basepos = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasepos])
         basedir = Matrix(3,1,[Float(x,30) for x in rawbasedir])
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2])
+        # try to simplify basedir based on possible angles
         for i in range(3):
-            basedir[i] = self.convertRealToRational(basedir[i],5)
+            value = None
+            for num in [3,4,5,6,7,8]:
+                if abs((basedir[i]-cos(pi/num))).evalf() <= (10**-self.precision):
+                    value = cos(pi/num)
+                    break
+                elif abs((basedir[i]+cos(pi/num))).evalf() <= (10**-self.precision):
+                    value = -cos(pi/num)
+                    break
+                elif abs((basedir[i]-sin(pi/num))).evalf() <= (10**-self.precision):
+                    value = sin(pi/num)
+                    break
+                elif abs((basedir[i]+sin(pi/num))).evalf() <= (10**-self.precision):
+                    value = -sin(pi/num)
+                    break
+            if value is not None:
+                basedir[i] = value
+            else:
+                self.convertRealToRational(basedir[i],5)
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
+        
         offsetdist = basedir.dot(basepos)
         basepos = basepos-basedir*offsetdist
         Links = LinksRaw[:]
@@ -2590,7 +2613,7 @@ class IKFastSolver(AutoReloader):
         if len(solvejointvars) != 5:
             raise self.CannotSolveError('need 5 joints')
         
-        log.info('ikfast translation direction 5d: %s',solvejointvars)
+        log.info('ikfast translation direction 5d: %r, direction=%r', solvejointvars, basedir)
         
         # if last two axes are intersecting, can divide computing position and direction
         ilinks = [i for i,Tlink in enumerate(Links) if self.has(Tlink,*solvejointvars)]
@@ -2624,17 +2647,98 @@ class IKFastSolver(AutoReloader):
                     p1 = T1[0:3,0:3]*basepos+T1[0:3,3]
                     l0 = T0[0:3,0:3]*self.Tee[0,0:3].transpose()
                     l1 = T1[0:3,0:3]*basedir
-                    
+
                     AllEquations = []
                     for i in range(3):
                         AllEquations.append(self.SimplifyTransform(p0[i]-p1[i]).expand())
                         AllEquations.append(self.SimplifyTransform(l0[i]-l1[i]).expand())
-                    self.sortComplexity(AllEquations)
+                        
+                    # check if all joints in solvejointvars[index:] are revolute and oriented in the same way
+                    checkorientationjoints = None
+                    leftside = None
+                    if len(solvejointvars[:index]) == 3 and all([self.IsHinge(j.name) for j in solvejointvars[:index]]):
+                        Taccums = None
+                        for T in T0links:
+                            if self.has(T, solvejointvars[0]):
+                                Taccums = [T]
+                            elif Taccums is not None:
+                                Taccums.append(T)
+                            if self.has(T, solvejointvars[index-1]):
+                                break
+                        if Taccums is not None:
+                            Tcheckorientation = self.multiplyMatrix(Taccums)
+                            checkorientationjoints = solvejointvars[:index]
+                            leftside = True
+                    if len(solvejointvars[index:]) == 3 and all([self.IsHinge(j.name) for j in solvejointvars[index:]]):
+                        Taccums = None
+                        for T in T1links:
+                            if self.has(T, solvejointvars[index]):
+                                Taccums = [T]
+                            elif Taccums is not None:
+                                Taccums.append(T)
+                            if self.has(T, solvejointvars[-1]):
+                                break
+                        if Taccums is not None:
+                            Tcheckorientation = self.multiplyMatrix(Taccums)
+                            checkorientationjoints = solvejointvars[index:]
+                            leftside = False
+                    if checkorientationjoints is not None:
+                        # TODO, have to consider different signs of the joints
+                        cvar3 = cos(checkorientationjoints[0] + checkorientationjoints[1] + checkorientationjoints[2]).expand(trig=True)
+                        svar3 = sin(checkorientationjoints[0] + checkorientationjoints[1] + checkorientationjoints[2]).expand(trig=True)
+                        # to check for same orientation, see if T's rotation is composed of cvar3 and svar3
+                        sameorientation = True
+                        for i in range(3):
+                            for j in range(3):
+                                if Tcheckorientation[i,j] != S.Zero and not self.equal(Tcheckorientation[i,j], cvar3) and not self.equal(Tcheckorientation[i,j], -cvar3) and not self.equal(Tcheckorientation[i,j], svar3) and not self.equal(Tcheckorientation[i,j], -svar3) and Tcheckorientation[i,j] != S.One:
+                                    sameorientation = False
+                                    break
+                        newsolvejointvars = solvejointvars
+                        if sameorientation:
+                            log.info('found joints %r to have same orientation, adding more equations', checkorientationjoints)
+                            sumjoint = Symbol('j100')
+                            for i in range(3):
+                                for j in range(3):
+                                    if self.equal(Tcheckorientation[i,j], cvar3):
+                                        Tcheckorientation[i,j] = cos(sumjoint)
+                                    elif self.equal(Tcheckorientation[i,j], -cvar3):
+                                        Tcheckorientation[i,j] = -cos(sumjoint)
+                                    elif self.equal(Tcheckorientation[i,j], svar3):
+                                        Tcheckorientation[i,j] = sin(sumjoint)
+                                    elif self.equal(Tcheckorientation[i,j], -svar3):
+                                        Tcheckorientation[i,j] = -sin(sumjoint)
+                            
+                            if not leftside:
+                                newT1links=[Tcheckorientation] + Links[ilinks[-1]+1:]
+                                newT1 = self.multiplyMatrix(newT1links)
+                                newp1 = newT1[0:3,0:3]*basepos+newT1[0:3,3]
+                                newl1 = newT1[0:3,0:3]*basedir
+                                newp1 = newp1.subs(sin(checkorientationjoints[2]), sin(sumjoint - checkorientationjoints[0] - checkorientationjoints[1]).expand(trig=True)).expand()
+                                newl1 = newl1.subs(sin(checkorientationjoints[2]), sin(sumjoint - checkorientationjoints[0] - checkorientationjoints[1]).expand(trig=True)).expand()
+                                for i in range(3):
+                                    newp1[i] = self.trigsimp(newp1[i], [sumjoint, checkorientationjoints[0], checkorientationjoints[1]])
+                                    newl1[i] = self.trigsimp(newl1[i], [sumjoint, checkorientationjoints[0], checkorientationjoints[1]])
 
+                                for i in range(3):
+                                    AllEquations.append(self.SimplifyTransform(p0[i]-newp1[i]).expand())
+                                    AllEquations.append(self.SimplifyTransform(l0[i]-newl1[i]).expand())
+                                AllEquations.append(checkorientationjoints[0] + checkorientationjoints[1] + checkorientationjoints[2] - sumjoint)
+                                AllEquations.append((sin(checkorientationjoints[0] + checkorientationjoints[1]) - sin(sumjoint-checkorientationjoints[2])).expand(trig=True))
+                                AllEquations.append((cos(checkorientationjoints[0] + checkorientationjoints[1]) - cos(sumjoint-checkorientationjoints[2])).expand(trig=True))
+                                AllEquations.append((sin(checkorientationjoints[1] + checkorientationjoints[2]) - sin(sumjoint-checkorientationjoints[0])).expand(trig=True))
+                                AllEquations.append((cos(checkorientationjoints[1] + checkorientationjoints[2]) - cos(sumjoint-checkorientationjoints[0])).expand(trig=True))
+                                AllEquations.append((sin(checkorientationjoints[2] + checkorientationjoints[0]) - sin(sumjoint-checkorientationjoints[1])).expand(trig=True))
+                                AllEquations.append((cos(checkorientationjoints[2] + checkorientationjoints[0]) - cos(sumjoint-checkorientationjoints[1])).expand(trig=True))
+                                for consistentvalues in self.testconsistentvalues:
+                                    var = self.Variable(sumjoint)
+                                    consistentvalues += var.getsubs((checkorientationjoints[0] + checkorientationjoints[1] + checkorientationjoints[2]).subs(consistentvalues))
+                                newsolvejointvars = solvejointvars + [sumjoint]
+                    self.sortComplexity(AllEquations)
+                    
                     if rawpolyeqs2[index] is None:
                         rawpolyeqs2[index] = self.buildRaghavanRothEquations(p0,p1,l0,l1,solvejointvars)
                     try:
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],solvejointvars,endbranchtree=[AST.SolverSequence([endbranchtree2])], AllEquationsExtra=AllEquations)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs2[index],newsolvejointvars,endbranchtree=[AST.SolverSequence([endbranchtree2])], AllEquationsExtra=AllEquations)
                         break
                     except self.CannotSolveError, e:
                         log.warn('%s', e)
@@ -4267,8 +4371,19 @@ class IKFastSolver(AutoReloader):
                             continue
                         for monoms,c in peq2[0].terms():
                             if monoms == monomkey:
-                                peq2[0] = (peq2[0] - c*monomexpr)*monomcoeff
-                                peq2[1] = peq2[1]*monomcoeff - c*monomvalue
+                                # have to remove any common expressions between c and monomcoeff, or else equation can get huge
+                                num2, denom2 = fraction(cancel(c/monomcoeff))
+                                denom3, num3 = fraction(cancel(monomcoeff/c))
+                                if denom2.is_number and denom3.is_number and abs(denom2.evalf()) > abs(denom3.evalf()): # have to select one with least abs value, or else equation will skyrocket
+                                    denom2 = denom3
+                                    num2 = num3
+                                # have to be careful when multiplying or equation magnitude can get really skewed
+                                if denom2.is_number and abs(denom2.evalf()) > 100:
+                                    peq2[0] = (peq2[0] - c*monomexpr)*monomcoeff
+                                    peq2[1] = peq2[1]*monomcoeff - c*monomvalue
+                                else:
+                                    peq2[0] = (peq2[0] - c*monomexpr)*denom2
+                                    peq2[1] = peq2[1]*denom2 - num2*monomvalue
                                 hasreducedeqs = True
                                 break
             # see if there's two equations with two similar monomials on the left-hand side
@@ -4281,10 +4396,12 @@ class IKFastSolver(AutoReloader):
                         if peq0monoms == peq2[0].monoms():
                             peqdict = peq[0].as_dict()
                             peq2dict = peq2[0].as_dict()
-                            peqdiff = peq2[0]*peqdict[peq0monoms[0]] - peq[0]*peq2dict[peq0monoms[0]]
+                            monom0num, monom0denom = fraction(cancel(peqdict[peq0monoms[0]]/peq2dict[peq0monoms[0]]))
+                            peqdiff = peq2[0]*monom0num - peq[0]*monom0denom
+                            #peqdiff = peq2[0]*peqdict[peq0monoms[0]] - peq[0]*peq2dict[peq0monoms[0]]
                             if peqdiff != S.Zero:
                                 # there's one monomial left
-                                peqright = (peq2[1]*peqdict[peq0monoms[0]] - peq[1]*peq2dict[peq0monoms[0]])
+                                peqright = (peq2[1]*monom0num - peq[1]*monom0denom)
                                 if peqdiff.LC() != S.Zero:
                                     # check if peqdiff.LC() divides everything cleanly
                                     q0, r0 = div(peqright, peqdiff.LC())
@@ -4294,8 +4411,9 @@ class IKFastSolver(AutoReloader):
                                             peqright = Poly(q0, *peqright.gens)
                                             peqdiff = Poly(q1, *peqdiff.gens)
                                 # now solve for the other variable
-                                peq2diff = peq2[0]*peqdict[peq0monoms[1]] - peq[0]*peq2dict[peq0monoms[1]]
-                                peq2right = (peq2[1]*peqdict[peq0monoms[1]] - peq[1]*peq2dict[peq0monoms[1]])
+                                monom1num, monom1denom = fraction(cancel(peqdict[peq0monoms[1]]/peq2dict[peq0monoms[1]]))
+                                peq2diff = peq2[0]*monom1num - peq[0]*monom1denom
+                                peq2right = (peq2[1]*monom1num - peq[1]*monom1denom)
                                 if peq2diff.LC() != S.Zero:
                                     # check if peqdiff.LC() divides everything cleanly
                                     q0, r0 = div(peq2right, peq2diff.LC())
@@ -4304,16 +4422,23 @@ class IKFastSolver(AutoReloader):
                                         if r1 == S.Zero:
                                             peq2right = Poly(q0, *peq2right.gens)
                                             peq2diff = Poly(q1, *peq2diff.gens)
-                                peq[0] = peqdiff
-                                peq[1] = peqright
-                                peq2[0] = peq2diff
-                                peq2[1] = peq2right
+                                eqdiff, eqdiffcommon = self.removecommonexprs(peqdiff.as_expr(),returncommon=True, onlygcd=False)
+                                eqright, eqrightcommon = self.removecommonexprs(peqright.as_expr(),returncommon=True, onlygcd=False)
+                                eqdiffmult = cancel(eqdiffcommon/eqrightcommon)
+                                peq[0] = Poly(eqdiff*eqdiffmult, *peqdiff.gens)
+                                peq[1] = Poly(eqright, *peqright.gens)
+                                
+                                eq2diff, eq2diffcommon = self.removecommonexprs(peq2diff.as_expr(),returncommon=True, onlygcd=False)
+                                eq2right, eq2rightcommon = self.removecommonexprs(peq2right.as_expr(),returncommon=True, onlygcd=False)
+                                eq2diffmult = cancel(eq2diffcommon/eq2rightcommon)
+                                peq2[0] = Poly(eq2diff*eq2diffmult, *peq2diff.gens)
+                                peq2[1] = Poly(eq2right, *peq2right.gens)
                                 hasreducedeqs = True
                                 break
                             else:
                                 # overwrite peq2 in case there are others
                                 peq2[0] = peqdiff
-                                peq2[1] = peq2[1]*peqdict[peq0monoms[0]] - peq[1]*peq2dict[peq0monoms[0]]
+                                peq2[1] = peq2[1]*monom0num - peq[1]*monom0denom
                                 hasreducedeqs = True
         neweqs_full = []
         reducedeqs = []
@@ -4762,10 +4887,10 @@ class IKFastSolver(AutoReloader):
         hassinglevariable = False
         for eq in reducedeqs:
             complexity = self.codeComplexity(eq)
-            if complexity > 4000:
+            if complexity > 1500:
                 raise self.CannotSolveError('equation way too complex (%d), looking for another solution'%complexity)
             
-            if complexity > 4000:
+            if complexity > 1500:
                 log.info('equation way too complex (%d), so try breaking it down', complexity)
                 # don't support this yet...
                 eq2 = eq.expand()
@@ -4913,6 +5038,9 @@ class IKFastSolver(AutoReloader):
                 # substitute all instances of the variable
                 processedequations = []
                 for peq in newreducedeqs[1:]:
+                    if self.codeComplexity(peq.as_expr()) > 10000:
+                        log.warn('equation too big')
+                        continue
                     maxdegree = peq.degree(igenoffset)
                     eqnew = S.Zero
                     for monoms,c in peq.terms():
@@ -5198,15 +5326,18 @@ class IKFastSolver(AutoReloader):
         htvarsubs = []
         htvars = []
         htvarsubsinv = []
+        cossinsubs = []
         for varsym in convertvars:
-            var = self.Variable(varsym) 
+            var = self.Variable(varsym)
             cossinvars.append(var.cvar)
             cossinvars.append(var.svar)
             htvar = Symbol('ht%s'%varsym.name)
             htvarsubs += [(var.cvar,(1-htvar**2)/(1+htvar**2)),(var.svar,2*htvar/(1+htvar**2))]
             htvarsubsinv.append((htvar, (1-var.cvar)/var.svar))
             htvars.append(htvar)
-        peq = Poly(eq,*cossinvars)
+            cossinsubs.append((cos(varsym), var.cvar))
+            cossinsubs.append((sin(varsym), var.svar))
+        peq = Poly(eq.subs(cossinsubs),*cossinvars)
         maxdenom = [0]*len(convertvars)
         for monoms in peq.monoms():
             for i in range(len(convertvars)):
@@ -6156,9 +6287,16 @@ class IKFastSolver(AutoReloader):
             return self.AddSolution(solutions,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
         
         # solve with all 3 variables together?
-        
+#         htvars = [self.Variable(varsym).htvar for varsym in curvars]
+#         reducedeqs = []
+#         for eq in AllEquations:
+#             if eq.has(*curvars):
+#                 num, denom, htvarsubsinv = self.ConvertSinCosEquationToHalfTan(eq, curvars)
+#                 reducedeqs.append(Poly(num, *htvars))
+# 
+
         # perhaps there's a degree of freedom that is not trivial to compute?
-       # take the highest hinge variable and set it
+        # take the highest hinge variable and set it
         return self.GuessValuesAndSolveEquations(AllEquations, curvars, othersolvedvars, solsubs, endbranchtree, currentcases, unknownvars, currentcasesubs)
     
 #         # have got this far, so perhaps two axes are aligned?

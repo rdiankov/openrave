@@ -192,7 +192,13 @@ import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class GraspingModel(DatabaseGenerator):
-    """Holds all functions/data related to a grasp between a robot hand and a target"""
+    """Holds all functions/data related to a grasp between a robot hand and a target
+
+    parameters:
+    - imanipulatordirection - a new manip.GetLocalToolDirection()
+    - approachdirectionmanip - the approach direction with respect to the manipulator coordinate system. If this is nonzero use it instead of igraspdir
+    - igrasptranslationoffset - a translation offset in the manipluator coordinate system to use before solving the IK
+    """
     graspsetname = u'default' # the name of the grasp set. this allows applications another way to differentiate what grasp parameters their set was generated with
     
     class GripperVisibility:
@@ -233,7 +239,7 @@ class GraspingModel(DatabaseGenerator):
         self.translationstepmult = None
         self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices()), 'graspikparam_nocol':8}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices()), 'graspikparam_nocol':8, 'approachdirectionmanip':3, 'igrasptranslationoffset':3 }
         # graspikparam_nocol is the serialized IkParameterization. It can hold a max of 8 values, the first being the type
         self.graspindices = dict()
         self.totaldof = 0
@@ -249,7 +255,7 @@ class GraspingModel(DatabaseGenerator):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 9
+        return 10
     
     def init(self,friction,avoidlinks,plannername=None):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
@@ -442,7 +448,7 @@ class GraspingModel(DatabaseGenerator):
         if graspingnoise is None:
             graspingnoise = 0.0
         if manipulatordirections is None:
-            manipulatordirections = array([self.manip.GetDirection()])
+            manipulatordirections = array([self.manip.GetLocalToolDirection()])
         self.translationstepmult = translationstepmult
         self.finestep = finestep
         time.sleep(0.1) # sleep or otherwise viewer might not load well
@@ -558,7 +564,7 @@ class GraspingModel(DatabaseGenerator):
         if standoffs is None:
             standoffs = array([0,0.025])
         if manipulatordirections is None:
-            manipulatordirections = array([self.manip.GetDirection()])
+            manipulatordirections = array([self.manip.GetLocalToolDirection()])
         if self.numthreads is None:
             numthreads = 1
         else:
@@ -810,7 +816,7 @@ class GraspingModel(DatabaseGenerator):
                         if self.manip.FindIKSolution(Tglobalgrasp,checkcollision) is None:
                             continue
                     elif self.manip.GetIkSolver().Supports(IkParameterization.Type.TranslationDirection5D):
-                        ikparam = IkParameterization(Ray(Tglobalgrasp[0:3,3],dot(Tglobalgrasp[0:3,0:3],self.manip.GetDirection())),IkParameterization.Type.TranslationDirection5D)
+                        ikparam = IkParameterization(Ray(Tglobalgrasp[0:3,3],dot(Tglobalgrasp[0:3,0:3],self.manip.GetLocalToolDirection())),IkParameterization.Type.TranslationDirection5D)
                         solution = self.manip.FindIKSolution(ikparam,checkcollision)
                         if solution is None:
                             continue

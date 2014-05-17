@@ -473,13 +473,13 @@ public:
             // check if exists and is loadable, if not, regenerate the IK.
             std::string ikfilenameprefix = str(boost::format("kinematics.%s/ikfast%s.%s.%s.")%pmanip->GetKinematicsStructureHash()%ikfastversion%striktype%platform);
             int ikdof = IkParameterization::GetDOF(iktype);
-            if( ikdof > (int)pmanip->GetArmIndices().size() ) {
+            if( ikdof > pmanip->GetArmDOF() ) {
                 RAVELOG_WARN(str(boost::format("not enough joints (%d) for ik %s")%pmanip->GetArmIndices().size()%striktype));
             }
             if( ikdof < pmanip->GetArmDOF() ) {
                 std::vector<int> vindices = pmanip->GetArmIndices();
                 std::vector<int> vsolveindices(ikdof), vfreeindices(vindices.size()-ikdof);
-                while (next_combination(&vindices[0], &vindices[ikdof], &vindices[vindices.size()])) {
+                do {
                     std::copy(vindices.begin(),vindices.begin()+ikdof,vsolveindices.begin());
                     sort(vsolveindices.begin(),vsolveindices.end());
                     std::copy(vindices.begin()+ikdof,vindices.end(),vfreeindices.begin());
@@ -501,7 +501,7 @@ public:
                     if (ikfilenamefound.size() > 0 ) {
                         break;
                     }
-                }
+                } while (next_combination(&vindices[0], &vindices[ikdof], &vindices[vindices.size()]));
             }
             else {
                 ikfilename=ikfilenameprefix;
