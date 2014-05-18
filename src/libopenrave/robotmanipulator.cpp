@@ -90,7 +90,7 @@ void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
             __pIkSolver.reset();
         }
     }
-    _info._vdirection = direction;
+    _info._vdirection = direction*(1/RaveSqrt(direction.lengthsqr3())); // should normalize
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
     GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);

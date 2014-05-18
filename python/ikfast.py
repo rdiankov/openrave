@@ -2634,7 +2634,7 @@ class IKFastSolver(AutoReloader):
         if tree is None:
             rawpolyeqs2 = [None]*len(solvejointvars)
             coupledsolutions = None
-            endbranchtree2 = []            
+            endbranchtree2 = []
             for solvemethod in [self.solveLiWoernleHiller, self.solveKohliOsvatic]:#, self.solveManochaCanny]:
                 if coupledsolutions is not None:
                     break
@@ -2682,6 +2682,7 @@ class IKFastSolver(AutoReloader):
                             Tcheckorientation = self.multiplyMatrix(Taccums)
                             checkorientationjoints = solvejointvars[index:]
                             leftside = False
+                    newsolvejointvars = solvejointvars
                     if checkorientationjoints is not None:
                         # TODO, have to consider different signs of the joints
                         cvar3 = cos(checkorientationjoints[0] + checkorientationjoints[1] + checkorientationjoints[2]).expand(trig=True)
@@ -2693,7 +2694,6 @@ class IKFastSolver(AutoReloader):
                                 if Tcheckorientation[i,j] != S.Zero and not self.equal(Tcheckorientation[i,j], cvar3) and not self.equal(Tcheckorientation[i,j], -cvar3) and not self.equal(Tcheckorientation[i,j], svar3) and not self.equal(Tcheckorientation[i,j], -svar3) and Tcheckorientation[i,j] != S.One:
                                     sameorientation = False
                                     break
-                        newsolvejointvars = solvejointvars
                         if sameorientation:
                             log.info('found joints %r to have same orientation, adding more equations', checkorientationjoints)
                             sumjoint = Symbol('j100')
@@ -5168,18 +5168,25 @@ class IKFastSolver(AutoReloader):
             # try to factor the equations manually
             if newreducedeqs[0].degree(2) == 1:
                 # try to solve one variable in terms of the others
-                usedvar0solution = solve(newreducedeqs[0],htvars[2])[0]
+                if len(htvars) > 2:
+                    usedvar0solution = solve(newreducedeqs[0],htvars[2])[0]
+                    igenoffset = usedvars.index(htvars[2])
+                    polyvars = htvars[0:2]
+                else:
+                    usedvar0solution = solve(newreducedeqs[0],htvars[1])[0]
+                    igenoffset = 1
+                    polyvars = htvars[0:1] + nonhtvars
+                    
                 num,denom = fraction(usedvar0solution)
-                igenoffset = 2
                 # substitute all instances of the variable
                 processedequations = []
                 for peq in newreducedeqs[1:]:
                     newpeq = S.Zero
-                    if peq.degree(2) > 1:
+                    if peq.degree(igenoffset) > 1:
                         # ignore higher powers
                         continue
-                    elif peq.degree(2) == 0:
-                        newpeq = Poly(peq,htvars[0],htvars[1])
+                    elif peq.degree(igenoffset) == 0:
+                        newpeq = Poly(peq,*polyvars)
                     else:
                         maxdegree = peq.degree(igenoffset)
                         eqnew = S.Zero
@@ -5188,10 +5195,10 @@ class IKFastSolver(AutoReloader):
                             term *= num**(monoms[igenoffset])
                             for imonom, monom in enumerate(monoms):
                                 if imonom != igenoffset:
-                                    term *= htvars[imonom]**monom
+                                    term *= peq.gens[imonom]**monom
                             eqnew += term.expand()
                         try:
-                            newpeq = Poly(eqnew,htvars[0],htvars[1])
+                            newpeq = Poly(eqnew,*polyvars)
                         except PolynomialError, e:
                             # most likel uservar0solution was bad
                             raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
@@ -5219,7 +5226,10 @@ class IKFastSolver(AutoReloader):
                         if highestcoeff == oo:
                             log.warn('an equation has inifinity?!')
                         else:
-                            processedequations.append(newpeq*(S.One/highestcoeff))
+                            if highestcoeff is not None:
+                                processedequations.append(newpeq*(S.One/highestcoeff))
+                            else:
+                                processedequations.append(newpeq)
                     else:
                         log.info('equation is zero, so ignoring')
                 for dialyticeqs in combinations(processedequations,3):
@@ -5277,7 +5287,7 @@ class IKFastSolver(AutoReloader):
                     det = Poly(S.Zero,leftvar)
                     for eq in eqadds:
                         det += eq
-                    
+                        
                     jointsol = 2*atan(leftvar)
                     firstsolution = AST.SolverPolynomialRoots(jointname=usedvars[ileftvar].name,poly=det,jointeval=[jointsol],isHinge=self.IsHinge(usedvars[ileftvar].name))
                     firstsolution.checkforzeros = []
@@ -5301,7 +5311,6 @@ class IKFastSolver(AutoReloader):
                     
                     thirdsolution = AST.SolverSolution(usedvars[2].name, isHinge=self.IsHinge(usedvars[2].name))
                     thirdsolution.jointeval = [usedvar0solution]
-                    
                     return preprocesssolutiontree+[firstsolution, secondsolution, thirdsolution]+endbranchtree, usedvars
 
                     
@@ -5825,9 +5834,6 @@ class IKFastSolver(AutoReloader):
         - cross products of combinations of rows/columns yield the left over row/column
         :param othervars: optional list of the unknown variables inside the equations. Help simplify depending on the terms of these variables
         """
-        if self._iktype != 'transform6d':
-            return eq
-        
         if othervars is not None:
             peq = Poly(eq,*othervars)
             if peq == S.Zero:
@@ -5838,6 +5844,29 @@ class IKFastSolver(AutoReloader):
         
         # there can be gobal substitutions like pz=0. get all of them that do not start with gconst
         transformsubstitutions = [(var,value) for var, value in self.globalsymbols if var.is_Symbol and not var.name.startswith('gconst')]
+        
+        if self._iktype == 'translationdirection5d':
+            # since includes direction, only try to simplify r00**2+r01**2+r02**2=1
+            simpiter = 0
+            origeq = eq
+            # first simplify just rotations since they don't add any new variables
+            changed = True
+            while changed and eq.has(*self._rotsymbols):
+                #log.info('simpiter=%d, complexity=%d', simpiter, self.codeComplexity(eq.as_expr() if isinstance(eq,Poly) else eq))
+                simpiter += 1
+                changed = False
+                neweq = self._SimplifyRotationNorm(eq, self._rotnormgroups[0:1])
+                if neweq is not None:
+                    eq2 = self._SubstituteGlobalSymbols(neweq, transformsubstitutions)
+                    if not self.equal(eq,eq2):
+                        eq = eq2
+                        changed = True
+            if isinstance(eq, Poly):
+                eq = eq.as_expr()
+            return eq
+        
+        if self._iktype != 'transform6d':
+            return eq
         
         simpiter = 0
         origeq = eq
@@ -7130,6 +7159,10 @@ class IKFastSolver(AutoReloader):
 #                             for j in range(Mall.shape[1]):
 #                                 Mall[i,j] = Poly(Mall[i,j],leftvar)
                         Malldet = Mall.berkowitz_det()
+                        complexity = self.codeComplexity(Malldet)
+                        if complexity > 1200:
+                            log.warn('determinant complexity is too big %d', complexity)
+                            continue
                         possiblefinaleq = self.checkFinalEquation(Poly(Malldet,leftvar),subs)
                         if possiblefinaleq is not None:
                             # sometimes +- I are solutions, so remove them
@@ -7307,8 +7340,10 @@ class IKFastSolver(AutoReloader):
         polyeqs = [peq[1] for peq in complexity]
         trigsubs = []
         trigsubsinv = []
+        othersolvedvarssyms = []
         for othervar in othersolvedvars:
             v = self.Variable(othervar)
+            othersolvedvarssyms += v.vars
             trigsubs += v.subs
             trigsubsinv += v.subsinv
         symbolscheck = []
@@ -7356,12 +7391,20 @@ class IKFastSolver(AutoReloader):
                             for j in range(1,numequationsneeded):
                                 mergedsystemequations += systemequations[i+j]
                             M2 = M.col_join(Matrix(numequationsneeded,len(allmonoms),mergedsystemequations))
-                            Mdet = M2.det()
-                            if Mdet != S.Zero:
-                                M = M2
-                                for j in range(numequationsneeded):
-                                    rows.append(i+j)
-                                break
+                            complexity = 0
+                            for i2 in range(M2.rows):
+                                for j2 in range(M2.cols):
+                                    complexity += self.codeComplexity(M2[i,j])
+                            if self.IsDeterminantNonZeroByEval(M2):
+                                if complexity < 5000:
+                                    Mdet = M2.det()
+                                    if Mdet != S.Zero:
+                                        M = M2
+                                        for j in range(numequationsneeded):
+                                            rows.append(i+j)
+                                        break
+                                else:
+                                    log.warn('found solution, but matrix is too complex and determinant will most likely freeze (%d)', complexity)
                                 
                         if M.shape[0] == M.shape[1]:
                             Mdet = self.trigsimp(Mdet.subs(trigsubsinv),othersolvedvars).subs(trigsubs)
