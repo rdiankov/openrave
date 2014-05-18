@@ -665,7 +665,7 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
 
 void ActiveDOFTrajectorySmoother::_UpdateParameters()
 {
-    RobotBase::RobotStateSaver saver(_robot, KinBody::Prop_RobotActiveDOFs);
+    RobotBase::RobotStateSaver saver(_robot, KinBody::Save_ActiveDOF);
     _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(_robot);
@@ -729,7 +729,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
 
 void ActiveDOFTrajectoryRetimer::_UpdateParameters()
 {
-    RobotBase::RobotStateSaver saver(_robot, KinBody::Prop_RobotActiveDOFs);
+    RobotBase::RobotStateSaver saver(_robot, KinBody::Save_ActiveDOF);
     _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(_robot);

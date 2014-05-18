@@ -547,7 +547,7 @@ public:
                 return false;
             }
 
-            string ikfastname = str(boost::format("ikfast.%s.%s")%probot->GetRobotStructureHash()%pmanip->GetName());
+            string ikfastname = str(boost::format("ikfast.%s.%s.%s")%pmanip->GetKinematicsStructureHash()%striktype%pmanip->GetName());
             boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikfastname,ikfilenamefound);
             bool bsuccess = true;
             if( !lib ) {

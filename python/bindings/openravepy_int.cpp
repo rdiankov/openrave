@@ -118,6 +118,11 @@ object PyInterfaceBase::GetUserData(const std::string& key) const {
     return openravepy::GetUserData(_pbase->GetUserData(key));
 }
 
+bool PyInterfaceBase::SupportsCommand(const string& cmd)
+{
+    return _pbase->SupportsCommand(cmd);
+}
+
 object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lockenv)
 {
     stringstream sin(in), sout;
@@ -1585,6 +1590,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("SetUserData",setuserdata4,args("key", "data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("RemoveUserData", &PyInterfaceBase::RemoveUserData, DOXY_FN(InterfaceBase, RemoveUserData))
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
+        .def("SupportsCommand",&PyInterfaceBase::SupportsCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsCommand))
         .def("SendCommand",&PyInterfaceBase::SendCommand, SendCommand_overloads(args("cmd","releasegil","lockenv"), sSendCommandDoc.c_str()))
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))

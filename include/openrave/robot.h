@@ -506,6 +506,7 @@ protected:
         std::vector<UserDataPtr> _vGrabbedBodies;
         Transform _tActiveManipLocalTool;
         Vector _vActiveManipLocalDirection;
+        IkSolverBasePtr _pActiveManipIkSolver;
 private:
         virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
     };

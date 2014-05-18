@@ -535,6 +535,8 @@ public:
     }
     object GetUserData(const std::string& key=std::string()) const;
 
+    bool SupportsCommand(const string& cmd);
+
     object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
 
     virtual object GetReadableInterfaces();

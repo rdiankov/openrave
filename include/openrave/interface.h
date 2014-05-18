@@ -123,6 +123,9 @@ public:
     /// \throw openrave_exception if command doesn't succeed
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
+    /// \brief return true if the command is supported
+    virtual bool SupportsCommand(const std::string& cmd);
+    
     /** \brief Used to send special commands to the interface and receive output.
 
         The command must be registered by \ref RegisterCommand. A special command '\b help' is

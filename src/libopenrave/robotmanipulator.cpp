@@ -69,7 +69,10 @@ void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuc
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
 {
     _info._sIkSolverXMLId.resize(0);
-    __pIkSolver.reset();
+    // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
+    if( !!__pIkSolver && TransformDistance2(_info._tLocalTool, t) > g_fEpsilonLinear ) {
+        __pIkSolver.reset();
+    }
     _info._tLocalTool = t;
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
@@ -80,6 +83,13 @@ void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
 {
     _info._sIkSolverXMLId.resize(0);
     __pIkSolver.reset();
+    // only reset the iksolver if transform is different. note that the correct way is to see if the hash changes, but that could take too much computation. also hashes truncate the numbers.
+    if( (_info._vdirection-direction).lengthsqr3() > g_fEpsilonLinear ) {
+        // only reset if direction is actually used
+        if( !!__pIkSolver && (__pIkSolver->Supports(IKP_TranslationDirection5D) || __pIkSolver->Supports(IKP_Direction3D)) ) {
+            __pIkSolver.reset();
+        }
+    }
     _info._vdirection = direction;
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);

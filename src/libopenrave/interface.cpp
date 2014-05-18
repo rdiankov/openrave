@@ -89,6 +89,12 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     __description = preference->__description;
 }
 
+bool InterfaceBase::SupportsCommand(const std::string& cmd)
+{
+    boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
+    return __mapCommands.find(cmd) != __mapCommands.end();
+}
+
 bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 {
     string cmd;

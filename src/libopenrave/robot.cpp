@@ -234,12 +234,21 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
             if( probot == _probot ) {
                 _pManipActive->SetLocalToolTransform(_tActiveManipLocalTool);
                 _pManipActive->SetLocalToolDirection(_vActiveManipLocalDirection);
+                _pManipActive->SetIkSolver(_pActiveManipIkSolver);
             }
             else {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(_pManipActive->GetName());
                 if( !!pmanip ) {
                     pmanip->SetLocalToolTransform(_tActiveManipLocalTool);
                     pmanip->SetLocalToolDirection(_vActiveManipLocalDirection);
+                    if( !!_pActiveManipIkSolver ) {
+                        IkSolverBasePtr pnewsolver = RaveCreateIkSolver(probot->GetEnv(), _pActiveManipIkSolver->GetXMLId());
+                        pnewsolver->Clone(_pActiveManipIkSolver, 0);
+                        pmanip->SetIkSolver(pnewsolver);
+                    }
+                    else {
+                        pmanip->SetIkSolver(IkSolverBasePtr());
+                    }
                 }
             }
         }
