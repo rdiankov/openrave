@@ -183,6 +183,10 @@ public:
         }
     }
 
+    const std::string& GetKinematicsStructureHash() const {
+        return _kinematicshash;
+    }
+    
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {

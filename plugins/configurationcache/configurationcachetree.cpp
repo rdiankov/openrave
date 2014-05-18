@@ -803,7 +803,7 @@ int CacheTree::SaveCache(std::string filename)
     _numnodes = knownnodes;
     _fulldirname = RaveFindDatabaseFile(std::string("selfcache.")+filename,false);
 
-    RAVELOG_VERBOSE_FORMAT("Writing cache to %s", _fulldirname);
+    RAVELOG_DEBUG_FORMAT("Writing cache to %s, size=%d", _fulldirname%_numnodes);
     
     FILE* pfile;
     pfile = fopen(_fulldirname.c_str(),"wb");
