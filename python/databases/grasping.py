@@ -739,7 +739,9 @@ class GraspingModel(DatabaseGenerator):
         with self.robot:
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
-            self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
+            Tmanip = self.manip.GetTransform()
+            Tmanip[0:3,3] += dot(Tmanip[0:3, 0:3], grasp[self.graspindices.get('igrasptranslationoffset')])
+            self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(Tmanip),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
             if len(self.manip.GetGripperIndices()) == 0:
                 return [],[[],self.robot.GetTransform()],None,None
