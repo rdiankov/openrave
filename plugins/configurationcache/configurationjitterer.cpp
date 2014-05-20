@@ -88,7 +88,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             }
         }
 
-        if( !!_cache ) {
+        if( bUseCache ) {
             _cache.reset(new CacheTree(_probot->GetActiveDOF()));
             _cache->Init(vweights, 1);
         }

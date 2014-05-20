@@ -596,15 +596,16 @@ protected:
         }
     }
 
-    int GetEnvironmentId(EnvironmentBasePtr penv)
+    int GetEnvironmentId(EnvironmentBaseConstPtr penv)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
-        FOREACH(it,_mapenvironments) {
-            if( it->second == penv.get() ) {
-                return it->first;
-            }
-        }
-        return 0;
+        return !!penv ? penv->GetId() : 0;
+//        boost::mutex::scoped_lock lock(_mutexinternal);
+//        FOREACH(it,_mapenvironments) {
+//            if( it->second == penv.get() ) {
+//                return it->first;
+//            }
+//        }
+//        return 0;
     }
 
     EnvironmentBasePtr GetEnvironment(int id)
@@ -979,7 +980,7 @@ void RaveAddCallbackForDestroy(const boost::function<void()>& fn)
     RaveGlobal::instance()->AddCallbackForDestroy(fn);
 }
 
-int RaveGetEnvironmentId(EnvironmentBasePtr penv)
+int RaveGetEnvironmentId(EnvironmentBaseConstPtr penv)
 {
     return RaveGlobal::instance()->GetEnvironmentId(penv);
 }

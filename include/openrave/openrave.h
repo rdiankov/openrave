@@ -2727,7 +2727,7 @@ OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::st
 OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
-OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr env);
+OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
 
 /// \brief get the environment from its unique id
 /// \param id the unique environment id returned by \ref RaveGetEnvironmentId

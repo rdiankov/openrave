@@ -4387,59 +4387,60 @@ class IKFastSolver(AutoReloader):
                                 hasreducedeqs = True
                                 break
             # see if there's two equations with two similar monomials on the left-hand side
-            for ipeq,peq in enumerate(neweqs):
-                peq0monoms = peq[0].monoms()
-                if peq[0] != S.Zero and len(peq0monoms) == 2:
-                    for ipeq2, peq2 in enumerate(neweqs):
-                        if ipeq2 == ipeq:
-                            continue
-                        if peq0monoms == peq2[0].monoms():
-                            peqdict = peq[0].as_dict()
-                            peq2dict = peq2[0].as_dict()
-                            monom0num, monom0denom = fraction(cancel(peqdict[peq0monoms[0]]/peq2dict[peq0monoms[0]]))
-                            peqdiff = peq2[0]*monom0num - peq[0]*monom0denom
-                            #peqdiff = peq2[0]*peqdict[peq0monoms[0]] - peq[0]*peq2dict[peq0monoms[0]]
-                            if peqdiff != S.Zero:
-                                # there's one monomial left
-                                peqright = (peq2[1]*monom0num - peq[1]*monom0denom)
-                                if peqdiff.LC() != S.Zero:
-                                    # check if peqdiff.LC() divides everything cleanly
-                                    q0, r0 = div(peqright, peqdiff.LC())
-                                    if r0 == S.Zero:
-                                        q1, r1 = div(peqdiff, peqdiff.LC())
-                                        if r1 == S.Zero:
-                                            peqright = Poly(q0, *peqright.gens)
-                                            peqdiff = Poly(q1, *peqdiff.gens)
-                                # now solve for the other variable
-                                monom1num, monom1denom = fraction(cancel(peqdict[peq0monoms[1]]/peq2dict[peq0monoms[1]]))
-                                peq2diff = peq2[0]*monom1num - peq[0]*monom1denom
-                                peq2right = (peq2[1]*monom1num - peq[1]*monom1denom)
-                                if peq2diff.LC() != S.Zero:
-                                    # check if peqdiff.LC() divides everything cleanly
-                                    q0, r0 = div(peq2right, peq2diff.LC())
-                                    if r0 == S.Zero:
-                                        q1, r1 = div(peq2diff, peq2diff.LC())
-                                        if r1 == S.Zero:
-                                            peq2right = Poly(q0, *peq2right.gens)
-                                            peq2diff = Poly(q1, *peq2diff.gens)
-                                eqdiff, eqdiffcommon = self.removecommonexprs(peqdiff.as_expr(),returncommon=True, onlygcd=False)
-                                eqright, eqrightcommon = self.removecommonexprs(peqright.as_expr(),returncommon=True, onlygcd=False)
-                                eqdiffmult = cancel(eqdiffcommon/eqrightcommon)
-                                peq[0] = Poly(eqdiff*eqdiffmult, *peqdiff.gens)
-                                peq[1] = Poly(eqright, *peqright.gens)
-                                
-                                eq2diff, eq2diffcommon = self.removecommonexprs(peq2diff.as_expr(),returncommon=True, onlygcd=False)
-                                eq2right, eq2rightcommon = self.removecommonexprs(peq2right.as_expr(),returncommon=True, onlygcd=False)
-                                eq2diffmult = cancel(eq2diffcommon/eq2rightcommon)
-                                peq2[0] = Poly(eq2diff*eq2diffmult, *peq2diff.gens)
-                                peq2[1] = Poly(eq2right, *peq2right.gens)
-                                hasreducedeqs = True
-                                break
-                            else:
-                                # overwrite peq2 in case there are others
-                                peq2[0] = peqdiff
-                                peq2[1] = peq2[1]*monom0num - peq[1]*monom0denom
-                                hasreducedeqs = True
+            # observed problem: coefficients become extremely huge (100+ digits), need a way to simplify them
+#             for ipeq,peq in enumerate(neweqs):
+#                 peq0monoms = peq[0].monoms()
+#                 if peq[0] != S.Zero and len(peq0monoms) == 2:
+#                     for ipeq2, peq2 in enumerate(neweqs):
+#                         if ipeq2 == ipeq:
+#                             continue
+#                         if peq0monoms == peq2[0].monoms():
+#                             peqdict = peq[0].as_dict()
+#                             peq2dict = peq2[0].as_dict()
+#                             monom0num, monom0denom = fraction(cancel(peqdict[peq0monoms[0]]/peq2dict[peq0monoms[0]]))
+#                             peqdiff = peq2[0]*monom0num - peq[0]*monom0denom
+#                             #peqdiff = peq2[0]*peqdict[peq0monoms[0]] - peq[0]*peq2dict[peq0monoms[0]]
+#                             if peqdiff != S.Zero:
+#                                 # there's one monomial left
+#                                 peqright = (peq2[1]*monom0num - peq[1]*monom0denom)
+#                                 if peqdiff.LC() != S.Zero:
+#                                     # check if peqdiff.LC() divides everything cleanly
+#                                     q0, r0 = div(peqright, peqdiff.LC())
+#                                     if r0 == S.Zero:
+#                                         q1, r1 = div(peqdiff, peqdiff.LC())
+#                                         if r1 == S.Zero:
+#                                             peqright = Poly(q0, *peqright.gens)
+#                                             peqdiff = Poly(q1, *peqdiff.gens)
+#                                 # now solve for the other variable
+#                                 monom1num, monom1denom = fraction(cancel(peqdict[peq0monoms[1]]/peq2dict[peq0monoms[1]]))
+#                                 peq2diff = peq2[0]*monom1num - peq[0]*monom1denom
+#                                 peq2right = (peq2[1]*monom1num - peq[1]*monom1denom)
+#                                 if peq2diff.LC() != S.Zero:
+#                                     # check if peqdiff.LC() divides everything cleanly
+#                                     q0, r0 = div(peq2right, peq2diff.LC())
+#                                     if r0 == S.Zero:
+#                                         q1, r1 = div(peq2diff, peq2diff.LC())
+#                                         if r1 == S.Zero:
+#                                             peq2right = Poly(q0, *peq2right.gens)
+#                                             peq2diff = Poly(q1, *peq2diff.gens)
+#                                 eqdiff, eqdiffcommon = self.removecommonexprs(peqdiff.as_expr(),returncommon=True, onlygcd=False)
+#                                 eqright, eqrightcommon = self.removecommonexprs(peqright.as_expr(),returncommon=True, onlygcd=False)
+#                                 eqdiffmult = cancel(eqdiffcommon/eqrightcommon)
+#                                 peq[0] = Poly(eqdiff*eqdiffmult, *peqdiff.gens)
+#                                 peq[1] = Poly(eqright, *peqright.gens)
+#                                 
+#                                 eq2diff, eq2diffcommon = self.removecommonexprs(peq2diff.as_expr(),returncommon=True, onlygcd=False)
+#                                 eq2right, eq2rightcommon = self.removecommonexprs(peq2right.as_expr(),returncommon=True, onlygcd=False)
+#                                 eq2diffmult = cancel(eq2diffcommon/eq2rightcommon)
+#                                 peq2[0] = Poly(eq2diff*eq2diffmult, *peq2diff.gens)
+#                                 peq2[1] = Poly(eq2right, *peq2right.gens)
+#                                 hasreducedeqs = True
+#                                 break
+#                             else:
+#                                 # overwrite peq2 in case there are others
+#                                 peq2[0] = peqdiff
+#                                 peq2[1] = peq2[1]*monom0num - peq[1]*monom0denom
+#                                 hasreducedeqs = True
         neweqs_full = []
         reducedeqs = []
         # filled with equations where one variable is singled out
@@ -5095,16 +5096,18 @@ class IKFastSolver(AutoReloader):
                         if len(useequations) == 0:
                             useequations += higherequations
                         for peq in useequations:
-                            peqnew = Poly(S.Zero,leftoverhtvars)
-                            maxhtvardegree = peq.degree(ihtvar)
-                            for monoms,c in peq.terms():
-                                term = c
-                                for imonom, monom in enumerate(monoms):
-                                    if imonom != ihtvar:
-                                        term *= htvars[imonom]**monom
-                                termpoly = Poly(term,leftoverhtvars)
-                                peqnew += termpoly * (Bpoly**(monoms[ihtvar]) * Apoly**(maxhtvardegree-monoms[ihtvar]))
-                            singlepolyequations.append(peqnew)
+                            complexity = self.codeComplexity(peq.as_expr())
+                            if complexity < 2000:
+                                peqnew = Poly(S.Zero,leftoverhtvars)
+                                maxhtvardegree = peq.degree(ihtvar)
+                                for monoms,c in peq.terms():
+                                    term = c
+                                    for imonom, monom in enumerate(monoms):
+                                        if imonom != ihtvar:
+                                            term *= htvars[imonom]**monom
+                                    termpoly = Poly(term,leftoverhtvars)
+                                    peqnew += termpoly * (Bpoly**(monoms[ihtvar]) * Apoly**(maxhtvardegree-monoms[ihtvar]))
+                                singlepolyequations.append(peqnew)
                         if len(singlepolyequations) > 0:
                             jointsol = 2*atan(leftoverhtvars[0])
                             jointname = leftoverhtvars[0].name[2:]
@@ -5169,69 +5172,71 @@ class IKFastSolver(AutoReloader):
             if newreducedeqs[0].degree(2) == 1:
                 # try to solve one variable in terms of the others
                 if len(htvars) > 2:
-                    usedvar0solution = solve(newreducedeqs[0],htvars[2])[0]
+                    usedvar0solutions = solve(newreducedeqs[0],htvars[2])[0]
                     igenoffset = usedvars.index(htvars[2])
                     polyvars = htvars[0:2]
                 else:
-                    usedvar0solution = solve(newreducedeqs[0],htvars[1])[0]
+                    usedvar0solutions = solve(newreducedeqs[0],htvars[1])
                     igenoffset = 1
                     polyvars = htvars[0:1] + nonhtvars
-                    
-                num,denom = fraction(usedvar0solution)
-                # substitute all instances of the variable
                 processedequations = []
-                for peq in newreducedeqs[1:]:
-                    newpeq = S.Zero
-                    if peq.degree(igenoffset) > 1:
-                        # ignore higher powers
-                        continue
-                    elif peq.degree(igenoffset) == 0:
-                        newpeq = Poly(peq,*polyvars)
-                    else:
-                        maxdegree = peq.degree(igenoffset)
-                        eqnew = S.Zero
-                        for monoms,c in peq.terms():
-                            term = c*denom**(maxdegree-monoms[igenoffset])
-                            term *= num**(monoms[igenoffset])
-                            for imonom, monom in enumerate(monoms):
-                                if imonom != igenoffset:
-                                    term *= peq.gens[imonom]**monom
-                            eqnew += term.expand()
-                        try:
-                            newpeq = Poly(eqnew,*polyvars)
-                        except PolynomialError, e:
-                            # most likel uservar0solution was bad
-                            raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
-                        
-                    if newpeq != S.Zero:
-                        # normalize by the greatest coefficient in LC, or otherwise determinant will never succeed
-                        LC=newpeq.LC()
-                        highestcoeff = None
-                        if LC.is_Add:
-                            for arg in LC.args:
-                                coeff = None
-                                if arg.is_Mul:
-                                    coeff = S.One
-                                    for subarg in arg.args:
-                                        if subarg.is_number:
-                                            coeff *= abs(subarg)
-                                elif arg.is_number:
-                                    coeff = abs(arg)
-                                if coeff is not None:
-                                    if coeff > S.One:
-                                        # round to the nearest integer
-                                        coeff = int(round(coeff.evalf()))
-                                    if highestcoeff is None or coeff > highestcoeff:
-                                        highestcoeff = coeff
-                        if highestcoeff == oo:
-                            log.warn('an equation has inifinity?!')
+                if len(usedvar0solutions) > 0:
+                    usedvar0solution = usedvar0solutions[0]
+                    num,denom = fraction(usedvar0solution)
+                    # substitute all instances of the variable
+                    
+                    for peq in newreducedeqs[1:]:
+                        newpeq = S.Zero
+                        if peq.degree(igenoffset) > 1:
+                            # ignore higher powers
+                            continue
+                        elif peq.degree(igenoffset) == 0:
+                            newpeq = Poly(peq,*polyvars)
                         else:
-                            if highestcoeff is not None:
-                                processedequations.append(newpeq*(S.One/highestcoeff))
+                            maxdegree = peq.degree(igenoffset)
+                            eqnew = S.Zero
+                            for monoms,c in peq.terms():
+                                term = c*denom**(maxdegree-monoms[igenoffset])
+                                term *= num**(monoms[igenoffset])
+                                for imonom, monom in enumerate(monoms):
+                                    if imonom != igenoffset:
+                                        term *= peq.gens[imonom]**monom
+                                eqnew += term.expand()
+                            try:
+                                newpeq = Poly(eqnew,*polyvars)
+                            except PolynomialError, e:
+                                # most likel uservar0solution was bad
+                                raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
+
+                        if newpeq != S.Zero:
+                            # normalize by the greatest coefficient in LC, or otherwise determinant will never succeed
+                            LC=newpeq.LC()
+                            highestcoeff = None
+                            if LC.is_Add:
+                                for arg in LC.args:
+                                    coeff = None
+                                    if arg.is_Mul:
+                                        coeff = S.One
+                                        for subarg in arg.args:
+                                            if subarg.is_number:
+                                                coeff *= abs(subarg)
+                                    elif arg.is_number:
+                                        coeff = abs(arg)
+                                    if coeff is not None:
+                                        if coeff > S.One:
+                                            # round to the nearest integer
+                                            coeff = int(round(coeff.evalf()))
+                                        if highestcoeff is None or coeff > highestcoeff:
+                                            highestcoeff = coeff
+                            if highestcoeff == oo:
+                                log.warn('an equation has inifinity?!')
                             else:
-                                processedequations.append(newpeq)
-                    else:
-                        log.info('equation is zero, so ignoring')
+                                if highestcoeff is not None:
+                                    processedequations.append(newpeq*(S.One/highestcoeff))
+                                else:
+                                    processedequations.append(newpeq)
+                        else:
+                            log.info('equation is zero, so ignoring')
                 for dialyticeqs in combinations(processedequations,3):
                     Mall = None
                     leftvar = None
