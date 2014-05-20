@@ -6178,7 +6178,10 @@ class IKFastSolver(AutoReloader):
                     rawsolutions=self.solveSingleVariable(self.sortComplexity(raweqns),curvar,othersolvedvars, unknownvars=curvars+unknownvars)
                     for solution in rawsolutions:
                         self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
-                        solutions.append((solution,curvar))
+                        if solution.numsolutions()>0:
+                            solutions.append((solution,curvar))
+                        else:
+                            log.warn('solution did not have any equations')
                 except self.CannotSolveError:
                     pass
         
@@ -6368,6 +6371,7 @@ class IKFastSolver(AutoReloader):
         solutions = [s for s in solutions if s[0].score < oo and s[0].checkValidSolution()] # remove infinite scores
         if len(solutions) == 0:
             raise self.CannotSolveError('no valid solutions')
+        
         if unknownvars is None:
             unknownvars = []
         solutions.sort(lambda x, y: x[0].score-y[0].score)
@@ -7868,7 +7872,7 @@ class IKFastSolver(AutoReloader):
                         continue
                     constsol = (-atan2(m[a], m[b]).subs(symbols)).evalf()
                     jointsolutions = [constsol+asinsol,constsol+pi.evalf()-asinsol]
-                    if not constsol.has(I) and all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
+                    if not constsol.has(I) and all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]) and len(jointsolutions) > 0:
                         #self.checkForDivideByZero(expandedsol)
                         solutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
                         solutions[-1].equationsused = equationsused
@@ -7877,9 +7881,9 @@ class IKFastSolver(AutoReloader):
                 try:
                     # substitute cos
                     if self.countVariables(eqnew,varsym.svar) <= 1 or (self.countVariables(eqnew,varsym.cvar) <= 2 and self.countVariables(eqnew,varsym.svar) == 0): # anything more than 1 implies quartic equation
-                        tempsolutions = solve(eqnew.subs(varsym.svar,sqrt(1-varsym.cvar**2)),varsym.cvar)
+                        tempsolutions = solve(eqnew.subs(varsym.svar,sqrt(1-varsym.cvar**2)).expand(),varsym.cvar)
                         jointsolutions = [self.SimplifyTransform(self.trigsimp(s.subs(symbols+varsym.subsinv),othersolvedvars)) for s in tempsolutions]
-                        if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
+                        if len(jointsolutions) > 0 and all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                             solutions.append(AST.SolverSolution(var.name,jointevalcos=jointsolutions,isHinge=self.IsHinge(var.name)))
                             solutions[-1].equationsused = equationsused
                         continue
@@ -7892,9 +7896,9 @@ class IKFastSolver(AutoReloader):
                 # substitute sin
                 try:
                     if self.countVariables(eqnew,varsym.svar) <= 1 or (self.countVariables(eqnew,varsym.svar) <= 2 and self.countVariables(eqnew,varsym.cvar) == 0): # anything more than 1 implies quartic equation
-                        tempsolutions = solve(eqnew.subs(varsym.cvar,sqrt(1-varsym.svar**2)),varsym.svar)
+                        tempsolutions = solve(eqnew.subs(varsym.cvar,sqrt(1-varsym.svar**2)).expand(),varsym.svar)
                         jointsolutions = [self.SimplifyTransform(self.trigsimp(s.subs(symbols+varsym.subsinv),othersolvedvars)) for s in tempsolutions]
-                        if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
+                        if all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]) and len(jointsolutions) > 0:
                             solutions.append(AST.SolverSolution(var.name,jointevalsin=jointsolutions,isHinge=self.IsHinge(var.name)))
                             solutions[-1].equationsused = equationsused
                         continue
