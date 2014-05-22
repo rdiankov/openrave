@@ -915,7 +915,9 @@ int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
             if( !_pcollidingbody ) {
                 RAVELOG_WARN_FORMAT("loading cache expected colliding body %s, but none found", _collidingbodyname);
             }
-            _newnode->_collidinglink = _pcollidingbody->GetLinks().at(collidinglinkindex);
+            else {
+                _newnode->_collidinglink = _pcollidingbody->GetLinks().at(collidinglinkindex);
+            }
             outs = fread(&_newnode->_robotlinkindex, sizeof(_newnode->_robotlinkindex), 1, pfile);
         }
 
