@@ -2443,9 +2443,9 @@ public:
         case PE_Ignore: return PE_Ignore;
         }
 
-        if( _processingtag.size() > 0 )
+        if( _processingtag.size() > 0 ) {
             return PE_Ignore;
-
+        }
         if (( xmlname == "effector") ||( xmlname == "gripperjoints") ||( xmlname == "joints") ||( xmlname == "armjoints") ||( xmlname == "base") ||( xmlname == "iksolver") ||( xmlname == "closingdir") ||( xmlname == "palmdirection") ||( xmlname=="direction") ||( xmlname == "closingdirection") ||( xmlname == "translation") ||( xmlname == "quat") ||( xmlname == "rotationaxis") ||( xmlname == "rotationmat") || xmlname == "chuckingdirection") {
             _processingtag = xmlname;
             return PE_Support;
