@@ -2274,6 +2274,11 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
     scenename = pfilename.stem();
 #endif
 #endif
+    // if there's any '.', then remove them
+    size_t dotindex = scenename.find_first_of('.');
+    if( dotindex != string::npos ) {
+        scenename = scenename.substr(0, dotindex);
+    }
     if( !writer.Write(scenename) ) {
         throw openrave_exception("ColladaWriter::Write(EnvironmentBasePtr) failed");
     }
@@ -2307,6 +2312,11 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
         scenename = pfilename.stem();
 #endif
 #endif
+        // if there's any '.', then remove them
+        size_t dotindex = scenename.find_first_of('.');
+        if( dotindex != string::npos ) {
+            scenename = scenename.substr(0, dotindex);
+        }
         if( !writer.Write(listbodies, scenename) ) {
             throw openrave_exception("ColladaWriter::Write(list<KinBodyPtr>) failed");
         }
