@@ -443,8 +443,7 @@ public:
         }
 
         // get ikfast version
-        string ikfastversion, platform;
-        {
+        if( _ikfastversion.size() == 0 || _platform.size() == 0 ) {
             string output;
             FILE* pipe = MYPOPEN(OPENRAVE_PYTHON_EXECUTABLE " -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
             {
@@ -463,15 +462,15 @@ public:
                 RAVELOG_WARN(str(boost::format("failed to parse string: %s")%output));
                 return false;
             }
-            ikfastversion = output.substr(0,index);
-            platform = output.substr(index+1);
+            _ikfastversion = output.substr(0,index);
+            _platform = output.substr(index+1);
         }
 
         string ikfilename;
         for(int iter = 0; iter < 2; ++iter) {
             string ikfilenamefound;
             // check if exists and is loadable, if not, regenerate the IK.
-            std::string ikfilenameprefix = str(boost::format("kinematics.%s/ikfast%s.%s.%s.")%pmanip->GetKinematicsStructureHash()%ikfastversion%striktype%platform);
+            std::string ikfilenameprefix = str(boost::format("kinematics.%s/ikfast%s.%s.%s.")%pmanip->GetKinematicsStructureHash()%_ikfastversion%striktype%_platform);
             int ikdof = IkParameterization::GetDOF(iktype);
             if( ikdof > pmanip->GetArmDOF() ) {
                 RAVELOG_WARN(str(boost::format("not enough joints (%d) for ik %s")%pmanip->GetArmIndices().size()%striktype));
@@ -1426,6 +1425,9 @@ public:
         }
         return IkSolverBasePtr();
     }
+
+    string _ikfastversion; ///< current ikfast version (assuming doesn't change during process lifetime)
+    string _platform; ///<  current platform architecture. ie x86-64
 };
 
 ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput)
