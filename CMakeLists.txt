@@ -78,6 +78,7 @@ include(CheckCXXSourceCompiles)
 include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
+include(InstallSymlink)
 
 find_package(PkgConfig) # pkg_check_modules
 
@@ -788,7 +789,7 @@ endif()
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
   # create all the directories ahead of time, or otherwise WORKING_DIRECTORY will not work
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/bin COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR})" COMPONENT openrave)
-  install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-config openrave-config WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/bin)" COMPONENT openrave)
+  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-config ${CMAKE_INSTALL_PREFIX}/bin/openrave-config)
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
@@ -804,13 +805,14 @@ if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-core.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}.pc openrave.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT openrave)
-    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink openrave${OPENRAVE_BIN_SUFFIX}-core.pc openrave-core.pc WORKING_DIRECTORY \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig)" COMPONENT openrave)
+    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
+    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
+
     if( BASH_COMPLETION_DIR )
-      install(CODE "get_filename_component(BASH_COMPLETION_ABSOLUTE_DIR \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR} ABSOLUTE)" COMPONENT openrave)
-      install(CODE "get_filename_component(BASH_COMPLETION_SHARE_DIR \${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR} ABSOLUTE)" COMPONENT openrave)
-      install(CODE "file(RELATIVE_PATH BASH_COMPLETION_RELATIVE_DIR \${BASH_COMPLETION_ABSOLUTE_DIR} \${BASH_COMPLETION_SHARE_DIR})" COMPONENT openrave)
-      install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink \${BASH_COMPLETION_RELATIVE_DIR}/openrave_completion.bash openrave_completion.bash WORKING_DIRECTORY \${BASH_COMPLETION_ABSOLUTE_DIR})" COMPONENT openrave)
+      get_filename_component(BASH_COMPLETION_ABSOLUTE_DIR ${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR} ABSOLUTE)
+      get_filename_component(BASH_COMPLETION_SHARE_DIR ${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR} ABSOLUTE)
+      file(RELATIVE_PATH BASH_COMPLETION_RELATIVE_DIR ${BASH_COMPLETION_ABSOLUTE_DIR} ${BASH_COMPLETION_SHARE_DIR})
+      InstallSymlink(${BASH_COMPLETION_RELATIVE_DIR}/openrave_completion.bash ${BASH_COMPLETION_ABSOLUTE_DIR}/openrave_completion.bash)
     endif()
   endif()
   # don't need symlinks
