@@ -37,9 +37,11 @@ install: # Use this to install any prerequisites or dependencies necessary to ru
   - make prefix=$INSTALL_DIR $PARALLEL_JOBS
   - make install $PARALLEL_JOBS
 before_script: # Use this to prepare your build for testing e.g. copy database configurations, environment variables, etc.
-  - export PATH=$(sh $CI_SOURCE_PATH/build/openrave-config --prefix)/bin:$PATH
+  - OPENRAVE_PREFIX=`$CI_SOURCE_PATH/../localinstall/bin/openrave-config --prefix`
+  - export PATH=$OPENRAVE_PREFIX/bin:$PATH
   - export PYTHONPATH=$(openrave-config --python-dir):$PYTHONPATH
   - export LD_LIBRARY_PATH=$(openrave-config --prefix)/lib:$LD_LIBRARY_PATH
+  - unset OPENRAVE_PREFIX
 script: # All commands must exit with code 0 on success. Anything else is considered failure.
   - cd $CI_SOURCE_PATH/test
   - python run_tests.py
