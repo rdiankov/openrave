@@ -1,0 +1,47 @@
+language:
+  - cpp
+  - python
+python:
+  - "2.7"
+compiler:
+  - gcc
+  - clang
+#notifications:
+# email:
+# recipients:
+# - someone
+# on_success: always #[always|never|change] # default: change
+# on_failure: always #[always|never|change] # default: always
+branches:
+  only:
+    - master
+    - production
+    - latest_stable
+before_install: # Use this to prepare the system to install prerequisites or dependencies
+  # Define some config vars
+  - export CI_SOURCE_PATH=$(pwd)
+  - export REPOSITORY_NAME=${PWD##*/}
+  - export PARALLEL_JOBS=-j4
+  - export OPENRAVE_DATA=$CI_SOURCE_PATH/data
+  - export OPENRAVE_DATABASE=$CI_SOURCE_PATH/../.openrave
+  - export INSTALL_DIR=$CI_SOURCE_PATH/../localinstall
+  - echo "Testing branch $TRAVIS_BRANCH of $REPOSITORY_NAME"
+  - sudo add-apt-repository ppa:openrave/testing -y
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq -y debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy python-sympy desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev collada-dom-dev pkg-config fparser-dev libhdf5-serial-dev liblapack-dev libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev libassimp-dev libbullet-dev python-nose
+    #sudo apt-get -y --force-yes --no-install-recommends install liblapack-dev libjpeg-dev libogg-dev libpng12-dev libqhull-dev libqrupdate1 libqt4-dev libqt4-opengl-dev libqt4-qt3support libqt4-scripttools libsimage-dev libsoqt4-dev libtiff4-dev  libunistring0 qt4-dev-tools libhdf5-serial-dev python-h5py libpcre++-dev python-matplotlib python-tk python-nose
+    #sudo apt-get install libboost-dev libboost-python-dev libboost-filesystem-dev libboost-iostreams-dev libboost-math-dev libboost-program-options-dev libboost-regex-dev libboost-random-dev libboost-serialization-dev libboost-signals-dev libboost-thread-dev libboost-wave-dev  python-nose
+install: # Use this to install any prerequisites or dependencies necessary to run your build
+  - mkdir -p $OPENRAVE_DATABASE
+  - rm -rf $INSTALL_DIR
+  - make prefix=$INSTALL_DIR $PARALLEL_JOBS
+  - make install $PARALLEL_JOBS
+before_script: # Use this to prepare your build for testing e.g. copy database configurations, environment variables, etc.
+  - OPENRAVE_PREFIX=`$CI_SOURCE_PATH/../localinstall/bin/openrave-config --prefix`
+  - export PATH=$OPENRAVE_PREFIX/bin:$PATH
+  - export PYTHONPATH=$(openrave-config --python-dir):$PYTHONPATH
+  - export LD_LIBRARY_PATH=$(openrave-config --prefix)/lib:$LD_LIBRARY_PATH
+  - unset OPENRAVE_PREFIX
+script: # All commands must exit with code 0 on success. Anything else is considered failure.
+  - cd $CI_SOURCE_PATH/test
+  - python run_tests.py
