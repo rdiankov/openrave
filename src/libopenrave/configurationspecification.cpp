@@ -281,6 +281,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     else if( name.size() >= 19 && name.substr(0,19) == "joint_accelerations" ) {
         derivativename = string("joint_jerks") + name.substr(19);
     }
+    else if( name.size() >= 11 && name.substr(0,11) == "joint_jerks" ) {
+        derivativename = string("joint_snaps") + name.substr(11);
+    }
     else if( name.size() >= 16 && name.substr(0,16) == "affine_transform" ) {
         derivativename = string("affine_velocities") + name.substr(16);
     }
@@ -321,6 +324,9 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
     }
     else if( name.size() >= 11 && name.substr(0,11) == "joint_jerks" ) {
         derivativename = string("joint_accelerations") + name.substr(11);
+    }
+    else if( name.size() >= 11 && name.substr(0,11) == "joint_snaps" ) {
+        derivativename = string("joint_jerks") + name.substr(11);
     }
     else if( name.size() >= 17 && name.substr(0,17) == "affine_velocities" ) {
         derivativename = string("affine_transform") + name.substr(17);
@@ -433,7 +439,7 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToVelocitySpecific
 
 ConfigurationSpecification ConfigurationSpecification::ConvertToDerivativeSpecification(uint32_t timederivative) const
 {
-    OPENRAVE_ASSERT_OP(timederivative,<,4);
+    OPENRAVE_ASSERT_OP(timederivative,<,7);
     ConfigurationSpecification derivspec;
     std::string searchname;
     derivspec._vgroups = _vgroups;
@@ -445,6 +451,9 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToDerivativeSpecif
                 case 1: searchname = "joint_velocities"; break;
                 case 2: searchname = "joint_accelerations"; break;
                 case 3: searchname = "joint_jerks"; break;
+                case 4: searchname = "joint_snaps"; break;
+                case 5: searchname = "joint_crackles"; break;
+                case 6: searchname = "joint_pops"; break;
                 default:
                     break;
                 }
@@ -456,6 +465,9 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToDerivativeSpecif
                 case 1: searchname = "affine_velocities"; break;
                 case 2: searchname = "affine_accelerations"; break;
                 case 3: searchname = "affine_jerks"; break;
+                case 4: searchname = "affine_snaps"; break;
+                case 5: searchname = "affine_crackles"; break;
+                case 6: searchname = "affine_pops"; break;
                 default:
                     break;
                 }
@@ -467,6 +479,9 @@ ConfigurationSpecification ConfigurationSpecification::ConvertToDerivativeSpecif
                 case 1: searchname = "ikparam_velocities"; break;
                 case 2: searchname = "ikparam_accelerations"; break;
                 case 3: searchname = "ikparam_jerks"; break;
+                case 4: searchname = "ikparam_snaps"; break;
+                case 5: searchname = "ikparam_crackles"; break;
+                case 6: searchname = "ikparam_pops"; break;
                 default:
                     break;
                 }
@@ -486,6 +501,7 @@ ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecific
     const boost::array<string,3> velgroups = {{"joint_velocities","affine_velocities","ikparam_velocities"}};
     const boost::array<string,3> accgroups = {{"joint_accelerations","affine_accelerations","ikparam_accelerations"}};
     const boost::array<string,3> jerkgroups = {{"joint_jerks","affine_jerks","ikparam_jerks"}};
+    const boost::array<string,3> snapgroups = {{"joint_snaps","affine_snaps","ikparam_snaps"}};
     const boost::array<string,3>* pgroup=NULL;
     if( timederivative == 0 ) {
         pgroup = &posgroups;
@@ -498,6 +514,9 @@ ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecific
     }
     else if( timederivative == 3 ) {
         pgroup = &jerkgroups;
+    }
+    else if( timederivative == 4 ) {
+        pgroup = &snapgroups;
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0("invalid timederivative",ORE_InvalidArguments);

@@ -979,6 +979,9 @@ public:
             - \b joint_velocities - The joint velocities (1/second) of a kinbody/robot. The name of the body with the joint names can follow.
             - \b joint_accelerations - The joint accelerations (1/second^2) of a kinbody/robot. The name of the body with the joint names can follow.
             - \b joint_jerks - The joint jerks (1/second^3) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_snaps - The joint snaps (1/second^4) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_crackles - The joint crackles (1/second^5) of a kinbody/robot. The name of the body with the joint names can follow.
+            - \b joint_pops - The joint pops (1/second^6) of a kinbody/robot. The name of the body with the joint names can follow.
             - \b joint_torques - The joint torques (Newton meter) of a kinbody/robot. The name of the body with the joint names can follow.
             - \b affine_transform - An affine transformation [quaternion, translation]. The name of the body with selected affine dofs (see \ref DOFAffine) can follow.
             - \b affine_velocities - The velocity (1/second) of the affine transformation [rotation axis, translation velocity], the name of the body can follow.
