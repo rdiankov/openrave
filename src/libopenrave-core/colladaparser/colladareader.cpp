@@ -380,7 +380,7 @@ public:
                     // newest openrave writers should have vX.Y.Z appended
                     if( authoring_tool == "OpenRAVE Collada Writer" || authoring_tool == "URDF Collada Writer" ) {
                         _bBackCompatValuesInRadians = true;
-                        RAVELOG_INFO("collada reader backcompat parsing for joint values\n");
+                        RAVELOG_DEBUG("collada reader backcompat parsing for joint values\n");
                     }
                 }
             }

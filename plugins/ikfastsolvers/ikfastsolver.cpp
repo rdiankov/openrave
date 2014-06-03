@@ -183,6 +183,10 @@ public:
         }
     }
 
+    const std::string& GetKinematicsStructureHash() const {
+        return _kinematicshash;
+    }
+    
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {
@@ -262,7 +266,17 @@ public:
 
     virtual bool Supports(IkParameterizationType iktype) const
     {
-        return iktype == _iktype;
+        if( iktype == _iktype ) {
+            return true;
+        }
+        // auto-conversion
+        if( _nTotalDOF == 4 ) {
+            return iktype == IKP_TranslationXAxisAngleZNorm4D;
+        }
+        else if( _nTotalDOF == 5 ) {
+            return iktype == IKP_TranslationDirection5D;
+        }
+        return false;
     }
 
     /// \brief manages the enabling and disabling of the end effector links depending on the filter options
@@ -412,7 +426,7 @@ protected:
         bool _bCheckEndEffectorEnvCollision, _bCheckEndEffectorSelfCollision, _bCheckSelfCollision, _bDisabled;
     };
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
@@ -420,7 +434,7 @@ protected:
         }
         IkReturn ikreturn(IKRA_Success);
         IkReturnPtr pikreturn(&ikreturn,utils::null_deleter());
-        if( !Solve(param,q0local,filteroptions,pikreturn) ) {
+        if( !Solve(rawparam,q0local,filteroptions,pikreturn) ) {
             return false;
         }
         if( !!result ) {
@@ -429,11 +443,11 @@ protected:
         return true;
     }
 
-    virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
+    virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector< std::vector<dReal> >& qSolutions)
     {
         std::vector<IkReturnPtr> vikreturns;
         qSolutions.resize(0);
-        if( !SolveAll(param,filteroptions,vikreturns) ) {
+        if( !SolveAll(rawparam,filteroptions,vikreturns) ) {
             return false;
         }
         qSolutions.resize(vikreturns.size());
@@ -474,12 +488,10 @@ protected:
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
     {
-        if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x")%_iktype%param.GetType()));
-            return false;
-        }
+        IkParameterization ikparamdummy;
+        const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         if( !!ikreturn ) {
             ikreturn->Clear();
         }
@@ -497,13 +509,11 @@ protected:
         return retaction == IKRA_Success;
     }
 
-    virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
+    virtual bool SolveAll(const IkParameterization& rawparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
     {
         vikreturns.resize(0);
-        if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x\n")%_iktype%param.GetType()));
-            return false;
-        }
+        IkParameterization ikparamdummy;
+        const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         RobotBase::RobotStateSaver saver(probot);
@@ -519,12 +529,10 @@ protected:
         return vikreturns.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
     {
-        if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x\n")%_iktype%param.GetType()));
-            return false;
-        }
+        IkParameterization ikparamdummy;
+        const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         if( vFreeParameters.size() != _vfreeparams.size() ) {
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
         }
@@ -548,13 +556,11 @@ protected:
         return retaction==IKRA_Success;
     }
 
-    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
+    virtual bool SolveAll(const IkParameterization& rawparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns)
     {
         vikreturns.resize(0);
-        if( param.GetType() != _iktype ) {
-            RAVELOG_WARN(str(boost::format("ik solver only supports type 0x%x, given 0x%x")%_iktype%param.GetType()));
-            return false;
-        }
+        IkParameterization ikparamdummy;
+        const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         if( vFreeParameters.size() != _vfreeparams.size() ) {
             throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
         }
@@ -1593,6 +1599,27 @@ protected:
             }
         }
         return vFreeInc;
+    }
+
+    inline const IkParameterization& _ConvertIkParameterization(const IkParameterization& param, IkParameterization& ikdummy)
+    {
+        if( param.GetType() == _iktype ) {
+            return param;
+        }
+
+        // try to convert localgoal into a different goal suitable for the IK
+        if( param.GetType() == IKP_Transform6D ) {
+            if( _nTotalDOF == 4 ) {
+                ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans, -normalizeAxisRotation(Vector(0,0,1), param.GetTransform6D().rot).first);
+                return ikdummy;
+            }
+            else if( _nTotalDOF == 5 ) {
+                RobotBase::ManipulatorPtr pmanip(_pmanip);
+                ikdummy.SetTranslationDirection5D(RAY(param.GetTransform6D().trans, quatRotate(param.GetTransform6D().rot, pmanip->GetLocalToolDirection())));
+                return ikdummy;
+            }
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT("ik solver %s (dof=%d) does not support iktype 0x%x", GetXMLId()%_nTotalDOF%param.GetType(), ORE_InvalidArguments);
     }
 
     RobotBase::ManipulatorWeakPtr _pmanip;

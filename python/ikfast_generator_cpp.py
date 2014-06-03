@@ -638,6 +638,9 @@ int main(int argc, char** argv)
         self._globalvariables = set(usedvars)
         self._solutioncounter = 0
         code += 'unsigned char ' + ','.join('_i%s[2], _n%s'%(var[0].name,var[0].name) for var in node.solvejointvars+node.freejointvars) + ';\n\n'
+        # special variable
+        code += 'IkReal j100, cj100, sj100;\n' # for dummy joints that is sum of real joints
+        code += 'unsigned char _ij100[2], _nj100;\n'
         return code
 
     def GetIkFunctionPreamble(self, node):

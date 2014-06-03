@@ -168,7 +168,7 @@ else:
 
 import numpy
 from ..openravepy_ext import openrave_exception, planning_error, transformPoints
-from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray
+from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray, poseFromMatrix
 from . import DatabaseGenerator
 from ..misc import SpaceSamplerExtra
 from .. import interfaces
@@ -192,7 +192,13 @@ import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class GraspingModel(DatabaseGenerator):
-    """Holds all functions/data related to a grasp between a robot hand and a target"""
+    """Holds all functions/data related to a grasp between a robot hand and a target
+
+    parameters:
+    - imanipulatordirection - a new manip.GetLocalToolDirection()
+    - approachdirectionmanip - the approach direction with respect to the manipulator coordinate system. If this is nonzero use it instead of igraspdir
+    - igrasptranslationoffset - a translation offset in the manipluator coordinate system to use before solving the IK
+    """
     graspsetname = u'default' # the name of the grasp set. this allows applications another way to differentiate what grasp parameters their set was generated with
     
     class GripperVisibility:
@@ -233,7 +239,8 @@ class GraspingModel(DatabaseGenerator):
         self.translationstepmult = None
         self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
-        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices())}
+        graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices()), 'graspikparam_nocol':8, 'approachdirectionmanip':3, 'igrasptranslationoffset':3 }
+        # graspikparam_nocol is the serialized IkParameterization. It can hold a max of 8 values, the first being the type
         self.graspindices = dict()
         self.totaldof = 0
         for name,dof in graspdof.iteritems():
@@ -248,7 +255,7 @@ class GraspingModel(DatabaseGenerator):
     def has(self):
         return len(self.grasps) > 0 and len(self.graspindices) > 0 and self.grasper is not None
     def getversion(self):
-        return 8
+        return 10
     
     def init(self,friction,avoidlinks,plannername=None):
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=self.maxvelmult)
@@ -441,7 +448,7 @@ class GraspingModel(DatabaseGenerator):
         if graspingnoise is None:
             graspingnoise = 0.0
         if manipulatordirections is None:
-            manipulatordirections = array([self.manip.GetDirection()])
+            manipulatordirections = array([self.manip.GetLocalToolDirection()])
         self.translationstepmult = translationstepmult
         self.finestep = finestep
         time.sleep(0.1) # sleep or otherwise viewer might not load well
@@ -501,6 +508,7 @@ class GraspingModel(DatabaseGenerator):
                 grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                 grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
                 grasp[self.graspindices.get('igraspfinalfingers')] = finalconfig[0][self.manip.GetGripperIndices()]
+                grasp[self.graspindices.get('graspikparam_nocol')] = r_[int(IkParameterizationType.Transform6D), poseFromMatrix(Tlocalgrasp_nocol)]
                 grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
                 self.robot.SetTransform(Trobotorig) # transform back to original position for checkgraspfn
                 if not forceclosure or mindist >= forceclosurethreshold:
@@ -556,7 +564,7 @@ class GraspingModel(DatabaseGenerator):
         if standoffs is None:
             standoffs = array([0,0.025])
         if manipulatordirections is None:
-            manipulatordirections = array([self.manip.GetDirection()])
+            manipulatordirections = array([self.manip.GetLocalToolDirection()])
         if self.numthreads is None:
             numthreads = 1
         else:
@@ -607,6 +615,7 @@ class GraspingModel(DatabaseGenerator):
 
                     grasp[self.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                     grasp[self.graspindices.get('grasptrans_nocol')] = reshape(transpose(Tlocalgrasp_nocol[0:3,0:4]),12)
+                    grasp[self.graspindices.get('graspikparam_nocol')] = r_[int(IkParameterizationType.Transform6D), poseFromMatrix(Tlocalgrasp_nocol)]
                     grasp[self.graspindices.get('igraspfinalfingers')] = finalshape[self.manip.GetGripperIndices()]
                     grasp[self.graspindices.get('forceclosure')] = mindist if mindist is not None else 0
                     if not forceclosurethreshold or mindist >= forceclosurethreshold:
@@ -618,7 +627,7 @@ class GraspingModel(DatabaseGenerator):
             if len(self.grasps) > 0:
                 order = argsort(self.grasps[:,self.graspindices.get('performance')[0]])
                 self.grasps = self.grasps[order]
-
+                
     def show(self,delay=0.1,options=None,forceclosure=True,showcontacts=True):
         with self.robot.CreateRobotStateSaver():
             with self.GripperVisibility(self.manip):
@@ -730,7 +739,9 @@ class GraspingModel(DatabaseGenerator):
         with self.robot:
             self.robot.SetActiveManipulator(self.manip)
             self.robot.SetDOFValues(grasp[self.graspindices.get('igrasppreshape')],self.manip.GetGripperIndices())
-            self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(self.manip.GetEndEffectorTransform()),self.robot.GetTransform())))
+            Tmanip = self.manip.GetTransform()
+            Tmanip[0:3,3] += dot(Tmanip[0:3, 0:3], grasp[self.graspindices.get('igrasptranslationoffset')])
+            self.robot.SetTransform(dot(self.getGlobalGraspTransform(grasp),dot(linalg.inv(Tmanip),self.robot.GetTransform())))
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
             if len(self.manip.GetGripperIndices()) == 0:
                 return [],[[],self.robot.GetTransform()],None,None
@@ -807,7 +818,7 @@ class GraspingModel(DatabaseGenerator):
                         if self.manip.FindIKSolution(Tglobalgrasp,checkcollision) is None:
                             continue
                     elif self.manip.GetIkSolver().Supports(IkParameterization.Type.TranslationDirection5D):
-                        ikparam = IkParameterization(Ray(Tglobalgrasp[0:3,3],dot(Tglobalgrasp[0:3,0:3],self.manip.GetDirection())),IkParameterization.Type.TranslationDirection5D)
+                        ikparam = IkParameterization(Ray(Tglobalgrasp[0:3,3],dot(Tglobalgrasp[0:3,0:3],self.manip.GetLocalToolDirection())),IkParameterization.Type.TranslationDirection5D)
                         solution = self.manip.FindIKSolution(ikparam,checkcollision)
                         if solution is None:
                             continue
@@ -816,6 +827,7 @@ class GraspingModel(DatabaseGenerator):
                             Tglobalgrasp = self.manip.GetEndEffectorTransform()
                             grasp = array(grasp)
                             grasp[self.graspindices['grasptrans_nocol']] = Tglobalgrasp[0:3,0:4].flatten()
+                            grasp[self.graspindices.get('graspikparam_nocol')] = r_[int(IkParameterizationType.Transform6D), poseFromMatrix(Tglobalgrasp)]
                     else:
                         return ValueError('manipulator iktype not correct')
                 elif checkcollision:

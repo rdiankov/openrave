@@ -1085,14 +1085,14 @@ def test_ik():
     rawbasedir=dot(ikmodel.manip.GetLocalToolTransform()[0:3,0:3],ikmodel.manip.GetDirection())
     rawbasepos=ikmodel.manip.GetLocalToolTransform()[0:3,3]
     
-    chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn)
+    chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn,ikfastoptions=1)
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator().generate(chaintree)
     open(sourcefilename,'w').write(code)
     
     #T0links.append(self.affineInverse(T1links.pop(-1)))
     # get values
     possibleangles = [S.Zero, pi.evalf()/2, asin(3.0/5).evalf(), asin(4.0/5).evalf(), asin(5.0/13).evalf(), asin(12.0/13).evalf()]
-    jointvalues = [S.Zero]*len(jointvars)
+    jointvalues = [S.Zero]*len(self._jointvars)
     jointvalues[0] = possibleangles[2]
     jointvalues[1] = possibleangles[3]
     jointvalues[2] = possibleangles[2]

@@ -4093,7 +4093,7 @@ void KinBody::_ComputeInternalInformation()
         index += 1;
     }
     _nParametersChanged = 0;
-    RAVELOG_DEBUG(str(boost::format("_ComputeInternalInformation %s in %fs")%GetName()%(1e-6*(utils::GetMicroTime()-starttime))));
+    RAVELOG_VERBOSE_FORMAT("initialized %s in %fs", GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
 }
 
 bool KinBody::IsAttached(KinBodyConstPtr pbody) const

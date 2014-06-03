@@ -288,6 +288,9 @@ public:
      */
     virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief returns the kinematics structure hash this ik solver is encoded to. Checked with \ref RobotBase::Manipulator::GetKinematicsStructureHash()
+    virtual const std::string& GetKinematicsStructureHash() const OPENRAVE_DUMMY_IMPLEMENTATION;
+    
 protected:
     inline IkSolverBasePtr shared_iksolver() {
         return boost::static_pointer_cast<IkSolverBase>(shared_from_this());

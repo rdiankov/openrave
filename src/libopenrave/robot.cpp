@@ -145,6 +145,13 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
     if( _options & Save_GrabbedBodies ) {
         _vGrabbedBodies = _probot->_vGrabbedBodies;
     }
+    if( _options & Save_ActiveManipulatorToolTransform ) {
+        _pManipActive = _probot->GetActiveManipulator();
+        if( !!_pManipActive ) {
+            _tActiveManipLocalTool = _pManipActive->GetLocalToolTransform();
+            _vActiveManipLocalDirection = _pManipActive->GetLocalToolDirection();
+        }
+    }
 }
 
 RobotBase::RobotStateSaver::~RobotStateSaver()
@@ -217,6 +224,30 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
                         }
                         probot->_AttachBody(pnewbody);
                         probot->_vGrabbedBodies.push_back(pnewgrabbed);
+                    }
+                }
+            }
+        }
+    }
+    if( _options & Save_ActiveManipulatorToolTransform ) {
+        if( !!_pManipActive ) {
+            if( probot == _probot ) {
+                _pManipActive->SetLocalToolTransform(_tActiveManipLocalTool);
+                _pManipActive->SetLocalToolDirection(_vActiveManipLocalDirection);
+                _pManipActive->SetIkSolver(_pActiveManipIkSolver);
+            }
+            else {
+                RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(_pManipActive->GetName());
+                if( !!pmanip ) {
+                    pmanip->SetLocalToolTransform(_tActiveManipLocalTool);
+                    pmanip->SetLocalToolDirection(_vActiveManipLocalDirection);
+                    if( !!_pActiveManipIkSolver ) {
+                        IkSolverBasePtr pnewsolver = RaveCreateIkSolver(probot->GetEnv(), _pActiveManipIkSolver->GetXMLId());
+                        pnewsolver->Clone(_pActiveManipIkSolver, 0);
+                        pmanip->SetIkSolver(pnewsolver);
+                    }
+                    else {
+                        pmanip->SetIkSolver(IkSolverBasePtr());
                     }
                 }
             }

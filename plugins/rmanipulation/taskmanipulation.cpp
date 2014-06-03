@@ -389,6 +389,7 @@ protected:
         int iStartCountdown = 40;
         string cmd;
         CollisionReportPtr report(new CollisionReport);
+        Vector vLocalGraspTranslationOffset;
 
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -439,6 +440,9 @@ protected:
             }
             else if( cmd == "ichuckingdirection" ) {
                 sinput >> iChuckingDirection;
+            }
+            else if( cmd == "igrasptrans" ) {
+                sinput >> vLocalGraspTranslationOffset.x >> vLocalGraspTranslationOffset.y >> vLocalGraspTranslationOffset.z;
             }
             else if( cmd == "steplength" ) {
                 sinput >> fRRTStepLength;

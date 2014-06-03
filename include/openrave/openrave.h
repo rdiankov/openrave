@@ -996,10 +996,11 @@ public:
             - \b previous - the previous waypoint's value is always chosen
             - \b next - the next waypoint's value is always chosen
             - \b linear - linear interpolation (default)
-            - \b quadratic - position is piecewise-quadratic, velocity is piecewise-linear, acceleration is one of -amax, 0, or amax
-            - \b cubic - 3 degree polynomial
-            - \b quadric - 4 degree polynomial
-            - \b quintic - 5 degree polynomial
+            - \b quadratic - position is piecewise-quadratic, velocity is piecewise-linear, acceleration is one of -amax, 0, or amax. needs velocity info
+            - \b cubic - 3 degree polynomial. needs velocity info.
+            - \b quadric - 4 degree polynomial. needs velocity and acceleration info.
+            - \b quintic - 5 degree polynomial. needs velocity and acceleration info.
+            - \b sextic - 6 degree polynomial. needs velocity, acceleration, and jerk info
          */
         std::string interpolation;
     };
@@ -2727,7 +2728,7 @@ OPENRAVE_API UserDataPtr RaveRegisterInterface(InterfaceType type, const std::st
 OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
-OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBasePtr env);
+OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
 
 /// \brief get the environment from its unique id
 /// \param id the unique environment id returned by \ref RaveGetEnvironmentId

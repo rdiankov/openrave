@@ -447,21 +447,21 @@ private:
     }
 
     /// \brief Write down environment
-    virtual bool Write()
+    virtual bool Write(const std::string& scenename=std::string())
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         std::list<KinBodyPtr> listbodies(vbodies.begin(),vbodies.end());
-        return Write(listbodies);
+        return Write(listbodies, scenename);
     }
 
-    virtual bool Write(const std::list<KinBodyPtr>& listbodies)
+    virtual bool Write(const std::list<KinBodyPtr>& listbodies, const std::string& scenename=std::string())
     {
         if( listbodies.size() == 0 ) {
             return false;
         }
-        _CreateScene();
+        _CreateScene(scenename);
         domPhysics_scene::domTechnique_commonRef common = daeSafeCast<domPhysics_scene::domTechnique_common>(_scene.pscene->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         //  Create gravity
@@ -1673,6 +1673,7 @@ private:
         else {
             _scene.kscene->setName("Kinematics Scene");
         }
+        
         // Create instance kinematics scene
         _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
         _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getId()).c_str());
@@ -2263,7 +2264,22 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     writer.Init("openrave_snapshot");
-    if( !writer.Write() ) {
+    std::string scenename;
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+    boost::filesystem::path pfilename(filename);
+    scenename = pfilename.stem().string();
+#else
+    boost::filesystem::path pfilename(filename, boost::filesystem::native);
+    scenename = pfilename.stem();
+#endif
+#endif
+    // if there's any '.', then remove them
+    size_t dotindex = scenename.find_first_of('.');
+    if( dotindex != string::npos ) {
+        scenename = scenename.substr(0, dotindex);
+    }
+    if( !writer.Write(scenename) ) {
         throw openrave_exception("ColladaWriter::Write(EnvironmentBasePtr) failed");
     }
     writer.Save(filename);
@@ -2286,7 +2302,22 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
         writer.Init("openrave_snapshot");
-        if( !writer.Write(listbodies) ) {
+        std::string scenename;
+#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+        boost::filesystem::path pfilename(filename);
+        scenename = pfilename.stem().string();
+#else
+        boost::filesystem::path pfilename(filename, boost::filesystem::native);
+        scenename = pfilename.stem();
+#endif
+#endif
+        // if there's any '.', then remove them
+        size_t dotindex = scenename.find_first_of('.');
+        if( dotindex != string::npos ) {
+            scenename = scenename.substr(0, dotindex);
+        }
+        if( !writer.Write(listbodies, scenename) ) {
             throw openrave_exception("ColladaWriter::Write(list<KinBodyPtr>) failed");
         }
         writer.Save(filename);

@@ -102,13 +102,13 @@ public:
                 if( newdist1 < 0 ) {
                     return PS_Interrupted;
                 }
-                RAVELOG_DEBUG(str(boost::format("path optimizing first stage - dist %f->%f, computation time=%fs\n")%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))));
+                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing first stage - dist %f->%f, computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime)));
                 uint32_t basetime2 = utils::GetMilliTime();
                 dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*2/10);
                 if( newdist2 < 0 ) {
                     return PS_Interrupted;
                 }
-                RAVELOG_DEBUG(str(boost::format("path optimizing second stage - dist %f->%f computation time=%fs\n")%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2))));
+                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2)));
             }
             else {
                 dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations);

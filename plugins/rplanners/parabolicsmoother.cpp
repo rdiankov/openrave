@@ -190,7 +190,7 @@ public:
 
         try {
             _bUsePerturbation = true;
-            RAVELOG_DEBUG(str(boost::format("initial path size=%d, duration=%f, pointtolerance=%f, multidof=%d")%dynamicpath.ramps.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance%_parameters->_multidofinterp));
+            RAVELOG_DEBUG_FORMAT("env=%d, initial path size=%d, duration=%f, pointtolerance=%f, multidof=%d", GetEnv()->GetId()%dynamicpath.ramps.size()%dynamicpath.GetTotalTime()%parameters->_pointtolerance%_parameters->_multidofinterp);
             ParabolicRamp::Vector tol = parameters->_vConfigResolution;
             FOREACH(it,tol) {
                 *it *= parameters->_pointtolerance;
@@ -205,10 +205,14 @@ public:
             int numshortcuts=0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
-                numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
+                //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
+                numshortcuts = Shortcut(dynamicpath, parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
+                if( numshortcuts < 0 ) {
+                    return PS_Interrupted;
+                }
             }
 
-            progress._iteration=1;
+            progress._iteration=parameters->_nMaxIterations;
             if( _CallCallbacks(progress) == PA_Interrupt ) {
                 return PS_Interrupted;
             }
@@ -330,7 +334,7 @@ public:
                         }
                     }
                     _bUsePerturbation = true; // re-enable
-                    progress._iteration=2;
+                    ++progress._iteration;
                     if( _CallCallbacks(progress) == PA_Interrupt ) {
                         return PS_Interrupted;
                     }
@@ -412,6 +416,126 @@ public:
             return false;
         }
         return true;
+    }
+
+    int Shortcut(ParabolicRamp::DynamicPath& dynamicpath, int numIters,ParabolicRamp::RampFeasibilityChecker& check,ParabolicRamp::RandomNumberGeneratorBase* rng, dReal mintimestep)
+    {
+        std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
+        int shortcuts = 0;
+        vector<dReal> rampStartTime(ramps.size());
+        dReal endTime=0;
+        for(size_t i=0; i<ramps.size(); i++) {
+            rampStartTime[i] = endTime;
+            endTime += ramps[i].endTime;
+        }
+        ParabolicRamp::Vector x0,x1,dx0,dx1;
+        ParabolicRamp::DynamicPath intermediate;
+        PlannerProgress progress; progress._iteration=0;
+        for(int iters=0; iters<numIters; iters++) {
+            dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
+            if( iters == 0 ) {
+                t1 = 0;
+                t2 = endTime;
+            }
+            if(t1 > t2) {
+                ParabolicRamp::Swap(t1,t2);
+            }
+            int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
+            int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
+            if(i1 == i2) {
+                continue;
+            }
+            //same ramp
+            dReal u1 = t1-rampStartTime[i1];
+            dReal u2 = t2-rampStartTime[i2];
+            PARABOLIC_RAMP_ASSERT(u1 >= 0);
+            PARABOLIC_RAMP_ASSERT(u1 <= ramps[i1].endTime+ParabolicRamp::EpsilonT);
+            PARABOLIC_RAMP_ASSERT(u2 >= 0);
+            PARABOLIC_RAMP_ASSERT(u2 <= ramps[i2].endTime+ParabolicRamp::EpsilonT);
+            u1 = ParabolicRamp::Min(u1,ramps[i1].endTime);
+            u2 = ParabolicRamp::Min(u2,ramps[i2].endTime);
+            ramps[i1].Evaluate(u1,x0);
+            if( _parameters->SetStateValues(x0) != 0 ) {
+                continue;
+            }
+            _parameters->_getstatefn(x0);
+            ramps[i2].Evaluate(u2,x1);
+            if( _parameters->SetStateValues(x1) != 0 ) {
+                continue;
+            }
+            _parameters->_getstatefn(x1);
+            ramps[i1].Derivative(u1,dx0);
+            ramps[i2].Derivative(u2,dx1);
+            bool res=ParabolicRamp::SolveMinTime(x0,dx0,x1,dx1,dynamicpath.accMax,dynamicpath.velMax,dynamicpath.xMin,dynamicpath.xMax,intermediate,_parameters->_multidofinterp);
+            if(!res) {
+                continue;
+            }
+            // check the new ramp time makes significant steps
+            dReal newramptime = intermediate.GetTotalTime();
+            if( newramptime+mintimestep > t2-t1 ) {
+                // reject since it didn't make significant improvement
+                PARABOLIC_RAMP_PLOG("shortcut iter=%d rejected time=%fs\n", iters, endTime-(t2-t1)+newramptime);
+                continue;
+            }
+
+            progress._iteration = iters;
+            if( _CallCallbacks(progress) == PA_Interrupt ) {
+                return -1;
+            }
+            
+            bool feas=true;
+            for(size_t i=0; i<intermediate.ramps.size(); i++) {
+                if( i > 0 ) {
+                    intermediate.ramps[i].x0 = intermediate.ramps[i-1].x1;
+                }
+                if( _parameters->SetStateValues(intermediate.ramps[i].x1) != 0 ) {
+                    feas=false;
+                    break;
+                }
+                _parameters->_getstatefn(intermediate.ramps[i].x1);
+                // have to resolve for the ramp since the positions might have changed?
+//                for(size_t j = 0; j < intermediate.rams[i].x1.size(); ++j) {
+//                    intermediate.ramps[i].SolveFixedSwitchTime();
+//                }
+                if(!check.Check(intermediate.ramps[i])) {
+                    feas=false;
+                    break;
+                }
+            }
+            if(!feas) {
+                continue;
+            }
+            //perform shortcut
+            shortcuts++;
+            ramps[i1].TrimBack(ramps[i1].endTime-u1);
+            ramps[i1].x1 = intermediate.ramps.front().x0;
+            ramps[i1].dx1 = intermediate.ramps.front().dx0;
+            ramps[i2].TrimFront(u2);
+            ramps[i2].x0 = intermediate.ramps.back().x1;
+            ramps[i2].dx0 = intermediate.ramps.back().dx1;
+
+            //replace intermediate ramps
+            for(int i=0; i<i2-i1-1; i++) {
+                ramps.erase(ramps.begin()+i1+1);
+            }
+            ramps.insert(ramps.begin()+i1+1,intermediate.ramps.begin(),intermediate.ramps.end());
+
+            //check for consistency
+            for(size_t i=0; i+1<ramps.size(); i++) {
+                PARABOLIC_RAMP_ASSERT(ramps[i].x1 == ramps[i+1].x0);
+                PARABOLIC_RAMP_ASSERT(ramps[i].dx1 == ramps[i+1].dx0);
+            }
+
+            //revise the timing
+            rampStartTime.resize(ramps.size());
+            endTime=0;
+            for(size_t i=0; i<ramps.size(); i++) {
+                rampStartTime[i] = endTime;
+                endTime += ramps[i].endTime;
+            }
+            RAVELOG_VERBOSE("shortcut iter=%d endTime=%f\n",iters,endTime);
+        }
+        return shortcuts;
     }
 
     virtual ParabolicRamp::Real Rand()

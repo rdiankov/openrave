@@ -617,13 +617,19 @@ public:
     virtual int GetDebugLevel() const = 0;
     //@}
 
+    /// \brief returns the unique id of the environment
+    inline int GetId() const {
+        return __nUniqueId;
+    }
+    
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;
     }
+
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData
-    int __nUniqueId;         ///< \see GetId
+    int __nUniqueId;         ///< \see RaveGetEnvironmentId
 };
 
 } // end namespace OpenRAVE

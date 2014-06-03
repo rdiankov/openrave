@@ -2200,7 +2200,7 @@ protected:
         FOREACHC(itbody,_vecbodies) {
             if(( *itbody != pbody) &&( (*itbody)->GetName() == pbody->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format("body %s does not have unique name")%pbody->GetName()));
+                    throw openrave_exception(str(boost::format("env=%d, body %s does not have unique name")%GetId()%pbody->GetName()));
                 }
                 return false;
             }
@@ -2212,7 +2212,7 @@ protected:
         FOREACHC(itsensor,_listSensors) {
             if(( *itsensor != psensor) &&( (*itsensor)->GetName() == psensor->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format("sensor %s does not have unique name")%psensor->GetName()));
+                    throw openrave_exception(str(boost::format("env=%d, sensor %s does not have unique name")%GetId()%psensor->GetName()));
                 }
                 return false;
             }
@@ -2224,7 +2224,7 @@ protected:
         FOREACHC(itviewer,_listViewers) {
             if(( *itviewer != pviewer) &&( (*itviewer)->GetName() == pviewer->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format("viewer '%s' does not have unique name")%pviewer->GetName()));
+                    throw openrave_exception(str(boost::format("env=%d, viewer '%s' does not have unique name")%GetId()%pviewer->GetName()));
                 }
                 return false;
             }
