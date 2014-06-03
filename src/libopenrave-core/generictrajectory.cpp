@@ -496,6 +496,11 @@ protected:
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
             }
+            else if( interpolation == "sextic" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                nNeedNeighboringInfo = 3;
+            }
             else if( interpolation == "" ) {
                 // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
                 _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
@@ -751,6 +756,11 @@ protected:
         throw OPENRAVE_EXCEPTION_FORMAT0("quintic interpolation not supported",ORE_InvalidArguments);
     }
 
+    void _InterpolateSextic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("sextic interpolation not supported",ORE_InvalidArguments);
+    }
+
     void _ValidateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
         size_t offset = ipoint*_spec.GetDOF();
@@ -799,12 +809,14 @@ protected:
 
     void _ValidateQuadric(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        throw OPENRAVE_EXCEPTION_FORMAT0("quadric interpolation not supported",ORE_InvalidArguments);
     }
 
     void _ValidateQuintic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
-        throw OPENRAVE_EXCEPTION_FORMAT0("quintic interpolation not supported",ORE_InvalidArguments);
+    }
+
+    void _ValidateSextic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    {
     }
 
     ConfigurationSpecification _spec;

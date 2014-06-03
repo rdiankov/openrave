@@ -570,7 +570,10 @@ class AST:
             zeroeq = S.Zero
             for monom, coeff in self.poly.terms():
                 if monom[0] > 0:
-                    zeroeq += abs(coeff.subs(self.dictequations))
+                    if len(self.dictequations) > 0: # bug with sympy?
+                        zeroeq += abs(coeff.subs(self.dictequations))
+                    else:
+                        zeroeq += abs(coeff)
             return [zeroeq]#self.poly.LC()]
         def getEquationsUsed(self):
             return self.equationsused

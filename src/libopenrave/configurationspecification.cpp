@@ -665,6 +665,7 @@ void ConfigurationSpecification::Swap(ConfigurationSpecification& spec)
 
 ConfigurationSpecification& ConfigurationSpecification::operator+= (const ConfigurationSpecification& r)
 {
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic","sextic"}};
     list< std::vector<Group>::const_iterator > listaddgroups;
     stringstream ss;
     vector<int> vindices;
@@ -679,7 +680,18 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                 itcompatgroup->interpolation = itrgroup->interpolation;
             }
             else if( itrgroup->interpolation.size() > 0 && itrgroup->interpolation != itcompatgroup->interpolation ) {
-                RAVELOG_WARN(str(boost::format("interpolation values of group %s differ: %s!=%s")%itcompatgroup->name%itcompatgroup->interpolation%itrgroup->interpolation));
+                // check if itrgroup->interpolation has a higher degree and use it instead
+                for(size_t i = 0; i < s_InterpolationOrder.size(); ++i) {
+                    if( s_InterpolationOrder.at(s_InterpolationOrder.size()-i-1) == itcompatgroup->interpolation ) {
+                        break;
+                    }
+                    if( s_InterpolationOrder.at(s_InterpolationOrder.size()-i-1) == itrgroup->interpolation ) {
+                        // r has higher order, so use it instead
+                        RAVELOG_VERBOSE_FORMAT("setting interpolation of group %s from %s to %s", itcompatgroup->name%itcompatgroup->interpolation%itrgroup->interpolation);
+                        itcompatgroup->interpolation = itrgroup->interpolation;
+                    }
+                }
+                itrgroup->interpolation != itcompatgroup->interpolation;
             }
 
             if( itcompatgroup->name == itrgroup->name ) {
@@ -1644,7 +1656,7 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
 
 std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation, int deriv)
 {
-    const static boost::array<std::string,6> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic"}};
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic","sextic"}};
     for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
         if( interpolation == s_InterpolationOrder[i] ) {
             if( i < deriv ) {
