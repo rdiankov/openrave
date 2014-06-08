@@ -31,15 +31,17 @@ public:
     GenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryBase(penv), _timeoffset(-1)
     {
         _maporder["deltatime"] = 0;
-        _maporder["joint_jerks"] = 1;
-        _maporder["affine_jerks"] = 2;
-        _maporder["joint_accelerations"] = 3;
-        _maporder["affine_accelerations"] = 4;
-        _maporder["joint_velocities"] = 5;
-        _maporder["affine_velocities"] = 6;
-        _maporder["joint_values"] = 7;
-        _maporder["affine_transform"] = 8;
-        _maporder["joint_torques"] = 9;
+        _maporder["joint_snaps"] = 1;
+        _maporder["affine_snaps"] = 2;
+        _maporder["joint_jerks"] = 3;
+        _maporder["affine_jerks"] = 4;
+        _maporder["joint_accelerations"] = 5;
+        _maporder["affine_accelerations"] = 6;
+        _maporder["joint_velocities"] = 7;
+        _maporder["affine_velocities"] = 8;
+        _maporder["joint_values"] = 9;
+        _maporder["affine_transform"] = 10;
+        _maporder["joint_torques"] = 11;
         _bInit = false;
         _bSamplingVerified = false;
     }
@@ -823,13 +825,15 @@ protected:
 
     void _InterpolateQuintic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
+        // p0, p1, v0, v1, a0, a1, dt, t, c5, c4, c3 = symbols('p0, p1, v0, v1, a0, a1, dt, t, c5, c4, c3')
         // p = c5*t**5 + c4*t**4 + c3*t**3 + c2*t**2 + c1*t + c0
         //
-        // v1 = 5*c5*t**4 + 4*c4*dt**3 + 3*c3*dt**2 + a0*dt + v0
-        // a1 = 20*c5*t**3 + 12*c4*dt**2 + 6*c3*dt + a0
+        // c5*dt**5 + c4*dt**4 + c3*dt**3 + a0/2*t**2 + v0*t + p0 - p1 = 0
+        // 5*c5*t**4 + 4*c4*dt**3 + 3*c3*dt**2 + a0*dt + v0 - v1 = 0
+        // 20*c5*t**3 + 12*c4*dt**2 + 6*c3*dt + a0 - a1 = 0
         //
         // A = Matrix(3,3,[dt**5, dt**4, dt**3, 5*dt**4, 4*dt**3, 3*dt**2, 20*dt**3, 12*dt**2, 6*dt])
-        // b = Matrix(3, 1, [p1 -0.5*a0*dt**2 - v0*dt - p0, v1 -a0*dt - v0, a1 - a0])
+        // b = Matrix(3, 1, [p1 -a0/2*dt**2 - v0*dt - p0, v1 -a0*dt - v0, a1 - a0])
         // c5 = -0.5*a0/dt**3 + a1/(2*dt**3) - 3*v0/dt**4 - 3*v1/dt**4 - 6*p0/dt**5 + 6*p1/dt**5
         // c4 = 1.5*a0/dt**2 - a1/dt**2 + 8*v0/dt**3 + 7*v1/dt**3 + 15*p0/dt**4 - 15*p1/dt**4
         // c3 = -1.5*a0/dt + a1/(2*dt) - 6*v0/dt**2 - 4*v1/dt**2 - 10*p0/dt**3 + 10*p1/dt**3
@@ -854,7 +858,7 @@ protected:
                     dReal dd0 = _vtrajdata[offset+ddoffset+i];
                     dReal dd1 = _vtrajdata[_spec.GetDOF()+offset+ddoffset+i];
                     dReal c5 = (-0.5*dd0 + dd1*0.5)*ideltatime3 - (3*deriv0 + 3*deriv1)*ideltatime4 + px*6*ideltatime5;
-                    dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 + px*15*ideltatime4;
+                    dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 - px*15*ideltatime4;
                     dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (- 6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
                 }
