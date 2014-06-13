@@ -1313,6 +1313,29 @@ public:
         _penv->UpdatePublishedBodies();
     }
 
+    object GetPublishedBodies(uint64_t timeout=0)
+    {
+        std::vector<KinBody::BodyState> vbodystates;
+        _penv->GetPublishedBodies(vbodystates, timeout);
+        boost::python::list ostates;
+        FOREACH(itstate, vbodystates) {
+            boost::python::dict ostate;
+            ostate["body"] = toPyKinBody(itstate->pbody, shared_from_this());
+            boost::python::list olinktransforms;
+            FOREACH(ittransform, itstate->vectrans) {
+                olinktransforms.append(ReturnTransform(*ittransform));
+            }
+            ostate["linktransforms"] = olinktransforms;
+            ostate["jointvalues"] = toPyArray(itstate->jointvalues);
+            ostate["name"] = ConvertStringToUnicode(itstate->strname);
+            ostate["uri"] = ConvertStringToUnicode(itstate->uri);
+            ostate["updatestamp"] = itstate->updatestamp;
+            ostate["environmentid"] = itstate->environmentid;
+            ostates.append(ostate);
+        }
+        return ostates;
+    }
+
     object Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
@@ -1496,6 +1519,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1762,6 +1786,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
                     .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                     .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
+                    .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(args("timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodies)))
                     .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"), DOXY_FN(EnvironmentBase,Triangulate))
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))

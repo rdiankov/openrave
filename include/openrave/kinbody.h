@@ -1215,7 +1215,7 @@ private:
     class BodyState
     {
 public:
-        BodyState() : environmentid(0){
+        BodyState() : updatestamp(0), environmentid(0) {
         }
         virtual ~BodyState() {
         }
@@ -1223,6 +1223,7 @@ public:
         std::vector<Transform> vectrans; ///< \see KinBody::GetLinkTransformations
         std::vector<dReal> jointvalues; ///< \see KinBody::GetDOFValues
         std::string strname;         ///< \see KinBody::GetName
+        std::string uri; ///< \see KinBody::GetURI
         int updatestamp; ///< \see KinBody::GetUpdateStamp
         int environmentid; ///< \see KinBody::GetEnvironmentId
     };

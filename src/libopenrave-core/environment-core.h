@@ -1802,6 +1802,7 @@ public:
             (*itbody)->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
             (*itbody)->GetDOFValues(state.jointvalues);
             state.strname =(*itbody)->GetName();
+            state.uri = (*itbody)->GetURI();
             state.updatestamp = (*itbody)->GetUpdateStamp();
             state.environmentid = (*itbody)->GetEnvironmentId();
             _vPublishedBodies.push_back(state);
