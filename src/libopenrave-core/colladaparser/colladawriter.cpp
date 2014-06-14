@@ -765,7 +765,7 @@ private:
 
                 // only write the links that are in this model
                 for(size_t ilink = 0; ilink < pcolladainfo->_bindingLinkSIDs.size(); ++ilink) {
-                    ColladaXMLReadable::Binding& linkbinding = pcolladainfo->_bindingLinkSIDs[ilink];
+                    ColladaXMLReadable::LinkBinding& linkbinding = pcolladainfo->_bindingLinkSIDs[ilink];
                     if( linkbinding.index == imodel ) {
                         domInstance_rigid_bodyRef pirb = daeSafeCast<domInstance_rigid_body>(ipmout->ipm->add(COLLADA_ELEMENT_INSTANCE_RIGID_BODY));
                         pirb->setBody(linkbinding.pmodel.c_str());

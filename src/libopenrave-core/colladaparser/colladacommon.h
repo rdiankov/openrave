@@ -53,11 +53,11 @@ public:
     }
 
     /// \brief sid bindings for kinematics, physics, and visual
-    struct Binding
+    struct LinkBinding
     {
-        Binding() : index(-1) {
+        LinkBinding() : index(-1) {
         }
-        Binding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel), index(-1) {
+        LinkBinding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel), index(-1) {
         }
         std::string kmodel, pmodel, vmodel;
         int index; ///< for _bindingLinkSIDs, it is the index inside the _bindingModelURIs vector
@@ -94,7 +94,7 @@ public:
     std::vector<ModelBinding> _bindingModelURIs;
     std::vector<AxisBinding> _bindingAxesSIDs; ///< same order as the body DOF
     std::list<AxisBinding> _bindingPassiveAxesSIDs; ///< same order as body->GetPassiveJoints()
-    std::vector<Binding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node). same order as link indices
+    std::vector<LinkBinding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node). same order as link indices
 };
 
 typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;

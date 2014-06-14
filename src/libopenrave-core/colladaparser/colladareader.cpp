@@ -134,14 +134,16 @@ public:
     typedef boost::shared_ptr<InterfaceType> InterfaceTypePtr;
 
     /// \brief bindings for instance models
-    class ModelBinding
+    class InstanceModelBinding
     {
 public:
-        ModelBinding(domNodeRef node, domInstance_kinematics_modelRef ikmodel, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : _node(node), _ikmodel(ikmodel) {
+        InstanceModelBinding(domInstance_nodeRef inode, domNodeRef node, domInstance_kinematics_modelRef ikmodel, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>(), const std::string& idsuffix=std::string()) : _inode(inode), _node(node), _ikmodel(ikmodel), _idsuffix(idsuffix) {
             _listInstanceScopeKModel = listInstanceScope;
         }
-        domNodeRef _node;
+        domInstance_nodeRef _inode; ///< optional instance node that the visual node could have come from
+        domNodeRef _node; ///< visual nod
         domInstance_kinematics_modelRef _ikmodel;
+        std::string _idsuffix; ///< if _node is instantiated (cloned), then this holds the suffix used to instantiate
         domInstance_physics_modelRef _ipmodel;
         std::list<daeElementRef> _listInstanceScopeKModel;
         domKinematics_modelRef _kmodel; // the resolved model from _ikmodel
@@ -151,7 +153,7 @@ public:
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
+        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans, domAxis_constraintRef pkinematicaxis, dReal jointvalue, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans), pkinematicaxis(pkinematicaxis), jointvalue(jointvalue), kinematics_axis_info(kinematics_axis_info), motion_axis_info(motion_axis_info),_iaxis(0) {
             _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
@@ -161,9 +163,12 @@ public:
                     if (!!visualnode) {
                         break;
                     }
-                    visualnode = _InstantiateNode(pae);
-                    if( !!visualnode ) {
-                        break;
+                    ivisualnode = daeSafeCast<domInstance_node>(pae);
+                    if( !!ivisualnode ) {
+                        visualnode = instantiatenodefn(pae);
+                        if( !!visualnode ) {
+                            break;
+                        }
                     }
                     pae = pae->getParentElement();
                 }
@@ -177,7 +182,8 @@ public:
         daeElementRef pvisualtrans;
         domAxis_constraintRef pkinematicaxis;
         dReal jointvalue; ///< this value is in degrees/meters
-        domNodeRef visualnode;
+        domInstance_nodeRef ivisualnode; ///< if the visual node comes from instantiating, this points to the instance_node element
+        domNodeRef visualnode; ///< the visual node
         domKinematics_axis_infoRef kinematics_axis_info;
         domMotion_axis_infoRef motion_axis_info;
         KinBody::JointPtr _pjoint;
@@ -186,7 +192,7 @@ public:
     };
 
     /// \brief bindings for links between different specs
-    class LinkBinding
+    class InstanceLinkBinding
     {
 public:
         KinBody::LinkPtr _link;
@@ -203,9 +209,9 @@ public:
     class KinematicsSceneBindings
     {
 public:
-        std::list<ModelBinding> listModelBindings;
+        std::list<InstanceModelBinding> listInstanceModelBindings;
         std::list<JointAxisBinding> listAxisBindings;
-        std::list<LinkBinding> listLinkBindings;
+        std::list<InstanceLinkBinding> listInstanceLinkBindings;
 
         bool AddAxisInfo(const domInstance_kinematics_model_Array& arr, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info)
         {
@@ -315,6 +321,7 @@ public:
 
     bool _InitPreOpen(const AttributesList& atts)
     {
+        _mapInstantiatedNodes.clear();
         RAVELOG_VERBOSE(str(boost::format("init COLLADA reader version: %s, namespace: %s\n")%COLLADA_VERSION%COLLADA_NAMESPACE));
         _dae = GetGlobalDAE();
         _bSkipGeometry = false;
@@ -427,7 +434,7 @@ public:
             KinematicsSceneBindings& bindings = allbindings[iscene];
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,bindings);
             _ExtractPhysicsBindings(allscene,bindings);
-            FOREACH(itbinding,bindings.listModelBindings) {
+            FOREACH(itbinding,bindings.listInstanceModelBindings) {
                 if( !!itbinding->_node->getId() ) {
                     vprocessednodes.push_back(itbinding->_node->getId());
                 }
@@ -451,7 +458,7 @@ public:
                 }
             }
 
-            FOREACH(itlinkbinding,bindings.listLinkBindings) {
+            FOREACH(itlinkbinding,bindings.listInstanceLinkBindings) {
                 if( !!itlinkbinding->_link && !!itlinkbinding->_node && !!itlinkbinding->_node->getID()) {
                     vprocessednodes.push_back(itlinkbinding->_node->getID());
                 }
@@ -509,7 +516,7 @@ public:
                                                 if( !!ref_target ) {
                                                     string nodeid = ref_target->getID();
                                                     FOREACH(itbinding,allbindings) {
-                                                        FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                        FOREACH(itlinkbinding, itbinding->listInstanceLinkBindings) {
                                                             if( !!itlinkbinding->_node && nodeid == itlinkbinding->_node->getID() ) {
                                                                 ref_link = itlinkbinding->_link;
                                                                 break;
@@ -535,7 +542,7 @@ public:
                                                 if( !!ptarget ) {
                                                     string nodeid = ptarget->getID();
                                                     FOREACH(itbinding,allbindings) {
-                                                        FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                        FOREACH(itlinkbinding, itbinding->listInstanceLinkBindings) {
                                                             if( !!itlinkbinding->_node && nodeid == itlinkbinding->_node->getID() ) {
                                                                 link = itlinkbinding->_link;
                                                                 break;
@@ -574,7 +581,7 @@ public:
                                                                     if( !!ptarget ) {
                                                                         string nodeid = ptarget->getID();
                                                                         FOREACH(itbinding,allbindings) {
-                                                                            FOREACH(itlinkbinding, itbinding->listLinkBindings) {
+                                                                            FOREACH(itlinkbinding, itbinding->listInstanceLinkBindings) {
                                                                                 if( !!itlinkbinding->_node && nodeid == itlinkbinding->_node->getID() ) {
                                                                                     pignore_link = itlinkbinding->_link;
                                                                                     break;
@@ -990,8 +997,8 @@ public:
                                     if( !!itaxis->_pjoint && itaxis->_pjoint->GetParent() == pbody ) {
                                         if( itaxis->pkinematicaxis == pjointaxis ) {
                                             if( !!itaxis->visualnode ) {
-                                                std::list<ModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listModelBindings);
-                                                if (itmodel != bindings.listModelBindings.end()) {
+                                                std::list<InstanceModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listInstanceModelBindings);
+                                                if (itmodel != bindings.listInstanceModelBindings.end()) {
                                                     int dofindex = itaxis->_pjoint->GetDOFIndex();
                                                     ColladaXMLReadable::AxisBinding axisbinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
                                                     if( dofindex >= 0 ) {
@@ -1054,7 +1061,7 @@ public:
 
             ColladaXMLReadablePtr pcolladainfo(new ColladaXMLReadable());
             pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
-            std::map<domInstance_physics_modelRef,int> mapModelIndices;
+            std::map<domInstance_physics_modelRef, std::pair<int, std::list<InstanceModelBinding>::iterator> > mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
                 listInstanceScope.push_back(ias);
@@ -1063,11 +1070,19 @@ public:
                 if( !bsuccess ) {
                     RAVELOG_WARN("failed to extract kinematics model\n");
                 }
-                FOREACH(it, bindings.listModelBindings) {
+                FOREACH(it, bindings.listInstanceModelBindings) {
                     if( it->_ikmodel == ikmodel && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0) {
                         if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
-                            mapModelIndices[it->_ipmodel] = (int)pcolladainfo->_bindingModelURIs.size();
-                            ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), _MakeFullURIFromId(it->_node->getId(),it->_node));
+                            mapModelIndices[it->_ipmodel] = std::make_pair((int)pcolladainfo->_bindingModelURIs.size(), it);
+                            std::string vmodel;
+                            if( !!it->_inode ) {
+                                // node is instantiated, so take the instance_node's URL instead! this is because it->_node is cloned.
+                                vmodel = _MakeFullURI(it->_inode->getUrl(), it->_inode->getUrl().getElement().cast());//y_MakeFullURIFromId(it->_node->getId(),it->_inode);
+                            }
+                            else {
+                                vmodel = _MakeFullURIFromId(it->_node->getId(),it->_node);
+                            }
+                            ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), vmodel);
                             pcolladainfo->_bindingModelURIs.push_back(mbinding);
                         }
                         break;
@@ -1077,15 +1092,38 @@ public:
             }
 
             pcolladainfo->_bindingLinkSIDs.resize(pbody->GetLinks().size());
-            FOREACH(itlink, bindings.listLinkBindings) {
-                const LinkBinding& lb = *itlink;
+            FOREACH(itlink, bindings.listInstanceLinkBindings) {
+                const InstanceLinkBinding& lb = *itlink;
                 if( !!lb._link && lb._link->GetParent() == pbody ) {
                     if( !!lb._domlink && !!lb._rigidbody && !!lb._node ) {
                         if( !!lb._domlink->getSid() && !!lb._rigidbody->getSid() && !!lb._node->getSid() ) {
                             // find out the model that this link binding belongs to
-                            ColladaXMLReadable::Binding binding(lb._domlink->getSid(), lb._rigidbody->getSid(), _MakeFullURIFromId(lb._node->getId(),lb._node)); //lb._node->getSid());
+                            std::string vmodel;
+                            int bindingmodelindex = -1;
                             if( mapModelIndices.find(lb._ipmodel) != mapModelIndices.end() ) {
-                                binding.index = mapModelIndices[lb._ipmodel];
+                                bindingmodelindex = mapModelIndices[lb._ipmodel].first;
+                                std::list<InstanceModelBinding>::iterator itmodelinstance = mapModelIndices[lb._ipmodel].second;
+                                if( !!itmodelinstance->_inode ) {
+                                    // node was instantiated, so most likely the link node URL is different (ie without idsuffix)
+                                    std::string linknodeid = lb._node->getId();
+                                    if( itmodelinstance->_idsuffix.size() > 0 ) {
+                                        if( linknodeid.size() >= itmodelinstance->_idsuffix.size() && linknodeid.substr(linknodeid.size()-itmodelinstance->_idsuffix.size()) == itmodelinstance->_idsuffix ) {
+                                            vmodel = _MakeFullURIFromId(linknodeid.substr(0, linknodeid.size()-itmodelinstance->_idsuffix.size()), itmodelinstance->_inode->getUrl().getElement().cast());
+                                        }
+                                        else {
+                                            RAVELOG_WARN_FORMAT("link node id %s expected to end in idsuffix %s", linknodeid%itmodelinstance->_idsuffix);
+                                            vmodel = _MakeFullURIFromId(linknodeid, itmodelinstance->_inode);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if( vmodel.size() == 0 ) {
+                                vmodel = _MakeFullURIFromId(lb._node->getId(), lb._node);
+                            }
+                            ColladaXMLReadable::LinkBinding binding(lb._domlink->getSid(), lb._rigidbody->getSid(), vmodel); //lb._node->getSid());
+                            if( bindingmodelindex >= 0 ) {
+                                binding.index = bindingmodelindex;
                             }
                             pcolladainfo->_bindingLinkSIDs.at(lb._link->GetIndex()) = binding;
                         }
@@ -1104,10 +1142,10 @@ public:
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
         }
-        _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listLinkBindings);
+        _ExtractCollisionData(pbody,articulated_system,articulated_system->getExtra_array(),bindings.listInstanceLinkBindings);
         _ExtractExtraData(pbody,articulated_system->getExtra_array());
         // also collision data state can be dynamic, so process instance_articulated_system too
-        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listLinkBindings);
+        _ExtractCollisionData(pbody,ias,ias->getExtra_array(),bindings.listInstanceLinkBindings);
         return true;
     }
 
@@ -1122,7 +1160,7 @@ public:
             RAVELOG_WARN(str(boost::format("%s does not reference valid kinematics\n")%getSid(ikm)));
             return false;
         }
-        FOREACH(it, bindings.listModelBindings) {
+        FOREACH(it, bindings.listInstanceModelBindings) {
             if( it->_ikmodel == ikm && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0) {
                 it->_kmodel = kmodel;
                 break;
@@ -1167,7 +1205,7 @@ public:
 
         // find matching visual node
         domNodeRef pvisualnode;
-        FOREACH(it, bindings.listModelBindings) {
+        FOREACH(it, bindings.listInstanceModelBindings) {
             // have to use listInstanceScope
             if( it->_ikmodel == ikm && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0 ) {
                 pvisualnode = it->_node;
@@ -1177,7 +1215,7 @@ public:
         if( !pvisualnode ) {
             if( listInstanceScope.size() == 0 ) {
                 // if top scope, make an exception to ignore the resolved scope
-                FOREACH(it, bindings.listModelBindings) {
+                FOREACH(it, bindings.listInstanceModelBindings) {
                     // have to use listInstanceScope
                     if( it->_ikmodel == ikm ) {
                         pvisualnode = it->_node;
@@ -1385,7 +1423,7 @@ public:
             }
         }
 
-        _ExtractCollisionData(pkinbody,kmodel,kmodel->getExtra_array(),bindings.listLinkBindings);
+        _ExtractCollisionData(pkinbody,kmodel,kmodel->getExtra_array(),bindings.listInstanceLinkBindings);
 
         {
             stringstream ss;
@@ -1399,7 +1437,7 @@ public:
                         plink = pkinbody->GetLink(_ExtractLinkName(pdomlink));
                     }
                     else {
-                        plink = _ResolveLinkBinding(bindings.listLinkBindings, linksid);
+                        plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, linksid);
                     }
                     if( !plink ) {
                         RAVELOG_WARN(str(boost::format("failed to resolve link_info link %s\n")%linksid));
@@ -1522,9 +1560,9 @@ public:
             RAVELOG_VERBOSE(str(boost::format("Node Id %s and Name %s\n")%pdomnode->getId()%pdomnode->getName()));
 
             bool bFoundBinding = false;
-            FOREACH(itlinkbinding, bindings.listLinkBindings) {
+            FOREACH(itlinkbinding, bindings.listInstanceLinkBindings) {
                 // visual scenes can have weird hierarchy which makes physics assignment difficult
-                LinkBinding& lb = *itlinkbinding;
+                InstanceLinkBinding& lb = *itlinkbinding;
                 if( !lb._node ) {
                     // have to resolve _node
                     lb._node = daeSafeCast<domNode>(lb._nodeurifromphysics->getElement().cast());
@@ -1543,14 +1581,14 @@ public:
                         // set the rigid offset to the transform of the instance physics model parent
                         trigidoffset = getNodeParentTransform(lb._nodephysicsoffset) * _ExtractFullTransform(lb._nodephysicsoffset);
                     }
-                    break;
+                   break;
                 }
             }
             if( !bFoundBinding ) {
-                LinkBinding lb;
+                InstanceLinkBinding lb;
                 lb._node = pdomnode;
                 lb._link = plink;
-                bindings.listLinkBindings.push_back(lb);
+                bindings.listInstanceLinkBindings.push_back(lb);
             }
         }
 
@@ -2676,7 +2714,7 @@ public:
                             manipinfo._sBaseLinkName = _ExtractLinkName(pdomlink);
                         }
                         else {
-                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listLinkBindings, pframe_origin->getAttribute("link"));
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_origin->getAttribute("link"));
                             if( !!plink ) {
                                 manipinfo._sBaseLinkName = plink->GetName();
                             }
@@ -2692,7 +2730,7 @@ public:
                             manipinfo._sEffectorLinkName = _ExtractLinkName(pdomlink);
                         }
                         else {
-                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listLinkBindings, pframe_tip->getAttribute("link"));
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_tip->getAttribute("link"));
                             if( !!plink ) {
                                 manipinfo._sEffectorLinkName = plink->GetName();
                             }
@@ -3351,7 +3389,7 @@ public:
 private:
 
     /// \brief if inode points to a valid node, inserts it in the scene and removes the instance_node
-    static domNodeRef _InstantiateNode(daeElementRef pelt)
+    domNodeRef _InstantiateNode(daeElementRef pelt)
     {
         domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pelt);
         if( !inode ) {
@@ -3379,7 +3417,7 @@ private:
 
         // have to clone since the parents are different
         daeElementRef parentelt = pelt->getParent();
-        daeElementRef newnode = daeSafeCast<domNode>(node->clone(idsuffix.size() > 0 ? idsuffix.c_str() : NULL));
+        domNodeRef newnode = daeSafeCast<domNode>(node->clone(idsuffix.size() > 0 ? idsuffix.c_str() : NULL));
         if( !!node->getDocumentURI() ) {
             if( !parentelt->getDocumentURI() || !(*node->getDocumentURI() == *parentelt->getDocumentURI()) ) {
                 _ResolveURLs(newnode,*node->getDocumentURI());
@@ -3393,10 +3431,11 @@ private:
             // remove the old node's id since it doesn't belong to the visual hierarchy!
             newnode->getDAE()->getDatabase()->removeElement(node->getDocument(), node);
         }
-        return daeSafeCast<domNode>(newnode);
+        _mapInstantiatedNodes[newnode] = std::make_pair(inode, idsuffix);
+        return newnode;
     }
 
-    static void _InstantiateVisualSceneNodes(const domNode_Array & nodes)
+    void _InstantiateVisualSceneNodes(const domNode_Array & nodes)
     {
         for(size_t i = 0; i < nodes.getCount(); ++i) {
             for(size_t j = 0; j < nodes[i]->getInstance_node_array().getCount(); ++j) {
@@ -3406,6 +3445,7 @@ private:
         }
     }
 
+    /// \brief for the element and all its children, replace any URIs with srcuri
     static void _ResolveURLs(daeElementRef elt, const daeURI& srcuri)
     {
         // resolve all xsAnyURIs
@@ -3436,7 +3476,7 @@ private:
     ///
     /// \param kiscene instance of one kinematics scene, binds the kinematic and visual models
     /// \param bindings the extracted bindings
-    static void _ExtractKinematicsVisualBindings(domInstance_with_extraRef viscene, domInstance_kinematics_sceneRef kiscene, KinematicsSceneBindings& bindings)
+    void _ExtractKinematicsVisualBindings(domInstance_with_extraRef viscene, domInstance_kinematics_sceneRef kiscene, KinematicsSceneBindings& bindings)
     {
         domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
         if (!kscene) {
@@ -3452,12 +3492,23 @@ private:
 
             // visual information
             daeElement* pnodeelt = daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt;
+            domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnodeelt);
             domNodeRef node = daeSafeCast<domNode>(pnodeelt);
-            if (!node) {
-                node = _InstantiateNode(pnodeelt);
+            if (!node && !!inode) {
+                node = _InstantiateNode(inode);
                 if( !node ) {
                     RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
                     continue;
+                }
+            }
+
+            std::string idsuffix;
+            if( !inode ) {
+                // see if node camera from an instance_node
+                std::map<domNodeRef, std::pair<domInstance_nodeRef, std::string> >::iterator itinode = _mapInstantiatedNodes.find(node);
+                if( itinode != _mapInstantiatedNodes.end() ) {
+                    inode = itinode->second.first;
+                    idsuffix = itinode->second.second;
                 }
             }
 
@@ -3474,7 +3525,7 @@ private:
                 }
                 continue;
             }
-            bindings.listModelBindings.push_back(ModelBinding(node,ikmodel, listInstanceScope));
+            bindings.listInstanceModelBindings.push_back(InstanceModelBinding(inode, node,ikmodel, listInstanceScope, idsuffix));
         }
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
@@ -3508,7 +3559,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene, jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
+            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, _1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 
@@ -3524,18 +3575,18 @@ private:
                 if( ipmodel->getParent().id().size() ) {
                     nodephysicsoffset = daeSafeCast<domNode>(ipmodel->getParent().getElement().cast());
                 }
-                std::list<ModelBinding>::iterator itmodelbindings = _FindParentModel(nodephysicsoffset,bindings.listModelBindings);
-                if( itmodelbindings == bindings.listModelBindings.end() ) {
-                    itmodelbindings = _FindChildModel(nodephysicsoffset,bindings.listModelBindings);
+                std::list<InstanceModelBinding>::iterator itmodelbindings = _FindParentModel(nodephysicsoffset,bindings.listInstanceModelBindings);
+                if( itmodelbindings == bindings.listInstanceModelBindings.end() ) {
+                    itmodelbindings = _FindChildModel(nodephysicsoffset,bindings.listInstanceModelBindings);
                 }
-                if( itmodelbindings == bindings.listModelBindings.end() ) {
+                if( itmodelbindings == bindings.listInstanceModelBindings.end() ) {
                     RAVELOG_WARN(str(boost::format("instance_physics_model %s did not find visual binding to %s")%ipmodel->getSid()%ipmodel->getParent().getOriginalURI()));
                 }
                 else {
                     itmodelbindings->_ipmodel = ipmodel;
                 }
                 for(size_t ibody = 0; ibody < ipmodel->getInstance_rigid_body_array().getCount(); ++ibody) {
-                    LinkBinding lb;
+                    InstanceLinkBinding lb;
                     lb._ipmodel = ipmodel;
                     lb._irigidbody = ipmodel->getInstance_rigid_body_array()[ibody];
                     // don't resolve the node here since it could be pointing to a node inside <instance_node>
@@ -3544,7 +3595,7 @@ private:
                     lb._rigidbody = daeSafeCast<domRigid_body>(daeSidRef(lb._irigidbody->getBody(),pmodel).resolve().elt);
                     lb._nodephysicsoffset = nodephysicsoffset;
                     if( !!lb._rigidbody ) { // && !!lb._node ) {
-                        bindings.listLinkBindings.push_back(lb);
+                        bindings.listInstanceLinkBindings.push_back(lb);
                     }
                 }
             }
@@ -3671,8 +3722,8 @@ private:
         return InterfaceTypePtr();
     }
 
-    KinBody::LinkPtr _ResolveLinkBinding(const std::list<LinkBinding>& listLinkBindings, const std::string& linksid) {
-        FOREACHC(itbinding,listLinkBindings) {
+    KinBody::LinkPtr _ResolveLinkBinding(const std::list<InstanceLinkBinding>& listInstanceLinkBindings, const std::string& linksid) {
+        FOREACHC(itbinding,listInstanceLinkBindings) {
             if( !!itbinding->_domlink && !!itbinding->_domlink->getSid() ) {
                 if( strcmp(itbinding->_domlink->getSid(), linksid.c_str()) == 0 ) {
                     return itbinding->_link;
@@ -3683,7 +3734,7 @@ private:
     }
 
     /// \brief extracts collision-specific data infoe
-    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<LinkBinding>& listLinkBindings) {
+    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -3697,7 +3748,7 @@ private:
                                 plink0 = pbody->GetLink(_ExtractLinkName(pdomlink0));
                             }
                             else {
-                                plink0 = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link0"));
+                                plink0 = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link0"));
                             }
                             if( !plink0 ) {
                                 RAVELOG_WARN(str(boost::format("failed to resolve link0 %s\n")%pelt->getAttribute("link0")));
@@ -3710,7 +3761,7 @@ private:
                                 plink1 = pbody->GetLink(_ExtractLinkName(pdomlink1));
                             }
                             else {
-                                plink1 = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link1"));
+                                plink1 = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link1"));
                             }
                             if( !plink1 ) {
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
@@ -3728,7 +3779,7 @@ private:
                                 plink = pbody->GetLink(_ExtractLinkName(pdomlink));
                             }
                             else {
-                                plink = _ResolveLinkBinding(listLinkBindings, pelt->getAttribute("link"));
+                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"));
                             }
                             if( !plink ) {
                                 RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
@@ -3784,7 +3835,7 @@ private:
         }
         else {
             // perhaps targetref doesn't have kmodel id prefix to it. so search for the sid in each kinematics_model
-            FOREACHC(itmodel, bindings.listModelBindings) {
+            FOREACHC(itmodel, bindings.listInstanceModelBindings) {
                 if( !!itmodel->_kmodel && !!itmodel->_kmodel->getTechnique_common()) {
                     daeTArray<domJointRef> joints;
                     itmodel->_kmodel->getTechnique_common()->getChildrenByType(joints);
@@ -3854,30 +3905,30 @@ private:
         return "";
     }
 
-    /// \brief searches through the node's parents until one matches the node stored in listModelBindings
-    static std::list<ModelBinding>::iterator _FindParentModel(domNodeRef pnode, std::list<ModelBinding>& listModelBindings)
+    /// \brief searches through the node's parents until one matches the node stored in listInstanceModelBindings
+    static std::list<InstanceModelBinding>::iterator _FindParentModel(domNodeRef pnode, std::list<InstanceModelBinding>& listInstanceModelBindings)
     {
         if( !pnode ) {
-            return listModelBindings.end();
+            return listInstanceModelBindings.end();
         }
         while(!!pnode) {
-            FOREACH(itmodel,listModelBindings) {
+            FOREACH(itmodel,listInstanceModelBindings) {
                 if( _CompareElementURI(pnode,itmodel->_node) > 0 ) {
                     return itmodel;
                 }
             }
             pnode = daeSafeCast<domNode>(pnode->getParentElement());
         }
-        return listModelBindings.end();
+        return listInstanceModelBindings.end();
     }
 
-    /// \brief searches through the node's children until one matches the node stored in listModelBindings
-    static std::list<ModelBinding>::iterator _FindChildModel(domNodeRef pnode, std::list<ModelBinding>& listModelBindings)
+    /// \brief searches through the node's children until one matches the node stored in listInstanceModelBindings
+    static std::list<InstanceModelBinding>::iterator _FindChildModel(domNodeRef pnode, std::list<InstanceModelBinding>& listInstanceModelBindings)
     {
         if( !pnode ) {
-            return listModelBindings.end();
+            return listInstanceModelBindings.end();
         }
-        FOREACH(itmodel,listModelBindings) {
+        FOREACH(itmodel,listInstanceModelBindings) {
             domNodeRef pelt = itmodel->_node;
             while(!!pelt) {
                 if( _CompareElementURI(pnode,pelt) > 0 ) {
@@ -3886,7 +3937,7 @@ private:
                 pelt = daeSafeCast<domNode>(pelt->getParentElement());
             }
         }
-        return listModelBindings.end();
+        return listInstanceModelBindings.end();
     }
 
     /// \brief Extracts MathML into fparser equation format
@@ -4451,6 +4502,8 @@ private:
     }
 
     /// \brief returns a string with the full URI
+    ///
+    /// \param pelt the element that instantiates the uri
     std::string _MakeFullURI(const xsAnyURI& uri, daeElementRef pelt) {
         daeURI* docuri = pelt->getDocumentURI();
         if( !docuri ) {
@@ -4510,6 +4563,7 @@ private:
     std::set<RobotBase::AttachedSensorPtr> _setInitialSensors;
     std::vector<std::string> _vOpenRAVESchemeAliases;
     std::map<std::string,daeURI> _mapInverseResolvedURIList; ///< holds a list of inverse resolved relationships file:// -> openrave://
+    std::map<domNodeRef, std::pair<domInstance_nodeRef, std::string> > _mapInstantiatedNodes; ///< holds a map of the instantiated (cloned) node and the original instance_node elements. Also contains the idsuffix used to instantiate the node.
 
     bool _bOpeningZAE; ///< true if currently opening a zae
     bool _bSkipGeometry;
@@ -4618,10 +4672,10 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
 // register for typeof (MSVC only)
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::ModelBinding)
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::InstanceModelBinding)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::InterfaceType)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::JointAxisBinding)
-BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::LinkBinding)
+BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::InstanceLinkBinding)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaReader::KinematicsSceneBindings)
 #endif
 
