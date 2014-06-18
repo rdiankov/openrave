@@ -15,6 +15,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "colladacommon.h"
+
+#include <1.5/dom/domCOLLADA.h>
+#include <1.5/dom/domConstants.h>
+#include <1.5/dom/domTriangles.h>
+#include <1.5/dom/domTypes.h>
+#include <1.5/dom/domElements.h>
+
 using namespace ColladaDOM150;
 
 #include <locale>

@@ -23,7 +23,7 @@ if( COLLADA_DOM_FOUND )
   include_directories(${COLLADA_DOM_INCLUDE_DIRS})
   set (OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
   message(STATUS "Geometry Parsing: Collada DOM ${COLLADA_DOM_VERSION}")
-  set(openrave_core_SOURCES ${openrave_core_SOURCES} colladaparser/colladareader.cpp colladaparser/colladawriter.cpp colladaparser/colladacommon.cpp)
+  set(openrave_core_SOURCES ${openrave_core_SOURCES} colladaparser/colladareader150.cpp colladaparser/colladareader141.cpp colladaparser/colladawriter.cpp colladaparser/colladacommon.cpp)
 endif()
 
 if( ASSIMP_FOUND )

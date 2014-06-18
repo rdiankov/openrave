@@ -238,7 +238,8 @@ private:
     friend class ::XFileReader;
 #endif
 #endif
-    friend class ColladaReader;
+    friend class ColladaReader141;
+    friend class ColladaReader150;
     friend class RaveDatabase;
 };
 

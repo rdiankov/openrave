@@ -376,7 +376,8 @@ private:
         friend class ::XFileReader;
 #endif
 #endif
-        friend class ColladaReader;
+        friend class ColladaReader141;
+        friend class ColladaReader150;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
@@ -459,7 +460,8 @@ private:
         friend class ::XFileReader;
 #endif
 #endif
-        friend class ColladaReader;
+        friend class ColladaReader141;
+        friend class ColladaReader150;
         friend class RobotBase;
     };
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
@@ -996,7 +998,8 @@ private:
 #endif
 #endif
     friend class ColladaWriter;
-    friend class ColladaReader;
+    friend class ColladaReader141;
+    friend class ColladaReader150;
     friend class RaveDatabase;
     friend class Grabbed;
 };

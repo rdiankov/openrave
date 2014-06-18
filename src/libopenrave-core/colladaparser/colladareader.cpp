@@ -18,10 +18,38 @@
 #include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
 
-namespace OpenRAVE
-{
+#ifdef OPENRAVE_USING_COLLADA141
+
+#include <1.4/dom/domCOLLADA.h>
+#include <1.4/dom/domConstants.h>
+#include <1.4/dom/domTriangles.h>
+#include <1.4/dom/domTypes.h>
+#include <1.4/dom/domElements.h>
+
+using namespace ColladaDOM141;
+#define ColladaReader ColladaReader141
+#define RaveParseColladaURI RaveParseColladaURI141
+#define RaveParseColladaFile RaveParseColladaFile141
+#define RaveParseColladaData RaveParseColladaData141
+
+#else
+
+#include <1.5/dom/domCOLLADA.h>
+#include <1.5/dom/domConstants.h>
+#include <1.5/dom/domTriangles.h>
+#include <1.5/dom/domTypes.h>
+#include <1.5/dom/domElements.h>
 
 using namespace ColladaDOM150;
+#define ColladaReader ColladaReader150
+#define RaveParseColladaURI RaveParseColladaURI150
+#define RaveParseColladaFile RaveParseColladaFile150
+#define RaveParseColladaData RaveParseColladaData150
+
+#endif
+
+namespace OpenRAVE
+{
 
 class ColladaReader : public daeErrorHandler
 {
@@ -3377,6 +3405,9 @@ public:
     {
         if( _bOpeningZAE && (msg == string("Document is empty\n") || msg == string("Error parsing XML in daeLIBXMLPlugin::read\n")  ) ) {
             return;     // collada-dom prints these messages even if no error
+        }
+        if( msg == string("Trying to load an invalid COLLADA version for this DOM build!") ) {
+            throw FileVersionException(msg);
         }
         RAVELOG_ERROR(str(boost::format("COLLADA error: %s")%msg));
     }

@@ -349,7 +349,8 @@ protected:
             friend class ::XFileReader;
 #endif
 #endif
-            friend class ColladaReader;
+            friend class ColladaReader141;
+            friend class ColladaReader150;
             friend class RobotBase;
             friend class KinBody;
             friend class KinBody::Link;
@@ -644,7 +645,8 @@ private:
         friend class ::XFileReader;
 #endif
 #endif
-        friend class ColladaReader;
+        friend class ColladaReader141;
+        friend class ColladaReader150;
         friend class KinBody;
         friend class RobotBase;
     };
@@ -1203,7 +1205,8 @@ private:
         friend class ::XFileReader;
 #endif
 #endif
-        friend class ColladaReader;
+        friend class ColladaReader141;
+        friend class ColladaReader150;
         friend class ColladaWriter;
         friend class KinBody;
     };
@@ -2133,7 +2136,8 @@ private:
 #endif
 #endif
 
-    friend class ColladaReader;
+    friend class ColladaReader141;
+    friend class ColladaReader150;
     friend class ColladaWriter;
     friend class PhysicsEngineBase;
     friend class CollisionCheckerBase;

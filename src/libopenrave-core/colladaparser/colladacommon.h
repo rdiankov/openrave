@@ -22,26 +22,39 @@
 
 #include "../ravep.h"
 
+#define COLLADA_DOM_NAMESPACE // for collada-dom 2.4
+
 #ifdef OPENRAVE_COLLADA_SUPPORT
 
-#define COLLADA_DOM_NAMESPACE // collada-dom 2.4
+#ifdef OPENRAVE_USING_COLLADA141
+namespace ColladaDOM141 {} // declare in case earlier versions are used
+#else
 namespace ColladaDOM150 {} // declare in case earlier versions are used
+#endif
 
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
 #include <dae/domAny.h>
 #include <dae/daeDocument.h>
-#include <1.5/dom/domCOLLADA.h>
-#include <1.5/dom/domConstants.h>
-#include <1.5/dom/domTriangles.h>
-#include <1.5/dom/domTypes.h>
-#include <1.5/dom/domElements.h>
+
 #include <boost/lexical_cast.hpp>
 
 namespace OpenRAVE
 {
 
-class ColladaReader;
+/// \brief thrown when file being processed is unsupported version
+class OPENRAVE_API FileVersionException : public openrave_exception
+{
+public:
+    FileVersionException() : openrave_exception() {
+    }
+    FileVersionException(const std::string& s) : openrave_exception(s) {
+    }
+    virtual ~FileVersionException() throw() {
+    }
+};
+
+//class ColladaReader;
 class ColladaWriter;
 
 /// \brief holds all information required to describe the collada references to the loaded body
