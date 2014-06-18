@@ -1433,6 +1433,9 @@ public:
     inline void SetTransform6D(const Transform& t) {
         _type = IKP_Transform6D; _transform = t;
     }
+    inline void SetTransform6DVelocity(const Transform& t) {
+        _type = IKP_Transform6DVelocity; _transform = t;
+    }
     inline void SetRotation3D(const Vector& quaternion) {
         _type = IKP_Rotation3D; _transform.rot = quaternion;
     }

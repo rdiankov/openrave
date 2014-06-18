@@ -346,6 +346,34 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
         break;
     }
+    // velocities
+    case IKP_Transform6DVelocity: {
+        Vector vlinearvel, vangularvel;
+        GetEndEffector()->GetVelocity(vlinearvel, vangularvel);
+
+        Transform tee = GetTransform();
+        //__pEffector->GetTransform() * _info._tLocalTool
+        // TODO, have to convert relative to the end effector's velocity
+        vlinearvel += vangularvel.cross(tee.trans - GetEndEffector()->GetTransform().trans); // t.trans = GetTransform().trans - tbase.trans
+
+        if( !inworld ) {
+            // remove the base link velocity frame
+            // v_B = v_A + angularvel x (B-A)
+            Transform tbase = GetBase()->GetTransform();
+            // TODO, have to convert relative to the base's velocity!
+            vlinearvel -= vangularvel.cross(t.trans); // t.trans = GetTransform().trans - tbase.trans
+            //Vector vbaselinear, vbaseangular;
+            //GetBase()->GetVelocity(vlinearvel, vangularvel);
+            //Vector voffset = t.trans - tbase.trans;
+            //vLinkVelocities[2][i].first = vbaselinear + vbaseangular.cross(voffset);
+            //vLinkVelocities[2][i].second = vbaseangular;
+        }
+        Transform tvel;
+        tvel.trans = vlinearvel;
+        tvel.rot = quatMultiply(t.rot,Vector(0,vangularvel.x,vangularvel.y,vangularvel.z)) * 0.5;
+        ikp.SetTransform6DVelocity(tvel);
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
     }
@@ -420,6 +448,34 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
     case IKP_TranslationZAxisAngleYNorm4D: {
         Vector vglobaldirection = t.rotate(_info._vdirection);
         ikp.SetTranslationZAxisAngleYNorm4D(t.trans,RaveAtan2(vglobaldirection.x,vglobaldirection.z));
+        break;
+    }
+    // velocities
+    case IKP_Transform6DVelocity: {
+        Vector vlinearvel, vangularvel;
+        GetEndEffector()->GetVelocity(vlinearvel, vangularvel);
+
+        Transform tee = GetTransform();
+        //__pEffector->GetTransform() * _info._tLocalTool
+        // TODO, have to convert relative to the end effector's velocity
+        vlinearvel += vangularvel.cross(tee.trans - GetEndEffector()->GetTransform().trans); // t.trans = GetTransform().trans - tbase.trans
+
+        if( !inworld ) {
+            // remove the base link velocity frame
+            // v_B = v_A + angularvel x (B-A)
+            Transform tbase = GetBase()->GetTransform();
+            // TODO, have to convert relative to the base's velocity!
+            vlinearvel -= vangularvel.cross(t.trans); // t.trans = GetTransform().trans - tbase.trans
+            //Vector vbaselinear, vbaseangular;
+            //GetBase()->GetVelocity(vlinearvel, vangularvel);
+            //Vector voffset = t.trans - tbase.trans;
+            //vLinkVelocities[2][i].first = vbaselinear + vbaseangular.cross(voffset);
+            //vLinkVelocities[2][i].second = vbaseangular;
+        }
+        Transform tvel;
+        tvel.trans = vlinearvel;
+        tvel.rot = quatMultiply(t.rot,Vector(0,vangularvel.x,vangularvel.y,vangularvel.z)) * 0.5;
+        ikp.SetTransform6DVelocity(tvel);
         break;
     }
     default:
