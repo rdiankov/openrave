@@ -26,11 +26,8 @@
 
 #ifdef OPENRAVE_COLLADA_SUPPORT
 
-#ifdef OPENRAVE_USING_COLLADA141
 namespace ColladaDOM141 {} // declare in case earlier versions are used
-#else
 namespace ColladaDOM150 {} // declare in case earlier versions are used
-#endif
 
 #include <dae.h>
 #include <dae/daeErrorHandler.h>
