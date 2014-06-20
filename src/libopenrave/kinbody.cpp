@@ -919,15 +919,18 @@ Transform KinBody::GetTransform() const
 
 bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
-    std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
-    velocities.at(0).first = linearvel;
-    velocities.at(0).second = angularvel;
-    Vector vlinktrans = _veclinks.at(0)->GetTransform().trans;
-    for(size_t i = 1; i < _veclinks.size(); ++i) {
-        velocities[i].first = linearvel + angularvel.cross(_veclinks[i]->GetTransform().trans-vlinktrans);
-        velocities[i].second = angularvel;
+    if( _veclinks.size() > 0 ) {
+        std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
+        velocities.at(0).first = linearvel;
+        velocities.at(0).second = angularvel;
+        Vector vlinktrans = _veclinks.at(0)->GetTransform().trans;
+        for(size_t i = 1; i < _veclinks.size(); ++i) {
+            velocities[i].first = linearvel + angularvel.cross(_veclinks[i]->GetTransform().trans-vlinktrans);
+            velocities[i].second = angularvel;
+        }
+        return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
     }
-    return GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
+    return false;
 }
 
 void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel, uint32_t checklimits)

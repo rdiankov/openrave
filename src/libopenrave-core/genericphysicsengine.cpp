@@ -32,7 +32,13 @@ public:
     };
 
     boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
-        return boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+        boost::shared_ptr<PhysicsData> pdata = boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+        if( !pdata ) {
+            // isn't initialized for some reason, this can happen during environment cloning
+            InitKinBody(boost::const_pointer_cast<KinBody>(pbody)); // fixme
+            pdata = boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+        }
+        return pdata;
     }
 
 public:
