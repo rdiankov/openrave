@@ -196,7 +196,7 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex);
             fdiff = pjoint->SubtractValue(vtestsolution.at(dofindex), solution.at(i), dofindex-pjoint->GetDOFIndex());
             if( fdiff > g_fEpsilonJointLimit ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
+                throw OPENRAVE_EXCEPTION_FORMAT("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution. manip dof %d (%f != %f)",robot->GetName()%manipulator->GetName()%dofindex%vtestsolution.at(dofindex)%solution.at(i), ORE_InconsistentConstraints);
             }
         }
     }
@@ -210,14 +210,19 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             }
             if( vtestsolution.size() > 0 ) {
                 // check that the robot is set to solution
+                RobotBasePtr robot = manipulator->GetRobot();
                 vector<dReal> vtestsolution2;
-                manipulator->GetRobot()->GetConfigurationValues(vtestsolution2);
+                robot->GetConfigurationValues(vtestsolution2);
                 for(size_t i = 0; i < manipulator->GetArmIndices().size(); ++i) {
                     vtestsolution.at(manipulator->GetArmIndices()[i]) = solution.at(i);
                 }
                 for(size_t i = 0; i < vtestsolution.size(); ++i) {
                     if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("one of the filters set on robot %s manip %s did not restore the robot configuraiton. config dof %d (%f -> %f)",manipulator->GetRobot()->GetName()%manipulator->GetName()%i%vtestsolution.at(i)%vtestsolution2.at(i), ORE_InconsistentConstraints);
+                        int dofindex = manipulator->GetArmIndices()[i];
+                        KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex); // for debugging
+                        robot->GetConfigurationValues(vtestsolution2);
+                        pitdata->_filterfn(solution,manipulator,param); // for debugging internals
+                        throw OPENRAVE_EXCEPTION_FORMAT("one of the filters set on robot %s manip %s did not restore the robot configuraiton. config dof %d (%f -> %f)",robot->GetName()%manipulator->GetName()%i%vtestsolution.at(i)%vtestsolution2.at(i), ORE_InconsistentConstraints);
                     }
                 }
             }
