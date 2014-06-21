@@ -150,6 +150,7 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         if( !!_pManipActive ) {
             _tActiveManipLocalTool = _pManipActive->GetLocalToolTransform();
             _vActiveManipLocalDirection = _pManipActive->GetLocalToolDirection();
+            _pActiveManipIkSolver = _pManipActive->GetIkSolver();
         }
     }
 }
