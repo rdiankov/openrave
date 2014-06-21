@@ -239,10 +239,10 @@ inline int CountCircularBranches(dReal angle)
 inline dReal GetClosestValueAlongCircle(dReal angle, dReal testvalue)
 {
     int n = static_cast<int>((testvalue-angle)/PI);
-    if( n > 1 ) {
+    if( n >= 1 ) {
         return angle + static_cast<dReal>((n+1)/2)*2*PI;
     }
-    else if( n < -1 ) {
+    else if( n <= -1 ) {
         return angle + static_cast<dReal>((n-1)/2)*2*PI;
     }
     return angle;

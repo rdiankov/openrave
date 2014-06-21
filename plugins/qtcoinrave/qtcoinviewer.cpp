@@ -2640,8 +2640,7 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironme
 #endif
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
-        lockenv->try_lock();
-        if( !!*lockenv ) {
+        if( lockenv->try_lock() ) {
             break;
         }
         if( bUpdateEnvironment ) {
@@ -2914,8 +2913,7 @@ void QtCoinViewer::UpdateFromModel()
     if( _bLockEnvironment && !lockenv ) {
         uint64_t basetime = utils::GetMicroTime();
         while(utils::GetMicroTime()-basetime<1000 ) {
-            lockenv.try_lock();
-            if( !!lockenv ) {
+            if( lockenv.try_lock() ) {
                 // acquired the lock, so update the bodies!
                 GetEnv()->UpdatePublishedBodies();
                 break;
@@ -2960,8 +2958,7 @@ void QtCoinViewer::UpdateFromModel()
                     if( _bLockEnvironment && !lockenv ) {
                         uint64_t basetime = utils::GetMicroTime();
                         while(utils::GetMicroTime()-basetime<1000 ) {
-                            lockenv.try_lock();
-                            if( !!lockenv )  {
+                            if( lockenv.try_lock() )  {
                                 break;
                             }
                         }
