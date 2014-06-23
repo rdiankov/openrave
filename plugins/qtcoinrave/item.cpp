@@ -211,6 +211,9 @@ void KinBodyItem::Load()
                 psep->addChild(phints);
 
                 switch(geom->GetType()) {
+                case GT_None:
+                    break;
+
                 case GT_Sphere: {
                     SoSphere* s = new SoSphere();
                     s->radius = geom->GetSphereRadius();
