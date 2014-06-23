@@ -200,7 +200,10 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     }
 
     _pgeom.reset(new KinBody::GeometryInfo());
-    if( _stricmp(type.c_str(), "box") == 0 ) {
+    if( _stricmp(type.c_str(), "none") == 0 ) {
+        _pgeom->_type = GT_None;
+    }
+    else if( _stricmp(type.c_str(), "box") == 0 ) {
         _pgeom->_type = GT_Box;
     }
     else if( _stricmp(type.c_str(), "sphere") == 0 ) {
@@ -339,6 +342,10 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     else {
         // could be type specific features
         switch(_pgeom->_type) {
+        case GT_None:
+            // Do nothing
+            break;
+
         case GT_Sphere:
             if( xmlname == "radius" ) {
                 _ss >> _pgeom->_vGeomData.x;

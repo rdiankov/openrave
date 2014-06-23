@@ -151,6 +151,9 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
     // start tesselating
     switch(_type) {
+    case GT_None:
+        break;
+
     case GT_Sphere: {
         // log_2 (1+ tess)
         GenerateSphereTriangulation(_meshcollision, 3 + (int)(logf(fTessellation) / logf(2.0f)) );
