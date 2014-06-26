@@ -132,7 +132,6 @@ void KinBodyItem::Load()
             ptrans->rotation.setValue(tgeom.rot.y, tgeom.rot.z, tgeom.rot.w, tgeom.rot.x);
             ptrans->translation.setValue(tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
 
-            // open
             bool bSucceeded = false;
             if((_viewmode == VG_RenderOnly)||(_viewmode == VG_RenderCollision)) {
                 SoInput mySceneInput;
@@ -147,6 +146,7 @@ void KinBodyItem::Load()
                     extension = geom->GetRenderFilename().substr(geom->GetRenderFilename().find_last_of('.')+1);
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 }
+
                 if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
                     if( mySceneInput.openFile(geom->GetRenderFilename().c_str()) ) {
                         psep = SoDB::readAll(&mySceneInput);
@@ -172,6 +172,25 @@ void KinBodyItem::Load()
                             mySceneInput.closeFile();
                             bSucceeded = true;
                         }
+                    }
+                }
+
+                // Fall back on OpenRAVE's standard mesh loader.
+                if( !bSucceeded ) {
+
+                    typedef boost::shared_ptr<TriMesh> TriMeshPtr;
+                    TriMeshPtr mesh = _pchain->GetEnv()->ReadTrimeshURI(TriMeshPtr(), geom->GetRenderFilename());
+                    if (mesh) {
+                        // apply render scale to the mesh
+                        Vector render_scale = geom->GetRenderScale();
+                        FOREACH(it, mesh->vertices) {
+                            it->x *= render_scale.x;
+                            it->y *= render_scale.y;
+                            it->z *= render_scale.z;
+                        }
+
+                        psep = RenderTrimesh(psep, *mesh, geom);
+                        bSucceeded = true;
                     }
                 }
             }
@@ -291,6 +310,69 @@ void KinBodyItem::Load()
 
     _bReload = false;
     _bDrawStateChanged = false;
+}
+
+SoSeparator *KinBodyItem::RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, KinBody::Link::GeometryPtr geom)
+{
+    // create custom
+    if( psep == NULL ) {
+        psep = new SoSeparator();
+    }
+    else {
+        SoSeparator* pparentsep = new SoSeparator();
+        pparentsep->addChild(psep);
+        psep = pparentsep;
+    }
+
+    // set a diffuse color
+    SoMaterial* mtrl = new SoMaterial;
+    mtrl->diffuseColor = SbColor(&geom->GetDiffuseColor().x);
+    mtrl->ambientColor = SbColor(&geom->GetAmbientColor().x);
+    mtrl->setOverride(true);
+    mtrl->transparency = geom->GetTransparency();
+    psep->addChild(mtrl);
+
+    // by default render only one side of objects
+    // don't change since sensors like cameras are usually inside objects, but they
+    // need to see outside of the world
+    SoShapeHints* phints = new SoShapeHints();
+    phints->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
+    phints->shapeType = SoShapeHints::SOLID;
+    phints->faceType = SoShapeHints::CONVEX;
+    phints->creaseAngle = 0;
+    psep->addChild(phints);
+
+    phints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE;
+
+    SoMaterialBinding* pbinding = new SoMaterialBinding();
+    pbinding->value = SoMaterialBinding::OVERALL;
+    psep->addChild(pbinding);
+
+    if( geom->GetTransparency() > 0 ) {
+        SoTransparencyType* ptype = new SoTransparencyType();
+        ptype->value = SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
+        psep->addChild(ptype);
+    }
+
+    SoCoordinate3* vprop = new SoCoordinate3();
+    // this makes it crash!
+    //vprop->point.set1Value(mesh.indices.size()-1,SbVec3f(0,0,0)); // resize
+    int i = 0;
+    FOREACHC(itind, mesh.indices) {
+        RaveVector<float> v = mesh.vertices[*itind];
+        vprop->point.set1Value(i++, SbVec3f(v.x,v.y,v.z));
+    }
+
+    psep->addChild(vprop);
+
+    SoFaceSet* faceset = new SoFaceSet();
+    // this makes it crash!
+    //faceset->numVertices.set1Value(mesh.indices.size()/3-1,3);
+    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
+        faceset->numVertices.set1Value(i,3);
+    }
+    psep->addChild(faceset);
+    return psep;
 }
 
 bool KinBodyItem::UpdateFromIv()
