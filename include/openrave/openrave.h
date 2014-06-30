@@ -1189,6 +1189,19 @@ protected:
         Looks for 'ikparam' groups.
         \param[inout] ikparam filled with ikparameterization (if found)
         \param[in] itdata data in the format of this configuration specification
+        \param[in] robot_name optional name of robot to filter by
+        \param[in] manipulator_name optional name of manipulator to filter by
+        \param[in] timederivative the time derivative of the data to extract
+        \return true if at least one group was found for extracting
+     */
+    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, std::string const &robot_name, std::string const &manipulator_name, int timederivative) const;
+
+
+    /** \brief extracts an ikparameterization given the start of a configuration space point
+
+        Looks for 'ikparam' groups.
+        \param[inout] ikparam filled with ikparameterization (if found)
+        \param[in] itdata data in the format of this configuration specification
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
