@@ -853,7 +853,7 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     return bfound;
 }
 
-bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, std::string const &robot_name, std::string const &manipulator_name, int timederivative) const
+bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, std::string const &robotname, std::string const &manipulatorname, int timederivative) const
 {
     bool bfound = false;
     string searchname;
@@ -869,19 +869,19 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
             int iktype = IKP_None;
             ss >> iktype;
 
-            // filter by robot if a robot_name is specified
-            if (!robot_name.empty()) {
-                std::string search_robot_name;
-                ss >> search_robot_name;
-                if (search_robot_name != robot_name) {
+            // filter by robot if robotname is specified
+            if (!robotname.empty()) {
+                std::string search_robotname;
+                ss >> search_robotname;
+                if (search_robotname != robotname) {
                     continue;
                 }
 
-                // also filter by manipulator if a manipulator_name is specified
-                if (!manipulator_name.empty()) {
-                    std::string search_manipulator_name;
-                    ss >> search_manipulator_name;
-                    if (search_manipulator_name != manipulator_name) {
+                // also filter by manipulator if manipulatorname is specified
+                if (!manipulatorname.empty()) {
+                    std::string search_manipulatorname;
+                    ss >> search_manipulatorname;
+                    if (search_manipulatorname != manipulatorname) {
                         continue;
                     }
                 }
