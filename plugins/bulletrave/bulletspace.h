@@ -166,6 +166,8 @@ private:
                 boost::shared_ptr<btCollisionShape> child;
                 KinBody::Link::GeometryPtr geom = *itgeom;
                 switch(geom->GetType()) {
+                case GT_None:
+                    break;
                 case GT_Box:
                     child.reset(new btBoxShape(GetBtVector(geom->GetBoxExtents())));
                     break;
@@ -219,7 +221,7 @@ private:
                     break;
                 }
 
-                if( !child ) {
+                if( !child && geom->GetType() != GT_None ) {
                     RAVELOG_WARN("did not create geom type 0x%x\n", geom->GetType());
                     continue;
                 }

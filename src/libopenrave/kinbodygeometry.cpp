@@ -140,7 +140,7 @@ KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
 
 bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 {
-    if( _type == GT_TriMesh ) {
+    if( _type == GT_TriMesh || _type == GT_None ) {
         return true;
     }
     _meshcollision.indices.clear();
@@ -237,6 +237,11 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
     TransformMatrix tglobal = t * _info._t;
 
     switch(_info._type) {
+    case GT_None:
+        ab.extents.x = 0;
+        ab.extents.y = 0;
+        ab.extents.z = 0;
+        break;
     case GT_Box:
         ab.extents.x = RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z;
         ab.extents.y = RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z;
@@ -445,6 +450,7 @@ bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vec
             return true;
         }
         break;
+    case GT_None:
     default:
         break;
     }
