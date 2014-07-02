@@ -31,6 +31,7 @@
 
 #include "plugindatabase.h"
 
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 
 #define LIBXML_SAX1_ENABLED
@@ -1175,14 +1176,17 @@ IkParameterizationType IkParameterization::GetIkTypeFromUniqueId(int uniqueid)
     throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
 }
 
-ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation)
+ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation, const std::string& robotname, const std::string& manipname)
 {
     ConfigurationSpecification spec;
     spec._vgroups.resize(1);
     spec._vgroups[0].offset = 0;
     spec._vgroups[0].dof = IkParameterization::GetNumberOfValues(iktype);
-    spec._vgroups[0].name = str(boost::format("ikparam_values %d")%iktype);
+    spec._vgroups[0].name = str(boost::format("ikparam_values %d %s %s")%iktype%robotname%manipname);
     spec._vgroups[0].interpolation = interpolation;
+
+    // remove any trailing whitespace from missing robot or manipulator names
+    boost::algorithm::trim(spec._vgroups[0].name);
     return spec;
 }
 

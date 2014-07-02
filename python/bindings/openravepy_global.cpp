@@ -388,11 +388,11 @@ public:
         return object();
     }
 
-    object ExtractIkParameterization(object odata, std::string const &robotname = "", std::string const &manipulatorname = "", int timederivative=0) const
+    object ExtractIkParameterization(object odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
     {
         IkParameterization ikparam;
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
-        bool bfound = _spec.ExtractIkParameterization(ikparam, vdata.begin(), robotname, manipulatorname, timederivative);
+        bool bfound = _spec.ExtractIkParameterization(ikparam, vdata.begin(), timederivative, robotname, manipulatorname);
         if( bfound ) {
             return toPyIkParameterization(ikparam);
         }
@@ -405,7 +405,7 @@ public:
     {
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         std::vector<dReal> values(RaveGetAffineDOF(affinedofs),0);
-        bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs,timederivative);
+        bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs);
         if( bfound ) {
             return toPyArray(values);
         }
@@ -1165,7 +1165,7 @@ void init_openravepy_global()
 
                                            .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(args("transform","data","body","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractTransform)))
                                            .def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(args("data","body","affinedofs","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractAffineValues)))
-                                           .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(args("data","robotname","manipulatorname","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
+                                           .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(args("data","timederivative","robotname","manipulatorname"),DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
                                            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(args("data","body","indices","timederivative"),DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
                                            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime,args("data"),DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
                                            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime,args("data","deltatime"),DOXY_FN(ConfigurationSpecification,InsertDeltaTime))

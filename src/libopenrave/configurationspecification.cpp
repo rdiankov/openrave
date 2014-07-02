@@ -853,7 +853,7 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     return bfound;
 }
 
-bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, std::string const &robotname, std::string const &manipulatorname, int timederivative) const
+bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative, std::string const &robotname, std::string const &manipulatorname) const
 {
     bool bfound = false;
     string searchname;
@@ -931,11 +931,6 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
         }
     }
     return bfound;
-}
-
-bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative) const
-{
-    return ExtractIkParameterization(ikparam, itdata, "", "", timederivative);
 }
 
 bool ConfigurationSpecification::ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative) const
