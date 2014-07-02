@@ -179,6 +179,7 @@ void TrajectoryReader::characters(const std::string& ch)
 GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const AttributesList& atts) : _pgeom(pgeom)
 {
     _bOverwriteDiffuse = _bOverwriteAmbient = _bOverwriteTransparency = false;
+    _sGroupName = "self";
     string type;
     bool bVisible = true, bModifiable = true;
     FOREACHC(itatt,atts) {
@@ -191,6 +192,9 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
         }
         else if( itatt->first == "modifiable" ) {
             bModifiable = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
+        }
+        else if( itatt->first == "group" && !itatt->second.empty() ) {
+            _sGroupName = itatt->second;
         }
     }
 
