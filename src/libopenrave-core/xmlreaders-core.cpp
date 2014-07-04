@@ -935,6 +935,15 @@ public:
                 xmlreaders::GeometryInfoReaderPtr geomreader = boost::dynamic_pointer_cast<xmlreaders::GeometryInfoReader>(_pcurreader);
                 if( !!geomreader ) {
                     KinBody::GeometryInfoPtr info = geomreader->GetGeometryInfo();
+
+                    // geometry is not in the default group, so we add it to the LinkInfo without instantiating it
+                    string groupname = geomreader->GetGroupName();
+                    if( groupname != "self" ) {
+                        _plink->_info._mapExtraGeometries[groupname].push_back(info);
+                        _pcurreader.reset();
+                        return false;
+                    }
+
                     TransformMatrix tm(info->_t); tm.trans = Vector();
                     TransformMatrix tminv = tm.inverse();
                     tm.m[0] *= _vScaleGeometry.x; tm.m[1] *= _vScaleGeometry.x; tm.m[2] *= _vScaleGeometry.x;

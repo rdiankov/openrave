@@ -108,12 +108,17 @@ public:
     inline bool IsOverwriteTransparency() const {
         return _bOverwriteTransparency;
     }
+
+    inline const std::string &GetGroupName() const {
+        return _sGroupName;
+    }
 protected:
     KinBody::GeometryInfoPtr _pgeom;
     std::stringstream _ss;
     BaseXMLReaderPtr _pcurreader;
 
     bool _bOverwriteDiffuse, _bOverwriteAmbient, _bOverwriteTransparency;
+    std::string _sGroupName;
 };
 
 typedef boost::shared_ptr<GeometryInfoReader> GeometryInfoReaderPtr;
