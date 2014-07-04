@@ -684,7 +684,7 @@ void ConfigurationSpecification::Swap(ConfigurationSpecification& spec)
 
 ConfigurationSpecification& ConfigurationSpecification::operator+= (const ConfigurationSpecification& r)
 {
-    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic","sextic"}};
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quartic","quintic","sextic"}};
     list< std::vector<Group>::const_iterator > listaddgroups;
     stringstream ss;
     vector<int> vindices;
@@ -1675,7 +1675,7 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
 
 std::string ConfigurationSpecification::GetInterpolationDerivative(const std::string& interpolation, int deriv)
 {
-    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quadric","quintic","sextic"}};
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quartic","quintic","sextic"}};
     for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
         if( interpolation == s_InterpolationOrder[i] ) {
             if( i < deriv ) {

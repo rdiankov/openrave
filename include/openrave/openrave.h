@@ -1001,7 +1001,7 @@ public:
             - \b linear - linear interpolation (default)
             - \b quadratic - position is piecewise-quadratic, velocity is piecewise-linear, acceleration is one of -amax, 0, or amax. needs velocity info
             - \b cubic - 3 degree polynomial. needs velocity info.
-            - \b quadric - 4 degree polynomial. needs velocity and acceleration info.
+            - \b quartic - 4 degree polynomial. needs velocity and acceleration info.
             - \b quintic - 5 degree polynomial. needs velocity and acceleration info.
             - \b sextic - 6 degree polynomial. needs velocity, acceleration, and jerk info
          */

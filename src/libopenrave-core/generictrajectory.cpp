@@ -498,8 +498,8 @@ protected:
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
             }
-            else if( interpolation == "quadric" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadric,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            else if( interpolation == "quartic" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
             }
@@ -782,7 +782,7 @@ protected:
         }
     }
 
-    void _InterpolateQuadric(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
+    void _InterpolateQuartic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, std::vector<dReal>& data)
     {
         // p = c4*t**4 + c3*t**3 + c2*t**2 + c1*t + c0
         //
@@ -990,7 +990,7 @@ protected:
         // TODO, need 3 groups to verify
     }
 
-    void _ValidateQuadric(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
+    void _ValidateQuartic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
     }
 
