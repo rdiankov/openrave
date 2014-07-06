@@ -602,6 +602,8 @@ private:
     {
         dGeomID odegeom = NULL;
         switch(info._type) {
+        case OpenRAVE::GT_None:
+            break;
         case OpenRAVE::GT_Box:
             odegeom = dCreateBox(0,info._vGeomData.x*2.0f,info._vGeomData.y*2.0f,info._vGeomData.z*2.0f);
             break;

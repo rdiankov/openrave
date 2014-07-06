@@ -312,6 +312,22 @@ if sympy_smaller_073:
     power.Pow._eval_subs = Pow_eval_subs
 
 # simplify/simplify.py
+def trigsimp_custom(self, **args):
+    """
+    Default trigsimp (in sympy >= 0.7.3) reduces sum of sin/cos products, for example
+
+        trigsimp(-sin(x)⋅cos(y) + sin(y)⋅cos(x))
+        >> -sin(x - y)
+
+    We have to undo this step, which is what happens here.
+    """
+    from sympy.simplify import trigsimp as sympy_trigsimp 
+    from sympy.simplify.fu import TR10
+    return TR10(sympy_trigsimp(self, **args))
+
+if not sympy_smaller_073:
+    trigsimp = trigsimp_custom
+
 # def custom_trigsimp_nonrecursive(expr, deep=False):
 #     """
 #     A nonrecursive trig simplifier, used from trigsimp.

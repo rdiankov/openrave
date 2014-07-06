@@ -1197,7 +1197,23 @@ protected:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
-                    if(  pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
+                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "ikfast collision " << report.__str__() << " colvalues=[";
+                            std::vector<dReal> vallvalues;
+                            probot->GetDOFValues(vallvalues);
+                            for(size_t i = 0; i < vallvalues.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << vallvalues[i];
+                                }
+                                else {
+                                    ss << vallvalues[i];
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
                     }
                     stateCheck.ResetCheckEndEffectorEnvCollision();

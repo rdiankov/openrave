@@ -100,25 +100,25 @@ public:
         return object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification()));
     }
 
-    object GetConfigurationSpecification(object o) {
-        extract<PyIkParameterization*> pyik(o);
+    object GetConfigurationSpecification(object ointerpolation, const std::string& robotname="", const std::string& manipname="") {
+        extract<PyIkParameterization*> pyik(ointerpolation);
         if( pyik.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification()));
+            return object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
-        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(o);
+        extract<boost::shared_ptr<PyIkParameterization> > pyikptr(ointerpolation);
         if( pyikptr.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification()));
+            return object(openravepy::toPyConfigurationSpecification(((boost::shared_ptr<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
         }
-        extract<IkParameterizationType> pyiktype(o);
+        extract<IkParameterizationType> pyiktype(ointerpolation);
         if( pyiktype.check() ) {
-            return object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype)));
+            return object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype, std::string(), robotname, manipname)));
         }
-        return object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(o))));
+        return object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(ointerpolation), robotname, manipname)));
     }
 
-    static object GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation="")
+    static object GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="")
     {
-        return object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation)));
+        return object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation, robotname, manipname)));
     }
 
     void SetTransform6D(object o) {
@@ -353,7 +353,8 @@ public:
     }
 };
 
-BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 2)
+BOOST_PYTHON_FUNCTION_OVERLOADS(GetConfigurationSpecificationFromType_overloads, PyIkParameterization::GetConfigurationSpecificationFromType, 1, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetConfigurationSpecification_overloads, GetConfigurationSpecification, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ClearCustomValues_overloads, ClearCustomValues, 0, 1)
 
 void init_openravepy_ikparameterization()
@@ -406,7 +407,7 @@ void init_openravepy_ikparameterization()
         int (PyIkParameterization::*getnumberofvalues2)(object) = &PyIkParameterization::GetNumberOfValues;
         int (*getnumberofvaluesstatic)(IkParameterizationType) = IkParameterization::GetNumberOfValues;
         object (PyIkParameterization::*GetConfigurationSpecification1)() = &PyIkParameterization::GetConfigurationSpecification;
-        object (PyIkParameterization::*GetConfigurationSpecification2)(object) = &PyIkParameterization::GetConfigurationSpecification;
+        object (PyIkParameterization::*GetConfigurationSpecification2)(object, const std::string&, const std::string&) = &PyIkParameterization::GetConfigurationSpecification;
         scope ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))
                                    .def(init<object,IkParameterizationType>(args("primitive","type")))
                                    .def(init<string>(args("str")))
@@ -454,8 +455,8 @@ void init_openravepy_ikparameterization()
                                    .def("GetNumberOfValuesFromType", getnumberofvaluesstatic,args("type"), DOXY_FN(IkParameterization,GetNumberOfValues))
                                    .staticmethod("GetNumberOfValuesFromType")
                                    .def("GetConfigurationSpecification", GetConfigurationSpecification1, DOXY_FN(IkParameterization,GetConfigurationSpecification))
-                                   .def("GetConfigurationSpecification", GetConfigurationSpecification2, args("type"), DOXY_FN(IkParameterization,GetConfigurationSpecification))
-                                   .def("GetConfigurationSpecificationFromType", PyIkParameterization::GetConfigurationSpecificationFromType, GetConfigurationSpecificationFromType_overloads(args("type","interpolation"), DOXY_FN(IkParameterization,GetConfigurationSpecification)))
+                                   .def("GetConfigurationSpecification", GetConfigurationSpecification2, GetConfigurationSpecification_overloads(args("interpolation", "robotname", "manipname"), DOXY_FN(IkParameterization,GetConfigurationSpecification)))
+                                   .def("GetConfigurationSpecificationFromType", PyIkParameterization::GetConfigurationSpecificationFromType, GetConfigurationSpecificationFromType_overloads(args("type","interpolation","robotname","manipname"), DOXY_FN(IkParameterization,GetConfigurationSpecification)))
                                    .staticmethod("GetConfigurationSpecificationFromType")
                                    .def("ComputeDistanceSqr",&PyIkParameterization::ComputeDistanceSqr,DOXY_FN(IkParameterization,ComputeDistanceSqr))
                                    .def("Transform",&PyIkParameterization::Transform,"Returns a new parameterization with transformed by the transformation T (T * ik)")

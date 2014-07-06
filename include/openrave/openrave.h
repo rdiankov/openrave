@@ -1190,9 +1190,11 @@ protected:
         \param[inout] ikparam filled with ikparameterization (if found)
         \param[in] itdata data in the format of this configuration specification
         \param[in] timederivative the time derivative of the data to extract
+        \param[in] robotname optional name of robot to filter by
+        \param[in] manipulatorname optional name of manipulator to filter by
         \return true if at least one group was found for extracting
      */
-    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0) const;
+    virtual bool ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative=0, std::string const &robotname="", std::string const &manipulatorname="") const;
 
     /** \brief extracts the affine values
 
@@ -1901,10 +1903,11 @@ public:
         }
     }
 
-    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="");
-    inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const
+    static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="");
+
+    inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="") const
     {
-        return GetConfigurationSpecification(GetType(),interpolation);
+        return GetConfigurationSpecification(GetType(), interpolation, robotname, manipname);
     }
 
     /// \brief in-place left-transform into a new coordinate system. Equivalent to t * ikparam

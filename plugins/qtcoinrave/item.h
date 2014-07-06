@@ -188,6 +188,8 @@ protected:
     virtual void GeometryChangedCallback();
     virtual void DrawChangedCallback();
 
+    SoSeparator *RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, KinBody::Link::GeometryPtr geom);
+
     KinBodyPtr _pchain;
     int networkid;            ///< _pchain->GetNetworkId()
     std::vector< LINK > _veclinks;     ///< render items for each link, indexed same as links

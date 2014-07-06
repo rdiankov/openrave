@@ -21,7 +21,7 @@
 class IdealController : public ControllerBase
 {
 public:
-    IdealController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false)
+    IdealController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false)
     {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
 If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
@@ -35,6 +35,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "If set, will check if the robot gets into a collision during movement");
         RegisterCommand("SetThrowExceptions",boost::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
+        RegisterCommand("SetEnableLogging",boost::bind(&IdealController::_SetEnableLogging,this,_1,_2),
+                        "If set, will write trajectories to disk");
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
@@ -49,12 +51,14 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             flog.close();
         }
         if( !!_probot ) {
-            string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj.xml");
-            flog.open(filename.c_str());
-            if( !flog ) {
-                RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
+            if( _bEnableLogging ) {
+                string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj.xml");
+                flog.open(filename.c_str());
+                if( !flog ) {
+                    RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
+                }
+                //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
             }
-            //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
             _dofcircular.resize(0);
@@ -234,7 +238,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _samplespec.ExtractTransform(t,v.begin(),_probot);
             }
 
-            if( !!flog ) {
+            if( !!flog && _bEnableLogging ) {
                 ptraj->serialize(flog);
             }
 
@@ -400,6 +404,11 @@ private:
         is >> _bThrowExceptions;
         return !!is;
     }
+    virtual bool _SetEnableLogging(std::ostream& os, std::istream& is)
+    {
+        is >> _bEnableLogging;
+        return !!is;
+    }
 
     inline boost::shared_ptr<IdealController> shared_controller() {
         return boost::dynamic_pointer_cast<IdealController>(shared_from_this());
@@ -539,7 +548,7 @@ private:
     int _nControlTransformation;
     ofstream flog;
     int cmdid;
-    bool _bPause, _bIsDone, _bCheckCollision, _bThrowExceptions;
+    bool _bPause, _bIsDone, _bCheckCollision, _bThrowExceptions, _bEnableLogging;
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;

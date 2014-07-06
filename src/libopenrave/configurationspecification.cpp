@@ -853,7 +853,7 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     return bfound;
 }
 
-bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative) const
+bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& ikparam, std::vector<dReal>::const_iterator itdata, int timederivative, std::string const &robotname, std::string const &manipulatorname) const
 {
     bool bfound = false;
     string searchname;
@@ -868,6 +868,25 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
             stringstream ss(itgroup->name.substr(searchname.size()));
             int iktype = IKP_None;
             ss >> iktype;
+
+            // filter by robot if robotname is specified
+            if (!robotname.empty()) {
+                std::string search_robotname;
+                ss >> search_robotname;
+                if (search_robotname != robotname) {
+                    continue;
+                }
+
+                // also filter by manipulator if manipulatorname is specified
+                if (!manipulatorname.empty()) {
+                    std::string search_manipulatorname;
+                    ss >> search_manipulatorname;
+                    if (search_manipulatorname != manipulatorname) {
+                        continue;
+                    }
+                }
+            }
+
             if( !!ss ) {
                 ikparam.Set(itdata+itgroup->offset,static_cast<IkParameterizationType>(iktype|(timederivative == 1 ? IKP_VelocityDataBit : 0)));
                 bfound = true;

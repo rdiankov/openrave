@@ -35,11 +35,6 @@ if( MSVC )
 else()
   install(TARGETS libopenrave EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
-#if( OPENRAVE_LIBRARY_SUFFIX AND NOT WIN32 )
-#  # create a symlink to the so for easier use..
-#  add_custom_command(TARGET libopenrave POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE_NAME:libopenrave0.3> $<TARGET_FILE_NAME:libopenrave> )
-#  install(FILES libopenrave.so DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
-#endif()
 
 if( OPT_CBINDINGS )
   add_library(libopenrave_c SHARED libopenrave_c.cpp)

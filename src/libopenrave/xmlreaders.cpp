@@ -179,6 +179,7 @@ void TrajectoryReader::characters(const std::string& ch)
 GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const AttributesList& atts) : _pgeom(pgeom)
 {
     _bOverwriteDiffuse = _bOverwriteAmbient = _bOverwriteTransparency = false;
+    _sGroupName = "self";
     string type;
     bool bVisible = true, bModifiable = true;
     FOREACHC(itatt,atts) {
@@ -192,6 +193,9 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
         else if( itatt->first == "modifiable" ) {
             bModifiable = !(_stricmp(itatt->second.c_str(), "false") == 0 || itatt->second=="0");
         }
+        else if( itatt->first == "group" && !itatt->second.empty() ) {
+            _sGroupName = itatt->second;
+        }
     }
 
     if( type.size() == 0 ) {
@@ -200,7 +204,10 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     }
 
     _pgeom.reset(new KinBody::GeometryInfo());
-    if( _stricmp(type.c_str(), "box") == 0 ) {
+    if( _stricmp(type.c_str(), "none") == 0 ) {
+        _pgeom->_type = GT_None;
+    }
+    else if( _stricmp(type.c_str(), "box") == 0 ) {
         _pgeom->_type = GT_Box;
     }
     else if( _stricmp(type.c_str(), "sphere") == 0 ) {
@@ -339,6 +346,10 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     else {
         // could be type specific features
         switch(_pgeom->_type) {
+        case GT_None:
+            // Do nothing
+            break;
+
         case GT_Sphere:
             if( xmlname == "radius" ) {
                 _ss >> _pgeom->_vGeomData.x;
