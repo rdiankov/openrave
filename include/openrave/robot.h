@@ -343,6 +343,11 @@ public:
         /// Note that the return type is by-value, so should not be used in iteration
         virtual ConfigurationSpecification GetArmConfigurationSpecification(const std::string& interpolation="") const;
 
+        /// \brief return a copy of the configuration specification of this arm under a particular IkParameterizationType
+        ///
+        /// Note that the return type is by-value, so should not be used in iteration
+        virtual ConfigurationSpecification GetIkConfigurationSpecification(IkParameterizationType ik_type, const std::string& interpolation="") const;
+
         virtual void serialize(std::ostream& o, int options) const;
 
         /// \brief Return hash of just the manipulator definition.

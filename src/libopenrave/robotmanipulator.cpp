@@ -1076,6 +1076,11 @@ ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecificat
     return spec;
 }
 
+ConfigurationSpecification RobotBase::Manipulator::GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation) const
+{
+    return IkParameterization::GetConfigurationSpecification(iktype, GetRobot()->GetName(), GetName());
+}
+
 const std::string& RobotBase::Manipulator::GetStructureHash() const
 {
     if( __hashstructure.size() == 0 ) {
