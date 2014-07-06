@@ -405,7 +405,7 @@ public:
     {
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         std::vector<dReal> values(RaveGetAffineDOF(affinedofs),0);
-        bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs);
+        bool bfound = _spec.ExtractAffineValues(values.begin(),vdata.begin(),openravepy::GetKinBody(pybody),affinedofs, timederivative);
         if( bfound ) {
             return toPyArray(values);
         }

@@ -1182,7 +1182,14 @@ ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkP
     spec._vgroups.resize(1);
     spec._vgroups[0].offset = 0;
     spec._vgroups[0].dof = IkParameterization::GetNumberOfValues(iktype);
-    spec._vgroups[0].name = str(boost::format("ikparam_values %d %s %s")%iktype%robotname%manipname);
+    spec._vgroups[0].name = str(boost::format("ikparam_values %d"));
+    if( robotname.size() > 0 ) {
+        spec._vgroups[0].name += robotname;
+        spec._vgroups[0].name += " ";
+        if( manipname.size() > 0 ) {
+        spec._vgroups[0].name += manipname;
+        }
+    }
     spec._vgroups[0].interpolation = interpolation;
 
     // remove any trailing whitespace from missing robot or manipulator names

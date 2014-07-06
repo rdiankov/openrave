@@ -1905,9 +1905,9 @@ public:
 
     static ConfigurationSpecification GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="");
 
-    inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="") const
+    inline ConfigurationSpecification GetConfigurationSpecification(const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="") const
     {
-        return GetConfigurationSpecification(GetType(),interpolation,"","");
+        return GetConfigurationSpecification(GetType(), interpolation, robotname, manipname);
     }
 
     /// \brief in-place left-transform into a new coordinate system. Equivalent to t * ikparam
