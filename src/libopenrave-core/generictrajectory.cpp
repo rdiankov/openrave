@@ -170,6 +170,7 @@ public:
             return;
         }
         BOOST_ASSERT(startindex*_spec.GetDOF() <= _vtrajdata.size() && endindex*_spec.GetDOF() <= _vtrajdata.size());
+        OPENRAVE_ASSERT_OP(startindex,<,endindex);
         _vtrajdata.erase(_vtrajdata.begin()+startindex*_spec.GetDOF(),_vtrajdata.begin()+endindex*_spec.GetDOF());
         _bChanged = true;
     }
