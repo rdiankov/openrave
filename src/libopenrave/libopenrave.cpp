@@ -1182,7 +1182,7 @@ ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkP
     spec._vgroups.resize(1);
     spec._vgroups[0].offset = 0;
     spec._vgroups[0].dof = IkParameterization::GetNumberOfValues(iktype);
-    spec._vgroups[0].name = str(boost::format("ikparam_values %d"));
+    spec._vgroups[0].name = str(boost::format("ikparam_values %d")%iktype);
     if( robotname.size() > 0 ) {
         spec._vgroups[0].name += robotname;
         spec._vgroups[0].name += " ";
