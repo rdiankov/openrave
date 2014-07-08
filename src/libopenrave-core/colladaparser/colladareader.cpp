@@ -187,6 +187,7 @@ public:
         domKinematics_axis_infoRef kinematics_axis_info;
         domMotion_axis_infoRef motion_axis_info;
         KinBody::JointPtr _pjoint;
+        std::string _jointsidref; ///< the sid of the joint
         std::list<daeElementRef> _listInstanceScopeAxis; // <joint>
         int _iaxis;
     };
@@ -1000,7 +1001,7 @@ public:
                                                 std::list<InstanceModelBinding>::iterator itmodel = _FindParentModel(itaxis->visualnode,bindings.listInstanceModelBindings);
                                                 if (itmodel != bindings.listInstanceModelBindings.end()) {
                                                     int dofindex = itaxis->_pjoint->GetDOFIndex();
-                                                    ColladaXMLReadable::AxisBinding axisbinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"));
+                                                    ColladaXMLReadable::AxisBinding axisbinding(param->getSIDREF()->getValue(), itaxis->pvisualtrans->getAttribute("sid"), itaxis->_jointsidref);
                                                     if( dofindex >= 0 ) {
                                                         pcolladainfo->_bindingAxesSIDs.at(dofindex+itaxis->_iaxis) = axisbinding;
                                                     }
@@ -1077,7 +1078,7 @@ public:
                             std::string vmodel;
                             if( !!it->_inode ) {
                                 // node is instantiated, so take the instance_node's URL instead! this is because it->_node is cloned.
-                                vmodel = _MakeFullURI(it->_inode->getUrl(), it->_inode->getUrl().getElement().cast());//y_MakeFullURIFromId(it->_node->getId(),it->_inode);
+                                vmodel = _MakeFullURI(it->_inode->getUrl(), it->_inode->getUrl().getElement().cast()); //y_MakeFullURIFromId(it->_node->getId(),it->_inode);
                             }
                             else {
                                 vmodel = _MakeFullURIFromId(it->_node->getId(),it->_node);
@@ -1117,7 +1118,7 @@ public:
                                     }
                                 }
                             }
-                            
+
                             if( vmodel.size() == 0 ) {
                                 vmodel = _MakeFullURIFromId(lb._node->getId(), lb._node);
                             }
@@ -1581,7 +1582,7 @@ public:
                         // set the rigid offset to the transform of the instance physics model parent
                         trigidoffset = getNodeParentTransform(lb._nodephysicsoffset) * _ExtractFullTransform(lb._nodephysicsoffset);
                     }
-                   break;
+                    break;
                 }
             }
             if( !bFoundBinding ) {
@@ -1655,12 +1656,12 @@ public:
                     RAVELOG_WARN(str(boost::format("could not find attached joint %s!\n")%pattfull->getJoint()));
                     continue;
                 }
-                string jointsid;
+                string jointsidref;
                 if( string(pattfull->getJoint()).find("./") == 0 ) {
-                    jointsid = str(boost::format("%s/%s")%_ExtractParentId(pattfull)%&pattfull->getJoint()[1]);
+                    jointsidref = str(boost::format("%s/%s")%_ExtractParentId(pattfull)%&pattfull->getJoint()[1]);
                 }
                 else {
-                    jointsid = pattfull->getJoint();
+                    jointsidref = pattfull->getJoint();
                 }
 
                 domJointRef pdomjoint = daeSafeCast<domJoint> (peltjoint);
@@ -1677,7 +1678,7 @@ public:
 
                 // get direct child link
                 if (!pattfull->getLink()) {
-                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%jointsid));
+                    RAVELOG_WARN(str(boost::format("joint %s needs to be attached to a valid link\n")%jointsidref));
                     continue;
                 }
 
@@ -1699,7 +1700,7 @@ public:
                     }
                 }
                 if (!pchildnode) {
-                    RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%jointsid));
+                    RAVELOG_DEBUG(str(boost::format("joint %s has no visual binding\n")%jointsidref));
                 }
 
                 // create the joints before creating the child links
@@ -1715,6 +1716,7 @@ public:
                         if (vdomaxes[ic] == itaxisbinding->pkinematicaxis) {
                             itaxisbinding->_pjoint = pjoint;
                             itaxisbinding->_iaxis = ic;
+                            itaxisbinding->_jointsidref = jointsidref;
                         }
                     }
                 }
@@ -1769,13 +1771,13 @@ public:
                     pkinbody->_vPassiveJoints.push_back(pjoint);
                 }
 
-                if( _mapJointSids.find(jointsid) != _mapJointSids.end() ) {
-                    RAVELOG_WARN(str(boost::format("jointid '%s' is duplicated!")%jointsid));
+                if( _mapJointSids.find(jointsidref) != _mapJointSids.end() ) {
+                    RAVELOG_WARN_FORMAT("jointid '%s' is duplicated!", jointsidref);
                 }
-                _mapJointSids[jointsid] = pjoint;
-                size_t lastJointSidIndex = jointsid.find_last_of('/');
+                _mapJointSids[jointsidref] = pjoint;
+                size_t lastJointSidIndex = jointsidref.find_last_of('/');
                 if( lastJointSidIndex != string::npos ) {
-                    _mapJointSids[jointsid.substr(lastJointSidIndex+1)] = pjoint;
+                    _mapJointSids[jointsidref.substr(lastJointSidIndex+1)] = pjoint;
                 }
 
                 RAVELOG_DEBUG(str(boost::format("joint %s (%d:%d)")%pjoint->_info._name%pjoint->jointindex%pjoint->dofindex));
@@ -1799,7 +1801,7 @@ public:
                 for (size_t ic = 0; ic < vdomaxes.getCount(); ++ic) {
                     domKinematics_axis_infoRef kinematics_axis_info;
                     domMotion_axis_infoRef motion_axis_info;
-                    FOREACHC(itaxisbinding,bindings.listAxisBindings) {
+                    FOREACH(itaxisbinding,bindings.listAxisBindings) {
                         if (CompareElementsSidToId(vdomaxes[ic], itaxisbinding->pkinematicaxis) > 0) {
                             kinematics_axis_info = itaxisbinding->kinematics_axis_info;
                             motion_axis_info = itaxisbinding->motion_axis_info;

@@ -68,10 +68,11 @@ public:
     {
         AxisBinding() {
         }
-        AxisBinding(const std::string& kmodelaxissidref, const std::string& nodesid) : kmodelaxissidref(kmodelaxissidref), nodesid(nodesid) {
+        AxisBinding(const std::string& kmodelaxissidref, const std::string& nodesid, const std::string& jointsidref) : kmodelaxissidref(kmodelaxissidref), nodesid(nodesid), jointsidref(jointsidref) {
         }
         std::string kmodelaxissidref;
         std::string nodesid;
+        std::string jointsidref; ///< the sidref of the joint kmodelid/jointsid
     };
 
     /// \brief sid bindings for kinematics, physics, and visual
