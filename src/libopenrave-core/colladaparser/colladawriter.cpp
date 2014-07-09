@@ -1227,6 +1227,7 @@ private:
         kmout->kmodel = kmodel;
         kmout->vaxissids.resize(0);
         kmout->vlinksids.resize(pbody->GetLinks().size());
+        kmout->vdofsids.resize(pbody->GetDOF());
 
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
@@ -1267,6 +1268,9 @@ private:
                     domJoint_limitsRef plimits = daeSafeCast<domJoint_limits>(vaxes[ia]->add(COLLADA_TYPE_LIMITS));
                     daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MIN))->getValue() = lmin.at(ia)*fmult;
                     daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MAX))->getValue() = lmax.at(ia)*fmult;
+                }
+                if( pjoint->GetDOFIndex() >= 0 ) {
+                    kmout->vdofsids.at(pjoint->GetDOFIndex()+ia) = jointsid;
                 }
             }
             vdomjoints.at(itjoint->first) = pdomjoint;
