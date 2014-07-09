@@ -1438,7 +1438,7 @@ public:
                         plink = pkinbody->GetLink(_ExtractLinkName(pdomlink));
                     }
                     else {
-                        plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, linksid);
+                        plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, linksid, pkinbody);
                     }
                     if( !plink ) {
                         RAVELOG_WARN(str(boost::format("failed to resolve link_info link %s\n")%linksid));
@@ -2716,7 +2716,7 @@ public:
                             manipinfo._sBaseLinkName = _ExtractLinkName(pdomlink);
                         }
                         else {
-                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_origin->getAttribute("link"));
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_origin->getAttribute("link"), probot);
                             if( !!plink ) {
                                 manipinfo._sBaseLinkName = plink->GetName();
                             }
@@ -2732,7 +2732,7 @@ public:
                             manipinfo._sEffectorLinkName = _ExtractLinkName(pdomlink);
                         }
                         else {
-                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_tip->getAttribute("link"));
+                            KinBody::LinkPtr plink = _ResolveLinkBinding(bindings.listInstanceLinkBindings, pframe_tip->getAttribute("link"), probot);
                             if( !!plink ) {
                                 manipinfo._sEffectorLinkName = plink->GetName();
                             }
@@ -3724,11 +3724,14 @@ private:
         return InterfaceTypePtr();
     }
 
-    KinBody::LinkPtr _ResolveLinkBinding(const std::list<InstanceLinkBinding>& listInstanceLinkBindings, const std::string& linksid) {
+    /// \param pbody is the body that the link has to be long to
+    KinBody::LinkPtr _ResolveLinkBinding(const std::list<InstanceLinkBinding>& listInstanceLinkBindings, const std::string& linksid, KinBodyPtr pbody) {
         FOREACHC(itbinding,listInstanceLinkBindings) {
-            if( !!itbinding->_domlink && !!itbinding->_domlink->getSid() ) {
-                if( strcmp(itbinding->_domlink->getSid(), linksid.c_str()) == 0 ) {
-                    return itbinding->_link;
+            if( !!itbinding->_domlink && !!itbinding->_domlink->getSid() && !!itbinding->_link ) {
+                if( !pbody || pbody == itbinding->_link->GetParent() ) {
+                    if( strcmp(itbinding->_domlink->getSid(), linksid.c_str()) == 0 ) {
+                        return itbinding->_link;
+                    }
                 }
             }
         }
@@ -3750,7 +3753,7 @@ private:
                                 plink0 = pbody->GetLink(_ExtractLinkName(pdomlink0));
                             }
                             else {
-                                plink0 = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link0"));
+                                plink0 = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link0"), pbody);
                             }
                             if( !plink0 ) {
                                 RAVELOG_WARN(str(boost::format("failed to resolve link0 %s\n")%pelt->getAttribute("link0")));
@@ -3763,7 +3766,7 @@ private:
                                 plink1 = pbody->GetLink(_ExtractLinkName(pdomlink1));
                             }
                             else {
-                                plink1 = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link1"));
+                                plink1 = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link1"), pbody);
                             }
                             if( !plink1 ) {
                                 RAVELOG_WARN(str(boost::format("failed to resolve link1 %s\n")%pelt->getAttribute("link1")));
@@ -3781,12 +3784,13 @@ private:
                                 plink = pbody->GetLink(_ExtractLinkName(pdomlink));
                             }
                             else {
-                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"));
+                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
                             }
                             if( !plink ) {
                                 RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
                                 continue;
                             }
+                            BOOST_ASSERT(plink->GetParent()==pbody);
                             resolveCommon_bool_or_param(pelt, referenceElt, plink->_info._bIsEnabled);
                         }
                     }

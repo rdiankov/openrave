@@ -702,7 +702,7 @@ private:
         if( IsForceWrite("readable") ) {
             _WriteKinBodyExtraInfo(pbody,articulated_system_motion);
         }
-        if( IsForceWrite("link_collision_state") ) {
+        if( IsWrite("link_collision_state") ) {
             _WriteCollisionData(pbody, ias, vlinksidrefs, false);
         }
 
@@ -2006,7 +2006,7 @@ private:
                 daeElementRef gripper_joint;
                 if( mapgripper_joints.find(pjoint) == mapgripper_joints.end() ) {
                     gripper_joint = ptec->add("gripper_joint");
-                    gripper_joint->setAttribute("joint",vdofsidrefs.at(pjoint->GetDOF()).c_str());
+                    gripper_joint->setAttribute("joint",vdofsidrefs.at(pjoint->GetDOFIndex()).c_str());
                 }
                 else {
                     gripper_joint = mapgripper_joints[pjoint];
