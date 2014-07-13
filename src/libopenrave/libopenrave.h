@@ -24,6 +24,8 @@
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
 #include <openrave/utils.h>
 
+//#include <boost/math/special_functions/round.hpp>
+
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
@@ -167,12 +169,11 @@ private:
     bool _bIsEnabled;
 };
 
-
 #define SERIALIZATION_PRECISION 4
 template<typename T>
 inline T SerializationValue(T f)
 {
-    return ( f > -1e-4f && f < 1e-4f ) ? static_cast<T>(0) : f;
+    return ( f > -1e-4f && f < 1e-4f ) ? static_cast<T>(0) : f;//boost::math::round(10000*f)*0.0001;
 }
 
 inline void SerializeRound(std::ostream& o, float f)
