@@ -1841,7 +1841,7 @@ void TriMesh::serialize(std::ostream& o, int options) const
 {
     o << vertices.size() << " ";
     FOREACHC(it,vertices) {
-        o << it->x << " " << it->y << " " << it->z << " ";
+        SerializeRound3(o, *it);
     }
     o << indices.size() << " ";
     FOREACHC(it,indices) {

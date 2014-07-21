@@ -170,6 +170,7 @@ public:
             return;
         }
         BOOST_ASSERT(startindex*_spec.GetDOF() <= _vtrajdata.size() && endindex*_spec.GetDOF() <= _vtrajdata.size());
+        OPENRAVE_ASSERT_OP(startindex,<,endindex);
         _vtrajdata.erase(_vtrajdata.begin()+startindex*_spec.GetDOF(),_vtrajdata.begin()+endindex*_spec.GetDOF());
         _bChanged = true;
     }
@@ -500,7 +501,7 @@ protected:
             }
             else if( interpolation == "quartic" ) {
                 _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
             }
             else if( interpolation == "quintic" ) {

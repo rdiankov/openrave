@@ -271,10 +271,14 @@ public:
         }
         // auto-conversion
         if( _nTotalDOF == 4 ) {
-            return iktype == IKP_TranslationXAxisAngleZNorm4D;
+            if( _iktype == IKP_Transform6D ) {
+                return iktype == IKP_TranslationXAxisAngleZNorm4D;
+            }
         }
         else if( _nTotalDOF == 5 ) {
-            return iktype == IKP_TranslationDirection5D;
+            if( _iktype == IKP_Transform6D ) {
+                return iktype == IKP_TranslationDirection5D;
+            }
         }
         return false;
     }

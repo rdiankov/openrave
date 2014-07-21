@@ -58,7 +58,7 @@ public:
      */
     virtual void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite=false) = 0;
 
-    /// \brief removes a number of waypoints starting at the specified index
+    /// \brief removes a range of waypoints [startindex, endindex) removing starting at startindex and ending at the element before endindex.
     virtual void Remove(size_t startindex, size_t endindex) = 0;
 
     /** \brief samples a data point on the trajectory at a particular time

@@ -4902,6 +4902,9 @@ class IKFastSolver(AutoReloader):
             except self.CannotSolveError,e:
                 log.debug(u'failed solving first two variables pairwise: %s', e)
                 
+        if len(reducedeqs) < 3:
+            raise self.CannotSolveError('have need at least 3 reducedeqs (%d)'%len(reducedeqs))
+        
         log.info('reducing equations')
         newreducedeqs = []
         hassinglevariable = False
@@ -5191,8 +5194,11 @@ class IKFastSolver(AutoReloader):
             if newreducedeqs[0].degree(2) == 1:
                 # try to solve one variable in terms of the others
                 if len(htvars) > 2:
-                    usedvar0solutions = solve(newreducedeqs[0],htvars[2])[0]
-                    igenoffset = usedvars.index(htvars[2])
+                    usedvar0solutions = [solve(newreducedeqs[0],htvars[2])[0]]
+                    # check which index in usedvars matches htvars[2]
+                    for igenoffset in range(len(usedvars)):
+                        if htvars[2].name.find(usedvars[igenoffset].name) >= 0:
+                            break
                     polyvars = htvars[0:2]
                 else:
                     usedvar0solutions = solve(newreducedeqs[0],htvars[1])

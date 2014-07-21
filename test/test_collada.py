@@ -20,6 +20,7 @@ class TestCOLLADA(EnvironmentSetup):
         testdesc='asdfa{}<>ff\nffas\nff<f>'
         with env:
             for robotfile in g_robotfiles:
+                self.log.info(u'checking collada %s', robotfile)
                 env.Reset()
                 robot0=self.LoadRobot(robotfile)
                 # add a transform to test that offsets are handled correctly
@@ -242,7 +243,7 @@ class TestCOLLADA(EnvironmentSetup):
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
         filedata=open('test_externalref_joints.dae','r').read()
         assert(filedata.find(reffile)>=0)
-        assert(len(filedata)<7000) # should be small
+        assert(len(filedata)<10000) # should be small
         assert(env2.Load('test_externalref_joints.dae'))
         misc.CompareBodies(robot,env2.GetRobots()[0])
         assert(len(env.GetBodies())==len(env2.GetBodies()))

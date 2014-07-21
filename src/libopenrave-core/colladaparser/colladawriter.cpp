@@ -202,17 +202,19 @@ public:
             //axis_output(const string& sid, KinBody::JointConstPtr pjoint, int iaxis) : sid(sid), pjoint(pjoint), iaxis(iaxis) {}
             axis_output() : iaxis(0) {
             }
-            string sid;     // joint/axis
-            string nodesid;
+            std::string sid;     // joint/axis
+            std::string nodesid;
             KinBody::JointConstPtr pjoint;
             int iaxis;
-            string jointnodesid;
+            std::string jointnodesid;
+            std::string joint_sidref; /// kmodelid/joint, sidref of the joint
         };
         KinBodyPtr pbody; ///< the body written for
         domKinematics_modelRef kmodel;
         domNodeRef noderoot; ///< root node containing the body transform it should have only one child pointing to the first link of the body
         std::vector<axis_output> vaxissids;     ///< no ordering
-        std::vector<std::string > vlinksids;     ///< same ordering as the link indices
+        std::vector<std::string > vlinksids;     ///< linksid. same ordering as the link indices
+        std::vector<std::string > vdofsids; ///< jointsid for every DOF
     };
 
     struct axis_sids
@@ -672,18 +674,23 @@ private:
             }
         }
 
-        std::vector<std::string> vlinksids(pcolladainfo->_bindingLinkSIDs.size());
-        for(size_t i = 0; i < vlinksids.size(); ++i) {
-            vlinksids[i] = pcolladainfo->_bindingLinkSIDs[i].kmodel;
+        std::vector<std::string> vlinksidrefs(pcolladainfo->_bindingLinkSIDs.size());
+        for(size_t i = 0; i < vlinksidrefs.size(); ++i) {
+            vlinksidrefs[i] = pcolladainfo->_bindingLinkSIDs[i].kmodel;
+        }
+
+        std::vector<std::string> vdofsidrefs(pcolladainfo->_bindingAxesSIDs.size());
+        for(size_t i = 0; i < vdofsidrefs.size(); ++i) {
+            vdofsidrefs[i] = pcolladainfo->_bindingAxesSIDs[i].jointsidref;
         }
 
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
         if( !!probot ) {
             if( IsForceWrite("manipulator") ) {
-                _WriteManipulators(probot, articulated_system_motion, vlinksids);
+                _WriteManipulators(probot, articulated_system_motion, vlinksidrefs, vdofsidrefs);
             }
             if( IsForceWrite("sensor") ) {
-                _WriteAttachedSensors(probot, articulated_system_motion, vlinksids);
+                _WriteAttachedSensors(probot, articulated_system_motion, vlinksidrefs);
             }
         }
         if( IsForceWrite("jointlimit") ) {
@@ -695,8 +702,8 @@ private:
         if( IsForceWrite("readable") ) {
             _WriteKinBodyExtraInfo(pbody,articulated_system_motion);
         }
-        if( IsForceWrite("link_collision_state") ) {
-            _WriteCollisionData(pbody, ias, vlinksids, false);
+        if( IsWrite("link_collision_state") ) {
+            _WriteCollisionData(pbody, ias, vlinksidrefs, false);
         }
 
         Transform tnode = pbody->GetTransform();
@@ -988,15 +995,19 @@ private:
 
         if( pbody->IsRobot() ) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-            std::vector<std::string> vlinksids(kmout->vlinksids.size());
-            for(size_t i = 0; i < vlinksids.size(); ++i) {
-                vlinksids[i] = kmodelid + kmout->vlinksids.at(i);
+            std::vector<std::string> vlinksidrefs(kmout->vlinksids.size());
+            for(size_t i = 0; i < vlinksidrefs.size(); ++i) {
+                vlinksidrefs[i] = kmodelid + kmout->vlinksids.at(i);
+            }
+            std::vector<std::string> vdofsidrefs(kmout->vdofsids.size());
+            for(size_t i = 0; i < vdofsidrefs.size(); ++i) {
+                vdofsidrefs.at(i) = kmodelid + kmout->vdofsids[i];
             }
             if( IsWrite("manipulator") ) {
-                _WriteManipulators(probot, articulated_system_motion, vlinksids);
+                _WriteManipulators(probot, articulated_system_motion, vlinksidrefs, vdofsidrefs);
             }
             if( IsWrite("sensor") ) {
-                _WriteAttachedSensors(probot, articulated_system_motion, vlinksids);
+                _WriteAttachedSensors(probot, articulated_system_motion, vlinksidrefs);
             }
         }
 
@@ -1216,6 +1227,7 @@ private:
         kmout->kmodel = kmodel;
         kmout->vaxissids.resize(0);
         kmout->vlinksids.resize(pbody->GetLinks().size());
+        kmout->vdofsids.resize(pbody->GetDOF());
 
         FOREACHC(itjoint, vjoints) {
             KinBody::JointConstPtr pjoint = itjoint->second;
@@ -1256,6 +1268,9 @@ private:
                     domJoint_limitsRef plimits = daeSafeCast<domJoint_limits>(vaxes[ia]->add(COLLADA_TYPE_LIMITS));
                     daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MIN))->getValue() = lmin.at(ia)*fmult;
                     daeSafeCast<domMinmax>(plimits->add(COLLADA_ELEMENT_MAX))->getValue() = lmax.at(ia)*fmult;
+                }
+                if( pjoint->GetDOFIndex() >= 0 ) {
+                    kmout->vdofsids.at(pjoint->GetDOFIndex()+ia) = jointsid;
                 }
             }
             vdomjoints.at(itjoint->first) = pdomjoint;
@@ -1306,25 +1321,35 @@ private:
 
         _WriteKinBodyType(pbody,kmout->kmodel);
 
-        std::vector<std::string> vlinksids(kmout->vlinksids.size());
-        for(size_t i = 0; i < vlinksids.size(); ++i) {
-            vlinksids[i] = kmodelid + string("/") + kmout->vlinksids.at(i);
+        std::vector<std::string> vlinksidrefs(kmout->vlinksids.size());
+        for(size_t i = 0; i < vlinksidrefs.size(); ++i) {
+            vlinksidrefs[i] = str(boost::format("%s/%s")%kmodelid%kmout->vlinksids.at(i));
         }
-        _WriteCollisionData(pbody, kmout->kmodel, vlinksids);
+        _WriteCollisionData(pbody, kmout->kmodel, vlinksidrefs);
 
+        FOREACH(itaxissid, kmout->vaxissids) {
+            size_t index = itaxissid->sid.find("/");
+            if( index == string::npos ) {
+                itaxissid->joint_sidref = str(boost::format("%s/joint%d")%kmodelid%itaxissid->pjoint->GetJointIndex());
+            }
+            else {
+                itaxissid->joint_sidref = kmodelid + itaxissid->sid.substr(index);
+            }
+        }
+        
         if( IsWrite("link_info") ) {
             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
             string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
 
             // write the float/int parameters for all links
-            for(size_t ilink = 0; ilink < vlinksids.size(); ++ilink) {
+            for(size_t ilink = 0; ilink < vlinksidrefs.size(); ++ilink) {
                 KinBody::LinkPtr plink = pbody->GetLinks().at(ilink);
                 if( plink->GetFloatParameters().size() == 0 && plink->GetIntParameters().size() == 0 && plink->GetStringParameters().size() == 0 ) {
                     continue;
                 }
                 domExtraRef pextra = daeSafeCast<domExtra>(kmout->kmodel->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setType("link_info");
-                pextra->setName(vlinksids.at(ilink).c_str());
+                pextra->setName(vlinksidrefs.at(ilink).c_str());
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
 
@@ -1794,7 +1819,7 @@ private:
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
             string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
             pattfull->setJoint(jointid.c_str());
-
+            
             LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints);
             out.listusedlinks.insert(out.listusedlinks.end(),childinfo.listusedlinks.begin(),childinfo.listusedlinks.end());
 
@@ -1954,7 +1979,7 @@ private:
         }
     }
 
-    void _WriteManipulators(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksids)
+    void _WriteManipulators(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, const std::vector<std::string>& vdofsidrefs)
     {
         FOREACHC(itmanip, probot->GetManipulators()) {
             domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
@@ -1963,9 +1988,9 @@ private:
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
             daeElementRef frame_origin = ptec->add("frame_origin");
-            frame_origin->setAttribute("link",vlinksids.at((*itmanip)->GetBase()->GetIndex()).c_str());
+            frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
             daeElementRef frame_tip = ptec->add("frame_tip");
-            frame_tip->setAttribute("link",vlinksids.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
+            frame_tip->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
             _WriteTransformation(frame_tip,(*itmanip)->GetLocalToolTransform());
             {
                 daeElementRef direction = frame_tip->add("direction");
@@ -1981,7 +2006,7 @@ private:
                 daeElementRef gripper_joint;
                 if( mapgripper_joints.find(pjoint) == mapgripper_joints.end() ) {
                     gripper_joint = ptec->add("gripper_joint");
-                    gripper_joint->setAttribute("joint",str(boost::format("joint%d")%pjoint->GetJointIndex()).c_str());
+                    gripper_joint->setAttribute("joint",vdofsidrefs.at(pjoint->GetDOFIndex()).c_str());
                 }
                 else {
                     gripper_joint = mapgripper_joints[pjoint];
@@ -2000,7 +2025,7 @@ private:
         }
     }
 
-    void _WriteAttachedSensors(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksids)
+    void _WriteAttachedSensors(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
     {
         if (probot->GetAttachedSensors().size() > 0) {
             size_t sensorindex = 0;
@@ -2011,7 +2036,7 @@ private:
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
                 daeElementRef frame_origin = ptec->add("frame_origin");
-                frame_origin->setAttribute("link",vlinksids.at((*itattachedsensor)->GetAttachingLink()->GetIndex()).c_str());
+                frame_origin->setAttribute("link",vlinksidrefs.at((*itattachedsensor)->GetAttachingLink()->GetIndex()).c_str());
                 _WriteTransformation(frame_origin,(*itattachedsensor)->GetRelativeTransform());
 
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
@@ -2035,7 +2060,7 @@ private:
         }
     }
 
-    void _WriteCollisionData(KinBodyPtr pbody, daeElementRef parent, const std::vector<std::string>& vlinksids, bool bWriteIgnoreLinkPair=true)
+    void _WriteCollisionData(KinBodyPtr pbody, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, bool bWriteIgnoreLinkPair=true)
     {
         // collision data
         domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
@@ -2047,14 +2072,14 @@ private:
             KinBody::LinkPtr plink1 = pbody->GetLink(itadjacent->second);
             if( !!plink0 && !!plink1 ) {
                 daeElementRef pignore = ptec->add("ignore_link_pair");
-                pignore->setAttribute("link0",vlinksids.at(plink0->GetIndex()).c_str());
-                pignore->setAttribute("link1",vlinksids.at(plink1->GetIndex()).c_str());
+                pignore->setAttribute("link0",vlinksidrefs.at(plink0->GetIndex()).c_str());
+                pignore->setAttribute("link1",vlinksidrefs.at(plink1->GetIndex()).c_str());
             }
         }
         if( IsWrite("link_collision_state") ) {
             FOREACHC(itlink,pbody->GetLinks()) {
                 daeElementRef link_collision_state = ptec->add("link_collision_state");
-                link_collision_state->setAttribute("link",vlinksids.at((*itlink)->GetIndex()).c_str());
+                link_collision_state->setAttribute("link",vlinksidrefs.at((*itlink)->GetIndex()).c_str());
                 link_collision_state->add("bool")->setCharData((*itlink)->IsEnabled() ? "true" : "false");
             }
         }
