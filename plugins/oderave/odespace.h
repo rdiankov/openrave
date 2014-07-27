@@ -207,7 +207,7 @@ public:
         int nLastStamp;
 
         vector<boost::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
-        vector<dReal> _vdofbranches;
+        vector<OpenRAVE::dReal> _vdofbranches;
 
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
