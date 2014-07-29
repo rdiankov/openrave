@@ -12,7 +12,7 @@ if( libpcrecpp_FOUND )
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${libpcrecpp_LDFLAGS_OTHER}")
   set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${libpcrecpp_LIBRARIES})
   include_directories(${libpcrecpp_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} libpcrecpp_LIBRARY_DIRS)
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${libpcrecpp_LIBRARY_DIRS})
   add_definitions(-DHAVE_PCRECPP)
 endif()
 
