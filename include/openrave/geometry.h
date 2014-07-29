@@ -445,8 +445,7 @@ public:
         t.rot.z = rot.x*r.rot.z + rot.z*r.rot.x + rot.w*r.rot.y - rot.y*r.rot.w;
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
         // normalize the transformation
-        T fnorm = t.rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( t.rot.lengthsqr4() > 0.99f && t.rot.lengthsqr4() < 1.01f );
         t.rot.normalize4();
         return t;
     }

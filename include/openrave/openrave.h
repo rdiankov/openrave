@@ -22,7 +22,6 @@
 
 #ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
 #define BOOST_ENABLE_ASSERT_HANDLER
-#define BOOST_DISABLE_ASSERTS // for later versions of boost (>= 1.54)
 #endif
 
 #include <cstdio>
@@ -2849,7 +2848,7 @@ const std::string& IkParameterization::GetName() const
 
 } // end namespace OpenRAVE
 
-#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_DISABLE_ASSERTS) || defined(BOOST_ENABLE_ASSERT_HANDLER))
+#if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))
 /// Modifications controlling %boost library behavior.
 namespace boost
 {
