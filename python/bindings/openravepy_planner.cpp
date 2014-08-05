@@ -298,6 +298,7 @@ void init_openravepy_planner()
                         .def("InitPlan",InitPlan2,args("robot","xmlparams"), DOXY_FN(PlannerBase,InitPlan "RobotBasePtr; std::istream"))
                         .def("PlanPath",&PyPlannerBase::PlanPath,PlanPath_overloads(args("traj","releasegil"), DOXY_FN(PlannerBase,PlanPath)))
                         .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
+                        .def("RegisterPlanCallback",&PyPlannerBase::RegisterPlanCallback, DOXY_FN(PlannerBase,RegisterPlanCallback))
         ;
 
         class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
