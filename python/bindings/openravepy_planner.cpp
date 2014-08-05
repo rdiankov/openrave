@@ -196,16 +196,22 @@ public:
             RAVELOG_ERROR("exception occured in _PlanCallback:\n");
             PyErr_Print();
         }
-        PyGILState_Release(gstate);
+        PlannerAction ret = PA_None;
         if(( res == object()) || !res ) {
-            return PA_None;
+            ret = PA_None;
+            RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
         }
-        extract<PlannerAction> xb(res);
-        if( xb.check() ) {
-            return (PlannerAction)xb;
+        else {
+            extract<PlannerAction> xb(res);
+            if( xb.check() ) {
+                ret = (PlannerAction)xb;
+            }
+            else {
+                RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
+            }
         }
-        RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
-        return PA_None;
+        PyGILState_Release(gstate);
+        return ret;
     }
 
     object RegisterPlanCallback(object fncallback)
