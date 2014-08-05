@@ -250,16 +250,22 @@ protected:
             RAVELOG_ERROR("exception occured in python collision callback:\n");
             PyErr_Print();
         }
-        PyGILState_Release(gstate);
+        CollisionAction ret = CA_DefaultAction;
         if(( res == object()) || !res ) {
-            return CA_DefaultAction;
+            ret = CA_DefaultAction;
+            RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
         }
-        extract<int> xi(res);
-        if( xi.check() ) {
-            return (CollisionAction)(int) xi;
+        else {
+            extract<int> xi(res);
+            if( xi.check() ) {
+                ret = (CollisionAction)(int) xi;
+            }
+            else {
+                RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
+            }
         }
-        RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
-        return CA_DefaultAction;
+        PyGILState_Release(gstate);
+        return ret;
     }
 
 public:
