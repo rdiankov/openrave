@@ -204,7 +204,8 @@ public:
             FOREACH(itchildren, _vsetLevelNodes) {
                 itchildren->clear();
             }
-            _pNodesPool->purge_memory();
+            //_pNodesPool->purge_memory();
+            _pNodesPool.reset(new boost::pool<>(sizeof(Node)+_dof*sizeof(dReal)));
         }
         _numnodes = 0;
     }
