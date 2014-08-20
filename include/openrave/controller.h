@@ -84,7 +84,7 @@ public:
 
     /// \brief return the time along the current command
     virtual dReal GetTime() const OPENRAVE_DUMMY_IMPLEMENTATION;
-
+    
     /// \brief get velocity of the controlled DOFs
     ///
     /// \param vel [out] - current velocity of robot from the dof

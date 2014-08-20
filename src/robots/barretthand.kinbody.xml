@@ -77,7 +77,7 @@
       <inertia>0.000007 0 0 0 0.000040 0 0 0 0.000352</inertia>
     </mass>
   </Body>
-  <Joint name="JF1mimic" type="hinge" enable="false" mimic_pos="JF1/3+0.8727" mimic_vel="|JF1 0.3333333333333333" mimic_accel="|JF1 0.3333333333333333">
+  <Joint name="JF1mimic" type="hinge" enable="false" mimic_pos="JF1/3+0.8727" mimic_vel="|JF1 0.3333333333333333" mimic_accel="|JF1 0">
     <Body>Finger0-1</Body>
     <Body>Finger0-2</Body>
     <offsetfrom>Finger0-2</offsetfrom>
@@ -202,7 +202,7 @@
       <inertia>0.000007 0 0 0 0.000040 0 0 0 0.000352</inertia>
     </mass>
   </Body>
-  <Joint name="JF3mimic" type="hinge" enable="false" mimic_pos="JF3/3+0.8727" mimic_vel="|JF3 0.3333333333333333" mimic_accel="|JF3 0.3333333333333333">
+  <Joint name="JF3mimic" type="hinge" enable="false" mimic_pos="JF3/3+0.8727" mimic_vel="|JF3 0.3333333333333333" mimic_accel="|JF3 0">
     <Body>Finger2-1</Body>
     <Body>Finger2-2</Body>
     <offsetfrom>Finger2-2</offsetfrom>
@@ -226,7 +226,7 @@
     <resolution>1.7</resolution>
     <maxtorque>2</maxtorque>
   </Joint>
-  <Joint name="JF4mimic" type="hinge" enable="false" mimic_pos="JF4" mimic_vel="|JF4 1" mimic_accel="|JF4 1">
+  <Joint name="JF4mimic" type="hinge" enable="false" mimic_pos="JF4" mimic_vel="|JF4 1" mimic_accel="|JF4 0">
     <Body>handbase</Body>
     <Body>Finger1-0</Body>
     <offsetfrom>Finger1-0</offsetfrom>
