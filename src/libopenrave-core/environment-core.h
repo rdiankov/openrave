@@ -1488,7 +1488,7 @@ public:
 
     virtual boost::shared_ptr<TriMesh> _ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
     {
-        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        //EnvironmentMutex::scoped_lock lockenv(GetMutex()); // don't lock!
         string filedata = RaveFindLocalFile(filename);
         if( filedata.size() == 0 ) {
             return boost::shared_ptr<TriMesh>();
