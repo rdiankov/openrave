@@ -177,7 +177,7 @@ void KinBodyItem::Load()
 
                 // Fall back on OpenRAVE's standard mesh loader.
                 if( !bSucceeded ) {
-
+                    // need to very careful
                     typedef boost::shared_ptr<TriMesh> TriMeshPtr;
                     TriMeshPtr mesh = _pchain->GetEnv()->ReadTrimeshURI(TriMeshPtr(), geom->GetRenderFilename());
                     if (mesh) {

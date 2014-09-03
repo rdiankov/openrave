@@ -5767,7 +5767,10 @@ class IKFastSolver(AutoReloader):
                     subsvals = [(s,v.evalf()) for s,v in subs]
                     subs = subsvals+getsubs(subsvals)
                 # have to sub at least twice with the global symbols
-                A = Mall[maxdegree].subs(subs).subs(self.globalsymbols).subs(subs).evalf()
+                A = Mall[maxdegree].subs(subs)
+                for i in range(A.shape[0]):
+                    for j in range(A.shape[1]):
+                        A[i,j] = self._SubstituteGlobalSymbols(A[i,j]).subs(subs).evalf()
                 eps = 10**-(self.precision-3)
                 Anumpy = numpy.array(numpy.array(A), numpy.float64)
                 if numpy.isnan(numpy.sum(Anumpy)):
@@ -5779,8 +5782,14 @@ class IKFastSolver(AutoReloader):
                     except ValueError, e:
                         log.error('error when taking inverse: %s', e)
                         continue
-                    B = Ainv*Mall[1].subs(subs).evalf()
+                    B = Ainv*Mall[1].subs(subs)
+                    for i in range(B.shape[0]):
+                        for j in range(B.shape[1]):
+                            B[i,j] = self._SubstituteGlobalSymbols(B[i,j]).subs(subs).evalf()
                     C = Ainv*Mall[0].subs(subs).evalf()
+                    for i in range(C.shape[0]):
+                        for j in range(C.shape[1]):
+                            C[i,j] = self._SubstituteGlobalSymbols(C[i,j]).subs(subs).evalf()
                     A2 = zeros((B.shape[0],B.shape[0]*2))
                     for i in range(B.shape[0]):
                         A2[i,B.shape[0]+i] = S.One
@@ -5808,7 +5817,10 @@ class IKFastSolver(AutoReloader):
                         continue
                     Atotal = None
                     for idegree in range(maxdegree+1):
-                        Adegree = Mall[idegree].subs(subs).subs(self.globalsymbols).evalf()
+                        Adegree = Mall[idegree].subs(subs)
+                        for i in range(Adegree.shape[0]):
+                            for j in range(Adegree.shape[1]):
+                                Adegree[i,j] = self._SubstituteGlobalSymbols(Adegree[i,j]).subs(subs).evalf()
                         if Atotal is None:
                             Atotal = Adegree
                         else:
@@ -5817,7 +5829,8 @@ class IKFastSolver(AutoReloader):
                     leftvarvalue = leftvar.subs(subs).evalf()
                     hasnonzerodet = False
                     for testvalue in [-10*S.One, -S.One,-0.5*S.One, 0.5*S.One, S.One, 10*S.One]:
-                        detvalue = Atotal.subs(leftvar,leftvarvalue+testvalue).evalf().det()
+                        Atotal2 = Atotal.subs(leftvar,leftvarvalue+testvalue).evalf()
+                        detvalue = Atotal2.det()
                         if abs(detvalue) > 1e-10:
                             hasnonzerodet = True
                     if not hasnonzerodet:

@@ -3496,8 +3496,10 @@ private:
             daeElement* pnodeelt = daeSidRef(kbindmodel->getNode(), viscene->getUrl().getElement()).resolve().elt;
             domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pnodeelt);
             domNodeRef node = daeSafeCast<domNode>(pnodeelt);
-            if (!node && !!inode) {
-                node = _InstantiateNode(inode);
+            if (!node ) {
+                if( !!inode ) {
+                    node = _InstantiateNode(inode);
+                }
                 if( !node ) {
                     RAVELOG_WARN(str(boost::format("bind_kinematics_model does not reference valid node %s\n")%kbindmodel->getNode()));
                     continue;
@@ -3527,7 +3529,8 @@ private:
                 }
                 continue;
             }
-            bindings.listInstanceModelBindings.push_back(InstanceModelBinding(inode, node,ikmodel, listInstanceScope, idsuffix));
+            BOOST_ASSERT(!!node);
+            bindings.listInstanceModelBindings.push_back(InstanceModelBinding(inode, node, ikmodel, listInstanceScope, idsuffix));
         }
         // axis info
         for (size_t ijoint = 0; ijoint < kiscene->getBind_joint_axis_array().getCount(); ++ijoint) {
