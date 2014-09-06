@@ -1819,9 +1819,6 @@ RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& nam
 /// Check if body is self colliding. Links that are joined together are ignored.
 bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
-    if( KinBody::CheckSelfCollision(report, collisionchecker) ) {
-        return true;
-    }
     if( !collisionchecker ) {
         collisionchecker = _selfcollisionchecker;
         if( !collisionchecker ) {
@@ -1833,6 +1830,21 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
         }
     }
 
+    bool bAllLinkCollisions = !!(collisionchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bCollision = false;
+    if( KinBody::CheckSelfCollision(report, collisionchecker) ) {
+        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+            return true;
+        }
+        bCollision = true;
+    }
+
     // if collision checker is set to distance checking, have to compare reports for the minimum distance
     int coloptions = collisionchecker->GetCollisionOptions();
     CollisionReport tempreport;
@@ -1842,7 +1854,6 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
     }
 
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
-    bool bCollision = false;
     FOREACHC(itgrabbed, _vGrabbedBodies) {
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
         KinBodyPtr pbody(pgrabbed->_pgrabbedbody);
@@ -1854,23 +1865,31 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
             FOREACHC(itbodylink,pbody->GetLinks()) {
                 if( collisionchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
                     bCollision = true;
-                    break;
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        break;
+                    }
                 }
                 if( !!pusereport && pusereport->minDistance < report->minDistance ) {
                     *report = *pusereport;
                 }
             }
             if( bCollision ) {
-                break;
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    break;
+                }
             }
         }
         if( bCollision ) {
-            break;
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                break;
+            }
         }
 
         if( pbody->CheckSelfCollision(pusereport, collisionchecker) ) {
             bCollision = true;
-            break;
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                break;
+            }
         }
         if( !!pusereport && pusereport->minDistance < report->minDistance ) {
             *report = *pusereport;
@@ -1892,27 +1911,37 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
                             if( find(pgrabbed2->_listNonCollidingLinks.begin(),pgrabbed2->_listNonCollidingLinks.end(),*itlink) != pgrabbed2->_listNonCollidingLinks.end() ) {
                                 if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),pusereport) ) {
                                     bCollision = true;
-                                    break;
+                                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                        break;
+                                    }
                                 }
                                 if( !!pusereport && pusereport->minDistance < report->minDistance ) {
                                     *report = *pusereport;
                                 }
                             }
                             if( bCollision ) {
-                                break;
+                                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                    break;
+                                }
                             }
                         }
                         if( bCollision ) {
-                            break;
+                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                break;
+                            }
                         }
                     }
                 }
                 if( bCollision ) {
-                    break;
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        break;
+                    }
                 }
             }
             if( bCollision ) {
-                break;
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    break;
+                }
             }
         }
     }
@@ -1945,11 +1974,22 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
     CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bincollision = false;
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
         if( pchecker->CheckCollision(LinkConstPtr(plink),report) ) {
-            return true;
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
         }
     }
 
@@ -1976,24 +2016,89 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, 
                 KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
                 pbody->SetTransform(tlinktrans * pgrabbed->_troot);
                 if( pchecker->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
-                    return true;
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
                 }
             }
         }
     }
-    return false;
+    return bincollision;
+}
+
+bool RobotBase::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
+{
+    LinkPtr plink = _veclinks.at(ilinkindex);
+    CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+    bool bincollision = false;
+    if( plink->IsEnabled() ) {
+        if( pchecker->CheckCollision(LinkConstPtr(plink),report) ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
+        }
+    }
+
+    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
+    // it is important to make sure to add all other attached bodies in the ignored list!
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    FOREACHC(itgrabbed,_vGrabbedBodies) {
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+        if( pgrabbed->_plinkrobot == plink ) {
+            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pbody ) {
+                vbodyexcluded.resize(0);
+                vbodyexcluded.push_back(shared_kinbody_const());
+                FOREACHC(itgrabbed2,_vGrabbedBodies) {
+                    if( itgrabbed2 != itgrabbed ) {
+                        GrabbedConstPtr pgrabbed2 = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed2);
+                        KinBodyPtr pbody2 = pgrabbed2->_pgrabbedbody.lock();
+                        if( !!pbody2 ) {
+                            vbodyexcluded.push_back(pbody2);
+                        }
+                    }
+                }
+                if( pchecker->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+            }
+        }
+    }
+    return bincollision;
 }
 
 bool RobotBase::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
     // TODO: have to consider rigidly attached links??
     CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+    bool bincollision = false;
     LinkPtr plink = _veclinks.at(ilinkindex);
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
         if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-            return true;
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
         }
     }
 
@@ -2015,12 +2120,15 @@ bool RobotBase::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktra
                 KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
                 pbody->SetTransform(tlinktrans * pgrabbed->_troot);
                 if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pbody),report) ) {
-                    return true;
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
                 }
             }
         }
     }
-    return false;
+    return bincollision;
 }
 
 void RobotBase::SimulationStep(dReal fElapsedTime)

@@ -230,7 +230,6 @@ public:
             if( !!report ) {
                 report->plink1 = robotlink;
                 report->plink2 = collidinglink;
-                report->numCols = 1;
             }
             return true;
         } // (free configuration)
@@ -352,7 +351,6 @@ public:
             if( !!report ) {
                 report->plink1 = robotlink;
                 report->plink2 = collidinglink;
-                report->numCols = 1;
             }
             return true;
         }

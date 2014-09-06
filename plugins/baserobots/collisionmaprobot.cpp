@@ -229,36 +229,32 @@ For joints J2xJ3, the index operation is::\n\n\
                 }
                 if( !curmap.vfreespace(indices) ) {
                     // get all colliding links and check to make sure that at least two are enabled
-                    vector<LinkConstPtr> vLinkColliding;
+                    vector< std::pair<LinkConstPtr, LinkConstPtr> > vLinkColliding;
                     FOREACHC(itjindex,curmap.jointindices) {
                         JointPtr pjoint = GetJoints().at(*itjindex);
-                        if( !!pjoint->GetFirstAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetFirstAttached())== vLinkColliding.end()) ) {
-                            vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetFirstAttached()));
-                        }
-                        if( !!pjoint->GetSecondAttached() &&( find(vLinkColliding.begin(),vLinkColliding.end(),pjoint->GetSecondAttached())== vLinkColliding.end()) ) {
-                            vLinkColliding.push_back(KinBody::LinkConstPtr(pjoint->GetSecondAttached()));
+                        if( !!pjoint->GetFirstAttached() && !!pjoint->GetSecondAttached() ) {
+                            std::pair<LinkConstPtr, LinkConstPtr> links(pjoint->GetFirstAttached(), pjoint->GetSecondAttached());
+                            if( links.first->IsEnabled() && links.second->IsEnabled() ) {
+                                if( links.second->GetIndex() < links.first->GetIndex() ) {
+                                    std::swap(links.first, links.second);
+                                }
+                                if( find(vLinkColliding.begin(),vLinkColliding.end(), links) == vLinkColliding.end() ) {
+                                    vLinkColliding.push_back(links);
+                                }
+                            }
                         }
                     }
-                    int numenabled = 0;
-                    FOREACHC(itlink,vLinkColliding) {
-                        if( (*itlink)->IsEnabled() ) {
-                            numenabled++;
-                        }
-                    }
-                    if( numenabled < 2 ) {
+                    if( vLinkColliding.size() == 0 ) {
                         continue;
                     }
                     if( !!report ) {
-                        report->numCols = 1;
                         report->vLinkColliding = vLinkColliding;
                         if( vLinkColliding.size() > 0 ) {
-                            report->plink1 = vLinkColliding.at(0);
-                        }
-                        if( vLinkColliding.size() > 1 ) {
-                            report->plink2 = vLinkColliding.at(1);
+                            report->plink1 = vLinkColliding.at(0).first;
+                            report->plink2 = vLinkColliding.at(0).second;
                         }
                     }
-                    RAVELOG_VERBOSE(str(boost::format("Self collision: joints %s(%d):%s(%d)")%curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]));
+                    RAVELOG_VERBOSE_FORMAT("Self collision: joints %s(%d):%s(%d)", curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]);
                     return true;
                 }
             }

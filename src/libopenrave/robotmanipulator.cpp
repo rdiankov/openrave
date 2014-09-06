@@ -640,6 +640,63 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
     }
 }
 
+bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report) const
+{
+    RobotBasePtr probot(__probot);
+    // get all child links of the manipualtor
+    int iattlink = __pEffector->GetIndex();
+    vector<LinkPtr> vattachedlinks;
+    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
+
+    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bincollision = false;
+    
+    FOREACHC(itlink,vattachedlinks) {
+        if( probot->CheckLinkCollision((*itlink)->GetIndex(), report) ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
+        }
+    }
+    FOREACHC(itlink, probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACHC(itarmdof,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
+                bGripperLink = false;
+                break;
+            }
+        }
+        if( !bGripperLink ) {
+            continue;
+        }
+        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
+            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
+                if( probot->CheckLinkCollision(ilink, report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+                break;
+            }
+        }
+    }
+    return bincollision;
+}
+
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
 {
     RobotBasePtr probot(__probot);
@@ -649,9 +706,23 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     int iattlink = __pEffector->GetIndex();
     vector<LinkPtr> vattachedlinks;
     __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
+
+    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bincollision = false;
+
     FOREACHC(itlink,vattachedlinks) {
         if( probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
-            return true;
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
         }
     }
     FOREACHC(itlink, probot->GetLinks()) {
@@ -673,13 +744,16 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 if( probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                    return true;
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
                 }
                 break;
             }
         }
     }
-    return false;
+    return bincollision;
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report) const
@@ -691,9 +765,23 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
     int iattlink = __pEffector->GetIndex();
     vector<LinkPtr> vattachedlinks;
     __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
+
+    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bincollision = false;
+
     FOREACHC(itlink,vattachedlinks) {
         if( probot->CheckLinkSelfCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
-            return true;
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
         }
     }
     FOREACHC(itlink, probot->GetLinks()) {
@@ -715,13 +803,16 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
                 if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                    return true;
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
                 }
                 break;
             }
         }
     }
-    return false;
+    return bincollision;
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples) const

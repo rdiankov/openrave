@@ -261,7 +261,6 @@ public:
         FOREACH(itbody,vecbodies) {
             if(!!report) {
                 report->numWithinTol = 0;
-                report->numCols = 0;
             }
             KinBodyPtr pbody2 = *itbody;
 
@@ -293,25 +292,23 @@ public:
                 if(!report && !_benablecol && !_benabledis && _benabletol && retval) {
                     return true;
                 }
+                if( retval ) {
+                    ++tmpnumcols;
+                }
             }
 
             if(!!report) {
                 if(report->numWithinTol > 0) {
                     tmpnumwithintol++;
                 }
-                if(report->numCols > 0) {
-                    tmpnumcols++;
-                }
             }
         }
 
         if(!!report) {
             report->numWithinTol = tmpnumwithintol;
-            report->numCols = tmpnumcols;
         }
 
         return tmpnumcols>0;
-
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
@@ -445,7 +442,6 @@ private:
         FOREACH(itbody,vecbodies) {
             if(!!report) {
                 report->numWithinTol = 0;
-                report->numCols = 0;
             }
             KinBodyPtr pbody2 = *itbody;
 
@@ -478,20 +474,19 @@ private:
                     if(!report && !_benablecol && !_benabledis && _benabletol && retval) {
                         return true;
                     }
+                    if( retval ) {
+                        ++tmpnumcols;
+                    }
                 }
             }
             if(!!report) {
                 if(report->numWithinTol > 0) {
                     tmpnumwithintol++;
                 }
-                if(report->numCols > 0) {
-                    tmpnumcols++;
-                }
             }
         }
         if(!!report) {
             report->numWithinTol = tmpnumwithintol;
-            report->numCols = tmpnumcols;
         }
         return tmpnumcols>0;
     }
@@ -579,7 +574,6 @@ private:
             }
             else {
                 PQP_Collide(&colres,R1,T1,m1.get(),R2,T2,m2.get());
-                report->numCols += colres.Colliding();
 
                 if(colres.NumPairs() > 0) {
                     report->plink1 = link1;

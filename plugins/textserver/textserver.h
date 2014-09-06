@@ -1715,8 +1715,8 @@ protected:
             FOREACHC(it, (*itmanip)->GetArmIndices()) {
                 os << *it << " ";
             }
-            os << (*itmanip)->GetClosingDirection().size() << " ";
-            FOREACHC(it, (*itmanip)->GetClosingDirection()) {
+            os << (*itmanip)->GetChuckingDirection().size() << " ";
+            FOREACHC(it, (*itmanip)->GetChuckingDirection()) {
                 os << *it << " ";
             }
             os << (*itmanip)->GetDirection().x << " " << (*itmanip)->GetDirection().y << " " << (*itmanip)->GetDirection().z << " ";

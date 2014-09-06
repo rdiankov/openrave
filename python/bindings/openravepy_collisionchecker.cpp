@@ -58,7 +58,6 @@ public:
     void init(PyEnvironmentBasePtr pyenv)
     {
         options = report->options;
-        numCols = report->numCols;
         minDistance = report->minDistance;
         numWithinTol = report->numWithinTol;
         if( !!report->plink1 ) {
@@ -78,6 +77,19 @@ public:
             newcontacts.append(PYCONTACT(*itc));
         }
         contacts = newcontacts;
+
+        boost::python::list newLinkColliding;
+        FOREACHC(itlinks, report->vLinkColliding) {
+            object pylink1, pylink2;
+            if( !!itlinks->first ) {
+                pylink1 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(itlinks->first), pyenv);
+            }
+            if( !!itlinks->second ) {
+                pylink2 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(itlinks->second), pyenv);
+            }
+            newLinkColliding.append(boost::python::make_tuple(pylink1, pylink2));
+        }
+        vLinkColliding = newLinkColliding;
     }
 
     string __str__()
@@ -90,8 +102,8 @@ public:
 
     int options;
     object plink1, plink2;
-    int numCols;
-    //std::vector<KinBody::Link*> vLinkColliding;
+
+    boost::python::list vLinkColliding;
     dReal minDistance;
     int numWithinTol;
     boost::python::list contacts;
@@ -641,7 +653,9 @@ void init_openravepy_collisionchecker()
     .value("UseTolerance",CO_UseTolerance)
     .value("Contacts",CO_Contacts)
     .value("RayAnyHit",CO_RayAnyHit)
-    .value("ActiveDOFs",CO_ActiveDOFs);
+    .value("ActiveDOFs",CO_ActiveDOFs)
+    .value("AllLinkCollisions", CO_AllLinkCollisions)
+    ;
     enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
     .value("DefaultAction",CA_DefaultAction)
     .value("Ignore",CA_Ignore)
@@ -658,10 +672,10 @@ void init_openravepy_collisionchecker()
     .def_readonly("options",&PyCollisionReport::options)
     .def_readonly("plink1",&PyCollisionReport::plink1)
     .def_readonly("plink2",&PyCollisionReport::plink2)
-    .def_readonly("numCols",&PyCollisionReport::numCols)
     .def_readonly("minDistance",&PyCollisionReport::minDistance)
     .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
     .def_readonly("contacts",&PyCollisionReport::contacts)
+    .def_readonly("vLinkColliding",&PyCollisionReport::vLinkColliding)
     .def("__str__",&PyCollisionReport::__str__)
     .def("__unicode__",&PyCollisionReport::__unicode__)
     ;
