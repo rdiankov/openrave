@@ -383,12 +383,10 @@ public:
     template <typename U> RaveTransform(const RaveTransform<U>& t) {
         rot = t.rot;
         trans = t.trans;
-        T fnorm = rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
     }
     template <typename U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
-        T fnorm = rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
     }
     inline RaveTransform(const RaveTransformMatrix<T>&t);
 
@@ -430,8 +428,7 @@ public:
         t.rot.z = rot.x*r.rot.z + rot.z*r.rot.x + rot.w*r.rot.y - rot.y*r.rot.w;
         t.rot.w = rot.x*r.rot.w + rot.w*r.rot.x + rot.y*r.rot.z - rot.z*r.rot.y;
         // normalize the transformation
-        T fnorm = t.rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( t.rot.lengthsqr4() > 0.99f && t.rot.lengthsqr4() < 1.01f );
         t.rot.normalize4();
         return t;
     }
@@ -469,8 +466,7 @@ public:
     template <typename U> inline RaveTransform<T>& operator= (const RaveTransform<U>&r) {
         trans = r.trans;
         rot = r.rot;
-        T fnorm = rot.lengthsqr4();
-        MATH_ASSERT( fnorm > 0.99f && fnorm < 1.01f );
+        MATH_ASSERT( rot.lengthsqr4() > 0.99f && rot.lengthsqr4() < 1.01f );
         return *this;
     }
 
