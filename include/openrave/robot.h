@@ -263,7 +263,14 @@ public:
          */
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
-        /** \brief Checks collision with only the gripper given its end-effector transform and the rest of the environment. Ignores disabled links.
+        /** \brief Checks collision with only the gripper and the rest of the environment with the current link transforms. Ignores disabled links.
+            
+            \param[out] report [optional] collision report
+            \return true if a collision occurred
+         */
+        virtual bool CheckEndEffectorCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+        
+        /** \brief Checks collision with only the gripper and the rest of the environment given a new end-effector transform. Ignores disabled links.
 
             \param tEE the end effector transform
             \param[out] report [optional] collision report
@@ -890,13 +897,20 @@ private:
      */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
-    /** \brief checks collision of a robot link with the surrounding environment. Attached/Grabbed bodies to this link are also checked for collision.
+    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[in] tlinktrans The transform of the link to check
         \param[out] report [optional] collision report
      */
     virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
 

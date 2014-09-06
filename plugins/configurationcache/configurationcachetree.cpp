@@ -58,7 +58,7 @@ CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
 
 void CacheTreeNode::SetCollisionInfo(CollisionReportPtr report)
 {
-    if(!!report && report->numCols > 0) {
+    if( !!report ) {
         _collidinglinktrans = report->plink1->GetTransform();
         _robotlinkindex = report->plink1->GetIndex();
         _collidinglink = report->plink2;

@@ -221,7 +221,27 @@ class RunCollision(EnvironmentSetup):
             assert(abs(report.minDistance-0.29193971893003506) < 0.01 )
             assert(report.plink1 == robot.GetLink('wam1'))
             assert(report.plink2 == env.GetKinBody('pole').GetLinks()[0])
+
+    def test_multiplecontacts(self):
+        env=self.env
+        env.GetCollisionChecker().SetCollisionOptions(CollisionOptions.AllLinkCollisions)
+        self.LoadEnv('data/lab1.env.xml')
+        robot = env.GetRobots()[0]
+        manip = robot.GetManipulators()[0]
+        body1 = env.GetKinBody('mug1')
+        body2 = env.GetKinBody('mug2')
+
+        body1.SetTransform(manip.GetEndEffector().GetTransform())
+        body2.SetTransform(manip.GetEndEffector().GetTransform())
         
+        report = CollisionReport()
+        env.CheckCollision(robot,report=report)
+
+        assert(len(report.vLinkColliding)==8)
+        
+        manip.CheckEndEffectorCollision(report)
+        assert(len(report.vLinkColliding)==4)
+
 #generate_classes(RunCollision, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunCollision):

@@ -1678,13 +1678,14 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
 void CollisionReport::Reset(int coloptions)
 {
     options = coloptions;
-    minDistance = 1e20f;
-    numCols = 0;
-    numWithinTol = 0;
-    contacts.resize(0);
-    vLinkColliding.resize(0);
-    plink1.reset();
-    plink2.reset();
+    if( !(nKeepPrevious & 1) ) {
+        minDistance = 1e20f;
+        numWithinTol = 0;
+        contacts.resize(0);
+        vLinkColliding.resize(0);
+        plink1.reset();
+        plink2.reset();
+    }
 }
 
 std::string CollisionReport::__str__() const
@@ -1698,7 +1699,11 @@ std::string CollisionReport::__str__() const
     if( !!plink2 ) {
         s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
     }
-    s << ") contacts="<<contacts.size();
+    s << ")";
+    if( vLinkColliding.size() > 0 ) {
+        s << ", numpairs=" << vLinkColliding.size();
+    }
+    s << ", contacts="<<contacts.size();
     if( minDistance < 1e10 ) {
         s << ", mindist="<<minDistance;
     }

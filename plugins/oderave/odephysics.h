@@ -608,7 +608,6 @@ private:
         if( _listcallbacks.size() > 0 ) {
             // fill the collision report
             _report->Reset(OpenRAVE::CO_Contacts);
-            _report->numCols = N;
             _report->plink1 = pkb1;
             _report->plink2 = pkb2;
 

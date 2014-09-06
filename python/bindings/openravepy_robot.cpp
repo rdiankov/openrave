@@ -522,6 +522,13 @@ public:
             return object(openravepy::toPyConfigurationSpecification(_pmanip->GetIkConfigurationSpecification(iktype, interpolation)));
         }
 
+        bool CheckEndEffectorCollision(PyCollisionReportPtr pyreport) const
+        {
+            bool bcollision = _pmanip->CheckEndEffectorCollision(openravepy::GetCollisionReport(pyreport));
+            openravepy::UpdateCollisionReport(pyreport,_pyenv);
+            return bcollision;
+        }
+
         bool CheckEndEffectorCollision(object otrans) const
         {
             IkParameterization ikparam;
@@ -530,12 +537,13 @@ public:
             }
             return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans));
         }
+        
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
             bool bCollision;
             IkParameterization ikparam;
             if( ExtractIkParameterization(otrans,ikparam) ) {
-                bCollision = _pmanip->CheckEndEffectorCollision(ikparam,openravepy::GetCollisionReport(pReport));
+                bCollision = _pmanip->CheckEndEffectorCollision(ikparam, openravepy::GetCollisionReport(pReport));
             }
             else {
                 bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),openravepy::GetCollisionReport(pReport));
@@ -1593,6 +1601,7 @@ void init_openravepy_robot()
         object (PyRobotBase::PyManipulator::*pmanipiks)(object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
         object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
+        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision0)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision2)(object,PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
@@ -1648,6 +1657,7 @@ void init_openravepy_robot()
         .def("GetArmConfigurationSpecification",&PyRobotBase::PyManipulator::GetArmConfigurationSpecification, GetArmConfigurationSpecification_overloads(args("interpolation"),DOXY_FN(RobotBase::Manipulator,GetArmConfigurationSpecification)))
         .def("GetIkConfigurationSpecification",&PyRobotBase::PyManipulator::GetIkConfigurationSpecification, GetIkConfigurationSpecification_overloads(args("iktype", "interpolation"),DOXY_FN(RobotBase::Manipulator,GetIkConfigurationSpecification)))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,args("transform"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
+        .def("CheckEndEffectorCollision",pCheckEndEffectorCollision0,args("report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision2,args("transform","report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
         .def("CheckIndependentCollision",pCheckIndependentCollision1, DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
         .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"), DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))

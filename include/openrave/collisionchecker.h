@@ -38,7 +38,9 @@ enum CollisionOptions
         The things that **will not be** checked for collision are:
         - links that do not remove with respect to each other as a result of moving the active dofs.
      */
-    CO_ActiveDOFs = 16,
+    CO_ActiveDOFs = 0x10,
+    CO_AllLinkCollisions = 0x20, ///< if set then all the link collisions will be returned inside CollisionReport::vLinkColliding. Collision is slower because more pairs have to be checked.
+    CO_AllGeometryContacts = 0x40, ///< if set, then will return the contacts of all the colliding geometries. This option can be very slow.
 };
 
 /// \brief action to perform whenever a collision is detected between objects
@@ -52,10 +54,6 @@ enum CollisionAction
 class OPENRAVE_API CollisionReport
 {
 public:
-    CollisionReport() {
-        Reset();
-    }
-
     class OPENRAVE_API CONTACT
     {
 public:
@@ -70,21 +68,31 @@ public:
         dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
     };
 
-    int options; ///< the options that the CollisionReport was called with
-
+    CollisionReport() {
+        nKeepPrevious = 0;
+        Reset();
+    }
+    
+    /// \brief resets the report structure for the next collision call
+    ///
+    /// depending on nKeepPrevious will keep previous data.
+    virtual void Reset(int coloptions = 0);
+    virtual std::string __str__() const;
+    
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
-
-    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
-    int numCols; ///< this is the number of objects that collide with the object of interest
-    std::vector<KinBody::LinkConstPtr> vLinkColliding; ///< objects colliding with this object
-
-    dReal minDistance; ///< minimum distance from last query, filled if CO_Distance option is set
-    int numWithinTol; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+    
+    std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllCollisions is enabled.
 
     std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
 
-    virtual void Reset(int coloptions = 0);
-    virtual std::string __str__() const;
+    int options; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
+    
+    dReal minDistance; ///< minimum distance from last query, filled if CO_Distance option is set
+    int numWithinTol; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+
+    uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
+
+    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
 };
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
@@ -249,6 +257,38 @@ private:
 };
 
 typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
+
+/** \brief Helper class to save and restore the nKeepPrevious variable in a collision report. Should be used by anyone using multiple CheckCollision calls and aggregating results.
+
+    Sample code would look like:
+    
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+ */
+class OPENRAVE_API CollisionReportKeepSaver
+{
+public:
+    CollisionReportKeepSaver(CollisionReportPtr preport) : _report(preport) {
+        if( !!preport ) {
+            _nKeepPrevious = preport->nKeepPrevious;
+        }
+    }
+    virtual ~CollisionReportKeepSaver() {
+        if( !!_report ) {
+            _report->nKeepPrevious = _nKeepPrevious;
+        }
+    }
+    
+private:
+    CollisionReportPtr _report;
+    uint8_t _nKeepPrevious;
+};
+
+typedef boost::shared_ptr<CollisionReportKeepSaver> CollisionReportKeepSaverPtr;
 
 } // end namespace OpenRAVE
 
