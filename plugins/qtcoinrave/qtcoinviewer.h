@@ -356,6 +356,7 @@ public:
     bool _ShowCommand(ostream& sout, istream& sinput);
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
+    bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     
     void _SetNearPlane(dReal nearplane);
     
@@ -490,6 +491,7 @@ public:
     /// width and height of offscreen-rendered image
     unsigned int _nRenderWidth;
     unsigned int _nRenderHeight;
+    float _fTrackAngleToUp; ///< tilt a little when looking at the point
 
     friend class EnvMessage;
     friend class ViewerSetSizeMessage;

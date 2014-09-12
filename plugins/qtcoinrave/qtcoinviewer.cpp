@@ -197,7 +197,10 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
     RegisterCommand("TrackManipulator", boost::bind(&QtCoinViewer::_TrackManipulatorCommand, this, _1, _2),
                     "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
+    RegisterCommand("SetTrackingAngleToUp", boost::bind(&QtCoinViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
+                    "sets a new angle to up");
 
+    _fTrackAngleToUp = 0.3;
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
@@ -2377,6 +2380,12 @@ bool QtCoinViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     return !!_ptrackingmanip;
 }
 
+bool QtCoinViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
+{
+    sinput >> _fTrackAngleToUp;
+    return true;
+}
+
 int QtCoinViewer::main(bool bShow)
 {
     _nQuitMainLoop = -1;
@@ -3091,11 +3100,10 @@ void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
 
         if( bTracking ) {
             RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-            const float angletoup = 0.3; // tilt a little when looking at the point
             RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
             vlookatdir -= vup*vup.dot3(vlookatdir);
             float flookatlen = sqrtf(vlookatdir.lengthsqr3());
-            vlookatdir = vlookatdir*cosf(angletoup) + flookatlen*sinf(angletoup)*vup; // flookatlen shouldn't change
+            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
             if( flookatlen > g_fEpsilon ) {
                 vlookatdir *= 1/flookatlen;
             }
