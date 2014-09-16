@@ -253,7 +253,7 @@ public:
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
-            return SensorGeometryPtr(pgeom);
+            return SensorGeometryPtr(boost::shared_ptr<CameraGeomData>(pgeom));
         }
         return SensorGeometryPtr();
     }
@@ -261,7 +261,7 @@ public:
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
-            return SensorDataPtr(new CameraSensorData());
+            return SensorDataPtr(boost::shared_ptr<CameraSensorData>(new CameraSensorData()));
         }
         return SensorDataPtr();
     }

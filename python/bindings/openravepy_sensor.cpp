@@ -149,7 +149,7 @@ public:
                 imagedata = static_cast<numeric::array>(handle<>(pyvalues));
             }
         }
-        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : PySensorData(SensorBase::ST_Camera)
+        PyCameraSensorData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : PySensorData(SensorBase::ST_Camera), intrinsics(pgeom->intrinsics)
         {
             {
                 npy_intp dims[] = { pgeom->height,pgeom->width,3};
