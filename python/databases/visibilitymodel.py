@@ -288,6 +288,54 @@ class VisibilityModel(DatabaseGenerator):
         finally:
             # have to destroy the plot handle
             h = None
+
+    def ShowTransform(self, relativepose, options=None):
+        """moves the robot links temporarily to show a transform
+        """
+        if self.robot != self.sensorrobot:
+            pts = poseMult(self.sensorrobot.GetTransformPose(), InvertPose(relativepose))[4:7]
+        else:
+            pts = poseMult(self.target.GetTransformPose(), relativepose)[4:7]
+        h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
+        try:
+            with RobotStateSaver(self.robot):
+                # disable all non-child links
+                for link in self.robot.GetLinks():
+                    link.Enable(link in self.manip.GetChildLinks())
+                with self.GripperVisibility(self.manip):
+                    with self.env:
+                        if len(self.preshapes) > 0:
+                            self.robot.SetDOFValues(self.preshapes[0],self.manip.GetGripperIndices())
+
+                        if self.robot != self.sensorrobot:
+                            # sensor is not attached to robot
+                            # robot should be grabbing the targt
+                            assert(self.robot.IsGrabbing(self.target) is not None)
+                            linkrelativepose = poseMult(poseMult(self.attachedsensor.GetTransformPose(),InvertPose(relativepose)), InvertPose(self.target.GetTransformPose()))
+                            for link in self.manip.GetChildLinks():
+                                link.SetTransform(poseMult(linkrelativepose, link.GetTransformPose()))
+                        else:
+                            # robot should not be grabbing the targt
+                            assert(self.robot.IsGrabbing(self.target) is None)
+                            linkrelativepose = poseMult(InvertPose(self.attachedsensor.GetTransformPose()),self.manip.GetTransformPose())
+                            globalCameraPose = poseMult(self.target.GetTransformPose(), relativepose)
+                            grasppose = poseMult(globalCameraPose, linkrelativepose)
+                            deltapose = poseMult(grasppose,InvertPose(self.manip.GetTransformPose()))
+                            for link in self.manip.GetChildLinks():
+                                link.SetTransform(poseMult(deltapose,link.GetTransformPose()))
+                        visibility = self.visualprob.ComputeVisibility()
+                        self.env.UpdatePublishedBodies()
+                    msg='visibility=%d, press any key to continue: '%(visibility)
+                    if options is not None and options.showimage:
+                        pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                        I=self.getCameraImage()
+                        print(msg)
+                        pilutil.imshow(I)
+                    else:
+                        raw_input(msg)
+        finally:
+            # have to destroy the plot handle
+            h = None
             
     def show(self,options=None):
         if self.env.GetViewer() is None:

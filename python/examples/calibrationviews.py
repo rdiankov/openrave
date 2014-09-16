@@ -263,7 +263,7 @@ def main(env,options):
     if options.showsensor and attachedsensor.GetSensor() is not None and attachedsensor.GetSensor().Supports(Sensor.Type.Camera):
         attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
         attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)
-
+        
     while True:
         print 'computing all locations, might take more than a minute...'
         self.computeAndMoveToObservations(usevisibility=options.usevisibility,posedist=options.posedist)

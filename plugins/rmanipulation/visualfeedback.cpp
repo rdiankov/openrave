@@ -177,7 +177,11 @@ public:
                 FOREACHC(itlink, _vf->_target->GetLinks())
                 _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
                 _abTarget = _vf->_target->ComputeAABB();
-                vector<AABB> vboxes; vboxes.push_back(_vf->_target->ComputeAABB());
+                // have to increase its dimensions a little!
+                _abTarget.extents.x += 0.0001;
+                _abTarget.extents.y += 0.0001;
+                _abTarget.extents.z += 0.0001;
+                vector<AABB> vboxes; vboxes.push_back(_abTarget);
 
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
                 _ptargetbox->InitFromBoxes(vboxes,true);

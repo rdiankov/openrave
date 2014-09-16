@@ -326,7 +326,14 @@ def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     
     else:
         raise NotImplemented('iktype %s'%str(ikparam.GetType()))
-    
+
+def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
+    angles = numpy.arange(0, 2*numpy.pi+0.1, 0.1)
+    R = openravepy_int.matrixFromQuat(openravepy_int.quatRotateDirection([0,0,1],normal))
+    right = R[0:3,0]*radius
+    up = R[0:3,1]*radius
+    return env.drawlinestrip(c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
+
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
     indices = numpy.reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))

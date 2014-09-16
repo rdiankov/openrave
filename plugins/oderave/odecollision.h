@@ -1218,12 +1218,12 @@ private:
                 }
 
                 if( _options&OpenRAVE::CO_RayAnyHit ) {
-                    pcb->_bCollision = true;
+                    pcb->_bStopChecking = true;
                 }
             }
             else {
                 if( _options&OpenRAVE::CO_RayAnyHit ) {
-                    pcb->_bCollision = true;
+                    pcb->_bStopChecking = true;
                 }
             }
 
