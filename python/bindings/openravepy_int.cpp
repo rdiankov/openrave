@@ -66,7 +66,7 @@ object toPyArray(const Transform& t)
 AttributesList toAttributesList(boost::python::dict odict)
 {
     AttributesList atts;
-    if( !(odict == object()) ) {
+    if( !(odict.is_none()) ) {
         boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
         size_t num = boost::python::len(iterkeys);
         for (size_t i = 0; i < num; i++) {
@@ -82,7 +82,7 @@ AttributesList toAttributesList(boost::python::dict odict)
 AttributesList toAttributesList(boost::python::list oattributes)
 {
     AttributesList atts;
-    if( !(oattributes == object()) ) {
+    if( !(oattributes.is_none()) ) {
         size_t num=len(oattributes);
         for (size_t i = 0; i < num; i++) {
             // Because we know they're strings, we can do this
@@ -96,7 +96,7 @@ AttributesList toAttributesList(boost::python::list oattributes)
 
 AttributesList toAttributesList(boost::python::object oattributes)
 {
-    if( !(oattributes == object()) ) {
+    if( !(oattributes.is_none()) ) {
         boost::python::extract<boost::python::dict> odictextractor(oattributes);
         if( odictextractor.check() ) {
             return toAttributesList((boost::python::dict)odictextractor());
@@ -251,7 +251,7 @@ protected:
             PyErr_Print();
         }
         CollisionAction ret = CA_DefaultAction;
-        if(( res == object()) || !res ) {
+        if(( res.is_none()) || !res ) {
             ret = CA_DefaultAction;
             RAVELOG_WARN("collision callback nothing returning, so executing default action\n");
         }
@@ -1147,7 +1147,7 @@ public:
     /// returns the number of colors
     static size_t _getGraphColors(object ocolors, vector<float>&vcolors)
     {
-        if( !(ocolors == object()) ) {
+        if( !(ocolors.is_none()) ) {
             if( PyObject_HasAttrString(ocolors.ptr(),"shape") ) {
                 object colorshape = ocolors.attr("shape");
                 switch( len(colorshape) ) {
@@ -1246,7 +1246,7 @@ public:
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=object())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( !(ocolor == object()) ) {
+        if( !(ocolor.is_none()) ) {
             vcolor = ExtractVector34(ocolor,1.0f);
         }
         return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
@@ -1255,7 +1255,7 @@ public:
     object drawbox(object opos, object oextents, object ocolor=object())
     {
         RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( !(ocolor == object()) ) {
+        if( !(ocolor.is_none()) ) {
             vcolor = ExtractVector34(ocolor,1.0f);
         }
         return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
@@ -1281,7 +1281,7 @@ public:
         vector<int> vindices;
         int* pindices = NULL;
         int numTriangles = vpoints.size()/9;
-        if( !(oindices == object()) ) {
+        if( !(oindices.is_none()) ) {
             vindices = ExtractArray<int>(oindices.attr("flat"));
             if( vindices.size() > 0 ) {
                 numTriangles = vindices.size()/3;
@@ -1289,7 +1289,7 @@ public:
             }
         }
         RaveVector<float> vcolor(1,0.5,0.5,1);
-        if( !(ocolors == object()) ) {
+        if( !(ocolors.is_none()) ) {
             object shape = ocolors.attr("shape");
             if( len(shape) == 1 ) {
                 return toPyGraphHandle(_penv->drawtrimesh(&vpoints[0],sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));

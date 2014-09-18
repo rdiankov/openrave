@@ -37,7 +37,7 @@ public:
     virtual SensorBase::CameraIntrinsics GetCameraIntrinsics()
     {
         SensorBase::CameraIntrinsics intrinsics;
-        if( K == object() ) {
+        if( K.is_none() ) {
             intrinsics.fx = 0;
             intrinsics.fy = 0;
             intrinsics.cx = 0;

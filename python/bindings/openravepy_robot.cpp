@@ -1324,7 +1324,7 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
         PyRobotStateSaverPtr saver;
-        if( options == object() ) {
+        if( options.is_none() ) {
             saver.reset(new PyRobotStateSaver(_probot,_pyenv));
         }
         else {

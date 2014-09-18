@@ -59,7 +59,7 @@ public:
     }
 
     void Restore(object p=object()) {
-        if( p == object() ) {
+        if( p.is_none() ) {
             _state->Restore();
         }
         else {

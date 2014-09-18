@@ -379,7 +379,7 @@ public:
     {
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);
         Transform t;
-        if( !(otransform == object()) ) {
+        if( !(otransform.is_none()) ) {
             t = openravepy::ExtractTransform(otransform);
         }
         if( _spec.ExtractTransform(t,vdata.begin(),openravepy::GetKinBody(pybody)) ) {
@@ -600,7 +600,7 @@ PyConfigurationSpecificationPtr pyRaveGetAffineConfigurationSpecification(int af
 object pyRaveGetAffineDOFValuesFromTransform(object otransform, int affinedofs, object oActvAffineRotationAxis=object())
 {
     Vector vActvAffineRotationAxis(0,0,1);
-    if( !(oActvAffineRotationAxis == object()) ) {
+    if( !(oActvAffineRotationAxis.is_none()) ) {
         vActvAffineRotationAxis = ExtractVector3(oActvAffineRotationAxis);
     }
     std::vector<dReal> values(RaveGetAffineDOF(affinedofs));
@@ -656,7 +656,7 @@ void raveLogVerbose(const string &s)
 int pyGetIntFromPy(object olevel, int defaultvalue)
 {
     int level = defaultvalue;
-    if( !(olevel == object()) ) {
+    if( !(olevel.is_none()) ) {
         // some version of boost python return true for extract::check, even through the actual conversion will throw an OverflowError
         // therefore check for conversion compatibility starting at the longest signed integer
         extract<int64_t> levelint64(olevel);
