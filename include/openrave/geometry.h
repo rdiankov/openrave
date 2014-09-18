@@ -1006,10 +1006,19 @@ inline RaveVector<T> InterpolateQuatSlerp(const RaveVector<T>& quat0, const Rave
     // if theta = 180 degrees then result is not fully defined
     // we could rotate around any axis normal to quat0 or qb
     if (MATH_FABS(sinHalfTheta) < 1e-7f) { // fabs is floating point absolute
-        qm.w = (quat0.w * 0.5f + qb.w * 0.5f);
-        qm.x = (quat0.x * 0.5f + qb.x * 0.5f);
-        qm.y = (quat0.y * 0.5f + qb.y * 0.5f);
-        qm.z = (quat0.z * 0.5f + qb.z * 0.5f);
+        if( islongarc ) {
+            qm.w = (quat0.w * 0.5f - qb.w * 0.5f);
+            qm.x = (quat0.x * 0.5f - qb.x * 0.5f);
+            qm.y = (quat0.y * 0.5f - qb.y * 0.5f);
+            qm.z = (quat0.z * 0.5f - qb.z * 0.5f);
+        }
+        else {
+            qm.w = (quat0.w * 0.5f + qb.w * 0.5f);
+            qm.x = (quat0.x * 0.5f + qb.x * 0.5f);
+            qm.y = (quat0.y * 0.5f + qb.y * 0.5f);
+            qm.z = (quat0.z * 0.5f + qb.z * 0.5f);
+        }
+        qm.normalize4();
         return qm;
     }
     T ratioA = MATH_SIN((1 - t) * halfTheta) / sinHalfTheta;
@@ -1021,7 +1030,14 @@ inline RaveVector<T> InterpolateQuatSlerp(const RaveVector<T>& quat0, const Rave
     qm.z = (quat0.z * ratioA + qb.z * ratioB);
     if( islongarc ) {
         // have to normalize if going along the big arc
-        qm.normalize4();
+        T f = qm.lengthsqr4();
+        if( f > 1e-7 ) {
+            qm /= RaveSqrt(f);
+        }
+        else {
+            // cannot normalize? just choose quat0
+            qm = quat0;
+        }
     }
     return qm;
 }
