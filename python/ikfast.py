@@ -4564,12 +4564,26 @@ class IKFastSolver(AutoReloader):
             BL = zeros((A.shape[0]-len(allmonoms),1))
             AUadjugate = None
             AU = A[:A.shape[1],:]
-            nummatrixsymbols = __builtin__.sum([1 for a in AU if not a.is_number])
+            nummatrixsymbols = 0
+            numcomplexpows = 0 # for non-symbols, how many non-integer pows there are
+            for a in AU:
+                if not a.is_number:
+                    nummatrixsymbols += 1
+                    continue
+                
+                hascomplexpow = False
+                for poweq in eq.find(Pow):
+                    if poweq.exp != S.One and poweq.exp != -S.One:
+                        hascomplexpow = True
+                        break
+                if hascomplexpow:
+                    numcomplexpows += 1
+            
             # the 150 threshold is a guess
             if nummatrixsymbols > 150:
                 log.info('found a non-singular matrix with %d symbols, but most likely there is a better one', nummatrixsymbols)
                 raise self.CannotSolveError('matrix has too many symbols (%d), giving up since most likely will freeze'%nummatrixsymbols)
-            
+                    
             log.info('matrix has %d symbols', nummatrixsymbols)
             if nummatrixsymbols > 10:
                 # if matrix symbols are great, yield so that other combinations can be tested?
@@ -4664,7 +4678,8 @@ class IKFastSolver(AutoReloader):
                 for c in C:
                     reducedeqs.append(c)
             else:
-                if nummatrixsymbols > 40:
+                # usually if nummatrixsymbols == 0, we would just solve the inverse of the matrix. however if non-integer powers get in the way, we have to resort to solving the matrix dynamically...
+                if nummatrixsymbols + numcomplexpows/4 > 40:
                     Asymbols = []
                     for i in range(AU.shape[0]):
                         Asymbols.append([Symbol('gclwh%d_%d'%(i,j)) for j in range(AU.shape[1])])
@@ -4713,7 +4728,7 @@ class IKFastSolver(AutoReloader):
                         gres0i = GinacUtils.ConvertToGinac(res0[i],localsymbolmap)
                         gDDi = GinacUtils.ConvertToGinac(DD[i,i],localsymbolmap)
                         gres1[i,0] = gres0i*gDDi
-                    gothersymbols = [localsymbolmap[s.name] for s in othersymbols]
+                    gothersymbols = [localsymbolmap[s.name] for s in othersymbols if s.name in localsymbolmap]
                     res2 = []
                     gres2 = swiginac.symbolic_matrix(len(res0),1,'gres2')
                     for icol in range(len(gres1)):
@@ -4755,11 +4770,20 @@ class IKFastSolver(AutoReloader):
                     for c in C:
                         reducedeqs.append(c)
                 else:
-                    AUinv = AU.inv()
-                    BUresult = AUinv*BU
-                    C = AL*BUresult-BL
+                    # if AU has too many fractions, it can prevent computation
+                    allzeros = True
+                    for b in BU:
+                        if b != S.Zero:
+                            allzeros = False
+                    if not allzeros:
+                        AUinv = AU.inv()
+                        BUresult = AUinv*BU
+                        C = AL*BUresult-BL
+                    else:
+                        C = -BL
                     for c in C:
-                        reducedeqs.append(c)
+                        if c != S.Zero:
+                            reducedeqs.append(c)
             log.info('computed non-singular AU matrix')
         
         if len(reducedeqs) == 0:
@@ -8612,7 +8636,7 @@ class IKFastSolver(AutoReloader):
         thresh = 0.01**N
         nummatrixsymbols = __builtin__.sum([1 for a in A if not a.is_number])
         if nummatrixsymbols == 0:
-            return A.det().evalf() > thresh
+            return A.evalf().det() > thresh # should evaluate first before deterimnant computation, or else might freeze
         
         for testconsistentvalue in self.testconsistentvalues:
             detvalue = A.subs(testconsistentvalue).evalf().det()

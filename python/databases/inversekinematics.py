@@ -820,8 +820,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
-            raise InverseKinematicsError(u'number of joints to solve for is not equal to required joints %d!=%d'%(len(self.solveindices),dofexpected))
-
+            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name})
+        
         if freeinc is not None:
             self.freeinc = freeinc
         if self.freeinc is None:
