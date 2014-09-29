@@ -104,9 +104,9 @@ void CacheTreeNode::SetCollisionInfo(int robotlinkindex, int type)
 //    }
 //}
 
-CacheTree::CacheTree(int statedof) : _poolNodes(sizeof(CacheTreeNode)+sizeof(dReal)*statedof)
+CacheTree::CacheTree(int statedof)
 {
-
+    _poolNodes.reset(new boost::pool<>(sizeof(CacheTreeNode)+sizeof(dReal)*statedof));
     _vnodes.resize(0);
     _dummycs.resize(0);
     _fulldirname.resize(0);
@@ -165,7 +165,10 @@ void CacheTree::Reset()
     FOREACH(itnode, _vnodes) {
         (*itnode)->~CacheTreeNode();
     }
-    _poolNodes.purge_memory();
+    // purge_memory leaks!
+    //_poolNodes.purge_memory();
+    _poolNodes.reset(new boost::pool<>(sizeof(CacheTreeNode)+sizeof(dReal)*_statedof));
+    //_pNodesPool.reset(new boost::pool<>(sizeof(Node)+_dof*sizeof(dReal)));
     _numnodes = 0;
 }
 
@@ -179,7 +182,7 @@ CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, C
     void* pmemory;
     {
         //boost::mutex::scoped_lock lock(_mutexpool);
-        pmemory = _poolNodes.malloc();
+        pmemory = _poolNodes->malloc();
     }
     //Vector* plinkspheres = (Vector*)((uint8_t*)pmemory + sizeof(CacheTreeNode) + sizeof(dReal)*_statedof);
     CacheTreeNodePtr newnode = new (pmemory) CacheTreeNode(cs, NULL);
@@ -196,7 +199,7 @@ CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
     void* pmemory;
     {
         //boost::mutex::scoped_lock lock(_mutexpool);
-        pmemory = _poolNodes.malloc();
+        pmemory = _poolNodes->malloc();
     }
     //Vector* plinkspheres = (Vector*)((uint8_t*)pmemory + sizeof(CacheTreeNode) + sizeof(dReal)*_statedof);
     CacheTreeNodePtr clonenode = new (pmemory) CacheTreeNode(refnode->GetConfigurationState(), _statedof, refnode->_plinkspheres);
@@ -217,7 +220,7 @@ CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
 void CacheTree::_DeleteCacheTreeNode(CacheTreeNodePtr pnode)
 {
     pnode->~CacheTreeNode();
-    _poolNodes.free(pnode);
+    _poolNodes->free(pnode);
 }
 
 dReal CacheTree::ComputeDistance(const std::vector<dReal>& cstatei, const std::vector<dReal>& cstatef) const
