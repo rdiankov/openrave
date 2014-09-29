@@ -688,6 +688,7 @@ public:
             return false;
         }
 
+        _bOneStep = _parameters->_nRRTExtentType == 1;
         RAVELOG_DEBUG("RrtPlanner::InitPlan - RRT Planner Initialized\n");
         return true;
     }

@@ -542,6 +542,9 @@ protected:
         specfinal.AddDerivativeGroups(1,true);
         specfinal.AddDeltaTimeGroup();
 
+        std::vector<KinBody::LinkPtr> vmanipchildlinks;
+        pmanip->GetChildLinks(vmanipchildlinks);
+
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
@@ -709,11 +712,20 @@ protected:
                 graspparams->bavoidcontact = true;
                 // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
 
+                KinBody::KinBodyStateSaver robotlinksaver(_robot, KinBody::Save_LinkEnable);
+                
+                // disable all links not children to the manipulator
+                FOREACHC(itlink,_robot->GetLinks()) {
+                    if( std::find(vmanipchildlinks.begin(),vmanipchildlinks.end(),*itlink) == vmanipchildlinks.end() ) {
+                        (*itlink)->Enable(false);
+                    }
+                }
+                
                 if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
-
+                
                 if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;

@@ -121,8 +121,9 @@ public:
             pgoalfn->_maxdivision=maxdivision;
             pgoalfn->SetRobot(robot);
 
-            PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+            BasicRRTParametersPtr params(new BasicRRTParameters());
             params->SetRobotActiveJoints(robot);
+            params->_nRRTExtentType = 1; // one step
             params->_goalfn = boost::bind(&MoveUnsync::Eval,pgoalfn,_1);
             params->_nMaxIterations = 5000;
             robot->GetActiveDOFValues(params->vinitialconfig);

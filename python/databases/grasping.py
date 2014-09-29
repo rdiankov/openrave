@@ -635,6 +635,11 @@ class GraspingModel(DatabaseGenerator):
                 
     def show(self,delay=0.1,options=None,forceclosure=True,showcontacts=True):
         with self.robot.CreateRobotStateSaver():
+            # disable all links not children to the manipulator
+            manipchildlinks = self.manip.GetChildLinks()
+            for link in self.robot.GetLinks():
+                if not link in manipchildlinks:
+                    link.Enable(False)
             with self.GripperVisibility(self.manip):
                 time.sleep(1.0) # let viewer update?
                 graspingnoise=None

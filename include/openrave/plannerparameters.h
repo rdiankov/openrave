@@ -733,20 +733,23 @@ typedef boost::shared_ptr<RRTParameters> RRTParametersPtr;
 class OPENRAVE_API BasicRRTParameters : public RRTParameters
 {
 public:
-    BasicRRTParameters() : RRTParameters(), _fGoalBiasProb(0.05f), _bProcessing(false) {
+    BasicRRTParameters() : RRTParameters(), _fGoalBiasProb(0.05f), _nRRTExtentType(0), _bProcessingBasic(false) {
         _vXMLParameters.push_back("goalbias");
+        _vXMLParameters.push_back("nrrtextenttype");
     }
 
     dReal _fGoalBiasProb;
+    int _nRRTExtentType; ///< the rrt extent type. if 0 then extend all the way to the sampled position. if 1, then just extend one step length before sampling again.
 
 protected:
-    bool _bProcessing;
+    bool _bProcessingBasic;
     virtual bool serialize(std::ostream& O, int options=0) const
     {
         if( !PlannerParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
+        O << "<nrrtextenttype>" << _nRRTExtentType << "</nrrtextenttype>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -756,7 +759,7 @@ protected:
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
     {
-        if( _bProcessing ) {
+        if( _bProcessingBasic ) {
             return PE_Ignore;
         }
         switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
@@ -765,20 +768,23 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="goalbias";
-        return _bProcessing ? PE_Support : PE_Pass;
+        _bProcessingBasic = name=="goalbias" || name =="nrrtextenttype";
+        return _bProcessingBasic ? PE_Support : PE_Pass;
     }
 
     virtual bool endElement(const std::string& name)
     {
-        if( _bProcessing ) {
+        if( _bProcessingBasic ) {
             if( name == "goalbias") {
                 _ss >> _fGoalBiasProb;
+            }
+            else if( name == "nrrtextenttype" ) {
+                _ss >> _nRRTExtentType;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
             }
-            _bProcessing = false;
+            _bProcessingBasic = false;
             return false;
         }
 

@@ -108,16 +108,12 @@ public:
         CollisionCheckerMngr checkermngr(GetEnv(),"");
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
 
+        // do not disable any links of the robot here!
         KinBody::LinkPtr pbase;
         if( !!pmanip ) {
-            // disable all links not children to the manipulator
             pbase = pmanip->GetBase();
             pmanip->GetChildLinks(_vlinks);
-            FOREACHC(itlink,_robot->GetLinks()) {
-                if( std::find(_vlinks.begin(),_vlinks.end(),*itlink) == _vlinks.end() ) {
-                    (*itlink)->Enable(false);
-                }
-            }
+
         }
         else {
             _vlinks = _robot->GetLinks();

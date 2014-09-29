@@ -827,7 +827,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.freeinc is None:
             self.freeinc = self.getDefaultFreeIncrements(0.1,0.01)
         
-        log.info('Generating inverse kinematics for manip %s: %s %s, precision=%s (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices, precision)
+        log.info('Generating inverse kinematics for manip %s: %s %s, precision=%s, maxcasedepth=%d (this might take up to 10 min)',self.manip.GetName(),self.iktype,self.solveindices, precision, ikfastmaxcasedepth)
         if outputlang is None:
             outputlang = 'cpp'
         sourcefilename = self.getsourcefilename(False,outputlang)
