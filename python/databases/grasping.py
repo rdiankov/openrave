@@ -221,7 +221,10 @@ class GraspingModel(DatabaseGenerator):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,target,maxvelmult=None):
+    def __init__(self,robot,target,maxvelmult=None,graspparametersdof=None):
+        """
+        :param graspparametersdof: a dictionary of custom grasp parameters names and their DOF
+        """
         DatabaseGenerator.__init__(self,robot=robot)
         assert(target is not None)
         self.target = target
@@ -240,6 +243,8 @@ class GraspingModel(DatabaseGenerator):
         self.finestep = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices()), 'graspikparam_nocol':8, 'approachdirectionmanip':3, 'igrasptranslationoffset':3 }
+        if graspparametersdof is not None:
+                graspdof.update(graspparametersdof)
         # graspikparam_nocol is the serialized IkParameterization. It can hold a max of 8 values, the first being the type
         self.graspindices = dict()
         self.totaldof = 0
