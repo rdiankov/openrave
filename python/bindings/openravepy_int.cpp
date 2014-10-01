@@ -1619,7 +1619,6 @@ BOOST_PYTHON_MODULE(openravepy_int)
     exception_translator<boost::bad_function_call>();
 
     class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));
-
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;

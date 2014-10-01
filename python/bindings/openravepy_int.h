@@ -432,7 +432,30 @@ public:
 class PySerializableData : public PyUserData
 {
 public:
+    class StringSerializableData : public SerializableData
+    {
+    public:
+        StringSerializableData(const std::string& data) : _data(data) {
+        }
+        
+        virtual void Serialize(std::ostream& O, int options=0) const  {
+            O << _data;
+        }
+        
+        virtual void Deserialize(std::istream& I) {
+            // need to read the entire input
+            stringbuf buf;
+            I.get(buf, 0);
+            _data = buf.str();
+        }
+        
+        std::string _data;
+    };
+
     PySerializableData() {
+    }
+    PySerializableData(const std::string& data) {
+        _handle.reset(new StringSerializableData(data));
     }
     PySerializableData(SerializableDataPtr handle) : _handle(handle) {
     }

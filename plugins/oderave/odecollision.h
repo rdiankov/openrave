@@ -342,7 +342,7 @@ public:
     {
         bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
-        
+
         vector<dContact> vcontacts;
         dGeomID geom1 = _odespace->GetLinkGeom(plink1);
         int igeom1 = 0;
@@ -574,7 +574,7 @@ public:
                     _report.Reset(_options);
                     _report.minDistance = vcontacts[index].geom.depth;
                     _report.plink1 = plink;
-                    
+
                     // always return contacts since it isn't that much computation (openravepy expects this!)
                     //if( _report.options & OpenRAVE::CO_Contacts) {
                     Vector vnorm(vcontacts[index].geom.normal);
@@ -595,7 +595,7 @@ public:
                     if( listcallbacks.size() == 0 ) {
                         GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
                     }
-                    
+
                     CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
                     FOREACHC(itfn, listcallbacks) {
                         OpenRAVE::CollisionAction action = (*itfn)(preport,false);
@@ -710,6 +710,9 @@ public:
         bool bCollision = false;
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
+            if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
+                continue;
+            }
             if( _CheckCollision(plink1,plink2, report) ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
@@ -1012,7 +1015,7 @@ private:
                         _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[i].geom.pos,vnorm,distance));
                     }
                 }
-                
+
                 CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
                 FOREACHC(itfn, pcb->GetCallbacks()) {
                     OpenRAVE::CollisionAction action = (*itfn)(preport, false);
@@ -1139,7 +1142,7 @@ private:
                             return;
                         }
                     }
-                    
+
                     if( !!pcb->_report ) {
                         pcb->_report->plink1 = _report.plink1;
                         pcb->_report->plink2 = _report.plink2;
@@ -1147,7 +1150,7 @@ private:
                         pcb->_report->contacts.swap(_report.contacts);
                     }
                 }
-                
+
                 pcb->_bCollision = true;
                 if( !(_options & OpenRAVE::CO_AllLinkCollisions) ) {
                     pcb->_bStopChecking = true; // stop if not checking al the collisions
@@ -1219,7 +1222,7 @@ private:
                         return;
                     }
                 }
-                
+
                 // have to set locally first?
                 _report.Reset(_options);
                 _report.minDistance = contact[index].geom.depth;
@@ -1246,7 +1249,7 @@ private:
                 else {
                     _report.contacts.front() = CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance);
                 }
-                
+
                 CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
                 FOREACHC(itfn, pcb->GetCallbacks()) {
                     OpenRAVE::CollisionAction action = (*itfn)(preport,false);

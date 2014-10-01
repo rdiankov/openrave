@@ -143,7 +143,7 @@ public:
         params->btightgrasp = false;
         params->vtargetdirection = Vector(0,0,1);
         params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetDirection();
-        
+
         std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
@@ -289,9 +289,9 @@ public:
                 }
             }
         }
-            
+
         RobotBase::RobotStateSaver saver(_robot);
-        _robot->Enable(true);
+        // robot should not be re-enabled here! let the caller handle the robot link enables as they wish.
 
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);

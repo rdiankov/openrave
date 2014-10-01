@@ -2026,9 +2026,13 @@ class IKFastSolver(AutoReloader):
         newcheckforzeros = []
         for eqtemp in sol.checkforzeros:
             if self.codeComplexity(eqtemp) < 1000:
-                checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
-                if self.CheckExpressionUnique(newcheckforzeros,checkeq):
-                    newcheckforzeros.append(checkeq)
+                # if there's a sign, there's an infinite recursion?
+                if len(eqtemp.find(sign)) > 0:
+                    newcheckforzeros.append(eqtemp)
+                else:
+                    checkeq = self.removecommonexprs(eqtemp,onlygcd=False,onlynumbers=True)
+                    if self.CheckExpressionUnique(newcheckforzeros,checkeq):
+                        newcheckforzeros.append(checkeq)
             else:
                 newcheckforzeros.append(eqtemp)
         sol.checkforzeros = newcheckforzeros
@@ -6119,11 +6123,31 @@ class IKFastSolver(AutoReloader):
         :param checknegative: if True, then also check if -expr is inside exprs
         """
         for exprtest in exprs:
+            if expr.is_Function != exprtest.is_Function:
+                continue
+            if expr.is_Function:
+                if not expr.is_Function:
+                    return False
+                if exprtest.func == sign: # infinite loop for some reason if checking for this
+                    return False
+                if expr.func == sign: # infinite loop for some reason if checking for this
+                    return False
+                
             if self.equal(expr,exprtest):
                 return False
             
         if checknegative:
             for exprtest in exprs:
+                if expr.is_Function != exprtest.is_Function:
+                    continue
+                if expr.is_Function:
+                    if not expr.is_Function:
+                        return False
+                    if exprtest.func == sign: # infinite loop for some reason if checking for this
+                        return False
+                    if expr.func == sign: # infinite loop for some reason if checking for this
+                        return False
+                
                 if self.equal(-expr,exprtest):
                     return False
                 
@@ -8194,7 +8218,17 @@ class IKFastSolver(AutoReloader):
                         pbase = pbase[0]
                         pbasedict = pbase.as_dict()
                         for i in range(len(polyunknown)):
-                            eq = (polyunknown[i]*pbasedict.get(monom,S.Zero)-pbase*polyunknown[i].as_dict().get(monom,S.Zero)).as_expr().subs(allsymbols).expand()
+                            eq = (polyunknown[i]*pbasedict.get(monom,S.Zero)-pbase*polyunknown[i].as_dict().get(monom,S.Zero)).as_expr().subs(allsymbols)
+                            if self.codeComplexity(eq) > 4000:
+                                # .. way too complex
+                                continue
+                            eq = eq.expand()
+                            if self.codeComplexity(eq) > 10000:
+                                # .. way too complex
+                                continue
+                            if len(addedeqs) > 10 and self.codeComplexity(eq) > 2000:
+                                # .. already have enough...
+                                continue
                             if eq != S.Zero and self.CheckExpressionUnique(addedeqs,eq):
                                 eqnew, symbols = self.groupTerms(eq, unknownvars, symbolgen)
                                 allsymbols += symbols
