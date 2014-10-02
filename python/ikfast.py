@@ -6419,9 +6419,11 @@ class IKFastSolver(AutoReloader):
 #                 reducedeqs.append(Poly(num, *htvars))
 # 
 
-        if currentcases is not None and len(currentcases) > 0: # only estimate when deep in the hierarchy, do not want the guess to be executed all the time
+        # only guess if final joint to be solved
+        if len(othersolvedvars)+len(curvars) == len(self.freejointvars)+len(self._solvejointvars) and (len(curvars) == 1 or (currentcases is not None and len(currentcases) > 0)): # only estimate when deep in the hierarchy, do not want the guess to be executed all the time
             # perhaps there's a degree of freedom that is not trivial to compute?
             # take the highest hinge variable and set it
+            log.info('trying to guess variable from %r', curvars)
             return self.GuessValuesAndSolveEquations(AllEquations, curvars, othersolvedvars, solsubs, endbranchtree, currentcases, unknownvars, currentcasesubs)
         
         # have got this far, so perhaps two axes are aligned?
@@ -7132,7 +7134,13 @@ class IKFastSolver(AutoReloader):
                 log.warn('c=%d, think there is a free variable, but cannot solve relationship, so setting variable %s', scopecounter, curvar)
                 newtree += self.SolveAllEquations(AllEquations, leftovervars, othersolvedvars+[curvar], solsubs+self.Variable(curvar).subs, endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
                 return newtree
-            
+
+        if len(curvars) == 1:
+            log.info('have only one variable left %r and most likely it is not in equations %r', curvars[0], AllEquations)
+            solution = AST.SolverSolution(curvars[0].name, jointeval=[S.Zero], isHinge=self.IsHinge(curvars[0].name))
+            solution.FeasibleIsZeros = True
+            return [solution]+endbranchtree
+        
         raise self.CannotSolveError('cannot find a good variable')
     
     def SolvePairVariablesHalfAngle(self,raweqns,var0,var1,othersolvedvars,subs=None):
