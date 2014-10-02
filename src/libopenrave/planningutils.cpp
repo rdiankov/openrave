@@ -1792,9 +1792,9 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
         vwaypoints.resize(vtimes.size(),0);
     }
 
-    if( totaldof != spec.GetDOF() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("merged configuration needs to have %d DOF, currently has %d",totaldof%spec.GetDOF(),ORE_InvalidArguments);
-    }
+//    if( totaldof != spec.GetDOF() ) {
+//        throw OPENRAVE_EXCEPTION_FORMAT("merged configuration needs to have %d DOF, currently has %d",totaldof%spec.GetDOF(),ORE_InvalidArguments);
+//    }
     presulttraj = RaveCreateTrajectory(listtrajectories.front()->GetEnv(),listtrajectories.front()->GetXMLId());
     presulttraj->Init(spec);
 
