@@ -2248,6 +2248,7 @@ class IKFastSolver(AutoReloader):
 #             log.info('substituting %d global symbols',len(numbersubs))
 #             LinksRaw = LinksRaw2
 #             self.globalsymbols += numbersubs
+        self.Teeleftmult = self.multiplyMatrix(LinksLeft) # the raw ee passed to the ik solver function
         chaintree = solvefn(self, LinksRaw, jointvars, isolvejointvars)
         if self.useleftmultiply:
             chaintree.leftmultiply(Tleft=self.multiplyMatrix(LinksLeft), Tleftinv=self.multiplyMatrix(LinksLeftInv[::-1]))
@@ -4327,7 +4328,7 @@ class IKFastSolver(AutoReloader):
                 for j in unusedindices:
                     if j == i:
                         continue
-                    p1 = Poly(polyeqs[j][0],cvar,svar)
+                    p1 = Poly(polyeqs[j][0],cvar,svar) # TODO can be too complex
                     p1dict=p1.as_dict()
                     r0 = polyeqs[i][1].as_expr()
                     r1 = polyeqs[j][1].as_expr()
@@ -6418,12 +6419,13 @@ class IKFastSolver(AutoReloader):
 #                 reducedeqs.append(Poly(num, *htvars))
 # 
 
-        # perhaps there's a degree of freedom that is not trivial to compute?
-        # take the highest hinge variable and set it
-        return self.GuessValuesAndSolveEquations(AllEquations, curvars, othersolvedvars, solsubs, endbranchtree, currentcases, unknownvars, currentcasesubs)
-    
-#         # have got this far, so perhaps two axes are aligned?
-#         raise self.CannotSolveError('SolveAllEquations failed to find a variable to solve')
+        if currentcases is not None and len(currentcases) > 0: # only estimate when deep in the hierarchy, do not want the guess to be executed all the time
+            # perhaps there's a degree of freedom that is not trivial to compute?
+            # take the highest hinge variable and set it
+            return self.GuessValuesAndSolveEquations(AllEquations, curvars, othersolvedvars, solsubs, endbranchtree, currentcases, unknownvars, currentcasesubs)
+        
+        # have got this far, so perhaps two axes are aligned?
+        raise self.CannotSolveError('SolveAllEquations failed to find a variable to solve')
     
     def _SubstituteGlobalSymbols(self, eq, globalsymbols=None):
         if globalsymbols is None:
@@ -8382,6 +8384,7 @@ class IKFastSolver(AutoReloader):
                         return [self.solveHighDegreeEquationsHalfAngle(lineareqs,varsym1)]
                     except self.CannotSolveError,e:
                         log.warn('%s',e)
+
                 raise self.CannotSolveError('cannot cleanly separate pair equations')
 
         varindex=goodgroup[0][0]
