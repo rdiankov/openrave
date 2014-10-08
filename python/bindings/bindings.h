@@ -26,6 +26,7 @@
 #include <boost/python.hpp>
 #include <boost/assert.hpp>
 #include <boost/cstdint.hpp>
+#include <boost/version.hpp>
 #include <stdint.h>
 
 #ifdef _MSC_VER
@@ -70,6 +71,13 @@
 #include <complex>
 #include <algorithm>
 
+// is_none is not supported by older versions of python
+#if BOOST_VERSION >= 104300
+#define IS_PYTHONOBJECT_NONE(o) (o).is_none()
+#else
+#define IS_PYTHONOBJECT_NONE(o) (!!(o))
+#endif
+
 namespace openravepy {
 
 using namespace boost::python;
@@ -108,7 +116,7 @@ public:
 template <typename T>
 inline std::vector<T> ExtractArray(const object& o)
 {
-    if( o.is_none() ) {
+    if( IS_PYTHONOBJECT_NONE(o) ) {
         return std::vector<T>();
     }
     std::vector<T> v(len(o));

@@ -353,17 +353,24 @@ public:
         /// \brief return a copy of the configuration specification of this arm under a particular IkParameterizationType
         ///
         /// Note that the return type is by-value, so should not be used in iteration
-        virtual ConfigurationSpecification GetIkConfigurationSpecification(IkParameterizationType ik_type, const std::string& interpolation="") const;
-
-        virtual void serialize(std::ostream& o, int options) const;
+        virtual ConfigurationSpecification GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="") const;
+        
+        /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
+        virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
 
-        /// \brief Return hash of all kinematics information that involves solving the inverse kinematics equations.
+        /// \brief Return hash of all kinematics information of just the manipulator
         ///
         /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
         virtual const std::string& GetKinematicsStructureHash() const;
+
+        /// \brief Return hash of the information necessary to compute a certain ik
+        ///
+        /// This includes joint axes, joint positions, and final grasp transform. Hash is used to cache the solvers.
+        virtual const std::string& GetInverseKinematicsStructureHash(IkParameterizationType iktype) const;
+
 protected:
         /// \brief compute internal information from user-set info
         virtual void _ComputeInternalInformation();
@@ -376,6 +383,7 @@ private:
         ConfigurationSpecification __armspec; ///< reflects __varmdofindices
         mutable IkSolverBasePtr __pIkSolver;
         mutable std::string __hashstructure, __hashkinematicsstructure;
+        mutable std::map<IkParameterizationType, std::string> __maphashikstructure;
 
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

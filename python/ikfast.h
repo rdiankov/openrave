@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2012-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,13 +39,8 @@
 #define IKFAST_HEADER_COMMON
 
 /// should be the same as ikfast.__version__
-#define IKFAST_VERSION 71
-
-#ifdef _MSC_VER
-//#ifndef isfinite
-//#define isfinite _isfinite
-//#endif
-#endif // _MSC_VER
+/// if 0x10000000 bit is set, then the iksolver assumes 6D transforms are done without the manipulator offset taken into account (allows to reuse IK when manipulator offset changes)
+#define IKFAST_VERSION 0x10000048
 
 namespace ikfast {
 

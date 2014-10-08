@@ -197,7 +197,7 @@ public:
             PyErr_Print();
         }
         PlannerAction ret = PA_None;
-        if(( res.is_none()) || !res ) {
+        if( IS_PYTHONOBJECT_NONE(res) || !res ) {
             ret = PA_None;
             RAVELOG_WARN("plan callback nothing returning, so executing default action\n");
         }

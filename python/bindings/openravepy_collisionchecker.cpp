@@ -595,7 +595,7 @@ PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr pCollisionChecke
 
 CollisionReportPtr GetCollisionReport(object o)
 {
-    if( o.is_none() ) {
+    if( IS_PYTHONOBJECT_NONE(o) ) {
         return CollisionReportPtr();
     }
     extract<PyCollisionReportPtr> pyreport(o);

@@ -217,12 +217,14 @@ class InverseKinematicsModel(DatabaseGenerator):
                     geom.SetDraw(isdraw)
                     geom.SetTransparency(tr)
                     
-    _cachedKinematicsHash = None # manip.GetKinematicsStructureHash() when the ik was built with
+    _cachedKinematicsHash = None # manip.GetInverseKinematicsStructureHash() when the ik was built with
     def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
         """
         :param robot: if not None, will use the robot's active manipulator
         :param manip: if not None, will the manipulator, takes precedence over robot
         :param forceikfast: if set will always force the ikfast solver
+        :param freeindices: force the following freeindices on the ik solver
+        
         """
         self.ikfastproblem = None
         if manip is not None:
@@ -320,9 +322,9 @@ class InverseKinematicsModel(DatabaseGenerator):
             return True
         return self.setrobot(freeinc,*args,**kwargs)
     def getversion(self):
-        return int(self.ikfast.__version__)
+        return int(self.ikfast.__version__, 16)
     def getikname(self):
-        return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetKinematicsStructureHash(),str(self.iktype),self.manip.GetName())
+        return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetInverseKinematicsStructureHash(self.iktype),str(self.iktype),self.manip.GetName())
 
     def setrobot(self,freeinc=None):
         """Sets the ik solver on the robot.
@@ -526,10 +528,10 @@ class InverseKinematicsModel(DatabaseGenerator):
         index = -1
         allfreeindices = None
         while True:
-            basename = 'ikfast%s.%s.%s.'%(self.getversion(),self.iktype,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
+            basename = 'ikfast%s.%s.%s.'%(self.ikfast.__version__,self.iktype,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
             if len(freeindices)>0:
                 basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
-            filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
+            filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetInverseKinematicsStructureHash(self.iktype),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
             if not read or len(filename) > 0 or self.freeindices is not None:
                 break
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
@@ -551,12 +553,12 @@ class InverseKinematicsModel(DatabaseGenerator):
             solveindices, freeindices = self.GetDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
-        basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+        basename = 'ikfast%s.%s.'%(self.ikfast.__version__,self.iktype)
         basename += '_'.join(str(ind) for ind in sorted(solveindices))
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
         basename += '.' + outputlang
-        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
+        return RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetInverseKinematicsStructureHash(self.iktype),basename),read)
 
     def getstatsfilename(self,read=False):
         if self.iktype is None:
@@ -577,11 +579,11 @@ class InverseKinematicsModel(DatabaseGenerator):
                 freeindicesstrings.append(['',[]])
 
             for freeindicesstring, fi in freeindicesstrings:
-                basename = 'ikfast%s.%s.'%(self.getversion(),self.iktype)
+                basename = 'ikfast%s.%s.'%(self.ikfast.__version__,self.iktype)
                 basename += '_'.join(str(ind) for ind in sorted(solveindices))
                 basename += freeindicesstring
                 basename += '.pp'
-                filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetKinematicsStructureHash(),basename),read)
+                filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetInverseKinematicsStructureHash(self.iktype),basename),read)
                 if not read or len(filename) > 0 or self.freeindices is not None:
                     self.freeindices = fi
                     return filename
@@ -731,7 +733,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 #                 return self.ikfast.IKFastSolver.solveFullIK_TranslationXYOrientation3D(*args,**kwargs)
 #             solvefn=solveFullIK_TranslationXYOrientation3D
         elif self.iktype == IkParameterizationType.Transform6D:
-            Tgripperraw=self.manip.GetLocalToolTransform()
+            Tgripperraw = eye(4) # newer ikfast versions don't compile with self.manip.GetLocalToolTransform() in order to re-use the same 6D IK for multiple local transforms
             def solveFullIK_6D(*args,**kwargs):
                 kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_6D(*args,**kwargs)
@@ -841,7 +843,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             except OSError:
                 pass
             
-            solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetKinematicsStructureHash(),precision=precision)
+            solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetInverseKinematicsStructureHash(self.iktype),precision=precision)
             solver.maxcasedepth = ikfastmaxcasedepth
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False
@@ -932,7 +934,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             else:
                 log.warn('cannot continue further if outputlang %s is not cpp',outputlang)
                 
-        self._cachedKinematicsHash = self.manip.GetKinematicsStructureHash()
+        self._cachedKinematicsHash = self.manip.GetInverseKinematicsStructureHash(self.iktype)
         
     def perftiming(self,num):
         with self.env:

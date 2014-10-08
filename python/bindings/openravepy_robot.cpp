@@ -537,7 +537,7 @@ public:
             }
             return _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans));
         }
-        
+
         bool CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pReport) const
         {
             bool bCollision;
@@ -596,6 +596,10 @@ public:
         string GetKinematicsStructureHash() const {
             return _pmanip->GetKinematicsStructureHash();
         }
+        string GetInverseKinematicsStructureHash(IkParameterizationType iktype) const {
+            return _pmanip->GetInverseKinematicsStructureHash(iktype);
+        }
+
         string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName());
         }
@@ -1324,7 +1328,7 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
         PyRobotStateSaverPtr saver;
-        if( options.is_none() ) {
+        if( IS_PYTHONOBJECT_NONE(options) ) {
             saver.reset(new PyRobotStateSaver(_probot,_pyenv));
         }
         else {
@@ -1666,6 +1670,7 @@ void init_openravepy_robot()
         .def("CalculateAngularVelocityJacobian",&PyRobotBase::PyManipulator::CalculateAngularVelocityJacobian,DOXY_FN(RobotBase::Manipulator,CalculateAngularVelocityJacobian))
         .def("GetStructureHash",&PyRobotBase::PyManipulator::GetStructureHash, DOXY_FN(RobotBase::Manipulator,GetStructureHash))
         .def("GetKinematicsStructureHash",&PyRobotBase::PyManipulator::GetKinematicsStructureHash, DOXY_FN(RobotBase::Manipulator,GetKinematicsStructureHash))
+        .def("GetInverseKinematicsStructureHash",&PyRobotBase::PyManipulator::GetInverseKinematicsStructureHash, args("iktype"), DOXY_FN(RobotBase::Manipulator,GetInverseKinematicsStructureHash))
         .def("GetInfo",&PyRobotBase::PyManipulator::GetInfo, DOXY_FN(RobotBase::Manipulator,GetInfo))
         .def("__repr__",&PyRobotBase::PyManipulator::__repr__)
         .def("__str__",&PyRobotBase::PyManipulator::__str__)

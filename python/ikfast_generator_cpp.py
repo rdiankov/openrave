@@ -250,9 +250,6 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==%s);
 #include <algorithm>
 #include <complex>
 
-#define IKFAST_STRINGIZE2(s) #s
-#define IKFAST_STRINGIZE(s) IKFAST_STRINGIZE2(s)
-
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
 #include <sstream>
@@ -536,12 +533,12 @@ return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 
 IKFAST_API const char* GetKinematicsHash() { return "%s"; }
 
-IKFAST_API const char* GetIkFastVersion() { return IKFAST_STRINGIZE(IKFAST_VERSION); }
+IKFAST_API const char* GetIkFastVersion() { return "%s"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace
 #endif
-"""%(self.kinematicshash)
+"""%(self.kinematicshash, self.version)
 
         code += """
 #ifndef IKFAST_NO_MAIN

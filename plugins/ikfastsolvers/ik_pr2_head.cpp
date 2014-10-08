@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 71 generated on 2014-04-13 19:09:51.044953
+/// ikfast version 0x10000048 generated on 2014-10-08 15:29:33.363439
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,16 +26,13 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==71);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==0x10000048);
 
 #include <cmath>
 #include <vector>
 #include <limits>
 #include <algorithm>
 #include <complex>
-
-#define IKFAST_STRINGIZE2(s) #s
-#define IKFAST_STRINGIZE(s) IKFAST_STRINGIZE2(s)
 
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
@@ -332,6 +329,8 @@ public:
 IkReal j13,cj13,sj13,htj13,j13mul,j14,cj14,sj14,htj14,j14mul,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
 unsigned char _ij13[2], _nj13,_ij14[2], _nj14;
 
+IkReal j100, cj100, sj100;
+unsigned char _ij100[2], _nj100;
 bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
 j13=numeric_limits<IkReal>::quiet_NaN(); _ij13[0] = -1; _ij13[1] = -1; _nj13 = -1; j14=numeric_limits<IkReal>::quiet_NaN(); _ij14[0] = -1; _ij14[1] = -1; _nj14 = -1; 
 for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
@@ -687,9 +686,9 @@ IKSolver solver;
 return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
-IKFAST_API const char* GetKinematicsHash() { return "80f514166e15c34bd64294fc1fdd5ddd"; }
+IKFAST_API const char* GetKinematicsHash() { return "ccdaaf627c627c8f0de93cf89d496b0f"; }
 
-IKFAST_API const char* GetIkFastVersion() { return IKFAST_STRINGIZE(IKFAST_VERSION); }
+IKFAST_API const char* GetIkFastVersion() { return "0x10000048"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

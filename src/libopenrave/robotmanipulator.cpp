@@ -76,6 +76,7 @@ void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
     _info._tLocalTool = t;
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
+    __maphashikstructure.clear();
     GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
@@ -93,6 +94,7 @@ void RobotBase::Manipulator::SetLocalToolDirection(const Vector& direction)
     _info._vdirection = direction*(1/RaveSqrt(direction.lengthsqr3())); // should normalize
     __hashkinematicsstructure.resize(0);
     __hashstructure.resize(0);
+    __maphashikstructure.clear();
     GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
@@ -1090,7 +1092,7 @@ void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array
     }
 }
 
-void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
+void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
 {
     if( options & SO_RobotManipulators ) {
         o << (!__pBase ? -1 : __pBase->GetIndex()) << " " << (!__pEffector ? -1 : __pEffector->GetIndex()) << " ";
@@ -1104,7 +1106,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
         }
         SerializeRound(o,_info._tLocalTool);
     }
-    if( options & SO_Kinematics ) {
+    if( options & (SO_Kinematics|SO_InverseKinematics) ) {
         RobotBasePtr probot(__probot);
         Transform tcur;
         std::vector<JointPtr> vjoints;
@@ -1113,7 +1115,11 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
             FOREACH(itjoint, vjoints) {
                 tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
             }
-            tcur = tcur*_info._tLocalTool;
+            tcur = tcur;
+            // if 6D transform IK, then don't inlucde the local tool transform!
+            if( !!(options & SO_Kinematics) || iktype != IKP_Transform6D ) {
+                tcur *= _info._tLocalTool;
+            }
             SerializeRound(o,tcur);
             o << __varmdofindices.size() << " ";
 
@@ -1150,7 +1156,9 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options) const
             }
         }
     }
-    if( options & (SO_Kinematics|SO_RobotManipulators) ) {
+
+    // output direction if SO_Kinematics|SO_RobotManipulators. if IK hash, then output only on certain ik types.
+    if( !!(options & (SO_Kinematics|SO_RobotManipulators)) || (!!(options&SO_InverseKinematics) && (iktype == IKP_TranslationDirection5D || iktype == IKP_Direction3D || iktype == IKP_Ray4D)) ) {
         SerializeRound3(o,_info._vdirection);
     }
 }
@@ -1177,7 +1185,7 @@ const std::string& RobotBase::Manipulator::GetStructureHash() const
     if( __hashstructure.size() == 0 ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_RobotManipulators);
+        serialize(ss,SO_RobotManipulators|SO_Kinematics);
         __hashstructure = utils::GetMD5HashString(ss.str());
     }
     return __hashstructure;
@@ -1194,6 +1202,21 @@ const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
     return __hashkinematicsstructure;
 }
 
+const std::string& RobotBase::Manipulator::GetInverseKinematicsStructureHash(IkParameterizationType iktype) const
+{
+    std::map<IkParameterizationType, std::string>::const_iterator it = __maphashikstructure.find(iktype);
+    if( it == __maphashikstructure.end() ) {
+        ostringstream ss;
+        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        serialize(ss,SO_InverseKinematics,iktype);
+        __maphashikstructure[iktype] = utils::GetMD5HashString(ss.str());
+        return __maphashikstructure[iktype];
+    }
+    else {
+        return it->second;
+    }
+}
+
 void RobotBase::Manipulator::_ComputeInternalInformation()
 {
     if( !utils::IsValidName(_info._name) ) {
@@ -1207,6 +1230,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     __pIkSolver.reset();
     __hashstructure.resize(0);
     __hashkinematicsstructure.resize(0);
+    __maphashikstructure.clear();
     if( !__pBase || !__pEffector ) {
         RAVELOG_WARN(str(boost::format("manipulator %s has undefined base and end effector links %s, %s\n")%GetName()%_info._sBaseLinkName%_info._sEffectorLinkName));
         __armspec = ConfigurationSpecification();

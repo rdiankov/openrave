@@ -198,7 +198,9 @@ public:
 
         IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, const vector<dReal>& vfreeinc)
         {
-            int ikfastversion = boost::lexical_cast<int>(GetIkFastVersion());
+            std::stringstream sversion(GetIkFastVersion());
+            uint32_t ikfastversion = 0;
+            sversion >> std::hex >> ikfastversion;
             if( ikfastversion < 60 ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("ikfast version %d not supported", ikfastversion, ORE_InvalidArguments);
             }
@@ -470,7 +472,7 @@ public:
         for(int iter = 0; iter < 2; ++iter) {
             string ikfilenamefound;
             // check if exists and is loadable, if not, regenerate the IK.
-            std::string ikfilenameprefix = str(boost::format("kinematics.%s/ikfast%s.%s.%s.")%pmanip->GetKinematicsStructureHash()%_ikfastversion%striktype%_platform);
+            std::string ikfilenameprefix = str(boost::format("kinematics.%s/ikfast%s.%s.%s.")%pmanip->GetInverseKinematicsStructureHash(iktype)%_ikfastversion%striktype%_platform);
             int ikdof = IkParameterization::GetDOF(iktype);
             if( ikdof > pmanip->GetArmDOF() ) {
                 RAVELOG_WARN(str(boost::format("not enough joints (%d) for ik %s")%pmanip->GetArmIndices().size()%striktype));
@@ -526,7 +528,7 @@ public:
                 atts.push_back(make_pair(string("target"), probot->GetName()));
                 string tempfilename = RaveGetHomeDirectory() + str(boost::format("/testikfastrobot%d.dae")%(RaveRandomInt()%1000));
                 // file not found, so create
-                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%tempfilename));
+                RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(iktype)%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
                 string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s")%tempfilename%pmanip->GetName()%striktype);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler
@@ -546,7 +548,7 @@ public:
                 return false;
             }
 
-            string ikfastname = str(boost::format("ikfast.%s.%s.%s")%pmanip->GetKinematicsStructureHash()%striktype%pmanip->GetName());
+            string ikfastname = str(boost::format("ikfast.%s.%s.%s")%pmanip->GetInverseKinematicsStructureHash(iktype)%striktype%pmanip->GetName());
             boost::shared_ptr<IkLibrary> lib = _AddIkLibrary(ikfastname,ikfilenamefound);
             bool bsuccess = true;
             if( !lib ) {

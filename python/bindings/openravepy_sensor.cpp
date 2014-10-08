@@ -37,7 +37,7 @@ public:
     virtual SensorBase::CameraIntrinsics GetCameraIntrinsics()
     {
         SensorBase::CameraIntrinsics intrinsics;
-        if( K.is_none() ) {
+        if( IS_PYTHONOBJECT_NONE(K) ) {
             intrinsics.fx = 0;
             intrinsics.fy = 0;
             intrinsics.cx = 0;

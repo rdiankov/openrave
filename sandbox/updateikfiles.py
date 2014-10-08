@@ -38,6 +38,7 @@ def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,r
     print robotfilename, manipname, iktype, destfilename
     RaveInitialize()
     env=Environment()
+    env.StopSimulation()
     try:
         with env:
             robot = env.ReadRobotXMLFile(robotfilename,{'skipgeometry':'1'})
@@ -99,6 +100,7 @@ def get_freeindies_combinations(robot_file, manip_name):
         return [None]
     RaveInitialize()
     env=Environment()
+    env.StopSimulation()
     env.Load(robot_file)
     robot=env.GetRobots()[0]
     manip=robot.SetActiveManipulator(manip_name)

@@ -15,7 +15,7 @@
 /// See the License for the specific language governing permissions and
 /// limitations under the License.
 ///
-/// ikfast version 71 generated on 2014-04-13 19:02:11.684744
+/// ikfast version 0x10000048 generated on 2014-10-08 15:38:05.368867
 /// To compile with gcc:
 ///     gcc -lstdc++ ik.cpp
 /// To compile without any main function as a shared object (might need -llapack):
@@ -26,16 +26,13 @@ using namespace ikfast;
 
 // check if the included ikfast version matches what this file was compiled with
 #define IKFAST_COMPILE_ASSERT(x) extern int __dummy[(int)x]
-IKFAST_COMPILE_ASSERT(IKFAST_VERSION==71);
+IKFAST_COMPILE_ASSERT(IKFAST_VERSION==0x10000048);
 
 #include <cmath>
 #include <vector>
 #include <limits>
 #include <algorithm>
 #include <complex>
-
-#define IKFAST_STRINGIZE2(s) #s
-#define IKFAST_STRINGIZE(s) IKFAST_STRINGIZE2(s)
 
 #ifndef IKFAST_ASSERT
 #include <stdexcept>
@@ -303,7 +300,7 @@ inline CheckValue<T> IKPowWithIntegerCheck(T f, int n)
 /// solves the forward kinematics equations.
 /// \param pfree is an array specifying the free joints of the chain.
 IKFAST_API void ComputeFk(const IkReal* j, IkReal* eetrans, IkReal* eerot) {
-IkReal x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,x36,x37,x38,x39,x40,x41,x42,x43,x44,x45,x46,x47,x48,x49,x50,x51,x52,x53;
+IkReal x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31,x32,x33,x34,x35,x36,x37,x38,x39,x40,x41;
 x0=IKcos(j[0]);
 x1=IKcos(j[1]);
 x2=IKsin(j[2]);
@@ -316,61 +313,48 @@ x8=IKcos(j[5]);
 x9=IKsin(j[5]);
 x10=IKsin(j[4]);
 x11=IKcos(j[4]);
-x12=((0.0203)*x3);
-x13=((1.0)*x11);
-x14=((0.4331)*x0);
-x15=((0.175)*x2);
-x16=((1.0)*x10);
-x17=((1.0)*x7);
-x18=((0.175)*x0);
-x19=((0.175)*x7);
-x20=((1.0)*x3);
-x21=((0.175)*x6);
-x22=((1.0)*x2);
-x23=((1.0)*x0);
-x24=(x1*x7);
-x25=(x3*x4);
-x26=(x0*x1);
-x27=(x10*x6);
-x28=(x2*x4);
-x29=(x1*x3);
-x30=(x1*x2);
-x31=(x1*x20);
-x32=(x0*x22*x4);
-x33=(x17*x28);
-x34=((((-1.0)*x31))+x28);
-x35=(((x1*x22))+((x20*x4)));
-x36=((-1.0)*x35);
-x37=((((-1.0)*x32))+((x26*x3)));
-x38=((((-1.0)*x33))+((x24*x3)));
-x39=(x36*x6);
-x40=(x35*x5);
-x41=((((-1.0)*x0*x20*x4))+(((-1.0)*x22*x26)));
-x42=(((x22*x26))+((x0*x20*x4)));
-x43=(x17*(((((-1.0)*x30))+(((-1.0)*x25)))));
-x44=(x17*((x30+x25)));
-x45=(x37*x6);
-x46=(x38*x6);
-x47=(x10*x41);
-x48=(x10*x43);
-x49=((((-1.0)*x17*x5))+x45);
-x50=(((x0*x5))+x46);
-x51=(((x5*((x32+(((-1.0)*x20*x26))))))+(((-1.0)*x17*x6)));
-x52=(((x5*(((((-1.0)*x17*x29))+x33))))+((x0*x6)));
-x53=(x11*x49);
-eerot[0]=(((x8*((x47+x53))))+((x51*x9)));
-eerot[1]=(((x51*x8))+((x9*(((((-1.0)*x16*x41))+(((-1.0)*x13*x49)))))));
-eerot[2]=(((x10*x49))+((x11*x42)));
-eetrans[0]=((((0.4318)*x26))+((x11*((((x18*x25))+((x15*x26))))))+(((-1.0)*x12*x26))+((x14*x25))+(((0.0203)*x0*x28))+((x14*x30))+(((-0.1501)*x7))+((x10*(((((-1.0)*x19*x5))+((x21*x37)))))));
-eerot[3]=(((x8*((((x11*x50))+x48))))+((x52*x9)));
-eerot[4]=(((x9*(((((-1.0)*x16*x43))+(((-1.0)*x13*x50))))))+((x52*x8)));
-eerot[5]=(((x11*x44))+((x10*x50)));
-eetrans[1]=((((0.1501)*x0))+(((0.4318)*x24))+(((0.4331)*x25*x7))+(((-1.0)*x12*x24))+((x10*((((x18*x5))+((x21*x38))))))+((x11*((((x19*x25))+((x15*x24))))))+(((0.4331)*x2*x24))+(((0.0203)*x28*x7)));
-eerot[6]=(((x8*((((x10*x34))+((x11*x39))))))+((x40*x9)));
-eerot[7]=(((x9*(((((-1.0)*x16*x34))+(((-1.0)*x13*x39))))))+((x40*x8)));
-eerot[8]=(((x27*x36))+((x11*((x31+(((-1.0)*x22*x4)))))));
-IkReal x54=((1.0)*x15);
-eetrans[2]=((1.371)+(((-0.4318)*x4))+(((0.4331)*x29))+((x27*(((((-1.0)*x1*x54))+(((-0.175)*x25))))))+(((0.0203)*x30))+((x11*(((((-1.0)*x4*x54))+(((0.175)*x29))))))+((x12*x4))+(((-0.4331)*x28)));
+x12=((1.0)*x11);
+x13=((1.0)*x7);
+x14=((1.0)*x10);
+x15=((1.0)*x2);
+x16=((0.4331)*x2);
+x17=(x0*x1);
+x18=(x1*x7);
+x19=(x3*x4);
+x20=(x2*x4);
+x21=(x1*x3);
+x22=(x1*x2);
+x23=((1.0)*x21);
+x24=((1.0)*x19);
+x25=((0.0203)*x21);
+x26=(x0*x15*x4);
+x27=(x13*x20);
+x28=((((-1.0)*x23))+x20);
+x29=(((x1*x15))+x24);
+x30=((-1.0)*x29);
+x31=(x30*x6);
+x32=(x29*x5);
+x33=((((-1.0)*x15*x17))+(((-1.0)*x0*x24)));
+x34=(((x0*x24))+((x15*x17)));
+x35=(x13*(((((-1.0)*x22))+(((-1.0)*x19)))));
+x36=(x13*((x19+x22)));
+x37=(x10*x33);
+x38=(((x6*(((((-1.0)*x26))+((x17*x3))))))+(((-1.0)*x13*x5)));
+x39=(((x0*x5))+((x6*((((x18*x3))+(((-1.0)*x27)))))));
+x40=(((x5*(((((-1.0)*x17*x3))+x26))))+(((-1.0)*x13*x6)));
+x41=(((x0*x6))+((x5*(((((-1.0)*x13*x21))+x27)))));
+eerot[0]=(((x40*x9))+((x8*((((x11*x38))+x37)))));
+eerot[1]=(((x40*x8))+((x9*(((((-1.0)*x12*x38))+(((-1.0)*x14*x33)))))));
+eerot[2]=(((x10*x38))+((x11*x34)));
+eetrans[0]=((((0.4318)*x17))+(((0.4331)*x0*x19))+(((-0.0203)*x17*x3))+(((0.0203)*x0*x20))+((x16*x17))+(((-0.1501)*x7)));
+eerot[3]=(((x41*x9))+((x8*((((x10*x35))+((x11*x39)))))));
+eerot[4]=(((x41*x8))+((x9*(((((-1.0)*x12*x39))+(((-1.0)*x14*x35)))))));
+eerot[5]=(((x10*x39))+((x11*x36)));
+eetrans[1]=((((0.1501)*x0))+(((0.4318)*x18))+(((-0.0203)*x18*x3))+(((0.4331)*x19*x7))+((x16*x18))+(((0.0203)*x20*x7)));
+eerot[6]=(((x32*x9))+((x8*((((x11*x31))+((x10*x28)))))));
+eerot[7]=(((x32*x8))+((x9*(((((-1.0)*x12*x31))+(((-1.0)*x14*x28)))))));
+eerot[8]=(((x10*x31))+((x11*((x23+(((-1.0)*x15*x4)))))));
+eetrans[2]=((1.371)+(((-0.4318)*x4))+(((0.4331)*x21))+(((-1.0)*x16*x4))+(((0.0203)*x19))+(((0.0203)*x22)));
 }
 
 IKFAST_API int GetNumFreeParameters() { return 0; }
@@ -386,6 +370,8 @@ public:
 IkReal j0,cj0,sj0,htj0,j0mul,j1,cj1,sj1,htj1,j1mul,j2,cj2,sj2,htj2,j2mul,j3,cj3,sj3,htj3,j3mul,j4,cj4,sj4,htj4,j4mul,j5,cj5,sj5,htj5,j5mul,new_r00,r00,rxp0_0,new_r01,r01,rxp0_1,new_r02,r02,rxp0_2,new_r10,r10,rxp1_0,new_r11,r11,rxp1_1,new_r12,r12,rxp1_2,new_r20,r20,rxp2_0,new_r21,r21,rxp2_1,new_r22,r22,rxp2_2,new_px,px,npx,new_py,py,npy,new_pz,pz,npz,pp;
 unsigned char _ij0[2], _nj0,_ij1[2], _nj1,_ij2[2], _nj2,_ij3[2], _nj3,_ij4[2], _nj4,_ij5[2], _nj5;
 
+IkReal j100, cj100, sj100;
+unsigned char _ij100[2], _nj100;
 bool ComputeIk(const IkReal* eetrans, const IkReal* eerot, const IkReal* pfree, IkSolutionListBase<IkReal>& solutions) {
 j0=numeric_limits<IkReal>::quiet_NaN(); _ij0[0] = -1; _ij0[1] = -1; _nj0 = -1; j1=numeric_limits<IkReal>::quiet_NaN(); _ij1[0] = -1; _ij1[1] = -1; _nj1 = -1; j2=numeric_limits<IkReal>::quiet_NaN(); _ij2[0] = -1; _ij2[1] = -1; _nj2 = -1; j3=numeric_limits<IkReal>::quiet_NaN(); _ij3[0] = -1; _ij3[1] = -1; _nj3 = -1; j4=numeric_limits<IkReal>::quiet_NaN(); _ij4[0] = -1; _ij4[1] = -1; _nj4 = -1; j5=numeric_limits<IkReal>::quiet_NaN(); _ij5[0] = -1; _ij5[1] = -1; _nj5 = -1; 
 for(int dummyiter = 0; dummyiter < 1; ++dummyiter) {
@@ -404,43 +390,43 @@ px = eetrans[0]; py = eetrans[1]; pz = eetrans[2];
 new_r00=r00;
 new_r01=r01;
 new_r02=r02;
-new_px=(px+(((-0.175)*r02)));
+new_px=px;
 new_r10=r10;
 new_r11=r11;
 new_r12=r12;
-new_py=(py+(((-0.175)*r12)));
+new_py=py;
 new_r20=r20;
 new_r21=r21;
 new_r22=r22;
-new_pz=((-1.371)+(((-0.175)*r22))+pz);
+new_pz=((-1.371)+pz);
 r00 = new_r00; r01 = new_r01; r02 = new_r02; r10 = new_r10; r11 = new_r11; r12 = new_r12; r20 = new_r20; r21 = new_r21; r22 = new_r22; px = new_px; py = new_py; pz = new_pz;
-IkReal x55=((1.0)*px);
-IkReal x56=((1.0)*pz);
-IkReal x57=((1.0)*py);
+IkReal x42=((1.0)*px);
+IkReal x43=((1.0)*pz);
+IkReal x44=((1.0)*py);
 pp=((px*px)+(py*py)+(pz*pz));
 npx=(((px*r00))+((py*r10))+((pz*r20)));
 npy=(((px*r01))+((py*r11))+((pz*r21)));
 npz=(((px*r02))+((py*r12))+((pz*r22)));
-rxp0_0=((((-1.0)*r20*x57))+((pz*r10)));
-rxp0_1=(((px*r20))+(((-1.0)*r00*x56)));
-rxp0_2=((((-1.0)*r10*x55))+((py*r00)));
-rxp1_0=((((-1.0)*r21*x57))+((pz*r11)));
-rxp1_1=(((px*r21))+(((-1.0)*r01*x56)));
-rxp1_2=((((-1.0)*r11*x55))+((py*r01)));
-rxp2_0=(((pz*r12))+(((-1.0)*r22*x57)));
-rxp2_1=(((px*r22))+(((-1.0)*r02*x56)));
-rxp2_2=((((-1.0)*r12*x55))+((py*r02)));
+rxp0_0=((((-1.0)*r20*x44))+((pz*r10)));
+rxp0_1=(((px*r20))+(((-1.0)*r00*x43)));
+rxp0_2=((((-1.0)*r10*x42))+((py*r00)));
+rxp1_0=((((-1.0)*r21*x44))+((pz*r11)));
+rxp1_1=(((px*r21))+(((-1.0)*r01*x43)));
+rxp1_2=((((-1.0)*r11*x42))+((py*r01)));
+rxp2_0=((((-1.0)*r22*x44))+((pz*r12)));
+rxp2_1=((((-1.0)*r02*x43))+((px*r22)));
+rxp2_2=((((-1.0)*r12*x42))+((py*r02)));
 {
 IkReal j2array[2], cj2array[2], sj2array[2];
 bool j2valid[2]={false};
 _nj2 = 2;
 if( (((-1.0601789761685)+(((2.67068488900329)*pp)))) < -1-IKFAST_SINCOS_THRESH || (((-1.0601789761685)+(((2.67068488900329)*pp)))) > 1+IKFAST_SINCOS_THRESH )
     continue;
-IkReal x58=IKasin(((-1.0601789761685)+(((2.67068488900329)*pp))));
-j2array[0]=((0.0468371131132389)+(((1.0)*x58)));
+IkReal x45=IKasin(((-1.0601789761685)+(((2.67068488900329)*pp))));
+j2array[0]=((0.0468371131132389)+(((1.0)*x45)));
 sj2array[0]=IKsin(j2array[0]);
 cj2array[0]=IKcos(j2array[0]);
-j2array[1]=((3.18842976670303)+(((-1.0)*x58)));
+j2array[1]=((3.18842976670303)+(((-1.0)*x45)));
 sj2array[1]=IKsin(j2array[1]);
 cj2array[1]=IKcos(j2array[1]);
 if( j2array[0] > IKPI )
@@ -494,26 +480,26 @@ continue; // no branches [j0, j1]
 IkReal j1array[2], cj1array[2], sj1array[2];
 bool j1valid[2]={false};
 _nj1 = 2;
-IkReal x59=((((-0.4331)*cj2))+(((-0.0203)*sj2)));
-IkReal x60=((0.4318)+(((-0.0203)*cj2))+(((0.4331)*sj2)));
-CheckValue<IkReal> x63 = IKatan2WithCheck(IkReal(x59),x60,IKFAST_ATAN2_MAGTHRESH);
-if(!x63.valid){
+IkReal x46=((((-0.4331)*cj2))+(((-0.0203)*sj2)));
+IkReal x47=((0.4318)+(((-0.0203)*cj2))+(((0.4331)*sj2)));
+CheckValue<IkReal> x50 = IKatan2WithCheck(IkReal(x46),x47,IKFAST_ATAN2_MAGTHRESH);
+if(!x50.valid){
 continue;
 }
-IkReal x61=((1.0)*(x63.value));
-if((((x59*x59)+(x60*x60))) < -0.00001)
+IkReal x48=((1.0)*(x50.value));
+if((((x46*x46)+(x47*x47))) < -0.00001)
 continue;
-CheckValue<IkReal> x64=IKPowWithIntegerCheck(IKabs(IKsqrt(((x59*x59)+(x60*x60)))),-1);
-if(!x64.valid){
+CheckValue<IkReal> x51=IKPowWithIntegerCheck(IKabs(IKsqrt(((x46*x46)+(x47*x47)))),-1);
+if(!x51.valid){
 continue;
 }
-if( ((pz*(x64.value))) < -1-IKFAST_SINCOS_THRESH || ((pz*(x64.value))) > 1+IKFAST_SINCOS_THRESH )
+if( ((pz*(x51.value))) < -1-IKFAST_SINCOS_THRESH || ((pz*(x51.value))) > 1+IKFAST_SINCOS_THRESH )
     continue;
-IkReal x62=IKasin((pz*(x64.value)));
-j1array[0]=((((-1.0)*x61))+(((-1.0)*x62)));
+IkReal x49=IKasin((pz*(x51.value)));
+j1array[0]=((((-1.0)*x49))+(((-1.0)*x48)));
 sj1array[0]=IKsin(j1array[0]);
 cj1array[0]=IKcos(j1array[0]);
-j1array[1]=((3.14159265358979)+x62+(((-1.0)*x61)));
+j1array[1]=((3.14159265358979)+(((-1.0)*x48))+x49);
 sj1array[1]=IKsin(j1array[1]);
 cj1array[1]=IKcos(j1array[1]);
 if( j1array[0] > IKPI )
@@ -550,43 +536,43 @@ j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
 
 {
 IkReal j0eval[3];
+IkReal x52=pz*pz;
+IkReal x53=((25000000.0)*pp);
+IkReal x54=(cj1*pp);
+IkReal x55=((3240659.0)*cj1);
+IkReal x56=((21590000.0)*pz*sj1);
+IkReal x57=(cj1*x52);
+j0eval[0]=(x54+(((-1.0)*x57)));
+j0eval[1]=IKsign(((((-21590000.0)*x57))+(((21590000.0)*x54))));
+j0eval[2]=((IKabs((((px*x56))+((px*x53))+(((-601661.75)*px))+((py*x55)))))+(IKabs(((((-1.0)*px*x55))+(((-601661.75)*py))+((py*x56))+((py*x53))))));
+if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
+{
+{
+IkReal j0eval[3];
+IkReal x58=pz*pz;
+IkReal x59=((4331.0)*cj2);
+IkReal x60=(pp*sj1);
+IkReal x61=((1501.0)*sj1);
+IkReal x62=((203.0)*sj2);
+IkReal x63=(sj1*x58);
+IkReal x64=((10000.0)*cj1*pz);
+j0eval[0]=(x60+(((-1.0)*x63)));
+j0eval[1]=((IKabs(((((-1.0)*px*x64))+((px*x59))+((px*x62))+((py*x61)))))+(IKabs(((((-1.0)*px*x61))+(((-1.0)*py*x64))+((py*x62))+((py*x59))))));
+j0eval[2]=IKsign(((((10000.0)*x60))+(((-10000.0)*x63))));
+if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
+{
+{
+IkReal j0eval[3];
 IkReal x65=pz*pz;
-IkReal x66=((25000000.0)*pp);
+IkReal x66=((203.0)*cj2);
 IkReal x67=(cj1*pp);
-IkReal x68=((3240659.0)*cj1);
-IkReal x69=((21590000.0)*pz*sj1);
-IkReal x70=(cj1*x65);
-j0eval[0]=(x67+(((-1.0)*x70)));
-j0eval[1]=IKsign(((((-21590000.0)*x70))+(((21590000.0)*x67))));
-j0eval[2]=((IKabs((((px*x66))+((px*x69))+(((-601661.75)*px))+((py*x68)))))+(IKabs(((((-1.0)*px*x68))+(((-601661.75)*py))+((py*x69))+((py*x66))))));
-if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
-{
-{
-IkReal j0eval[3];
-IkReal x71=pz*pz;
-IkReal x72=((4331.0)*cj2);
-IkReal x73=(pp*sj1);
-IkReal x74=((1501.0)*sj1);
-IkReal x75=((203.0)*sj2);
-IkReal x76=(sj1*x71);
-IkReal x77=((10000.0)*cj1*pz);
-j0eval[0]=(x73+(((-1.0)*x76)));
-j0eval[1]=((IKabs((((py*x74))+(((-1.0)*px*x77))+((px*x75))+((px*x72)))))+(IKabs((((py*x72))+((py*x75))+(((-1.0)*px*x74))+(((-1.0)*py*x77))))));
-j0eval[2]=IKsign(((((-10000.0)*x76))+(((10000.0)*x73))));
-if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
-{
-{
-IkReal j0eval[3];
-IkReal x78=pz*pz;
-IkReal x79=((203.0)*cj2);
-IkReal x80=(cj1*pp);
-IkReal x81=((1501.0)*cj1);
-IkReal x82=((4331.0)*sj2);
-IkReal x83=((10000.0)*pz*sj1);
-IkReal x84=(cj1*x78);
-j0eval[0]=(x80+(((-1.0)*x84)));
-j0eval[1]=IKsign(((((10000.0)*x80))+(((-10000.0)*x84))));
-j0eval[2]=((IKabs((((py*x82))+((py*x83))+(((4318.0)*py))+(((-1.0)*py*x79))+(((-1.0)*px*x81)))))+(IKabs(((((-1.0)*px*x79))+((py*x81))+((px*x83))+((px*x82))+(((4318.0)*px))))));
+IkReal x68=((1501.0)*cj1);
+IkReal x69=((4331.0)*sj2);
+IkReal x70=((10000.0)*pz*sj1);
+IkReal x71=(cj1*x65);
+j0eval[0]=(x67+(((-1.0)*x71)));
+j0eval[1]=IKsign(((((-10000.0)*x71))+(((10000.0)*x67))));
+j0eval[2]=((IKabs(((((-1.0)*px*x66))+((px*x69))+(((4318.0)*px))+((px*x70))+((py*x68)))))+(IKabs((((py*x70))+(((-1.0)*px*x68))+(((4318.0)*py))+(((-1.0)*py*x66))+((py*x69))))));
 if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
 {
 {
@@ -594,13 +580,13 @@ IkReal evalcond[8];
 bool bgotonextstatement = true;
 do
 {
-IkReal x85=((1.0)*pp);
-IkReal x86=((0.4318)+pz+(((-0.0203)*cj2))+(((0.4331)*sj2)));
+IkReal x72=((1.0)*pp);
+IkReal x73=((0.4318)+pz+(((-0.0203)*cj2))+(((0.4331)*sj2)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-1.5707963267949)+j1)))), 6.28318530717959)));
-evalcond[1]=((0.39696895)+(((-0.01753108)*cj2))+(((0.37402516)*sj2))+(((-1.0)*x85)));
-evalcond[2]=((0.02406647)+(((-0.8636)*pz))+(((-1.0)*x85)));
-evalcond[3]=x86;
-evalcond[4]=x86;
+evalcond[1]=((0.39696895)+(((-1.0)*x72))+(((-0.01753108)*cj2))+(((0.37402516)*sj2)));
+evalcond[2]=((0.02406647)+(((-1.0)*x72))+(((-0.8636)*pz)));
+evalcond[3]=x73;
+evalcond[4]=x73;
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -609,12 +595,12 @@ IkReal j0eval[3];
 sj1=1.0;
 cj1=0;
 j1=1.5707963267949;
-IkReal x87=pz*pz;
-IkReal x88=((203.0)*sj2);
-IkReal x89=((4331.0)*cj2);
-j0eval[0]=((((-1.0)*pp))+x87);
-j0eval[1]=((IKabs(((((-1.0)*py*x88))+(((-1.0)*py*x89))+(((1501.0)*px)))))+(IKabs(((((-1501.0)*py))+(((-1.0)*px*x89))+(((-1.0)*px*x88))))));
-j0eval[2]=IKsign(((((10000.0)*x87))+(((-10000.0)*pp))));
+IkReal x74=pz*pz;
+IkReal x75=((203.0)*sj2);
+IkReal x76=((4331.0)*cj2);
+j0eval[0]=((((-1.0)*pp))+x74);
+j0eval[1]=((IKabs(((((-1.0)*px*x75))+(((-1.0)*px*x76))+(((-1501.0)*py)))))+(IKabs(((((1501.0)*px))+(((-1.0)*py*x76))+(((-1.0)*py*x75))))));
+j0eval[2]=IKsign(((((10000.0)*x74))+(((-10000.0)*pp))));
 if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
 {
 {
@@ -622,11 +608,205 @@ IkReal evalcond[4];
 bool bgotonextstatement = true;
 do
 {
-IkReal x90=((((0.0203)*sj2))+(((0.4331)*cj2)));
+IkReal x77=((((0.0203)*sj2))+(((0.4331)*cj2)));
 evalcond[0]=((IKabs(px))+(IKabs(py)));
 evalcond[1]=0.1501;
-evalcond[2]=((-1.0)*x90);
-evalcond[3]=x90;
+evalcond[2]=((-1.0)*x77);
+evalcond[3]=x77;
+if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  )
+{
+bgotonextstatement=false;
+{
+IkReal j0array[4], cj0array[4], sj0array[4];
+bool j0valid[4]={false};
+_nj0 = 4;
+j0array[0]=0;
+sj0array[0]=IKsin(j0array[0]);
+cj0array[0]=IKcos(j0array[0]);
+j0array[1]=1.5707963267949;
+sj0array[1]=IKsin(j0array[1]);
+cj0array[1]=IKcos(j0array[1]);
+j0array[2]=3.14159265358979;
+sj0array[2]=IKsin(j0array[2]);
+cj0array[2]=IKcos(j0array[2]);
+j0array[3]=-1.5707963267949;
+sj0array[3]=IKsin(j0array[3]);
+cj0array[3]=IKcos(j0array[3]);
+if( j0array[0] > IKPI )
+{
+    j0array[0]-=IK2PI;
+}
+else if( j0array[0] < -IKPI )
+{    j0array[0]+=IK2PI;
+}
+j0valid[0] = true;
+if( j0array[1] > IKPI )
+{
+    j0array[1]-=IK2PI;
+}
+else if( j0array[1] < -IKPI )
+{    j0array[1]+=IK2PI;
+}
+j0valid[1] = true;
+if( j0array[2] > IKPI )
+{
+    j0array[2]-=IK2PI;
+}
+else if( j0array[2] < -IKPI )
+{    j0array[2]+=IK2PI;
+}
+j0valid[2] = true;
+if( j0array[3] > IKPI )
+{
+    j0array[3]-=IK2PI;
+}
+else if( j0array[3] < -IKPI )
+{    j0array[3]+=IK2PI;
+}
+j0valid[3] = true;
+for(int ij0 = 0; ij0 < 4; ++ij0)
+{
+if( !j0valid[ij0] )
+{
+    continue;
+}
+_ij0[0] = ij0; _ij0[1] = -1;
+for(int iij0 = ij0+1; iij0 < 4; ++iij0)
+{
+if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRESH && IKabs(sj0array[ij0]-sj0array[iij0]) < IKFAST_SOLUTION_THRESH )
+{
+    j0valid[iij0]=false; _ij0[1] = iij0; break; 
+}
+}
+j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
+
+rotationfunction0(solutions);
+}
+}
+
+}
+} while(0);
+if( bgotonextstatement )
+{
+bool bgotonextstatement = true;
+do
+{
+if( 1 )
+{
+bgotonextstatement=false;
+continue; // branch miss [j0]
+
+}
+} while(0);
+if( bgotonextstatement )
+{
+}
+}
+}
+
+} else
+{
+{
+IkReal j0array[1], cj0array[1], sj0array[1];
+bool j0valid[1]={false};
+_nj0 = 1;
+IkReal x464=((203.0)*sj2);
+IkReal x465=((4331.0)*cj2);
+CheckValue<IkReal> x466=IKPowWithIntegerCheck(IKsign(((((10000.0)*(pz*pz)))+(((-10000.0)*pp)))),-1);
+if(!x466.valid){
+continue;
+}
+CheckValue<IkReal> x467 = IKatan2WithCheck(IkReal(((((1501.0)*px))+(((-1.0)*py*x464))+(((-1.0)*py*x465)))),((((-1.0)*px*x464))+(((-1.0)*px*x465))+(((-1501.0)*py))),IKFAST_ATAN2_MAGTHRESH);
+if(!x467.valid){
+continue;
+}
+j0array[0]=((-1.5707963267949)+(((1.5707963267949)*(x466.value)))+(x467.value));
+sj0array[0]=IKsin(j0array[0]);
+cj0array[0]=IKcos(j0array[0]);
+if( j0array[0] > IKPI )
+{
+    j0array[0]-=IK2PI;
+}
+else if( j0array[0] < -IKPI )
+{    j0array[0]+=IK2PI;
+}
+j0valid[0] = true;
+for(int ij0 = 0; ij0 < 1; ++ij0)
+{
+if( !j0valid[ij0] )
+{
+    continue;
+}
+_ij0[0] = ij0; _ij0[1] = -1;
+for(int iij0 = ij0+1; iij0 < 1; ++iij0)
+{
+if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRESH && IKabs(sj0array[ij0]-sj0array[iij0]) < IKFAST_SOLUTION_THRESH )
+{
+    j0valid[iij0]=false; _ij0[1] = iij0; break; 
+}
+}
+j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
+{
+IkReal evalcond[2];
+IkReal x468=IKsin(j0);
+IkReal x469=IKcos(j0);
+evalcond[0]=((0.1501)+(((-1.0)*py*x469))+((px*x468)));
+evalcond[1]=((((-0.4331)*cj2))+((px*x469))+((py*x468))+(((-0.0203)*sj2)));
+if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  )
+{
+continue;
+}
+}
+
+rotationfunction0(solutions);
+}
+}
+
+}
+
+}
+
+}
+} while(0);
+if( bgotonextstatement )
+{
+bool bgotonextstatement = true;
+do
+{
+IkReal x470=((1.0)*pp);
+IkReal x471=((0.0203)*cj2);
+IkReal x472=((0.4331)*sj2);
+evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((1.5707963267949)+j1)))), 6.28318530717959)));
+evalcond[1]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*x470))+(((0.37402516)*sj2)));
+evalcond[2]=((0.02406647)+(((-1.0)*x470))+(((0.8636)*pz)));
+evalcond[3]=((0.4318)+(((-1.0)*x471))+(((-1.0)*pz))+x472);
+evalcond[4]=((-0.4318)+(((-1.0)*x472))+x471+pz);
+if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  )
+{
+bgotonextstatement=false;
+{
+IkReal j0eval[3];
+sj1=-1.0;
+cj1=0;
+j1=-1.5707963267949;
+IkReal x473=pz*pz;
+IkReal x474=((203.0)*sj2);
+IkReal x475=((4331.0)*cj2);
+j0eval[0]=((((-1.0)*x473))+pp);
+j0eval[1]=IKsign(((((-10000.0)*x473))+(((10000.0)*pp))));
+j0eval[2]=((IKabs(((((-1.0)*py*x474))+(((-1.0)*py*x475))+(((-1501.0)*px)))))+(IKabs(((((1501.0)*py))+(((-1.0)*px*x475))+(((-1.0)*px*x474))))));
+if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
+{
+{
+IkReal evalcond[4];
+bool bgotonextstatement = true;
+do
+{
+IkReal x476=x46;
+evalcond[0]=((IKabs(px))+(IKabs(py)));
+evalcond[1]=0.1501;
+evalcond[2]=x476;
+evalcond[3]=x476;
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -726,11 +906,11 @@ bool j0valid[1]={false};
 _nj0 = 1;
 IkReal x477=((203.0)*sj2);
 IkReal x478=((4331.0)*cj2);
-CheckValue<IkReal> x479 = IKatan2WithCheck(IkReal(((((1501.0)*px))+(((-1.0)*py*x477))+(((-1.0)*py*x478)))),((((-1.0)*px*x478))+(((-1.0)*px*x477))+(((-1501.0)*py))),IKFAST_ATAN2_MAGTHRESH);
+CheckValue<IkReal> x479 = IKatan2WithCheck(IkReal(((((-1.0)*py*x477))+(((-1.0)*py*x478))+(((-1501.0)*px)))),((((1501.0)*py))+(((-1.0)*px*x478))+(((-1.0)*px*x477))),IKFAST_ATAN2_MAGTHRESH);
 if(!x479.valid){
 continue;
 }
-CheckValue<IkReal> x480=IKPowWithIntegerCheck(IKsign(((((10000.0)*(pz*pz)))+(((-10000.0)*pp)))),-1);
+CheckValue<IkReal> x480=IKPowWithIntegerCheck(IKsign(((((-10000.0)*(pz*pz)))+(((10000.0)*pp)))),-1);
 if(!x480.valid){
 continue;
 }
@@ -762,10 +942,11 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[2];
-IkReal x481=IKsin(j0);
-IkReal x482=IKcos(j0);
-evalcond[0]=((0.1501)+(((-1.0)*py*x482))+((px*x481)));
-evalcond[1]=(((py*x481))+((px*x482))+(((-0.4331)*cj2))+(((-0.0203)*sj2)));
+IkReal x481=IKcos(j0);
+IkReal x482=IKsin(j0);
+IkReal x483=((1.0)*x481);
+evalcond[0]=((0.1501)+((px*x482))+(((-1.0)*py*x483)));
+evalcond[1]=((((-1.0)*py*x482))+(((-0.4331)*cj2))+(((-1.0)*px*x483))+(((-0.0203)*sj2)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -787,41 +968,51 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x483=((1.0)*pp);
-IkReal x484=((0.0203)*cj2);
-IkReal x485=((0.4331)*sj2);
-evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((1.5707963267949)+j1)))), 6.28318530717959)));
-evalcond[1]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*x483))+(((0.37402516)*sj2)));
-evalcond[2]=((0.02406647)+(((-1.0)*x483))+(((0.8636)*pz)));
-evalcond[3]=((0.4318)+(((-1.0)*x484))+(((-1.0)*pz))+x485);
-evalcond[4]=((-0.4318)+(((-1.0)*x485))+x484+pz);
-if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  )
+IkReal x484=((((-0.4331)*cj2))+pz+(((-0.0203)*sj2)));
+evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(j1))), 6.28318530717959)));
+evalcond[1]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*pp))+(((0.37402516)*sj2)));
+evalcond[2]=x484;
+evalcond[3]=x484;
+if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
 {
 IkReal j0eval[3];
-sj1=-1.0;
-cj1=0;
-j1=-1.5707963267949;
-IkReal x486=pz*pz;
-IkReal x487=((203.0)*sj2);
-IkReal x488=((4331.0)*cj2);
-j0eval[0]=((((-1.0)*x486))+pp);
-j0eval[1]=IKsign(((((-10000.0)*x486))+(((10000.0)*pp))));
-j0eval[2]=((IKabs(((((-1501.0)*px))+(((-1.0)*py*x487))+(((-1.0)*py*x488)))))+(IKabs(((((1501.0)*py))+(((-1.0)*px*x487))+(((-1.0)*px*x488))))));
+sj1=0;
+cj1=1.0;
+j1=0;
+IkReal x485=pz*pz;
+IkReal x486=((25000000.0)*pp);
+j0eval[0]=((((-1.0)*pp))+x485);
+j0eval[1]=((IKabs(((((601661.75)*py))+(((3240659.0)*px))+(((-1.0)*py*x486)))))+(IKabs(((((-3240659.0)*py))+(((-1.0)*px*x486))+(((601661.75)*px))))));
+j0eval[2]=IKsign(((((21590000.0)*x485))+(((-21590000.0)*pp))));
 if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
 {
 {
-IkReal evalcond[4];
+IkReal j0eval[3];
+sj1=0;
+cj1=1.0;
+j1=0;
+IkReal x487=pz*pz;
+IkReal x488=((4340.5148926345)*sj2);
+IkReal x489=((468.713922881552)*pz);
+j0eval[0]=((((-1.0)*x487))+pp);
+j0eval[1]=IKsign(((((-10000.0)*x487))+(((10000.0)*pp))));
+j0eval[2]=((IKabs((((py*x488))+(((4318.0)*py))+(((-1501.0)*px))+(((-1.0)*py*x489)))))+(IKabs(((((1501.0)*py))+((px*x488))+(((-1.0)*px*x489))+(((4318.0)*px))))));
+if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
+{
+{
+IkReal evalcond[5];
 bool bgotonextstatement = true;
 do
 {
-IkReal x489=x59;
+IkReal x490=((0.4318)+(((0.43405148926345)*sj2))+(((-0.0468713922881552)*pz)));
 evalcond[0]=((IKabs(px))+(IKabs(py)));
 evalcond[1]=0.1501;
-evalcond[2]=x489;
-evalcond[3]=x489;
-if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  )
+evalcond[2]=((0.02406647)+(((-1.0)*pp)));
+evalcond[3]=x490;
+evalcond[4]=x490;
+if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
 {
@@ -918,17 +1109,17 @@ if( bgotonextstatement )
 IkReal j0array[1], cj0array[1], sj0array[1];
 bool j0valid[1]={false};
 _nj0 = 1;
-IkReal x490=((203.0)*sj2);
-IkReal x491=((4331.0)*cj2);
-CheckValue<IkReal> x492 = IKatan2WithCheck(IkReal(((((-1.0)*py*x491))+(((-1.0)*py*x490))+(((-1501.0)*px)))),((((1501.0)*py))+(((-1.0)*px*x490))+(((-1.0)*px*x491))),IKFAST_ATAN2_MAGTHRESH);
-if(!x492.valid){
-continue;
-}
-CheckValue<IkReal> x493=IKPowWithIntegerCheck(IKsign(((((-10000.0)*(pz*pz)))+(((10000.0)*pp)))),-1);
+IkReal x491=((4340.5148926345)*sj2);
+IkReal x492=((468.713922881552)*pz);
+CheckValue<IkReal> x493 = IKatan2WithCheck(IkReal((((py*x491))+(((4318.0)*py))+(((-1.0)*py*x492))+(((-1501.0)*px)))),((((1501.0)*py))+((px*x491))+(((-1.0)*px*x492))+(((4318.0)*px))),IKFAST_ATAN2_MAGTHRESH);
 if(!x493.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(x492.value)+(((1.5707963267949)*(x493.value))));
+CheckValue<IkReal> x494=IKPowWithIntegerCheck(IKsign(((((-10000.0)*(pz*pz)))+(((10000.0)*pp)))),-1);
+if(!x494.valid){
+continue;
+}
+j0array[0]=((-1.5707963267949)+(x493.value)+(((1.5707963267949)*(x494.value))));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -955,13 +1146,15 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 }
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
-IkReal evalcond[2];
-IkReal x494=IKcos(j0);
+IkReal evalcond[3];
 IkReal x495=IKsin(j0);
-IkReal x496=((1.0)*x494);
-evalcond[0]=((0.1501)+((px*x495))+(((-1.0)*py*x496)));
-evalcond[1]=((((-0.4331)*cj2))+(((-1.0)*px*x496))+(((-1.0)*py*x495))+(((-0.0203)*sj2)));
-if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  )
+IkReal x496=IKcos(j0);
+IkReal x497=((1.0)*x496);
+IkReal x498=(py*x495);
+evalcond[0]=((0.1501)+((px*x495))+(((-1.0)*py*x497)));
+evalcond[1]=((0.02406647)+(((0.8636)*x498))+(((-1.0)*pp))+(((0.8636)*px*x496)));
+evalcond[2]=((0.4318)+(((-1.0)*px*x497))+(((0.43405148926345)*sj2))+(((-1.0)*x498))+(((-0.0468713922881552)*pz)));
+if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
 }
@@ -975,165 +1168,22 @@ rotationfunction0(solutions);
 
 }
 
-}
-} while(0);
-if( bgotonextstatement )
+} else
 {
-bool bgotonextstatement = true;
-do
 {
-IkReal x497=((((-0.4331)*cj2))+pz+(((-0.0203)*sj2)));
-evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(j1))), 6.28318530717959)));
-evalcond[1]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*pp))+(((0.37402516)*sj2)));
-evalcond[2]=x497;
-evalcond[3]=x497;
-if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  )
-{
-bgotonextstatement=false;
-{
-IkReal j0eval[3];
-sj1=0;
-cj1=1.0;
-j1=0;
-IkReal x498=pz*pz;
+IkReal j0array[1], cj0array[1], sj0array[1];
+bool j0valid[1]={false};
+_nj0 = 1;
 IkReal x499=((25000000.0)*pp);
-j0eval[0]=((((-1.0)*pp))+x498);
-j0eval[1]=((IKabs(((((-3240659.0)*py))+(((-1.0)*px*x499))+(((601661.75)*px)))))+(IKabs(((((601661.75)*py))+(((3240659.0)*px))+(((-1.0)*py*x499))))));
-j0eval[2]=IKsign(((((21590000.0)*x498))+(((-21590000.0)*pp))));
-if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
-{
-{
-IkReal j0eval[3];
-sj1=0;
-cj1=1.0;
-j1=0;
-IkReal x500=pz*pz;
-IkReal x501=((4340.5148926345)*sj2);
-IkReal x502=((468.713922881552)*pz);
-j0eval[0]=(pp+(((-1.0)*x500)));
-j0eval[1]=IKsign(((((-10000.0)*x500))+(((10000.0)*pp))));
-j0eval[2]=((IKabs(((((1501.0)*py))+(((4318.0)*px))+((px*x501))+(((-1.0)*px*x502)))))+(IKabs(((((-1.0)*py*x502))+(((4318.0)*py))+((py*x501))+(((-1501.0)*px))))));
-if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
-{
-{
-IkReal evalcond[5];
-bool bgotonextstatement = true;
-do
-{
-IkReal x503=((0.4318)+(((0.43405148926345)*sj2))+(((-0.0468713922881552)*pz)));
-evalcond[0]=((IKabs(px))+(IKabs(py)));
-evalcond[1]=0.1501;
-evalcond[2]=((0.02406647)+(((-1.0)*pp)));
-evalcond[3]=x503;
-evalcond[4]=x503;
-if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  )
-{
-bgotonextstatement=false;
-{
-IkReal j0array[4], cj0array[4], sj0array[4];
-bool j0valid[4]={false};
-_nj0 = 4;
-j0array[0]=0;
-sj0array[0]=IKsin(j0array[0]);
-cj0array[0]=IKcos(j0array[0]);
-j0array[1]=1.5707963267949;
-sj0array[1]=IKsin(j0array[1]);
-cj0array[1]=IKcos(j0array[1]);
-j0array[2]=3.14159265358979;
-sj0array[2]=IKsin(j0array[2]);
-cj0array[2]=IKcos(j0array[2]);
-j0array[3]=-1.5707963267949;
-sj0array[3]=IKsin(j0array[3]);
-cj0array[3]=IKcos(j0array[3]);
-if( j0array[0] > IKPI )
-{
-    j0array[0]-=IK2PI;
-}
-else if( j0array[0] < -IKPI )
-{    j0array[0]+=IK2PI;
-}
-j0valid[0] = true;
-if( j0array[1] > IKPI )
-{
-    j0array[1]-=IK2PI;
-}
-else if( j0array[1] < -IKPI )
-{    j0array[1]+=IK2PI;
-}
-j0valid[1] = true;
-if( j0array[2] > IKPI )
-{
-    j0array[2]-=IK2PI;
-}
-else if( j0array[2] < -IKPI )
-{    j0array[2]+=IK2PI;
-}
-j0valid[2] = true;
-if( j0array[3] > IKPI )
-{
-    j0array[3]-=IK2PI;
-}
-else if( j0array[3] < -IKPI )
-{    j0array[3]+=IK2PI;
-}
-j0valid[3] = true;
-for(int ij0 = 0; ij0 < 4; ++ij0)
-{
-if( !j0valid[ij0] )
-{
-    continue;
-}
-_ij0[0] = ij0; _ij0[1] = -1;
-for(int iij0 = ij0+1; iij0 < 4; ++iij0)
-{
-if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRESH && IKabs(sj0array[ij0]-sj0array[iij0]) < IKFAST_SOLUTION_THRESH )
-{
-    j0valid[iij0]=false; _ij0[1] = iij0; break; 
-}
-}
-j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
-
-rotationfunction0(solutions);
-}
-}
-
-}
-} while(0);
-if( bgotonextstatement )
-{
-bool bgotonextstatement = true;
-do
-{
-if( 1 )
-{
-bgotonextstatement=false;
-continue; // branch miss [j0]
-
-}
-} while(0);
-if( bgotonextstatement )
-{
-}
-}
-}
-
-} else
-{
-{
-IkReal j0array[1], cj0array[1], sj0array[1];
-bool j0valid[1]={false};
-_nj0 = 1;
-IkReal x504=((4340.5148926345)*sj2);
-IkReal x505=((468.713922881552)*pz);
-CheckValue<IkReal> x506 = IKatan2WithCheck(IkReal(((((-1.0)*py*x505))+(((4318.0)*py))+((py*x504))+(((-1501.0)*px)))),((((1501.0)*py))+(((4318.0)*px))+((px*x504))+(((-1.0)*px*x505))),IKFAST_ATAN2_MAGTHRESH);
-if(!x506.valid){
+CheckValue<IkReal> x500 = IKatan2WithCheck(IkReal(((((601661.75)*py))+(((3240659.0)*px))+(((-1.0)*py*x499)))),((((-3240659.0)*py))+(((-1.0)*px*x499))+(((601661.75)*px))),IKFAST_ATAN2_MAGTHRESH);
+if(!x500.valid){
 continue;
 }
-CheckValue<IkReal> x507=IKPowWithIntegerCheck(IKsign(((((-10000.0)*(pz*pz)))+(((10000.0)*pp)))),-1);
-if(!x507.valid){
+CheckValue<IkReal> x501=IKPowWithIntegerCheck(IKsign(((((21590000.0)*(pz*pz)))+(((-21590000.0)*pp)))),-1);
+if(!x501.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(x506.value)+(((1.5707963267949)*(x507.value))));
+j0array[0]=((-1.5707963267949)+(x500.value)+(((1.5707963267949)*(x501.value))));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -1161,77 +1211,13 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[3];
-IkReal x508=IKsin(j0);
-IkReal x509=IKcos(j0);
-IkReal x510=((1.0)*x509);
-IkReal x511=(py*x508);
-evalcond[0]=((0.1501)+((px*x508))+(((-1.0)*py*x510)));
-evalcond[1]=((0.02406647)+(((0.8636)*px*x509))+(((-1.0)*pp))+(((0.8636)*x511)));
-evalcond[2]=((0.4318)+(((-1.0)*px*x510))+(((-1.0)*x511))+(((0.43405148926345)*sj2))+(((-0.0468713922881552)*pz)));
-if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  )
-{
-continue;
-}
-}
-
-rotationfunction0(solutions);
-}
-}
-
-}
-
-}
-
-} else
-{
-{
-IkReal j0array[1], cj0array[1], sj0array[1];
-bool j0valid[1]={false};
-_nj0 = 1;
-IkReal x512=((25000000.0)*pp);
-CheckValue<IkReal> x513 = IKatan2WithCheck(IkReal(((((601661.75)*py))+(((-1.0)*py*x512))+(((3240659.0)*px)))),((((-3240659.0)*py))+(((-1.0)*px*x512))+(((601661.75)*px))),IKFAST_ATAN2_MAGTHRESH);
-if(!x513.valid){
-continue;
-}
-CheckValue<IkReal> x514=IKPowWithIntegerCheck(IKsign(((((21590000.0)*(pz*pz)))+(((-21590000.0)*pp)))),-1);
-if(!x514.valid){
-continue;
-}
-j0array[0]=((-1.5707963267949)+(x513.value)+(((1.5707963267949)*(x514.value))));
-sj0array[0]=IKsin(j0array[0]);
-cj0array[0]=IKcos(j0array[0]);
-if( j0array[0] > IKPI )
-{
-    j0array[0]-=IK2PI;
-}
-else if( j0array[0] < -IKPI )
-{    j0array[0]+=IK2PI;
-}
-j0valid[0] = true;
-for(int ij0 = 0; ij0 < 1; ++ij0)
-{
-if( !j0valid[ij0] )
-{
-    continue;
-}
-_ij0[0] = ij0; _ij0[1] = -1;
-for(int iij0 = ij0+1; iij0 < 1; ++iij0)
-{
-if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRESH && IKabs(sj0array[ij0]-sj0array[iij0]) < IKFAST_SOLUTION_THRESH )
-{
-    j0valid[iij0]=false; _ij0[1] = iij0; break; 
-}
-}
-j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
-{
-IkReal evalcond[3];
-IkReal x515=IKsin(j0);
-IkReal x516=IKcos(j0);
-IkReal x517=((1.0)*x516);
-IkReal x518=(py*x515);
-evalcond[0]=((0.1501)+((px*x515))+(((-1.0)*py*x517)));
-evalcond[1]=((0.02406647)+(((0.8636)*px*x516))+(((-1.0)*pp))+(((0.8636)*x518)));
-evalcond[2]=((0.4318)+(((-1.0)*px*x517))+(((-1.0)*x518))+(((0.43405148926345)*sj2))+(((-0.0468713922881552)*pz)));
+IkReal x502=IKsin(j0);
+IkReal x503=IKcos(j0);
+IkReal x504=((1.0)*x503);
+IkReal x505=(py*x502);
+evalcond[0]=((0.1501)+(((-1.0)*py*x504))+((px*x502)));
+evalcond[1]=((0.02406647)+(((0.8636)*px*x503))+(((0.8636)*x505))+(((-1.0)*pp)));
+evalcond[2]=((0.4318)+(((0.43405148926345)*sj2))+(((-0.0468713922881552)*pz))+(((-1.0)*x505))+(((-1.0)*px*x504)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -1253,13 +1239,13 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x519=((0.0203)*sj2);
-IkReal x520=((0.4331)*cj2);
-IkReal x521=(x520+x519);
+IkReal x506=((0.0203)*sj2);
+IkReal x507=((0.4331)*cj2);
+IkReal x508=(x506+x507);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-3.14159265358979)+j1)))), 6.28318530717959)));
 evalcond[1]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*pp))+(((0.37402516)*sj2)));
-evalcond[2]=((((-1.0)*x521))+(((-1.0)*pz)));
-evalcond[3]=(pz+x521);
+evalcond[2]=((((-1.0)*x508))+(((-1.0)*pz)));
+evalcond[3]=(pz+x508);
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -1268,11 +1254,11 @@ IkReal j0eval[3];
 sj1=0;
 cj1=-1.0;
 j1=3.14159265358979;
-IkReal x522=pz*pz;
-IkReal x523=((25000000.0)*pp);
-j0eval[0]=((((-1.0)*x522))+pp);
-j0eval[1]=((IKabs(((((-1.0)*px*x523))+(((601661.75)*px))+(((3240659.0)*py)))))+(IKabs(((((-3240659.0)*px))+(((601661.75)*py))+(((-1.0)*py*x523))))));
-j0eval[2]=IKsign(((((21590000.0)*pp))+(((-21590000.0)*x522))));
+IkReal x509=pz*pz;
+IkReal x510=((25000000.0)*pp);
+j0eval[0]=(pp+(((-1.0)*x509)));
+j0eval[1]=((IKabs(((((-1.0)*px*x510))+(((601661.75)*px))+(((3240659.0)*py)))))+(IKabs(((((-3240659.0)*px))+(((601661.75)*py))+(((-1.0)*py*x510))))));
+j0eval[2]=IKsign(((((-21590000.0)*x509))+(((21590000.0)*pp))));
 if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
 {
 {
@@ -1280,12 +1266,12 @@ IkReal j0eval[3];
 sj1=0;
 cj1=-1.0;
 j1=3.14159265358979;
-IkReal x524=pz*pz;
-IkReal x525=((4340.5148926345)*sj2);
-IkReal x526=((468.713922881552)*pz);
-j0eval[0]=((((-1.0)*pp))+x524);
-j0eval[1]=((IKabs((((px*x526))+((px*x525))+(((4318.0)*px))+(((-1501.0)*py)))))+(IKabs(((((1501.0)*px))+(((4318.0)*py))+((py*x526))+((py*x525))))));
-j0eval[2]=IKsign(((((-10000.0)*pp))+(((10000.0)*x524))));
+IkReal x511=pz*pz;
+IkReal x512=((4340.5148926345)*sj2);
+IkReal x513=((468.713922881552)*pz);
+j0eval[0]=((((-1.0)*pp))+x511);
+j0eval[1]=((IKabs((((px*x512))+((px*x513))+(((4318.0)*px))+(((-1501.0)*py)))))+(IKabs(((((1501.0)*px))+((py*x512))+((py*x513))+(((4318.0)*py))))));
+j0eval[2]=IKsign(((((10000.0)*x511))+(((-10000.0)*pp))));
 if( IKabs(j0eval[0]) < 0.0000010000000000  || IKabs(j0eval[1]) < 0.0000010000000000  || IKabs(j0eval[2]) < 0.0000010000000000  )
 {
 {
@@ -1293,14 +1279,14 @@ IkReal evalcond[5];
 bool bgotonextstatement = true;
 do
 {
-IkReal x527=((0.43405148926345)*sj2);
-IkReal x528=((0.0468713922881552)*pz);
-IkReal x529=(x527+x528);
+IkReal x514=((0.43405148926345)*sj2);
+IkReal x515=((0.0468713922881552)*pz);
+IkReal x516=(x515+x514);
 evalcond[0]=((IKabs(px))+(IKabs(py)));
 evalcond[1]=0.1501;
 evalcond[2]=((0.02406647)+(((-1.0)*pp)));
-evalcond[3]=((0.4318)+x529);
-evalcond[4]=((-0.4318)+(((-1.0)*x529)));
+evalcond[3]=((0.4318)+x516);
+evalcond[4]=((-0.4318)+(((-1.0)*x516)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -1398,17 +1384,17 @@ if( bgotonextstatement )
 IkReal j0array[1], cj0array[1], sj0array[1];
 bool j0valid[1]={false};
 _nj0 = 1;
-IkReal x530=((4340.5148926345)*sj2);
-IkReal x531=((468.713922881552)*pz);
-CheckValue<IkReal> x532=IKPowWithIntegerCheck(IKsign(((((10000.0)*(pz*pz)))+(((-10000.0)*pp)))),-1);
-if(!x532.valid){
+IkReal x517=((4340.5148926345)*sj2);
+IkReal x518=((468.713922881552)*pz);
+CheckValue<IkReal> x519 = IKatan2WithCheck(IkReal(((((1501.0)*px))+((py*x517))+((py*x518))+(((4318.0)*py)))),(((px*x517))+((px*x518))+(((4318.0)*px))+(((-1501.0)*py))),IKFAST_ATAN2_MAGTHRESH);
+if(!x519.valid){
 continue;
 }
-CheckValue<IkReal> x533 = IKatan2WithCheck(IkReal(((((1501.0)*px))+(((4318.0)*py))+((py*x530))+((py*x531)))),(((px*x531))+((px*x530))+(((4318.0)*px))+(((-1501.0)*py))),IKFAST_ATAN2_MAGTHRESH);
-if(!x533.valid){
+CheckValue<IkReal> x520=IKPowWithIntegerCheck(IKsign(((((10000.0)*(pz*pz)))+(((-10000.0)*pp)))),-1);
+if(!x520.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(((1.5707963267949)*(x532.value)))+(x533.value));
+j0array[0]=((-1.5707963267949)+(x519.value)+(((1.5707963267949)*(x520.value))));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -1436,13 +1422,13 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[3];
-IkReal x534=IKsin(j0);
-IkReal x535=IKcos(j0);
-IkReal x536=(px*x535);
-IkReal x537=(py*x534);
-evalcond[0]=((0.1501)+(((-1.0)*py*x535))+((px*x534)));
-evalcond[1]=((0.02406647)+(((-0.8636)*x536))+(((-0.8636)*x537))+(((-1.0)*pp)));
-evalcond[2]=((0.4318)+(((0.43405148926345)*sj2))+(((0.0468713922881552)*pz))+x537+x536);
+IkReal x521=IKsin(j0);
+IkReal x522=IKcos(j0);
+IkReal x523=(px*x522);
+IkReal x524=(py*x521);
+evalcond[0]=((0.1501)+(((-1.0)*py*x522))+((px*x521)));
+evalcond[1]=((0.02406647)+(((-0.8636)*x523))+(((-0.8636)*x524))+(((-1.0)*pp)));
+evalcond[2]=((0.4318)+(((0.43405148926345)*sj2))+(((0.0468713922881552)*pz))+x523+x524);
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -1463,16 +1449,16 @@ rotationfunction0(solutions);
 IkReal j0array[1], cj0array[1], sj0array[1];
 bool j0valid[1]={false};
 _nj0 = 1;
-IkReal x538=((25000000.0)*pp);
-CheckValue<IkReal> x539 = IKatan2WithCheck(IkReal(((((-3240659.0)*px))+(((601661.75)*py))+(((-1.0)*py*x538)))),((((-1.0)*px*x538))+(((601661.75)*px))+(((3240659.0)*py))),IKFAST_ATAN2_MAGTHRESH);
-if(!x539.valid){
+IkReal x525=((25000000.0)*pp);
+CheckValue<IkReal> x526=IKPowWithIntegerCheck(IKsign(((((-21590000.0)*(pz*pz)))+(((21590000.0)*pp)))),-1);
+if(!x526.valid){
 continue;
 }
-CheckValue<IkReal> x540=IKPowWithIntegerCheck(IKsign(((((-21590000.0)*(pz*pz)))+(((21590000.0)*pp)))),-1);
-if(!x540.valid){
+CheckValue<IkReal> x527 = IKatan2WithCheck(IkReal(((((-3240659.0)*px))+(((601661.75)*py))+(((-1.0)*py*x525)))),((((-1.0)*px*x525))+(((601661.75)*px))+(((3240659.0)*py))),IKFAST_ATAN2_MAGTHRESH);
+if(!x527.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(x539.value)+(((1.5707963267949)*(x540.value))));
+j0array[0]=((-1.5707963267949)+(((1.5707963267949)*(x526.value)))+(x527.value));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -1500,13 +1486,13 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[3];
-IkReal x541=IKsin(j0);
-IkReal x542=IKcos(j0);
-IkReal x543=(px*x542);
-IkReal x544=(py*x541);
-evalcond[0]=((0.1501)+(((-1.0)*py*x542))+((px*x541)));
-evalcond[1]=((0.02406647)+(((-0.8636)*x544))+(((-0.8636)*x543))+(((-1.0)*pp)));
-evalcond[2]=((0.4318)+(((0.43405148926345)*sj2))+(((0.0468713922881552)*pz))+x544+x543);
+IkReal x528=IKsin(j0);
+IkReal x529=IKcos(j0);
+IkReal x530=(px*x529);
+IkReal x531=(py*x528);
+evalcond[0]=((0.1501)+(((-1.0)*py*x529))+((px*x528)));
+evalcond[1]=((0.02406647)+(((-0.8636)*x530))+(((-0.8636)*x531))+(((-1.0)*pp)));
+evalcond[2]=((0.4318)+(((0.43405148926345)*sj2))+(((0.0468713922881552)*pz))+x531+x530);
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -1528,20 +1514,20 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x545=((1.0)*pp);
-IkReal x546=((0.4331)*cj2);
-IkReal x547=((0.4331)*sj2);
-IkReal x548=((0.0203)*cj2);
-IkReal x549=((0.0203)*sj2);
-IkReal x550=(pz*sj1);
+IkReal x532=((1.0)*pp);
+IkReal x533=((0.4331)*cj2);
+IkReal x534=((0.4331)*sj2);
+IkReal x535=((0.0203)*cj2);
+IkReal x536=((0.0203)*sj2);
+IkReal x537=(pz*sj1);
 evalcond[0]=((IKabs(px))+(IKabs(py)));
 evalcond[1]=0.1501;
-evalcond[2]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*x545))+(((0.37402516)*sj2)));
-evalcond[3]=((0.02406647)+(((-0.8636)*x550))+(((-1.0)*x545)));
-evalcond[4]=((((-1.0)*x546))+(((-1.0)*x549))+((cj1*pz)));
-evalcond[5]=((0.4318)+(((-1.0)*x548))+x550+x547);
-evalcond[6]=(((sj1*x547))+(((-1.0)*cj1*x546))+(((-1.0)*cj1*x549))+(((-1.0)*sj1*x548))+pz+(((0.4318)*sj1)));
-evalcond[7]=((((0.4318)*cj1))+((sj1*x549))+((sj1*x546))+(((-1.0)*cj1*x548))+((cj1*x547)));
+evalcond[2]=((0.39696895)+(((-0.01753108)*cj2))+(((-1.0)*x532))+(((0.37402516)*sj2)));
+evalcond[3]=((0.02406647)+(((-0.8636)*x537))+(((-1.0)*x532)));
+evalcond[4]=((((-1.0)*x536))+(((-1.0)*x533))+((cj1*pz)));
+evalcond[5]=((0.4318)+(((-1.0)*x535))+x534+x537);
+evalcond[6]=((((-1.0)*sj1*x535))+((sj1*x534))+(((-1.0)*cj1*x533))+(((-1.0)*cj1*x536))+pz+(((0.4318)*sj1)));
+evalcond[7]=((((0.4318)*cj1))+((sj1*x536))+((sj1*x533))+(((-1.0)*cj1*x535))+((cj1*x534)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -1643,20 +1629,20 @@ if( bgotonextstatement )
 IkReal j0array[1], cj0array[1], sj0array[1];
 bool j0valid[1]={false};
 _nj0 = 1;
-IkReal x551=((203.0)*cj2);
-IkReal x552=((1501.0)*cj1);
-IkReal x553=((4331.0)*sj2);
-IkReal x554=((10000.0)*cj1);
-IkReal x555=((10000.0)*pz*sj1);
-CheckValue<IkReal> x556=IKPowWithIntegerCheck(IKsign((((pp*x554))+(((-1.0)*x554*(pz*pz))))),-1);
-if(!x556.valid){
+IkReal x538=((203.0)*cj2);
+IkReal x539=((1501.0)*cj1);
+IkReal x540=((4331.0)*sj2);
+IkReal x541=((10000.0)*cj1);
+IkReal x542=((10000.0)*pz*sj1);
+CheckValue<IkReal> x543 = IKatan2WithCheck(IkReal((((py*x540))+((py*x542))+(((-1.0)*px*x539))+(((-1.0)*py*x538))+(((4318.0)*py)))),((((-1.0)*px*x538))+((px*x542))+((px*x540))+(((4318.0)*px))+((py*x539))),IKFAST_ATAN2_MAGTHRESH);
+if(!x543.valid){
 continue;
 }
-CheckValue<IkReal> x557 = IKatan2WithCheck(IkReal((((py*x553))+((py*x555))+(((-1.0)*px*x552))+(((4318.0)*py))+(((-1.0)*py*x551)))),(((py*x552))+((px*x553))+((px*x555))+(((-1.0)*px*x551))+(((4318.0)*px))),IKFAST_ATAN2_MAGTHRESH);
-if(!x557.valid){
+CheckValue<IkReal> x544=IKPowWithIntegerCheck(IKsign((((pp*x541))+(((-1.0)*x541*(pz*pz))))),-1);
+if(!x544.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(((1.5707963267949)*(x556.value)))+(x557.value));
+j0array[0]=((-1.5707963267949)+(x543.value)+(((1.5707963267949)*(x544.value))));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -1684,22 +1670,22 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[5];
-IkReal x558=IKcos(j0);
-IkReal x559=IKsin(j0);
-IkReal x560=((0.4331)*sj2);
-IkReal x561=((0.4331)*cj2);
-IkReal x562=(pz*sj1);
-IkReal x563=((0.0203)*cj2);
-IkReal x564=((0.8636)*cj1);
-IkReal x565=((1.0)*cj1);
-IkReal x566=((0.0203)*sj2);
-IkReal x567=(px*x558);
-IkReal x568=(py*x559);
-evalcond[0]=((0.1501)+(((-1.0)*py*x558))+((px*x559)));
-evalcond[1]=(((cj1*pz))+((sj1*x567))+((sj1*x568))+(((-1.0)*x566))+(((-1.0)*x561)));
-evalcond[2]=((0.02406647)+((x564*x567))+((x564*x568))+(((-1.0)*pp))+(((-0.8636)*x562)));
-evalcond[3]=((0.4318)+x562+x560+(((-1.0)*x563))+(((-1.0)*x565*x567))+(((-1.0)*x565*x568)));
-evalcond[4]=(((cj1*x560))+(((0.4318)*cj1))+(((-1.0)*cj1*x563))+((sj1*x561))+((sj1*x566))+(((-1.0)*x567))+(((-1.0)*x568)));
+IkReal x545=IKcos(j0);
+IkReal x546=IKsin(j0);
+IkReal x547=((0.4331)*sj2);
+IkReal x548=((0.4331)*cj2);
+IkReal x549=(pz*sj1);
+IkReal x550=((0.0203)*cj2);
+IkReal x551=((0.8636)*cj1);
+IkReal x552=((1.0)*cj1);
+IkReal x553=((0.0203)*sj2);
+IkReal x554=(px*x545);
+IkReal x555=(py*x546);
+evalcond[0]=((0.1501)+(((-1.0)*py*x545))+((px*x546)));
+evalcond[1]=(((sj1*x554))+((sj1*x555))+(((-1.0)*x548))+((cj1*pz))+(((-1.0)*x553)));
+evalcond[2]=((0.02406647)+(((-0.8636)*x549))+(((-1.0)*pp))+((x551*x554))+((x551*x555)));
+evalcond[3]=((0.4318)+(((-1.0)*x550))+(((-1.0)*x552*x554))+(((-1.0)*x552*x555))+x547+x549);
+evalcond[4]=(((sj1*x553))+(((-1.0)*x555))+(((-1.0)*x554))+(((0.4318)*cj1))+((sj1*x548))+(((-1.0)*cj1*x550))+((cj1*x547)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -1720,20 +1706,20 @@ rotationfunction0(solutions);
 IkReal j0array[1], cj0array[1], sj0array[1];
 bool j0valid[1]={false};
 _nj0 = 1;
-IkReal x569=((203.0)*sj2);
-IkReal x570=((4331.0)*cj2);
-IkReal x571=((10000.0)*sj1);
-IkReal x572=((1501.0)*sj1);
-IkReal x573=((10000.0)*cj1*pz);
-CheckValue<IkReal> x574 = IKatan2WithCheck(IkReal(((((-1.0)*px*x572))+((py*x570))+(((-1.0)*py*x573))+((py*x569)))),((((-1.0)*px*x573))+((py*x572))+((px*x570))+((px*x569))),IKFAST_ATAN2_MAGTHRESH);
-if(!x574.valid){
+IkReal x556=((203.0)*sj2);
+IkReal x557=((4331.0)*cj2);
+IkReal x558=((10000.0)*sj1);
+IkReal x559=((1501.0)*sj1);
+IkReal x560=((10000.0)*cj1*pz);
+CheckValue<IkReal> x561=IKPowWithIntegerCheck(IKsign((((pp*x558))+(((-1.0)*x558*(pz*pz))))),-1);
+if(!x561.valid){
 continue;
 }
-CheckValue<IkReal> x575=IKPowWithIntegerCheck(IKsign(((((-1.0)*x571*(pz*pz)))+((pp*x571)))),-1);
-if(!x575.valid){
+CheckValue<IkReal> x562 = IKatan2WithCheck(IkReal((((py*x557))+((py*x556))+(((-1.0)*py*x560))+(((-1.0)*px*x559)))),(((py*x559))+((px*x557))+((px*x556))+(((-1.0)*px*x560))),IKFAST_ATAN2_MAGTHRESH);
+if(!x562.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(x574.value)+(((1.5707963267949)*(x575.value))));
+j0array[0]=((-1.5707963267949)+(((1.5707963267949)*(x561.value)))+(x562.value));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -1761,22 +1747,22 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[5];
-IkReal x576=IKcos(j0);
-IkReal x577=IKsin(j0);
-IkReal x578=((0.4331)*sj2);
-IkReal x579=((0.4331)*cj2);
-IkReal x580=(pz*sj1);
-IkReal x581=((0.0203)*cj2);
-IkReal x582=((0.8636)*cj1);
-IkReal x583=((1.0)*cj1);
-IkReal x584=((0.0203)*sj2);
-IkReal x585=(px*x576);
-IkReal x586=(py*x577);
-evalcond[0]=((0.1501)+((px*x577))+(((-1.0)*py*x576)));
-evalcond[1]=(((sj1*x586))+((sj1*x585))+((cj1*pz))+(((-1.0)*x579))+(((-1.0)*x584)));
-evalcond[2]=((0.02406647)+((x582*x585))+((x582*x586))+(((-1.0)*pp))+(((-0.8636)*x580)));
-evalcond[3]=((0.4318)+(((-1.0)*x583*x585))+(((-1.0)*x583*x586))+x578+x580+(((-1.0)*x581)));
-evalcond[4]=((((-1.0)*x585))+(((-1.0)*x586))+((sj1*x579))+(((0.4318)*cj1))+((sj1*x584))+(((-1.0)*cj1*x581))+((cj1*x578)));
+IkReal x563=IKcos(j0);
+IkReal x564=IKsin(j0);
+IkReal x565=((0.4331)*sj2);
+IkReal x566=((0.4331)*cj2);
+IkReal x567=(pz*sj1);
+IkReal x568=((0.0203)*cj2);
+IkReal x569=((0.8636)*cj1);
+IkReal x570=((1.0)*cj1);
+IkReal x571=((0.0203)*sj2);
+IkReal x572=(px*x563);
+IkReal x573=(py*x564);
+evalcond[0]=((0.1501)+(((-1.0)*py*x563))+((px*x564)));
+evalcond[1]=(((sj1*x572))+((sj1*x573))+((cj1*pz))+(((-1.0)*x571))+(((-1.0)*x566)));
+evalcond[2]=((0.02406647)+(((-1.0)*pp))+((x569*x573))+((x569*x572))+(((-0.8636)*x567)));
+evalcond[3]=((0.4318)+(((-1.0)*x570*x573))+(((-1.0)*x570*x572))+x567+x565+(((-1.0)*x568)));
+evalcond[4]=(((cj1*x565))+((sj1*x571))+(((0.4318)*cj1))+(((-1.0)*x572))+(((-1.0)*x573))+(((-1.0)*cj1*x568))+((sj1*x566)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -1797,19 +1783,19 @@ rotationfunction0(solutions);
 IkReal j0array[1], cj0array[1], sj0array[1];
 bool j0valid[1]={false};
 _nj0 = 1;
-IkReal x587=((25000000.0)*pp);
-IkReal x588=((21590000.0)*cj1);
-IkReal x589=((3240659.0)*cj1);
-IkReal x590=((21590000.0)*pz*sj1);
-CheckValue<IkReal> x591 = IKatan2WithCheck(IkReal((((py*x590))+(((-1.0)*px*x589))+(((-601661.75)*py))+((py*x587)))),(((px*x587))+(((-601661.75)*px))+((px*x590))+((py*x589))),IKFAST_ATAN2_MAGTHRESH);
-if(!x591.valid){
+IkReal x574=((25000000.0)*pp);
+IkReal x575=((21590000.0)*cj1);
+IkReal x576=((3240659.0)*cj1);
+IkReal x577=((21590000.0)*pz*sj1);
+CheckValue<IkReal> x578 = IKatan2WithCheck(IkReal(((((-1.0)*px*x576))+((py*x574))+((py*x577))+(((-601661.75)*py)))),(((py*x576))+((px*x577))+((px*x574))+(((-601661.75)*px))),IKFAST_ATAN2_MAGTHRESH);
+if(!x578.valid){
 continue;
 }
-CheckValue<IkReal> x592=IKPowWithIntegerCheck(IKsign((((pp*x588))+(((-1.0)*x588*(pz*pz))))),-1);
-if(!x592.valid){
+CheckValue<IkReal> x579=IKPowWithIntegerCheck(IKsign(((((-1.0)*x575*(pz*pz)))+((pp*x575)))),-1);
+if(!x579.valid){
 continue;
 }
-j0array[0]=((-1.5707963267949)+(x591.value)+(((1.5707963267949)*(x592.value))));
+j0array[0]=((-1.5707963267949)+(x578.value)+(((1.5707963267949)*(x579.value))));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
 if( j0array[0] > IKPI )
@@ -1837,22 +1823,22 @@ if( j0valid[iij0] && IKabs(cj0array[ij0]-cj0array[iij0]) < IKFAST_SOLUTION_THRES
 j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 {
 IkReal evalcond[5];
-IkReal x593=IKcos(j0);
-IkReal x594=IKsin(j0);
-IkReal x595=((0.4331)*sj2);
-IkReal x596=((0.4331)*cj2);
-IkReal x597=(pz*sj1);
-IkReal x598=((0.0203)*cj2);
-IkReal x599=((0.8636)*cj1);
-IkReal x600=((1.0)*cj1);
-IkReal x601=((0.0203)*sj2);
-IkReal x602=(px*x593);
-IkReal x603=(py*x594);
-evalcond[0]=((0.1501)+((px*x594))+(((-1.0)*py*x593)));
-evalcond[1]=(((sj1*x602))+((sj1*x603))+((cj1*pz))+(((-1.0)*x596))+(((-1.0)*x601)));
-evalcond[2]=((0.02406647)+(((-0.8636)*x597))+(((-1.0)*pp))+((x599*x602))+((x599*x603)));
-evalcond[3]=((0.4318)+(((-1.0)*x598))+(((-1.0)*x600*x602))+(((-1.0)*x600*x603))+x597+x595);
-evalcond[4]=((((0.4318)*cj1))+((sj1*x601))+((cj1*x595))+(((-1.0)*x603))+(((-1.0)*x602))+(((-1.0)*cj1*x598))+((sj1*x596)));
+IkReal x580=IKcos(j0);
+IkReal x581=IKsin(j0);
+IkReal x582=((0.4331)*sj2);
+IkReal x583=((0.4331)*cj2);
+IkReal x584=(pz*sj1);
+IkReal x585=((0.0203)*cj2);
+IkReal x586=((0.8636)*cj1);
+IkReal x587=((1.0)*cj1);
+IkReal x588=((0.0203)*sj2);
+IkReal x589=(px*x580);
+IkReal x590=(py*x581);
+evalcond[0]=((0.1501)+((px*x581))+(((-1.0)*py*x580)));
+evalcond[1]=(((sj1*x589))+((cj1*pz))+((sj1*x590))+(((-1.0)*x588))+(((-1.0)*x583)));
+evalcond[2]=((0.02406647)+((x586*x589))+(((-1.0)*pp))+(((-0.8636)*x584))+((x586*x590)));
+evalcond[3]=((0.4318)+(((-1.0)*x587*x590))+(((-1.0)*x587*x589))+x582+x584+(((-1.0)*x585)));
+evalcond[4]=((((-1.0)*x589))+(((0.4318)*cj1))+((sj1*x588))+((sj1*x583))+(((-1.0)*x590))+(((-1.0)*cj1*x585))+((cj1*x582)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -1879,24 +1865,24 @@ rotationfunction0(solutions);
 IkReal j0array[2], cj0array[2], sj0array[2];
 bool j0valid[2]={false};
 _nj0 = 2;
-CheckValue<IkReal> x606 = IKatan2WithCheck(IkReal(((-1.0)*py)),px,IKFAST_ATAN2_MAGTHRESH);
-if(!x606.valid){
+CheckValue<IkReal> x593 = IKatan2WithCheck(IkReal(((-1.0)*py)),px,IKFAST_ATAN2_MAGTHRESH);
+if(!x593.valid){
 continue;
 }
-IkReal x604=((1.0)*(x606.value));
+IkReal x591=((1.0)*(x593.value));
 if((((px*px)+(py*py))) < -0.00001)
 continue;
-CheckValue<IkReal> x607=IKPowWithIntegerCheck(IKabs(IKsqrt(((px*px)+(py*py)))),-1);
-if(!x607.valid){
+CheckValue<IkReal> x594=IKPowWithIntegerCheck(IKabs(IKsqrt(((px*px)+(py*py)))),-1);
+if(!x594.valid){
 continue;
 }
-if( (((0.1501)*(x607.value))) < -1-IKFAST_SINCOS_THRESH || (((0.1501)*(x607.value))) > 1+IKFAST_SINCOS_THRESH )
+if( (((0.1501)*(x594.value))) < -1-IKFAST_SINCOS_THRESH || (((0.1501)*(x594.value))) > 1+IKFAST_SINCOS_THRESH )
     continue;
-IkReal x605=IKasin(((0.1501)*(x607.value)));
-j0array[0]=((((-1.0)*x605))+(((-1.0)*x604)));
+IkReal x592=IKasin(((0.1501)*(x594.value)));
+j0array[0]=((((-1.0)*x592))+(((-1.0)*x591)));
 sj0array[0]=IKsin(j0array[0]);
 cj0array[0]=IKcos(j0array[0]);
-j0array[1]=((3.14159265358979)+x605+(((-1.0)*x604)));
+j0array[1]=((3.14159265358979)+(((-1.0)*x591))+x592);
 sj0array[1]=IKsin(j0array[1]);
 cj0array[1]=IKcos(j0array[1]);
 if( j0array[0] > IKPI )
@@ -1933,53 +1919,53 @@ j0 = j0array[ij0]; cj0 = cj0array[ij0]; sj0 = sj0array[ij0];
 
 {
 IkReal j1eval[3];
-IkReal x608=cj2*cj2;
-IkReal x609=(cj2*sj2);
-IkReal x610=(py*sj0);
-IkReal x611=(pz*sj2);
-IkReal x612=((1.0)*pz);
-IkReal x613=(cj2*pz);
-IkReal x614=(cj0*cj2*px);
-IkReal x615=(cj0*px*sj2);
-j1eval[0]=((((-1.0)*sj2*x610))+(((-1.0)*x615))+(((-21.3349753694581)*x614))+(((-21.3349753694581)*x611))+x613+(((-21.3349753694581)*cj2*x610))+(((-21.2709359605911)*pz)));
-j1eval[1]=IKsign(((((-0.0203)*sj2*x610))+(((-0.4331)*cj2*x610))+(((0.0203)*x613))+(((-0.4331)*x611))+(((-0.4331)*x614))+(((-0.0203)*x615))+(((-0.4318)*pz))));
-j1eval[2]=((IKabs(((-0.00041209)+(((-0.18716352)*x608))+(pz*pz)+(((-0.01758386)*x609)))))+(IKabs(((-0.00879193)+(((-0.00876554)*sj2))+(((-0.18701258)*cj2))+(((-1.0)*x610*x612))+(((-0.18716352)*x609))+(((-1.0)*cj0*px*x612))+(((0.01758386)*x608))))));
+IkReal x595=cj2*cj2;
+IkReal x596=(cj2*sj2);
+IkReal x597=(py*sj0);
+IkReal x598=(pz*sj2);
+IkReal x599=((1.0)*pz);
+IkReal x600=(cj2*pz);
+IkReal x601=(cj0*cj2*px);
+IkReal x602=(cj0*px*sj2);
+j1eval[0]=((((-21.3349753694581)*cj2*x597))+(((-1.0)*sj2*x597))+(((-1.0)*x602))+(((-21.3349753694581)*x598))+x600+(((-21.3349753694581)*x601))+(((-21.2709359605911)*pz)));
+j1eval[1]=IKsign(((((-0.4331)*x598))+(((0.0203)*x600))+(((-0.0203)*x602))+(((-0.4331)*x601))+(((-0.0203)*sj2*x597))+(((-0.4331)*cj2*x597))+(((-0.4318)*pz))));
+j1eval[2]=((IKabs(((-0.00879193)+(((-0.00876554)*sj2))+(((-0.18701258)*cj2))+(((-1.0)*x597*x599))+(((0.01758386)*x595))+(((-1.0)*cj0*px*x599))+(((-0.18716352)*x596)))))+(IKabs(((-0.00041209)+(((-0.01758386)*x596))+(pz*pz)+(((-0.18716352)*x595))))));
 if( IKabs(j1eval[0]) < 0.0000010000000000  || IKabs(j1eval[1]) < 0.0000010000000000  || IKabs(j1eval[2]) < 0.0000010000000000  )
 {
 {
 IkReal j1eval[3];
-IkReal x616=(cj2*pz);
-IkReal x617=(py*sj0);
-IkReal x618=((935.0629)*sj2);
-IkReal x619=((1.0)*cj2);
-IkReal x620=((21.3349753694581)*sj2);
-IkReal x621=(cj0*px);
-IkReal x622=((1082.75)*pp);
-IkReal x623=(pz*sj2);
-IkReal x624=((43.8277)*cj2);
-IkReal x625=((50.75)*pp);
-IkReal x626=((2159.0)*pz);
-j1eval[0]=(((x617*x620))+(((-1.0)*x617*x619))+(((-21.3349753694581)*x616))+(((-1.0)*x619*x621))+(((-1.0)*x623))+(((21.2709359605911)*x621))+(((21.2709359605911)*x617))+((x620*x621)));
-j1eval[1]=IKsign(((((-1.0)*x621*x624))+(((932.2562)*x617))+((x618*x621))+(((932.2562)*x621))+(((-1.0)*x617*x624))+(((-43.8277)*x623))+((x617*x618))+(((-935.0629)*x616))));
-j1eval[2]=((IKabs(((-25.979754365)+(((-1.0)*pz*x626))+(((1079.5)*pp))+((sj2*x622))+(((-26.0579703925)*sj2))+(((1.2213733525)*cj2))+(((-1.0)*cj2*x625)))))+(IKabs(((((-1.0)*x621*x626))+((sj2*x625))+(((-1.0)*x617*x626))+(((-1.2213733525)*sj2))+(((-26.0579703925)*cj2))+((cj2*x622))))));
+IkReal x603=(cj2*pz);
+IkReal x604=(py*sj0);
+IkReal x605=((935.0629)*sj2);
+IkReal x606=((1.0)*cj2);
+IkReal x607=((21.3349753694581)*sj2);
+IkReal x608=(cj0*px);
+IkReal x609=((1082.75)*pp);
+IkReal x610=(pz*sj2);
+IkReal x611=((43.8277)*cj2);
+IkReal x612=((50.75)*pp);
+IkReal x613=((2159.0)*pz);
+j1eval[0]=((((21.2709359605911)*x608))+(((21.2709359605911)*x604))+((x604*x607))+(((-1.0)*x604*x606))+(((-1.0)*x610))+((x607*x608))+(((-1.0)*x606*x608))+(((-21.3349753694581)*x603)));
+j1eval[1]=IKsign((((x605*x608))+(((932.2562)*x604))+(((932.2562)*x608))+((x604*x605))+(((-43.8277)*x610))+(((-1.0)*x604*x611))+(((-935.0629)*x603))+(((-1.0)*x608*x611))));
+j1eval[2]=((IKabs(((-25.979754365)+(((-1.0)*cj2*x612))+(((1079.5)*pp))+(((-26.0579703925)*sj2))+(((-1.0)*pz*x613))+(((1.2213733525)*cj2))+((sj2*x609)))))+(IKabs((((cj2*x609))+(((-1.0)*x604*x613))+(((-1.2213733525)*sj2))+(((-26.0579703925)*cj2))+((sj2*x612))+(((-1.0)*x608*x613))))));
 if( IKabs(j1eval[0]) < 0.0000010000000000  || IKabs(j1eval[1]) < 0.0000010000000000  || IKabs(j1eval[2]) < 0.0000010000000000  )
 {
 {
 IkReal j1eval[3];
-IkReal x627=cj0*cj0;
-IkReal x628=py*py;
-IkReal x629=pz*pz;
-IkReal x630=px*px;
-IkReal x631=((935.0629)*cj2);
-IkReal x632=(py*sj0);
-IkReal x633=((43.8277)*sj2);
-IkReal x634=((2500.0)*pp);
-IkReal x635=(cj0*px);
-IkReal x636=(x627*x628);
-IkReal x637=(x627*x630);
-j1eval[0]=((((2.0)*x632*x635))+x629+x628+x637+(((-1.0)*x636)));
-j1eval[1]=((IKabs(((((-1.0)*pz*x634))+(((60.166175)*pz))+((x632*x633))+((x631*x632))+((x631*x635))+((x633*x635)))))+(IKabs((((x634*x635))+((pz*x631))+((pz*x633))+(((-60.166175)*x635))+(((-60.166175)*x632))+((x632*x634))))));
-j1eval[2]=IKsign(((((2159.0)*x628))+(((2159.0)*x629))+(((2159.0)*x637))+(((-2159.0)*x636))+(((4318.0)*x632*x635))));
+IkReal x614=cj0*cj0;
+IkReal x615=py*py;
+IkReal x616=pz*pz;
+IkReal x617=px*px;
+IkReal x618=((935.0629)*cj2);
+IkReal x619=(py*sj0);
+IkReal x620=((43.8277)*sj2);
+IkReal x621=((2500.0)*pp);
+IkReal x622=(cj0*px);
+IkReal x623=(x614*x615);
+IkReal x624=(x614*x617);
+j1eval[0]=((((2.0)*x619*x622))+x615+x616+x624+(((-1.0)*x623)));
+j1eval[1]=((IKabs(((((-1.0)*pz*x621))+(((60.166175)*pz))+((x619*x620))+((x618*x622))+((x618*x619))+((x620*x622)))))+(IKabs((((pz*x620))+((x619*x621))+(((-60.166175)*x619))+((pz*x618))+(((-60.166175)*x622))+((x621*x622))))));
+j1eval[2]=IKsign(((((2159.0)*x616))+(((2159.0)*x615))+(((2159.0)*x624))+(((-2159.0)*x623))+(((4318.0)*x619*x622))));
 if( IKabs(j1eval[0]) < 0.0000010000000000  || IKabs(j1eval[1]) < 0.0000010000000000  || IKabs(j1eval[2]) < 0.0000010000000000  )
 {
 continue; // no branches [j1]
@@ -1990,67 +1976,67 @@ continue; // no branches [j1]
 IkReal j1array[1], cj1array[1], sj1array[1];
 bool j1valid[1]={false};
 _nj1 = 1;
-IkReal x638=cj0*cj0;
-IkReal x639=py*py;
+IkReal x625=cj0*cj0;
+IkReal x626=py*py;
+IkReal x627=(py*sj0);
+IkReal x628=((43.8277)*sj2);
+IkReal x629=((935.0629)*cj2);
+IkReal x630=(cj0*px);
+IkReal x631=((2500.0)*pp);
+IkReal x632=((2159.0)*x626);
+CheckValue<IkReal> x633=IKPowWithIntegerCheck(IKsign(((((2159.0)*(pz*pz)))+(((2159.0)*x625*(px*px)))+(((4318.0)*x627*x630))+x632+(((-1.0)*x625*x632)))),-1);
+if(!x633.valid){
+continue;
+}
+CheckValue<IkReal> x634 = IKatan2WithCheck(IkReal(((((-1.0)*pz*x631))+(((60.166175)*pz))+((x628*x630))+((x629*x630))+((x627*x629))+((x627*x628)))),(((pz*x628))+((pz*x629))+(((-60.166175)*x627))+(((-60.166175)*x630))+((x627*x631))+((x630*x631))),IKFAST_ATAN2_MAGTHRESH);
+if(!x634.valid){
+continue;
+}
+j1array[0]=((-1.5707963267949)+(((1.5707963267949)*(x633.value)))+(x634.value));
+sj1array[0]=IKsin(j1array[0]);
+cj1array[0]=IKcos(j1array[0]);
+if( j1array[0] > IKPI )
+{
+    j1array[0]-=IK2PI;
+}
+else if( j1array[0] < -IKPI )
+{    j1array[0]+=IK2PI;
+}
+j1valid[0] = true;
+for(int ij1 = 0; ij1 < 1; ++ij1)
+{
+if( !j1valid[ij1] )
+{
+    continue;
+}
+_ij1[0] = ij1; _ij1[1] = -1;
+for(int iij1 = ij1+1; iij1 < 1; ++iij1)
+{
+if( j1valid[iij1] && IKabs(cj1array[ij1]-cj1array[iij1]) < IKFAST_SOLUTION_THRESH && IKabs(sj1array[ij1]-sj1array[iij1]) < IKFAST_SOLUTION_THRESH )
+{
+    j1valid[iij1]=false; _ij1[1] = iij1; break; 
+}
+}
+j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
+{
+IkReal evalcond[5];
+IkReal x635=IKsin(j1);
+IkReal x636=IKcos(j1);
+IkReal x637=((0.4331)*sj2);
+IkReal x638=(cj0*px);
+IkReal x639=((0.4331)*cj2);
 IkReal x640=(py*sj0);
-IkReal x641=((43.8277)*sj2);
-IkReal x642=((935.0629)*cj2);
-IkReal x643=(cj0*px);
-IkReal x644=((2500.0)*pp);
-IkReal x645=((2159.0)*x639);
-CheckValue<IkReal> x646 = IKatan2WithCheck(IkReal(((((60.166175)*pz))+((x640*x642))+((x640*x641))+((x641*x643))+(((-1.0)*pz*x644))+((x642*x643)))),(((x643*x644))+(((-60.166175)*x643))+(((-60.166175)*x640))+((x640*x644))+((pz*x641))+((pz*x642))),IKFAST_ATAN2_MAGTHRESH);
-if(!x646.valid){
-continue;
-}
-CheckValue<IkReal> x647=IKPowWithIntegerCheck(IKsign(((((4318.0)*x640*x643))+(((2159.0)*(pz*pz)))+(((2159.0)*x638*(px*px)))+x645+(((-1.0)*x638*x645)))),-1);
-if(!x647.valid){
-continue;
-}
-j1array[0]=((-1.5707963267949)+(x646.value)+(((1.5707963267949)*(x647.value))));
-sj1array[0]=IKsin(j1array[0]);
-cj1array[0]=IKcos(j1array[0]);
-if( j1array[0] > IKPI )
-{
-    j1array[0]-=IK2PI;
-}
-else if( j1array[0] < -IKPI )
-{    j1array[0]+=IK2PI;
-}
-j1valid[0] = true;
-for(int ij1 = 0; ij1 < 1; ++ij1)
-{
-if( !j1valid[ij1] )
-{
-    continue;
-}
-_ij1[0] = ij1; _ij1[1] = -1;
-for(int iij1 = ij1+1; iij1 < 1; ++iij1)
-{
-if( j1valid[iij1] && IKabs(cj1array[ij1]-cj1array[iij1]) < IKFAST_SOLUTION_THRESH && IKabs(sj1array[ij1]-sj1array[iij1]) < IKFAST_SOLUTION_THRESH )
-{
-    j1valid[iij1]=false; _ij1[1] = iij1; break; 
-}
-}
-j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
-{
-IkReal evalcond[5];
-IkReal x648=IKsin(j1);
-IkReal x649=IKcos(j1);
-IkReal x650=((0.4331)*sj2);
-IkReal x651=(cj0*px);
-IkReal x652=((0.4331)*cj2);
-IkReal x653=(py*sj0);
-IkReal x654=((0.0203)*cj2);
-IkReal x655=((0.0203)*sj2);
-IkReal x656=((1.0)*x649);
-IkReal x657=((0.0203)*x648);
-IkReal x658=(pz*x648);
-IkReal x659=((0.8636)*x649);
-evalcond[0]=(((x648*x653))+((x648*x651))+(((-1.0)*x655))+(((-1.0)*x652))+((pz*x649)));
-evalcond[1]=((0.02406647)+(((-0.8636)*x658))+((x653*x659))+((x651*x659))+(((-1.0)*pp)));
-evalcond[2]=((0.4318)+(((-1.0)*x651*x656))+(((-1.0)*x654))+x650+x658+(((-1.0)*x653*x656)));
-evalcond[3]=((((0.4318)*x648))+((x648*x650))+pz+(((-1.0)*x649*x655))+(((-1.0)*x649*x652))+(((-1.0)*x648*x654)));
-evalcond[4]=((((0.4318)*x649))+(((-1.0)*x651))+(((-1.0)*x653))+((x649*x650))+((x648*x655))+((x648*x652))+(((-1.0)*x649*x654)));
+IkReal x641=((0.0203)*cj2);
+IkReal x642=((0.0203)*sj2);
+IkReal x643=((1.0)*x636);
+IkReal x644=((0.0203)*x635);
+IkReal x645=(pz*x635);
+IkReal x646=((0.8636)*x636);
+evalcond[0]=(((x635*x640))+((pz*x636))+((x635*x638))+(((-1.0)*x639))+(((-1.0)*x642)));
+evalcond[1]=((0.02406647)+((x638*x646))+(((-0.8636)*x645))+((x640*x646))+(((-1.0)*pp)));
+evalcond[2]=((0.4318)+(((-1.0)*x640*x643))+(((-1.0)*x641))+x645+x637+(((-1.0)*x638*x643)));
+evalcond[3]=(((x635*x637))+(((-1.0)*x636*x639))+(((-1.0)*x635*x641))+(((0.4318)*x635))+pz+(((-1.0)*x636*x642)));
+evalcond[4]=(((x635*x642))+(((-1.0)*x640))+((x635*x639))+((x636*x637))+(((0.4318)*x636))+(((-1.0)*x636*x641))+(((-1.0)*x638)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -2071,22 +2057,22 @@ rotationfunction0(solutions);
 IkReal j1array[1], cj1array[1], sj1array[1];
 bool j1valid[1]={false};
 _nj1 = 1;
-IkReal x660=(pp*sj2);
-IkReal x661=(cj2*pp);
-IkReal x662=(py*sj0);
-IkReal x663=(cj0*px);
-IkReal x664=((935.0629)*sj2);
-IkReal x665=((2159.0)*pz);
-IkReal x666=((43.8277)*cj2);
-CheckValue<IkReal> x667 = IKatan2WithCheck(IkReal(((((-1.0)*x662*x665))+(((-1.0)*x663*x665))+(((1082.75)*x661))+(((50.75)*x660))+(((-1.2213733525)*sj2))+(((-26.0579703925)*cj2)))),((-25.979754365)+(((-50.75)*x661))+(((1082.75)*x660))+(((1079.5)*pp))+(((-26.0579703925)*sj2))+(((-1.0)*pz*x665))+(((1.2213733525)*cj2))),IKFAST_ATAN2_MAGTHRESH);
-if(!x667.valid){
+IkReal x647=(pp*sj2);
+IkReal x648=(cj2*pp);
+IkReal x649=(py*sj0);
+IkReal x650=(cj0*px);
+IkReal x651=((935.0629)*sj2);
+IkReal x652=((2159.0)*pz);
+IkReal x653=((43.8277)*cj2);
+CheckValue<IkReal> x654 = IKatan2WithCheck(IkReal(((((1082.75)*x648))+(((50.75)*x647))+(((-1.2213733525)*sj2))+(((-26.0579703925)*cj2))+(((-1.0)*x650*x652))+(((-1.0)*x649*x652)))),((-25.979754365)+(((1082.75)*x647))+(((1079.5)*pp))+(((-26.0579703925)*sj2))+(((-1.0)*pz*x652))+(((1.2213733525)*cj2))+(((-50.75)*x648))),IKFAST_ATAN2_MAGTHRESH);
+if(!x654.valid){
 continue;
 }
-CheckValue<IkReal> x668=IKPowWithIntegerCheck(IKsign(((((-935.0629)*cj2*pz))+(((-43.8277)*pz*sj2))+(((-1.0)*x662*x666))+(((-1.0)*x663*x666))+((x662*x664))+(((932.2562)*x663))+(((932.2562)*x662))+((x663*x664)))),-1);
-if(!x668.valid){
+CheckValue<IkReal> x655=IKPowWithIntegerCheck(IKsign(((((-935.0629)*cj2*pz))+(((-43.8277)*pz*sj2))+(((932.2562)*x649))+((x649*x651))+(((932.2562)*x650))+(((-1.0)*x650*x653))+(((-1.0)*x649*x653))+((x650*x651)))),-1);
+if(!x655.valid){
 continue;
 }
-j1array[0]=((-1.5707963267949)+(x667.value)+(((1.5707963267949)*(x668.value))));
+j1array[0]=((-1.5707963267949)+(x654.value)+(((1.5707963267949)*(x655.value))));
 sj1array[0]=IKsin(j1array[0]);
 cj1array[0]=IKcos(j1array[0]);
 if( j1array[0] > IKPI )
@@ -2114,23 +2100,23 @@ if( j1valid[iij1] && IKabs(cj1array[ij1]-cj1array[iij1]) < IKFAST_SOLUTION_THRES
 j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
 {
 IkReal evalcond[5];
-IkReal x669=IKsin(j1);
-IkReal x670=IKcos(j1);
-IkReal x671=((0.4331)*sj2);
-IkReal x672=(cj0*px);
-IkReal x673=((0.4331)*cj2);
-IkReal x674=(py*sj0);
-IkReal x675=((0.0203)*cj2);
-IkReal x676=((0.0203)*sj2);
-IkReal x677=((1.0)*x670);
-IkReal x678=((0.0203)*x669);
-IkReal x679=(pz*x669);
-IkReal x680=((0.8636)*x670);
-evalcond[0]=(((pz*x670))+((x669*x674))+((x669*x672))+(((-1.0)*x676))+(((-1.0)*x673)));
-evalcond[1]=((0.02406647)+((x674*x680))+(((-1.0)*pp))+(((-0.8636)*x679))+((x672*x680)));
-evalcond[2]=((0.4318)+x679+x671+(((-1.0)*x672*x677))+(((-1.0)*x674*x677))+(((-1.0)*x675)));
-evalcond[3]=((((0.4318)*x669))+((x669*x671))+(((-1.0)*x670*x676))+(((-1.0)*x670*x673))+pz+(((-1.0)*x669*x675)));
-evalcond[4]=(((x670*x671))+((x669*x676))+((x669*x673))+(((-1.0)*x670*x675))+(((-1.0)*x674))+(((-1.0)*x672))+(((0.4318)*x670)));
+IkReal x656=IKsin(j1);
+IkReal x657=IKcos(j1);
+IkReal x658=((0.4331)*sj2);
+IkReal x659=(cj0*px);
+IkReal x660=((0.4331)*cj2);
+IkReal x661=(py*sj0);
+IkReal x662=((0.0203)*cj2);
+IkReal x663=((0.0203)*sj2);
+IkReal x664=((1.0)*x657);
+IkReal x665=((0.0203)*x656);
+IkReal x666=(pz*x656);
+IkReal x667=((0.8636)*x657);
+evalcond[0]=(((pz*x657))+((x656*x661))+((x656*x659))+(((-1.0)*x663))+(((-1.0)*x660)));
+evalcond[1]=((0.02406647)+(((-1.0)*pp))+((x661*x667))+((x659*x667))+(((-0.8636)*x666)));
+evalcond[2]=((0.4318)+(((-1.0)*x659*x664))+(((-1.0)*x661*x664))+(((-1.0)*x662))+x658+x666);
+evalcond[3]=((((0.4318)*x656))+(((-1.0)*x657*x663))+(((-1.0)*x657*x660))+((x656*x658))+pz+(((-1.0)*x656*x662)));
+evalcond[4]=((((-1.0)*x659))+((x656*x663))+((x656*x660))+(((0.4318)*x657))+(((-1.0)*x657*x662))+(((-1.0)*x661))+((x657*x658)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -2151,22 +2137,22 @@ rotationfunction0(solutions);
 IkReal j1array[1], cj1array[1], sj1array[1];
 bool j1valid[1]={false};
 _nj1 = 1;
-IkReal x681=cj2*cj2;
-IkReal x682=(cj0*px);
-IkReal x683=((0.4331)*cj2);
-IkReal x684=(cj2*sj2);
-IkReal x685=((0.0203)*sj2);
-IkReal x686=(py*sj0);
-IkReal x687=((1.0)*pz);
-CheckValue<IkReal> x688 = IKatan2WithCheck(IkReal(((-0.00041209)+(((-0.18716352)*x681))+(pz*pz)+(((-0.01758386)*x684)))),((-0.00879193)+(((-0.00876554)*sj2))+(((0.01758386)*x681))+(((-0.18701258)*cj2))+(((-0.18716352)*x684))+(((-1.0)*x686*x687))+(((-1.0)*x682*x687))),IKFAST_ATAN2_MAGTHRESH);
-if(!x688.valid){
+IkReal x668=cj2*cj2;
+IkReal x669=(cj0*px);
+IkReal x670=((0.4331)*cj2);
+IkReal x671=(cj2*sj2);
+IkReal x672=((0.0203)*sj2);
+IkReal x673=(py*sj0);
+IkReal x674=((1.0)*pz);
+CheckValue<IkReal> x675 = IKatan2WithCheck(IkReal(((-0.00041209)+(((-0.01758386)*x671))+(pz*pz)+(((-0.18716352)*x668)))),((-0.00879193)+(((-0.00876554)*sj2))+(((-0.18701258)*cj2))+(((-1.0)*x669*x674))+(((0.01758386)*x668))+(((-0.18716352)*x671))+(((-1.0)*x673*x674))),IKFAST_ATAN2_MAGTHRESH);
+if(!x675.valid){
 continue;
 }
-CheckValue<IkReal> x689=IKPowWithIntegerCheck(IKsign(((((-1.0)*x685*x686))+(((-1.0)*x682*x683))+(((-1.0)*x682*x685))+(((-1.0)*x683*x686))+(((0.0203)*cj2*pz))+(((-0.4331)*pz*sj2))+(((-0.4318)*pz)))),-1);
-if(!x689.valid){
+CheckValue<IkReal> x676=IKPowWithIntegerCheck(IKsign(((((-1.0)*x670*x673))+(((-1.0)*x669*x672))+(((-1.0)*x669*x670))+(((-1.0)*x672*x673))+(((0.0203)*cj2*pz))+(((-0.4331)*pz*sj2))+(((-0.4318)*pz)))),-1);
+if(!x676.valid){
 continue;
 }
-j1array[0]=((-1.5707963267949)+(x688.value)+(((1.5707963267949)*(x689.value))));
+j1array[0]=((-1.5707963267949)+(x675.value)+(((1.5707963267949)*(x676.value))));
 sj1array[0]=IKsin(j1array[0]);
 cj1array[0]=IKcos(j1array[0]);
 if( j1array[0] > IKPI )
@@ -2194,23 +2180,23 @@ if( j1valid[iij1] && IKabs(cj1array[ij1]-cj1array[iij1]) < IKFAST_SOLUTION_THRES
 j1 = j1array[ij1]; cj1 = cj1array[ij1]; sj1 = sj1array[ij1];
 {
 IkReal evalcond[5];
-IkReal x690=IKsin(j1);
-IkReal x691=IKcos(j1);
-IkReal x692=((0.4331)*sj2);
-IkReal x693=(cj0*px);
-IkReal x694=((0.4331)*cj2);
-IkReal x695=(py*sj0);
-IkReal x696=((0.0203)*cj2);
-IkReal x697=((0.0203)*sj2);
-IkReal x698=((1.0)*x691);
-IkReal x699=((0.0203)*x690);
-IkReal x700=(pz*x690);
-IkReal x701=((0.8636)*x691);
-evalcond[0]=(((x690*x695))+((x690*x693))+((pz*x691))+(((-1.0)*x697))+(((-1.0)*x694)));
-evalcond[1]=((0.02406647)+(((-0.8636)*x700))+((x695*x701))+(((-1.0)*pp))+((x693*x701)));
-evalcond[2]=((0.4318)+(((-1.0)*x693*x698))+(((-1.0)*x695*x698))+x692+(((-1.0)*x696))+x700);
-evalcond[3]=(((x690*x692))+(((0.4318)*x690))+pz+(((-1.0)*x690*x696))+(((-1.0)*x691*x694))+(((-1.0)*x691*x697)));
-evalcond[4]=(((x690*x694))+((x690*x697))+(((0.4318)*x691))+((x691*x692))+(((-1.0)*x691*x696))+(((-1.0)*x693))+(((-1.0)*x695)));
+IkReal x677=IKsin(j1);
+IkReal x678=IKcos(j1);
+IkReal x679=((0.4331)*sj2);
+IkReal x680=(cj0*px);
+IkReal x681=((0.4331)*cj2);
+IkReal x682=(py*sj0);
+IkReal x683=((0.0203)*cj2);
+IkReal x684=((0.0203)*sj2);
+IkReal x685=((1.0)*x678);
+IkReal x686=((0.0203)*x677);
+IkReal x687=(pz*x677);
+IkReal x688=((0.8636)*x678);
+evalcond[0]=(((pz*x678))+(((-1.0)*x681))+(((-1.0)*x684))+((x677*x680))+((x677*x682)));
+evalcond[1]=((0.02406647)+((x682*x688))+(((-0.8636)*x687))+(((-1.0)*pp))+((x680*x688)));
+evalcond[2]=((0.4318)+(((-1.0)*x680*x685))+(((-1.0)*x683))+x679+x687+(((-1.0)*x682*x685)));
+evalcond[3]=(((x677*x679))+(((-1.0)*x678*x684))+(((-1.0)*x678*x681))+pz+(((0.4318)*x677))+(((-1.0)*x677*x683)));
+evalcond[4]=(((x677*x684))+((x677*x681))+(((-1.0)*x678*x683))+((x678*x679))+(((0.4318)*x678))+(((-1.0)*x680))+(((-1.0)*x682)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -2237,28 +2223,28 @@ return solutions.GetNumSolutions()>0;
 }
 inline void rotationfunction0(IkSolutionListBase<IkReal>& solutions) {
 for(int rotationiter = 0; rotationiter < 1; ++rotationiter) {
-IkReal x91=(cj0*r00);
-IkReal x92=(cj0*r01);
-IkReal x93=((1.0)*sj1);
-IkReal x94=((1.0)*sj0);
-IkReal x95=(r11*sj0);
-IkReal x96=(cj1*sj2);
-IkReal x97=(cj0*r02);
-IkReal x98=((((-1.0)*sj2*x93))+((cj1*cj2)));
-IkReal x99=(((cj2*sj1))+x96);
-IkReal x100=(cj0*x98);
-IkReal x101=(sj0*x98);
-IkReal x102=(sj0*x99);
-IkReal x103=((((-1.0)*x96))+(((-1.0)*cj2*x93)));
-new_r00=(((r10*x101))+((r20*x103))+((x91*x98)));
-new_r01=(((x92*x98))+((r21*x103))+((x95*x98)));
-new_r02=(((r22*x103))+((x97*x98))+((r12*x101)));
-new_r10=(((cj0*r10))+(((-1.0)*r00*x94)));
-new_r11=((((-1.0)*r01*x94))+((cj0*r11)));
-new_r12=(((cj0*r12))+(((-1.0)*r02*x94)));
-new_r20=(((r10*x102))+((r20*x98))+((x91*x99)));
-new_r21=(((r21*x98))+((x92*x99))+((x95*x99)));
-new_r22=(((x97*x99))+((r12*x102))+((r22*x98)));
+IkReal x78=(cj0*r00);
+IkReal x79=(cj0*r01);
+IkReal x80=((1.0)*sj1);
+IkReal x81=((1.0)*sj0);
+IkReal x82=(r11*sj0);
+IkReal x83=(cj1*sj2);
+IkReal x84=(cj0*r02);
+IkReal x85=((((-1.0)*sj2*x80))+((cj1*cj2)));
+IkReal x86=(((cj2*sj1))+x83);
+IkReal x87=(cj0*x85);
+IkReal x88=(sj0*x85);
+IkReal x89=(sj0*x86);
+IkReal x90=((((-1.0)*x83))+(((-1.0)*cj2*x80)));
+new_r00=(((x78*x85))+((r10*x88))+((r20*x90)));
+new_r01=(((r21*x90))+((x79*x85))+((x82*x85)));
+new_r02=(((x84*x85))+((r12*x88))+((r22*x90)));
+new_r10=((((-1.0)*r00*x81))+((cj0*r10)));
+new_r11=(((cj0*r11))+(((-1.0)*r01*x81)));
+new_r12=((((-1.0)*r02*x81))+((cj0*r12)));
+new_r20=(((x78*x86))+((r10*x89))+((r20*x85)));
+new_r21=(((x79*x86))+((r21*x85))+((x82*x86)));
+new_r22=(((x84*x86))+((r12*x89))+((r22*x85)));
 {
 IkReal j4array[2], cj4array[2], sj4array[2];
 bool j4valid[2]={false};
@@ -2297,6 +2283,34 @@ j4 = j4array[ij4]; cj4 = cj4array[ij4]; sj4 = sj4array[ij4];
 
 {
 IkReal j3eval[2];
+IkReal x91=(cj0*r00);
+IkReal x92=(cj0*r01);
+IkReal x93=((1.0)*sj1);
+IkReal x94=((1.0)*sj0);
+IkReal x95=(r11*sj0);
+IkReal x96=(cj1*sj2);
+IkReal x97=(cj0*r02);
+IkReal x98=x85;
+IkReal x99=(((cj2*sj1))+x96);
+IkReal x100=(cj0*x98);
+IkReal x101=(sj0*x98);
+IkReal x102=(sj0*x99);
+IkReal x103=x90;
+new_r00=(((r10*x101))+((r20*x103))+((x91*x98)));
+new_r01=(((x92*x98))+((r21*x103))+((x95*x98)));
+new_r02=(((r22*x103))+((x97*x98))+((r12*x101)));
+new_r10=(((cj0*r10))+(((-1.0)*r00*x94)));
+new_r11=((((-1.0)*r01*x94))+((cj0*r11)));
+new_r12=(((cj0*r12))+(((-1.0)*r02*x94)));
+new_r20=(((r10*x102))+((r20*x98))+((x91*x99)));
+new_r21=(((r21*x98))+((x92*x99))+((x95*x99)));
+new_r22=(((x97*x99))+((r12*x102))+((r22*x98)));
+j3eval[0]=sj4;
+j3eval[1]=IKsign(sj4);
+if( IKabs(j3eval[0]) < 0.0000010000000000  || IKabs(j3eval[1]) < 0.0000010000000000  )
+{
+{
+IkReal j3eval[1];
 IkReal x104=(cj0*r00);
 IkReal x105=(cj0*r01);
 IkReal x106=((1.0)*sj1);
@@ -2304,12 +2318,12 @@ IkReal x107=((1.0)*sj0);
 IkReal x108=(r11*sj0);
 IkReal x109=(cj1*sj2);
 IkReal x110=(cj0*r02);
-IkReal x111=x98;
+IkReal x111=x85;
 IkReal x112=(((cj2*sj1))+x109);
 IkReal x113=(cj0*x111);
 IkReal x114=(sj0*x111);
 IkReal x115=(sj0*x112);
-IkReal x116=x103;
+IkReal x116=x90;
 new_r00=(((r10*x114))+((r20*x116))+((x104*x111)));
 new_r01=(((r21*x116))+((x108*x111))+((x105*x111)));
 new_r02=(((x110*x111))+((r22*x116))+((r12*x114)));
@@ -2319,34 +2333,6 @@ new_r12=((((-1.0)*r02*x107))+((cj0*r12)));
 new_r20=(((r10*x115))+((r20*x111))+((x104*x112)));
 new_r21=(((r21*x111))+((x108*x112))+((x105*x112)));
 new_r22=(((x110*x112))+((r22*x111))+((r12*x115)));
-j3eval[0]=sj4;
-j3eval[1]=IKsign(sj4);
-if( IKabs(j3eval[0]) < 0.0000010000000000  || IKabs(j3eval[1]) < 0.0000010000000000  )
-{
-{
-IkReal j3eval[1];
-IkReal x117=(cj0*r00);
-IkReal x118=(cj0*r01);
-IkReal x119=((1.0)*sj1);
-IkReal x120=((1.0)*sj0);
-IkReal x121=(r11*sj0);
-IkReal x122=(cj1*sj2);
-IkReal x123=(cj0*r02);
-IkReal x124=x98;
-IkReal x125=(((cj2*sj1))+x122);
-IkReal x126=(cj0*x124);
-IkReal x127=(sj0*x124);
-IkReal x128=(sj0*x125);
-IkReal x129=x103;
-new_r00=(((x117*x124))+((r20*x129))+((r10*x127)));
-new_r01=(((x121*x124))+((r21*x129))+((x118*x124)));
-new_r02=(((r22*x129))+((r12*x127))+((x123*x124)));
-new_r10=((((-1.0)*r00*x120))+((cj0*r10)));
-new_r11=(((cj0*r11))+(((-1.0)*r01*x120)));
-new_r12=((((-1.0)*r02*x120))+((cj0*r12)));
-new_r20=(((x117*x125))+((r20*x124))+((r10*x128)));
-new_r21=(((x121*x125))+((r21*x124))+((x118*x125)));
-new_r22=(((r22*x124))+((r12*x128))+((x123*x125)));
 j3eval[0]=sj4;
 if( IKabs(j3eval[0]) < 0.0000010000000000  )
 {
@@ -2368,15 +2354,15 @@ bgotonextstatement=false;
 IkReal j3array[2], cj3array[2], sj3array[2];
 bool j3valid[2]={false};
 _nj3 = 2;
-CheckValue<IkReal> x131 = IKatan2WithCheck(IkReal(new_r02),new_r12,IKFAST_ATAN2_MAGTHRESH);
-if(!x131.valid){
+CheckValue<IkReal> x118 = IKatan2WithCheck(IkReal(new_r02),new_r12,IKFAST_ATAN2_MAGTHRESH);
+if(!x118.valid){
 continue;
 }
-IkReal x130=x131.value;
-j3array[0]=((-1.0)*x130);
+IkReal x117=x118.value;
+j3array[0]=((-1.0)*x117);
 sj3array[0]=IKsin(j3array[0]);
 cj3array[0]=IKcos(j3array[0]);
-j3array[1]=((3.14159265358979)+(((-1.0)*x130)));
+j3array[1]=((3.14159265358979)+(((-1.0)*x117)));
 sj3array[1]=IKsin(j3array[1]);
 cj3array[1]=IKcos(j3array[1]);
 if( j3array[0] > IKPI )
@@ -2423,10 +2409,10 @@ continue;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-IkReal x132=((1.0)*new_r01);
-if( IKabs(((((-1.0)*cj3*x132))+(((-1.0)*new_r00*sj3)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*sj3*x132))+((cj3*new_r00)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*cj3*x132))+(((-1.0)*new_r00*sj3))))+IKsqr(((((-1.0)*sj3*x132))+((cj3*new_r00))))-1) <= IKFAST_SINCOS_THRESH )
+IkReal x119=((1.0)*new_r01);
+if( IKabs(((((-1.0)*cj3*x119))+(((-1.0)*new_r00*sj3)))) < IKFAST_ATAN2_MAGTHRESH && IKabs((((cj3*new_r00))+(((-1.0)*sj3*x119)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*cj3*x119))+(((-1.0)*new_r00*sj3))))+IKsqr((((cj3*new_r00))+(((-1.0)*sj3*x119))))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2(((((-1.0)*cj3*x132))+(((-1.0)*new_r00*sj3))), ((((-1.0)*sj3*x132))+((cj3*new_r00))));
+j5array[0]=IKatan2(((((-1.0)*cj3*x119))+(((-1.0)*new_r00*sj3))), (((cj3*new_r00))+(((-1.0)*sj3*x119))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -2454,21 +2440,21 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x133=IKsin(j5);
-IkReal x134=IKcos(j5);
-IkReal x135=((1.0)*sj3);
-IkReal x136=((1.0)*x134);
-IkReal x137=(sj3*x133);
-IkReal x138=((1.0)*x133);
-IkReal x139=(cj3*x136);
-evalcond[0]=(((new_r11*sj3))+x133+((cj3*new_r01)));
-evalcond[1]=(((cj3*x133))+((sj3*x134))+new_r01);
-evalcond[2]=(((new_r10*sj3))+(((-1.0)*x136))+((cj3*new_r00)));
-evalcond[3]=((((-1.0)*new_r00*x135))+(((-1.0)*x138))+((cj3*new_r10)));
-evalcond[4]=((((-1.0)*new_r01*x135))+(((-1.0)*x136))+((cj3*new_r11)));
-evalcond[5]=(x137+(((-1.0)*x139))+new_r00);
-evalcond[6]=(x137+(((-1.0)*x139))+new_r11);
-evalcond[7]=((((-1.0)*x134*x135))+(((-1.0)*cj3*x138))+new_r10);
+IkReal x120=IKsin(j5);
+IkReal x121=IKcos(j5);
+IkReal x122=((1.0)*sj3);
+IkReal x123=((1.0)*x121);
+IkReal x124=(sj3*x120);
+IkReal x125=((1.0)*x120);
+IkReal x126=(cj3*x123);
+evalcond[0]=(((new_r11*sj3))+x120+((cj3*new_r01)));
+evalcond[1]=(((cj3*x120))+((sj3*x121))+new_r01);
+evalcond[2]=(((new_r10*sj3))+(((-1.0)*x123))+((cj3*new_r00)));
+evalcond[3]=((((-1.0)*new_r00*x122))+(((-1.0)*x125))+((cj3*new_r10)));
+evalcond[4]=((((-1.0)*new_r01*x122))+(((-1.0)*x123))+((cj3*new_r11)));
+evalcond[5]=((((-1.0)*x126))+x124+new_r00);
+evalcond[6]=((((-1.0)*x126))+x124+new_r11);
+evalcond[7]=((((-1.0)*cj3*x125))+(((-1.0)*x121*x122))+new_r10);
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -2535,15 +2521,15 @@ bgotonextstatement=false;
 IkReal j3array[2], cj3array[2], sj3array[2];
 bool j3valid[2]={false};
 _nj3 = 2;
-CheckValue<IkReal> x141 = IKatan2WithCheck(IkReal(new_r02),new_r12,IKFAST_ATAN2_MAGTHRESH);
-if(!x141.valid){
+CheckValue<IkReal> x128 = IKatan2WithCheck(IkReal(new_r02),new_r12,IKFAST_ATAN2_MAGTHRESH);
+if(!x128.valid){
 continue;
 }
-IkReal x140=x141.value;
-j3array[0]=((-1.0)*x140);
+IkReal x127=x128.value;
+j3array[0]=((-1.0)*x127);
 sj3array[0]=IKsin(j3array[0]);
 cj3array[0]=IKcos(j3array[0]);
-j3array[1]=((3.14159265358979)+(((-1.0)*x140)));
+j3array[1]=((3.14159265358979)+(((-1.0)*x127)));
 sj3array[1]=IKsin(j3array[1]);
 cj3array[1]=IKcos(j3array[1]);
 if( j3array[0] > IKPI )
@@ -2590,10 +2576,10 @@ continue;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-IkReal x142=((1.0)*sj3);
-if( IKabs((((cj3*new_r01))+(((-1.0)*new_r00*x142)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*new_r01*x142))+(((-1.0)*cj3*new_r00)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((((cj3*new_r01))+(((-1.0)*new_r00*x142))))+IKsqr(((((-1.0)*new_r01*x142))+(((-1.0)*cj3*new_r00))))-1) <= IKFAST_SINCOS_THRESH )
+IkReal x129=((1.0)*sj3);
+if( IKabs(((((-1.0)*new_r00*x129))+((cj3*new_r01)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*new_r01*x129))+(((-1.0)*cj3*new_r00)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*new_r00*x129))+((cj3*new_r01))))+IKsqr(((((-1.0)*new_r01*x129))+(((-1.0)*cj3*new_r00))))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2((((cj3*new_r01))+(((-1.0)*new_r00*x142))), ((((-1.0)*new_r01*x142))+(((-1.0)*cj3*new_r00))));
+j5array[0]=IKatan2(((((-1.0)*new_r00*x129))+((cj3*new_r01))), ((((-1.0)*new_r01*x129))+(((-1.0)*cj3*new_r00))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -2621,21 +2607,21 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x143=IKsin(j5);
-IkReal x144=IKcos(j5);
-IkReal x145=((1.0)*sj3);
-IkReal x146=((1.0)*x143);
-IkReal x147=(sj3*x144);
-IkReal x148=((1.0)*x144);
-IkReal x149=(cj3*x146);
-evalcond[0]=(((new_r10*sj3))+x144+((cj3*new_r00)));
-evalcond[1]=((((-1.0)*x146))+((new_r11*sj3))+((cj3*new_r01)));
-evalcond[2]=(((cj3*x144))+new_r00+((sj3*x143)));
-evalcond[3]=((((-1.0)*x146))+((cj3*new_r10))+(((-1.0)*new_r00*x145)));
-evalcond[4]=((((-1.0)*new_r01*x145))+(((-1.0)*x148))+((cj3*new_r11)));
-evalcond[5]=((((-1.0)*x149))+x147+new_r01);
-evalcond[6]=((((-1.0)*x149))+x147+new_r10);
-evalcond[7]=((((-1.0)*x143*x145))+(((-1.0)*cj3*x148))+new_r11);
+IkReal x130=IKsin(j5);
+IkReal x131=IKcos(j5);
+IkReal x132=((1.0)*sj3);
+IkReal x133=((1.0)*x130);
+IkReal x134=(sj3*x131);
+IkReal x135=((1.0)*x131);
+IkReal x136=(cj3*x133);
+evalcond[0]=(((new_r10*sj3))+x131+((cj3*new_r00)));
+evalcond[1]=(((new_r11*sj3))+(((-1.0)*x133))+((cj3*new_r01)));
+evalcond[2]=(((cj3*x131))+((sj3*x130))+new_r00);
+evalcond[3]=((((-1.0)*new_r00*x132))+(((-1.0)*x133))+((cj3*new_r10)));
+evalcond[4]=((((-1.0)*new_r01*x132))+(((-1.0)*x135))+((cj3*new_r11)));
+evalcond[5]=(x134+(((-1.0)*x136))+new_r01);
+evalcond[6]=(x134+(((-1.0)*x136))+new_r10);
+evalcond[7]=((((-1.0)*cj3*x135))+new_r11+(((-1.0)*x130*x132)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -2709,18 +2695,18 @@ if( bgotonextstatement )
 IkReal j3array[1], cj3array[1], sj3array[1];
 bool j3valid[1]={false};
 _nj3 = 1;
-CheckValue<IkReal> x151=IKPowWithIntegerCheck(sj4,-1);
-if(!x151.valid){
+CheckValue<IkReal> x138=IKPowWithIntegerCheck(sj4,-1);
+if(!x138.valid){
 continue;
 }
-IkReal x150=x151.value;
-CheckValue<IkReal> x152=IKPowWithIntegerCheck(new_r12,-1);
-if(!x152.valid){
+IkReal x137=x138.value;
+CheckValue<IkReal> x139=IKPowWithIntegerCheck(new_r12,-1);
+if(!x139.valid){
 continue;
 }
-if( IKabs((x150*(x152.value)*(((1.0)+(((-1.0)*(cj4*cj4)))+(((-1.0)*(new_r02*new_r02))))))) < IKFAST_ATAN2_MAGTHRESH && IKabs((new_r02*x150)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x150*(x152.value)*(((1.0)+(((-1.0)*(cj4*cj4)))+(((-1.0)*(new_r02*new_r02)))))))+IKsqr((new_r02*x150))-1) <= IKFAST_SINCOS_THRESH )
+if( IKabs((x137*(x139.value)*(((1.0)+(((-1.0)*(cj4*cj4)))+(((-1.0)*(new_r02*new_r02))))))) < IKFAST_ATAN2_MAGTHRESH && IKabs((new_r02*x137)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x137*(x139.value)*(((1.0)+(((-1.0)*(cj4*cj4)))+(((-1.0)*(new_r02*new_r02)))))))+IKsqr((new_r02*x137))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j3array[0]=IKatan2((x150*(x152.value)*(((1.0)+(((-1.0)*(cj4*cj4)))+(((-1.0)*(new_r02*new_r02)))))), (new_r02*x150));
+j3array[0]=IKatan2((x137*(x139.value)*(((1.0)+(((-1.0)*(cj4*cj4)))+(((-1.0)*(new_r02*new_r02)))))), (new_r02*x137));
 sj3array[0]=IKsin(j3array[0]);
 cj3array[0]=IKcos(j3array[0]);
 if( j3array[0] > IKPI )
@@ -2748,26 +2734,54 @@ if( j3valid[iij3] && IKabs(cj3array[ij3]-cj3array[iij3]) < IKFAST_SOLUTION_THRES
 j3 = j3array[ij3]; cj3 = cj3array[ij3]; sj3 = sj3array[ij3];
 {
 IkReal evalcond[8];
-IkReal x153=IKcos(j3);
-IkReal x154=IKsin(j3);
-IkReal x155=((1.0)*sj4);
-IkReal x156=((1.0)*cj4);
-IkReal x157=(new_r02*x153);
-IkReal x158=(new_r12*x154);
-evalcond[0]=((((-1.0)*x153*x155))+new_r02);
-evalcond[1]=((((-1.0)*x154*x155))+new_r12);
-evalcond[2]=(((new_r12*x153))+(((-1.0)*new_r02*x154)));
-evalcond[3]=((((-1.0)*x155))+x157+x158);
-evalcond[4]=(((cj4*x158))+((cj4*x157))+(((-1.0)*new_r22*x155)));
-evalcond[5]=((((-1.0)*new_r20*x156))+(((-1.0)*new_r10*x154*x155))+(((-1.0)*new_r00*x153*x155)));
-evalcond[6]=((((-1.0)*new_r01*x153*x155))+(((-1.0)*new_r21*x156))+(((-1.0)*new_r11*x154*x155)));
-evalcond[7]=((1.0)+(((-1.0)*new_r22*x156))+(((-1.0)*x155*x157))+(((-1.0)*x155*x158)));
+IkReal x140=IKcos(j3);
+IkReal x141=IKsin(j3);
+IkReal x142=((1.0)*sj4);
+IkReal x143=((1.0)*cj4);
+IkReal x144=(new_r02*x140);
+IkReal x145=(new_r12*x141);
+evalcond[0]=((((-1.0)*x140*x142))+new_r02);
+evalcond[1]=((((-1.0)*x141*x142))+new_r12);
+evalcond[2]=(((new_r12*x140))+(((-1.0)*new_r02*x141)));
+evalcond[3]=((((-1.0)*x142))+x144+x145);
+evalcond[4]=((((-1.0)*new_r22*x142))+((cj4*x144))+((cj4*x145)));
+evalcond[5]=((((-1.0)*new_r10*x141*x142))+(((-1.0)*new_r20*x143))+(((-1.0)*new_r00*x140*x142)));
+evalcond[6]=((((-1.0)*new_r01*x140*x142))+(((-1.0)*new_r21*x143))+(((-1.0)*new_r11*x141*x142)));
+evalcond[7]=((1.0)+(((-1.0)*x142*x144))+(((-1.0)*x142*x145))+(((-1.0)*new_r22*x143)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
 }
 }
 
+{
+IkReal j5eval[2];
+IkReal x146=(cj0*r00);
+IkReal x147=(cj0*r01);
+IkReal x148=((1.0)*sj1);
+IkReal x149=((1.0)*sj0);
+IkReal x150=(r11*sj0);
+IkReal x151=(cj1*sj2);
+IkReal x152=(cj0*r02);
+IkReal x153=x85;
+IkReal x154=(((cj2*sj1))+x151);
+IkReal x155=(cj0*x153);
+IkReal x156=(sj0*x153);
+IkReal x157=(sj0*x154);
+IkReal x158=x90;
+new_r00=(((r20*x158))+((x146*x153))+((r10*x156)));
+new_r01=(((x150*x153))+((r21*x158))+((x147*x153)));
+new_r02=(((x152*x153))+((r22*x158))+((r12*x156)));
+new_r10=((((-1.0)*r00*x149))+((cj0*r10)));
+new_r11=((((-1.0)*r01*x149))+((cj0*r11)));
+new_r12=((((-1.0)*r02*x149))+((cj0*r12)));
+new_r20=(((r20*x153))+((x146*x154))+((r10*x157)));
+new_r21=(((x150*x154))+((r21*x153))+((x147*x154)));
+new_r22=(((x152*x154))+((r22*x153))+((r12*x157)));
+j5eval[0]=sj4;
+j5eval[1]=IKsign(sj4);
+if( IKabs(j5eval[0]) < 0.0000010000000000  || IKabs(j5eval[1]) < 0.0000010000000000  )
+{
 {
 IkReal j5eval[2];
 IkReal x159=(cj0*r00);
@@ -2777,12 +2791,12 @@ IkReal x162=((1.0)*sj0);
 IkReal x163=(r11*sj0);
 IkReal x164=(cj1*sj2);
 IkReal x165=(cj0*r02);
-IkReal x166=x98;
+IkReal x166=x85;
 IkReal x167=(((cj2*sj1))+x164);
 IkReal x168=(cj0*x166);
 IkReal x169=(sj0*x166);
 IkReal x170=(sj0*x167);
-IkReal x171=x103;
+IkReal x171=x90;
 new_r00=(((r20*x171))+((r10*x169))+((x159*x166)));
 new_r01=(((r21*x171))+((x160*x166))+((x163*x166)));
 new_r02=(((r22*x171))+((x165*x166))+((r12*x169)));
@@ -2792,12 +2806,12 @@ new_r12=((((-1.0)*r02*x162))+((cj0*r12)));
 new_r20=(((r20*x166))+((r10*x170))+((x159*x167)));
 new_r21=(((r21*x166))+((x160*x167))+((x163*x167)));
 new_r22=(((r22*x166))+((x165*x167))+((r12*x170)));
-j5eval[0]=sj4;
-j5eval[1]=IKsign(sj4);
+j5eval[0]=sj3;
+j5eval[1]=sj4;
 if( IKabs(j5eval[0]) < 0.0000010000000000  || IKabs(j5eval[1]) < 0.0000010000000000  )
 {
 {
-IkReal j5eval[2];
+IkReal j5eval[3];
 IkReal x172=(cj0*r00);
 IkReal x173=(cj0*r01);
 IkReal x174=((1.0)*sj1);
@@ -2805,12 +2819,12 @@ IkReal x175=((1.0)*sj0);
 IkReal x176=(r11*sj0);
 IkReal x177=(cj1*sj2);
 IkReal x178=(cj0*r02);
-IkReal x179=x98;
+IkReal x179=x85;
 IkReal x180=(((cj2*sj1))+x177);
 IkReal x181=(cj0*x179);
 IkReal x182=(sj0*x179);
 IkReal x183=(sj0*x180);
-IkReal x184=x103;
+IkReal x184=x90;
 new_r00=(((x172*x179))+((r20*x184))+((r10*x182)));
 new_r01=(((x176*x179))+((x173*x179))+((r21*x184)));
 new_r02=(((x178*x179))+((r12*x182))+((r22*x184)));
@@ -2820,34 +2834,6 @@ new_r12=((((-1.0)*r02*x175))+((cj0*r12)));
 new_r20=(((x172*x180))+((r20*x179))+((r10*x183)));
 new_r21=(((x176*x180))+((x173*x180))+((r21*x179)));
 new_r22=(((r22*x179))+((x178*x180))+((r12*x183)));
-j5eval[0]=sj3;
-j5eval[1]=sj4;
-if( IKabs(j5eval[0]) < 0.0000010000000000  || IKabs(j5eval[1]) < 0.0000010000000000  )
-{
-{
-IkReal j5eval[3];
-IkReal x185=(cj0*r00);
-IkReal x186=(cj0*r01);
-IkReal x187=((1.0)*sj1);
-IkReal x188=((1.0)*sj0);
-IkReal x189=(r11*sj0);
-IkReal x190=(cj1*sj2);
-IkReal x191=(cj0*r02);
-IkReal x192=x98;
-IkReal x193=(((cj2*sj1))+x190);
-IkReal x194=(cj0*x192);
-IkReal x195=(sj0*x192);
-IkReal x196=(sj0*x193);
-IkReal x197=x103;
-new_r00=(((x185*x192))+((r20*x197))+((r10*x195)));
-new_r01=(((x186*x192))+((x189*x192))+((r21*x197)));
-new_r02=(((x191*x192))+((r12*x195))+((r22*x197)));
-new_r10=((((-1.0)*r00*x188))+((cj0*r10)));
-new_r11=((((-1.0)*r01*x188))+((cj0*r11)));
-new_r12=((((-1.0)*r02*x188))+((cj0*r12)));
-new_r20=(((x185*x193))+((r20*x192))+((r10*x196)));
-new_r21=(((x186*x193))+((x189*x193))+((r21*x192)));
-new_r22=(((x191*x193))+((r12*x196))+((r22*x192)));
 j5eval[0]=cj3;
 j5eval[1]=cj4;
 j5eval[2]=sj4;
@@ -2858,20 +2844,20 @@ IkReal evalcond[12];
 bool bgotonextstatement = true;
 do
 {
-IkReal x198=(new_r22+(((-1.0)*cj4)));
-IkReal x199=((((-1.0)*sj4))+new_r12);
-IkReal x200=((1.0)*cj4);
-IkReal x201=((1.0)*sj4);
+IkReal x185=(new_r22+(((-1.0)*cj4)));
+IkReal x186=((((-1.0)*sj4))+new_r12);
+IkReal x187=((1.0)*cj4);
+IkReal x188=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-1.5707963267949)+j3)))), 6.28318530717959)));
-evalcond[1]=x198;
-evalcond[2]=x198;
+evalcond[1]=x185;
+evalcond[2]=x185;
 evalcond[3]=new_r02;
-evalcond[4]=x199;
-evalcond[5]=x199;
-evalcond[6]=((((-1.0)*new_r22*x201))+((cj4*new_r12)));
-evalcond[7]=((((-1.0)*new_r20*x200))+(((-1.0)*new_r10*x201)));
-evalcond[8]=((((-1.0)*new_r21*x200))+(((-1.0)*new_r11*x201)));
-evalcond[9]=((1.0)+(((-1.0)*new_r22*x200))+(((-1.0)*new_r12*x201)));
+evalcond[4]=x186;
+evalcond[5]=x186;
+evalcond[6]=(((cj4*new_r12))+(((-1.0)*new_r22*x188)));
+evalcond[7]=((((-1.0)*new_r20*x187))+(((-1.0)*new_r10*x188)));
+evalcond[8]=((((-1.0)*new_r21*x187))+(((-1.0)*new_r11*x188)));
+evalcond[9]=((1.0)+(((-1.0)*new_r22*x187))+(((-1.0)*new_r12*x188)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -2879,15 +2865,15 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x202 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
-if(!x202.valid){
+CheckValue<IkReal> x189 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
+if(!x189.valid){
 continue;
 }
-CheckValue<IkReal> x203=IKPowWithIntegerCheck(IKsign(new_r12),-1);
-if(!x203.valid){
+CheckValue<IkReal> x190=IKPowWithIntegerCheck(IKsign(new_r12),-1);
+if(!x190.valid){
 continue;
 }
-j5array[0]=((-1.5707963267949)+(x202.value)+(((1.5707963267949)*(x203.value))));
+j5array[0]=((-1.5707963267949)+(x189.value)+(((1.5707963267949)*(x190.value))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -2915,19 +2901,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x204=IKsin(j5);
-IkReal x205=IKcos(j5);
-IkReal x206=((1.0)*new_r12);
-IkReal x207=((1.0)*x205);
-IkReal x208=((1.0)*x204);
-evalcond[0]=(((new_r12*x205))+new_r20);
-evalcond[1]=(((new_r22*x204))+new_r11);
-evalcond[2]=((((-1.0)*x204*x206))+new_r21);
-evalcond[3]=((((-1.0)*new_r22*x207))+new_r10);
-evalcond[4]=((((-1.0)*x208))+(((-1.0)*new_r00)));
-evalcond[5]=((((-1.0)*x207))+(((-1.0)*new_r01)));
-evalcond[6]=((((-1.0)*new_r21*x206))+x204+((new_r11*new_r22)));
-evalcond[7]=((((-1.0)*new_r20*x206))+(((-1.0)*x207))+((new_r10*new_r22)));
+IkReal x191=IKsin(j5);
+IkReal x192=IKcos(j5);
+IkReal x193=((1.0)*new_r12);
+IkReal x194=((1.0)*x192);
+IkReal x195=((1.0)*x191);
+evalcond[0]=(((new_r12*x192))+new_r20);
+evalcond[1]=(((new_r22*x191))+new_r11);
+evalcond[2]=((((-1.0)*x191*x193))+new_r21);
+evalcond[3]=((((-1.0)*new_r22*x194))+new_r10);
+evalcond[4]=((((-1.0)*x195))+(((-1.0)*new_r00)));
+evalcond[5]=((((-1.0)*x194))+(((-1.0)*new_r01)));
+evalcond[6]=((((-1.0)*new_r21*x193))+x191+((new_r11*new_r22)));
+evalcond[7]=((((-1.0)*x194))+(((-1.0)*new_r20*x193))+((new_r10*new_r22)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -2979,19 +2965,19 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x209=(new_r22+(((-1.0)*cj4)));
-IkReal x210=((1.0)*cj4);
-IkReal x211=((1.0)*sj4);
+IkReal x196=(new_r22+(((-1.0)*cj4)));
+IkReal x197=((1.0)*cj4);
+IkReal x198=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((1.5707963267949)+j3)))), 6.28318530717959)));
-evalcond[1]=x209;
-evalcond[2]=x209;
+evalcond[1]=x196;
+evalcond[2]=x196;
 evalcond[3]=new_r02;
 evalcond[4]=(sj4+new_r12);
-evalcond[5]=((((-1.0)*new_r12))+(((-1.0)*x211)));
-evalcond[6]=((((-1.0)*new_r12*x210))+(((-1.0)*new_r22*x211)));
-evalcond[7]=(((new_r10*sj4))+(((-1.0)*new_r20*x210)));
-evalcond[8]=(((new_r11*sj4))+(((-1.0)*new_r21*x210)));
-evalcond[9]=((1.0)+((new_r12*sj4))+(((-1.0)*new_r22*x210)));
+evalcond[5]=((((-1.0)*x198))+(((-1.0)*new_r12)));
+evalcond[6]=((((-1.0)*new_r22*x198))+(((-1.0)*new_r12*x197)));
+evalcond[7]=(((new_r10*sj4))+(((-1.0)*new_r20*x197)));
+evalcond[8]=(((new_r11*sj4))+(((-1.0)*new_r21*x197)));
+evalcond[9]=((1.0)+((new_r12*sj4))+(((-1.0)*new_r22*x197)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3029,19 +3015,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x212=IKsin(j5);
-IkReal x213=IKcos(j5);
-IkReal x214=((1.0)*new_r11);
-IkReal x215=((1.0)*new_r10);
-IkReal x216=((1.0)*x213);
-evalcond[0]=(new_r21+((new_r12*x212)));
-evalcond[1]=((((-1.0)*x212))+new_r00);
-evalcond[2]=(new_r01+(((-1.0)*x216)));
-evalcond[3]=((((-1.0)*new_r12*x216))+new_r20);
-evalcond[4]=(((new_r22*x212))+(((-1.0)*x214)));
-evalcond[5]=((((-1.0)*new_r22*x216))+(((-1.0)*x215)));
-evalcond[6]=(((new_r12*new_r21))+x212+(((-1.0)*new_r22*x214)));
-evalcond[7]=(((new_r12*new_r20))+(((-1.0)*new_r22*x215))+(((-1.0)*x216)));
+IkReal x199=IKsin(j5);
+IkReal x200=IKcos(j5);
+IkReal x201=((1.0)*new_r11);
+IkReal x202=((1.0)*new_r10);
+IkReal x203=((1.0)*x200);
+evalcond[0]=(((new_r12*x199))+new_r21);
+evalcond[1]=((((-1.0)*x199))+new_r00);
+evalcond[2]=((((-1.0)*x203))+new_r01);
+evalcond[3]=((((-1.0)*new_r12*x203))+new_r20);
+evalcond[4]=((((-1.0)*x201))+((new_r22*x199)));
+evalcond[5]=((((-1.0)*new_r22*x203))+(((-1.0)*x202)));
+evalcond[6]=((((-1.0)*new_r22*x201))+x199+((new_r12*new_r21)));
+evalcond[7]=((((-1.0)*new_r22*x202))+(((-1.0)*x203))+((new_r12*new_r20)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3093,23 +3079,23 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x217=(new_r12*sj3);
-IkReal x218=(new_r11*sj3);
-IkReal x219=((1.0)*sj3);
-IkReal x220=((1.0)*cj3);
-IkReal x221=((((-1.0)*new_r02*x219))+((cj3*new_r12)));
+IkReal x204=(new_r12*sj3);
+IkReal x205=(new_r11*sj3);
+IkReal x206=((1.0)*sj3);
+IkReal x207=((1.0)*cj3);
+IkReal x208=((((-1.0)*new_r02*x206))+((cj3*new_r12)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-1.5707963267949)+j4)))), 6.28318530717959)));
 evalcond[1]=new_r22;
-evalcond[2]=(new_r02+(((-1.0)*x220)));
-evalcond[3]=(new_r12+(((-1.0)*x219)));
-evalcond[4]=x221;
-evalcond[5]=x221;
-evalcond[6]=((-1.0)+x217+((cj3*new_r02)));
-evalcond[7]=(x218+((cj3*new_r01)));
+evalcond[2]=((((-1.0)*x207))+new_r02);
+evalcond[3]=((((-1.0)*x206))+new_r12);
+evalcond[4]=x208;
+evalcond[5]=x208;
+evalcond[6]=((-1.0)+x204+((cj3*new_r02)));
+evalcond[7]=(x205+((cj3*new_r01)));
 evalcond[8]=(((new_r10*sj3))+((cj3*new_r00)));
-evalcond[9]=((((-1.0)*new_r10*x219))+(((-1.0)*new_r00*x220)));
-evalcond[10]=((((-1.0)*new_r01*x220))+(((-1.0)*x218)));
-evalcond[11]=((1.0)+(((-1.0)*x217))+(((-1.0)*new_r02*x220)));
+evalcond[9]=((((-1.0)*new_r00*x207))+(((-1.0)*new_r10*x206)));
+evalcond[10]=((((-1.0)*x205))+(((-1.0)*new_r01*x207)));
+evalcond[11]=((1.0)+(((-1.0)*new_r02*x207))+(((-1.0)*x204)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  && IKabs(evalcond[10]) < 0.0000010000000000  && IKabs(evalcond[11]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3147,19 +3133,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x222=IKcos(j5);
-IkReal x223=IKsin(j5);
-IkReal x224=((1.0)*new_r12);
-IkReal x225=((1.0)*x223);
-IkReal x226=((1.0)*x222);
-evalcond[0]=(x222+new_r20);
-evalcond[1]=(new_r21+(((-1.0)*x225)));
-evalcond[2]=(((new_r12*x222))+new_r01);
-evalcond[3]=(((new_r12*x223))+new_r00);
-evalcond[4]=(new_r11+(((-1.0)*new_r02*x226)));
-evalcond[5]=(new_r10+(((-1.0)*new_r02*x225)));
-evalcond[6]=(((new_r02*new_r10))+(((-1.0)*x225))+(((-1.0)*new_r00*x224)));
-evalcond[7]=((((-1.0)*new_r01*x224))+((new_r02*new_r11))+(((-1.0)*x226)));
+IkReal x209=IKcos(j5);
+IkReal x210=IKsin(j5);
+IkReal x211=((1.0)*new_r12);
+IkReal x212=((1.0)*x210);
+IkReal x213=((1.0)*x209);
+evalcond[0]=(x209+new_r20);
+evalcond[1]=(new_r21+(((-1.0)*x212)));
+evalcond[2]=(((new_r12*x209))+new_r01);
+evalcond[3]=(new_r00+((new_r12*x210)));
+evalcond[4]=((((-1.0)*new_r02*x213))+new_r11);
+evalcond[5]=((((-1.0)*new_r02*x212))+new_r10);
+evalcond[6]=(((new_r02*new_r10))+(((-1.0)*x212))+(((-1.0)*new_r00*x211)));
+evalcond[7]=((((-1.0)*new_r01*x211))+((new_r02*new_r11))+(((-1.0)*x213)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3211,22 +3197,22 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x227=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
-IkReal x228=(((new_r10*sj3))+((cj3*new_r00)));
-IkReal x229=(((new_r11*sj3))+((cj3*new_r01)));
-IkReal x230=((1.0)+((new_r12*sj3))+((cj3*new_r02)));
+IkReal x214=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
+IkReal x215=(((new_r10*sj3))+((cj3*new_r00)));
+IkReal x216=(((new_r11*sj3))+((cj3*new_r01)));
+IkReal x217=((1.0)+((new_r12*sj3))+((cj3*new_r02)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((1.5707963267949)+j4)))), 6.28318530717959)));
 evalcond[1]=new_r22;
 evalcond[2]=(cj3+new_r02);
 evalcond[3]=(sj3+new_r12);
-evalcond[4]=x227;
-evalcond[5]=x227;
-evalcond[6]=x230;
-evalcond[7]=x229;
-evalcond[8]=x228;
-evalcond[9]=x228;
-evalcond[10]=x229;
-evalcond[11]=x230;
+evalcond[4]=x214;
+evalcond[5]=x214;
+evalcond[6]=x217;
+evalcond[7]=x216;
+evalcond[8]=x215;
+evalcond[9]=x215;
+evalcond[10]=x216;
+evalcond[11]=x217;
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  && IKabs(evalcond[10]) < 0.0000010000000000  && IKabs(evalcond[11]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3264,19 +3250,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x231=IKcos(j5);
-IkReal x232=IKsin(j5);
-IkReal x233=((1.0)*new_r02);
-IkReal x234=((1.0)*x231);
-IkReal x235=((1.0)*x232);
-evalcond[0]=(x232+new_r21);
-evalcond[1]=((((-1.0)*x234))+new_r20);
-evalcond[2]=(((new_r02*x231))+new_r11);
-evalcond[3]=(((new_r02*x232))+new_r10);
-evalcond[4]=((((-1.0)*new_r12*x234))+new_r01);
-evalcond[5]=((((-1.0)*new_r12*x235))+new_r00);
-evalcond[6]=(((new_r00*new_r12))+(((-1.0)*x235))+(((-1.0)*new_r10*x233)));
-evalcond[7]=(((new_r01*new_r12))+(((-1.0)*x234))+(((-1.0)*new_r11*x233)));
+IkReal x218=IKcos(j5);
+IkReal x219=IKsin(j5);
+IkReal x220=((1.0)*new_r02);
+IkReal x221=((1.0)*x218);
+IkReal x222=((1.0)*x219);
+evalcond[0]=(x219+new_r21);
+evalcond[1]=(new_r20+(((-1.0)*x221)));
+evalcond[2]=(((new_r02*x218))+new_r11);
+evalcond[3]=(((new_r02*x219))+new_r10);
+evalcond[4]=(new_r01+(((-1.0)*new_r12*x221)));
+evalcond[5]=(new_r00+(((-1.0)*new_r12*x222)));
+evalcond[6]=((((-1.0)*new_r10*x220))+((new_r00*new_r12))+(((-1.0)*x222)));
+evalcond[7]=((((-1.0)*new_r11*x220))+((new_r01*new_r12))+(((-1.0)*x221)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3328,18 +3314,18 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x236=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
-IkReal x237=(((new_r12*sj3))+((cj3*new_r02)));
+IkReal x223=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
+IkReal x224=(((new_r12*sj3))+((cj3*new_r02)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(j4))), 6.28318530717959)));
 evalcond[1]=((-1.0)+new_r22);
 evalcond[2]=new_r20;
 evalcond[3]=new_r02;
 evalcond[4]=new_r12;
 evalcond[5]=new_r21;
-evalcond[6]=x236;
-evalcond[7]=x236;
-evalcond[8]=x237;
-evalcond[9]=x237;
+evalcond[6]=x223;
+evalcond[7]=x223;
+evalcond[8]=x224;
+evalcond[9]=x224;
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3347,10 +3333,10 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-IkReal x238=((1.0)*new_r01);
-if( IKabs(((((-1.0)*cj3*x238))+(((-1.0)*new_r00*sj3)))) < IKFAST_ATAN2_MAGTHRESH && IKabs((((cj3*new_r00))+(((-1.0)*sj3*x238)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*cj3*x238))+(((-1.0)*new_r00*sj3))))+IKsqr((((cj3*new_r00))+(((-1.0)*sj3*x238))))-1) <= IKFAST_SINCOS_THRESH )
+IkReal x225=((1.0)*new_r01);
+if( IKabs(((((-1.0)*cj3*x225))+(((-1.0)*new_r00*sj3)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*sj3*x225))+((cj3*new_r00)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*cj3*x225))+(((-1.0)*new_r00*sj3))))+IKsqr(((((-1.0)*sj3*x225))+((cj3*new_r00))))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2(((((-1.0)*cj3*x238))+(((-1.0)*new_r00*sj3))), (((cj3*new_r00))+(((-1.0)*sj3*x238))));
+j5array[0]=IKatan2(((((-1.0)*cj3*x225))+(((-1.0)*new_r00*sj3))), ((((-1.0)*sj3*x225))+((cj3*new_r00))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -3378,21 +3364,21 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x239=IKsin(j5);
-IkReal x240=IKcos(j5);
-IkReal x241=((1.0)*sj3);
-IkReal x242=((1.0)*x240);
-IkReal x243=(sj3*x239);
-IkReal x244=((1.0)*x239);
-IkReal x245=(cj3*x242);
-evalcond[0]=(((new_r11*sj3))+x239+((cj3*new_r01)));
-evalcond[1]=(((cj3*x239))+((sj3*x240))+new_r01);
-evalcond[2]=(((new_r10*sj3))+((cj3*new_r00))+(((-1.0)*x242)));
-evalcond[3]=((((-1.0)*new_r00*x241))+((cj3*new_r10))+(((-1.0)*x244)));
-evalcond[4]=((((-1.0)*new_r01*x241))+((cj3*new_r11))+(((-1.0)*x242)));
-evalcond[5]=(x243+(((-1.0)*x245))+new_r00);
-evalcond[6]=(x243+(((-1.0)*x245))+new_r11);
-evalcond[7]=((((-1.0)*cj3*x244))+(((-1.0)*x240*x241))+new_r10);
+IkReal x226=IKsin(j5);
+IkReal x227=IKcos(j5);
+IkReal x228=((1.0)*sj3);
+IkReal x229=((1.0)*x227);
+IkReal x230=(sj3*x226);
+IkReal x231=((1.0)*x226);
+IkReal x232=(cj3*x229);
+evalcond[0]=(((new_r11*sj3))+x226+((cj3*new_r01)));
+evalcond[1]=(((cj3*x226))+((sj3*x227))+new_r01);
+evalcond[2]=(((new_r10*sj3))+((cj3*new_r00))+(((-1.0)*x229)));
+evalcond[3]=((((-1.0)*x231))+((cj3*new_r10))+(((-1.0)*new_r00*x228)));
+evalcond[4]=((((-1.0)*new_r01*x228))+((cj3*new_r11))+(((-1.0)*x229)));
+evalcond[5]=((((-1.0)*x232))+x230+new_r00);
+evalcond[6]=((((-1.0)*x232))+x230+new_r11);
+evalcond[7]=((((-1.0)*x227*x228))+(((-1.0)*cj3*x231))+new_r10);
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3444,19 +3430,19 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x246=(new_r12*sj3);
-IkReal x247=((1.0)*new_r02);
-IkReal x248=((((-1.0)*sj3*x247))+((cj3*new_r12)));
+IkReal x233=(new_r12*sj3);
+IkReal x234=((1.0)*new_r02);
+IkReal x235=(((cj3*new_r12))+(((-1.0)*sj3*x234)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-3.14159265358979)+j4)))), 6.28318530717959)));
 evalcond[1]=((1.0)+new_r22);
 evalcond[2]=new_r20;
 evalcond[3]=new_r02;
 evalcond[4]=new_r12;
 evalcond[5]=new_r21;
-evalcond[6]=x248;
-evalcond[7]=x248;
-evalcond[8]=(x246+((cj3*new_r02)));
-evalcond[9]=((((-1.0)*x246))+(((-1.0)*cj3*x247)));
+evalcond[6]=x235;
+evalcond[7]=x235;
+evalcond[8]=(x233+((cj3*new_r02)));
+evalcond[9]=((((-1.0)*cj3*x234))+(((-1.0)*x233)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3464,10 +3450,10 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-IkReal x249=((1.0)*sj3);
-if( IKabs(((((-1.0)*new_r00*x249))+((cj3*new_r01)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*new_r01*x249))+(((-1.0)*cj3*new_r00)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*new_r00*x249))+((cj3*new_r01))))+IKsqr(((((-1.0)*new_r01*x249))+(((-1.0)*cj3*new_r00))))-1) <= IKFAST_SINCOS_THRESH )
+IkReal x236=((1.0)*sj3);
+if( IKabs((((cj3*new_r01))+(((-1.0)*new_r00*x236)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*cj3*new_r00))+(((-1.0)*new_r01*x236)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((((cj3*new_r01))+(((-1.0)*new_r00*x236))))+IKsqr(((((-1.0)*cj3*new_r00))+(((-1.0)*new_r01*x236))))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2(((((-1.0)*new_r00*x249))+((cj3*new_r01))), ((((-1.0)*new_r01*x249))+(((-1.0)*cj3*new_r00))));
+j5array[0]=IKatan2((((cj3*new_r01))+(((-1.0)*new_r00*x236))), ((((-1.0)*cj3*new_r00))+(((-1.0)*new_r01*x236))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -3495,21 +3481,21 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x250=IKsin(j5);
-IkReal x251=IKcos(j5);
-IkReal x252=((1.0)*sj3);
-IkReal x253=((1.0)*x250);
-IkReal x254=(sj3*x251);
-IkReal x255=((1.0)*x251);
-IkReal x256=(cj3*x253);
-evalcond[0]=(((new_r10*sj3))+x251+((cj3*new_r00)));
-evalcond[1]=(((new_r11*sj3))+((cj3*new_r01))+(((-1.0)*x253)));
-evalcond[2]=(((cj3*x251))+((sj3*x250))+new_r00);
-evalcond[3]=(((cj3*new_r10))+(((-1.0)*new_r00*x252))+(((-1.0)*x253)));
-evalcond[4]=((((-1.0)*new_r01*x252))+((cj3*new_r11))+(((-1.0)*x255)));
-evalcond[5]=(x254+new_r01+(((-1.0)*x256)));
-evalcond[6]=(x254+new_r10+(((-1.0)*x256)));
-evalcond[7]=((((-1.0)*x250*x252))+(((-1.0)*cj3*x255))+new_r11);
+IkReal x237=IKsin(j5);
+IkReal x238=IKcos(j5);
+IkReal x239=((1.0)*sj3);
+IkReal x240=((1.0)*x237);
+IkReal x241=(sj3*x238);
+IkReal x242=((1.0)*x238);
+IkReal x243=(cj3*x240);
+evalcond[0]=(((new_r10*sj3))+x238+((cj3*new_r00)));
+evalcond[1]=(((new_r11*sj3))+((cj3*new_r01))+(((-1.0)*x240)));
+evalcond[2]=(((cj3*x238))+new_r00+((sj3*x237)));
+evalcond[3]=(((cj3*new_r10))+(((-1.0)*x240))+(((-1.0)*new_r00*x239)));
+evalcond[4]=(((cj3*new_r11))+(((-1.0)*x242))+(((-1.0)*new_r01*x239)));
+evalcond[5]=(x241+(((-1.0)*x243))+new_r01);
+evalcond[6]=(x241+(((-1.0)*x243))+new_r10);
+evalcond[7]=((((-1.0)*cj3*x242))+new_r11+(((-1.0)*x237*x239)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3561,20 +3547,20 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x257=(new_r22+(((-1.0)*cj4)));
-IkReal x258=((((-1.0)*sj4))+new_r02);
-IkReal x259=((1.0)*cj4);
-IkReal x260=((1.0)*sj4);
+IkReal x244=(new_r22+(((-1.0)*cj4)));
+IkReal x245=((((-1.0)*sj4))+new_r02);
+IkReal x246=((1.0)*cj4);
+IkReal x247=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(j3))), 6.28318530717959)));
-evalcond[1]=x257;
-evalcond[2]=x257;
-evalcond[3]=x258;
+evalcond[1]=x244;
+evalcond[2]=x244;
+evalcond[3]=x245;
 evalcond[4]=new_r12;
-evalcond[5]=x258;
-evalcond[6]=(((cj4*new_r02))+(((-1.0)*new_r22*x260)));
-evalcond[7]=((((-1.0)*new_r00*x260))+(((-1.0)*new_r20*x259)));
-evalcond[8]=((((-1.0)*new_r21*x259))+(((-1.0)*new_r01*x260)));
-evalcond[9]=((1.0)+(((-1.0)*new_r22*x259))+(((-1.0)*new_r02*x260)));
+evalcond[5]=x245;
+evalcond[6]=(((cj4*new_r02))+(((-1.0)*new_r22*x247)));
+evalcond[7]=((((-1.0)*new_r00*x247))+(((-1.0)*new_r20*x246)));
+evalcond[8]=((((-1.0)*new_r01*x247))+(((-1.0)*new_r21*x246)));
+evalcond[9]=((1.0)+(((-1.0)*new_r22*x246))+(((-1.0)*new_r02*x247)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3612,18 +3598,18 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x261=IKcos(j5);
-IkReal x262=IKsin(j5);
-IkReal x263=((1.0)*new_r02);
-IkReal x264=((1.0)*x261);
-evalcond[0]=(new_r20+((new_r02*x261)));
-evalcond[1]=((((-1.0)*x262))+new_r10);
-evalcond[2]=(new_r11+(((-1.0)*x264)));
-evalcond[3]=(((new_r22*x262))+new_r01);
-evalcond[4]=((((-1.0)*x262*x263))+new_r21);
-evalcond[5]=((((-1.0)*new_r22*x264))+new_r00);
-evalcond[6]=(((new_r01*new_r22))+(((-1.0)*new_r21*x263))+x262);
-evalcond[7]=(((new_r00*new_r22))+(((-1.0)*new_r20*x263))+(((-1.0)*x264)));
+IkReal x248=IKcos(j5);
+IkReal x249=IKsin(j5);
+IkReal x250=((1.0)*new_r02);
+IkReal x251=((1.0)*x248);
+evalcond[0]=(new_r20+((new_r02*x248)));
+evalcond[1]=((((-1.0)*x249))+new_r10);
+evalcond[2]=(new_r11+(((-1.0)*x251)));
+evalcond[3]=(((new_r22*x249))+new_r01);
+evalcond[4]=((((-1.0)*x249*x250))+new_r21);
+evalcond[5]=(new_r00+(((-1.0)*new_r22*x251)));
+evalcond[6]=((((-1.0)*new_r21*x250))+((new_r01*new_r22))+x249);
+evalcond[7]=(((new_r00*new_r22))+(((-1.0)*new_r20*x250))+(((-1.0)*x251)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3675,19 +3661,19 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x265=(new_r22+(((-1.0)*cj4)));
-IkReal x266=((1.0)*cj4);
-IkReal x267=((1.0)*sj4);
+IkReal x252=(new_r22+(((-1.0)*cj4)));
+IkReal x253=((1.0)*cj4);
+IkReal x254=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-3.14159265358979)+j3)))), 6.28318530717959)));
-evalcond[1]=x265;
-evalcond[2]=x265;
+evalcond[1]=x252;
+evalcond[2]=x252;
 evalcond[3]=(sj4+new_r02);
 evalcond[4]=new_r12;
-evalcond[5]=((((-1.0)*new_r02))+(((-1.0)*x267)));
-evalcond[6]=((((-1.0)*new_r22*x267))+(((-1.0)*new_r02*x266)));
-evalcond[7]=(((new_r00*sj4))+(((-1.0)*new_r20*x266)));
-evalcond[8]=(((new_r01*sj4))+(((-1.0)*new_r21*x266)));
-evalcond[9]=((1.0)+((new_r02*sj4))+(((-1.0)*new_r22*x266)));
+evalcond[5]=((((-1.0)*new_r02))+(((-1.0)*x254)));
+evalcond[6]=((((-1.0)*new_r22*x254))+(((-1.0)*new_r02*x253)));
+evalcond[7]=(((new_r00*sj4))+(((-1.0)*new_r20*x253)));
+evalcond[8]=((((-1.0)*new_r21*x253))+((new_r01*sj4)));
+evalcond[9]=((1.0)+((new_r02*sj4))+(((-1.0)*new_r22*x253)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -3695,15 +3681,15 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x268 = IKatan2WithCheck(IkReal(((-1.0)*new_r21)),new_r20,IKFAST_ATAN2_MAGTHRESH);
-if(!x268.valid){
+CheckValue<IkReal> x255 = IKatan2WithCheck(IkReal(((-1.0)*new_r21)),new_r20,IKFAST_ATAN2_MAGTHRESH);
+if(!x255.valid){
 continue;
 }
-CheckValue<IkReal> x269=IKPowWithIntegerCheck(IKsign(new_r02),-1);
-if(!x269.valid){
+CheckValue<IkReal> x256=IKPowWithIntegerCheck(IKsign(new_r02),-1);
+if(!x256.valid){
 continue;
 }
-j5array[0]=((-1.5707963267949)+(x268.value)+(((1.5707963267949)*(x269.value))));
+j5array[0]=((-1.5707963267949)+(x255.value)+(((1.5707963267949)*(x256.value))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -3731,19 +3717,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x270=IKsin(j5);
-IkReal x271=IKcos(j5);
-IkReal x272=((1.0)*new_r00);
-IkReal x273=((1.0)*new_r01);
-IkReal x274=((1.0)*x271);
-evalcond[0]=(new_r21+((new_r02*x270)));
-evalcond[1]=((((-1.0)*new_r02*x274))+new_r20);
-evalcond[2]=((((-1.0)*x270))+(((-1.0)*new_r10)));
-evalcond[3]=((((-1.0)*new_r11))+(((-1.0)*x274)));
-evalcond[4]=(((new_r22*x270))+(((-1.0)*x273)));
-evalcond[5]=((((-1.0)*new_r22*x274))+(((-1.0)*x272)));
-evalcond[6]=((((-1.0)*new_r22*x273))+x270+((new_r02*new_r21)));
-evalcond[7]=((((-1.0)*new_r22*x272))+(((-1.0)*x274))+((new_r02*new_r20)));
+IkReal x257=IKsin(j5);
+IkReal x258=IKcos(j5);
+IkReal x259=((1.0)*new_r00);
+IkReal x260=((1.0)*new_r01);
+IkReal x261=((1.0)*x258);
+evalcond[0]=(((new_r02*x257))+new_r21);
+evalcond[1]=(new_r20+(((-1.0)*new_r02*x261)));
+evalcond[2]=((((-1.0)*new_r10))+(((-1.0)*x257)));
+evalcond[3]=((((-1.0)*new_r11))+(((-1.0)*x261)));
+evalcond[4]=(((new_r22*x257))+(((-1.0)*x260)));
+evalcond[5]=((((-1.0)*new_r22*x261))+(((-1.0)*x259)));
+evalcond[6]=((((-1.0)*new_r22*x260))+x257+((new_r02*new_r21)));
+evalcond[7]=(((new_r02*new_r20))+(((-1.0)*x261))+(((-1.0)*new_r22*x259)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -3821,22 +3807,137 @@ if( bgotonextstatement )
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x276=IKPowWithIntegerCheck(sj4,-1);
-if(!x276.valid){
+CheckValue<IkReal> x263=IKPowWithIntegerCheck(sj4,-1);
+if(!x263.valid){
 continue;
 }
-IkReal x275=x276.value;
-CheckValue<IkReal> x277=IKPowWithIntegerCheck(cj3,-1);
+IkReal x262=x263.value;
+CheckValue<IkReal> x264=IKPowWithIntegerCheck(cj3,-1);
+if(!x264.valid){
+continue;
+}
+CheckValue<IkReal> x265=IKPowWithIntegerCheck(cj4,-1);
+if(!x265.valid){
+continue;
+}
+if( IKabs((x262*(x264.value)*(x265.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x262)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x262*(x264.value)*(x265.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))))+IKsqr(((-1.0)*new_r20*x262))-1) <= IKFAST_SINCOS_THRESH )
+    continue;
+j5array[0]=IKatan2((x262*(x264.value)*(x265.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))), ((-1.0)*new_r20*x262));
+sj5array[0]=IKsin(j5array[0]);
+cj5array[0]=IKcos(j5array[0]);
+if( j5array[0] > IKPI )
+{
+    j5array[0]-=IK2PI;
+}
+else if( j5array[0] < -IKPI )
+{    j5array[0]+=IK2PI;
+}
+j5valid[0] = true;
+for(int ij5 = 0; ij5 < 1; ++ij5)
+{
+if( !j5valid[ij5] )
+{
+    continue;
+}
+_ij5[0] = ij5; _ij5[1] = -1;
+for(int iij5 = ij5+1; iij5 < 1; ++iij5)
+{
+if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRESH && IKabs(sj5array[ij5]-sj5array[iij5]) < IKFAST_SOLUTION_THRESH )
+{
+    j5valid[iij5]=false; _ij5[1] = iij5; break; 
+}
+}
+j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
+{
+IkReal evalcond[12];
+IkReal x266=IKsin(j5);
+IkReal x267=IKcos(j5);
+IkReal x268=(cj3*new_r00);
+IkReal x269=(cj3*cj4);
+IkReal x270=(cj4*sj3);
+IkReal x271=((1.0)*sj3);
+IkReal x272=((1.0)*sj4);
+IkReal x273=((1.0)*x267);
+IkReal x274=(sj3*x266);
+IkReal x275=((1.0)*x266);
+evalcond[0]=(new_r20+((sj4*x267)));
+evalcond[1]=((((-1.0)*x266*x272))+new_r21);
+evalcond[2]=(((new_r11*sj3))+((cj4*x266))+((cj3*new_r01)));
+evalcond[3]=((((-1.0)*new_r00*x271))+((cj3*new_r10))+(((-1.0)*x275)));
+evalcond[4]=((((-1.0)*new_r01*x271))+((cj3*new_r11))+(((-1.0)*x273)));
+evalcond[5]=(((x266*x269))+((sj3*x267))+new_r01);
+evalcond[6]=((((-1.0)*cj4*x273))+((new_r10*sj3))+x268);
+evalcond[7]=((((-1.0)*x269*x273))+x274+new_r00);
+evalcond[8]=(((x266*x270))+(((-1.0)*cj3*x273))+new_r11);
+evalcond[9]=((((-1.0)*cj3*x275))+(((-1.0)*x270*x273))+new_r10);
+evalcond[10]=((((-1.0)*new_r21*x272))+x266+((new_r01*x269))+((new_r11*x270)));
+evalcond[11]=(((cj4*x268))+(((-1.0)*new_r20*x272))+(((-1.0)*x273))+((new_r10*x270)));
+if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[8]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[9]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[10]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[11]) > IKFAST_EVALCOND_THRESH  )
+{
+continue;
+}
+}
+
+{
+std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(6);
+vinfos[0].jointtype = 1;
+vinfos[0].foffset = j0;
+vinfos[0].indices[0] = _ij0[0];
+vinfos[0].indices[1] = _ij0[1];
+vinfos[0].maxsolutions = _nj0;
+vinfos[1].jointtype = 1;
+vinfos[1].foffset = j1;
+vinfos[1].indices[0] = _ij1[0];
+vinfos[1].indices[1] = _ij1[1];
+vinfos[1].maxsolutions = _nj1;
+vinfos[2].jointtype = 1;
+vinfos[2].foffset = j2;
+vinfos[2].indices[0] = _ij2[0];
+vinfos[2].indices[1] = _ij2[1];
+vinfos[2].maxsolutions = _nj2;
+vinfos[3].jointtype = 1;
+vinfos[3].foffset = j3;
+vinfos[3].indices[0] = _ij3[0];
+vinfos[3].indices[1] = _ij3[1];
+vinfos[3].maxsolutions = _nj3;
+vinfos[4].jointtype = 1;
+vinfos[4].foffset = j4;
+vinfos[4].indices[0] = _ij4[0];
+vinfos[4].indices[1] = _ij4[1];
+vinfos[4].maxsolutions = _nj4;
+vinfos[5].jointtype = 1;
+vinfos[5].foffset = j5;
+vinfos[5].indices[0] = _ij5[0];
+vinfos[5].indices[1] = _ij5[1];
+vinfos[5].maxsolutions = _nj5;
+std::vector<int> vfree(0);
+solutions.AddSolution(vinfos,vfree);
+}
+}
+}
+
+}
+
+}
+
+} else
+{
+{
+IkReal j5array[1], cj5array[1], sj5array[1];
+bool j5valid[1]={false};
+_nj5 = 1;
+CheckValue<IkReal> x277=IKPowWithIntegerCheck(sj4,-1);
 if(!x277.valid){
 continue;
 }
-CheckValue<IkReal> x278=IKPowWithIntegerCheck(cj4,-1);
+IkReal x276=x277.value;
+CheckValue<IkReal> x278=IKPowWithIntegerCheck(sj3,-1);
 if(!x278.valid){
 continue;
 }
-if( IKabs((x275*(x277.value)*(x278.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x275)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x275*(x277.value)*(x278.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))))+IKsqr(((-1.0)*new_r20*x275))-1) <= IKFAST_SINCOS_THRESH )
+if( IKabs((x276*(x278.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x276)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x276*(x278.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))))+IKsqr(((-1.0)*new_r20*x276))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2((x275*(x277.value)*(x278.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))), ((-1.0)*new_r20*x275));
+j5array[0]=IKatan2((x276*(x278.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))), ((-1.0)*new_r20*x276));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -3940,18 +4041,15 @@ solutions.AddSolution(vinfos,vfree);
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x290=IKPowWithIntegerCheck(sj4,-1);
+CheckValue<IkReal> x289=IKPowWithIntegerCheck(IKsign(sj4),-1);
+if(!x289.valid){
+continue;
+}
+CheckValue<IkReal> x290 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
 if(!x290.valid){
 continue;
 }
-IkReal x289=x290.value;
-CheckValue<IkReal> x291=IKPowWithIntegerCheck(sj3,-1);
-if(!x291.valid){
-continue;
-}
-if( IKabs((x289*(x291.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x289)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x289*(x291.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))))+IKsqr(((-1.0)*new_r20*x289))-1) <= IKFAST_SINCOS_THRESH )
-    continue;
-j5array[0]=IKatan2((x289*(x291.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))), ((-1.0)*new_r20*x289));
+j5array[0]=((-1.5707963267949)+(((1.5707963267949)*(x289.value)))+(x290.value));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -3979,140 +4077,28 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[12];
-IkReal x292=IKsin(j5);
-IkReal x293=IKcos(j5);
-IkReal x294=(cj3*new_r00);
-IkReal x295=(cj3*cj4);
-IkReal x296=(cj4*sj3);
-IkReal x297=((1.0)*sj3);
-IkReal x298=((1.0)*sj4);
-IkReal x299=((1.0)*x293);
-IkReal x300=(sj3*x292);
-IkReal x301=((1.0)*x292);
-evalcond[0]=(((sj4*x293))+new_r20);
-evalcond[1]=(new_r21+(((-1.0)*x292*x298)));
-evalcond[2]=(((new_r11*sj3))+((cj4*x292))+((cj3*new_r01)));
-evalcond[3]=(((cj3*new_r10))+(((-1.0)*new_r00*x297))+(((-1.0)*x301)));
-evalcond[4]=((((-1.0)*new_r01*x297))+(((-1.0)*x299))+((cj3*new_r11)));
-evalcond[5]=(new_r01+((x292*x295))+((sj3*x293)));
-evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x299))+x294);
-evalcond[7]=(x300+(((-1.0)*x295*x299))+new_r00);
-evalcond[8]=((((-1.0)*cj3*x299))+new_r11+((x292*x296)));
-evalcond[9]=((((-1.0)*cj3*x301))+(((-1.0)*x296*x299))+new_r10);
-evalcond[10]=((((-1.0)*new_r21*x298))+((new_r11*x296))+x292+((new_r01*x295)));
-evalcond[11]=((((-1.0)*new_r20*x298))+(((-1.0)*x299))+((new_r10*x296))+((cj4*x294)));
-if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[8]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[9]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[10]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[11]) > IKFAST_EVALCOND_THRESH  )
-{
-continue;
-}
-}
-
-{
-std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(6);
-vinfos[0].jointtype = 1;
-vinfos[0].foffset = j0;
-vinfos[0].indices[0] = _ij0[0];
-vinfos[0].indices[1] = _ij0[1];
-vinfos[0].maxsolutions = _nj0;
-vinfos[1].jointtype = 1;
-vinfos[1].foffset = j1;
-vinfos[1].indices[0] = _ij1[0];
-vinfos[1].indices[1] = _ij1[1];
-vinfos[1].maxsolutions = _nj1;
-vinfos[2].jointtype = 1;
-vinfos[2].foffset = j2;
-vinfos[2].indices[0] = _ij2[0];
-vinfos[2].indices[1] = _ij2[1];
-vinfos[2].maxsolutions = _nj2;
-vinfos[3].jointtype = 1;
-vinfos[3].foffset = j3;
-vinfos[3].indices[0] = _ij3[0];
-vinfos[3].indices[1] = _ij3[1];
-vinfos[3].maxsolutions = _nj3;
-vinfos[4].jointtype = 1;
-vinfos[4].foffset = j4;
-vinfos[4].indices[0] = _ij4[0];
-vinfos[4].indices[1] = _ij4[1];
-vinfos[4].maxsolutions = _nj4;
-vinfos[5].jointtype = 1;
-vinfos[5].foffset = j5;
-vinfos[5].indices[0] = _ij5[0];
-vinfos[5].indices[1] = _ij5[1];
-vinfos[5].maxsolutions = _nj5;
-std::vector<int> vfree(0);
-solutions.AddSolution(vinfos,vfree);
-}
-}
-}
-
-}
-
-}
-
-} else
-{
-{
-IkReal j5array[1], cj5array[1], sj5array[1];
-bool j5valid[1]={false};
-_nj5 = 1;
-CheckValue<IkReal> x302=IKPowWithIntegerCheck(IKsign(sj4),-1);
-if(!x302.valid){
-continue;
-}
-CheckValue<IkReal> x303 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
-if(!x303.valid){
-continue;
-}
-j5array[0]=((-1.5707963267949)+(((1.5707963267949)*(x302.value)))+(x303.value));
-sj5array[0]=IKsin(j5array[0]);
-cj5array[0]=IKcos(j5array[0]);
-if( j5array[0] > IKPI )
-{
-    j5array[0]-=IK2PI;
-}
-else if( j5array[0] < -IKPI )
-{    j5array[0]+=IK2PI;
-}
-j5valid[0] = true;
-for(int ij5 = 0; ij5 < 1; ++ij5)
-{
-if( !j5valid[ij5] )
-{
-    continue;
-}
-_ij5[0] = ij5; _ij5[1] = -1;
-for(int iij5 = ij5+1; iij5 < 1; ++iij5)
-{
-if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRESH && IKabs(sj5array[ij5]-sj5array[iij5]) < IKFAST_SOLUTION_THRESH )
-{
-    j5valid[iij5]=false; _ij5[1] = iij5; break; 
-}
-}
-j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
-{
-IkReal evalcond[12];
-IkReal x304=IKsin(j5);
-IkReal x305=IKcos(j5);
-IkReal x306=(cj3*new_r00);
-IkReal x307=(cj3*cj4);
-IkReal x308=(cj4*sj3);
-IkReal x309=((1.0)*sj3);
-IkReal x310=((1.0)*sj4);
-IkReal x311=((1.0)*x305);
-IkReal x312=(sj3*x304);
-IkReal x313=((1.0)*x304);
-evalcond[0]=(((sj4*x305))+new_r20);
-evalcond[1]=((((-1.0)*x304*x310))+new_r21);
-evalcond[2]=(((new_r11*sj3))+((cj3*new_r01))+((cj4*x304)));
-evalcond[3]=((((-1.0)*x313))+((cj3*new_r10))+(((-1.0)*new_r00*x309)));
-evalcond[4]=((((-1.0)*x311))+(((-1.0)*new_r01*x309))+((cj3*new_r11)));
-evalcond[5]=(((sj3*x305))+((x304*x307))+new_r01);
-evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x311))+x306);
-evalcond[7]=(x312+(((-1.0)*x307*x311))+new_r00);
-evalcond[8]=(((x304*x308))+new_r11+(((-1.0)*cj3*x311)));
-evalcond[9]=((((-1.0)*x308*x311))+new_r10+(((-1.0)*cj3*x313)));
-evalcond[10]=((((-1.0)*new_r21*x310))+((new_r01*x307))+((new_r11*x308))+x304);
-evalcond[11]=((((-1.0)*new_r20*x310))+((new_r10*x308))+(((-1.0)*x311))+((cj4*x306)));
+IkReal x291=IKsin(j5);
+IkReal x292=IKcos(j5);
+IkReal x293=(cj3*new_r00);
+IkReal x294=(cj3*cj4);
+IkReal x295=(cj4*sj3);
+IkReal x296=((1.0)*sj3);
+IkReal x297=((1.0)*sj4);
+IkReal x298=((1.0)*x292);
+IkReal x299=(sj3*x291);
+IkReal x300=((1.0)*x291);
+evalcond[0]=(((sj4*x292))+new_r20);
+evalcond[1]=((((-1.0)*x291*x297))+new_r21);
+evalcond[2]=(((new_r11*sj3))+((cj4*x291))+((cj3*new_r01)));
+evalcond[3]=(((cj3*new_r10))+(((-1.0)*new_r00*x296))+(((-1.0)*x300)));
+evalcond[4]=((((-1.0)*new_r01*x296))+(((-1.0)*x298))+((cj3*new_r11)));
+evalcond[5]=(((x291*x294))+new_r01+((sj3*x292)));
+evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x298))+x293);
+evalcond[7]=(x299+new_r00+(((-1.0)*x294*x298)));
+evalcond[8]=(((x291*x295))+(((-1.0)*cj3*x298))+new_r11);
+evalcond[9]=((((-1.0)*cj3*x300))+(((-1.0)*x295*x298))+new_r10);
+evalcond[10]=((((-1.0)*new_r21*x297))+((new_r11*x295))+x291+((new_r01*x294)));
+evalcond[11]=((((-1.0)*new_r20*x297))+(((-1.0)*x298))+((new_r10*x295))+((cj4*x293)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[8]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[9]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[10]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[11]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -4173,15 +4159,15 @@ solutions.AddSolution(vinfos,vfree);
 IkReal j3array[1], cj3array[1], sj3array[1];
 bool j3valid[1]={false};
 _nj3 = 1;
-CheckValue<IkReal> x314=IKPowWithIntegerCheck(IKsign(sj4),-1);
-if(!x314.valid){
+CheckValue<IkReal> x301=IKPowWithIntegerCheck(IKsign(sj4),-1);
+if(!x301.valid){
 continue;
 }
-CheckValue<IkReal> x315 = IKatan2WithCheck(IkReal(new_r12),new_r02,IKFAST_ATAN2_MAGTHRESH);
-if(!x315.valid){
+CheckValue<IkReal> x302 = IKatan2WithCheck(IkReal(new_r12),new_r02,IKFAST_ATAN2_MAGTHRESH);
+if(!x302.valid){
 continue;
 }
-j3array[0]=((-1.5707963267949)+(((1.5707963267949)*(x314.value)))+(x315.value));
+j3array[0]=((-1.5707963267949)+(((1.5707963267949)*(x301.value)))+(x302.value));
 sj3array[0]=IKsin(j3array[0]);
 cj3array[0]=IKcos(j3array[0]);
 if( j3array[0] > IKPI )
@@ -4209,26 +4195,54 @@ if( j3valid[iij3] && IKabs(cj3array[ij3]-cj3array[iij3]) < IKFAST_SOLUTION_THRES
 j3 = j3array[ij3]; cj3 = cj3array[ij3]; sj3 = sj3array[ij3];
 {
 IkReal evalcond[8];
-IkReal x316=IKcos(j3);
-IkReal x317=IKsin(j3);
-IkReal x318=((1.0)*sj4);
-IkReal x319=((1.0)*cj4);
-IkReal x320=(new_r02*x316);
-IkReal x321=(new_r12*x317);
-evalcond[0]=(new_r02+(((-1.0)*x316*x318)));
-evalcond[1]=(new_r12+(((-1.0)*x317*x318)));
-evalcond[2]=((((-1.0)*new_r02*x317))+((new_r12*x316)));
-evalcond[3]=(x320+x321+(((-1.0)*x318)));
-evalcond[4]=((((-1.0)*new_r22*x318))+((cj4*x321))+((cj4*x320)));
-evalcond[5]=((((-1.0)*new_r20*x319))+(((-1.0)*new_r10*x317*x318))+(((-1.0)*new_r00*x316*x318)));
-evalcond[6]=((((-1.0)*new_r21*x319))+(((-1.0)*new_r11*x317*x318))+(((-1.0)*new_r01*x316*x318)));
-evalcond[7]=((1.0)+(((-1.0)*new_r22*x319))+(((-1.0)*x318*x320))+(((-1.0)*x318*x321)));
+IkReal x303=IKcos(j3);
+IkReal x304=IKsin(j3);
+IkReal x305=((1.0)*sj4);
+IkReal x306=((1.0)*cj4);
+IkReal x307=(new_r02*x303);
+IkReal x308=(new_r12*x304);
+evalcond[0]=((((-1.0)*x303*x305))+new_r02);
+evalcond[1]=((((-1.0)*x304*x305))+new_r12);
+evalcond[2]=((((-1.0)*new_r02*x304))+((new_r12*x303)));
+evalcond[3]=(x308+x307+(((-1.0)*x305)));
+evalcond[4]=((((-1.0)*new_r22*x305))+((cj4*x308))+((cj4*x307)));
+evalcond[5]=((((-1.0)*new_r00*x303*x305))+(((-1.0)*new_r20*x306))+(((-1.0)*new_r10*x304*x305)));
+evalcond[6]=((((-1.0)*new_r21*x306))+(((-1.0)*new_r11*x304*x305))+(((-1.0)*new_r01*x303*x305)));
+evalcond[7]=((1.0)+(((-1.0)*new_r22*x306))+(((-1.0)*x305*x307))+(((-1.0)*x305*x308)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
 }
 }
 
+{
+IkReal j5eval[2];
+IkReal x309=(cj0*r00);
+IkReal x310=(cj0*r01);
+IkReal x311=((1.0)*sj1);
+IkReal x312=((1.0)*sj0);
+IkReal x313=(r11*sj0);
+IkReal x314=(cj1*sj2);
+IkReal x315=(cj0*r02);
+IkReal x316=x85;
+IkReal x317=(((cj2*sj1))+x314);
+IkReal x318=(cj0*x316);
+IkReal x319=(sj0*x316);
+IkReal x320=(sj0*x317);
+IkReal x321=x90;
+new_r00=(((r20*x321))+((x309*x316))+((r10*x319)));
+new_r01=(((x310*x316))+((r21*x321))+((x313*x316)));
+new_r02=(((x315*x316))+((r22*x321))+((r12*x319)));
+new_r10=((((-1.0)*r00*x312))+((cj0*r10)));
+new_r11=((((-1.0)*r01*x312))+((cj0*r11)));
+new_r12=((((-1.0)*r02*x312))+((cj0*r12)));
+new_r20=(((r20*x316))+((x309*x317))+((r10*x320)));
+new_r21=(((x310*x317))+((r21*x316))+((x313*x317)));
+new_r22=(((r12*x320))+((x315*x317))+((r22*x316)));
+j5eval[0]=sj4;
+j5eval[1]=IKsign(sj4);
+if( IKabs(j5eval[0]) < 0.0000010000000000  || IKabs(j5eval[1]) < 0.0000010000000000  )
+{
 {
 IkReal j5eval[2];
 IkReal x322=(cj0*r00);
@@ -4238,12 +4252,12 @@ IkReal x325=((1.0)*sj0);
 IkReal x326=(r11*sj0);
 IkReal x327=(cj1*sj2);
 IkReal x328=(cj0*r02);
-IkReal x329=x98;
+IkReal x329=x85;
 IkReal x330=(((cj2*sj1))+x327);
 IkReal x331=(cj0*x329);
 IkReal x332=(sj0*x329);
 IkReal x333=(sj0*x330);
-IkReal x334=x103;
+IkReal x334=x90;
 new_r00=(((x322*x329))+((r20*x334))+((r10*x332)));
 new_r01=(((x326*x329))+((x323*x329))+((r21*x334)));
 new_r02=(((r22*x334))+((r12*x332))+((x328*x329)));
@@ -4253,12 +4267,12 @@ new_r12=((((-1.0)*r02*x325))+((cj0*r12)));
 new_r20=(((r20*x329))+((r10*x333))+((x322*x330)));
 new_r21=(((r21*x329))+((x323*x330))+((x326*x330)));
 new_r22=(((r12*x333))+((r22*x329))+((x328*x330)));
-j5eval[0]=sj4;
-j5eval[1]=IKsign(sj4);
+j5eval[0]=sj3;
+j5eval[1]=sj4;
 if( IKabs(j5eval[0]) < 0.0000010000000000  || IKabs(j5eval[1]) < 0.0000010000000000  )
 {
 {
-IkReal j5eval[2];
+IkReal j5eval[3];
 IkReal x335=(cj0*r00);
 IkReal x336=(cj0*r01);
 IkReal x337=((1.0)*sj1);
@@ -4266,12 +4280,12 @@ IkReal x338=((1.0)*sj0);
 IkReal x339=(r11*sj0);
 IkReal x340=(cj1*sj2);
 IkReal x341=(cj0*r02);
-IkReal x342=x98;
+IkReal x342=x85;
 IkReal x343=(((cj2*sj1))+x340);
 IkReal x344=(cj0*x342);
 IkReal x345=(sj0*x342);
 IkReal x346=(sj0*x343);
-IkReal x347=x103;
+IkReal x347=x90;
 new_r00=(((x335*x342))+((r20*x347))+((r10*x345)));
 new_r01=(((r21*x347))+((x336*x342))+((x339*x342)));
 new_r02=(((r22*x347))+((x341*x342))+((r12*x345)));
@@ -4281,34 +4295,6 @@ new_r12=((((-1.0)*r02*x338))+((cj0*r12)));
 new_r20=(((x335*x343))+((r20*x342))+((r10*x346)));
 new_r21=(((r21*x342))+((x336*x343))+((x339*x343)));
 new_r22=(((r22*x342))+((x341*x343))+((r12*x346)));
-j5eval[0]=sj3;
-j5eval[1]=sj4;
-if( IKabs(j5eval[0]) < 0.0000010000000000  || IKabs(j5eval[1]) < 0.0000010000000000  )
-{
-{
-IkReal j5eval[3];
-IkReal x348=(cj0*r00);
-IkReal x349=(cj0*r01);
-IkReal x350=((1.0)*sj1);
-IkReal x351=((1.0)*sj0);
-IkReal x352=(r11*sj0);
-IkReal x353=(cj1*sj2);
-IkReal x354=(cj0*r02);
-IkReal x355=x98;
-IkReal x356=(((cj2*sj1))+x353);
-IkReal x357=(cj0*x355);
-IkReal x358=(sj0*x355);
-IkReal x359=(sj0*x356);
-IkReal x360=x103;
-new_r00=(((r20*x360))+((r10*x358))+((x348*x355)));
-new_r01=(((x352*x355))+((r21*x360))+((x349*x355)));
-new_r02=(((r12*x358))+((x354*x355))+((r22*x360)));
-new_r10=((((-1.0)*r00*x351))+((cj0*r10)));
-new_r11=((((-1.0)*r01*x351))+((cj0*r11)));
-new_r12=((((-1.0)*r02*x351))+((cj0*r12)));
-new_r20=(((r10*x359))+((x348*x356))+((r20*x355)));
-new_r21=(((r21*x355))+((x352*x356))+((x349*x356)));
-new_r22=(((r12*x359))+((x354*x356))+((r22*x355)));
 j5eval[0]=cj3;
 j5eval[1]=cj4;
 j5eval[2]=sj4;
@@ -4319,20 +4305,20 @@ IkReal evalcond[12];
 bool bgotonextstatement = true;
 do
 {
-IkReal x361=(new_r22+(((-1.0)*cj4)));
-IkReal x362=((((-1.0)*sj4))+new_r12);
-IkReal x363=((1.0)*cj4);
-IkReal x364=((1.0)*sj4);
+IkReal x348=(new_r22+(((-1.0)*cj4)));
+IkReal x349=((((-1.0)*sj4))+new_r12);
+IkReal x350=((1.0)*cj4);
+IkReal x351=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-1.5707963267949)+j3)))), 6.28318530717959)));
-evalcond[1]=x361;
-evalcond[2]=x361;
+evalcond[1]=x348;
+evalcond[2]=x348;
 evalcond[3]=new_r02;
-evalcond[4]=x362;
-evalcond[5]=x362;
-evalcond[6]=(((cj4*new_r12))+(((-1.0)*new_r22*x364)));
-evalcond[7]=((((-1.0)*new_r20*x363))+(((-1.0)*new_r10*x364)));
-evalcond[8]=((((-1.0)*new_r11*x364))+(((-1.0)*new_r21*x363)));
-evalcond[9]=((1.0)+(((-1.0)*new_r22*x363))+(((-1.0)*new_r12*x364)));
+evalcond[4]=x349;
+evalcond[5]=x349;
+evalcond[6]=((((-1.0)*new_r22*x351))+((cj4*new_r12)));
+evalcond[7]=((((-1.0)*new_r10*x351))+(((-1.0)*new_r20*x350)));
+evalcond[8]=((((-1.0)*new_r11*x351))+(((-1.0)*new_r21*x350)));
+evalcond[9]=((1.0)+(((-1.0)*new_r22*x350))+(((-1.0)*new_r12*x351)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -4340,15 +4326,15 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x365 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
-if(!x365.valid){
+CheckValue<IkReal> x352 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
+if(!x352.valid){
 continue;
 }
-CheckValue<IkReal> x366=IKPowWithIntegerCheck(IKsign(new_r12),-1);
-if(!x366.valid){
+CheckValue<IkReal> x353=IKPowWithIntegerCheck(IKsign(new_r12),-1);
+if(!x353.valid){
 continue;
 }
-j5array[0]=((-1.5707963267949)+(x365.value)+(((1.5707963267949)*(x366.value))));
+j5array[0]=((-1.5707963267949)+(x352.value)+(((1.5707963267949)*(x353.value))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -4376,19 +4362,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x367=IKsin(j5);
-IkReal x368=IKcos(j5);
-IkReal x369=((1.0)*new_r12);
-IkReal x370=((1.0)*x368);
-IkReal x371=((1.0)*x367);
-evalcond[0]=(new_r20+((new_r12*x368)));
-evalcond[1]=(((new_r22*x367))+new_r11);
-evalcond[2]=((((-1.0)*x367*x369))+new_r21);
-evalcond[3]=((((-1.0)*new_r22*x370))+new_r10);
-evalcond[4]=((((-1.0)*x371))+(((-1.0)*new_r00)));
-evalcond[5]=((((-1.0)*x370))+(((-1.0)*new_r01)));
-evalcond[6]=(x367+((new_r11*new_r22))+(((-1.0)*new_r21*x369)));
-evalcond[7]=((((-1.0)*new_r20*x369))+(((-1.0)*x370))+((new_r10*new_r22)));
+IkReal x354=IKsin(j5);
+IkReal x355=IKcos(j5);
+IkReal x356=((1.0)*new_r12);
+IkReal x357=((1.0)*x355);
+IkReal x358=((1.0)*x354);
+evalcond[0]=(new_r20+((new_r12*x355)));
+evalcond[1]=(((new_r22*x354))+new_r11);
+evalcond[2]=(new_r21+(((-1.0)*x354*x356)));
+evalcond[3]=((((-1.0)*new_r22*x357))+new_r10);
+evalcond[4]=((((-1.0)*x358))+(((-1.0)*new_r00)));
+evalcond[5]=((((-1.0)*x357))+(((-1.0)*new_r01)));
+evalcond[6]=(x354+((new_r11*new_r22))+(((-1.0)*new_r21*x356)));
+evalcond[7]=((((-1.0)*x357))+((new_r10*new_r22))+(((-1.0)*new_r20*x356)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -4440,19 +4426,19 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x372=(new_r22+(((-1.0)*cj4)));
-IkReal x373=((1.0)*cj4);
-IkReal x374=((1.0)*sj4);
+IkReal x359=(new_r22+(((-1.0)*cj4)));
+IkReal x360=((1.0)*cj4);
+IkReal x361=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((1.5707963267949)+j3)))), 6.28318530717959)));
-evalcond[1]=x372;
-evalcond[2]=x372;
+evalcond[1]=x359;
+evalcond[2]=x359;
 evalcond[3]=new_r02;
 evalcond[4]=(sj4+new_r12);
-evalcond[5]=((((-1.0)*x374))+(((-1.0)*new_r12)));
-evalcond[6]=((((-1.0)*new_r12*x373))+(((-1.0)*new_r22*x374)));
-evalcond[7]=((((-1.0)*new_r20*x373))+((new_r10*sj4)));
-evalcond[8]=((((-1.0)*new_r21*x373))+((new_r11*sj4)));
-evalcond[9]=((1.0)+((new_r12*sj4))+(((-1.0)*new_r22*x373)));
+evalcond[5]=((((-1.0)*x361))+(((-1.0)*new_r12)));
+evalcond[6]=((((-1.0)*new_r22*x361))+(((-1.0)*new_r12*x360)));
+evalcond[7]=((((-1.0)*new_r20*x360))+((new_r10*sj4)));
+evalcond[8]=(((new_r11*sj4))+(((-1.0)*new_r21*x360)));
+evalcond[9]=((1.0)+((new_r12*sj4))+(((-1.0)*new_r22*x360)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -4490,19 +4476,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x375=IKsin(j5);
-IkReal x376=IKcos(j5);
-IkReal x377=((1.0)*new_r11);
-IkReal x378=((1.0)*new_r10);
-IkReal x379=((1.0)*x376);
-evalcond[0]=(((new_r12*x375))+new_r21);
-evalcond[1]=((((-1.0)*x375))+new_r00);
-evalcond[2]=((((-1.0)*x379))+new_r01);
-evalcond[3]=((((-1.0)*new_r12*x379))+new_r20);
-evalcond[4]=((((-1.0)*x377))+((new_r22*x375)));
-evalcond[5]=((((-1.0)*x378))+(((-1.0)*new_r22*x379)));
-evalcond[6]=((((-1.0)*new_r22*x377))+x375+((new_r12*new_r21)));
-evalcond[7]=((((-1.0)*x379))+(((-1.0)*new_r22*x378))+((new_r12*new_r20)));
+IkReal x362=IKsin(j5);
+IkReal x363=IKcos(j5);
+IkReal x364=((1.0)*new_r11);
+IkReal x365=((1.0)*new_r10);
+IkReal x366=((1.0)*x363);
+evalcond[0]=(new_r21+((new_r12*x362)));
+evalcond[1]=((((-1.0)*x362))+new_r00);
+evalcond[2]=((((-1.0)*x366))+new_r01);
+evalcond[3]=((((-1.0)*new_r12*x366))+new_r20);
+evalcond[4]=(((new_r22*x362))+(((-1.0)*x364)));
+evalcond[5]=((((-1.0)*x365))+(((-1.0)*new_r22*x366)));
+evalcond[6]=((((-1.0)*new_r22*x364))+x362+((new_r12*new_r21)));
+evalcond[7]=((((-1.0)*x366))+(((-1.0)*new_r22*x365))+((new_r12*new_r20)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -4554,23 +4540,23 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x380=(new_r12*sj3);
-IkReal x381=(new_r11*sj3);
-IkReal x382=((1.0)*sj3);
-IkReal x383=((1.0)*cj3);
-IkReal x384=((((-1.0)*new_r02*x382))+((cj3*new_r12)));
+IkReal x367=(new_r12*sj3);
+IkReal x368=(new_r11*sj3);
+IkReal x369=((1.0)*sj3);
+IkReal x370=((1.0)*cj3);
+IkReal x371=(((cj3*new_r12))+(((-1.0)*new_r02*x369)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-1.5707963267949)+j4)))), 6.28318530717959)));
 evalcond[1]=new_r22;
-evalcond[2]=((((-1.0)*x383))+new_r02);
-evalcond[3]=((((-1.0)*x382))+new_r12);
-evalcond[4]=x384;
-evalcond[5]=x384;
-evalcond[6]=((-1.0)+x380+((cj3*new_r02)));
-evalcond[7]=(x381+((cj3*new_r01)));
+evalcond[2]=((((-1.0)*x370))+new_r02);
+evalcond[3]=((((-1.0)*x369))+new_r12);
+evalcond[4]=x371;
+evalcond[5]=x371;
+evalcond[6]=((-1.0)+x367+((cj3*new_r02)));
+evalcond[7]=(x368+((cj3*new_r01)));
 evalcond[8]=(((new_r10*sj3))+((cj3*new_r00)));
-evalcond[9]=((((-1.0)*new_r10*x382))+(((-1.0)*new_r00*x383)));
-evalcond[10]=((((-1.0)*new_r01*x383))+(((-1.0)*x381)));
-evalcond[11]=((1.0)+(((-1.0)*new_r02*x383))+(((-1.0)*x380)));
+evalcond[9]=((((-1.0)*new_r00*x370))+(((-1.0)*new_r10*x369)));
+evalcond[10]=((((-1.0)*x368))+(((-1.0)*new_r01*x370)));
+evalcond[11]=((1.0)+(((-1.0)*x367))+(((-1.0)*new_r02*x370)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  && IKabs(evalcond[10]) < 0.0000010000000000  && IKabs(evalcond[11]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -4608,19 +4594,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x385=IKcos(j5);
-IkReal x386=IKsin(j5);
-IkReal x387=((1.0)*new_r12);
-IkReal x388=((1.0)*x386);
-IkReal x389=((1.0)*x385);
-evalcond[0]=(x385+new_r20);
-evalcond[1]=((((-1.0)*x388))+new_r21);
-evalcond[2]=(((new_r12*x385))+new_r01);
-evalcond[3]=(((new_r12*x386))+new_r00);
-evalcond[4]=((((-1.0)*new_r02*x389))+new_r11);
-evalcond[5]=((((-1.0)*new_r02*x388))+new_r10);
-evalcond[6]=((((-1.0)*new_r00*x387))+(((-1.0)*x388))+((new_r02*new_r10)));
-evalcond[7]=((((-1.0)*new_r01*x387))+(((-1.0)*x389))+((new_r02*new_r11)));
+IkReal x372=IKcos(j5);
+IkReal x373=IKsin(j5);
+IkReal x374=((1.0)*new_r12);
+IkReal x375=((1.0)*x373);
+IkReal x376=((1.0)*x372);
+evalcond[0]=(x372+new_r20);
+evalcond[1]=((((-1.0)*x375))+new_r21);
+evalcond[2]=(((new_r12*x372))+new_r01);
+evalcond[3]=(((new_r12*x373))+new_r00);
+evalcond[4]=(new_r11+(((-1.0)*new_r02*x376)));
+evalcond[5]=(new_r10+(((-1.0)*new_r02*x375)));
+evalcond[6]=((((-1.0)*new_r00*x374))+(((-1.0)*x375))+((new_r02*new_r10)));
+evalcond[7]=((((-1.0)*x376))+((new_r02*new_r11))+(((-1.0)*new_r01*x374)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -4672,22 +4658,22 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x390=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
-IkReal x391=(((new_r10*sj3))+((cj3*new_r00)));
-IkReal x392=(((new_r11*sj3))+((cj3*new_r01)));
-IkReal x393=((1.0)+((new_r12*sj3))+((cj3*new_r02)));
+IkReal x377=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
+IkReal x378=(((new_r10*sj3))+((cj3*new_r00)));
+IkReal x379=(((new_r11*sj3))+((cj3*new_r01)));
+IkReal x380=((1.0)+((new_r12*sj3))+((cj3*new_r02)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((1.5707963267949)+j4)))), 6.28318530717959)));
 evalcond[1]=new_r22;
 evalcond[2]=(cj3+new_r02);
 evalcond[3]=(sj3+new_r12);
-evalcond[4]=x390;
-evalcond[5]=x390;
-evalcond[6]=x393;
-evalcond[7]=x392;
-evalcond[8]=x391;
-evalcond[9]=x391;
-evalcond[10]=x392;
-evalcond[11]=x393;
+evalcond[4]=x377;
+evalcond[5]=x377;
+evalcond[6]=x380;
+evalcond[7]=x379;
+evalcond[8]=x378;
+evalcond[9]=x378;
+evalcond[10]=x379;
+evalcond[11]=x380;
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  && IKabs(evalcond[10]) < 0.0000010000000000  && IKabs(evalcond[11]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -4725,19 +4711,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x394=IKcos(j5);
-IkReal x395=IKsin(j5);
-IkReal x396=((1.0)*new_r02);
-IkReal x397=((1.0)*x394);
-IkReal x398=((1.0)*x395);
-evalcond[0]=(x395+new_r21);
-evalcond[1]=((((-1.0)*x397))+new_r20);
-evalcond[2]=(new_r11+((new_r02*x394)));
-evalcond[3]=(new_r10+((new_r02*x395)));
-evalcond[4]=((((-1.0)*new_r12*x397))+new_r01);
-evalcond[5]=((((-1.0)*new_r12*x398))+new_r00);
-evalcond[6]=((((-1.0)*x398))+((new_r00*new_r12))+(((-1.0)*new_r10*x396)));
-evalcond[7]=((((-1.0)*x397))+((new_r01*new_r12))+(((-1.0)*new_r11*x396)));
+IkReal x381=IKcos(j5);
+IkReal x382=IKsin(j5);
+IkReal x383=((1.0)*new_r02);
+IkReal x384=((1.0)*x381);
+IkReal x385=((1.0)*x382);
+evalcond[0]=(x382+new_r21);
+evalcond[1]=((((-1.0)*x384))+new_r20);
+evalcond[2]=(((new_r02*x381))+new_r11);
+evalcond[3]=(((new_r02*x382))+new_r10);
+evalcond[4]=((((-1.0)*new_r12*x384))+new_r01);
+evalcond[5]=((((-1.0)*new_r12*x385))+new_r00);
+evalcond[6]=((((-1.0)*new_r10*x383))+((new_r00*new_r12))+(((-1.0)*x385)));
+evalcond[7]=((((-1.0)*new_r11*x383))+((new_r01*new_r12))+(((-1.0)*x384)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -4789,18 +4775,18 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x399=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
-IkReal x400=(((new_r12*sj3))+((cj3*new_r02)));
+IkReal x386=((((-1.0)*new_r02*sj3))+((cj3*new_r12)));
+IkReal x387=(((new_r12*sj3))+((cj3*new_r02)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(j4))), 6.28318530717959)));
 evalcond[1]=((-1.0)+new_r22);
 evalcond[2]=new_r20;
 evalcond[3]=new_r02;
 evalcond[4]=new_r12;
 evalcond[5]=new_r21;
-evalcond[6]=x399;
-evalcond[7]=x399;
-evalcond[8]=x400;
-evalcond[9]=x400;
+evalcond[6]=x386;
+evalcond[7]=x386;
+evalcond[8]=x387;
+evalcond[9]=x387;
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -4808,10 +4794,10 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-IkReal x401=((1.0)*new_r01);
-if( IKabs(((((-1.0)*cj3*x401))+(((-1.0)*new_r00*sj3)))) < IKFAST_ATAN2_MAGTHRESH && IKabs((((cj3*new_r00))+(((-1.0)*sj3*x401)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*cj3*x401))+(((-1.0)*new_r00*sj3))))+IKsqr((((cj3*new_r00))+(((-1.0)*sj3*x401))))-1) <= IKFAST_SINCOS_THRESH )
+IkReal x388=((1.0)*new_r01);
+if( IKabs(((((-1.0)*new_r00*sj3))+(((-1.0)*cj3*x388)))) < IKFAST_ATAN2_MAGTHRESH && IKabs((((cj3*new_r00))+(((-1.0)*sj3*x388)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr(((((-1.0)*new_r00*sj3))+(((-1.0)*cj3*x388))))+IKsqr((((cj3*new_r00))+(((-1.0)*sj3*x388))))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2(((((-1.0)*cj3*x401))+(((-1.0)*new_r00*sj3))), (((cj3*new_r00))+(((-1.0)*sj3*x401))));
+j5array[0]=IKatan2(((((-1.0)*new_r00*sj3))+(((-1.0)*cj3*x388))), (((cj3*new_r00))+(((-1.0)*sj3*x388))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -4839,21 +4825,21 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x402=IKsin(j5);
-IkReal x403=IKcos(j5);
-IkReal x404=((1.0)*sj3);
-IkReal x405=((1.0)*x403);
-IkReal x406=(sj3*x402);
-IkReal x407=((1.0)*x402);
-IkReal x408=(cj3*x405);
-evalcond[0]=(((new_r11*sj3))+x402+((cj3*new_r01)));
-evalcond[1]=(((sj3*x403))+new_r01+((cj3*x402)));
-evalcond[2]=(((new_r10*sj3))+((cj3*new_r00))+(((-1.0)*x405)));
-evalcond[3]=(((cj3*new_r10))+(((-1.0)*new_r00*x404))+(((-1.0)*x407)));
-evalcond[4]=(((cj3*new_r11))+(((-1.0)*new_r01*x404))+(((-1.0)*x405)));
-evalcond[5]=(x406+new_r00+(((-1.0)*x408)));
-evalcond[6]=(x406+new_r11+(((-1.0)*x408)));
-evalcond[7]=((((-1.0)*cj3*x407))+(((-1.0)*x403*x404))+new_r10);
+IkReal x389=IKsin(j5);
+IkReal x390=IKcos(j5);
+IkReal x391=((1.0)*sj3);
+IkReal x392=((1.0)*x390);
+IkReal x393=(sj3*x389);
+IkReal x394=((1.0)*x389);
+IkReal x395=(cj3*x392);
+evalcond[0]=(((new_r11*sj3))+x389+((cj3*new_r01)));
+evalcond[1]=(((cj3*x389))+((sj3*x390))+new_r01);
+evalcond[2]=((((-1.0)*x392))+((new_r10*sj3))+((cj3*new_r00)));
+evalcond[3]=((((-1.0)*x394))+((cj3*new_r10))+(((-1.0)*new_r00*x391)));
+evalcond[4]=((((-1.0)*new_r01*x391))+(((-1.0)*x392))+((cj3*new_r11)));
+evalcond[5]=((((-1.0)*x395))+x393+new_r00);
+evalcond[6]=((((-1.0)*x395))+x393+new_r11);
+evalcond[7]=((((-1.0)*cj3*x394))+(((-1.0)*x390*x391))+new_r10);
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -4905,19 +4891,19 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x409=(new_r12*sj3);
-IkReal x410=((1.0)*new_r02);
-IkReal x411=(((cj3*new_r12))+(((-1.0)*sj3*x410)));
+IkReal x396=(new_r12*sj3);
+IkReal x397=((1.0)*new_r02);
+IkReal x398=((((-1.0)*sj3*x397))+((cj3*new_r12)));
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-3.14159265358979)+j4)))), 6.28318530717959)));
 evalcond[1]=((1.0)+new_r22);
 evalcond[2]=new_r20;
 evalcond[3]=new_r02;
 evalcond[4]=new_r12;
 evalcond[5]=new_r21;
-evalcond[6]=x411;
-evalcond[7]=x411;
-evalcond[8]=(x409+((cj3*new_r02)));
-evalcond[9]=((((-1.0)*cj3*x410))+(((-1.0)*x409)));
+evalcond[6]=x398;
+evalcond[7]=x398;
+evalcond[8]=(x396+((cj3*new_r02)));
+evalcond[9]=((((-1.0)*x396))+(((-1.0)*cj3*x397)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -4925,10 +4911,10 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-IkReal x412=((1.0)*sj3);
-if( IKabs((((cj3*new_r01))+(((-1.0)*new_r00*x412)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*cj3*new_r00))+(((-1.0)*new_r01*x412)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((((cj3*new_r01))+(((-1.0)*new_r00*x412))))+IKsqr(((((-1.0)*cj3*new_r00))+(((-1.0)*new_r01*x412))))-1) <= IKFAST_SINCOS_THRESH )
+IkReal x399=((1.0)*sj3);
+if( IKabs((((cj3*new_r01))+(((-1.0)*new_r00*x399)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((((-1.0)*new_r01*x399))+(((-1.0)*cj3*new_r00)))) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((((cj3*new_r01))+(((-1.0)*new_r00*x399))))+IKsqr(((((-1.0)*new_r01*x399))+(((-1.0)*cj3*new_r00))))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2((((cj3*new_r01))+(((-1.0)*new_r00*x412))), ((((-1.0)*cj3*new_r00))+(((-1.0)*new_r01*x412))));
+j5array[0]=IKatan2((((cj3*new_r01))+(((-1.0)*new_r00*x399))), ((((-1.0)*new_r01*x399))+(((-1.0)*cj3*new_r00))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -4956,21 +4942,21 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x413=IKsin(j5);
-IkReal x414=IKcos(j5);
-IkReal x415=((1.0)*sj3);
-IkReal x416=((1.0)*x413);
-IkReal x417=(sj3*x414);
-IkReal x418=((1.0)*x414);
-IkReal x419=(cj3*x416);
-evalcond[0]=(((new_r10*sj3))+x414+((cj3*new_r00)));
-evalcond[1]=(((new_r11*sj3))+((cj3*new_r01))+(((-1.0)*x416)));
-evalcond[2]=(((sj3*x413))+new_r00+((cj3*x414)));
-evalcond[3]=(((cj3*new_r10))+(((-1.0)*new_r00*x415))+(((-1.0)*x416)));
-evalcond[4]=(((cj3*new_r11))+(((-1.0)*x418))+(((-1.0)*new_r01*x415)));
-evalcond[5]=(x417+new_r01+(((-1.0)*x419)));
-evalcond[6]=(x417+new_r10+(((-1.0)*x419)));
-evalcond[7]=((((-1.0)*cj3*x418))+(((-1.0)*x413*x415))+new_r11);
+IkReal x400=IKsin(j5);
+IkReal x401=IKcos(j5);
+IkReal x402=((1.0)*sj3);
+IkReal x403=((1.0)*x400);
+IkReal x404=(sj3*x401);
+IkReal x405=((1.0)*x401);
+IkReal x406=(cj3*x403);
+evalcond[0]=(((new_r10*sj3))+x401+((cj3*new_r00)));
+evalcond[1]=(((new_r11*sj3))+((cj3*new_r01))+(((-1.0)*x403)));
+evalcond[2]=(((sj3*x400))+new_r00+((cj3*x401)));
+evalcond[3]=(((cj3*new_r10))+(((-1.0)*new_r00*x402))+(((-1.0)*x403)));
+evalcond[4]=(((cj3*new_r11))+(((-1.0)*new_r01*x402))+(((-1.0)*x405)));
+evalcond[5]=(x404+new_r01+(((-1.0)*x406)));
+evalcond[6]=(x404+new_r10+(((-1.0)*x406)));
+evalcond[7]=((((-1.0)*cj3*x405))+(((-1.0)*x400*x402))+new_r11);
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -5022,20 +5008,20 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x420=(new_r22+(((-1.0)*cj4)));
-IkReal x421=((((-1.0)*sj4))+new_r02);
-IkReal x422=((1.0)*cj4);
-IkReal x423=((1.0)*sj4);
+IkReal x407=(new_r22+(((-1.0)*cj4)));
+IkReal x408=((((-1.0)*sj4))+new_r02);
+IkReal x409=((1.0)*cj4);
+IkReal x410=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(j3))), 6.28318530717959)));
-evalcond[1]=x420;
-evalcond[2]=x420;
-evalcond[3]=x421;
+evalcond[1]=x407;
+evalcond[2]=x407;
+evalcond[3]=x408;
 evalcond[4]=new_r12;
-evalcond[5]=x421;
-evalcond[6]=(((cj4*new_r02))+(((-1.0)*new_r22*x423)));
-evalcond[7]=((((-1.0)*new_r00*x423))+(((-1.0)*new_r20*x422)));
-evalcond[8]=((((-1.0)*new_r21*x422))+(((-1.0)*new_r01*x423)));
-evalcond[9]=((1.0)+(((-1.0)*new_r22*x422))+(((-1.0)*new_r02*x423)));
+evalcond[5]=x408;
+evalcond[6]=(((cj4*new_r02))+(((-1.0)*new_r22*x410)));
+evalcond[7]=((((-1.0)*new_r20*x409))+(((-1.0)*new_r00*x410)));
+evalcond[8]=((((-1.0)*new_r21*x409))+(((-1.0)*new_r01*x410)));
+evalcond[9]=((1.0)+(((-1.0)*new_r02*x410))+(((-1.0)*new_r22*x409)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -5073,18 +5059,18 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x424=IKcos(j5);
-IkReal x425=IKsin(j5);
-IkReal x426=((1.0)*new_r02);
-IkReal x427=((1.0)*x424);
-evalcond[0]=(new_r20+((new_r02*x424)));
-evalcond[1]=((((-1.0)*x425))+new_r10);
-evalcond[2]=((((-1.0)*x427))+new_r11);
-evalcond[3]=(((new_r22*x425))+new_r01);
-evalcond[4]=((((-1.0)*x425*x426))+new_r21);
-evalcond[5]=((((-1.0)*new_r22*x427))+new_r00);
-evalcond[6]=(((new_r01*new_r22))+x425+(((-1.0)*new_r21*x426)));
-evalcond[7]=(((new_r00*new_r22))+(((-1.0)*x427))+(((-1.0)*new_r20*x426)));
+IkReal x411=IKcos(j5);
+IkReal x412=IKsin(j5);
+IkReal x413=((1.0)*new_r02);
+IkReal x414=((1.0)*x411);
+evalcond[0]=(new_r20+((new_r02*x411)));
+evalcond[1]=(new_r10+(((-1.0)*x412)));
+evalcond[2]=(new_r11+(((-1.0)*x414)));
+evalcond[3]=(((new_r22*x412))+new_r01);
+evalcond[4]=((((-1.0)*x412*x413))+new_r21);
+evalcond[5]=(new_r00+(((-1.0)*new_r22*x414)));
+evalcond[6]=(((new_r01*new_r22))+x412+(((-1.0)*new_r21*x413)));
+evalcond[7]=(((new_r00*new_r22))+(((-1.0)*new_r20*x413))+(((-1.0)*x414)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -5136,19 +5122,19 @@ if( bgotonextstatement )
 bool bgotonextstatement = true;
 do
 {
-IkReal x428=(new_r22+(((-1.0)*cj4)));
-IkReal x429=((1.0)*cj4);
-IkReal x430=((1.0)*sj4);
+IkReal x415=(new_r22+(((-1.0)*cj4)));
+IkReal x416=((1.0)*cj4);
+IkReal x417=((1.0)*sj4);
 evalcond[0]=((-3.14159265358979)+(IKfmod(((3.14159265358979)+(IKabs(((-3.14159265358979)+j3)))), 6.28318530717959)));
-evalcond[1]=x428;
-evalcond[2]=x428;
+evalcond[1]=x415;
+evalcond[2]=x415;
 evalcond[3]=(sj4+new_r02);
 evalcond[4]=new_r12;
-evalcond[5]=((((-1.0)*x430))+(((-1.0)*new_r02)));
-evalcond[6]=((((-1.0)*new_r02*x429))+(((-1.0)*new_r22*x430)));
-evalcond[7]=(((new_r00*sj4))+(((-1.0)*new_r20*x429)));
-evalcond[8]=(((new_r01*sj4))+(((-1.0)*new_r21*x429)));
-evalcond[9]=((1.0)+((new_r02*sj4))+(((-1.0)*new_r22*x429)));
+evalcond[5]=((((-1.0)*new_r02))+(((-1.0)*x417)));
+evalcond[6]=((((-1.0)*new_r02*x416))+(((-1.0)*new_r22*x417)));
+evalcond[7]=(((new_r00*sj4))+(((-1.0)*new_r20*x416)));
+evalcond[8]=(((new_r01*sj4))+(((-1.0)*new_r21*x416)));
+evalcond[9]=((1.0)+((new_r02*sj4))+(((-1.0)*new_r22*x416)));
 if( IKabs(evalcond[0]) < 0.0000010000000000  && IKabs(evalcond[1]) < 0.0000010000000000  && IKabs(evalcond[2]) < 0.0000010000000000  && IKabs(evalcond[3]) < 0.0000010000000000  && IKabs(evalcond[4]) < 0.0000010000000000  && IKabs(evalcond[5]) < 0.0000010000000000  && IKabs(evalcond[6]) < 0.0000010000000000  && IKabs(evalcond[7]) < 0.0000010000000000  && IKabs(evalcond[8]) < 0.0000010000000000  && IKabs(evalcond[9]) < 0.0000010000000000  )
 {
 bgotonextstatement=false;
@@ -5156,15 +5142,15 @@ bgotonextstatement=false;
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x431 = IKatan2WithCheck(IkReal(((-1.0)*new_r21)),new_r20,IKFAST_ATAN2_MAGTHRESH);
-if(!x431.valid){
+CheckValue<IkReal> x418 = IKatan2WithCheck(IkReal(((-1.0)*new_r21)),new_r20,IKFAST_ATAN2_MAGTHRESH);
+if(!x418.valid){
 continue;
 }
-CheckValue<IkReal> x432=IKPowWithIntegerCheck(IKsign(new_r02),-1);
-if(!x432.valid){
+CheckValue<IkReal> x419=IKPowWithIntegerCheck(IKsign(new_r02),-1);
+if(!x419.valid){
 continue;
 }
-j5array[0]=((-1.5707963267949)+(x431.value)+(((1.5707963267949)*(x432.value))));
+j5array[0]=((-1.5707963267949)+(x418.value)+(((1.5707963267949)*(x419.value))));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -5192,19 +5178,19 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[8];
-IkReal x433=IKsin(j5);
-IkReal x434=IKcos(j5);
-IkReal x435=((1.0)*new_r00);
-IkReal x436=((1.0)*new_r01);
-IkReal x437=((1.0)*x434);
-evalcond[0]=(new_r21+((new_r02*x433)));
-evalcond[1]=((((-1.0)*new_r02*x437))+new_r20);
-evalcond[2]=((((-1.0)*x433))+(((-1.0)*new_r10)));
-evalcond[3]=((((-1.0)*x437))+(((-1.0)*new_r11)));
-evalcond[4]=((((-1.0)*x436))+((new_r22*x433)));
-evalcond[5]=((((-1.0)*x435))+(((-1.0)*new_r22*x437)));
-evalcond[6]=(x433+((new_r02*new_r21))+(((-1.0)*new_r22*x436)));
-evalcond[7]=((((-1.0)*x437))+((new_r02*new_r20))+(((-1.0)*new_r22*x435)));
+IkReal x420=IKsin(j5);
+IkReal x421=IKcos(j5);
+IkReal x422=((1.0)*new_r00);
+IkReal x423=((1.0)*new_r01);
+IkReal x424=((1.0)*x421);
+evalcond[0]=(new_r21+((new_r02*x420)));
+evalcond[1]=((((-1.0)*new_r02*x424))+new_r20);
+evalcond[2]=((((-1.0)*x420))+(((-1.0)*new_r10)));
+evalcond[3]=((((-1.0)*x424))+(((-1.0)*new_r11)));
+evalcond[4]=(((new_r22*x420))+(((-1.0)*x423)));
+evalcond[5]=((((-1.0)*new_r22*x424))+(((-1.0)*x422)));
+evalcond[6]=((((-1.0)*new_r22*x423))+x420+((new_r02*new_r21)));
+evalcond[7]=((((-1.0)*new_r22*x422))+(((-1.0)*x424))+((new_r02*new_r20)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -5282,22 +5268,137 @@ if( bgotonextstatement )
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x439=IKPowWithIntegerCheck(sj4,-1);
-if(!x439.valid){
+CheckValue<IkReal> x426=IKPowWithIntegerCheck(sj4,-1);
+if(!x426.valid){
 continue;
 }
-IkReal x438=x439.value;
-CheckValue<IkReal> x440=IKPowWithIntegerCheck(cj3,-1);
+IkReal x425=x426.value;
+CheckValue<IkReal> x427=IKPowWithIntegerCheck(cj3,-1);
+if(!x427.valid){
+continue;
+}
+CheckValue<IkReal> x428=IKPowWithIntegerCheck(cj4,-1);
+if(!x428.valid){
+continue;
+}
+if( IKabs((x425*(x427.value)*(x428.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x425)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x425*(x427.value)*(x428.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))))+IKsqr(((-1.0)*new_r20*x425))-1) <= IKFAST_SINCOS_THRESH )
+    continue;
+j5array[0]=IKatan2((x425*(x427.value)*(x428.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))), ((-1.0)*new_r20*x425));
+sj5array[0]=IKsin(j5array[0]);
+cj5array[0]=IKcos(j5array[0]);
+if( j5array[0] > IKPI )
+{
+    j5array[0]-=IK2PI;
+}
+else if( j5array[0] < -IKPI )
+{    j5array[0]+=IK2PI;
+}
+j5valid[0] = true;
+for(int ij5 = 0; ij5 < 1; ++ij5)
+{
+if( !j5valid[ij5] )
+{
+    continue;
+}
+_ij5[0] = ij5; _ij5[1] = -1;
+for(int iij5 = ij5+1; iij5 < 1; ++iij5)
+{
+if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRESH && IKabs(sj5array[ij5]-sj5array[iij5]) < IKFAST_SOLUTION_THRESH )
+{
+    j5valid[iij5]=false; _ij5[1] = iij5; break; 
+}
+}
+j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
+{
+IkReal evalcond[12];
+IkReal x429=IKsin(j5);
+IkReal x430=IKcos(j5);
+IkReal x431=(cj3*new_r00);
+IkReal x432=(cj3*cj4);
+IkReal x433=(cj4*sj3);
+IkReal x434=((1.0)*sj3);
+IkReal x435=((1.0)*sj4);
+IkReal x436=((1.0)*x430);
+IkReal x437=(sj3*x429);
+IkReal x438=((1.0)*x429);
+evalcond[0]=(((sj4*x430))+new_r20);
+evalcond[1]=((((-1.0)*x429*x435))+new_r21);
+evalcond[2]=(((new_r11*sj3))+((cj4*x429))+((cj3*new_r01)));
+evalcond[3]=((((-1.0)*new_r00*x434))+(((-1.0)*x438))+((cj3*new_r10)));
+evalcond[4]=((((-1.0)*x436))+(((-1.0)*new_r01*x434))+((cj3*new_r11)));
+evalcond[5]=(((x429*x432))+((sj3*x430))+new_r01);
+evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x436))+x431);
+evalcond[7]=((((-1.0)*x432*x436))+x437+new_r00);
+evalcond[8]=((((-1.0)*cj3*x436))+((x429*x433))+new_r11);
+evalcond[9]=((((-1.0)*cj3*x438))+(((-1.0)*x433*x436))+new_r10);
+evalcond[10]=(((new_r01*x432))+((new_r11*x433))+x429+(((-1.0)*new_r21*x435)));
+evalcond[11]=((((-1.0)*x436))+((cj4*x431))+((new_r10*x433))+(((-1.0)*new_r20*x435)));
+if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[8]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[9]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[10]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[11]) > IKFAST_EVALCOND_THRESH  )
+{
+continue;
+}
+}
+
+{
+std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(6);
+vinfos[0].jointtype = 1;
+vinfos[0].foffset = j0;
+vinfos[0].indices[0] = _ij0[0];
+vinfos[0].indices[1] = _ij0[1];
+vinfos[0].maxsolutions = _nj0;
+vinfos[1].jointtype = 1;
+vinfos[1].foffset = j1;
+vinfos[1].indices[0] = _ij1[0];
+vinfos[1].indices[1] = _ij1[1];
+vinfos[1].maxsolutions = _nj1;
+vinfos[2].jointtype = 1;
+vinfos[2].foffset = j2;
+vinfos[2].indices[0] = _ij2[0];
+vinfos[2].indices[1] = _ij2[1];
+vinfos[2].maxsolutions = _nj2;
+vinfos[3].jointtype = 1;
+vinfos[3].foffset = j3;
+vinfos[3].indices[0] = _ij3[0];
+vinfos[3].indices[1] = _ij3[1];
+vinfos[3].maxsolutions = _nj3;
+vinfos[4].jointtype = 1;
+vinfos[4].foffset = j4;
+vinfos[4].indices[0] = _ij4[0];
+vinfos[4].indices[1] = _ij4[1];
+vinfos[4].maxsolutions = _nj4;
+vinfos[5].jointtype = 1;
+vinfos[5].foffset = j5;
+vinfos[5].indices[0] = _ij5[0];
+vinfos[5].indices[1] = _ij5[1];
+vinfos[5].maxsolutions = _nj5;
+std::vector<int> vfree(0);
+solutions.AddSolution(vinfos,vfree);
+}
+}
+}
+
+}
+
+}
+
+} else
+{
+{
+IkReal j5array[1], cj5array[1], sj5array[1];
+bool j5valid[1]={false};
+_nj5 = 1;
+CheckValue<IkReal> x440=IKPowWithIntegerCheck(sj4,-1);
 if(!x440.valid){
 continue;
 }
-CheckValue<IkReal> x441=IKPowWithIntegerCheck(cj4,-1);
+IkReal x439=x440.value;
+CheckValue<IkReal> x441=IKPowWithIntegerCheck(sj3,-1);
 if(!x441.valid){
 continue;
 }
-if( IKabs((x438*(x440.value)*(x441.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x438)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x438*(x440.value)*(x441.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))))+IKsqr(((-1.0)*new_r20*x438))-1) <= IKFAST_SINCOS_THRESH )
+if( IKabs((x439*(x441.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x439)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x439*(x441.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))))+IKsqr(((-1.0)*new_r20*x439))-1) <= IKFAST_SINCOS_THRESH )
     continue;
-j5array[0]=IKatan2((x438*(x440.value)*(x441.value)*((((new_r20*sj3))+(((-1.0)*new_r01*sj4))))), ((-1.0)*new_r20*x438));
+j5array[0]=IKatan2((x439*(x441.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))), ((-1.0)*new_r20*x439));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -5401,18 +5502,15 @@ solutions.AddSolution(vinfos,vfree);
 IkReal j5array[1], cj5array[1], sj5array[1];
 bool j5valid[1]={false};
 _nj5 = 1;
-CheckValue<IkReal> x453=IKPowWithIntegerCheck(sj4,-1);
+CheckValue<IkReal> x452=IKPowWithIntegerCheck(IKsign(sj4),-1);
+if(!x452.valid){
+continue;
+}
+CheckValue<IkReal> x453 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
 if(!x453.valid){
 continue;
 }
-IkReal x452=x453.value;
-CheckValue<IkReal> x454=IKPowWithIntegerCheck(sj3,-1);
-if(!x454.valid){
-continue;
-}
-if( IKabs((x452*(x454.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4)))))) < IKFAST_ATAN2_MAGTHRESH && IKabs(((-1.0)*new_r20*x452)) < IKFAST_ATAN2_MAGTHRESH && IKabs(IKsqr((x452*(x454.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))))+IKsqr(((-1.0)*new_r20*x452))-1) <= IKFAST_SINCOS_THRESH )
-    continue;
-j5array[0]=IKatan2((x452*(x454.value)*(((((-1.0)*cj3*cj4*new_r20))+(((-1.0)*new_r00*sj4))))), ((-1.0)*new_r20*x452));
+j5array[0]=((-1.5707963267949)+(((1.5707963267949)*(x452.value)))+(x453.value));
 sj5array[0]=IKsin(j5array[0]);
 cj5array[0]=IKcos(j5array[0]);
 if( j5array[0] > IKPI )
@@ -5440,140 +5538,28 @@ if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRES
 j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
 {
 IkReal evalcond[12];
-IkReal x455=IKsin(j5);
-IkReal x456=IKcos(j5);
-IkReal x457=(cj3*new_r00);
-IkReal x458=(cj3*cj4);
-IkReal x459=(cj4*sj3);
-IkReal x460=((1.0)*sj3);
-IkReal x461=((1.0)*sj4);
-IkReal x462=((1.0)*x456);
-IkReal x463=(sj3*x455);
-IkReal x464=((1.0)*x455);
-evalcond[0]=(((sj4*x456))+new_r20);
-evalcond[1]=((((-1.0)*x455*x461))+new_r21);
-evalcond[2]=(((cj4*x455))+((new_r11*sj3))+((cj3*new_r01)));
-evalcond[3]=((((-1.0)*x464))+(((-1.0)*new_r00*x460))+((cj3*new_r10)));
-evalcond[4]=((((-1.0)*new_r01*x460))+(((-1.0)*x462))+((cj3*new_r11)));
-evalcond[5]=(((sj3*x456))+((x455*x458))+new_r01);
-evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x462))+x457);
-evalcond[7]=(x463+(((-1.0)*x458*x462))+new_r00);
-evalcond[8]=(((x455*x459))+new_r11+(((-1.0)*cj3*x462)));
-evalcond[9]=((((-1.0)*x459*x462))+new_r10+(((-1.0)*cj3*x464)));
-evalcond[10]=((((-1.0)*new_r21*x461))+((new_r11*x459))+((new_r01*x458))+x455);
-evalcond[11]=(((new_r10*x459))+((cj4*x457))+(((-1.0)*new_r20*x461))+(((-1.0)*x462)));
-if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[8]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[9]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[10]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[11]) > IKFAST_EVALCOND_THRESH  )
-{
-continue;
-}
-}
-
-{
-std::vector<IkSingleDOFSolutionBase<IkReal> > vinfos(6);
-vinfos[0].jointtype = 1;
-vinfos[0].foffset = j0;
-vinfos[0].indices[0] = _ij0[0];
-vinfos[0].indices[1] = _ij0[1];
-vinfos[0].maxsolutions = _nj0;
-vinfos[1].jointtype = 1;
-vinfos[1].foffset = j1;
-vinfos[1].indices[0] = _ij1[0];
-vinfos[1].indices[1] = _ij1[1];
-vinfos[1].maxsolutions = _nj1;
-vinfos[2].jointtype = 1;
-vinfos[2].foffset = j2;
-vinfos[2].indices[0] = _ij2[0];
-vinfos[2].indices[1] = _ij2[1];
-vinfos[2].maxsolutions = _nj2;
-vinfos[3].jointtype = 1;
-vinfos[3].foffset = j3;
-vinfos[3].indices[0] = _ij3[0];
-vinfos[3].indices[1] = _ij3[1];
-vinfos[3].maxsolutions = _nj3;
-vinfos[4].jointtype = 1;
-vinfos[4].foffset = j4;
-vinfos[4].indices[0] = _ij4[0];
-vinfos[4].indices[1] = _ij4[1];
-vinfos[4].maxsolutions = _nj4;
-vinfos[5].jointtype = 1;
-vinfos[5].foffset = j5;
-vinfos[5].indices[0] = _ij5[0];
-vinfos[5].indices[1] = _ij5[1];
-vinfos[5].maxsolutions = _nj5;
-std::vector<int> vfree(0);
-solutions.AddSolution(vinfos,vfree);
-}
-}
-}
-
-}
-
-}
-
-} else
-{
-{
-IkReal j5array[1], cj5array[1], sj5array[1];
-bool j5valid[1]={false};
-_nj5 = 1;
-CheckValue<IkReal> x465=IKPowWithIntegerCheck(IKsign(sj4),-1);
-if(!x465.valid){
-continue;
-}
-CheckValue<IkReal> x466 = IKatan2WithCheck(IkReal(new_r21),((-1.0)*new_r20),IKFAST_ATAN2_MAGTHRESH);
-if(!x466.valid){
-continue;
-}
-j5array[0]=((-1.5707963267949)+(((1.5707963267949)*(x465.value)))+(x466.value));
-sj5array[0]=IKsin(j5array[0]);
-cj5array[0]=IKcos(j5array[0]);
-if( j5array[0] > IKPI )
-{
-    j5array[0]-=IK2PI;
-}
-else if( j5array[0] < -IKPI )
-{    j5array[0]+=IK2PI;
-}
-j5valid[0] = true;
-for(int ij5 = 0; ij5 < 1; ++ij5)
-{
-if( !j5valid[ij5] )
-{
-    continue;
-}
-_ij5[0] = ij5; _ij5[1] = -1;
-for(int iij5 = ij5+1; iij5 < 1; ++iij5)
-{
-if( j5valid[iij5] && IKabs(cj5array[ij5]-cj5array[iij5]) < IKFAST_SOLUTION_THRESH && IKabs(sj5array[ij5]-sj5array[iij5]) < IKFAST_SOLUTION_THRESH )
-{
-    j5valid[iij5]=false; _ij5[1] = iij5; break; 
-}
-}
-j5 = j5array[ij5]; cj5 = cj5array[ij5]; sj5 = sj5array[ij5];
-{
-IkReal evalcond[12];
-IkReal x467=IKsin(j5);
-IkReal x468=IKcos(j5);
-IkReal x469=(cj3*new_r00);
-IkReal x470=(cj3*cj4);
-IkReal x471=(cj4*sj3);
-IkReal x472=((1.0)*sj3);
-IkReal x473=((1.0)*sj4);
-IkReal x474=((1.0)*x468);
-IkReal x475=(sj3*x467);
-IkReal x476=((1.0)*x467);
-evalcond[0]=(((sj4*x468))+new_r20);
-evalcond[1]=((((-1.0)*x467*x473))+new_r21);
-evalcond[2]=(((cj4*x467))+((new_r11*sj3))+((cj3*new_r01)));
-evalcond[3]=((((-1.0)*new_r00*x472))+(((-1.0)*x476))+((cj3*new_r10)));
-evalcond[4]=((((-1.0)*x474))+(((-1.0)*new_r01*x472))+((cj3*new_r11)));
-evalcond[5]=(((sj3*x468))+((x467*x470))+new_r01);
-evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x474))+x469);
-evalcond[7]=(x475+new_r00+(((-1.0)*x470*x474)));
-evalcond[8]=(((x467*x471))+(((-1.0)*cj3*x474))+new_r11);
-evalcond[9]=((((-1.0)*x471*x474))+(((-1.0)*cj3*x476))+new_r10);
-evalcond[10]=((((-1.0)*new_r21*x473))+((new_r01*x470))+((new_r11*x471))+x467);
-evalcond[11]=(((cj4*x469))+((new_r10*x471))+(((-1.0)*x474))+(((-1.0)*new_r20*x473)));
+IkReal x454=IKsin(j5);
+IkReal x455=IKcos(j5);
+IkReal x456=(cj3*new_r00);
+IkReal x457=(cj3*cj4);
+IkReal x458=(cj4*sj3);
+IkReal x459=((1.0)*sj3);
+IkReal x460=((1.0)*sj4);
+IkReal x461=((1.0)*x455);
+IkReal x462=(sj3*x454);
+IkReal x463=((1.0)*x454);
+evalcond[0]=(((sj4*x455))+new_r20);
+evalcond[1]=((((-1.0)*x454*x460))+new_r21);
+evalcond[2]=(((cj4*x454))+((new_r11*sj3))+((cj3*new_r01)));
+evalcond[3]=((((-1.0)*x463))+(((-1.0)*new_r00*x459))+((cj3*new_r10)));
+evalcond[4]=((((-1.0)*new_r01*x459))+(((-1.0)*x461))+((cj3*new_r11)));
+evalcond[5]=(((sj3*x455))+((x454*x457))+new_r01);
+evalcond[6]=(((new_r10*sj3))+(((-1.0)*cj4*x461))+x456);
+evalcond[7]=(x462+new_r00+(((-1.0)*x457*x461)));
+evalcond[8]=(((x454*x458))+new_r11+(((-1.0)*cj3*x461)));
+evalcond[9]=((((-1.0)*x458*x461))+new_r10+(((-1.0)*cj3*x463)));
+evalcond[10]=((((-1.0)*new_r21*x460))+((new_r11*x458))+((new_r01*x457))+x454);
+evalcond[11]=(((new_r10*x458))+((cj4*x456))+(((-1.0)*new_r20*x460))+(((-1.0)*x461)));
 if( IKabs(evalcond[0]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[1]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[2]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[3]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[4]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[5]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[6]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[7]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[8]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[9]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[10]) > IKFAST_EVALCOND_THRESH  || IKabs(evalcond[11]) > IKFAST_EVALCOND_THRESH  )
 {
 continue;
@@ -5645,9 +5631,9 @@ IKSolver solver;
 return solver.ComputeIk(eetrans,eerot,pfree,solutions);
 }
 
-IKFAST_API const char* GetKinematicsHash() { return "1212e32be9160d1dd10dda70c49c46d3"; }
+IKFAST_API const char* GetKinematicsHash() { return "a6c70e6dd694838553470dde754d5825"; }
 
-IKFAST_API const char* GetIkFastVersion() { return IKFAST_STRINGIZE(IKFAST_VERSION); }
+IKFAST_API const char* GetIkFastVersion() { return "0x10000048"; }
 
 #ifdef IKFAST_NAMESPACE
 } // end namespace

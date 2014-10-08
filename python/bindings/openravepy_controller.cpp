@@ -78,7 +78,7 @@ public:
 
     bool SetDesired(object o, object otransform)
     {
-        if( otransform.is_none() ) {
+        if( IS_PYTHONOBJECT_NONE(otransform) ) {
             return SetDesired(o);
         }
         return _pcontroller->SetDesired(ExtractArray<dReal>(o),TransformConstPtr(new Transform(ExtractTransform(otransform))));

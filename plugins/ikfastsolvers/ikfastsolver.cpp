@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/lexical_cast.hpp>
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
@@ -33,6 +34,15 @@ public:
 public:
     IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc) {
         OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(IkReal));
+
+        _bEmptyTransform6D = false;
+        std::stringstream sversion(ikfunctions->_GetIkFastVersion());
+        uint32_t ikfastversion = 0;
+        sversion >> std::hex >> ikfastversion;
+        if( ikfastversion & 0x10000000 ) {
+            _bEmptyTransform6D = true;
+        }
+
         _vfreeparams.resize(ikfunctions->_GetNumFreeParameters());
         _fFreeIncRevolute = PI/8; // arbitrary
         _fFreeIncPrismaticNum = 10.0; // arbitrary
@@ -189,8 +199,8 @@ public:
     
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
-        if( _kinematicshash.size() > 0 && pmanip->GetKinematicsStructureHash() != _kinematicshash ) {
-            RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetKinematicsStructureHash()%_kinematicshash));
+        if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
+            RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(_iktype)%_kinematicshash));
         }
         RobotBasePtr probot = pmanip->GetRobot();
         bool bfound = false;
@@ -707,22 +717,26 @@ protected:
         return static_cast<IkReturnAction>(allres);
     }
 
-    inline bool _CallIk(const IkParameterization& param, const vector<IkReal>& vfree, ikfast::IkSolutionList<IkReal>& solutions)
+    /// \param tLocalTool _pmanip->GetLocalToolTransform()
+    inline bool _CallIk(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
     {
         if( !!_ikfunctions->_ComputeIk2 ) {
-            return _CallIk2(param, vfree, solutions);
+            return _CallIk2(param, vfree, tLocalTool, solutions);
         }
         else {
-            return _CallIk1(param, vfree, solutions);
+            return _CallIk1(param, vfree, tLocalTool, solutions);
         }
     }
 
-    bool _CallIk1(const IkParameterization& param, const vector<IkReal>& vfree, ikfast::IkSolutionList<IkReal>& solutions)
+    bool _CallIk1(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
     {
         try {
             switch(param.GetType()) {
             case IKP_Transform6D: {
                 TransformMatrix t = param.GetTransform6D();
+                if( _bEmptyTransform6D ) {
+                    t = t * tLocalTool.inverse();
+                }
                 IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
 //                stringstream ss; ss << "./ik " << std::setprecision(16);
@@ -850,13 +864,16 @@ protected:
         throw openrave_exception(str(boost::format("don't support ik parameterization 0x%x")%param.GetType()),ORE_InvalidArguments);
     }
 
-    bool _CallIk2(const IkParameterization& param, const vector<IkReal>& vfree, ikfast::IkSolutionList<IkReal>& solutions)
+    bool _CallIk2(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
     {
         RobotBase::ManipulatorPtr pmanip = _pmanip.lock();
         try {
             switch(param.GetType()) {
             case IKP_Transform6D: {
                 TransformMatrix t = param.GetTransform6D();
+                if( _bEmptyTransform6D ) {
+                    t = t * tLocalTool.inverse();
+                }
                 IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
 //                stringstream ss; ss << "./ik " << std::setprecision(16);
@@ -991,12 +1008,12 @@ protected:
 
     IkReturnAction _SolveSingle(const IkParameterization& param, const vector<IkReal>& vfree, const vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn, StateCheckEndEffector& stateCheck)
     {
+        RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
-        if( !_CallIk(param,vfree,solutions) ) {
+        if( !_CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
             return IKRA_RejectKinematics;
         }
 
-        RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         SolutionInfo bestsolution;
         std::vector<dReal> vravesol(pmanip->GetArmIndices().size());
@@ -1284,7 +1301,7 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         ikfast::IkSolutionList<IkReal> solutions;
-        if( _CallIk(param,vfree,solutions) ) {
+        if( _CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
             vector<IkReal> vsolfree;
             std::vector<IkReal> sol(pmanip->GetArmIndices().size());
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
@@ -1664,6 +1681,8 @@ protected:
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters)
     std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
     int _nSameStateRepeatCount;
+
+    bool _bEmptyTransform6D; ///< if true, then the iksolver has been built with identity of the manipulator transform. Only valid for Transform6D IKs.
 };
 
 #ifdef OPENRAVE_IKFAST_FLOAT32

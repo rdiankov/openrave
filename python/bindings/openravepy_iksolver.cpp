@@ -86,7 +86,7 @@ protected:
             errmsg = boost::str(boost::format("exception occured in python custom filter callback of iksolver %s: %s")%pIkSolver->GetXMLId()%GetPyErrorString());
         }
         IkReturn ikfr(IKRA_Success);
-        if( res.is_none() ) {
+        if( IS_PYTHONOBJECT_NONE(res) ) {
             ikfr._action = IKRA_Reject;
         }
         else {
@@ -135,7 +135,7 @@ public:
         PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
         IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
         vector<dReal> q0;
-        if( !(oq0.is_none()) ) {
+        if( !IS_PYTHONOBJECT_NONE(oq0) ) {
             q0 = ExtractArray<dReal>(oq0);
         }
         IkParameterization ikparam;
@@ -166,10 +166,10 @@ public:
         PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
         IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
         vector<dReal> q0, vFreeParameters;
-        if( !(oq0.is_none()) ) {
+        if( !IS_PYTHONOBJECT_NONE(oq0) ) {
             q0 = ExtractArray<dReal>(oq0);
         }
-        if( !(oFreeParameters.is_none()) ) {
+        if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
             vFreeParameters = ExtractArray<dReal>(oFreeParameters);
         }
         IkParameterization ikparam;
@@ -189,7 +189,7 @@ public:
             throw openrave_exception("first argument to IkSolver.Solve needs to be IkParameterization",ORE_InvalidArguments);
         }
         vector<dReal> vFreeParameters;
-        if( !(oFreeParameters.is_none()) ) {
+        if( !IS_PYTHONOBJECT_NONE(oFreeParameters) ) {
             vFreeParameters = ExtractArray<dReal>(oFreeParameters);
         }
         _pIkSolver->SolveAll(ikparam, vFreeParameters, filteroptions, vikreturns);

@@ -183,7 +183,7 @@ sympy_smaller_073 = sympy_version < '0.7.3'
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '71' # also in ikfast.h
+__version__ = '0x10000048' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -4506,11 +4506,14 @@ class IKFastSolver(AutoReloader):
                             break
                     if isunique:
                         neweqs_full.append((peq0norm, peq1norm))
+                    else:
+                        log.info('not unique: %r', eq)
                 else:
                     eq = eq.subs(self.freevarsubs)
                     if self.CheckExpressionUnique(reducedeqs, eq):
                         reducedeqs.append(eq)
-                        assert(len(reducedeqs)!=4)
+                    else:
+                        log.info('not unique: %r', eq)
             else:
                 if peq[0] != S.Zero:
                     peq0dict = peq[0].as_dict()
@@ -4524,6 +4527,8 @@ class IKFastSolver(AutoReloader):
                     eq = peq[1].as_expr().subs(self.freevarsubs)
                     if self.CheckExpressionUnique(reducedeqs, eq):
                         reducedeqs.append(eq)
+                    else:
+                        log.info('not unique: %r', eq)
         for ivar in range(2):
             if reducedsinglevars[2*ivar+0] is not None and reducedsinglevars[2*ivar+1] is not None:
                 # a0*cos = b0, a1*sin = b1
@@ -4544,6 +4549,7 @@ class IKFastSolver(AutoReloader):
 #             if len(allmonoms) < len(neweqs_test):
 #                 print 'found'
         if len(allmonoms) > len(neweqs_full) and len(reducedeqs) < 3:
+            #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
             raise self.CannotSolveError('new monoms is %d>%d'%(len(allmonoms), len(neweqs_full)))
         
         # the equations are ginac objects
@@ -5082,143 +5088,161 @@ class IKFastSolver(AutoReloader):
                 break
             
         if exportcoeffeqs is None:
-            if len(nonhtvars) > 0:
+            if len(nonhtvars) > 0 and newreducedeqs[0].degree:
                 log.info('try to solve one variable in terms of the others')
-                usedvar0solution = solve(newreducedeqs[0],nonhtvars[0])[0]
-                num,denom = fraction(usedvar0solution)
-                igenoffset = len(htvars)
-                # substitute all instances of the variable
-                processedequations = []
-                for peq in newreducedeqs[1:]:
-                    if self.codeComplexity(peq.as_expr()) > 10000:
-                        log.warn('equation too big')
-                        continue
-                    maxdegree = peq.degree(igenoffset)
-                    eqnew = S.Zero
-                    for monoms,c in peq.terms():
-                        term = c
-                        term *= denom**(maxdegree-monoms[igenoffset])
-                        term *= num**(monoms[igenoffset])
-                        for imonom, monom in enumerate(monoms):
-                            if imonom != igenoffset:
-                                term *= htvars[imonom]**monom
-                        eqnew += term
-                    try:
-                        newpeq = Poly(eqnew,htvars)
-                    except PolynomialError, e:
-                        # most likel uservar0solution was bad
-                        raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
+                doloop = True
+                while doloop:
+                    doloop = False
                     
-                    if newpeq != S.Zero:
-                        processedequations.append(newpeq)
-                # check if any variables have degree <= 1 for all equations
-                for ihtvar,htvar in enumerate(htvars):
-                    leftoverhtvars = list(htvars)
-                    leftoverhtvars.pop(ihtvar)
-                    freeequations = []
-                    linearequations = []
-                    higherequations = []
-                    for peq in processedequations:
-                        if peq.degree(ihtvar) == 0:
-                            freeequations.append(peq)
-                        elif peq.degree(ihtvar) == 1:
-                            linearequations.append(peq)
-                        else:
-                            higherequations.append(peq)
-                    if len(freeequations) > 0:
-                        log.info('found a way to solve this! still need to implement it though...')
-                    elif len(linearequations) > 0 and len(leftoverhtvars) == 1:
-                        # try substituting one into the other equations Ax = B
-                        A = S.Zero
-                        B = S.Zero
-                        for monoms,c in linearequations[0].terms():
+                    # check if there is an equation that can solve for nonhtvars[0] easily
+                    solvenonhtvareq = None
+                    for peq in newreducedeqs:
+                        if peq.degree(len(htvars)) == 1:
+                            solvenonhtvareq = peq
+                            break
+                    if solvenonhtvareq is None:
+                        break
+                    
+                    # nonhtvars[0] index is len(htvars)
+                    usedvar0solution = solve(newreducedeqs[0],nonhtvars[0])[0]
+                    num,denom = fraction(usedvar0solution)
+                    igenoffset = len(htvars)
+                    # substitute all instances of the variable
+                    processedequations = []
+                    for peq in newreducedeqs[1:]:
+                        if self.codeComplexity(peq.as_expr()) > 10000:
+                            log.warn('equation too big')
+                            continue
+                        maxdegree = peq.degree(igenoffset)
+                        eqnew = S.Zero
+                        for monoms,c in peq.terms():
                             term = c
+                            term *= denom**(maxdegree-monoms[igenoffset])
+                            term *= num**(monoms[igenoffset])
                             for imonom, monom in enumerate(monoms):
-                                if imonom != ihtvar:
+                                if imonom != igenoffset:
                                     term *= htvars[imonom]**monom
-                            if monoms[ihtvar] > 0:
-                                A += term
-                            else:
-                                B -= term
-                        Apoly = Poly(A,leftoverhtvars)
-                        Bpoly = Poly(B,leftoverhtvars)
-                        singlepolyequations = []
-                        useequations = linearequations[1:]
-                        if len(useequations) == 0:
-                            useequations += higherequations
-                        for peq in useequations:
-                            complexity = self.codeComplexity(peq.as_expr())
-                            if complexity < 2000:
-                                peqnew = Poly(S.Zero,leftoverhtvars)
-                                maxhtvardegree = peq.degree(ihtvar)
-                                for monoms,c in peq.terms():
-                                    term = c
-                                    for imonom, monom in enumerate(monoms):
-                                        if imonom != ihtvar:
-                                            term *= htvars[imonom]**monom
-                                    termpoly = Poly(term,leftoverhtvars)
-                                    peqnew += termpoly * (Bpoly**(monoms[ihtvar]) * Apoly**(maxhtvardegree-monoms[ihtvar]))
-                                singlepolyequations.append(peqnew)
-                        if len(singlepolyequations) > 0:
-                            jointsol = 2*atan(leftoverhtvars[0])
-                            jointname = leftoverhtvars[0].name[2:]
-                            firstsolution = AST.SolverPolynomialRoots(jointname=jointname,poly=singlepolyequations[0],jointeval=[jointsol],isHinge=self.IsHinge(jointname))
-                            firstsolution.checkforzeros = []
-                            firstsolution.postcheckforzeros = []
-                            firstsolution.postcheckfornonzeros = []
-                            firstsolution.postcheckforrange = []
-                            # in Ax=B, if A is 0 and B is non-zero, then equation is invalid
-                            # however if both A and B evaluate to 0, then equation is still valid
-                            # therefore equation is invalid only if A==0&&B!=0
-                            firstsolution.postcheckforNumDenom = [(A.as_expr(), B.as_expr())]
-                            firstsolution.AddHalfTanValue = True
+                            eqnew += term
+                        try:
+                            newpeq = Poly(eqnew,htvars)
+                        except PolynomialError, e:
+                            # most likel uservar0solution was bad...
+                            raise self.CannotSolveError('equation %s cannot be represented as a polynomial'%eqnew)
+                        
+                        if newpeq != S.Zero:
+                            processedequations.append(newpeq)
                     
-                            # actually both A and B can evaluate to zero, in which case we have to use a different method to solve them
-                            AllEquations = []
-                            for eq in reducedeqs:
-                                if self.codeComplexity(eq) > 500:
-                                    continue
-                                peq = Poly(eq, tvar)
-                                if sum(peq.degree_list()) == 0:
-                                    AllEquations.append(peq.TC().subs(self.invsubs).expand())
-                                elif sum(peq.degree_list()) == 1 and peq.TC() == S.Zero:
-                                    AllEquations.append(peq.LC().subs(self.invsubs).expand())
+                    if len(processedequations) == 0:
+                        break
+                    
+                    # check if any variables have degree <= 1 for all equations
+                    for ihtvar,htvar in enumerate(htvars):
+                        leftoverhtvars = list(htvars)
+                        leftoverhtvars.pop(ihtvar)
+                        freeequations = []
+                        linearequations = []
+                        higherequations = []
+                        for peq in processedequations:
+                            if peq.degree(ihtvar) == 0:
+                                freeequations.append(peq)
+                            elif peq.degree(ihtvar) == 1:
+                                linearequations.append(peq)
+                            else:
+                                higherequations.append(peq)
+                        if len(freeequations) > 0:
+                            log.info('found a way to solve this! still need to implement it though...')
+                        elif len(linearequations) > 0 and len(leftoverhtvars) == 1:
+                            # try substituting one into the other equations Ax = B
+                            A = S.Zero
+                            B = S.Zero
+                            for monoms,c in linearequations[0].terms():
+                                term = c
+                                for imonom, monom in enumerate(monoms):
+                                    if imonom != ihtvar:
+                                        term *= htvars[imonom]**monom
+                                if monoms[ihtvar] > 0:
+                                    A += term
                                 else:
-                                    # two substitutions: sin/(1+cos), (1-cos)/sin
-                                    neweq0 = S.Zero
-                                    neweq1 = S.Zero
+                                    B -= term
+                            Apoly = Poly(A,leftoverhtvars)
+                            Bpoly = Poly(B,leftoverhtvars)
+                            singlepolyequations = []
+                            useequations = linearequations[1:]
+                            if len(useequations) == 0:
+                                useequations += higherequations
+                            for peq in useequations:
+                                complexity = self.codeComplexity(peq.as_expr())
+                                if complexity < 2000:
+                                    peqnew = Poly(S.Zero,leftoverhtvars)
+                                    maxhtvardegree = peq.degree(ihtvar)
                                     for monoms,c in peq.terms():
-                                        neweq0 += c*(svar**monoms[0])*((1+cvar)**(peq.degree(0)-monoms[0]))
-                                        neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree(0)-monoms[0]))
-                                    if self.codeComplexity(neweq0) > 1000 or self.codeComplexity(neweq1) > 1000:
-                                        break
-                                    AllEquations.append(neweq0.subs(self.invsubs).expand())
-                                    AllEquations.append(neweq1.subs(self.invsubs).expand())
-                                
-                            #oldmaxcasedepth = self.maxcasedepth                            
-                            try:
-                                #self.maxcasedepth = min(self.maxcasedepth, 2)
-                                solvevar = Symbol(jointname)
-                                curvars = list(usedvars)
-                                curvars.remove(solvevar)
-                                unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
-                                solutiontree = self.SolveAllEquations(AllEquations+AllEquationsExtra,curvars=curvars+unusedvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
-                                #secondSolutionComplexity = self.codeComplexity(B) + self.codeComplexity(A)
-                                #if secondSolutionComplexity > 500:
-                                #    log.info('solution for %s is too complex, so delaying its solving')
-                                #solutiontree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
-                                return preprocesssolutiontree+[firstsolution]+solutiontree,usedvars+unusedvars
-                            
-                            except self.CannotSolveError, e:
-                                log.debug('could not solve full variables from scratch, so use existing solution: %s', e)
-                                secondsolution = AST.SolverSolution(htvar.name[2:], isHinge=self.IsHinge(htvar.name[2:]))
-                                secondsolution.jointeval = [2*atan2(B.as_expr(), A.as_expr())]
-                                secondsolution.AddHalfTanValue = True
-                                thirdsolution = AST.SolverSolution(nonhtvars[0].name, isHinge=self.IsHinge(nonhtvars[0].name))
-                                thirdsolution.jointeval = [usedvar0solution]
-                                return preprocesssolutiontree+[firstsolution, secondsolution, thirdsolution]+endbranchtree, usedvars
-#                             finally:
-#                                 self.maxcasedepth = oldmaxcasedepth
+                                        term = c
+                                        for imonom, monom in enumerate(monoms):
+                                            if imonom != ihtvar:
+                                                term *= htvars[imonom]**monom
+                                        termpoly = Poly(term,leftoverhtvars)
+                                        peqnew += termpoly * (Bpoly**(monoms[ihtvar]) * Apoly**(maxhtvardegree-monoms[ihtvar]))
+                                    singlepolyequations.append(peqnew)
+                            if len(singlepolyequations) > 0:
+                                jointsol = 2*atan(leftoverhtvars[0])
+                                jointname = leftoverhtvars[0].name[2:]
+                                firstsolution = AST.SolverPolynomialRoots(jointname=jointname,poly=singlepolyequations[0],jointeval=[jointsol],isHinge=self.IsHinge(jointname))
+                                firstsolution.checkforzeros = []
+                                firstsolution.postcheckforzeros = []
+                                firstsolution.postcheckfornonzeros = []
+                                firstsolution.postcheckforrange = []
+                                # in Ax=B, if A is 0 and B is non-zero, then equation is invalid
+                                # however if both A and B evaluate to 0, then equation is still valid
+                                # therefore equation is invalid only if A==0&&B!=0
+                                firstsolution.postcheckforNumDenom = [(A.as_expr(), B.as_expr())]
+                                firstsolution.AddHalfTanValue = True
+
+                                # actually both A and B can evaluate to zero, in which case we have to use a different method to solve them
+                                AllEquations = []
+                                for eq in reducedeqs:
+                                    if self.codeComplexity(eq) > 500:
+                                        continue
+                                    peq = Poly(eq, tvar)
+                                    if sum(peq.degree_list()) == 0:
+                                        AllEquations.append(peq.TC().subs(self.invsubs).expand())
+                                    elif sum(peq.degree_list()) == 1 and peq.TC() == S.Zero:
+                                        AllEquations.append(peq.LC().subs(self.invsubs).expand())
+                                    else:
+                                        # two substitutions: sin/(1+cos), (1-cos)/sin
+                                        neweq0 = S.Zero
+                                        neweq1 = S.Zero
+                                        for monoms,c in peq.terms():
+                                            neweq0 += c*(svar**monoms[0])*((1+cvar)**(peq.degree(0)-monoms[0]))
+                                            neweq1 += c*((1-cvar)**monoms[0])*(svar**(peq.degree(0)-monoms[0]))
+                                        if self.codeComplexity(neweq0) > 1000 or self.codeComplexity(neweq1) > 1000:
+                                            break
+                                        AllEquations.append(neweq0.subs(self.invsubs).expand())
+                                        AllEquations.append(neweq1.subs(self.invsubs).expand())
+
+                                #oldmaxcasedepth = self.maxcasedepth                            
+                                try:
+                                    #self.maxcasedepth = min(self.maxcasedepth, 2)
+                                    solvevar = Symbol(jointname)
+                                    curvars = list(usedvars)
+                                    curvars.remove(solvevar)
+                                    unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
+                                    solutiontree = self.SolveAllEquations(AllEquations+AllEquationsExtra,curvars=curvars+unusedvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
+                                    #secondSolutionComplexity = self.codeComplexity(B) + self.codeComplexity(A)
+                                    #if secondSolutionComplexity > 500:
+                                    #    log.info('solution for %s is too complex, so delaying its solving')
+                                    #solutiontree = self.SolveAllEquations(AllEquations,curvars=curvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
+                                    return preprocesssolutiontree+[firstsolution]+solutiontree,usedvars+unusedvars
+
+                                except self.CannotSolveError, e:
+                                    log.debug('could not solve full variables from scratch, so use existing solution: %s', e)
+                                    secondsolution = AST.SolverSolution(htvar.name[2:], isHinge=self.IsHinge(htvar.name[2:]))
+                                    secondsolution.jointeval = [2*atan2(B.as_expr(), A.as_expr())]
+                                    secondsolution.AddHalfTanValue = True
+                                    thirdsolution = AST.SolverSolution(nonhtvars[0].name, isHinge=self.IsHinge(nonhtvars[0].name))
+                                    thirdsolution.jointeval = [usedvar0solution]
+                                    return preprocesssolutiontree+[firstsolution, secondsolution, thirdsolution]+endbranchtree, usedvars
+#                               finally:
+#                                   self.maxcasedepth = oldmaxcasedepth
             # try to factor the equations manually
             if newreducedeqs[0].degree(2) == 1:
                 # try to solve one variable in terms of the others

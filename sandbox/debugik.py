@@ -1111,8 +1111,8 @@ def test_ik():
         psubs.append((self.Tee[i],self.convertRealToRational(self.Tfinal[i].subs(valsubs).evalf())))
     for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
         psubs.append((s,v.subs(psubs)))
-
-
+        
+        
     if len(self.globalsymbols) > 0:
         psubs += [(s,v.subs(psubs+valsubs)) for s,v in self.globalsymbols]    
     if len(raghavansolutiontree) > 0:

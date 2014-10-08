@@ -59,7 +59,7 @@ public:
     }
 
     void Restore(object p=object()) {
-        if( p.is_none() ) {
+        if( IS_PYTHONOBJECT_NONE(p) ) {
             _state->Restore();
         }
         else {
