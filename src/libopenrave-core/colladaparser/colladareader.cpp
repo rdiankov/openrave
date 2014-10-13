@@ -751,7 +751,7 @@ public:
                 }
                 FOREACH(itsensor, probot->_vecSensors) {
                     if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
-                        (*itsensor)->_name = _prefix + (*itsensor)->_name;
+                        (*itsensor)->_info._name = _prefix + (*itsensor)->_info._name;
                     }
                 }
             }
@@ -2834,7 +2834,7 @@ public:
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::AttachedSensorPtr pattachedsensor(new RobotBase::AttachedSensor(probot));
-                    pattachedsensor->_name = _ConvertToOpenRAVEName(name);
+                    pattachedsensor->_info._name = _ConvertToOpenRAVEName(name);
                     daeElementRef pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {
                         domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pframe_origin->getAttribute("link"), as).resolve().elt);
@@ -2845,7 +2845,7 @@ public:
                             RAVELOG_WARN(str(boost::format("failed to find manipulator %s frame origin %s\n")%name%pframe_origin->getAttribute("link")));
                             continue;
                         }
-                        pattachedsensor->trelative = _ExtractFullTransformFromChildren(pframe_origin);
+                        pattachedsensor->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
                     }
                     if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
                         RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
@@ -2854,6 +2854,7 @@ public:
                         pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
                     }
                     probot->GetAttachedSensors().push_back(pattachedsensor);
+                    pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n")%probot->GetName()%name));

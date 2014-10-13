@@ -46,7 +46,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     if( (cloningoptions&Clone_Sensors) && !!sensor.psensor ) {
         psensor = RaveCreateSensor(probot->GetEnv(), sensor.psensor->GetXMLId());
         if( !!psensor ) {
-            psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_name)); // need a unique targettable name
+            psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
             psensor->Clone(sensor.psensor,cloningoptions);
             if( !!psensor ) {
                 pdata = psensor->CreateSensorData();
@@ -61,15 +61,14 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::AttachedSensorInfo& info)
 {
-    _name = info._name;
+    _info = info;
     _probot = probot;
-    pattachedlink = probot->GetLink(info._linkname);
-    trelative = info._trelative;
-    psensor = RaveCreateSensor(probot->GetEnv(), info._sensorname);
+    pattachedlink = probot->GetLink(_info._linkname);
+    psensor = RaveCreateSensor(probot->GetEnv(), _info._sensorname);
     if( !!psensor ) {
-        psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_name)); // need a unique targettable name
-        if(!!info._sensorgeometry) {
-            psensor->SetSensorGeometry(info._sensorgeometry);
+        psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
+        if(!!_info._sensorgeometry) {
+            psensor->SetSensorGeometry(_info._sensorgeometry);
         }
         pdata = psensor->CreateSensorData();
     }
@@ -89,14 +88,27 @@ SensorBase::SensorDataPtr RobotBase::AttachedSensor::GetData() const
 
 void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
 {
-    trelative = t;
+    _info._trelative = t;
     GetRobot()->_PostprocessChangedParameters(Prop_SensorPlacement);
+}
+
+void RobotBase::AttachedSensor::UpdateInfo()
+{
+    if( !!psensor ) {
+        _info._sensorname = psensor->GetXMLId();
+        // try to get the sensor geometry...?
+        //_info._sensorgeometry
+    }
+    LinkPtr prealattachedlink = pattachedlink.lock();
+    if( !!prealattachedlink ) {
+        _info._linkname = prealattachedlink->GetName();
+    }
 }
 
 void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 {
     o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
-    SerializeRound(o,trelative);
+    SerializeRound(o,_info._trelative);
     o << (!pdata ? -1 : pdata->GetType()) << " ";
     // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
     if( !!psensor ) {
@@ -433,7 +445,7 @@ void RobotBase::_UpdateAttachedSensors()
 {
     FOREACH(itsensor, _vecSensors) {
         if( !!(*itsensor)->psensor && !(*itsensor)->pattachedlink.expired() )
-            (*itsensor)->psensor->SetTransform(LinkPtr((*itsensor)->pattachedlink)->GetTransform()*(*itsensor)->trelative);
+            (*itsensor)->psensor->SetTransform(LinkPtr((*itsensor)->pattachedlink)->GetTransform()*(*itsensor)->GetRelativeTransform());
     }
 }
 
@@ -1764,7 +1776,7 @@ RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::Manipulator
     return newmanip;
 }
 
-void RobotBase::RemoveManipulator(ManipulatorPtr manip)
+bool RobotBase::RemoveManipulator(ManipulatorPtr manip)
 {
     if( _pManipActive == manip ) {
         _pManipActive.reset();
@@ -1773,9 +1785,10 @@ void RobotBase::RemoveManipulator(ManipulatorPtr manip)
         if( *itmanip == manip ) {
             _vecManipulators.erase(itmanip);
             __hashrobotstructure.resize(0);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::AttachedSensorInfo& attachedsensorinfo, bool removeduplicate)
@@ -1802,6 +1815,7 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
     else {
         _vecSensors.push_back(newattachedsensor);
     }
+    newattachedsensor->UpdateInfo(); // just in case
     __hashrobotstructure.resize(0);
     return newattachedsensor;
 }
@@ -1814,6 +1828,18 @@ RobotBase::AttachedSensorPtr RobotBase::GetAttachedSensor(const std::string& nam
         }
     }
     return RobotBase::AttachedSensorPtr();
+}
+
+bool RobotBase::RemoveAttachedSensor(AttachedSensorPtr attsensor)
+{
+    FOREACH(itattsensor,_vecSensors) {
+        if( *itattsensor == attsensor ) {
+            _vecSensors.erase(itattsensor);
+            __hashrobotstructure.resize(0);
+            return true;
+        }
+    }
+    return false;
 }
 
 /// Check if body is self colliding. Links that are joined together are ignored.
@@ -2193,7 +2219,7 @@ void RobotBase::_ComputeInternalInformation()
             stringstream ss;
             ss << "sensor" << sensorindex;
             RAVELOG_WARN(str(boost::format("robot %s has a sensor with no name, setting to %s\n")%GetName()%ss.str()));
-            (*itsensor)->_name = ss.str();
+            (*itsensor)->_info._name = ss.str();
         }
         else if( !utils::IsValidName((*itsensor)->GetName()) ) {
             throw OPENRAVE_EXCEPTION_FORMAT("sensor name \"%s\" is not valid", (*itsensor)->GetName(), ORE_Failed);

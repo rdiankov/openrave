@@ -417,7 +417,7 @@ public:
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
         Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
-        std::string _sensorname; ///< name of the sensor interface to create
+        std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
@@ -439,16 +439,16 @@ public:
             return LinkPtr(pattachedlink);
         }
         virtual Transform GetRelativeTransform() const {
-            return trelative;
+            return _info._trelative;
         }
         virtual Transform GetTransform() const {
-            return LinkPtr(pattachedlink)->GetTransform()*trelative;
+            return LinkPtr(pattachedlink)->GetTransform()*_info._trelative;
         }
         virtual RobotBasePtr GetRobot() const {
             return RobotBasePtr(_probot);
         }
         virtual const std::string& GetName() const {
-            return _name;
+            return _info._name;
         }
 
         /// retrieves the current data from the sensor
@@ -458,15 +458,30 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
 
-        /// \return hash of the sensor definition
+        /// \brief return hash of the sensor definition
         virtual const std::string& GetStructureHash() const;
+
+        /// \brief Updates several fields in \ref _info depending on the current state of the attached sensor
+        virtual void UpdateInfo();
+
+        /// \brief returns the attached sensor info 
+        inline const AttachedSensorInfo& UpdateAndGetInfo() {
+            UpdateInfo();
+            return _info;
+        }
+        
+        /// \brief returns the attached sensor info 
+        inline const AttachedSensorInfo& GetInfo() const {
+            return _info;
+        }
+
 private:
+        AttachedSensorInfo _info; ///< user specified data
+        
         RobotBaseWeakPtr _probot;
         SensorBasePtr psensor;
         LinkWeakPtr pattachedlink;         ///< the robot link that the sensor is attached to
-        Transform trelative;         ///< relative transform of the sensor with respect to the attached link
         SensorBase::SensorDataPtr pdata;         ///< pointer to a preallocated data using psensor->CreateSensorData()
-        std::string _name;         ///< name of the attached sensor
         mutable std::string __hashstructure;
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -742,11 +757,11 @@ private:
     /// \throw openrave_exception If removeduplicate is false and there exists a manipulator with the same name, will throw an exception
     virtual ManipulatorPtr AddManipulator(const ManipulatorInfo& manipinfo, bool removeduplicate=false);
 
-    /// \brief removes a manipulator from the robot list.
+    /// \brief removes a manipulator from the robot list. if successful, returns true
     ///
     /// Will change the robot structure hash..
     /// if the active manipulator is set to this manipulator, it will be set to None afterwards
-    virtual void RemoveManipulator(ManipulatorPtr manip);
+    virtual bool RemoveManipulator(ManipulatorPtr manip);
 
     /// \deprecated (12/07/23)
     virtual int GetActiveManipulatorIndex() const RAVE_DEPRECATED;
@@ -761,6 +776,11 @@ private:
     /// \brief Returns an attached sensor from its name. If no sensor is with that name is present, returns empty pointer.
     virtual AttachedSensorPtr GetAttachedSensor(const std::string& name) const;
 
+    /// \brief tries to remove the attached sensor. If successful, returns true.
+    ///
+    /// Will change the robot structure hash..
+    virtual bool RemoveAttachedSensor(AttachedSensorPtr attsensor);
+    
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
 

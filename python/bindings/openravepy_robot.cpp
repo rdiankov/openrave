@@ -665,6 +665,9 @@ public:
         virtual ~PyAttachedSensor() {
         }
 
+        RobotBase::AttachedSensorPtr GetAttachedSensor() const {
+            return _pattached;
+        }
         object GetSensor() {
             return object(openravepy::toPySensor(_pattached->GetSensor(),_pyenv));
         }
@@ -698,6 +701,19 @@ public:
         string GetStructureHash() const {
             return _pattached->GetStructureHash();
         }
+
+        void UpdateInfo() {
+            _pattached->UpdateInfo();
+        }
+
+        object UpdateAndGetInfo() {
+            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo())));
+        }
+
+        object GetInfo() {
+            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->GetInfo())));
+        }
+
         string __repr__() {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetAttachedSensor('%s')")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
         }
@@ -895,12 +911,15 @@ public:
     PyManipulatorPtr AddManipulator(PyManipulatorInfoPtr pmanipinfo, bool removeduplicate=false) {
         return _GetManipulator(_probot->AddManipulator(*pmanipinfo->GetManipulatorInfo(), removeduplicate));
     }
-    void RemoveManipulator(PyManipulatorPtr pmanip) {
-        _probot->RemoveManipulator(pmanip->GetManipulator());
+    bool RemoveManipulator(PyManipulatorPtr pmanip) {
+        return _probot->RemoveManipulator(pmanip->GetManipulator());
     }
 
     PyAttachedSensorPtr AddAttachedSensor(PyAttachedSensorInfoPtr pattsensorinfo, bool removeduplicate=false) {
         return _GetAttachedSensor(_probot->AddAttachedSensor(*pattsensorinfo->GetAttachedSensorInfo(), removeduplicate));
+    }
+    bool RemoveAttachedSensor(PyAttachedSensorPtr pyattsensor) {
+        return _probot->RemoveAttachedSensor(pyattsensor->GetAttachedSensor());
     }
 
     object GetSensors()
@@ -1492,6 +1511,7 @@ void init_openravepy_robot()
                       .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(RobotBase,GetActiveManipulator))
                       .def("AddManipulator",&PyRobotBase::AddManipulator, AddManipulator_overloads(args("manipinfo", "removeduplicate"), DOXY_FN(RobotBase,AddManipulator)))
                       .def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor, AddAttachedSensor_overloads(args("attachedsensorinfo", "removeduplicate"), DOXY_FN(RobotBase,AddAttachedSensor)))
+                      .def("RemoveAttachedSensor",&PyRobotBase::RemoveAttachedSensor, args("attsensor"), DOXY_FN(RobotBase,RemoveAttachedSensor))
                       .def("RemoveManipulator",&PyRobotBase::RemoveManipulator, args("manip"), DOXY_FN(RobotBase,RemoveManipulator))
                       .def("GetActiveManipulatorIndex",&PyRobotBase::GetActiveManipulatorIndex, DOXY_FN(RobotBase,GetActiveManipulatorIndex))
                       .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(RobotBase,GetAttachedSensors))
@@ -1691,6 +1711,9 @@ void init_openravepy_robot()
         .def("GetData",&PyRobotBase::PyAttachedSensor::GetData, DOXY_FN(RobotBase::AttachedSensor,GetData))
         .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"), DOXY_FN(RobotBase::AttachedSensor,SetRelativeTransform))
         .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash, DOXY_FN(RobotBase::AttachedSensor,GetStructureHash))
+        .def("UpdateInfo",&PyRobotBase::PyAttachedSensor::UpdateInfo, DOXY_FN(RobotBase::AttachedSensor,UpdateInfo))
+        .def("GetInfo",&PyRobotBase::PyAttachedSensor::GetInfo, DOXY_FN(RobotBase::AttachedSensor,GetInfo))
+        .def("UpdateAndGetInfo",&PyRobotBase::PyAttachedSensor::UpdateAndGetInfo, DOXY_FN(RobotBase::AttachedSensor,UpdateAndGetInfo))
         .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
         .def("__repr__",&PyRobotBase::PyAttachedSensor::__repr__)
         .def("__unicode__",&PyRobotBase::PyAttachedSensor::__unicode__)

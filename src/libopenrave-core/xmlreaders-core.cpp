@@ -2665,7 +2665,7 @@ public:
             }
         }
 
-        _psensor->_name = name;
+        _psensor->_info._name = name;
         _probot = _psensor->GetRobot();
     }
 
@@ -2734,24 +2734,24 @@ public:
         else if( xmlname == "translation" ) {
             Vector v;
             _ss >> v.x >> v.y >> v.z;
-            _psensor->trelative.trans += v*_vScaleGeometry;
+            _psensor->_info._trelative.trans += v*_vScaleGeometry;
         }
         else if( xmlname == "quat" ) {
             Transform tnew;
             _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
             tnew.rot.normalize4();
-            _psensor->trelative.rot = (tnew*_psensor->trelative).rot;
+            _psensor->_info._trelative.rot = (tnew*_psensor->_info._trelative).rot;
         }
         else if( xmlname == "rotationaxis" ) {
             Vector vaxis; dReal fangle=0;
             _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
             Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-            _psensor->trelative.rot = (tnew*_psensor->trelative).rot;
+            _psensor->_info._trelative.rot = (tnew*_psensor->_info._trelative).rot;
         }
         else if( xmlname == "rotationmat" ) {
             TransformMatrix tnew;
             _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-            _psensor->trelative.rot = (Transform(tnew)*_psensor->trelative).rot;
+            _psensor->_info._trelative.rot = (Transform(tnew)*_psensor->_info._trelative).rot;
         }
 
         if( xmlname !=_processingtag )
@@ -3005,7 +3005,7 @@ public:
                 }
                 FOREACH(itsensor, _probot->GetAttachedSensors()) {
                     if( _setInitialSensors.find(*itsensor) == _setInitialSensors.end() ) {
-                        (*itsensor)->_name = _prefix + (*itsensor)->_name;
+                        (*itsensor)->_info._name = _prefix + (*itsensor)->_info._name;
                     }
                 }
                 FOREACH(itmanip,_probot->GetManipulators()) {
