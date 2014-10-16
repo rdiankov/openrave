@@ -784,6 +784,20 @@ void PlannerBase::PlannerParameters::Validate() const
         vector<dReal> vzeros(vstate.size());
         _neighstatefn(vstate2,vzeros,0);
         dReal dist = _distmetricfn(vstate,vstate2);
+        if( IS_DEBUGLEVEL(Level_Debug) ) {
+            if( dist > 1000*g_fEpsilon ) {
+                std::stringstream ss; ss << "vstate=";
+                for(size_t i = 0; i < vstate.size(); ++i) {
+                    ss << vstate[i] << ", ";
+                }
+                ss << "; vstate2=";
+                for(size_t i = 0; i < vstate2.size(); ++i) {
+                    ss << vstate2[i] << ", ";
+                }
+                RAVELOG_DEBUG_FORMAT("unequal states: %s",ss.str());
+            }
+        }
+        
         OPENRAVE_ASSERT_OP(dist,<=,1000*g_fEpsilon);
     }
     if( !!_diffstatefn && vstate.size() > 0 ) {

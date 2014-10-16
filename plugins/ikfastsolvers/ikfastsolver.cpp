@@ -250,8 +250,8 @@ public:
                 RAVELOG_WARN(str(boost::format("_vFreeInc not correct size: %d != %d\n")%_vFreeInc.size()%_vfreeparams.size()));
             }
             _vFreeInc.resize(_vfreeparams.size());
-            stringstream ss;
-            ss << "robot " << probot->GetName() << ":" << pmanip->GetName() << " setting free increment to: ";
+            //stringstream ss;
+            //ss << "robot " << probot->GetName() << ":" << pmanip->GetName() << " setting free increment to: ";
             for(size_t i = 0; i < _vFreeInc.size(); ++i) {
                 if( _vfreerevolute[i] ) {
                     _vFreeInc[i] = 0.1;
@@ -259,9 +259,9 @@ public:
                 else {
                     _vFreeInc[i] = 0.01;
                 }
-                ss << _vFreeInc[i] << " ";
+                //ss << _vFreeInc[i] << " ";
             }
-            RAVELOG_DEBUG(ss.str());
+            //RAVELOG_DEBUG(ss.str());
         }
 
         pmanip->GetChildLinks(_vchildlinks);
