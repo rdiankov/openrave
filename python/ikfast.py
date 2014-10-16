@@ -2897,6 +2897,8 @@ class IKFastSolver(AutoReloader):
             linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))
             # first try LiWoernleHiller since it is most robust
             for ilinklist, (T0links, T1links) in enumerate(linklist):
+                if ilinklist < 2:
+                    continue
                 log.info('try group %d/%d', ilinklist, len(linklist))
                 try:
                     # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
@@ -4549,7 +4551,6 @@ class IKFastSolver(AutoReloader):
 #             if len(allmonoms) < len(neweqs_test):
 #                 print 'found'
         if len(allmonoms) > len(neweqs_full) and len(reducedeqs) < 3:
-            #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
             raise self.CannotSolveError('new monoms is %d>%d'%(len(allmonoms), len(neweqs_full)))
         
         # the equations are ginac objects
@@ -4835,7 +4836,7 @@ class IKFastSolver(AutoReloader):
                     unknownvars.remove(curvar)
                     jointtrees2=[]
                     curvarsubs=self.Variable(curvar).subs
-                    treefirst = self.SolveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar])
+                    treefirst = self.SolveAllEquations(AllEquations,curvars=[curvar],othersolvedvars=self.freejointvars,solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([jointtrees2])],unknownvars=unknownvars+[tvar], canguessvars=False)
                     # solvable, which means we now have len(AllEquations)-1 with two variables, solve with half angles
                     halfanglesolution=self.SolvePairVariablesHalfAngle(raweqns=[eq.subs(curvarsubs) for eq in AllEquations],var0=unknownvars[0],var1=unknownvars[1],othersolvedvars=self.freejointvars+[curvar])[0]
                     # sometimes halfanglesolution can evaluate to all zeros (katana arm), need to catch this and go to a different branch
@@ -4855,7 +4856,7 @@ class IKFastSolver(AutoReloader):
                             subsinv += self.Variable(v).subsinv
                         AllEquationsOrig = [(peq[0].as_expr()-peq[1].as_expr()).subs(subsinv) for peq in rawpolyeqs]
                         self.sortComplexity(AllEquationsOrig)
-                        jointtrees2 += self.SolveAllEquations(AllEquationsOrig,curvars=curvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=endbranchtree)
+                        jointtrees2 += self.SolveAllEquations(AllEquationsOrig,curvars=curvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=endbranchtree, canguessvars=False)
                         return preprocesssolutiontree+solutiontree+treefirst,solvejointvars
                     
                     except self.CannotSolveError,e:
@@ -4864,7 +4865,7 @@ class IKFastSolver(AutoReloader):
                         
                     # solve all the unknowns now
                     jointtrees3=[]
-                    treesecond = self.SolveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees3])])
+                    treesecond = self.SolveAllEquations(AllEquations,curvars=unknownvars,othersolvedvars=self.freejointvars+[curvar,halfanglevar],solsubs=self.freevarsubs+curvarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees3])], canguessvars=False)
                     for t in treesecond:
                         # most likely t is a solution...
                         t.AddHalfTanValue = True
@@ -4921,10 +4922,10 @@ class IKFastSolver(AutoReloader):
                     halfanglesolution = self.SolvePairVariablesHalfAngle(raweqns=raweqns,var0=usedvars[0],var1=usedvars[1],othersolvedvars=self.freejointvars)[0]
                     halfanglevar = usedvars[0] if halfanglesolution.jointname==usedvars[0].name else usedvars[1]
                     unknownvar = usedvars[1] if halfanglesolution.jointname==usedvars[0].name else usedvars[0]
-                    nexttree = self.SolveAllEquations(raweqns,curvars=[unknownvar],othersolvedvars=self.freejointvars+[halfanglevar],solsubs=self.freevarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees])])
+                    nexttree = self.SolveAllEquations(raweqns,curvars=[unknownvar],othersolvedvars=self.freejointvars+[halfanglevar],solsubs=self.freevarsubs+self.Variable(halfanglevar).subs,endbranchtree=[AST.SolverSequence([jointtrees])], canguessvars=False)
                     #finalsolution = self.solveSingleVariable(AllEquations,usedvars[2],othersolvedvars=self.freejointvars+usedvars[0:2],maxsolutions=4,maxdegree=4)
                     try:
-                        finaltree = self.SolveAllEquations(AllEquations,curvars=usedvars[2:],othersolvedvars=self.freejointvars+usedvars[0:2],solsubs=self.freevarsubs+self.Variable(usedvars[0]).subs+self.Variable(usedvars[1]).subs,endbranchtree=endbranchtree)
+                        finaltree = self.SolveAllEquations(AllEquations,curvars=usedvars[2:],othersolvedvars=self.freejointvars+usedvars[0:2],solsubs=self.freevarsubs+self.Variable(usedvars[0]).subs+self.Variable(usedvars[1]).subs,endbranchtree=endbranchtree, canguessvars=False)
                         jointtrees += finaltree
                         return preprocesssolutiontree+[halfanglesolution]+nexttree,usedvars
                     
@@ -5031,16 +5032,16 @@ class IKFastSolver(AutoReloader):
                 #if eq.has(*usedvars) and not eq.has(*unusedvars):
                 AllEquations.append(eq)
             self.sortComplexity(AllEquations)
-            
+
             # first try to solve all the variables at once
             try:
-                solutiontree = self.SolveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars=self.freejointvars[:], solsubs=self.freevarsubs[:], endbranchtree=endbranchtree)
+                solutiontree = self.SolveAllEquations(AllEquations,curvars=solvejointvars,othersolvedvars=self.freejointvars[:], solsubs=self.freevarsubs[:], endbranchtree=endbranchtree, canguessvars=False)
                 return solutiontree, solvejointvars
             except self.CannotSolveError, e:
                 log.debug(u'failed solving all variables: %s', e)
                 
             try:
-                solutiontree = self.SolveAllEquations(AllEquations,curvars=usedvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:], unknownvars=unusedvars, endbranchtree=endbranchtree)
+                solutiontree = self.SolveAllEquations(AllEquations,curvars=usedvars,othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:], unknownvars=unusedvars, endbranchtree=endbranchtree, canguessvars=False)
                 return solutiontree, usedvars
             except self.CannotSolveError, e:
                 log.debug(u'failed solving used variables: %s', e)
@@ -5051,8 +5052,8 @@ class IKFastSolver(AutoReloader):
                     unknownvars.pop(ivar)
                     endbranchtree2 = []
                     if 1:
-                        solutiontree = self.SolveAllEquations(AllEquations,curvars=[usedvars[ivar]],othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([endbranchtree2])],unknownvars=unknownvars+unusedvars)
-                        endbranchtree2 += self.SolveAllEquations(AllEquations,curvars=unknownvars[0:2],othersolvedvars=self.freejointvars[:]+[usedvars[ivar]],solsubs=self.freevarsubs[:]+self.Variable(usedvars[ivar]).subs, unknownvars=unusedvars, endbranchtree=endbranchtree)
+                        solutiontree = self.SolveAllEquations(AllEquations,curvars=[usedvars[ivar]],othersolvedvars=self.freejointvars[:],solsubs=self.freevarsubs[:],endbranchtree=[AST.SolverSequence([endbranchtree2])],unknownvars=unknownvars+unusedvars, canguessvars=False)
+                        endbranchtree2 += self.SolveAllEquations(AllEquations,curvars=unknownvars[0:2],othersolvedvars=self.freejointvars[:]+[usedvars[ivar]],solsubs=self.freevarsubs[:]+self.Variable(usedvars[ivar]).subs, unknownvars=unusedvars, endbranchtree=endbranchtree, canguessvars=False)
                     return preprocesssolutiontree+solutiontree, usedvars#+unusedvars#[unknownvars[1], usedvars[ivar]]#
                 except self.CannotSolveError, e:
                     log.debug(u'single variable %s failed: %s', usedvars[ivar], e)
@@ -5226,7 +5227,7 @@ class IKFastSolver(AutoReloader):
                                     curvars = list(usedvars)
                                     curvars.remove(solvevar)
                                     unusedvars = [solvejointvar for solvejointvar in solvejointvars if not solvejointvar in usedvars]
-                                    solutiontree = self.SolveAllEquations(AllEquations+AllEquationsExtra,curvars=curvars+unusedvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree)
+                                    solutiontree = self.SolveAllEquations(AllEquations+AllEquationsExtra,curvars=curvars+unusedvars,othersolvedvars=self.freejointvars[:]+[solvevar],solsubs=self.freevarsubs[:]+self.Variable(solvevar).subs,endbranchtree=endbranchtree, canguessvars=False)
                                     #secondSolutionComplexity = self.codeComplexity(B) + self.codeComplexity(A)
                                     #if secondSolutionComplexity > 500:
                                     #    log.info('solution for %s is too complex, so delaying its solving')
@@ -5618,7 +5619,7 @@ class IKFastSolver(AutoReloader):
                         AllEquations.append(eq1.subs(self.invsubs))
                 if len(AllEquations) > 0:
                     otherjointtrees = []
-                    tree = self.SolveAllEquations(AllEquations,curvars=list(usedvars),othersolvedvars=[],solsubs=self.freevarsubs,endbranchtree=[AST.SolverSequence([otherjointtrees])])
+                    tree = self.SolveAllEquations(AllEquations,curvars=list(usedvars),othersolvedvars=[],solsubs=self.freevarsubs,endbranchtree=[AST.SolverSequence([otherjointtrees])], canguessvars=False)
                     log.info('first SolveAllEquations successful: %s',usedvars)
 #                     try:
 #                         # although things can be solved at this point, it yields a less optimal solution than if all variables were considered...
@@ -6258,9 +6259,14 @@ class IKFastSolver(AutoReloader):
                             NewEquations.append(neweq)
                     else:
                         NewEquations.append(neweq)
+            else:
+                NewEquations.append(eq)
         return NewEquations
     
-    def SolveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None,unknownvars=None, currentcasesubs=None):
+    def SolveAllEquations(self,AllEquations,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=None,unknownvars=None, currentcasesubs=None, canguessvars=True):
+        """
+        :param canguessvars: if True, can guess the variables given internal conditions are satisified
+        """
         if len(curvars) == 0:
             return endbranchtree
         
@@ -6443,8 +6449,9 @@ class IKFastSolver(AutoReloader):
 #                 reducedeqs.append(Poly(num, *htvars))
 # 
 
-        # only guess if final joint to be solved
-        if len(othersolvedvars)+len(curvars) == len(self.freejointvars)+len(self._solvejointvars) and (len(curvars) == 1 or (currentcases is not None and len(currentcases) > 0)): # only estimate when deep in the hierarchy, do not want the guess to be executed all the time
+        # only guess if final joint to be solved, or there exists current cases and at least one joint has been solved already.
+        # don't want to start guessing when no joints have been solved yet, this is an indication of bad equations
+        if canguessvars and len(othersolvedvars)+len(curvars) == len(self.freejointvars)+len(self._solvejointvars) and (len(curvars) == 1 or (len(curvars) < len(self._solvejointvars) and currentcases is not None and len(currentcases) > 0)): # only estimate when deep in the hierarchy, do not want the guess to be executed all the time
             # perhaps there's a degree of freedom that is not trivial to compute?
             # take the highest hinge variable and set it
             log.info('trying to guess variable from %r', curvars)
@@ -6873,7 +6880,7 @@ class IKFastSolver(AutoReloader):
                         else:
                             evalcond = cond
                         if eq == S.Zero:
-                            log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)
+                            log.info('c=%d, adding case %s=%s in %s', scopecounter, possiblevar, possiblevalue,checkzero)                                
                             # if the variable is 1 and part of the rotation matrix, can deduce other variables
                             if possiblevar in rotsymbols and (possiblevalue == S.One or possiblevalue == -S.One):
                                 row1 = int(possiblevar.name[-2])
@@ -7018,11 +7025,13 @@ class IKFastSolver(AutoReloader):
         else:
             trysubstitutions = self.ppsubs
         log.debug('c=%d have %d zero substitutions', scopecounter, len(flatzerosubstitutioneqs))
+        
         for iflatzerosubstitutioneqs, (cond, evalcond, othervarsubs, dictequations) in enumerate(flatzerosubstitutioneqs):
             # have to convert to fractions before substituting!
             if not all([self.isValidSolution(v) for s,v in othervarsubs]):
                 continue
             othervarsubs = [(s,self.ConvertRealToRationalEquation(v)) for s,v in othervarsubs]
+            #NewEquations = [eq.subs(self.npxyzsubs + self.rxpsubs).subs(othervarsubs) for eq in AllEquations]
             NewEquations = [eq.subs(othervarsubs) for eq in AllEquations]
             NewEquationsClean = self.PropagateSolvedConstants(NewEquations, othersolvedvars, curvars)
             
@@ -7067,7 +7076,7 @@ class IKFastSolver(AutoReloader):
                                 self._AddToGlobalSymbols(var, neweq)
                             if len(extradictequations) > 0:
                                 # have to re-substitute since some equations evaluated to zero
-                                NewEquationsClean = [eq.subs(extradictequations) for eq in NewEquationsClean]
+                                NewEquationsClean = [eq.subs(extradictequations).expand() for eq in NewEquationsClean]
                             newtree = self.SolveAllEquations(NewEquationsClean,curvars,othersolvedvars,solsubs,endbranchtree,currentcases=newcases, currentcasesubs=newcasesubs, unknownvars=unknownvars)
                             accumequations.append(NewEquationsClean) # store the equations for debugging purposes
                         else:
@@ -8002,7 +8011,11 @@ class IKFastSolver(AutoReloader):
                     # substitute cos
                     if self.countVariables(eqnew,varsym.svar) <= 1 or (self.countVariables(eqnew,varsym.cvar) <= 2 and self.countVariables(eqnew,varsym.svar) == 0): # anything more than 1 implies quartic equation
                         tempsolutions = solve(eqnew.subs(varsym.svar,sqrt(1-varsym.cvar**2)).expand(),varsym.cvar)
-                        jointsolutions = [self.SimplifyTransform(self.trigsimp(s.subs(symbols+varsym.subsinv),othersolvedvars)) for s in tempsolutions]
+                        jointsolutions = []
+                        for s in tempsolutions:
+                            s2 = self.trigsimp(s.subs(symbols+varsym.subsinv),othersolvedvars)
+                            if self.isValidSolution(s2):
+                                jointsolutions.append(self.SimplifyTransform(s2))
                         if len(jointsolutions) > 0 and all([self.isValidSolution(s) and self.isValidSolution(s) for s in jointsolutions]):
                             solutions.append(AST.SolverSolution(var.name,jointevalcos=jointsolutions,isHinge=self.IsHinge(var.name)))
                             solutions[-1].equationsused = equationsused
