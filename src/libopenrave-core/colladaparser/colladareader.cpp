@@ -2520,6 +2520,7 @@ public:
         }
 
         Transform tlocalgeom;
+        bool bgeomvisible = true;
         // check for OpenRAVE profile simple geometric primitives
         for(size_t ie = 0; ie < domgeom->getExtra_array().getCount(); ++ie) {
             domExtraRef pextra = domgeom->getExtra_array()[ie];
@@ -2592,6 +2593,7 @@ public:
                         }
                         else if( name == "visible" ) {
                             resolveCommon_bool_or_param(children[i],domgeom,geominfo._bVisible);
+                            bgeomvisible = geominfo._bVisible;
                         }
                     }
                     if( bfoundgeom ) {
@@ -2610,21 +2612,25 @@ public:
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
+                listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
+                listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
+                listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
+                listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             if( meshRef->getPolygons_array().getCount()> 0 ) {
                 RAVELOG_WARN("openrave does not support collada polygons\n");
@@ -2684,6 +2690,7 @@ public:
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 listGeometryInfos.back()._type = GT_TriMesh;
                 listGeometryInfos.back()._t = tlocalgeom;
+                listGeometryInfos.back()._bVisible = bgeomvisible;
                 _computeConvexHull(vconvexhull,listGeometryInfos.back()._meshcollision);
             }
             return true;

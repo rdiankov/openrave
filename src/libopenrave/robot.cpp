@@ -2350,6 +2350,10 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     KinBody::Clone(preference,cloningoptions);
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
+    _selfcollisionchecker.reset();
+    if( !!r->_selfcollisionchecker ) {
+        // TODO clone the self collision checker?
+    }
     __hashrobotstructure = r->__hashrobotstructure;
     _vecManipulators.clear();
     _pManipActive.reset();
