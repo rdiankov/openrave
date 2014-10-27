@@ -2897,8 +2897,6 @@ class IKFastSolver(AutoReloader):
             linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))
             # first try LiWoernleHiller since it is most robust
             for ilinklist, (T0links, T1links) in enumerate(linklist):
-                if ilinklist < 2:
-                    continue
                 log.info('try group %d/%d', ilinklist, len(linklist))
                 try:
                     # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
