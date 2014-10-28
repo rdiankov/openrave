@@ -30,67 +30,62 @@ public:
             _tOriginalEEI = _pmanipI->GetTransform();
             _tOriginalEEA = _pmanipA->GetTransform();
             _diff = _tOriginalEEA.inverse()*_tOriginalEEI;
-
+            _errorRot = 0.1;
+            _errorTrans = .010;
         }
         virtual ~DualArmManipulation() {
         }
 
         bool DualArmConstrained(std::vector<dReal>& vprev, const std::vector<dReal>& vdelta)
         {
-            std::vector<dReal> vcur = vprev;
-            for(size_t i = 0; i < vcur.size(); ++i) {
-                vcur[i] += vdelta.at(i);
+            std::vector<dReal> vnew = vprev;
+            for(size_t i=0; i<vnew.size(); ++i) {
+                vnew.at(i) += vdelta.at(i);
             }
-            std::vector<dReal> vnew = vcur;
-            bool pstatus=true;
-            double errorRot=0.1;
-            double errorTrans=.010;
-            vector<int> JointIndicesI;
 
-            std::vector<dReal> vold, vsolution;
-            _probot->GetDOFValues(vold);          //gets the current robot config
+            if( _CheckConstraint(vnew) ) {
+                // vprev+vdelta already fulfill the constraints
+                vprev = vnew;
+                return true;
+            }
+
+            KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
+
+            std::vector<dReal> vcur;
+            _probot->SetActiveDOFValues(vprev);
+            _probot->GetDOFValues(vcur);
+
+            _probot->SetActiveDOFValues(vnew);
+            _probot->GetDOFValues(vnew);
             Transform tA = _pmanipA->GetTransform();
-
             Transform tInew= tA*_diff;          //this is (wTRANSl)*(lTRANSr)
-            bool a= _pmanipI->FindIKSolution(tInew,vsolution, false);
 
-            if(a) {
-                vector<int> JointIndicesI = _pmanipI->GetArmIndices();
+            std::vector<dReal> vsolution;
+            if( _pmanipI->FindIKSolution(tInew,vsolution, false) ) {
+                vector<int> jointIndicesI = _pmanipI->GetArmIndices();
+                vector<dReal> vdiff;
+                for (size_t i=0; i<jointIndicesI.size(); ++i) {
+                    vdiff.push_back(vcur[jointIndicesI.at(i)]);
+                }
+                _probot->SubtractDOFValues(vdiff, vsolution, jointIndicesI);
 
-                for (size_t i=0; i<JointIndicesI.size(); i++) {      //this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
-                    if(fabs(vsolution.at(i)-vprev[JointIndicesI.at(i)])<errorRot*2) {
-                        vprev[JointIndicesI.at(i)]=vsolution[i];
+                //this check is important to make sure the IK solution does not fly too far away since there are multiple Ik solutions possible
+                for (size_t i=0; i<vdiff.size(); ++i) {
+                    if( fabs(vdiff[i]) < _errorRot*2.0 ) {
+                        vnew[jointIndicesI.at(i)] =  vcur[jointIndicesI.at(i)] - vdiff[i];
                     }
                     else {
                         return false;
                     }
                 }
-                pstatus=true;
             }
             else  {
                 return false;
             }
 
-            //now checking
-            _probot->SetActiveDOFValues(vprev);
-            Transform tI = _pmanipI->GetTransform();
-            tA = _pmanipA->GetTransform();
-            Transform tnew = tA.inverse()*tI;
-
-            for(int i = 0; i < 4; ++i) {
-                if (!(RaveFabs(tnew.rot[i]-_diff.rot[i])<errorRot)) {
-                    pstatus=false;
-                    return false;
-                }
-            }
-            for(int i = 0; i < 3; ++i) {
-                if (!(fabs(tnew.trans[i]-_diff.trans[i])<errorTrans)) {
-                    pstatus=false;
-                    return false;
-                }
-            }
-
-            return pstatus;
+            _probot->SetDOFValues(vnew);
+            _probot->GetActiveDOFValues(vprev);
+            return _CheckConstraint(vprev);
         }
 
         boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
@@ -100,8 +95,29 @@ protected:
         RobotBase::ManipulatorPtr _pmanipA;
         RobotBase::ManipulatorPtr _pmanipI;
         Transform _tOriginalEEI,_tOriginalEEA, _diff;
-        double _diffX,_diffY,_diffZ;
+        double _errorRot, _errorTrans;
 
+        bool _CheckConstraint(std::vector<dReal>& v) {
+            KinBody::KinBodyStateSaver saver(_probot, KinBody::Save_LinkTransformation);
+
+            _probot->SetActiveDOFValues(v);
+            Transform tI = _pmanipI->GetTransform();
+            Transform tA = _pmanipA->GetTransform();
+            Transform tnew = tA.inverse()*tI;
+
+            for(int i = 0; i < 4; ++i) {
+                if (!(RaveFabs(tnew.rot[i]-_diff.rot[i]) < _errorRot)) {
+                    return false;
+                }
+            }
+            for(int i = 0; i < 3; ++i) {
+                if (!(fabs(tnew.trans[i]-_diff.trans[i]) < _errorTrans)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     };
 
     static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
