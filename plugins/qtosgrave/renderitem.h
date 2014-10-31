@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 /*! --------------------------------------------------------------------
-   \file   Item.h
+   \file   renderitem.h
    \brief  Abstract base class for a render item
    -------------------------------------------------------------------- */
 
@@ -27,15 +27,16 @@ enum ViewGeometry {
     VG_RenderCollision = 2,
 };
 
-// My classes
-class Item;
-
 /// Encapsulate the Inventor rendering of an Item
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
     Item(QtOSGViewerPtr viewer);
     virtual ~Item();
+
+    /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
+    virtual void PrepForDeletion() {
+    }
 
     // general methods
     virtual const string& GetName() const {
@@ -104,6 +105,11 @@ class KinBodyItem : public Item
 public:
     KinBodyItem(QtOSGViewerPtr viewer, KinBodyPtr, ViewGeometry viewmode);
     virtual ~KinBodyItem();
+
+    virtual void PrepForDeletion() {
+        _geometrycallback.reset();
+        _drawcallback.reset();
+    }
 
     const string& GetName() const {
         return _pchain->GetName();

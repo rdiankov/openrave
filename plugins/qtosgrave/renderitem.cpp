@@ -16,6 +16,7 @@
    \brief  Abstract base class for an Item
    -------------------------------------------------------------------- */
 #include "qtosg.h"
+#include "renderitem.h"
 
 namespace qtosgrave {
 

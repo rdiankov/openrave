@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,17 +15,17 @@
 
 namespace qtosgrave {
 
-////////////////////////////////////////////////////////////////////////////////
-/// Constructor
-////////////////////////////////////////////////////////////////////////////////
-QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv,QApplication *app) : application(app),
-#if QT_VERSION >= 0x040000 // check for qt4
+QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, QApplication *app) : application(app),
     QMainWindow(NULL, Qt::Window),
-#else
-    QMainWindow(NULL, "OpenRAVE", Qt::WType_TopLevel),
-#endif
     ViewerBase(penv)
 {
+    int qtosgbuild = 0;
+    bool bCreateStatusBar = true, bCreateMenu = true;
+    int nAlwaysOnTopFlag = 0; // 1 - add on top flag (keep others), 2 - add on top flag (remove others)
+    sinput >> qtcoinbuild >> bCreateStatusBar >> bCreateMenu >> nAlwaysOnTopFlag;
+
+    //QApplication *app= new QApplication(s_QtArgc,NULL);
+
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
         _name += " (Development Version)";
@@ -33,26 +33,52 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv,QApplication *app) : applicatio
     else {
         _name += " (Stable Release)";
     }
-#if QT_VERSION >= 0x040000 // check for qt4
+
     setWindowTitle(_name.c_str());
-    statusBar()->showMessage(tr("Status Bar"));
-#endif
+    if(  bCreateStatusBar ) {
+        statusBar()->showMessage(tr("Status Bar"));
+    }
 
     __description = ":Interface Author: Gustavo Puche\n\nProvides a viewer based on Open Scene Graph.";
+//    RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera,this,_1,_2),
+//                    "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+//    RegisterCommand("SetFeedbackVisibility",boost::bind(&QtOSGViewer::_SetFeedbackVisibility,this,_1,_2),
+//                    "Accepts 0/1 value that decides whether to render the cross hairs");
+//    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_SetFeedbackVisibility,this,_1,_2),
+//                    "Accepts 0/1 value that decides whether to render the cross hairs");
+//    RegisterCommand("Resize",boost::bind(&QtOSGViewer::_CommandResize,this,_1,_2),
+//                    "Accepts width x height to resize internal video frame");
+//    RegisterCommand("SaveBodyLinkToVRML",boost::bind(&QtOSGViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
+//                    "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
+//    RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
+//                    "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
+//    RegisterCommand("StartViewerLoop", boost::bind(&QtOSGViewer::_StartViewerLoopCommand, this, _1, _2),
+//                    "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
+//    RegisterCommand("Show", boost::bind(&QtOSGViewer::_ShowCommand, this, _1, _2),
+//                    "executs the show directly");
+//    RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
+//                    "camera tracks the link maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
+//    RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
+//                    "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
+//    RegisterCommand("SetTrackingAngleToUp", boost::bind(&QtOSGViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
+//                    "sets a new angle to up");
 
+    _bLockEnvironment = true;
+    _InitGUI();
+}
+
+void QtOSGViewer::_InitGUI()
+{
     osg::ArgumentParser arguments(0, NULL);
 
-    centralWidget = new QWidget;
+    _qCentralWidget.reset(new QWidget());
+    _qCentralWidget->adjustSize();
+    setCentralWidget(_qCentralWidget);
 
-    centralWidget->adjustSize();
-
-    setCentralWidget(centralWidget);
-
-
-    osgWidget = new ViewerWidget;
+    _osgWidget.reset(new ViewerWidget());
 
     // Sends environment to widget
-    osgWidget->setEnv(penv);
+    _osgWidget->setEnv(penv);
 
     // initialize the environment
     _ivRoot = new osg::Group();
@@ -67,11 +93,9 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv,QApplication *app) : applicatio
     createStatusBar();
     createDockWidgets();
 
-    centralWidget->setLayout(centralLayout);
+    _qCentralWidget->setLayout(_qCentralLayout);
 
     resize(1024, 750);
-
-    simpleView = true;
 
     // toggle switches
 //     _nFrameNum = 0;
@@ -94,24 +118,33 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv,QApplication *app) : applicatio
     _viewGeometryMode = VG_RenderOnly;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Create layouts
-////////////////////////////////////////////////////////////////////////////////
-void QtOSGViewer::createLayouts()
+bool QtCoinViewer::ForceUpdatePublishedBodies()
 {
-//  RAVELOG_VERBOSE("----->>>> createLayouts()\n");
+    {
+        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        if( !_bUpdateEnvironment )
+            return false;
+    }
 
-    centralLayout = new QGridLayout;
-    centralLayout->addWidget(osgWidget,0,0);
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    GetEnv()->UpdatePublishedBodies();
+
+    _bModelsUpdated = false;
+    _bLockEnvironment = false; // notify UpdateFromModel to update without acquiring the lock
+    _condUpdateModels.wait(lock);
+    _bLockEnvironment = true; // reste
+    return _bModelsUpdated;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Actions that achieve buttons and menus
-////////////////////////////////////////////////////////////////////////////////
-void QtOSGViewer::createActions()
+void QtOSGViewer::CreateLayouts()
 {
-//  RAVELOG_VERBOSE("----->>>> createActions()\n");
+    _qCentralLayout = new QGridLayout;
+    _qCentralLayout->addWidget(_osgWidget,0,0);
+}
 
+void QtOSGViewer::CreateActions()
+{
     exitAct = new QAction(tr("E&xit"), this);
     exitAct->setShortcut(tr("Ctrl+Q"));
     connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
@@ -119,14 +152,6 @@ void QtOSGViewer::createActions()
     loadAct = new QAction(QIcon(":/images/open.png"),tr("L&oad..."), this);
     loadAct->setShortcut(tr("Ctrl+L"));
     connect(loadAct, SIGNAL(triggered()), this, SLOT(LoadEnvironment()));
-
-    multiAct = new QAction(tr("M&ultiView"), this);
-    multiAct->setShortcut(tr("Ctrl+M"));
-    connect(multiAct, SIGNAL(triggered()), this, SLOT(multiWidget()));
-
-    simpleAct = new QAction(tr("S&impleView"), this);
-    simpleAct->setShortcut(tr("Ctrl+1"));
-    connect(simpleAct, SIGNAL(triggered()), this, SLOT(simpleWidget()));
 
     importAct = new QAction(QIcon(":/images/Import.png"),tr("I&mport..."), this);
     importAct->setShortcut(tr("Ctrl+I"));
@@ -196,24 +221,14 @@ void QtOSGViewer::createActions()
     bboxAct->setCheckable(true);
     connect(bboxAct, SIGNAL(triggered()), this, SLOT(boundingBox()));
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(refresh()));
+    connect(&_timer, SIGNAL(timeout()), this, SLOT(Refresh()));
     _timer.start(10);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//  Refresh the screen with a new frame. Reads the scene from OpenRAVE Core.
-////////////////////////////////////////////////////////////////////////////////
-void QtOSGViewer::refresh(){
-
-//  RAVELOG_WARN("\t\t QtOSGViewer::refresh()\n\n");
-
-//  _Reset();
-
-
+void QtOSGViewer::Refresh()
+{
     UpdateFromModel();
-
-
-//  osgWidget->update();
+    //  _osgWidget->update();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -221,28 +236,26 @@ void QtOSGViewer::refresh(){
 ////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::_Reset()
 {
-    //    Debug
-//  RAVELOG_INFO("\t\t QtOSGViewer::_Reset()\n");
-
-//  deselect();
-
-//  RAVELOG_INFO("Number of bodies mapped = %d\n",_mapbodies.size());
-
+    _Deselect();
+    UpdateFromModel();
+    _condUpdateModels.notify_all();
+    
     FOREACH(itbody, _mapbodies)
     {
         BOOST_ASSERT( itbody->first->GetUserData("qtosg") == itbody->second );
-
-        //  Clear Gui Data
-
-        //  Modified for OpenRAVE 0.5v
         itbody->first->RemoveUserData("qtosg");
     }
-
-    GetEnv()->UpdatePublishedBodies();
-
+    
     _mapbodies.clear();
-
     objectTree->clear();
+
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        FOREACH(it,_listRemoveItems) {
+            delete *it;
+        }
+        _listRemoveItems.clear();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -260,8 +273,6 @@ void QtOSGViewer::createMenus()
     fileMenu->addAction(exitAct);
 
     viewMenu = menuBar()->addMenu(tr("&View"));
-    viewMenu->addAction(multiAct);
-    viewMenu->addAction(simpleAct);
 
     viewMenu->addSeparator();
     viewMenu->addAction(viewCamAct);
@@ -287,23 +298,13 @@ void QtOSGViewer::createMenus()
     helpMenu->addAction(aboutAct);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Future use
-////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::createScrollArea()
 {
 
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Menu items
-////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::LoadEnvironment()
 {
-    //    Debug
-//  RAVELOG_WARN("----->>>> LoadEnvironment()\n");
-
-#if QT_VERSION >= 0x040000 // check for qt4
     QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL,
                                               "Env Files (*.xml);;COLLADA Files (*.dae)");
 
@@ -315,22 +316,15 @@ void QtOSGViewer::LoadEnvironment()
 
     GetEnv()->Load(s.toAscii().data());
 
-
-    //  Debug
     RAVELOG_INFO("\n---------Refresh--------\n");
-
-    //
-
-
+    
     //  Refresh the screen.
     UpdateFromModel();
 
     RAVELOG_INFO("----> set home <----\n");
 
     //  Center object in window viewer
-    osgWidget->setHome();
-
-#endif
+    _osgWidget->setHome();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -369,7 +363,7 @@ void QtOSGViewer::SaveEnvironment()
 ////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::home()
 {
-    osgWidget->home();
+    _osgWidget->home();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -383,13 +377,13 @@ void QtOSGViewer::light()
     {
 //    RAVELOG_DEBUG("Switch OFF light \n");
         lightAct->setIcon(QIcon(":/images/lightoff.png"));
-        osgWidget->setLight(false);
+        _osgWidget->setLight(false);
     }
     else
     {
 //    RAVELOG_DEBUG("Switch ON light \n");
         lightAct->setIcon(QIcon(":/images/lighton.png"));
-        osgWidget->setLight(true);
+        _osgWidget->setLight(true);
     }
 }
 
@@ -402,11 +396,11 @@ void QtOSGViewer::facesMode()
 
     if (facesAct->isChecked())
     {
-        osgWidget->setFacesMode(false);
+        _osgWidget->setFacesMode(false);
     }
     else
     {
-        osgWidget->setFacesMode(true);
+        _osgWidget->setFacesMode(true);
     }
 }
 
@@ -414,15 +408,15 @@ void QtOSGViewer::polygonMode()
 {
     if (smoothAct->isChecked())
     {
-        osgWidget->setPolygonMode(0);
+        _osgWidget->setPolygonMode(0);
     }
     else if (flatAct->isChecked())
     {
-        osgWidget->setPolygonMode(1);
+        _osgWidget->setPolygonMode(1);
     }
     else
     {
-        osgWidget->setPolygonMode(2);
+        _osgWidget->setPolygonMode(2);
     }
 }
 
@@ -431,7 +425,7 @@ void QtOSGViewer::polygonMode()
 ////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::boundingBox()
 {
-    osgWidget->drawBoundingBox(bboxAct->isChecked());
+    _osgWidget->drawBoundingBox(bboxAct->isChecked());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -439,7 +433,7 @@ void QtOSGViewer::boundingBox()
 ////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::axes()
 {
-    osgWidget->drawAxes(AxesAct->isChecked());
+    _osgWidget->drawAxes(AxesAct->isChecked());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -449,24 +443,24 @@ void QtOSGViewer::pointerGroupClicked(int button)
 {
     switch (button) {
     case -2:
-        osgWidget->drawTrackball(false);
-        osgWidget->select(true);
+        _osgWidget->drawTrackball(false);
+        _osgWidget->select(true);
         break;
     case -3:
-        osgWidget->drawTrackball(true);
-        osgWidget->select(false);
+        _osgWidget->drawTrackball(true);
+        _osgWidget->select(false);
         break;
     case -4:
-        osgWidget->drawBoundingBox(true);
-        osgWidget->select(false);
+        _osgWidget->drawBoundingBox(true);
+        _osgWidget->select(false);
         break;
     case -5:
-        osgWidget->drawAxes(true);
-        osgWidget->select(false);
+        _osgWidget->drawAxes(true);
+        _osgWidget->select(false);
         break;
     default:
         RAVELOG_ERROR("pointerGroupClicked failure. Button %d pushed\n",button);
-        osgWidget->select(false);
+        _osgWidget->select(false);
         break;
     }
 }
@@ -480,28 +474,11 @@ void QtOSGViewer::draggerGroupClicked(int button)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Multi Widget selection
-////////////////////////////////////////////////////////////////////////////////
-void QtOSGViewer::multiWidget()
-{
-    osgWidget->setMultipleView();
-
-    repaintWidgets(GetRoot());
-}
-
-void QtOSGViewer::simpleWidget()
-{
-    osgWidget->setSimpleView();
-
-    repaintWidgets(GetRoot());
-}
-
-////////////////////////////////////////////////////////////////////////////////
 /// Repaint widgets
 ////////////////////////////////////////////////////////////////////////////////
-void QtOSGViewer::repaintWidgets(osg::Group* group)
+void QtOSGViewer::_RepaintWidgets(boost::shared_ptr<osg::Group> group)
 {
-    osgWidget->setSceneData(group);
+    _osgWidget->setSceneData(group);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -630,7 +607,7 @@ void QtOSGViewer::sceneListClicked(QTreeWidgetItem* item,int num)
     std::string mass;
 
     //  Select robot in Viewers
-    osgWidget->selectRobot(item->text(0).toAscii().data());
+    _osgWidget->selectRobot(item->text(0).toAscii().data());
 
     //  Clears details
     detailsTree->clear();
@@ -839,19 +816,6 @@ void QtOSGViewer::mouseDoubleClickEvent(QMouseEvent *e)
     std::cout << e->button() << std::endl;
 }
 
-void QtOSGViewer::setSimpleView(bool state)
-{
-    simpleView = state;
-}
-bool QtOSGViewer::isSimpleView()
-{
-    return simpleView;
-}
-
-///////////////////////////////////////
-//	 RaveViewerBase interface	       //
-///////////////////////////////////////
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Reset the camera depending on its mode
 ////////////////////////////////////////////////////////////////////////////////
@@ -886,7 +850,7 @@ int QtOSGViewer::main(bool bShow)
     UpdateFromModel();
 
     //  Center model in viewer windows
-    osgWidget->setHome();
+    _osgWidget->setHome();
 
     application->exec();
     return 0;
@@ -1002,7 +966,7 @@ void QtOSGViewer::closegraph(void* handle)
 
 }
 
-void QtOSGViewer::deselect()
+void QtOSGViewer::_Deselect()
 {
 
 }
@@ -1071,6 +1035,14 @@ bool QtOSGViewer::LoadModel(const string& filename)
 ////////////////////////////////////////////////////////////////////////////////
 void QtOSGViewer::UpdateFromModel()
 {
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        FOREACH(it,_listRemoveItems) {
+            delete *it;
+        }
+        _listRemoveItems.clear();
+    }
+    
     bool newdata;
 
     _listRemoveItems.clear();
@@ -1153,7 +1125,7 @@ void QtOSGViewer::UpdateFromModel()
     }
 
     //  Repaint the scene created
-    repaintWidgets(GetRoot());
+    _RepaintWidgets(GetRoot());
 
     if (newdata)
     {
@@ -1289,7 +1261,6 @@ void QtOSGViewer::EnvironmentSync()
     {
         boost::mutex::scoped_lock lockupdating(_mutexUpdating);
         if( !_bUpdateEnvironment ) {
-//            RAVELOG_WARNA("cannot update models from environment sync\n");
             return;
         }
     }
@@ -1301,4 +1272,9 @@ void QtOSGViewer::EnvironmentSync()
         RAVELOG_WARNA("failed to update models from environment sync\n");
 }
 
+ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
+{
+    return ViewerBasePtr(new QtOSGViewer(penv, sinput));
 }
+
+} // end namespace qtosgviewer

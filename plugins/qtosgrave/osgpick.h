@@ -50,8 +50,7 @@ class ViewerWidget;
 class PickHandler : public osgGA::GUIEventHandler {
 public:
 
-    PickHandler(ViewerWidget* viewer) :
-        _viewer(viewer),_select(false) {
+    PickHandler() : _select(false) {
     }
 
     ~PickHandler() {
@@ -99,7 +98,6 @@ public:
 
 protected:
     bool _select;
-    ViewerWidget  *_viewer;
 };
 
 }

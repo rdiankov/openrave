@@ -391,12 +391,12 @@ class InverseKinematicsModel(DatabaseGenerator):
                 else:
                     log.warn('cannot set increment for joint type %s'%joint.GetType())
             return freeinc
-
+        
     def GetDefaultIndices(self,avoidPrismaticAsFree=False):
         """Returns a default set of free indices if the robot has more joints than required by the IK.
         In the futrue, this function will contain heuristics in order to select the best indices candidates.
         
-        :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints.
+        :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints unless the IK gets really complicated (and usually cannot be solved)
         """
         if self.iktype is None:
             raise InverseKinematicsError(u'ik type is not set')

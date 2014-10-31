@@ -11,7 +11,7 @@ if(NOT OPENGL_FOUND)
 endif()
 
 #include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
-find_package(OpenSceneGraph 3.0 COMPONENTS osgDB osgQt osgGA osgText osgViewer osgManipulator osgShadow)
+find_package(OpenSceneGraph 3.0 COMPONENTS osgDB osgQt osgGA osgText osgViewer osgManipulator)# osgShadow)
 
 if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND)
   message(STATUS "Detected Qt/OSG GUI, making plugin")
@@ -23,7 +23,7 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND OPENGL_FOUND AND OPENSCE
   
   link_directories(${OPENRAVE_LINK_DIRS})
 
-  set(QTOSG_SRCS objecttree.cpp treemodel.cpp Item.cpp treeitem.cpp qtosgviewer.cpp qtosgravemain.cpp osgviewerQtContext.h osgpick.cpp)
+  set(QTOSG_SRCS objecttree.cpp treemodel.cpp renderitem.cpp renderitem.h treeitem.cpp qtosgviewer.cpp qtosgravemain.cpp osgviewerQtContext.h osgpick.cpp)
   set(QTOSG_MOCS qtosgviewer.h treemodel.h OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED)
   set(QTOSG_RCCS qtosgviewer.qrc)
 

@@ -23,24 +23,25 @@
 #include <osg/ArgumentParser>
 #include "osgviewerQtContext.h"
 
-class QAction;
-class QMenu;
-class QOsgWidget;
-class QScrollArea;
-class QGridLayout;
-class QTreeView;
-class QMouseEvent;
-class QComboBox;
-class QButtonGroup;
-class TreeModel;
+//class QAction;
+//class QMenu;
+//class QOsgWidget;
+//class QScrollArea;
+//class QGridLayout;
+//class QTreeView;
+//class QMouseEvent;
+//class QComboBox;
+//class QButtonGroup;
+//class TreeModel;
 
 namespace qtosgrave {
 
+/// \brief class of the entire viewer that periodically syncs with the openrave environment.
 class QtOSGViewer : public QMainWindow, public ViewerBase
 {
     Q_OBJECT;
 public:
-    QtOSGViewer(EnvironmentBasePtr penv,QApplication *app);
+    QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput);
     bool isSimpleView();
     void setSimpleView(bool state);
 
@@ -81,11 +82,11 @@ public:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
 
     virtual void closegraph(void* handle);
-    virtual void deselect();
+    virtual void _Deselect();
 
     //	TODO : Specific QtOsgRave functions
     //virtual osg::Camera* GetCamera() { return _ivCamera; }
-    virtual osg::Group* GetRoot() {
+    virtual osg::ref_ptr<osg::Group> GetRoot() {
         return _ivRoot;
     }
 
@@ -135,7 +136,10 @@ public slots:
     void SaveEnvironment();
     void multiWidget();
     void simpleWidget();
-    void refresh();
+
+    /// \brief Refresh the screen with a new frame. Reads the scene from OpenRAVE Core. on timer?
+    void Refresh();
+    
     void home();
     void light();
     void polygonMode();
@@ -147,37 +151,7 @@ public slots:
 
     void sceneListClicked(QTreeWidgetItem* item,int num);
 
-public:
-    class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
-    {
-public:
-        EnvMessage(QtOSGViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
-        virtual ~EnvMessage();
-
-        /// execute the command in the caller
-        virtual void callerexecute();
-        /// execute the command in the viewer
-        virtual void viewerexecute();
-
-        virtual void releasemutex()
-        {
-            _plock.reset();
-        }
-
 protected:
-        QtOSGViewerPtr _pviewer;
-        void** _ppreturn;
-        boost::mutex _mutex;
-        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
-    };
-    typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
-    typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
-
-    static int s_InitRefCount;
-
-protected:
-
-    virtual void _UpdateEnvironment();
 
     inline QtOSGViewerPtr shared_viewer() {
         return boost::static_pointer_cast<QtOSGViewer>(shared_from_this());
@@ -186,49 +160,21 @@ protected:
         return boost::static_pointer_cast<QtOSGViewer const>(shared_from_this());
     }
 
-    // Message Queue
-    list<EnvMessagePtr> _listMessages;
-    list<Item*> _listRemoveItems;
-    boost::mutex _mutexItems, _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
-
-    //    // Message Queue
-    //    list<EnvMessage*> _listMessages;
-    //    list<pthread_mutex_t*> listMsgMutexes;
-    //    pthread_mutex_t _mutexMessages, _mutexUpdating; ///< mutex protected messages
-    //
-    //    QVBoxLayout * vlayout;
-    //    QGroupBox * view1;
-
-    // Rendering
-    osg::Group*        _ivRoot;        ///< root node of the inventor scene
-    //    SoSeparator*        _ivBodies;      ///< all the environment bodies are stored in this node
-    //    SoPerspectiveCamera* _ivCamera;       ///< the camera itself
-    //    SoDrawStyle*         _ivStyle;
-    //    SoTimerSensor*      _timerSensor;   ///< used for animation callback
-    //
-    //    SoTimerSensor*      _timerVideo;    ///< used for video recording
-    //
-    //    // the GUI
-    //    QWidget       *_pQtWidget;
-    //    SoQtExaminerViewer* _pviewer;
-    //    QAction *pTogglePublishAnytime, *pToggleDynamicSimulation;
-    //    QActionGroup* _pToggleDebug;
-    //
-    osg::Node*                  _selectedNode;
-    osgManipulator::Dragger*    _pdragger;
-    //    SoEventCallback* _eventKeyboardCB;
-    //
-    //    SoText2* _messageNode;
-
+    virtual void _InitGUI();
+    virtual void _UpdateEnvironment();
+    virtual bool _ForceUpdatePublishedBodies();
     virtual void _Reset();
 
-    void createActions();
+    /// \brief Actions that achieve buttons and menus
+    void CreateActions();
     void createMenus();
     void createScrollArea();
     void createToolsBar();
-    void repaintWidgets(osg::Group*);
-    void createLayouts();
-    void createStatusBar();
+    void _RepaintWidgets(boost::shared_ptr<osg::Group>);
+
+    /// \brief Create layouts
+    void CreateLayouts();
+    void CreateStatusBar();
     void mouseDoubleClickEvent(QMouseEvent *e);
     void createDockWidgets();
 
@@ -237,21 +183,29 @@ protected:
 
     //  Fills object tree with robot info
     void fillObjectTree(QTreeWidget *tw);
+    
+    virtual void _DeleteItemCallback(Item* pItem)
+    {
+        boost::mutex::scoped_lock lock(_mutexItems);
+        pItem->PrepForDeletion();
+        _listRemoveItems.push_back(pItem);
+    }
+    
+    QApplication  *application; ///< root qt application?
 
-    //	Application
-    QApplication  *application;
-
-    //	The GUI
+    // Message Queue
+    //list<EnvMessagePtr> _listMessages;
+    list<Item*> _listRemoveItems; ///< raw points of items to be deleted, triggered from _DeleteItemCallback
+    boost::mutex _mutexItems, _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    
+    // Rendering
+    osg::ref_ptr<osg::Group> _ivRoot;        ///< root node
+    osg::ref_ptr<osg::Node> _selectedNode;
+    osg::ref_ptr<osgManipulator::Dragger>    _pdragger;
+    
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
-
     ItemPtr _pSelectedItem;     ///< the currently selected item
-
-    /// for movie recording
-    //        SoOffscreenRenderer _ivOffscreen;
-    //        SoSeparator* _pOffscreenVideo, *_pFigureRoot;
-    //        uint64_t _nLastVideoFrame, _nVideoTimeOffset;
-    //        bool _bCanRenderOffscreen;
-
+    
     RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item
     RaveTransform<float> Tcam;
     std::string _name;
@@ -264,18 +218,17 @@ protected:
     unsigned int _sampleCountAlone;
     unsigned int _sampleCountWithEnv;
     int _available;
-    //        SoGLRenderAction* _renderAction;
-    //        SoPerspectiveCamera* _pmycam;
+    
 
-    bool _bLockEnvironment;
     boost::mutex _mutexUpdateModels, _mutexCallbacks;
     boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
     boost::mutex _mutexGUI;
     bool _bInIdleThread;
 
+
     timeval timestruct;
 
-    PhysicsEngineBase* pphysics;
+    PhysicsEngineBasePtr pphysics;
 
     // toggle switches
     bool _bModelsUpdated;
@@ -320,86 +273,69 @@ protected:
     std::list<std::pair<int,ViewerCallbackFn > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
 
     //QSize getSize();
-    QGridLayout *centralLayout;
-    QGridLayout *multiViewLayout;
+    QGridLayout* _qCentralLayout;
+    QWidget* _qCentralWidget;
+    boost::shared_ptr<ViewerWidget> _osgWidget;
+    boost::shared_ptr<TreeModel> treeModel;
 
+    QMenu* fileMenu;
+    QMenu* viewMenu;
+    QMenu* helpMenu;
+    QMenu* animation;
+    QMenu* options;
+    QMenu* dynamics;
 
-    QScrollArea *glWidgetArea;
-    QScrollArea *myToolsArea;
-    QScrollArea *treeModelArea;
+    QAction* exitAct;
+    QAction* loadAct;
+    QAction* multiAct;
+    QAction* simpleAct;
 
-    QWidget    *centralWidget;
-//  QOsgWidget *osgWidget;
-//  QOsgWidget *osgWidgetFront;
-//  QOsgWidget *osgWidgetBack;
-//  QOsgWidget *osgWidgetUsr;
+    QAction* importAct;
+    QAction* saveAct;
+    QAction* viewCamAct;
+    QAction* viewColAct;
+    QAction* pubilshAct;
+    QAction* printAct;
+    QAction* showAct;
+    QAction* playAct;
+    QAction* stopAct;
+    QAction* recordAct;
+    QAction* odeAct;
+    QAction* selfAct;
+    QAction* applyAct;
+    QAction* aboutAct;
+    QAction* pauseAct;
+    QAction* puntAct;
+    QAction* AxesAct;
+    QAction* houseAct;
+    QAction* smoothAct;
+    QAction* flatAct;
+    QAction* lightAct;
+    QAction* wireAct;
+    QAction* facesAct;
+    QAction* bboxAct;
 
-    ViewerWidget *osgWidget;
+    QToolBar* fileToolBar;
+    QToolBar* actionToolBar;
+    QToolBar* physicsToolBar;
+    QToolBar* toolsBar;
 
-    TreeModel *treeModel;
-
-    QMenu *fileMenu;
-    QMenu *viewMenu;
-    QMenu *helpMenu;
-    QMenu *animation;
-    QMenu *options;
-    QMenu *dynamics;
-
-    QAction *exitAct;
-    QAction *loadAct;
-    QAction *multiAct;
-    QAction *simpleAct;
-
-    QAction *importAct;
-    QAction *saveAct;
-    QAction *viewCamAct;
-    QAction *viewColAct;
-    QAction *pubilshAct;
-    QAction *printAct;
-    QAction *showAct;
-    QAction *playAct;
-    QAction *stopAct;
-    QAction *recordAct;
-    QAction *odeAct;
-    QAction *selfAct;
-    QAction *applyAct;
-    QAction *aboutAct;
-    QAction *pauseAct;
-    QAction *puntAct;
-    QAction *AxesAct;
-    QAction *houseAct;
-    QAction *smoothAct;
-    QAction *flatAct;
-    QAction *lightAct;
-    QAction *wireAct;
-    QAction *facesAct;
-    QAction *bboxAct;
-
-    QToolBar *fileToolBar;
-    QToolBar *actionToolBar;
-    QToolBar *physicsToolBar;
-    QToolBar *toolsBar;
-
-    QComboBox *physicsComboBox;
-
+    QComboBox* physicsComboBox;
+    
     QString fileName;
-    QTreeView *tree;
+    QTreeView* _qtree;
 
-    QActionGroup *shapeGroup;
-    QButtonGroup *pointerTypeGroup;
-    QButtonGroup *buttonGroup;
-    QButtonGroup *draggerTypeGroup;
-
-    //  Tree of robots, joints and links
-    QTreeWidget* objectTree;
-
-    //  Details panel object
-    QTreeWidget* detailsTree;
-
-    bool simpleView;
-
+    QActionGroup* shapeGroup;
+    QButtonGroup* pointerTypeGroup;
+    QButtonGroup* buttonGroup;
+    QButtonGroup* draggerTypeGroup;
+    
+    QTreeWidget* objectTree; ///< Tree of robots, joints and links
+    QTreeWidget* detailsTree; ///< Details panel object
+    
     QTimer _timer;
-
+    
+    bool _bLockEnvironment; ///< if true, should lock the environment.
 };
 
 }

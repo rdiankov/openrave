@@ -197,7 +197,7 @@ typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
 
 }
 
-#include "Item.h"
+#include "renderitem.h"
 #include "qtosgviewer.h"
 
 #endif /* QTOSG_H_ */

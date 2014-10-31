@@ -11,15 +11,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "qtosg.h"
-#include "qtosgviewer.h"
 #include <openrave/plugin.h>
-
-using namespace OpenRAVE;
 
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
 #include "X11/Xlib.h"
 #endif
+
+using namespace OpenRAVE;
+
+namespace qtosgrave {
+ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput);
+}
 
 // for some reason windows complains when the prototypes are different
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -27,7 +29,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     //	Debug.
     RAVELOG_VERBOSE("Initiating QTOSGRave plugin...!!!!.\n");
     
-    static int s_SoQtArgc = 0; // has to be static!!
+    static int s_QtArgc = 0; // has to be static!!
 
     switch(type) {
     case PT_Viewer:
@@ -39,8 +41,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         }
 #endif
         if( interfacename == "qtosg" ) {
-            QApplication *app= new QApplication(s_SoQtArgc,NULL);
-            return InterfaceBasePtr(new qtosgrave::QtOSGViewer(penv,app));
+            // not sure if should be creating application all the time...
+            return qtosgrave::CreateQtOSGViewer(penv, sinput);
         }
         break;
     default:
@@ -57,4 +59,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()
 {
+    // necessary since QApplication does not destroy all threads when last SoQt viewer is done
+    //removePostedEvents - sometimes freezes on this function
+    //QApplication::quit();
 }

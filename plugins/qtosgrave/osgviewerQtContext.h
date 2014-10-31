@@ -16,7 +16,6 @@
 
 #include <QtCore/QTimer>
 #include <QtGui/QApplication>
-#include <QtGui/QGridLayout>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/ShadeModel>
@@ -45,215 +44,118 @@ namespace qtosgrave {
 using namespace OpenRAVE;
 using namespace osgQt;
 
-//  Class of the window viewer
+/// \brief  Class of the openscene graph 3d viewer
 class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
 {
 public:
-
-    int uniqueLightNumber;
-    int LIGHTS;
-
-    osg::PositionAttitudeTransform **lightTransform;
-    osg::StateSet *lightStateSet;
-
-    bool isSimpleView;
-//    bool doubleClickPressed;
-
-    QList<QWidget*> widgetsList;
-    osgViewer::View* view1;
-    osgViewer::View* view2;
-    osgViewer::View* view3;
-    osgViewer::View* view4;
-
-    QGridLayout* grid;
-    ////////////////////////////////////////////////////////////////////////////
-    /// Constructor of ViewerWidget
-    ////////////////////////////////////////////////////////////////////////////
-    ViewerWidget() : QWidget()
+    ViewerWidget(EnvironmentBasePtr penv) : QWidget()
     {
-        //  Sets light on
-        _light_on = true;
-
-        LIGHTS = 5;
-        uniqueLightNumber = 0;
-
-        //  Lights
-        lightTransform = new osg::PositionAttitudeTransform*[LIGHTS];
-
-        startup();
-
-        QWidget* widget;
-        isSimpleView = false;
-//      doubleClickPressed = false;
-
-        //  Reset acutal kinbody
+        _penv = penv;
+        _bLightOn = true;        
+        _InitializeLights(5);
         _actualKinbody = "";
 
         //  Initialize picker handler
-        _picker = new PickHandler(this);
-
-        view1 = new osgViewer::View;
-        view2 = new osgViewer::View;
-        view3 = new osgViewer::View;
-        view4 = new osgViewer::View;
+        _picker.reset(new PickHandler());
+        _osgview = new osgViewer::View();
 
         //  Improve FPS to 60 per viewer
         setThreadingModel(osgViewer::CompositeViewer::CullDrawThreadPerContext);
 //      setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
 
-        widget = addViewWidget( createCamera(0,0,100,100), view1 );
-        widgetsList << widget;
-        widget = addViewWidget( createCamera(0,0,100,100), view2 );
-        widgetsList << widget;
-        widget = addViewWidget( createCamera(0,0,100,100), view3 );
-        widgetsList << widget;
-        widget = addViewWidget( createCamera(0,0,100,100), view4 );
-        widgetsList << widget;
-
-        grid = new QGridLayout;
-        grid->addWidget( widgetsList[0], 0, 0 );
-        grid->addWidget( widgetsList[1], 0, 1 );
-        grid->addWidget( widgetsList[2], 1, 0 );
-        grid->addWidget( widgetsList[3], 1, 1 );
-        setLayout( grid );
-
+        QWidget* widgetview = _AddViewWidget(CreateCamera(0,0,100,100), _osgview );
+        QGridLayout* grid = new QGridLayout;
+        grid->addWidget(widgetview, 0, 0);
+        setLayout(widgetview);
+        //setWidget(widgetview);
+        
         //  Sets pickhandler
-        view1->addEventHandler(_picker);
+        _osgview->addEventHandler(_picker);
 
         connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
         _timer.start( 10 );
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Sets environment of OpenRAVE
-    ////////////////////////////////////////////////////////////////////////////
-    void setEnv(EnvironmentBasePtr penv)
-    {
-        _penv = penv;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// Draws bounding box
-    ////////////////////////////////////////////////////////////////////////////
-    void drawBoundingBox(bool pressed)
+    /// \brief Draws bounding box around actual kinbody
+    void DrawBoundingBox(bool pressed)
     {
         //  Gets camera transform
-//      storeMatrixTransform();
+//      _StoreMatrixTransform();
 
         //  If boundingbox button is pressed
-        if (pressed)
-        {
-            //  Debug
-//        propagate();
-
+        if (pressed) {
             _draggerName = "Box";
+            _SelectRobot(_actualKinbody);
 
-            selectRobot(_actualKinbody);
-
-            //view1->setSceneData(addDraggerToObject(_scene_lights.get(), "Box"));
-//        view1->setSceneData(addDraggerToObject(view1->getSceneData()->asGroup()->getChild(0), "Box"));
+            //_osgview->setSceneData(addDraggerToObject(_osgLightsGroup.get(), "Box"));
+//        _osgview->setSceneData(addDraggerToObject(_osgview->getSceneData()->asGroup()->getChild(0), "Box"));
         }
 
         //  Set camera transform
-//      loadMatrixTransform();
+//      _LoadMatrixTransform();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Clear dragger from the viewer
-    ////////////////////////////////////////////////////////////////////////////
-    void clearDragger()
+    /// \brief Clear dragger from the viewer
+    void ClearDragger()
     {
-        if (!!_dragger)
-        {
+        if (!!_dragger) {
             _dragger->getParent(0)->removeChild(_dragger);
             _dragger.release();
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Active selection
-    ////////////////////////////////////////////////////////////////////////////
-    void select(bool active)
+    /// \brief Active selection
+    void SelectActive(bool active)
     {
         _picker->activeSelect(active);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ///  Draws trackball sphere
-    ////////////////////////////////////////////////////////////////////////////
-    void drawTrackball(bool pressed)
+    ///  \brief Draws trackball sphere
+    void DrawTrackball(bool pressed)
     {
         //  Gets camera transform
-//      storeMatrixTransform();
+//      _StoreMatrixTransform();
 
         //  If boundingbox button is pressed
-        if (pressed)
-        {
-            //  Debug
-//        propagate();
-
+        if (pressed) {
             _draggerName = "TrackballDragger";
+            _SelectRobot(_actualKinbody);
 
-            selectRobot(_actualKinbody);
-
-//        view1->setSceneData(addDraggerToObject(view1->getSceneData()->asGroup()->getChild(0),
-//                                                 "TrackballDragger"));
+//        _osgview->setSceneData(addDraggerToObject(_osgview->getSceneData()->asGroup()->getChild(0), "TrackballDragger"));
         }
 
         //  Set camera transform
-//      loadMatrixTransform();
+//      _LoadMatrixTransform();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Draws translate axis
-    ////////////////////////////////////////////////////////////////////////////
-    void drawAxes(bool pressed)
+    /// \brief Draws translate axis
+    void DrawAxes(bool pressed)
     {
-        //  Debug
-//      qWarning("[drawAxes]");
-
 //      osg::Node* node;
 
         //  Gets camera transform
-//      storeMatrixTransform();
+//      _StoreMatrixTransform();
 
-        if (pressed)
-        {
-            //  Debug
-//        propagate();
-
+        if (pressed) {
             _draggerName = "TranslateAxisDragger";
+            _SelectRobot(_actualKinbody);
 
-            selectRobot(_actualKinbody);
-
-//        node = view1->getSceneData()->asGroup()->getChild(0);
-
-//        view1->setSceneData(addDraggerToObject(node,"TranslateAxisDragger"));
-
-            //  Debug
-//        showSceneGraph("",view1->getSceneData());
+//        node = _osgview->getSceneData()->asGroup()->getChild(0);
+//        _osgview->setSceneData(addDraggerToObject(node,"TranslateAxisDragger"));
         }
 
         //  Set camera transform
-//      loadMatrixTransform();
+//      _LoadMatrixTransform();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Select robot or kinbody from screen
-    ////////////////////////////////////////////////////////////////////////////
-    void selectRobot(std::string name)
+    /// \brief Select robot or kinbody from screen
+    void _SelectRobot(std::string name)
     {
         //  Gets camera transform
-//      storeMatrixTransform();
+        osg::Node* node = _osgview->getSceneData();
+        node = _FindNamedNode(name,node);
 
-        osg::Node* node;
-
-        node = view1->getSceneData();
-
-        node = findNamedNode(name,node);
-
-        if (!!node)
-        {
+        if (!!node) {
             propagate();
 
             //  Sets robot selected
@@ -262,99 +164,67 @@ public:
             //  Debug
             qWarning("Node name %s",node->getName().c_str());
 
-            addDraggerToObject(node,_draggerName);
+            _AddDraggerToObject(node,_draggerName);
         }
         //  Set camera transform
-//      loadMatrixTransform();
+//      _LoadMatrixTransform();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Sets scene data node in all viewers
-    ////////////////////////////////////////////////////////////////////////////
-    void setSceneData(osg::Node* scene)
+    /// \brief  Sets scene data node in all viewers
+    void _SetSceneData(osg::Node* scene)
     {
         //  Normalize object normals
         scene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
 
-        _scene_lights->removeChild(_scene_lights_data.get());
+        _osgLightsGroup->removeChild(_osgLightsGroupData.get());
 
-        _scene_lights_data = scene->asGroup();
+        _osgLightsGroupData = scene->asGroup();
 
-        _scene_lights->addChild(scene);
+        _osgLightsGroup->addChild(scene);
 
-        if (_light_on)
-        {
-            view1->setSceneData(_scene_lights);
-            view2->setSceneData(_scene_lights);
-            view3->setSceneData(_scene_lights);
-            view4->setSceneData(_scene_lights);
+        if (_bLightOn) {
+            _osgview->setSceneData(_osgLightsGroup);
         }
-        else
-        {
-            view1->setSceneData(_scene_lights_data);
-            view2->setSceneData(_scene_lights_data);
-            view3->setSceneData(_scene_lights_data);
-            view4->setSceneData(_scene_lights_data);
+        else {
+            _osgview->setSceneData(_osgLightsGroupData);
         }
-
-        //  Debug
-//      showSceneGraph("",scene);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Reset viewer to original position
-    ////////////////////////////////////////////////////////////////////////////
-    void home()
+    /// \brief  Reset viewer to original position
+    void ResetViewToHome()
     {
-        view1->home();
-        view2->home();
-        view3->home();
-        view4->home();
+        _osgview->home();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Reset viewer to original position
-    ////////////////////////////////////////////////////////////////////////////
-    void setHome()
+    /// \brief Reset viewer to original position
+    void _SetHome()
     {
-        //  If _scene_lights != NULL
-        if (_scene_lights.valid())
+        //  If _osgLightsGroup != NULL
+        if (_osgLightsGroup.valid())
         {
-            const osg::BoundingSphere& bs = _scene_lights->getBound();
+            const osg::BoundingSphere& bs = _osgLightsGroup->getBound();
 
-            view1->getCameraManipulator()->setHomePosition(osg::Vec3d(-4.0*bs.radius(),4.0*bs.radius(),0.0),bs.center(),osg::Vec3d(0.0,0.0,1.0));
-            view2->getCameraManipulator()->setHomePosition(osg::Vec3d(-4.0*bs.radius(),0.0,0.0),bs.center(),osg::Vec3d(0.0,0.0,1.0));
-            view3->getCameraManipulator()->setHomePosition(osg::Vec3d(0.0,4.0*bs.radius(),0.0),bs.center(),osg::Vec3d(0.0,0.0,1.0));
-            view4->getCameraManipulator()->setHomePosition(osg::Vec3d(0.0,0.0,4.0*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
-
-            view1->home();
-            view2->home();
-            view3->home();
-            view4->home();
+            _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(-4.0*bs.radius(),4.0*bs.radius(),0.0),bs.center(),osg::Vec3d(0.0,0.0,1.0));
+            _osgview->home();
         }
     }
 
 
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    //  Lighting
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
+    //  Lighting Stuff //
 
     osg::Material *createSimpleMaterial(osg::Vec4 color)
     {
         osg::Material *material = new osg::Material();
         material->setDiffuse(osg::Material::FRONT,  osg::Vec4(0.0, 0.0, 0.0, 1.0));
         material->setEmission(osg::Material::FRONT, color);
-
         return material;
     }
 
-    osg::Light* createLight(osg::Vec4 color)
+    osg::Light* _CreateLight(osg::Vec4 color, int lightid)
     {
         osg::Light *light = new osg::Light();
         // each light must have a unique number
-        light->setLightNum(uniqueLightNumber++);
+        light->setLightNum(lightid);
         // we set the light's position via a PositionAttitudeTransform object
         light->setPosition(osg::Vec4(0.0, 0.0, 0.0, 1.0));
         light->setDiffuse(color);
@@ -363,15 +233,14 @@ public:
         light->setConstantAttenuation(1);
         light->setQuadraticAttenuation(0.1);
         light->setSpotCutoff(70.0);
-
         return light;
     }
 
-    osg::Light* createAmbientLight(osg::Vec4 color)
+    osg::Light* _CreateAmbientLight(osg::Vec4 color, int lightid)
     {
         osg::Light *light = new osg::Light();
         // each light must have a unique number
-        light->setLightNum(uniqueLightNumber++);
+        light->setLightNum(lightid);
         // we set the light's position via a PositionAttitudeTransform object
         light->setPosition(osg::Vec4(0.0, 0.0, 0.0, 1.0));
         light->setDiffuse(color);
@@ -381,19 +250,17 @@ public:
         //  Attenuation
         light->setConstantAttenuation(1);
         light->setQuadraticAttenuation(0.2);
-
         return light;
     }
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    //  Initialize lighting
-    ////////////////////////////////////////////////////////////////////////////
-    void startup()
+    
+    /// \brief Initialize lighting
+    void _InitializeLights(int nlights)
     {
+        _vLightTransform.resize(nlights);
+        
         // we need the scene's state set to enable the light for the entire scene
-        _scene_lights = new osg::Group();
-        lightStateSet = _scene_lights->getOrCreateStateSet();
+        _osgLightsGroup = new osg::Group();
+        _lightStateSet = _osgLightsGroup->getOrCreateStateSet();
 
         // Create 3 Lights
         osg::Vec4 lightColors[] = { osg::Vec4(1.0, 1.0, 1.0, 1.0),
@@ -408,61 +275,45 @@ public:
                                       osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0)};
         osg::Geode *lightMarker[LIGHTS];
         osg::LightSource *lightSource[LIGHTS];
+        int lightid = 0;
 
-        for (int i = 0; i < LIGHTS; i++)
+        for (int i = 0; i < nlights; i++)
         {
             lightMarker[i] = new osg::Geode();
             lightMarker[i]->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(), 1)));
             lightMarker[i]->getOrCreateStateSet()->setAttribute(createSimpleMaterial(lightColors[i]));
-
             lightSource[i] = new osg::LightSource();
 
-            qWarning("Unique Light Number %d\n",uniqueLightNumber);
-
-            if (i == 0)
-            {
-                lightSource[i]->setLight(createAmbientLight(lightColors[i]));
+            if (i == 0) {
+                lightSource[i]->setLight(_CreateAmbientLight(lightColors[i], lightid++));
             }
-            else
-            {
-                lightSource[i]->setLight(createLight(lightColors[i]));
-
+            else {
+                lightSource[i]->setLight(_CreateLight(lightColors[i], lightid++));
             }
 
             lightSource[i]->getLight()->setDirection(lightDirection[i]);
             lightSource[i]->setLocalStateSetModes(osg::StateAttribute::ON);
             lightSource[i]->setStateSetModes(*lightStateSet, osg::StateAttribute::ON);
 
-            lightTransform[i] = new osg::PositionAttitudeTransform();
-            lightTransform[i]->addChild(lightSource[i]);
-            lightTransform[i]->addChild(lightMarker[i]);
-            lightTransform[i]->setPosition(lightPosition[i]);
-
-            lightTransform[i]->setScale(osg::Vec3(0.1,0.1,0.1));
-
-            _scene_lights->addChild(lightTransform[i]);
+            _vLightTransform[i] = new osg::PositionAttitudeTransform();
+            _vLightTransform[i]->addChild(lightSource[i]);
+            _vLightTransform[i]->addChild(lightMarker[i]);
+            _vLightTransform[i]->setPosition(lightPosition[i]);
+            _vLightTransform[i].setScale(osg::Vec3(0.1,0.1,0.1));
+            _osgLightsGroup->addChild(_vLightTransform[i]);
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Light button
-    ////////////////////////////////////////////////////////////////////////////
-    void setLight(bool enabled)
+    /// \brief Light button
+    void _SetLight(bool enabled)
     {
-        if (enabled)
-        {
-            _light_on = true;
-        }
-        else
-        {
-            _light_on = false;
-        }
+        _bLightOn = enabled;
     }
 
     //  Cull face
     void setFacesMode(bool enabled)
     {
-        osg::StateSet* stateset = view1->getSceneData()->getOrCreateStateSet();
+        osg::StateSet* stateset = _osgview->getSceneData()->getOrCreateStateSet();
         if (enabled)
         {
             stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT));
@@ -476,14 +327,10 @@ public:
             stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::ON);
         }
 
-
-
-        view1->getSceneData()->setStateSet(stateset);
+        _osgview->getSceneData()->setStateSet(stateset);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Sets poligon mode (SMOOTH, FLAT or WIRED)
-    ////////////////////////////////////////////////////////////////////////////
+    /// \brief Sets poligon mode (SMOOTH, FLAT or WIRED)
     void setPolygonMode(int mode)
     {
         osg::PolygonMode *poly = new osg::PolygonMode();
@@ -493,30 +340,28 @@ public:
         case 0:
             poly->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::FILL);
             sm->setMode(osg::ShadeModel::SMOOTH);
-            view1->getSceneData()->getOrCreateStateSet()->setAttribute(poly);
-            view1->getSceneData()->getOrCreateStateSet()->setAttribute(sm);
+            _osgview->getSceneData()->getOrCreateStateSet()->setAttribute(poly);
+            _osgview->getSceneData()->getOrCreateStateSet()->setAttribute(sm);
 
             break;
         case 1:
             poly->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::FILL);
             sm->setMode(osg::ShadeModel::FLAT);
-            view1->getSceneData()->getOrCreateStateSet()->setAttributeAndModes(poly,osg::StateAttribute::ON);
-            view1->getSceneData()->getOrCreateStateSet()->setAttribute(sm);
+            _osgview->getSceneData()->getOrCreateStateSet()->setAttributeAndModes(poly,osg::StateAttribute::ON);
+            _osgview->getSceneData()->getOrCreateStateSet()->setAttribute(sm);
 
             break;
         case 2:
             poly->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
             sm->setMode(osg::ShadeModel::SMOOTH);
-            view1->getSceneData()->getOrCreateStateSet()->setAttribute(poly);
-            view1->getSceneData()->getOrCreateStateSet()->setAttribute(sm);
+            _osgview->getSceneData()->getOrCreateStateSet()->setAttribute(poly);
+            _osgview->getSceneData()->getOrCreateStateSet()->setAttribute(sm);
             break;
         }
 
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Set wire view to a node
-    ////////////////////////////////////////////////////////////////////////////
+    /// \brief Set wire view to a node
     void setWire(osg::Node* node)
     {
         osg::PolygonMode *poly = new osg::PolygonMode();
@@ -529,10 +374,8 @@ public:
         node->getOrCreateStateSet()->setAttribute(sm);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Create a viewer widget
-    ////////////////////////////////////////////////////////////////////////////
-    QWidget* addViewWidget( osg::Camera* camera, osgViewer::View* view )
+    /// \brief Create a viewer widget
+    QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view )
     {
         view->setCamera( camera );
         addView( view );
@@ -543,10 +386,8 @@ public:
         return gw ? gw->getGraphWidget() : NULL;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Create Open GL Context
-    ////////////////////////////////////////////////////////////////////////////
-    osg::Camera* createCamera( int x, int y, int w, int h, const std::string& name="", bool windowDecoration=false )
+    /// \brief Create Open GL Context
+    osg::ref_ptr<osg::Camera> CreateCamera( int x, int y, int w, int h, const std::string& name="", bool windowDecoration=false)
     {
         osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
 
@@ -566,21 +407,17 @@ public:
         traits->sampleBuffers = ds->getMultiSamples();
         traits->samples = ds->getNumMultiSamples();
 
-        osg::ref_ptr<osg::Camera> camera = new osg::Camera;
+        osg::ref_ptr<osg::Camera> camera(new osg::Camera());
         camera->setGraphicsContext( new GraphicsWindowQt(traits.get()) );
 
         camera->setClearColor( osg::Vec4(0.66, 0.75, 0.85, 1.0) );
         camera->setViewport( new osg::Viewport(0, 0, traits->width, traits->height) );
-        camera->setProjectionMatrixAsPerspective(
-            30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
-        return camera.release();
+        camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
+        return camera;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Find an OSG Node with the name given
-    ////////////////////////////////////////////////////////////////////////////
-    osg::Node* findNamedNode(const std::string& searchName,
-                             osg::Node* currNode)
+    /// \brief Find an OSG Node with the name given
+    osg::Node* _FindNamedNode(const std::string& searchName, osg::Node* currNode)
     {
         osg::ref_ptr<osg::Group> currGroup;
         osg::ref_ptr<osg::Node> foundNode;
@@ -611,9 +448,10 @@ public:
         {
             for (unsigned int i = 0; i < currGroup->getNumChildren(); i++)
             {
-                foundNode = findNamedNode(searchName, currGroup->getChild(i));
-                if (foundNode)
-                    return foundNode.get();                                               // found a match!
+                foundNode = _FindNamedNode(searchName, currGroup->getChild(i));
+                if (foundNode) {
+                    return foundNode.get(); // found a match!
+                }
             }
             return NULL; // We have checked each child node - no match found.
         }
@@ -623,10 +461,8 @@ public:
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Print nodes of scenegraph
-    ////////////////////////////////////////////////////////////////////////////
-    void showSceneGraph(const std::string& currLevel,osg::Node* currNode)
+    /// \brief Print nodes of scenegraph
+    void _ShowSceneGraph(const std::string& currLevel,osg::Node* currNode)
     {
         std::string level;
         osg::ref_ptr<osg::Group> currGroup;
@@ -638,41 +474,25 @@ public:
         if ( !!currNode)
         {
             qWarning("|%sNode class:%s (%s)",currLevel.c_str(),currNode->className(),currNode->getName().c_str());
-
             level = level + "-";
-
             currGroup = currNode->asGroup(); // returns NULL if not a group.
-            if ( currGroup )
-            {
-                for (unsigned int i = 0; i < currGroup->getNumChildren(); i++)
-                {
-                    showSceneGraph(level,currGroup->getChild(i));
+            if ( currGroup ) {
+                for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
+                    _ShowSceneGraph(level,currGroup->getChild(i));
                 }
             }
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Get link children and store list in global variable _linkChildren
-    ////////////////////////////////////////////////////////////////////////////
-    void getLinkChildren( std::string & robotName, KinBody::LinkPtr link,
-                          std::vector<KinBody::LinkPtr> vlinks)
+    /// \brief Get link children and store list in global variable _linkChildren
+    void _GetLinkChildren( std::string & robotName, KinBody::LinkPtr link, std::vector<KinBody::LinkPtr> vlinks)
     {
-        osg::Node* robot;
-
-        robot = findNamedNode(robotName,view1->getSceneData());
-
-        osg::Node* transform;
-
-        transform = findNamedNode("tg-"+link->GetName(),robot);
-
+        osg::Node* robot = _FindNamedNode(robotName,_osgview->getSceneData());
+        osg::Node* transform = _FindNamedNode("tg-"+link->GetName(),robot);
         _linkChildren.push_back(transform->asTransform()->asMatrixTransform());
-
-        FOREACH(itlink,vlinks)
-        {
-            if ((*itlink)->IsParentLink(link))
-            {
-                getLinkChildren(robotName,(*itlink),vlinks);
+        FOREACH(itlink,vlinks) {
+            if ((*itlink)->IsParentLink(link)) {
+                _GetLinkChildren(robotName,(*itlink),vlinks);
             }
         }
     }
@@ -687,8 +507,8 @@ public:
         osg::Node* node;
         osg::MatrixTransform* transform;
 
-        robot = findNamedNode(robotName,view1->getSceneData());
-        node = findNamedNode("tg-"+link->GetName(),robot);
+        robot = _FindNamedNode(robotName,_osgview->getSceneData());
+        node = _FindNamedNode("tg-"+link->GetName(),robot);
 
         if (!!node)
         {
@@ -762,84 +582,65 @@ public:
             robotName = robot->getName();
 
             //  Gets camera transform
-            storeMatrixTransform();
+            _StoreMatrixTransform();
 
             //  Copy scene node for modify it
-            scene = view1->getSceneData();
+            scene = _osgview->getSceneData();
 
             // Find joint of a link name given
-            joint = findJoint(robotName,linkName);
+            joint = _FindJoint(robotName,linkName);
 
-            node_found = findNamedNode("tg-"+linkName,robot);
+            node_found = _FindNamedNode("tg-"+linkName,robot);
             node_found = node_found->getParent(0);
-
-//        node_found = findLinkParent(node);
-
-            if (!!node_found && !!joint)
-            {
-                selected = addDraggerToObject(robotName,node_found,
-                                              "RotateCylinderDragger",joint);
-
-                view1->setSceneData(scene);
+            
+            if (!!node_found && !!joint) {
+                selected = _AddDraggerToObject(robotName,node_found, "RotateCylinderDragger",joint);
+                _osgview->setSceneData(scene);
 
                 //  Set camera transform
-                loadMatrixTransform();
+                _LoadMatrixTransform();
             }
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Find link initial node. Group node
-    ////////////////////////////////////////////////////////////////////////////
-    osg::Node* findLinkParent(osg::Node* node)
+    /// \brief Find link initial node. Group node
+    osg::Node* _FindLinkParent(osg::Node* node)
     {
         //  There is an error?
-        if (!node)
-        {
+        if (!node) {
             return NULL;
         }
 
-//      if (string(node->className()) == string(node->getParent(0)->className())
-//          &&  string(node->className()) == string("Group"))
-        if (string(node->className()) == string(node->getParent(0)->className())
-            &&  string(node->className()) == string("Group"))
-        {
+        if (string(node->className()) == string(node->getParent(0)->className()) &&  string(node->className()) == string("Group")) {
             //  Node found
             return node;
         }
-        else
-        {
+        else {
             //  Continue searching for parent
-            return findLinkParent(node->getParent(0));
+            return _FindLinkParent(node->getParent(0));
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Propagate transform to link children
-    ////////////////////////////////////////////////////////////////////////////
-    void propagate()
+    /// \brief Propagate transform to link children
+    void PropagateTransforms()
     {
-        osg::ref_ptr<osg::Node>   robot;
-        osg::ref_ptr<osg::Group>  parent;
-        osg::MatrixTransform*     tglobal;
+        osg::MatrixTransform* tglobal;
         osg::Matrix mR,mL;
 
-        if (_linkChildren.size() == 0)
+        if (_linkChildren.size() == 0) {
             return;
-
-        if (!_root)
-        {
+        }
+        if (!_root) {
             //  Clears childrens of link
             _linkChildren.clear();
-
             return;
         }
 
         // Get robot
-        robot = findRobot(_selected);
+        osg::ref_ptr<osg::Node> robot = findRobot(_selected);
 
         //  Gets parent of _root
-        parent = _root->getParent(0);
+        osg::ref_ptr<osg::Group> parent = _root->getParent(0);
 
         //  Restore parent of selected link
         parent->addChild(_selected);
@@ -880,18 +681,11 @@ public:
 
         // Clears list of link children
         _linkChildren.clear();
-
-        //  Debug
-//      showSceneGraph("",view1->getSceneData());
-
-        //  Updates core from Viewer joint values
-        updateCoreFromViewer();
+        _UpdateCoreFromViewer();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Find joint into OpenRAVE core
-    ////////////////////////////////////////////////////////////////////////////
-    KinBody::JointPtr findJoint(std::string & robotName,std::string &linkName)
+    /// \brief Find joint into OpenRAVE core
+    KinBody::JointPtr _FindJoint(std::string & robotName,std::string &linkName)
     {
         KinBody::JointPtr joint;
         KinBody::LinkPtr link;
@@ -901,24 +695,18 @@ public:
         //  Gets robots
         _penv->GetRobots(robots);
 
-        for (size_t i = 0; i < robots.size(); i++)
-        {
-            if (robots[i]->GetName() == robotName)
-            {
+        for (size_t i = 0; i < robots.size(); i++) {
+            if (robots[i]->GetName() == robotName) {
                 link = robots[i]->GetLink(linkName);
 
-                if (!!link)
-                {
+                if (!!link) {
                     //  Propagate transformations to child nodes
                     propagate();
 
                     //  Gets all childs of the link
-                    getLinkChildren(robotName,link,robots[i]->GetLinks());
-
-                    FOREACH(itjoint,robots[i]->GetJoints())
-                    {
-                        if ((*itjoint)->GetSecondAttached()==link)
-                        {
+                    _GetLinkChildren(robotName,link,robots[i]->GetLinks());
+                    FOREACH(itjoint,robots[i]->GetJoints()) {
+                        if ((*itjoint)->GetSecondAttached()==link) {
                             return *itjoint;
                         }
                     }
@@ -929,102 +717,39 @@ public:
         return joint;
     }
 
-public slots:
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// Sets simple view
-    ////////////////////////////////////////////////////////////////////////////
-    void setSimpleView()
-    {
-        if (!isSimpleView)
-        {
-            //  Activate simple view flag
-            isSimpleView = true;
-
-            int count = grid->count();
-
-            for (int i = 0; i < count; i++)
-            {
-                widgetsList[i]->close();
-            }
-
-            widgetsList[0]->show();
-        }
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// Sets multiple view
-    ////////////////////////////////////////////////////////////////////////////
-    void setMultipleView()
-    {
-        if (isSimpleView)
-        {
-            //  Deactivate simple view flag
-            isSimpleView = false;
-
-            int count = grid->count();
-
-            for (int i = 0; i < count; i++)
-            {
-                widgetsList[i]->show();
-            }
-        }
-    }
-
 protected:
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Updates joint values from viewer to OpenRAVE core
-    ////////////////////////////////////////////////////////////////////////////
-    void updateCoreFromViewer()
+    /// \brief Updates joint values from viewer to OpenRAVE core. uses GetPublishedBodies, so doesn't need environment lock.
+    virtual void _UpdateCoreFromViewer()
     {
-        //  Debug
-//      qWarning("ViewerWidget::UpdateCoreFromViewer");
-
         std::vector<KinBody::BodyState> vecbodies;
-
         _penv->GetPublishedBodies(vecbodies);
-
-        FOREACH(itbody,vecbodies)
-        {
+        FOREACH(itbody,vecbodies) {
             BOOST_ASSERT( !!itbody->pbody );
             KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
             KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtosg"));
-
-            //  Update KinBodyItem
-            if (!!pitem)
-            {
-//          qWarning("Update item '%s'",pitem->GetName().c_str());
+            if (!!pitem) {
                 pitem->UpdateFromIv();
             }
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Stores matrix transform
-    ////////////////////////////////////////////////////////////////////////////
-    void storeMatrixTransform()
+    /// \brief Stores matrix transform
+    void _StoreMatrixTransform()
     {
-        //  Gets camera transform
-//      _matrix1 = view1->getCameraManipulator()->getMatrix();
-        _matrix1 = view1->getCamera()->getViewMatrix();
+        _matrix1 = _osgview->getCamera()->getViewMatrix();
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Loads matrix transform
-    ////////////////////////////////////////////////////////////////////////////
-    void loadMatrixTransform()
+    /// \brief Loads the stored matrix transform to the camera
+    void _LoadMatrixTransform()
     {
-//      view1->getCameraManipulator()->setByMatrix(_matrix1);
-        view1->getCamera()->setViewMatrix(_matrix1);
+        _osgview->getCamera()->setViewMatrix(_matrix1);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    /// Create a dragger with a name given
-    ////////////////////////////////////////////////////////////////////////////
-    osgManipulator::Dragger* createDragger(const std::string& name)
+    /// \brief Create a dragger with a name given
+    osg::ref_ptr<osgManipulator::Dragger> _CreateDragger(const std::string& name)
     {
-        osgManipulator::Dragger* dragger = 0;
+        osg::ref_ptr<osgManipulator::Dragger> dragger;
         if ("TabPlaneDragger" == name)
         {
             osgManipulator::TabPlaneDragger* d = new osgManipulator::TabPlaneDragger();
@@ -1075,32 +800,27 @@ protected:
         }
         return dragger;
     }
-
-    ////////////////////////////////////////////////////////////////////////////
-    //  Create a manipulator over an object pased
-    ////////////////////////////////////////////////////////////////////////////
-    osg::Node* addDraggerToObject(osg::Node* object, const std::string& name)
+    
+    /// \brief Create a manipulator over an object pased
+    osg::Node* _AddDraggerToObject(osg::Node* object, const std::string& name)
     {
         std::string robotName;
         KinBody::JointPtr j;
-        return addDraggerToObject(robotName,object,name,j);
+        return _AddDraggerToObject(robotName,object,name,j);
     }
 
-    osg::Node* addDraggerToObject(std::string& robotName,osg::Node* object,
-                                  const std::string& name,
-                                  KinBody::JointPtr joint)
+    osg::Node* _AddDraggerToObject(std::string& robotName,osg::Node* object, const std::string& name, KinBody::JointPtr joint)
     {
-//      object->getOrCreateStateSet()->setMode(GL_NORMALIZE,
-//                                              osg::StateAttribute::ON);
+//      object->getOrCreateStateSet()->setMode(GL_NORMALIZE, osg::StateAttribute::ON);
 
         // Clears dragger
-        clearDragger();
+        ClearDragger();
 
         //  New selection
         _selection = new osg::MatrixTransform;
 
         //  Create a new dragger
-        _dragger = createDragger(name);
+        _dragger = _CreateDragger(name);
 
         _root = new osg::Group;
         _root->addChild(_dragger.get());
@@ -1109,8 +829,7 @@ protected:
         //  Store object selected in global variable _selected
         _selected = object;
 
-        if (name == "RotateCylinderDragger" && !!joint)
-        {
+        if (name == "RotateCylinderDragger" && !!joint) {
             //  Change view of dragger
             setWire(_dragger);
 
@@ -1122,8 +841,7 @@ protected:
                 parent->addChild(_root);
             }
         }
-        else if (name != "RotateCylinderDragger")
-        {
+        else if (name != "RotateCylinderDragger") {
             for (size_t i = 0; i < object->getParents().size(); i++)
             {
                 osg::ref_ptr<osg::Group>  parent;
@@ -1137,8 +855,7 @@ protected:
 
         float scale = object->getBound().radius() * 1.3;
 
-        if (name == "RotateCylinderDragger" && !!joint)
-        {
+        if (name == "RotateCylinderDragger" && !!joint) {
             Vector axis;
             Vector anchor;
             Vector dragger_direction;
@@ -1157,14 +874,11 @@ protected:
 
             matrix.makeRotate(osg::Quat(dragger_rotation.y,dragger_rotation.z,dragger_rotation.w,dragger_rotation.x));
 
-            _dragger->setMatrix(matrix *
-                                osg::Matrix::scale(scale, scale, scale) *
-                                osg::Matrix::translate(anchor.x,anchor.y,anchor.z));
+            _dragger->setMatrix(matrix * osg::Matrix::scale(scale, scale, scale) * osg::Matrix::translate(anchor.x,anchor.y,anchor.z));
         }
         else
         {
-            _dragger->setMatrix(osg::Matrix::scale(scale, scale, scale) *
-                                osg::Matrix::translate(object->getBound().center()));
+            _dragger->setMatrix(osg::Matrix::scale(scale, scale, scale) * osg::Matrix::translate(object->getBound().center()));
         }
 
         _dragger->addTransformUpdating(_selection);
@@ -1179,10 +893,6 @@ protected:
         // activation if either the ctrl key or the 'a' key is pressed and held down.
         _dragger->setActivationModKeyMask(osgGA::GUIEventAdapter::MODKEY_CTRL);
         _dragger->setActivationKeyEvent('a');
-
-        //  Print scene graph
-//      showSceneGraph("",view1->getSceneData());
-
         return _root;
     }
 
@@ -1190,9 +900,6 @@ protected:
     //    Event handling    //
     //////////////////////////
 
-    ////////////////////////////////////////////////////////////////////////////
-    //  Paint event
-    ////////////////////////////////////////////////////////////////////////////
     virtual void paintEvent( QPaintEvent* event )
     {
         frame();
@@ -1225,54 +932,33 @@ protected:
 //      doubleClickPressed = true;
 //    }
 
-    ////////////////////////
-    //  Global variables  //
-    ////////////////////////
-
-    //  Light flag
-    bool _light_on;
-
-    //  Scene Node with lights
-    osg::ref_ptr<osg::Group> _scene_lights;
-
-    //  Scene Data to romove after each repaint
-    osg::ref_ptr<osg::Group> _scene_lights_data;
-
-    //  Parent of dragger and selection
-    osg::ref_ptr<osg::Group> _root;
-
-    //  There is only one dragger at the same time
-    osg::ref_ptr<osgManipulator::Dragger> _dragger;
-
-    //  Transform applied by dragger
-    osg::ref_ptr<osg::MatrixTransform> _selection;
-
-    //  Object selected by dragger
-    osg::ref_ptr<osg::Node> _selected;
 
 //    //  Flags to apply anchor (if true) to the dragger position
 //    std::map<std::string,bool> _needAnchor;
 
-    // Kinematic body selected or robot
-    std::string _actualKinbody;
+    
+    osg::ref_ptr<osg::Group> _osgLightsGroup; ///< Scene Node with lights
+    osg::ref_ptr<osg::Group> _osgLightsGroupData; ///< Scene Data to romove after each repaint
+    osg::ref_ptr<osg::Group> _root; ///< Parent of dragger and selection
+    osg::ref_ptr<osgManipulator::Dragger> _dragger; ///< There is only one dragger at the same time
+    osg::ref_ptr<osg::MatrixTransform> _selection; ///< Transform applied by dragger
+    osg::ref_ptr<osg::Node> _selected; ///< Object selected by dragger
+    
+    std::string _actualKinbody; ///< Kinematic body selected or robot
+    std::string _draggerName; ///< Actual dragger selected
+    
+    boost::shared_ptr<PickHandler> _picker; ///<  Pick handler for joint selection
+    osg::Matrixf _matrix1; ///< stored matrix transform
 
-    //  Actual dragger selected
-    std::string _draggerName;
-
-    //  Pick handler for joint selection
-    PickHandler *_picker;
-
-    //  Matrix transform
-    osg::Matrixd _matrix1;
-
-    //  Timer for repaint
-    QTimer _timer;
-
-    //  Environment variable
+    std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _vLightTransform;
+    osg::ref_ptr<osg::StateSet> _lightStateSet;
+    osg::ref_ptr<osgViewer::View> _osgview;
+    
+    QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
+    std::vector<osg::ref_ptr<osg::MatrixTransform> > _linkChildren; ///< List of link children
 
-    //  List of link children
-    std::vector<osg::MatrixTransform*> _linkChildren;
+    bool _bLightOn; ///< whether lights are on or not
 };
 
 }

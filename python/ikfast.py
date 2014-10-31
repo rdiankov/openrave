@@ -3721,14 +3721,14 @@ class IKFastSolver(AutoReloader):
                     if polyeqs[i][j] is not None:
                         continue
                     poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
-                    if 1:#self.codeComplexity(poly0.as_expr()) < 2000:
+                    if self.codeComplexity(poly0.as_expr()) < 5000:
                         poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
                         if not simplify or poly1 == S.Zero:
                             polyeqs[i][j] = poly1
                         else:
                             polyeqs[i][j] = self.SimplifyTransformPoly(poly1)
                     else:
-                        polyeqs[i][j] = poly0
+                        polyeqs[i][j] = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
         #ppl0 = p0.dot(p0)*l0 - 2*l0.dot(p0)*p0
         #ppl1 = p1.dot(p1)*l1 - 2*l1.dot(p1)*p1        
         ppl0 = polyeqs[9][0].as_expr()*l0 - 2*polyeqs[10][0].as_expr()*p0 # p0.dot(p0)*l0 - 2*l0.dot(p0)*p0
@@ -3741,7 +3741,7 @@ class IKFastSolver(AutoReloader):
                     if polyeqs[i][j] is not None:
                         continue
                     poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
-                    if 1:#self.codeComplexity(poly0.as_expr()) < 2000:
+                    if self.codeComplexity(poly0.as_expr()) < 5000:
                         poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
                         if not simplify or poly1 == S.Zero:
                             polyeqs[i][j] = poly1
@@ -3749,7 +3749,7 @@ class IKFastSolver(AutoReloader):
                             polyeqs[i][j] = self.SimplifyTransformPoly(poly1)
                     else:
                         log.warn('raghavan roth equation (%d,%d) too complex', i, j)
-                        polyeqs[i][j] = poly0
+                        polyeqs[i][j] = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
         log.info('computed in %fs', time.time()-starttime)
         # prune any that have varying symbols
         # remove all fractions? having big integers could blow things up...
