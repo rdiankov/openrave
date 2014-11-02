@@ -108,6 +108,204 @@ AttributesList toAttributesList(boost::python::object oattributes)
     return AttributesList();
 }
 
+/// \brief manages all the viewers created through SetViewer into a single thread
+class ViewerManager
+{
+    /// \brief info about the viewer to create or that is created
+    struct ViewerInfo
+    {
+        EnvironmentBasePtr _penv;
+        std::string _viewername;
+        bool _bShowViewer;
+        ViewerBasePtr _pviewer; /// the created viewer
+        boost::condition _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+    };
+    typedef boost::shared_ptr<ViewerInfo> ViewerInfoPtr;
+public:
+    ViewerManager() {
+        _bShutdown = false;
+        _bInMain = false;
+        _threadviewer.reset(new boost::thread(boost::bind(&ViewerManager::_RunViewerThread, this)));
+    }
+
+    virtual ~ViewerManager() {
+        Destroy();
+    }
+
+    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer)
+    {
+        ViewerBasePtr pviewer;
+        if( strviewer.size() > 0 ) {
+
+            ViewerInfoPtr pinfo(new ViewerInfo());
+            pinfo->_penv = penv;
+            pinfo->_viewername = strviewer;
+            pinfo->_bShowViewer = bShowViewer;
+            if( _bInMain ) {
+                // create in this thread since viewer thread is already waiting on another viewer
+                pviewer = RaveCreateViewer(penv, strviewer);
+                if( !!pviewer ) {
+                    penv->AddViewer(pviewer);
+                    // TODO uncomment once Show posts to queue
+//                    if( bShowViewer ) {
+//                        pviewer->Show(1);
+//                    }
+                    pinfo->_pviewer = pviewer;
+                    boost::mutex::scoped_lock lock(_mutexViewer);
+                    _listviewerinfos.push_back(pinfo);
+                    _conditionViewer.notify_all();
+                }
+            }
+            else {
+                // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
+                boost::mutex::scoped_lock lock(_mutexViewer);
+                _listviewerinfos.push_back(pinfo);
+                _conditionViewer.notify_all();
+
+                /// wait until viewer thread process it
+                pinfo->_cond.wait(_mutexViewer);
+                pviewer = pinfo->_pviewer;
+            }
+        }
+        return pviewer;
+    }
+
+    /// \brief if removed, returns true
+    bool RemoveViewer(ViewerBasePtr pviewer)
+    {
+        if( !pviewer ) {
+            return false;
+        }
+        {
+            boost::mutex::scoped_lock lock(_mutexViewer);
+            FOREACH(itviewer, _listviewerinfos) {
+                ViewerBasePtr ptestviewer = (*itviewer)->_pviewer;
+                if(ptestviewer == pviewer ) {
+                    pviewer->quitmainloop();
+                    _listviewerinfos.erase(itviewer);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void Destroy() {
+        _bShutdown = true;
+        {
+            boost::mutex::scoped_lock lock(_mutexViewer);
+            // have to notify everyone
+            FOREACH(itinfo, _listviewerinfos) {
+                (*itinfo)->_cond.notify_all();
+            }
+            _listviewerinfos.clear();
+            _conditionViewer.notify_all();
+        }
+        if( !!_threadviewer ) {
+            _threadviewer->join();
+        }
+        _threadviewer.reset();
+    }
+
+protected:
+    void _RunViewerThread()
+    {
+        while(!_bShutdown) {
+            std::list<ViewerBasePtr> listviewers, listtempviewers;
+            bool bShowViewer = true;
+            {
+                boost::mutex::scoped_lock lock(_mutexViewer);
+                if( _listviewerinfos.size() == 0 ) {
+                    _conditionViewer.wait(lock);
+                    if( _listviewerinfos.size() == 0 ) {
+                        continue;
+                    }
+                }
+
+                listviewers.clear();
+                FOREACH(itinfo, _listviewerinfos) {
+                    ViewerInfoPtr pinfo = *itinfo;
+                    if( !pinfo->_pviewer ) {
+                        pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
+                        if( !!pinfo->_pviewer ) {
+                            pinfo->_penv->AddViewer(pinfo->_pviewer);
+                        }
+                        // notify other thread that viewer failed
+                        pinfo->_cond.notify_all();
+                    }
+                    if( !!pinfo->_pviewer ) {
+                        if( listviewers.size() == 0 ) {
+                            bShowViewer = pinfo->_bShowViewer;
+                        }
+                        listviewers.push_back(pinfo->_pviewer);
+                    }
+                }
+            }
+            
+            ViewerBasePtr puseviewer;
+            FOREACH(itviewer, listviewers) {
+                // double check if viewer is added to env
+                bool bfound = false;
+                listtempviewers.clear();
+                (*itviewer)->GetEnv()->GetViewers(listtempviewers);
+                FOREACH(itviewer2, listtempviewers) {
+                    if( *itviewer == *itviewer2 ) {
+                        bfound = true;
+                        break;
+                    }
+                }
+                if( bfound ) {
+                    puseviewer = *itviewer;
+                    break;
+                }
+                else {
+                    // viewer is not in environment any more, so erase from list
+                    listviewers.erase(itviewer);
+                    break; // break since modifying list
+                }
+            }
+
+            listtempviewers.clear();
+
+            if( !!puseviewer ) {
+                _bInMain = true;
+                puseviewer->main(bShowViewer);
+                _bInMain = false;
+                // remove from _listviewerinfos in order to avoid running the main loop again
+                {
+                    boost::mutex::scoped_lock lock(_mutexViewer);
+                    FOREACH(itinfo, _listviewerinfos) {
+                        if( (*itinfo)->_pviewer == puseviewer ) {
+                            _listviewerinfos.erase(itinfo);
+                            break;
+                        }
+                    }
+                }
+                puseviewer.reset();
+            }
+            // just go and run the next viewer's loop, don't exit here!
+        }
+        RAVELOG_DEBUG("shutting down viewer manager thread\n");
+    }
+
+    boost::shared_ptr<boost::thread> _threadviewer;
+    boost::mutex _mutexViewer;
+    boost::condition _conditionViewer;
+    std::list<ViewerInfoPtr> _listviewerinfos;
+    
+    bool _bShutdown; ///< if true, shutdown everything
+    bool _bInMain; ///< if true, viewer thread is running a main function
+};
+
+boost::shared_ptr<ViewerManager> GetViewerManager()
+{
+    static boost::shared_ptr<ViewerManager> viewermanager;
+    if( !viewermanager ) {
+        viewermanager.reset(new ViewerManager());
+    }
+    return viewermanager;
+}
+
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
     CHECK_POINTER(_pbase);
@@ -178,9 +376,6 @@ class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBas
     ViewerBasePtr _pviewer;
 protected:
     EnvironmentBasePtr _penv;
-    boost::shared_ptr<boost::thread> _threadviewer;
-    boost::mutex _mutexViewer;
-    boost::condition _conditionViewer;
 
     PyInterfaceBasePtr _toPyInterface(InterfaceBasePtr pinterface)
     {
@@ -203,26 +398,6 @@ protected:
         case PT_SpaceSampler: return openravepy::toPySpaceSampler(boost::static_pointer_cast<SpaceSamplerBase>(pinterface),shared_from_this());
         }
         return PyInterfaceBasePtr();
-    }
-
-    void _ViewerThread(const string &strviewer, bool bShowViewer)
-    {
-        _pviewer.reset();
-        {
-            boost::mutex::scoped_lock lock(_mutexViewer);
-            _pviewer = RaveCreateViewer(_penv, strviewer);
-            if( !!_pviewer ) {
-                _penv->AddViewer(_pviewer);
-            }
-            _conditionViewer.notify_all();
-        }
-
-        if( !_pviewer ) {
-            return;
-        }
-        _pviewer->main(bShowViewer);     // spin until quitfrommainloop is called
-        _penv->Remove(_pviewer);
-        _pviewer.reset();
     }
 
     void _BodyCallback(object fncallback, KinBodyPtr pbody, int action)
@@ -286,10 +461,6 @@ public:
 
     virtual ~PyEnvironmentBase()
     {
-        if( !!_threadviewer ) {
-            _threadviewer->join();
-        }
-        _threadviewer.reset();
         _pviewer.reset();
     }
 
@@ -298,9 +469,7 @@ public:
     }
     void Destroy() {
         _penv->Destroy();
-        if( !!_threadviewer ) {
-            _threadviewer->join();
-        }
+        GetViewerManager()->RemoveViewer(_pviewer);
     }
 
     PyEnvironmentBasePtr CloneSelf(int options)
@@ -325,7 +494,7 @@ public:
             if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
                 if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
                     RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
-                    boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                    //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
                     SetViewer("");
                 }
             }
@@ -904,6 +1073,12 @@ public:
     }
     bool Remove(PyInterfaceBasePtr obj) {
         CHECK_POINTER(obj);
+
+        // have to check if viewer in order to notify viewer manager
+        ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(obj->GetInterfaceBase());
+        if( !!pviewer ) {
+            GetViewerManager()->RemoveViewer(pviewer);
+        }
         return _penv->Remove(obj->GetInterfaceBase());
     }
 
@@ -1084,26 +1259,8 @@ public:
 
     bool SetViewer(const string &viewername, bool showviewer=true)
     {
-        if( !!_threadviewer ) {     // wait for the viewer
-            _threadviewer->join();
-        }
-        _threadviewer.reset();
-
-        if( viewername.size() > 0 ) {
-            boost::mutex::scoped_lock lock(_mutexViewer);
-            _threadviewer.reset(new boost::thread(boost::bind(&PyEnvironmentBase::_ViewerThread, shared_from_this(), viewername, showviewer)));
-            _conditionViewer.wait(lock);
-            //            if( !_penv->GetViewer() || _penv->GetViewer()->GetXMLId() != viewername ) {
-            //                RAVELOG_WARN("failed to create viewer %s\n", viewername.c_str());
-            //                _threadviewer->join();
-            //                _threadviewer.reset();
-            //                return false;
-            //            }
-            //            else {
-            //                RAVELOG_INFOA("viewer %s successfully attached\n", viewername.c_str());
-            //            }
-        }
-        return true;
+        _pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer);
+        return !!_pviewer;
     }
 
     object GetViewer()

@@ -46,6 +46,9 @@ public:
         if( !_viewer ) {
             std::stringstream sinput(_s);
             _viewer = CreateQtOSGViewer(_penv, sinput);
+            if( !!_viewer ) {
+                _viewer->Show(1); // TODO remove once Show posts to queue
+            }
         }
     }
 
@@ -81,14 +84,12 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         if( interfacename == "qtosg" ) {
             // not sure if should be creating application all the time...
 
-            if( QApplication::startingUp() ) {
-                RAVELOG_INFO("qt is not initialized yet\n");
-            }
+            //if( QApplication::startingUp() ) {
 
             //CoreApplication::postEvent ( QObject * receiver, QEvent * event )
             QCoreApplication *qapp = QApplication::instance();
             if( !qapp ) {
-                RAVELOG_DEBUG("did not detect QApplication, so creating...\n");
+                RAVELOG_INFO("qt is not initialized yet, so initializing...\n");
                 static int s_QtArgc = 0; // has to be static!
                 qapp = new QApplication(s_QtArgc,NULL);
                 return qtosgrave::CreateQtOSGViewer(penv, sinput);

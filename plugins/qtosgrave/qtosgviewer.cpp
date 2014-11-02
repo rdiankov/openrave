@@ -878,6 +878,7 @@ void QtOSGViewer::quitmainloop()
 
 void QtOSGViewer::Show(int showtype)
 {
+    // have to put this in the message queue
     if (showtype ) {
         show();
     }
