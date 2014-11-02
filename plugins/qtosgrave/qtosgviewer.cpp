@@ -265,12 +265,10 @@ void QtOSGViewer::_Reset()
     UpdateFromModel();
     _condUpdateModels.notify_all();
 
-    FOREACH(itbody, _mapbodies)
-    {
+    FOREACH(itbody, _mapbodies) {
         BOOST_ASSERT( itbody->first->GetUserData(_userdatakey) == itbody->second );
         itbody->first->RemoveUserData(_userdatakey);
     }
-
     _mapbodies.clear();
     objectTree->clear();
 
@@ -1037,26 +1035,51 @@ void QtOSGViewer::UpdateFromModel()
         _listRemoveItems.clear();
     }
 
-    bool newdata;
-
-    _listRemoveItems.clear();
-
+    boost::mutex::scoped_lock lock(_mutexUpdateModels);
     vector<KinBody::BodyState> vecbodies;
 
-    GetEnv()->GetPublishedBodies(vecbodies);
+#if BOOST_VERSION >= 103500
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
+#else
+    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
+#endif
 
-    newdata = false;
+    if( _bLockEnvironment && !lockenv ) {
+        uint64_t basetime = utils::GetMicroTime();
+        while(utils::GetMicroTime()-basetime<1000 ) {
+            if( lockenv.try_lock() ) {
+                // acquired the lock, so update the bodies!
+                GetEnv()->UpdatePublishedBodies();
+                break;
+            }
+        }
+    }
 
+    try {
+        GetEnv()->GetPublishedBodies(vecbodies,100000); // 0.1s
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN("timeout of GetPublishedBodies\n");
+        return;
+    }
     FOREACH(it, _mapbodies) {
         it->second->SetUserData(0);
     }
 
+    bool newdata = false; // set to true if new object was created    
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
         KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
 
-        //  if pitem is FALSE
+        if( !!pitem ) {
+            if( !pitem->GetBody() ) {
+                // looks like item has been destroyed, so remove from data
+                pbody->RemoveUserData(_userdatakey);
+                pitem.reset();
+            }
+        }
+        
         if( !pitem ) {
             // create a new body
             // make sure pbody is actually present
@@ -1065,9 +1088,22 @@ void QtOSGViewer::UpdateFromModel()
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetUserData(_userdatakey) ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
+                        RAVELOG_WARN_FORMAT("body %s already registered!", pbody->GetName());
                         continue;
                     }
 
+                    if( _bLockEnvironment && !lockenv ) {
+                        uint64_t basetime = utils::GetMicroTime();
+                        while(utils::GetMicroTime()-basetime<1000 ) {
+                            if( lockenv.try_lock() )  {
+                                break;
+                            }
+                        }
+                        if( !lockenv ) {
+                            return; // couldn't acquire the lock, try next time. This prevents deadlock situations
+                        }
+                    }
+                    
                     if( pbody->IsRobot() ) {
                         pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode));
                     }
@@ -1076,15 +1112,15 @@ void QtOSGViewer::UpdateFromModel()
                     }
                     newdata = true;
 
-                    //  Adds pitem to list of items for remove
-                    _listRemoveItems.push_back(pitem.get());
+                    // TODO
+//                    if( !!_pdragger && _pdragger->GetSelectedItem() == pitem ) {
+//                        _Deselect();
+//                    }
 
                     pitem->Load();
-
-                    //  Modified for OpenRAVE 0.5v
                     pbody->SetUserData(_userdatakey, pitem);
-
                     _mapbodies[pbody] = pitem;
+                    newdata = true;
                 }
                 else {
                     pitem = boost::static_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
@@ -1104,34 +1140,49 @@ void QtOSGViewer::UpdateFromModel()
             continue;
         }
 
-        //  TODO : Revise
         BOOST_ASSERT( pitem->GetBody() == pbody);
         BOOST_ASSERT( itmap->second == pitem );
 
         pitem->SetUserData(1);
 
         //  Update viewer with core transforms
-        pitem->UpdateFromModel(itbody->jointvalues,itbody->vectrans);
+        pitem->UpdateFromModel(itbody->jointvalues, itbody->vectrans);
     }
 
-    //  Repaint the scene created
-    _RepaintWidgets(GetRoot());
-
-    if (newdata)
-    {
-        //  Fill tree widget with robot and joints
-        _FillObjectTree(objectTree);
-    }
-    
     FOREACH_NOINC(it, _mapbodies) {
-        if(!it->second->GetUserData()) {
-            //  Modified for OpenRAVE 0.5v
+        if( !it->second->GetUserData() ) {
+            // item doesn't exist anymore, remove it
             it->first->RemoveUserData(_userdatakey);
+
+            if( _pSelectedItem == it->second ) {
+                // TODO
+                //_pdragger.reset();
+                _pSelectedItem.reset();
+                //_ivRoot->deselectAll();
+            }
+
             _mapbodies.erase(it++);
         }
         else {
             ++it;
         }
+    }
+
+    _bModelsUpdated = true;
+    _condUpdateModels.notify_all();
+
+//    if( _bAutoSetCamera &&(_mapbodies.size() > 0)) {
+//        RAVELOG_DEBUG("auto-setting camera location\n");
+//        _bAutoSetCamera = false;
+//        _pviewer->viewAll();
+//    }
+    
+    //  Repaint the scene created
+    _RepaintWidgets(GetRoot());
+
+    if (newdata) {
+        //  Fill tree widget with robot and joints
+        _FillObjectTree(objectTree);
     }
 }
 
