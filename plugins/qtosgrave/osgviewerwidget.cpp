@@ -314,8 +314,8 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
 
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setGraphicsContext( new GraphicsWindowQt(traits.get()) );
-
-    camera->setClearColor( osg::Vec4(0.66, 0.75, 0.85, 1.0) );
+    
+    camera->setClearColor( osg::Vec4(0.95, 1.0, 0.98, 1.0) );
     camera->setViewport( new osg::Viewport(0, 0, traits->width, traits->height) );
     camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
     return camera;

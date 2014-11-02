@@ -36,6 +36,8 @@ public:
     /// \brief destroys the main loop
     virtual void quitmainloop();
 
+    virtual void Show(int showtype);
+
     virtual bool GetFractionOccluded(KinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded);
 
     /// Retries a 24bit RGB image of dimensions width and height from the current scene
@@ -74,6 +76,9 @@ public:
     virtual osg::ref_ptr<osg::Group> GetRoot() {
         return _ivRoot;
     }
+
+    /// \brief override base class
+    virtual void customEvent(QEvent * e);
 
     //    virtual void UpdateCameraTransform();
     //    static void _PlayCB(void *userData, SoSensor *);
@@ -114,6 +119,7 @@ public:
     virtual void EnvironmentSync();
 
     virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
+    virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
 
     /// \brief Locks environment
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
@@ -275,6 +281,7 @@ protected:
     ViewGeometry _viewGeometryMode;
 
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
 
     //QSize getSize();
     QGridLayout* _qCentralLayout;
@@ -378,6 +385,7 @@ protected:
     bool _bLockEnvironment; ///< if true, should lock the environment.
 
     friend class ItemSelectionCallbackData;
+    friend class ViewerThreadCallbackData;
     friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);
 };
 

@@ -53,6 +53,26 @@ protected:
 };
 typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
 
+class ViewerThreadCallbackData : public UserData
+{
+public:
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~ViewerThreadCallbackData() {
+        boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::ViewerThreadCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtOSGViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
+
 QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
 {
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
@@ -119,7 +139,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
     // initialize the environment
     _ivRoot = new osg::Group();
     _ivRoot->ref();
-    
+
     _qtree = new QTreeView;
 
     _CreateActions();
@@ -129,7 +149,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
         _CreateStatusBar();
     }
     _CreateDockWidgets();
-    
+
     resize(1024, 750);
 
     // toggle switches
@@ -150,6 +170,19 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
     _bManipTracking = false;
     _bAntialiasing = false;
     _viewGeometryMode = VG_RenderOnly;
+}
+
+void QtOSGViewer::customEvent(QEvent * e)
+{
+    if (e->type() == CALLBACK_EVENT) {
+        MyCallbackEvent* pe = dynamic_cast<MyCallbackEvent*>(e);
+        if( !pe ) {
+            RAVELOG_WARN("got a qt message that isn't of MyCallbackEvent, converting statically (dangerous)\n");
+            pe = static_cast<MyCallbackEvent*>(e);
+        }
+        pe->_fn();
+        e->setAccepted(true);
+    }
 }
 
 bool QtOSGViewer::_ForceUpdatePublishedBodies()
@@ -257,6 +290,26 @@ void QtOSGViewer::_Refresh()
 {
     UpdateFromModel();
     //  _posgWidget->update();
+
+    {
+        std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
+        {
+            boost::mutex::scoped_lock lock(_mutexCallbacks);
+            listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
+        }
+        FOREACH(it,listRegisteredViewerThreadCallbacks) {
+            ViewerThreadCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
+            if( !!pdata ) {
+                try {
+                    pdata->_callback();
+                }
+                catch(const std::exception& e) {
+                    RAVELOG_ERROR(str(boost::format("Viewer Thread Callback Failed with error %s")%e.what()));
+                }
+            }
+        }
+    }
+
 }
 
 void QtOSGViewer::_Reset()
@@ -622,97 +675,75 @@ QTreeWidget* QtOSGViewer::_CreateObjectTree()
 
 void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
 {
-    RAVELOG_DEBUG("Begin _FillObjectTree....\n");
-
-    RobotBase* robot;
+    RAVELOG_VERBOSE("Begin _FillObjectTree....\n");    
     vector<KinBodyPtr> kinbodies;
     QList<QTreeWidgetItem*> items;
-
+    
     //  Clears tree
     treeWidget->clear();
     GetEnv()->GetBodies(kinbodies);
     for (size_t i = 0; i < kinbodies.size(); i++) {
         items.append(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(kinbodies[i]->GetName().c_str()))));
-
         //  Number of child to add
-        size_t nchild = 0;
+        int nchild = -1;
 
-        vector<KinBody::LinkPtr> links = kinbodies[i]->GetLinks();
-        vector<KinBody::JointPtr>  joints = kinbodies[i]->GetJoints();
-
-        //  Header 'Links'
-        items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Links"))));
-
-        for (size_t j = 0; j < links.size(); j++) {
-            items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(links[j]->GetName().c_str()))));
+        if( kinbodies[i]->GetLinks().size() > 0 ) {
+           //  Header 'Links'
+           items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Links"))));
+           nchild++;
+           FOREACHC(itlink, kinbodies[i]->GetLinks()) {
+               items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString((*itlink)->GetName().c_str()))));
+           }
         }
 
-        if (joints.size() > 0) {
+        if (kinbodies[i]->GetJoints().size() > 0) {
             //  Header 'Joints'
             items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Joints"))));
-
             nchild++;
-        }
-
-        for (size_t j = 0; j < joints.size(); j++) {
-            items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(joints[j]->GetName().c_str()))));
             
-            //  Adds links of joints
-            items[i]->child(nchild)->child(j)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(joints[j]->GetFirstAttached()->GetName().c_str()))));
-            items[i]->child(nchild)->child(j)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(joints[j]->GetSecondAttached()->GetName().c_str()))));
+            FOREACHC(itjoint, kinbodies[i]->GetJoints()) {
+                KinBody::JointConstPtr pjoint = *itjoint;
+                QTreeWidgetItem* pqjoint = new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pjoint->GetName().c_str())));
+                
+                //  Adds links of joints
+                pqjoint->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pjoint->GetFirstAttached()->GetName().c_str()))));
+                pqjoint->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pjoint->GetSecondAttached()->GetName().c_str()))));
+                items[i]->child(nchild)->addChild(pqjoint);
+            }
         }
 
         if (kinbodies[i]->IsRobot()) {
-            robot = (RobotBase*)kinbodies[i].get();
+            RobotBasePtr robot = RaveInterfaceCast<RobotBase>(kinbodies[i]);
 
-            vector<RobotBase::ManipulatorPtr>     manipulators;
-            vector<RobotBase::AttachedSensorPtr>  sensors;
-            ControllerBasePtr controller;
-
-            sensors = robot->GetAttachedSensors();
-            manipulators  = robot->GetManipulators();
-            controller  = robot->GetController();
-
-            RAVELOG_DEBUG("Sensors....\n");
-
-            if (sensors.size() > 0) {
+            if (robot->GetAttachedSensors().size() > 0) {
                 //  Header 'Sensors'
                 items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Sensors"))));
-
                 nchild++;
+                
+                FOREACHC(itattsensor, robot->GetAttachedSensors()) {
+                    RobotBase::AttachedSensorPtr pattsensor = *itattsensor;
+                    QTreeWidgetItem* pqattsensor = new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pattsensor->GetName().c_str())));
+                    RAVELOG_VERBOSE_FORMAT("Attach sensor %s robotlink=%s", pattsensor->GetName()%pattsensor->GetAttachingLink()->GetName());
+                    pqattsensor->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pattsensor->GetAttachingLink()->GetName().c_str()))));
+                    items[i]->child(nchild)->addChild(pqattsensor);
+                }
             }
 
-            RAVELOG_DEBUG("Sensors number=%d\n",sensors.size());
-
-            for (size_t j = 0; j < sensors.size(); j++) {
-                RAVELOG_INFO("Sensor name=%s\n",sensors[j]->GetName().c_str());
-
-                items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(sensors[j]->GetName().c_str()))));
-
-                RAVELOG_WARN("Sensor link=%s\n",sensors[j]->GetAttachingLink()->GetName().c_str());
-
-                items[i]->child(nchild)->child(j)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(sensors[j]->GetAttachingLink()->GetName().c_str()))));
-            }
-
-            RAVELOG_DEBUG("Manipulators....\n");
-
-            if (manipulators.size() > 0) {
+            if (robot->GetManipulators().size() > 0) {
                 //  Header 'Manipulators'
                 items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Manipulators"))));
-
                 nchild++;
+
+                FOREACHC(itmanip, robot->GetManipulators()) {
+                    RobotBase::ManipulatorPtr pmanip = *itmanip;
+                    items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pmanip->GetName().c_str()))));
+                }
             }
 
-            for (size_t j = 0; j < manipulators.size(); j++) {
-                items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(manipulators[j]->GetName().c_str()))));
-            }
-
-            RAVELOG_DEBUG("Controller....\n");
-
+            ControllerBasePtr controller = robot->GetController();
             if (!!controller) {
                 //  Header 'Controller'
                 items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Controller"))));
-
                 nchild++;
 
                 items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(controller->GetXMLFilename().c_str()))));
@@ -721,14 +752,12 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
     }
 
     treeWidget->insertTopLevelItems(0, items);
-
-    RAVELOG_DEBUG("End _FillObjectTree....\n");
+    RAVELOG_VERBOSE("End _FillObjectTree....\n");
 }
 
 void QtOSGViewer::mouseDoubleClickEvent(QMouseEvent *e)
 {
-    std::cout << "Press mouse: doubleClick" << std::endl;
-    std::cout << e->button() << std::endl;
+    RAVELOG_INFO("Press mouse: doubleClick: 0x%x", e->button());
 }
 
 void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
@@ -837,7 +866,7 @@ int QtOSGViewer::main(bool bShow)
 
     UpdateFromModel();
     _posgWidget->SetHome();
-    
+
     QApplication::instance()->exec();
     return 0;
 }
@@ -845,6 +874,16 @@ int QtOSGViewer::main(bool bShow)
 void QtOSGViewer::quitmainloop()
 {
 
+}
+
+void QtOSGViewer::Show(int showtype)
+{
+    if (showtype ) {
+        show();
+    }
+    else {
+        hide();
+    }
 }
 
 bool QtOSGViewer::GetFractionOccluded(KinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded)
@@ -1066,7 +1105,7 @@ void QtOSGViewer::UpdateFromModel()
         it->second->SetUserData(0);
     }
 
-    bool newdata = false; // set to true if new object was created    
+    bool newdata = false; // set to true if new object was created
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
@@ -1079,7 +1118,7 @@ void QtOSGViewer::UpdateFromModel()
                 pitem.reset();
             }
         }
-        
+
         if( !pitem ) {
             // create a new body
             // make sure pbody is actually present
@@ -1103,7 +1142,7 @@ void QtOSGViewer::UpdateFromModel()
                             return; // couldn't acquire the lock, try next time. This prevents deadlock situations
                         }
                     }
-                    
+
                     if( pbody->IsRobot() ) {
                         pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode));
                     }
@@ -1176,7 +1215,7 @@ void QtOSGViewer::UpdateFromModel()
 //        _bAutoSetCamera = false;
 //        _pviewer->viewAll();
 //    }
-    
+
     //  Repaint the scene created
     _RepaintWidgets(GetRoot());
 
@@ -1316,6 +1355,13 @@ UserDataPtr QtOSGViewer::RegisterItemSelectionCallback(const ItemSelectionCallba
 {
     ItemSelectionCallbackDataPtr pdata(new ItemSelectionCallbackData(fncallback,shared_viewer()));
     pdata->_iterator = _listRegisteredItemSelectionCallbacks.insert(_listRegisteredItemSelectionCallbacks.end(),pdata);
+    return pdata;
+}
+
+UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback)
+{
+    ViewerThreadCallbackDataPtr pdata(new ViewerThreadCallbackData(fncallback,shared_viewer()));
+    pdata->_iterator = _listRegisteredViewerThreadCallbacks.insert(_listRegisteredViewerThreadCallbacks.end(),pdata);
     return pdata;
 }
 

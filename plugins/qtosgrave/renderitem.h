@@ -82,8 +82,12 @@ public:
         return _ivGeom;
     }
 //    SoTransparencyType* GetIvTransparency() const { return _ivTransparency; }
+
+    /// \brief returns true if the given node is in the inventor hierarchy
     bool ContainsOSGNode(osg::Node *pNode);
 //    bool ContainsOSGNode(osg::NodePath *pNodePath);
+
+    /// \brief Set the visibility of the geometry (ON = true).
     void SetGeomVisibility(bool bFlag);
 //    void SetUnpickable();
 
@@ -155,7 +159,7 @@ public:
     osg::Vec3Array* generateNormals(osg::Vec3Array *vertices);
 
 protected:
-    //  Gets osg node with name 'name'
+    /// \brief Gets osg node with name 'name'
     osg::Group* _FindNodeName(const string& name);
 
     virtual void GeometryChangedCallback();
@@ -178,14 +182,15 @@ protected:
     UserDataPtr _geometrycallback, _drawcallback;
 
 private:
-    //  Print matrix
-    void printMatrix(osg::Matrix& m);
+    /// \brief Print matrix
+    void _PrintMatrix(osg::Matrix& m);
 
-    void printSceneGraph(const std::string& currLevel,osg::Node* currNode);
-    void printNodeFeatures(osg::Node *node);
-    void setNamedNode(const std::string&  name,
-                      osg::Node*    currNode);
+    /// \brief  Print nodes of scenegraph
+    void _PrintSceneGraph(const std::string& currLevel,osg::Node* currNode);
 
+    /// \brief  Print the features of the OSG Node
+    void _PrintNodeFeatures(osg::Node *node);
+    void setNamedNode(const std::string&  name, osg::Node*    currNode);
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;

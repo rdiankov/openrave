@@ -161,7 +161,19 @@ inline void SetMatrixTransform(osg::MatrixTransform* ptrans, const RaveTransform
 
 #include <osgText/Text>
 
+#define CALLBACK_EVENT QEvent::Type(QEvent::User+101) // also see qtcoin.h
+
 namespace qtosgrave {
+
+class MyCallbackEvent : public QEvent
+{
+public:
+    MyCallbackEvent(const boost::function<void()>& fn) : QEvent(CALLBACK_EVENT), _fn(fn) {
+    }
+    virtual ~MyCallbackEvent() {
+    }
+    boost::function<void()> _fn;
+};
 
 // Derive a class from NodeVisitor to find a node with a specific name.
 class FindNode : public osg::NodeVisitor

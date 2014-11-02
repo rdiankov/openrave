@@ -45,8 +45,6 @@ Item::~Item()
 
 }
 
-
-/// returns true if the given node is in the inventor hierarchy
 bool Item::ContainsOSGNode(osg::Node *pNode)
 {
     FindNode *search = new FindNode(pNode);
@@ -61,7 +59,6 @@ bool Item::ContainsOSGNode(osg::Node *pNode)
     return false;
 }
 
-/// Set the visibility of the geometry (ON = true).
 void Item::SetGeomVisibility(bool bFlag)
 {
     if (bFlag) {
@@ -86,8 +83,14 @@ KinBodyItem::KinBodyItem(QtOSGViewerPtr viewer, KinBodyPtr pchain, ViewGeometry 
     _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
 }
 
-void KinBodyItem::setNamedNode(const std::string&  name,
-                               osg::Node*    currNode)
+
+KinBodyItem::~KinBodyItem()
+{
+    //delete _pchain; // pointer doesn't belong to gui
+    _veclinks.clear();
+}
+
+void KinBodyItem::setNamedNode(const std::string&  name, osg::Node* currNode)
 {
     osg::Group* currGroup;
 
@@ -303,31 +306,29 @@ void KinBodyItem::Load()
                     geom->setVertexArray(vertices.get());
 
 
-                    RAVELOG_INFO("Indices=%d\n",mesh.indices.size());
+                    //RAVELOG_VERBOSE_FORMAT("Indices=%d", mesh.indices.size());
 
                     FOREACHC(itind, mesh.indices) {
                         RaveVector<float> v = mesh.vertices[*itind];
                         vertices->push_back(osg::Vec3(v.x,v.y,v.z));
                     }
 
-                    RAVELOG_INFO("Vertices=%d\n",mesh.indices.size());
+                    //RAVELOG_VERBOSE_FORMAT("Vertices=%d",mesh.indices.size());
 
                     osg::ref_ptr<osg::DrawElementsUInt> geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
-
-                    for(size_t i = 0; i < mesh.indices.size()/3; ++i)
-                    {
+                    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
                         geom_prim->push_back(i);
                     }
 
                     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,vertices->size()));
 
-                    RAVELOG_DEBUG("Calculate Normals\n");
+                    //RAVELOG_VERBOSE("Calculate Normals\n");
 
                     //  Calculate normals and set binding
                     osg::Vec3Array  *normals;
                     normals = generateNormals((osg::Vec3Array*)geom->getVertexArray());
                     
-                    RAVELOG_DEBUG("Normals Calculated!!!\n");
+                    //RAVELOG_VERBOSE("Normals Calculated!!!\n");
 
                     geom->setNormalArray(normals);
                     geom->setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
@@ -417,13 +418,12 @@ void KinBodyItem::Load()
 
     RAVELOG_DEBUG("Model added successfully!!!!!!\n");
     //  Print Scene Graph after creation
-    //  printSceneGraph("",_ivGeom);
+    //  _PrintSceneGraph("",_ivGeom);
 
     _bReload = false;
     _bDrawStateChanged = false;
 }
 
-//  Gets node with name 'name'
 osg::Group* KinBodyItem::_FindNodeName(const string& name)
 {
     osg::Group* node;
@@ -439,8 +439,7 @@ osg::Group* KinBodyItem::_FindNodeName(const string& name)
     return NULL;
 }
 
-//  Print matrix
-void KinBodyItem::printMatrix(osg::Matrix& m)
+void KinBodyItem::_PrintMatrix(osg::Matrix& m)
 {
     for (size_t i = 0; i < 4; i++) {
         RAVELOG_WARN("Line '%d'= %f %f %f %f\n",i,m(i,0),m(i,1),m(i,2),m(i,3));
@@ -450,39 +449,26 @@ void KinBodyItem::printMatrix(osg::Matrix& m)
     RAVELOG_DEBUG("\n");
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//  Print nodes of scenegraph
-////////////////////////////////////////////////////////////////////////////////
-void KinBodyItem::printSceneGraph(const std::string& currLevel,osg::Node* currNode)
+void KinBodyItem::_PrintSceneGraph(const std::string& currLevel,osg::Node* currNode)
 {
     std::string level;
-    osg::ref_ptr<osg::Group> currGroup;
-
     level = currLevel;
 
     // check to see if we have a valid (non-NULL) node.
     // if we do have a null node, return NULL.
-    if ( !!currNode)
-    {
+    if ( !!currNode) {
         level = level + "-";
-
-        RAVELOG_VERBOSE("|%sNode class:%s (%s)\n",currLevel.c_str(),currNode->className(),currNode->getName().c_str());
-
-        currGroup = currNode->asGroup(); // returns NULL if not a group.
-        if ( currGroup )
-        {
-            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++)
-            {
-                printSceneGraph(level,currGroup->getChild(i));
+        RAVELOG_VERBOSE_FORMAT("|%sNode class:%s (%s)\n",currLevel%currNode->className()%currNode->getName());
+        osg::ref_ptr<osg::Group> currGroup = currNode->asGroup(); // returns NULL if not a group.
+        if ( !!currGroup ) {
+            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
+                _PrintSceneGraph(level,currGroup->getChild(i));
             }
         }
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//  Print the features of the OSG Node
-////////////////////////////////////////////////////////////////////////////////
-void KinBodyItem::printNodeFeatures(osg::Node *node)
+void KinBodyItem::_PrintNodeFeatures(osg::Node *node)
 {
 //  RAVELOG_VERBOSE("----->>>> printNodeFeatures(node)\n");
 //  osg::StateSet* state;
@@ -588,19 +574,12 @@ void KinBodyItem::DrawChangedCallback()
     _bDrawStateChanged = true;
 }
 
-KinBodyItem::~KinBodyItem()
-{
-    //delete _pchain; // pointer doesn't belong to gui
-    _veclinks.clear();
-}
-
 bool KinBodyItem::UpdateFromIv()
 {
     //osg::Matrix m;
-
-    if( _pchain == NULL )
+    if( _pchain == NULL ) {
         return false;
-
+    }
     vector<Transform> vtrans(_veclinks.size());
     Transform tglob = GetRaveTransform(_ivXform);
 
@@ -616,7 +595,9 @@ bool KinBodyItem::UpdateFromIv()
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
-
+    else {
+        RAVELOG_WARN("failed to acquire environment lock for updating body (viewer updates might be choppy, otherwise this does not affect internal openrave state)\n");
+    }
     return true;
 }
 
