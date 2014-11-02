@@ -23,8 +23,6 @@
 #include <X11/Xlib.h>
 #endif
 
-//#include "myobject.h"
-
 using namespace OpenRAVE;
 
 namespace qtosgrave {
