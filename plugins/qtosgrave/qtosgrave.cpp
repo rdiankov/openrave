@@ -13,8 +13,10 @@
 // limitations under the License.
 #include <openrave/plugin.h>
 
+#include <QApplication>
+
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
-#include "X11/Xlib.h"
+#include <X11/Xlib.h>
 #endif
 
 using namespace OpenRAVE;
@@ -29,8 +31,6 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     //	Debug.
     RAVELOG_VERBOSE("Initiating QTOSGRave plugin...!!!!.\n");
     
-    static int s_QtArgc = 0; // has to be static!!
-
     switch(type) {
     case PT_Viewer:
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
@@ -42,6 +42,13 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 #endif
         if( interfacename == "qtosg" ) {
             // not sure if should be creating application all the time...
+
+            QCoreApplication *app = QApplication::instance();
+            if( !app ) {
+                RAVELOG_DEBUG("did not detect QApplication, so creating...\n");
+                static int s_QtArgc = 0; // has to be static!
+                app = new QApplication(s_QtArgc,NULL);
+            }
             return qtosgrave::CreateQtOSGViewer(penv, sinput);
         }
         break;

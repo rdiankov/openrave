@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ public:
     }
 
     // general methods
+    
     virtual const string& GetName() const {
         return _name;
     }
@@ -46,7 +47,7 @@ public:
         _name = name;
     }
 
-    /// update underlying model from Inventor's transformation
+    /// \brief update underlying model from OSG's transformation
     virtual bool UpdateFromIv() {
         return true;
     }
@@ -54,8 +55,8 @@ public:
         return true;
     }
 
-    /// update Inventor nodes from model
-    virtual bool UpdateFromModel(const vector<Transform>& vtrans) {
+    /// \brief update OSG nodes from model
+    virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans) {
         return true;
     }
 
@@ -147,13 +148,15 @@ public:
         return networkid;
     }
 
+    virtual void GetDOFValues(vector<dReal>& vjoint) const;
+    virtual void GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const;
     virtual void Load();
+
     osg::Vec3Array* generateNormals(osg::Vec3Array *vertices);
 
 protected:
-
-    //  Gets node with name 'name'
-    osg::Group* findNodeName(const string& name);
+    //  Gets osg node with name 'name'
+    osg::Group* _FindNodeName(const string& name);
 
     virtual void GeometryChangedCallback();
     virtual void DrawChangedCallback();
@@ -170,6 +173,7 @@ protected:
 
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
+    std::vector<dReal> _vdofbranches;
     mutable boost::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 

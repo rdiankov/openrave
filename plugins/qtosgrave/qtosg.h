@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -163,23 +163,21 @@ inline void SetMatrixTransform(osg::MatrixTransform* ptrans, const RaveTransform
 
 namespace qtosgrave {
 
-// Derive a class from NodeVisitor to find a node with a
-//   specific name.
+// Derive a class from NodeVisitor to find a node with a specific name.
 class FindNode : public osg::NodeVisitor
 {
 public:
-    FindNode( osg::Node* node )
-        : osg::NodeVisitor( // Traverse all children.
-            osg::NodeVisitor::TRAVERSE_ALL_CHILDREN ),
-        _nodeToFind( node ),_node(NULL) {
+    // Traverse all children.
+    FindNode( osg::Node* node ) : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN ), _nodeToFind( node ), _node(NULL) {
     }
     // This method gets called for every node in the scene
     //   graph. Check each node to see if its name matches
     //   our target. If so, save the node's address.
     virtual void apply( osg::Node* node )
     {
-        if (_nodeToFind == node)
+        if (_nodeToFind == node) {
             _node = node;
+        }
         // Keep traversing the rest of the scene graph.
         traverse( *node );
     }
@@ -191,13 +189,15 @@ protected:
     osg::Node*  _node;
 };
 
+class ViewerWidget;
+
 class QtOSGViewer;
 typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
+typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
 typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
 
 }
 
 #include "renderitem.h"
-#include "qtosgviewer.h"
 
 #endif /* QTOSG_H_ */

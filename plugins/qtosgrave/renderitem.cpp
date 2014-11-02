@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
    \brief  Abstract base class for an Item
    -------------------------------------------------------------------- */
 #include "qtosg.h"
+#include "qtosgviewer.h"
 #include "renderitem.h"
 
 namespace qtosgrave {
@@ -129,7 +130,6 @@ void KinBodyItem::Load()
     //  Sets name of Robot or Kinbody
     _ivGeom->setName(_pchain->GetName());
 
-    //  Debug
 //  RAVELOG_DEBUG("Kinbody name=%s\n",_ivGeom->getName().c_str());
 //  RAVELOG_VERBOSE("Number of links = %d\n",_pchain->GetLinks().size());
 
@@ -141,8 +141,7 @@ void KinBodyItem::Load()
 
         RaveTransform<float> tbody = (*it)->GetTransform();
 
-        //  Debug
-        RAVELOG_INFO("Link name = %s\n",(*it)->GetName().c_str());
+        RAVELOG_DEBUG_FORMAT("Link name = %s",(*it)->GetName());
 
 //    RAVELOG_INFO("Rt  Ext: %f,%f,%f,%f\n",tbody.rot.y, tbody.rot.z,tbody.rot.w,tbody.rot.x);
 
@@ -160,7 +159,7 @@ void KinBodyItem::Load()
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
             KinBody::Link::GeometryPtr orgeom = *itgeom;
-            if( !orgeom->IsDraw() && _viewmode == VG_RenderOnly ) {
+            if( !orgeom->IsVisible() && _viewmode == VG_RenderOnly ) {
                 continue;
             }
 
@@ -168,7 +167,6 @@ void KinBodyItem::Load()
             osg::MatrixTransform* ptrans = new osg::MatrixTransform();
             Transform tgeom = orgeom->GetTransform();
 
-//      //  Debug
 //      RAVELOG_VERBOSE("Trn Int: %f,%f,%f\n",tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
 //      RAVELOG_INFO("Rt  Int: %f,%f,%f,%f\n",tgeom.rot.y, tgeom.rot.z,tgeom.rot.w,tgeom.rot.x);
 
@@ -212,7 +210,7 @@ void KinBodyItem::Load()
                     state->setMode(GL_RESCALE_NORMAL,osg::StateAttribute::ON);
 
                     bSucceeded    = true;
-                    RaveVector<float> color = orgeom->GetDiffuseColor();
+                    //RaveVector<float> color = orgeom->GetDiffuseColor();
                 }
             }
 
@@ -234,8 +232,7 @@ void KinBodyItem::Load()
 
                 mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
 
-                //  Debug
-                RAVELOG_WARN("Diffuse color= %f %f %f\n",x,y,z);
+                RAVELOG_VERBOSE_FORMAT("Diffuse color= %f %f %f\n",x%y%z);
 
                 x = orgeom->GetAmbientColor().x;
                 y = orgeom->GetAmbientColor().y;
@@ -259,8 +256,7 @@ void KinBodyItem::Load()
 
                 switch(orgeom->GetType()) {
                 //  Geometry is defined like a Sphere
-                case KinBody::Link::GEOMPROPERTIES::GeomSphere: {
-
+                case GT_Sphere: {
                     osg::Sphere* s = new osg::Sphere();
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     s->setRadius(orgeom->GetSphereRadius());
@@ -271,8 +267,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Geometry is defined like a Box
-                case KinBody::Link::GEOMPROPERTIES::GeomBox: {
-
+                case GT_Box: {
                     Vector v;
                     osg::Box* box = new osg::Box();
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
@@ -285,9 +280,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Geometry is defined like a Cylinder
-                case KinBody::Link::GEOMPROPERTIES::GeomCylinder: {
-
-
+                case GT_Cylinder: {
                     // make SoCylinder point towards z, not y
                     osg::Cylinder* cy = new osg::Cylinder();
                     cy->setRadius(orgeom->GetCylinderRadius());
@@ -299,13 +292,13 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Extract geometry from collision Mesh
-                case KinBody::Link::GEOMPROPERTIES::GeomTrimesh: {
+                case GT_TriMesh: {
                     // make triangleMesh
                     osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
 
                     geom->setColorBinding(osg::Geometry::BIND_OVERALL);
 
-                    const KinBody::Link::TRIMESH& mesh = orgeom->GetCollisionMesh();
+                    const TriMesh& mesh = orgeom->GetCollisionMesh();
                     osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
                     geom->setVertexArray(vertices.get());
 
@@ -328,14 +321,12 @@ void KinBodyItem::Load()
 
                     geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,vertices->size()));
 
-                    //  Debug
-                    RAVELOG_WARN("Calculate Normals\n");
+                    RAVELOG_DEBUG("Calculate Normals\n");
 
                     //  Calculate normals and set binding
                     osg::Vec3Array  *normals;
                     normals = generateNormals((osg::Vec3Array*)geom->getVertexArray());
-
-                    //  Debug
+                    
                     RAVELOG_DEBUG("Normals Calculated!!!\n");
 
                     geom->setNormalArray(normals);
@@ -378,22 +369,18 @@ void KinBodyItem::Load()
         }
     }
 
-    //  Debug
-    RAVELOG_INFO("Number of links added = %d\n",_veclinks.size());
+    RAVELOG_DEBUG_FORMAT("Number of links added = %d", _veclinks.size());
 
     //  Is an object without joints
     if (_pchain->GetJoints().size() < 1) {
-        //  Debug
-//    RAVELOG_DEBUG("Object without joints\n");
-
         _ivGeom->addChild(_veclinks[0].first);
     }
     //  Object with joints
     else {
         //  Assemble link hierarchy
         FOREACH(itjoint, _pchain->GetJoints()) {
-            parent = findNodeName((*itjoint)->GetHierarchyParentLink()->GetName());
-            child = findNodeName((*itjoint)->GetHierarchyChildLink()->GetName());
+            parent = _FindNodeName((*itjoint)->GetHierarchyParentLink()->GetName());
+            child = _FindNodeName((*itjoint)->GetHierarchyChildLink()->GetName());
             if( !parent ) {
                 RAVELOG_WARN(str(boost::format("cannot find node link %s")%(*itjoint)->GetHierarchyParentLink()->GetName()));
             }
@@ -407,8 +394,8 @@ void KinBodyItem::Load()
 
         //  Assemble passive joints
         FOREACH(itjoint, _pchain->GetPassiveJoints()) {
-            parent = findNodeName((*itjoint)->GetHierarchyParentLink()->GetName());
-            child = findNodeName((*itjoint)->GetHierarchyChildLink()->GetName());
+            parent = _FindNodeName((*itjoint)->GetHierarchyParentLink()->GetName());
+            child = _FindNodeName((*itjoint)->GetHierarchyChildLink()->GetName());
             if( !parent ) {
                 RAVELOG_WARN(str(boost::format("cannot find node link %s")%(*itjoint)->GetHierarchyParentLink()->GetName()));
             }
@@ -429,7 +416,6 @@ void KinBodyItem::Load()
     }
 
     RAVELOG_DEBUG("Model added successfully!!!!!!\n");
-    //  Debug
     //  Print Scene Graph after creation
     //  printSceneGraph("",_ivGeom);
 
@@ -438,7 +424,7 @@ void KinBodyItem::Load()
 }
 
 //  Gets node with name 'name'
-osg::Group* KinBodyItem::findNodeName(const string& name)
+osg::Group* KinBodyItem::_FindNodeName(const string& name)
 {
     osg::Group* node;
     for (size_t i = 0; i < _veclinks.size(); i++) {
@@ -608,12 +594,9 @@ KinBodyItem::~KinBodyItem()
     _veclinks.clear();
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Update core from model transformations
-////////////////////////////////////////////////////////////////////////////////
 bool KinBodyItem::UpdateFromIv()
 {
-    osg::Matrix m;
+    //osg::Matrix m;
 
     if( _pchain == NULL )
         return false;
@@ -624,26 +607,32 @@ bool KinBodyItem::UpdateFromIv()
     vector<Transform>::iterator ittrans = vtrans.begin();
     FOREACH(it, _veclinks) {
         *ittrans = GetRaveTransform(it->second);
-        m = it->second->getMatrix();
-
-//    //  Debug
-//    RAVELOG_DEBUG("Matrix\n");
-//    printMatrix(m);
-
+        //*ittrans = tglob * *ittrans;
+        //m = it->second->getMatrix();
         ++ittrans;
     }
 
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
     if( !!lockenv ) {
-        _pchain->SetBodyTransformations(vtrans);
+        _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
 
     return true;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Update from model
-////////////////////////////////////////////////////////////////////////////////
+void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
+{
+    boost::mutex::scoped_lock lock(_mutexjoints);
+    vjoints = _vjointvalues;
+}
+
+void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const
+{
+    boost::mutex::scoped_lock lock(_mutexjoints);
+    vtrans = _vtrans;
+    vdofbranches = _vdofbranches;
+}
+
 bool KinBodyItem::UpdateFromModel()
 {
     if( !_pchain ) {
@@ -662,7 +651,7 @@ bool KinBodyItem::UpdateFromModel()
         }
         // make sure the body is still present!
         if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
-            _pchain->GetBodyTransformations(_vtrans);
+            _pchain->GetLinkTransformations(_vtrans, _vdofbranches);
             _pchain->GetDOFValues(vjointvalues);
         }
         else {
@@ -733,45 +722,46 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
 void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
 {
-    if(_pchain == NULL )
+    if(!_pchain ) {
         return;
-
-    // need to preserve enabled state
-    if( bGrab && !bGrabbed )
-        bEnabled = _pchain->IsEnabled();
-
+    }
+    
+//    // need to preserve enabled state
+//    if( bGrab && !bGrabbed ) {
+//        bEnabled = _pchain->IsEnabled();
+//    }
+    
     bGrabbed = bGrab;
 
     if( bUpdate ) {
-        if( bGrab ) UpdateFromModel();
-        else UpdateFromIv();
+        if( bGrab ) {
+            UpdateFromModel();
+        }
+        else {
+            UpdateFromIv();
+        }
     }
 
-    // need to preserve enabled state
-    if( bEnabled )
-        _pchain->Enable(!bGrab);
+//    // need to preserve enabled state
+//    if( bEnabled ) {
+//        _pchain->Enable(!bGrab);
+//    }
 }
 
 KinBody::LinkPtr KinBodyItem::GetLinkFromIv(osg::Node* plinknode) const
 {
     vector<LINK>::const_iterator it;
     vector<KinBody::LinkPtr>::const_iterator itlink = _pchain->GetLinks().begin();
-    FindNode* search = new FindNode(plinknode);
-
-    FORIT(it, _veclinks)
-    {
-        search->apply(it->first);
-
-        if (search->getNode())
-        {
-            delete search;
+    FindNode search(plinknode);
+    FORIT(it, _veclinks) {
+        search.apply(it->first);
+        if (search.getNode()) {
             return *itlink;
         }
 
         itlink++;
     }
-
-    delete search;
+    
     return KinBody::LinkPtr();
 }
 
@@ -796,10 +786,8 @@ RobotItem::RobotItem(QtOSGViewerPtr viewer, RobotBasePtr robot, ViewGeometry vie
                 osg::StateSet* state = peesep->getOrCreateStateSet();
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
 
-                mat->setDiffuse( osg::Material::FRONT,
-                                 osg::Vec4f(1,0.5,0.5,1) );
-                mat->setAmbient( osg::Material::FRONT,
-                                 osg::Vec4f(1,0.5,0.5,1));
+                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1) );
+                mat->setAmbient( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1));
 
                 state->setAttribute(mat.get());
 
@@ -957,7 +945,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
             if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {
                 RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);
                 if( !!manip->GetEndEffector() ) {
-                    RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetGraspTransform();
+                    RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetLocalToolTransform();
                     SetMatrixTransform(itee->_ptrans, transInvRoot * tgrasp);
                 }
             }

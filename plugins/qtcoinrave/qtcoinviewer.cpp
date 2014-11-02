@@ -1313,8 +1313,9 @@ void QtCoinViewer::EnvironmentSync()
     boost::mutex::scoped_lock lock(_mutexUpdateModels);
     _bModelsUpdated = false;
     _condUpdateModels.wait(lock);
-    if( !_bModelsUpdated )
+    if( !_bModelsUpdated ) {
         RAVELOG_WARN("failed to update models from environment sync\n");
+    }
 }
 
 void QtCoinViewer::_SetCamera(const RaveTransform<float>& _t, float focalDistance)

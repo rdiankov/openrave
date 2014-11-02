@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,21 +18,6 @@
 #include <QMainWindow>
 
 #include "treemodel.h"
-#include <iostream>
-
-#include <osg/ArgumentParser>
-#include "osgviewerQtContext.h"
-
-//class QAction;
-//class QMenu;
-//class QOsgWidget;
-//class QScrollArea;
-//class QGridLayout;
-//class QTreeView;
-//class QMouseEvent;
-//class QComboBox;
-//class QButtonGroup;
-//class TreeModel;
 
 namespace qtosgrave {
 
@@ -45,12 +30,10 @@ public:
     bool isSimpleView();
     void setSimpleView(bool state);
 
-    /// reset the camera depending on its mode
-    virtual void UpdateCameraTransform();
-
-    /// goes into the main loop
+    /// \brief goes into the main loop
     virtual int main(bool bShow);
-    /// destroys the main loop
+
+    /// \brief destroys the main loop
     virtual void quitmainloop();
 
     virtual bool GetFractionOccluded(KinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded);
@@ -62,7 +45,9 @@ public:
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
 //  virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
-    virtual RaveTransform<float> GetCameraTransform();
+    virtual RaveTransform<float> GetCameraTransform() const;
+    virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const;
+    virtual SensorBase::CameraIntrinsics GetCameraIntrinsics2() const;
 
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle = 0);
     virtual GraphHandlePtr plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle = 0, bool bhasalpha=false);
@@ -99,6 +84,8 @@ public:
 
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
+
+    /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
     /// \brief notified when a body has been removed from the environment
@@ -108,48 +95,94 @@ public:
         }
     }
 
-    //
-    //
-    //    /// updates all render objects from the internal openrave classes
-    //    virtual void UpdateFromModel();
-
     virtual void Reset();
     virtual void SetBkgndColor(const RaveVector<float>& color);
 
     virtual void StartPlaybackTimer();
     virtual void StopPlaybackTimer();
 
+    /// \brief Reads model from file and loads it in viewer
     virtual bool LoadModel(const string& filename);
 
-    /// updates all render objects from the internal openrave classes
+    /// \brief updates all render objects from the internal openrave classes
     void UpdateFromModel();
 
+    /// \brief Set Sync environment
     virtual void SetEnvironmentSync(bool bUpdate);
+
+    /// \brief Synchronize environment
     virtual void EnvironmentSync();
 
+    virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
+
+    /// \brief Locks environment
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+
+//    class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
+//    {
+//public:
+//        EnvMessage(QtOSGViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
+//        virtual ~EnvMessage();
+//
+//        /// execute the command in the caller
+//        /// \param bGuiThread if true, then calling from gui thread, so execute directly
+//        virtual void callerexecute(bool bGuiThread);
+//        /// execute the command in the viewer
+//        virtual void viewerexecute();
+//
+//        virtual void releasemutex()
+//        {
+//            _plock.reset();
+//        }
+//
+//protected:
+//        boost::weak_ptr<QtOSGViewer> _pviewer;
+//        void** _ppreturn;
+//        boost::mutex _mutex;
+//        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
+//    };
+//    typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
+//    typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
 
 public slots:
 
     void LoadEnvironment();
+
+    /// \brief Adds models to current scene
     void ImportEnvironment();
+
+    /// \brief Saves the environment into a file
     void SaveEnvironment();
     void multiWidget();
     void simpleWidget();
 
     /// \brief Refresh the screen with a new frame. Reads the scene from OpenRAVE Core. on timer?
-    void Refresh();
+    void _Refresh();
     
-    void home();
-    void light();
-    void polygonMode();
-    void facesMode();
-    void boundingBox();
-    void axes();
-    void pointerGroupClicked(int button);
-    void draggerGroupClicked(int button);
+    /// Set model home position in viewer
+    void ResetViewToHome();
 
-    void sceneListClicked(QTreeWidgetItem* item,int num);
+    /// \brief executed when menu item light is clicked to change the lights in the scene.
+    void _ProcessLightChange();
+    void polygonMode();
+
+    //  \brief Sets COUNTER CLOCKWISE and CLOCKWISE polygons
+    void _ProcessFacesModeChange();
+
+    /// Sets or reset bounding box
+    void _ProcessBoundingBox();
+
+    /// \brief Sets or reset axes
+    void axes();
+
+    /// \brief Event clicked of pointer, hand, bound and axes buttons
+    void _ProcessPointerGroupClicked(int button);
+
+    /// \brief Event clicked of bound and axes button
+    void _ProcessDraggerGroupClicked(int button);
+
+    /// \brief Slot to listen scene list events
+    void _OnObjectTreeClick(QTreeWidgetItem* item,int num);
 
 protected:
 
@@ -160,54 +193,64 @@ protected:
         return boost::static_pointer_cast<QtOSGViewer const>(shared_from_this());
     }
 
-    virtual void _InitGUI();
-    virtual void _UpdateEnvironment();
+    virtual void _InitGUI(bool bCreateStatusBar);
+    
+    /// \brief Update model and camera transform
+    virtual void _UpdateEnvironment(float fTimeElapsed);
     virtual bool _ForceUpdatePublishedBodies();
+
+    /// \brief Reset update from model
     virtual void _Reset();
 
+    /// \brief reset the camera depending on its mode
+    virtual void _UpdateCameraTransform(float fTimeElapsed);
+
     /// \brief Actions that achieve buttons and menus
-    void CreateActions();
-    void createMenus();
-    void createScrollArea();
-    void createToolsBar();
-    void _RepaintWidgets(boost::shared_ptr<osg::Group>);
+    void _CreateActions();
 
-    /// \brief Create layouts
-    void CreateLayouts();
-    void CreateStatusBar();
+    /// \brief Create menus
+    void _CreateMenus();
+
+    /// \brief Set Buttons and Icons in the ToolBar
+    void _CreateToolsBar();
+
+    /// \brief Repaint widgets
+    void _RepaintWidgets(osg::ref_ptr<osg::Group>);
+
+    /// \brief Create StatusBar and Set a Message
+    void _CreateStatusBar();
     void mouseDoubleClickEvent(QMouseEvent *e);
-    void createDockWidgets();
 
-    //  Create and set main options of object tree
-    QTreeWidget* createObjectTree();
+    /// \brief Create info panels
+    void _CreateDockWidgets();
 
-    //  Fills object tree with robot info
-    void fillObjectTree(QTreeWidget *tw);
+    /// \brief Create and set main options of object tree
+    QTreeWidget* _CreateObjectTree();
+
+    /// \brief Fills object tree with robot info
+    void _FillObjectTree(QTreeWidget *tw);
     
-    virtual void _DeleteItemCallback(Item* pItem)
-    {
-        boost::mutex::scoped_lock lock(_mutexItems);
-        pItem->PrepForDeletion();
-        _listRemoveItems.push_back(pItem);
-    }
-    
-    QApplication  *application; ///< root qt application?
+    void _DeleteItemCallback(Item* pItem);
 
     // Message Queue
     //list<EnvMessagePtr> _listMessages;
     list<Item*> _listRemoveItems; ///< raw points of items to be deleted, triggered from _DeleteItemCallback
-    boost::mutex _mutexItems, _mutexMessages, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    mutable boost::mutex _mutexMessages;
     
     // Rendering
     osg::ref_ptr<osg::Group> _ivRoot;        ///< root node
     osg::ref_ptr<osg::Node> _selectedNode;
     osg::ref_ptr<osgManipulator::Dragger>    _pdragger;
     
+    std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
     ItemPtr _pSelectedItem;     ///< the currently selected item
     
     RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item
-    RaveTransform<float> Tcam;
+    RaveTransform<float> _Tcamera;
+    geometry::RaveCameraIntrinsics<float> _camintrinsics;
+
     std::string _name;
 
     unsigned int _fb;
@@ -224,59 +267,20 @@ protected:
     boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
     boost::mutex _mutexGUI;
     bool _bInIdleThread;
-
-
     timeval timestruct;
 
     PhysicsEngineBasePtr pphysics;
 
-    // toggle switches
-    bool _bModelsUpdated;
-    bool _bDisplayGrid;
-    bool _bDisplayIK;
-    bool _bDisplayFPS;
-    bool _bDisplayFeedBack;
-    bool _bJointHilit;
-    bool _bDynamicReplan;
-    bool _bVelPredict;
-    bool _bDynSim;
-    bool _bGravity;
-    bool _bControl;
-
-    bool _bSensing;
-    bool _bMemory;
-    bool _bHardwarePlan;
-    bool _bShareBitmap;
-    bool _bManipTracking;
-    bool _bAntialiasing;
-
-    // data relating to playback
-    bool _bStopped;
-    bool _bTimeInitialized;
-    int _fileFrame;
-    int _recordInterval;
-    time_t _prevSec;
-    long _prevMicSec;
-
-    bool _bTimeElapsed;
-    //bool _bRecordMotion;
-    bool _bSaveVideo;
-    bool _bRealtimeVideo;
-    bool _bAutoSetCamera;
-
-    // ode thread related
-    bool _bQuitMainLoop;
-    bool _bUpdateEnvironment;
 
     ViewGeometry _viewGeometryMode;
 
-    std::list<std::pair<int,ViewerCallbackFn > > _listRegisteredCallbacks; ///< callbacks to call when particular properties of the body change.
+    std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
 
     //QSize getSize();
     QGridLayout* _qCentralLayout;
     QWidget* _qCentralWidget;
-    boost::shared_ptr<ViewerWidget> _osgWidget;
-    boost::shared_ptr<TreeModel> treeModel;
+    ViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
+    //boost::shared_ptr<TreeModel> treeModel;
 
     QMenu* fileMenu;
     QMenu* viewMenu;
@@ -334,8 +338,47 @@ protected:
     QTreeWidget* detailsTree; ///< Details panel object
     
     QTimer _timer;
-    
+    // toggle switches
+    bool _bModelsUpdated;
+    bool _bDisplayGrid;
+    bool _bDisplayIK;
+    bool _bDisplayFPS;
+    bool _bDisplayFeedBack;
+    bool _bJointHilit;
+    bool _bDynamicReplan;
+    bool _bVelPredict;
+    bool _bDynSim;
+    bool _bGravity;
+    bool _bControl;
+
+    bool _bSensing;
+    bool _bMemory;
+    bool _bHardwarePlan;
+    bool _bShareBitmap;
+    bool _bManipTracking;
+    bool _bAntialiasing;
+
+    // data relating to playback
+    bool _bStopped;
+    bool _bTimeInitialized;
+    int _fileFrame;
+    int _recordInterval;
+    time_t _prevSec;
+    long _prevMicSec;
+
+    bool _bTimeElapsed;
+    //bool _bRecordMotion;
+    bool _bSaveVideo;
+    bool _bRealtimeVideo;
+    bool _bAutoSetCamera;
+
+    // ode thread related
+    bool _bQuitMainLoop;
+    bool _bUpdateEnvironment;    
     bool _bLockEnvironment; ///< if true, should lock the environment.
+
+    friend class ItemSelectionCallbackData;
+    friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);
 };
 
 }

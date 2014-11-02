@@ -14,6 +14,8 @@
 #ifndef OPENRAVE_QTOSG_PICK_H_
 #define OPENRAVE_QTOSG_PICK_H_
 
+#include <boost/function.hpp>
+
 #include <osgUtil/Optimizer>
 #include <osgDB/ReadFile>
 #include <osgViewer/Viewer>
@@ -44,59 +46,27 @@
 
 namespace qtosgrave {
 
-class ViewerWidget;
-
-// class to handle events with a pick
-class PickHandler : public osgGA::GUIEventHandler {
+/// \brief class to handle events with a pick
+class OSGPickHandler : public osgGA::GUIEventHandler
+{
 public:
+    typedef boost::function<void (osg::Node*)> SelectLinkFn;
 
-    PickHandler() : _select(false) {
-    }
+    OSGPickHandler(const SelectLinkFn& selectLinkFn);
+    virtual ~OSGPickHandler();
 
-    ~PickHandler() {
-    }
+    /// \brief override from base class
+    bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
 
-    bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
-    {
-        switch(ea.getEventType())
-        {
-        case (osgGA::GUIEventAdapter::DOUBLECLICK):
-        {
-            doubleClick();
-            return false;
-        }
-        case (osgGA::GUIEventAdapter::PUSH):
-        {
-            osgViewer::View* view = dynamic_cast<osgViewer::View*>(&aa);
-            if (view) pick(view,ea);
-            return false;
-        }
-        case (osgGA::GUIEventAdapter::KEYDOWN):
-        {
-            if (ea.getKey()=='c')
-            {
-                osgViewer::View* view = dynamic_cast<osgViewer::View*>(&aa);
-                osg::ref_ptr<osgGA::GUIEventAdapter> event = new osgGA::GUIEventAdapter(ea);
-                event->setX((ea.getXmin()+ea.getXmax())*0.5);
-                event->setY((ea.getYmin()+ea.getYmax())*0.5);
-                if (view) pick(view,*event);
-            }
-            return false;
-        }
-        default:
-            return false;
-        }
-    }
-
-    virtual void pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
-
-    //  Active selection
+    /// \brief Active joint selection
     void activeSelect(bool active);
 
     //  Double click
     void doubleClick();
 
 protected:
+    virtual void _Pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
+    SelectLinkFn _selectLinkFn;
     bool _select;
 };
 

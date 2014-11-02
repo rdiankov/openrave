@@ -58,9 +58,9 @@ TreeItem *TreeItem::parent()
 
 int TreeItem::row() const
 {
-    if (parentItem)
+    if (!!parentItem) {
         return parentItem->childItems.indexOf(const_cast<TreeItem*>(this));
-
+    }
     return 0;
 }
 

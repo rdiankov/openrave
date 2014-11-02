@@ -16,7 +16,7 @@
 #include "qtcameraviewer.h"
 #include <openrave/plugin.h>
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
-#include "X11/Xlib.h"
+#include <X11/Xlib.h>
 #endif
 
 #include <QApplication>

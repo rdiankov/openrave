@@ -733,9 +733,9 @@ bool RobotItem::UpdateFromIv()
 
 bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans)
 {
-    if( !KinBodyItem::UpdateFromModel(vjointvalues,vtrans) )
+    if( !KinBodyItem::UpdateFromModel(vjointvalues,vtrans) ) {
         return false;
-
+    }
     if( bGrabbed ) {
         // only updated when grabbing!
         RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
