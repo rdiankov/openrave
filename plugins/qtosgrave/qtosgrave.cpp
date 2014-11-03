@@ -46,9 +46,9 @@ public:
         if( !_viewer ) {
             std::stringstream sinput(_s);
             _viewer = CreateQtOSGViewer(_penv, sinput);
-            if( !!_viewer ) {
-                _viewer->Show(1); // TODO remove once Show posts to queue
-            }
+//            if( !!_viewer ) {
+//                _viewer->Show(1); // TODO remove once Show posts to queue
+//            }
         }
     }
 

@@ -2961,7 +2961,7 @@ void QtCoinViewer::UpdateFromModel()
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetUserData("qtcoinviewer") ) {
                     if( _mapbodies.find(pbody) != _mapbodies.end() ) {
-                        RAVELOG_WARN("body %s already registered!\n", pbody->GetName().c_str());
+                        RAVELOG_WARN_FORMAT("body %s already registered!", pbody->GetName());
                         continue;
                     }
 

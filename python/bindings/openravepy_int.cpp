@@ -147,9 +147,9 @@ public:
                 if( !!pviewer ) {
                     penv->AddViewer(pviewer);
                     // TODO uncomment once Show posts to queue
-//                    if( bShowViewer ) {
-//                        pviewer->Show(1);
-//                    }
+                    if( bShowViewer ) {
+                        pviewer->Show(1);
+                    }
                     pinfo->_pviewer = pviewer;
                     boost::mutex::scoped_lock lock(_mutexViewer);
                     _listviewerinfos.push_back(pinfo);

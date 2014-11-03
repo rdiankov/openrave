@@ -20,7 +20,6 @@
 
 #include "osgviewerwidget.h"
 
-
 namespace qtosgrave {
 
 #define ITEM_DELETER boost::bind(DeleteItemCallbackSafe,weak_viewer(),_1)
@@ -120,6 +119,31 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar);
+    _bUpdateEnvironment = true;
+}
+
+QtOSGViewer::~QtOSGViewer()
+{
+    RAVELOG_DEBUG("destroying qtosg viewer\n");
+    {
+        boost::mutex::scoped_lock lock(_mutexGUIFunctions);
+
+        list<GUIThreadFunctionPtr>::iterator itmsg;
+        FORIT(itmsg, _listGUIFunctions) {
+            try {
+                (*itmsg)->Call();
+            }
+            catch(const boost::bad_weak_ptr& ex) {
+                // most likely viewer
+            }
+            catch(const std::exception& ex2) {
+                RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
+            }
+        }
+        _listGUIFunctions.clear();
+    }
+
+    _condUpdateModels.notify_all();
 }
 
 void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
@@ -283,12 +307,13 @@ void QtOSGViewer::_CreateActions()
     connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
     connect(&_timer, SIGNAL(timeout()), this, SLOT(_Refresh()));
-    _timer.start(10);
+    _timer.start(1000/60); // ms
 }
 
 void QtOSGViewer::_Refresh()
 {
-    UpdateFromModel();
+    _UpdateEnvironment(1.0/60.0);
+    //UpdateFromModel();
     //  _posgWidget->update();
 
     {
@@ -762,7 +787,7 @@ void QtOSGViewer::mouseDoubleClickEvent(QMouseEvent *e)
 
 void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
 //    SbVec3f pos = GetCamera()->position.getValue();
 //    _Tcamera.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
@@ -878,13 +903,19 @@ void QtOSGViewer::quitmainloop()
 
 void QtOSGViewer::Show(int showtype)
 {
-    // have to put this in the message queue
-    if (showtype ) {
-        show();
+    if( showtype ) {
+        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this));
     }
     else {
-        hide();
+        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this));
     }
+//    // have to put this in the message queue
+//    if (showtype ) {
+//        show();
+//    }
+//    else {
+//        hide();
+//    }
 }
 
 bool QtOSGViewer::GetFractionOccluded(KinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded)
@@ -911,7 +942,7 @@ void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistan
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     return _Tcamera*trot;
@@ -919,13 +950,13 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     return _camintrinsics;
 }
 
 SensorBase::CameraIntrinsics QtOSGViewer::GetCameraIntrinsics2() const
 {
-    boost::mutex::scoped_lock lock(_mutexMessages);
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
     SensorBase::CameraIntrinsics intr;
     intr.fx = _camintrinsics.fx;
     intr.fy = _camintrinsics.fy;
@@ -1256,16 +1287,20 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
     if( _bUpdateEnvironment ) {
         // process all messages
-//        list<EnvMessagePtr> listmessages;
-//        {
-//            boost::mutex::scoped_lock lockmsg(_mutexMessages);
-//            listmessages.swap(_listMessages);
-//            BOOST_ASSERT( _listMessages.size() == 0 );
-//        }
-//
-//        FOREACH(itmsg, listmessages) {
-//            (*itmsg)->viewerexecute();
-//        }
+        list<GUIThreadFunctionPtr> listGUIFunctions;
+        {
+            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+            listGUIFunctions.swap(_listGUIFunctions);
+        }
+
+        FOREACH(itmsg, listGUIFunctions) {
+            try {
+                (*itmsg)->Call();
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+            }
+        }
 
         // have to update model after messages since it can lock the environment
         UpdateFromModel();
@@ -1273,42 +1308,17 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// Environment message
-////////////////////////////////////////////////////////////////////////////////
-//QtOSGViewer::EnvMessage::EnvMessage(QtOSGViewerPtr pviewer, void** ppreturn, bool bWaitForMutex)
-//    : _pviewer(pviewer), _ppreturn(ppreturn)
-//{
-//    // get a mutex
-//    if( bWaitForMutex ) {
-//        _plock.reset(new boost::mutex::scoped_lock(_mutex));
-//    }
-//}
-//
-//QtOSGViewer::EnvMessage::~EnvMessage()
-//{
-//    _plock.reset();
-//}
-//
-///// execute the command in the caller
-//void QtOSGViewer::EnvMessage::callerexecute()
-//{
-//    bool bWaitForMutex = !!_plock;
-//
-//    {
-//        boost::mutex::scoped_lock lock(_pviewer->_mutexMessages);
-//        _pviewer->_listMessages.push_back(shared_from_this());
-//    }
-//
-//    if( bWaitForMutex )
-//        boost::mutex::scoped_lock lock(_mutex);
-//}
-//
-///// execute the command in the viewer
-//void QtOSGViewer::EnvMessage::viewerexecute()
-//{
-//    _plock.reset();
-//}
+void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
+{
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn));
+    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+    _listGUIFunctions.push_back(pfn);
+    if( block ) {
+        while(!pfn->IsFinished()) {
+            _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
+        }
+    }
+}
 
 void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 {
@@ -1319,11 +1329,11 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
-        boost::mutex::scoped_lock lockmsg(_mutexMessages);
-//        FOREACH(it,_listMessages) {
-//            (*it)->releasemutex();
-//        }
-//        _listMessages.clear();
+        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+        FOREACH(it,_listGUIFunctions) {
+            (*it)->SetFinished();
+        }
+        _listGUIFunctions.clear();
     }
 }
 

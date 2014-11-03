@@ -27,6 +27,7 @@ class QtOSGViewer : public QMainWindow, public ViewerBase
     Q_OBJECT;
 public:
     QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput);
+    virtual ~QtOSGViewer();
     bool isSimpleView();
     void setSimpleView(bool state);
 
@@ -124,31 +125,41 @@ public:
     /// \brief Locks environment
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
-//    class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
-//    {
-//public:
-//        EnvMessage(QtOSGViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
-//        virtual ~EnvMessage();
-//
-//        /// execute the command in the caller
-//        /// \param bGuiThread if true, then calling from gui thread, so execute directly
-//        virtual void callerexecute(bool bGuiThread);
-//        /// execute the command in the viewer
-//        virtual void viewerexecute();
-//
-//        virtual void releasemutex()
-//        {
-//            _plock.reset();
-//        }
-//
-//protected:
-//        boost::weak_ptr<QtOSGViewer> _pviewer;
-//        void** _ppreturn;
-//        boost::mutex _mutex;
-//        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
-//    };
-//    typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
-//    typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
+    /// \brief contains a function to be called inside the GUI thread.
+    class GUIThreadFunction
+    {
+    public:
+        GUIThreadFunction(const boost::function<void()>& fn) : _fn(fn), _bcalled(false), _bfinished(false) {
+        }
+
+        void Call() {
+            // have to set finished at the end
+            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
+            BOOST_ASSERT(!_bcalled);
+            _bcalled = true;
+            _fn();
+        }
+
+        /// \brief true if function has already been called
+        bool IsCalled() const {
+            return _bcalled;
+        }
+
+        bool IsFinished() const {
+            return _bfinished;
+        }
+        
+        void SetFinished() {
+            _bfinished = true;
+        }
+        
+    private:
+
+        boost::function<void()> _fn;
+        bool _bcalled; ///< true if function already called
+        bool _bfinished; ///< true if function processing is finished
+    };
+    typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
 
 public slots:
 
@@ -211,6 +222,12 @@ protected:
     /// \brief reset the camera depending on its mode
     virtual void _UpdateCameraTransform(float fTimeElapsed);
 
+    /// \brief posts a function to be executed in the GUI thread
+    ///
+    /// \param fn the function to execute
+    /// \param block if true, will return once the function has been executed.
+    void _PostToGUIThread(const boost::function<void()>& fn, bool block=false);
+    
     /// \brief Actions that achieve buttons and menus
     void _CreateActions();
 
@@ -239,10 +256,11 @@ protected:
     void _DeleteItemCallback(Item* pItem);
 
     // Message Queue
-    //list<EnvMessagePtr> _listMessages;
+    list<GUIThreadFunctionPtr> _listGUIFunctions;
     list<Item*> _listRemoveItems; ///< raw points of items to be deleted, triggered from _DeleteItemCallback
     boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
-    mutable boost::mutex _mutexMessages;
+    mutable boost::mutex _mutexGUIFunctions;
+    mutable boost::condition _notifyGUIFunctionComplete;
     
     // Rendering
     osg::ref_ptr<osg::Group> _ivRoot;        ///< root node
