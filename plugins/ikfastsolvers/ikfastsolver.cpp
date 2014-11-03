@@ -1145,7 +1145,7 @@ protected:
         IkParameterization paramnew;
 
         int retactionall = IKRA_Reject;
-        if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(1, IKSP_MaxPriority) ) {
 //            unsigned int maxsolutions = 1;
 //            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
 //                unsigned char m = iksol.basesol[i].maxsolutions;
@@ -1153,7 +1153,7 @@ protected:
 //                    maxsolutions *= m;
 //                }
 //            }
-            // TODO: iterating vravesols would could the filters vravesols.size() times even if a valid solution is found
+            // TODO: iterating vravesols would call the filters vravesols.size() times even if a valid solution is found
             // figure out a way to do short-curcuit the code to check the final solutions
             FOREACH(itravesol, vravesols) {
                 _vsolutionindices = vsolutionindices;
@@ -1167,7 +1167,7 @@ protected:
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
-                IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret);
+                IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret, 1, IKSP_MaxPriority);
                 nSameStateRepeatCount++;
                 _nSameStateRepeatCount = nSameStateRepeatCount;
                 retactionall |= retaction;
@@ -1274,26 +1274,105 @@ protected:
             RAVELOG_ERROR(ss.str());
             return static_cast<IkReturnAction>(retactionall|IKRA_RejectKinematicsPrecision);
         }
+        
 
-        // solution is valid, so replace the best
-        size_t index = 0;
-        FOREACH(itikreturn, listlocalikreturns) {
-            if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
-                d = _ComputeGeometricConfigDistSqr(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
+        if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
+            // order the listlocalikreturns depending on the distance to boost::get<1>(freeq0check), that way first solution is prioritized
+            std::vector< std::pair<size_t, dReal> > vdists; vdists.reserve(listlocalikreturns.size());
+            std::vector<IkReturnPtr> vtempikreturns; vtempikreturns.reserve(listlocalikreturns.size());
+            FOREACH(itikreturn, listlocalikreturns) {
+                dReal soldist = _ComputeGeometricConfigDistSqr(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
                 if( !(bestsolution.dist <= d) ) {
-                    bestsolution.ikreturn = *itikreturn;
-                    bestsolution.dist = d;
+                    vdists.push_back(std::make_pair(vdists.size(), soldist));
+                    vtempikreturns.push_back(*itikreturn);
                 }
             }
-            else {
-                // cannot compute distance, so quit once first solution is set to best
-                bestsolution.ikreturn = *itikreturn;
-                bestsolution.dist = d;
-                break;
+            if( vdists.size() == 0 ) {
+                return IKRA_Reject; // none could pass already computed solution
             }
-            ++index;
+            
+            std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
+            listlocalikreturns.clear();
+            for(size_t i = 0; i < vdists.size(); ++i) {
+                listlocalikreturns.push_back(vtempikreturns.at(vdists[i].first));
+            }
         }
+        
+        if( listlocalikreturns.size() == 0 ) {
+            return IKRA_Reject;
+        }
+        
+        // check ones with filter <= 0
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(IKSP_MinPriority, 0) ) {
+//            unsigned int maxsolutions = 1;
+//            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
+//                unsigned char m = iksol.basesol[i].maxsolutions;
+//                if( m != (unsigned char)-1 && m > 1) {
+//                    maxsolutions *= m;
+//                }
+//            }
+            // TODO: iterating vravesols would call the filters vravesols.size() times even if a valid solution is found
+            // figure out a way to do short-curcuit the code to check the final solutions
+            list<IkReturnPtr> listtestikreturns;
+            listtestikreturns.swap(listlocalikreturns);
+            FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
+                IkReturnPtr localret = *ittestreturn;
+                _vsolutionindices.resize(0);
+                FOREACH(it, localret->_mapdata["solutionindices"]) {
+                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                }
+                
+                probot->SetActiveDOFValues(localret->_vsolution,false);
+                // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
+                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
+                _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
+                IkReturnAction retaction = _CallFilters(localret->_vsolution, pmanip, paramnew,localret, IKSP_MinPriority, 0);
+                nSameStateRepeatCount++;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
+                retactionall |= retaction;
+                if( retactionall & IKRA_Quit ) {
+                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectCustomFilter);
+                }
+                else if( retaction == IKRA_Success ) {
+                    // success and the ikreturns are already ordered so that first one is with least distance.
+                    bestsolution.ikreturn = localret;
+                    if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
+                        d = _ComputeGeometricConfigDistSqr(probot,localret->_vsolution,boost::get<1>(freeq0check));
+                    }
+                    bestsolution.dist = d;
+                    //listlocalikreturns.push_back(localret);
+                    return IKRA_Success;
+                }
+            }
+            if( listlocalikreturns.size() == 0 ) {
+                return static_cast<IkReturnAction>(retactionall|IKRA_RejectCustomFilter);
+            }
+        }
+
+        OPENRAVE_ASSERT_OP(listlocalikreturns.size(),>,0);
+        bestsolution.dist = d;
+        bestsolution.ikreturn = listlocalikreturns.front();
         return IKRA_Success;
+//        // solution is valid, so replace the best
+//        size_t index = 0;
+//        FOREACH(itikreturn, listlocalikreturns) {
+//            if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
+//                d = _ComputeGeometricConfigDistSqr(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
+//                if( !(bestsolution.dist <= d) ) {
+//                    bestsolution.ikreturn = *itikreturn;
+//                    bestsolution.dist = d;
+//                }
+//            }
+//            else {
+//                // cannot compute distance, so quit once first solution is set to best
+//                bestsolution.ikreturn = *itikreturn;
+//                bestsolution.dist = d;
+//                break;
+//            }
+//            ++index;
+//        }
+//        return IKRA_Success;
     }
 
     IkReturnAction _SolveAll(const IkParameterization& param, const vector<IkReal>& vfree, int filteroptions, std::vector<IkReturnPtr>& vikreturns, StateCheckEndEffector& stateCheck)

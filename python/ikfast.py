@@ -2596,7 +2596,8 @@ class IKFastSolver(AutoReloader):
                 basedir[i] = value
             else:
                 basedir[i] = self.convertRealToRational(basedir[i],5)
-        basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
+        basedirlen2 = trigsimp(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
+        basedir /= sqrt(basedirlen2)
         
         offsetdist = basedir.dot(basepos)
         basepos = basepos-basedir*offsetdist

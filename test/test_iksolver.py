@@ -250,7 +250,7 @@ class TestIkSolver(EnvironmentSetup):
 
     def test_ikfastrobotsolutions(self):
         env=self.env
-        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 175)])]
+        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 31)])]
         for robotfilename, manipname, testsolutions in testrobotfiles:
             env.Reset()
             robot=self.LoadRobot(robotfilename)

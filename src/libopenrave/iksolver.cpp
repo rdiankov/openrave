@@ -243,13 +243,9 @@ bool IkSolverBase::_HasFilterInRange(int32_t minpriority, int32_t maxpriority) c
     FOREACHC(it,__listRegisteredFilters) {
         CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
         if( !!pitdata ) {
-            if( pitdata->_priority > maxpriority ) {
-                continue;
-            }
-            else if( pitdata->_priority >= minpriority) {
+            if( pitdata->_priority <= maxpriority && pitdata->_priority >= minpriority ) {
                 return true;
             }
-            return false;
         }
     }
     return false;
