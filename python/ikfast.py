@@ -682,7 +682,12 @@ class AST:
         def checkValidSolution(self):
             return True
         def getsubs(self,psubs):
-            Anew = self.A.subs(psubs).inv()
+            Asub = self.A.subs(psubs)
+            d = Asub.det()
+            if d == S.Zero:
+                raise IKFastSolver.CannotSolveError('determinant for matrix is zero')
+            
+            Anew = Asub.inv()
             subs = []
             for i in range(self.A.shape[0]):
                 for j in range(self.A.shape[1]):
@@ -5818,7 +5823,11 @@ class IKFastSolver(AutoReloader):
                 if getsubs is not None:
                     # have to explicitly evaluate since testsubs can be very complex
                     subsvals = [(s,v.evalf()) for s,v in subs]
-                    subs = subsvals+getsubs(subsvals)
+                    try:
+                        subs = subsvals+getsubs(subsvals)
+                    except self.CannotSolveError, e:
+                        # getsubs failed (sometimes it requires solving inverse matrix), so go to next set
+                        continue
                 # have to sub at least twice with the global symbols
                 A = Mall[maxdegree].subs(subs)
                 for i in range(A.shape[0]):
@@ -6560,7 +6569,7 @@ class IKFastSolver(AutoReloader):
         # zerosubstitutioneqs equations flattened for easier checking
         flatzerosubstitutioneqs = []
         hascheckzeros = False
-
+        
         addhandleddegeneratecases = [] # for bookkeeping/debugging
         
         # iterate in reverse order and put the most recently processed solution at the front.
@@ -6798,8 +6807,9 @@ class IKFastSolver(AutoReloader):
         
         if len(prevbranch) == 0:
             raise self.CannotSolveError('failed to add solution!')
-            
-        if len(currentcases) >= self.maxcasedepth:
+
+        maxlevel2scopecounter = 400 # used to limit how deep the hierarchy goes or otherwise IK can get too big
+        if len(currentcases) >= self.maxcasedepth or (maxlevel2scopecounter > maxlevel2scopecounter and len(currentcases) >= 2):
             log.warn('c=%d, %d levels deep in checking degenerate cases, skipping. curvars=%r, AllEquations=%r', scopecounter, self.maxcasedepth, curvars, AllEquations)
             lastbranch.append(AST.SolverBreak('%d cases reached'%self.maxcasedepth, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq, originalGlobalSymbols))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
             return prevbranch
