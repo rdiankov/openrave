@@ -28,9 +28,10 @@ static bool _bnotifiedmessage=false;
 
 class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
-    struct COLLISIONCALLBACK
+    class CollisionCallbackData
     {
-        COLLISIONCALLBACK(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
+    public:
+        CollisionCallbackData(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -135,8 +136,8 @@ public:
             dGeomDestroy(geomray);
             geomray = NULL;
         }
-        // don't call DestroyEnvironment since it relies on EnvironmentBase::GetBodies(), which can lead to a deadlock
-        //DestroyEnvironment();
+        // save to call DestroyEnvironment since it does not rely on the Environment lock
+        DestroyEnvironment();
         _odespace->DestroyEnvironment();
     }
 
@@ -166,12 +167,6 @@ public:
 
     virtual void DestroyEnvironment()
     {
-        // go through all the KinBodies and destory their collision pointers
-        vector<KinBodyPtr> vbodies;
-        GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies) {
-            (*itbody)->RemoveUserData(_userdatakey);
-        }
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
@@ -180,16 +175,13 @@ public:
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _odespace->InitKinBody(pbody);
-            pbody->SetUserData(_userdatakey, pinfo);
         }
         return !!pinfo;
     }
 
     virtual void RemoveKinBody(KinBodyPtr pbody)
     {
-        if( !!pbody ) {
-            pbody->RemoveUserData(_userdatakey);
-        }
+        _odespace->RemoveUserData(pbody);
     }
 
     virtual bool SetCollisionOptions(int collisionoptions)
@@ -207,7 +199,7 @@ public:
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
+        CollisionCallbackData cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
             return false;
         }
@@ -226,7 +218,7 @@ public:
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,pbody1,KinBody::LinkConstPtr());
+        CollisionCallbackData cb(shared_checker(),report,pbody1,KinBody::LinkConstPtr());
         if(( pbody1->GetLinks().size() == 0) || !pbody1->IsEnabled() ) {
             return false;
         }
@@ -265,7 +257,7 @@ public:
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),plink);
+        CollisionCallbackData cb(shared_checker(),report,KinBodyPtr(),plink);
         if( !plink->IsEnabled() ) {
             RAVELOG_VERBOSE("calling collision on disabled link %s\n", plink->GetName().c_str());
             return false;
@@ -447,7 +439,7 @@ public:
 #endif
 
         _odespace->Synchronize();
-        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
+        CollisionCallbackData cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
 
         bool bCollision = false;
         std::set<KinBodyPtr> setattached;
@@ -485,7 +477,7 @@ public:
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
+        CollisionCallbackData cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
             return false;
         }
@@ -626,7 +618,7 @@ public:
 
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
+        CollisionCallbackData cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
             return false;
         }
@@ -653,7 +645,7 @@ public:
 
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
     {
-        COLLISIONCALLBACK cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
+        CollisionCallbackData cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
 
         Vector vnormdir;
@@ -808,11 +800,11 @@ public:
 private:
     static void KinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {
-        COLLISIONCALLBACK* pcb = (COLLISIONCALLBACK*)data;
+        CollisionCallbackData* pcb = (CollisionCallbackData*)data;
         pcb->_pchecker->_KinBodyCollisionCallback(o1,o2,pcb);
     }
 
-    void _KinBodyCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
+    void _KinBodyCollisionCallback (dGeomID o1, dGeomID o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
             return;     // don't test anymore
@@ -943,11 +935,11 @@ private:
 
     static void KinBodyKinBodyCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {
-        COLLISIONCALLBACK* pcb = (COLLISIONCALLBACK*)data;
+        CollisionCallbackData* pcb = (CollisionCallbackData*)data;
         pcb->_pchecker->_KinBodyKinBodyCollisionCallback(o1,o2,pcb);
     }
 
-    void _KinBodyKinBodyCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
+    void _KinBodyKinBodyCollisionCallback (dGeomID o1, dGeomID o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
             return;     // don't test anymore
@@ -1041,11 +1033,11 @@ private:
 
     static void LinkCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {
-        COLLISIONCALLBACK* pcb = (COLLISIONCALLBACK*)data;
+        CollisionCallbackData* pcb = (CollisionCallbackData*)data;
         pcb->_pchecker->_LinkCollisionCallback(o1,o2,pcb);
     }
 
-    void _LinkCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
+    void _LinkCollisionCallback (dGeomID o1, dGeomID o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
             return;     // don't test anymore
@@ -1161,11 +1153,11 @@ private:
 
     static void RayCollisionCallback (void *data, dGeomID o1, dGeomID o2)
     {
-        COLLISIONCALLBACK* pcb = (COLLISIONCALLBACK*)data;
+        CollisionCallbackData* pcb = (CollisionCallbackData*)data;
         pcb->_pchecker->_RayCollisionCallback(o1,o2,pcb);
     }
 
-    void _RayCollisionCallback (dGeomID o1, dGeomID o2, COLLISIONCALLBACK* pcb)
+    void _RayCollisionCallback (dGeomID o1, dGeomID o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
             return;     // don't test anymore
@@ -1282,6 +1274,8 @@ private:
     size_t _nMaxStartContacts, _nMaxContacts;
     std::string _userdatakey;
     CollisionReport _report;
+
+
 };
 
 #endif

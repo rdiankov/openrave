@@ -662,7 +662,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         print 'getIndicesFromJointNames',freeindices,freejoints
         return freeindices
 
-    def generate(self,iktype=None, freejoints=None, freeinc=None, freeindices=None, precision=None, forceikbuild=True, outputlang=None, avoidPrismaticAsFree=False, ipython=False, ikfastoptions=0, ikfastmaxcasedepth=4):
+    def generate(self,iktype=None, freejoints=None, freeinc=None, freeindices=None, precision=None, forceikbuild=True, outputlang=None, avoidPrismaticAsFree=False, ipython=False, ikfastoptions=0, ikfastmaxcasedepth=3):
         """
         :param ikfastoptions: see IKFastSolver.generateIkSolver
         :param ikfastmaxcasedepth: the max level of degenerate cases to solve for

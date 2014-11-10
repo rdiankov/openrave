@@ -259,6 +259,11 @@ private:
     void DestroyEnvironment()
     {
         RAVELOG_VERBOSE("destroying ode collision environment\n");
+        // go through all the initialized KinBodies
+        FOREACH(itbody, _setInitializedBodies) {
+            (*itbody)->RemoveUserData(_userdatakey);
+        }
+        _setInitializedBodies.clear();
         _ode.reset();
     }
 
@@ -469,6 +474,8 @@ private:
             pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic|KinBody::Prop_LinkDynamics, boost::bind(&ODESpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<ODESpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         }
 
+        pbody->SetUserData(_userdatakey, pinfo);
+        _setInitializedBodies.insert(pbody);
         _Synchronize(pinfo, false);
         return pinfo;
     }
@@ -495,6 +502,16 @@ private:
         return _geometrygroup;
     }
 
+    void RemoveUserData(KinBodyPtr pbody)
+    {
+        if( !!pbody ) {
+            bool bremoved = pbody->RemoveUserData(_userdatakey);
+            size_t numerased = _setInitializedBodies.erase(pbody);
+            if( (size_t)bremoved != numerased ) {
+                RAVELOG_WARN("inconsistency detected with odespace user data\n");
+            }
+        }
+    }
 
     void Synchronize()
     {
@@ -592,6 +609,7 @@ private:
         if( !pinfo ) {
             pinfo = InitKinBody(pbody, KinBodyInfoPtr(), blockode);
             pbody->SetUserData(_userdatakey, pinfo);
+            _setInitializedBodies.insert(pbody);
             bcreated = true;
         }
         return std::make_pair(pinfo,bcreated);
@@ -653,6 +671,7 @@ private:
         return odegeomtrans;
     }
 
+    /// \param block if true, then will lock _ode->_mutex. Set to false when mutex is known to be already locked.
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
@@ -699,6 +718,7 @@ private:
     std::string _userdatakey;
     std::string _geometrygroup;
     SynchronizeCallbackFn _synccallback;
+    std::set<KinBodyConstPtr> _setInitializedBodies; ///< set of bodies that have been initialized and user data is set
     bool _bUsingPhysics;
 };
 
