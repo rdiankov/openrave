@@ -218,9 +218,11 @@ public:
             intrinsics = r.intrinsics;
             width = r.width;
             height = r.height;
+            sensor_reference = r.sensor_reference;
             return *this;
         }
         
+        std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
         CameraIntrinsics& KK;         ///< \deprecated (14/01/15)

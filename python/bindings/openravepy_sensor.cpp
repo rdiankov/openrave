@@ -71,6 +71,7 @@ public:
     {
         width = pgeom->width;
         height = pgeom->height;
+        sensor_reference = pgeom->sensor_reference;
     }
     virtual ~PyCameraGeomData() {
     }
@@ -82,11 +83,13 @@ public:
         geom->width = width;
         geom->height = height;
         geom->intrinsics = intrinsics.GetCameraIntrinsics();
+        geom->sensor_reference = sensor_reference;
         return geom;
     }
 
     PyCameraIntrinsics intrinsics;
     int width, height;
+    std::string sensor_reference;
 };
 
 class PySensorBase : public PyInterfaceBase
@@ -613,6 +616,7 @@ void init_openravepy_sensor()
     .def_readwrite("intrinsics",&PyCameraGeomData::intrinsics)
     .def_readwrite("width",&PyCameraGeomData::width)
     .def_readwrite("height",&PyCameraGeomData::height)
+    .def_readwrite("sensor_reference",&PyCameraGeomData::sensor_reference)
     .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
     ;
 

@@ -35,7 +35,7 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 14> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs"}};
+            static boost::array<string, 15> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -79,6 +79,9 @@ public:
             }
             else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
+            }
+            else if( name == "sensor_reference" ) {
+                ss >> _psensor->_pgeom->sensor_reference;
             }
             else if( name == "measurement_time" ) {
                 dReal measurement_time=1;
@@ -368,6 +371,9 @@ public:
         writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(1/framerate));
         if( _channelformat.size() > 0 ) {
             writer->AddChild("format",atts)->SetCharData(_channelformat);
+        }
+        if( _pgeom->sensor_reference.size() > 0 ) {
+            writer->AddChild("sensor_reference",atts)->SetCharData( _pgeom->sensor_reference);
         }
         ss.str("");
         ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;
