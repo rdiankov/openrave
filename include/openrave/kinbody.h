@@ -385,9 +385,16 @@ protected:
         /// \return true if any geometry of the link is visible.
         virtual bool IsVisible() const;
 
-        /// \brief parent body that link belong to.
-        inline KinBodyPtr GetParent() const {
-            return KinBodyPtr(_parent);
+        /// \brief parent body that link belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline KinBodyPtr GetParent(bool trylock=false) const {
+            if( trylock ) {
+                return _parent.lock();
+            }
+            else {
+                return KinBodyPtr(_parent);
+            }
         }
 
         /// \brief unique index into parent KinBody::GetLinks vector
@@ -833,8 +840,16 @@ public:
             return jointindex;
         }
 
-        inline KinBodyPtr GetParent() const {
-            return KinBodyPtr(_parent);
+        /// \brief parent body that joint belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline KinBodyPtr GetParent(bool trylock=false) const {
+            if( trylock ) {
+                return _parent.lock();
+            }
+            else {
+                return KinBodyPtr(_parent);
+            }
         }
 
         inline LinkPtr GetFirstAttached() const {

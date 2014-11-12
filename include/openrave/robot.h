@@ -85,8 +85,17 @@ public:
         virtual const std::string& GetName() const {
             return _info._name;
         }
-        virtual RobotBasePtr GetRobot() const {
-            return RobotBasePtr(__probot);
+
+        /// \brief get robot that manipulator belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline RobotBasePtr GetRobot(bool trylock=false) const {
+            if( trylock ) {
+                return __probot.lock();
+            }
+            else {
+                return RobotBasePtr(__probot);
+            }
         }
 
         /// \brief Sets the ik solver and initializes it with the current manipulator.
@@ -444,8 +453,17 @@ public:
         virtual Transform GetTransform() const {
             return LinkPtr(pattachedlink)->GetTransform()*_info._trelative;
         }
-        virtual RobotBasePtr GetRobot() const {
-            return RobotBasePtr(_probot);
+
+        /// \brief get robot that manipulator belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline RobotBasePtr GetRobot(bool trylock=false) const {
+            if( trylock ) {
+                return _probot.lock();
+            }
+            else {
+                return RobotBasePtr(_probot);
+            }
         }
         virtual const std::string& GetName() const {
             return _info._name;

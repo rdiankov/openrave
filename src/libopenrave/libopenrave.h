@@ -456,9 +456,14 @@ public:
         _listNonCollidingLinks.clear();
         itnoncolliding = _mapLinkIsNonColliding.begin();
         while( itnoncolliding != _mapLinkIsNonColliding.end() ) {
-            if( itnoncolliding->first->GetParent() != probot ) {
+            KinBodyPtr noncollidingparent = itnoncolliding->first->GetParent(true);
+            if( !noncollidingparent ) {
+                _mapLinkIsNonColliding.erase(itnoncolliding++);
+                    continue;
+            }
+            if( noncollidingparent != probot ) {
                 // check if body is currently being grabbed
-                if( _setgrabbed.find(itnoncolliding->first->GetParent()) == _setgrabbed.end() ) {
+                if( _setgrabbed.find(noncollidingparent) == _setgrabbed.end() ) {
                     _mapLinkIsNonColliding.erase(itnoncolliding++);
                     continue;
                 }
