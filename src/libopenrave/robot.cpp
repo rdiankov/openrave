@@ -96,7 +96,8 @@ void RobotBase::AttachedSensor::UpdateInfo()
 {
     if( !!psensor ) {
         _info._sensorname = psensor->GetXMLId();
-        // try to get the sensor geometry...?
+        // TODO try to get the sensor geometry...?
+        //GetSensorGeometry(ST_
         //_info._sensorgeometry
     }
     LinkPtr prealattachedlink = pattachedlink.lock();

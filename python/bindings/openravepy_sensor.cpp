@@ -92,6 +92,208 @@ public:
     std::string sensor_reference;
 };
 
+class PyLaserGeomData : public PySensorGeometry
+{
+public:
+    PyLaserGeomData() {
+        min_angle = boost::python::make_tuple(0.0, 0.0);
+        max_angle = boost::python::make_tuple(0.0, 0.0);
+        min_range = 0.0;
+        max_range = 0.0;
+        time_increment = 0.0;
+        time_scan = 0.0;
+    }
+    PyLaserGeomData(boost::shared_ptr<SensorBase::LaserGeomData> pgeom)
+    {
+        min_angle = boost::python::make_tuple(pgeom->min_angle[0], pgeom->min_angle[1]);
+        max_angle = boost::python::make_tuple(pgeom->max_angle[0], pgeom->max_angle[1]);
+        min_range = pgeom->min_range;
+        max_range = pgeom->max_range;
+        time_increment = pgeom->time_increment;
+        time_scan = pgeom->time_scan;
+    }
+    virtual ~PyLaserGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_Laser;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::LaserGeomData> geom(new SensorBase::LaserGeomData());
+        geom->min_angle[0] = (dReal)boost::python::extract<dReal>(min_angle[0]);
+        geom->min_angle[1] = (dReal)boost::python::extract<dReal>(min_angle[1]);
+        geom->max_angle[0] = (dReal)boost::python::extract<dReal>(max_angle[0]);
+        geom->max_angle[1] = (dReal)boost::python::extract<dReal>(max_angle[1]);
+        geom->min_range = min_range;
+        geom->max_range = max_range;
+        geom->time_increment = time_increment;
+        geom->time_scan = time_scan;
+        return geom;
+    }
+
+    boost::python::tuple min_angle, max_angle, resolution;
+    dReal min_range, max_range, time_increment, time_scan;
+};
+
+class PyJointEncoderGeomData : public PySensorGeometry
+{
+public:
+    PyJointEncoderGeomData() {
+        resolution = toPyArray(std::vector<dReal>());
+    }
+    PyJointEncoderGeomData(boost::shared_ptr<SensorBase::JointEncoderGeomData> pgeom)
+    {
+        resolution = toPyArray(pgeom->resolution);
+    }
+    virtual ~PyJointEncoderGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_JointEncoder;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::JointEncoderGeomData> geom(new SensorBase::JointEncoderGeomData());
+        geom->resolution = ExtractArray<dReal>(resolution);
+        return geom;
+    }
+
+    object resolution;
+};
+
+class PyForce6DGeomData : public PySensorGeometry
+{
+public:
+    PyForce6DGeomData() {
+    }
+    PyForce6DGeomData(boost::shared_ptr<SensorBase::Force6DGeomData> pgeom)
+    {
+    }
+    virtual ~PyForce6DGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_Force6D;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::Force6DGeomData> geom(new SensorBase::Force6DGeomData());
+        return geom;
+    }
+};
+
+class PyIMUGeomData : public PySensorGeometry
+{
+public:
+    PyIMUGeomData() {
+        time_measurement = 0.0;
+    }
+    PyIMUGeomData(boost::shared_ptr<SensorBase::IMUGeomData> pgeom)
+    {
+        time_measurement = pgeom->time_measurement;
+    }
+    virtual ~PyIMUGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_IMU;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::IMUGeomData> geom(new SensorBase::IMUGeomData());
+        geom->time_measurement = time_measurement;
+        return geom;
+    }
+
+    dReal time_measurement;
+};
+
+class PyOdometryGeomData : public PySensorGeometry
+{
+public:
+    PyOdometryGeomData() {
+    }
+    PyOdometryGeomData(boost::shared_ptr<SensorBase::OdometryGeomData> pgeom)
+    {
+        targetid = pgeom->targetid;
+    }
+    virtual ~PyOdometryGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_Odometry;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::OdometryGeomData> geom(new SensorBase::OdometryGeomData());
+        geom->targetid = targetid;
+        return geom;
+    }
+
+    std::string targetid;
+};
+
+// TODO fill rest of fields
+class PyTactileGeomData : public PySensorGeometry
+{
+public:
+    PyTactileGeomData() {
+        thickness = 0.0;
+    }
+    PyTactileGeomData(boost::shared_ptr<SensorBase::TactileGeomData> pgeom)
+    {
+        thickness = pgeom->thickness;
+    }
+    virtual ~PyTactileGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_Tactile;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::TactileGeomData> geom(new SensorBase::TactileGeomData());
+        geom->thickness = thickness;
+        return geom;
+    }
+
+    dReal thickness;
+};
+
+class PyActuatorGeomData : public PySensorGeometry
+{
+public:
+    PyActuatorGeomData() {
+        maxtorque = 0.0;
+        maxcurrent = 0.0;
+        nominalcurrent = 0.0;
+        maxvelocity = 0.0;
+        maxacceleration = 0.0;
+        maxjerk = 0.0;
+        staticfriction = 0.0;
+        viscousfriction = 0.0;
+    }
+    PyActuatorGeomData(boost::shared_ptr<SensorBase::ActuatorGeomData> pgeom)
+    {
+        maxtorque = pgeom->maxtorque;
+        maxcurrent = pgeom->maxcurrent;
+        nominalcurrent = pgeom->nominalcurrent;
+        maxvelocity = pgeom->maxvelocity;
+        maxacceleration = pgeom->maxacceleration;
+        maxjerk = pgeom->maxjerk;
+        staticfriction = pgeom->staticfriction;
+        viscousfriction = pgeom->viscousfriction;
+    }
+    virtual ~PyActuatorGeomData() {
+    }
+    virtual SensorBase::SensorType GetType() {
+        return SensorBase::ST_Actuator;
+    }
+    virtual SensorBase::SensorGeometryPtr GetGeometry() {
+        boost::shared_ptr<SensorBase::ActuatorGeomData> geom(new SensorBase::ActuatorGeomData());
+        geom->maxtorque = maxtorque;
+        geom->maxcurrent = maxcurrent;
+        geom->nominalcurrent = nominalcurrent;
+        geom->maxvelocity = maxvelocity;
+        geom->maxacceleration = maxacceleration;
+        geom->maxjerk = maxjerk;
+        geom->staticfriction = staticfriction;
+        geom->viscousfriction = viscousfriction;
+        return geom;
+    }
+
+    dReal maxtorque, maxcurrent, nominalcurrent, maxvelocity, maxacceleration, maxjerk, staticfriction, viscousfriction;
+};
+
 class PySensorBase : public PyInterfaceBase
 {
 protected:
@@ -338,25 +540,25 @@ public:
         return _psensor->SimulationStep(timeelapsed);
     }
 
-    boost::shared_ptr<PySensorData> GetSensorGeometry(SensorBase::SensorType type)
+    boost::shared_ptr<PySensorGeometry> GetSensorGeometry(SensorBase::SensorType type)
     {
         switch(type) {
         case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyLaserGeomData(boost::static_pointer_cast<SensorBase::LaserGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_Camera:
-            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyCameraGeomData(boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_JointEncoder:
-            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyJointEncoderGeomData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_Force6D:
-            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyForce6DGeomData(boost::static_pointer_cast<SensorBase::Force6DGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_IMU:
-            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyIMUGeomData(boost::static_pointer_cast<SensorBase::IMUGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_Odometry:
-            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyOdometryGeomData(boost::static_pointer_cast<SensorBase::OdometryGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_Tactile:
-            return boost::shared_ptr<PySensorData>(new PyTactileSensorData(boost::static_pointer_cast<SensorBase::TactileGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyTactileGeomData(boost::static_pointer_cast<SensorBase::TactileGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_Actuator:
-            return boost::shared_ptr<PySensorData>(new PyActuatorSensorData(boost::static_pointer_cast<SensorBase::ActuatorGeomData>(_psensor->GetSensorGeometry())));
+            return boost::shared_ptr<PySensorGeometry>(new PyActuatorGeomData(boost::static_pointer_cast<SensorBase::ActuatorGeomData>(_psensor->GetSensorGeometry())));
         case SensorBase::ST_Invalid:
             break;
         }
@@ -418,6 +620,10 @@ public:
 
     bool Supports(SensorBase::SensorType type) {
         return _psensor->Supports(type);
+    }
+
+    void SetSensorGeometry(PySensorGeometryPtr pygeometry) {
+        _psensor->SetSensorGeometry(pygeometry->GetGeometry());
     }
 
     void SetTransform(object transform) {
@@ -498,6 +704,7 @@ void init_openravepy_sensor()
                        .def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData))
                        .def("CreateSensorData",&PySensorBase::CreateSensorData, DOXY_FN(SensorBase,CreateSensorData))
                        .def("GetSensorGeometry",&PySensorBase::GetSensorGeometry,DOXY_FN(SensorBase,GetSensorGeometry))
+                       .def("SetSensorGeometry",&PySensorBase::SetSensorGeometry, DOXY_FN(SensorBase,SetSensorGeometry))
                        .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
                        .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform))
                        .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
@@ -618,6 +825,45 @@ void init_openravepy_sensor()
     .def_readwrite("height",&PyCameraGeomData::height)
     .def_readwrite("sensor_reference",&PyCameraGeomData::sensor_reference)
     .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
+    ;
+
+    class_<PyLaserGeomData, boost::shared_ptr<PyLaserGeomData>, bases<PySensorGeometry> >("LaserGeomData", DOXY_CLASS(SensorBase::LaserGeomData))
+    .def_readwrite("min_angle",&PyLaserGeomData::min_angle)
+    .def_readwrite("max_angle",&PyLaserGeomData::max_angle)
+    .def_readwrite("min_range",&PyLaserGeomData::min_range)
+    .def_readwrite("max_range",&PyLaserGeomData::max_range)
+    .def_readwrite("time_increment",&PyLaserGeomData::time_increment)
+    .def_readwrite("time_scan",&PyLaserGeomData::time_scan)
+    ;
+
+    class_<PyJointEncoderGeomData, boost::shared_ptr<PyJointEncoderGeomData>, bases<PySensorGeometry> >("JointEncoderGeomData", DOXY_CLASS(SensorBase::JointEncoderGeomData))
+    .def_readwrite("resolution",&PyJointEncoderGeomData::resolution)
+    ;
+
+    class_<PyForce6DGeomData, boost::shared_ptr<PyForce6DGeomData>, bases<PySensorGeometry> >("Force6DGeomData", DOXY_CLASS(SensorBase::Force6DGeomData))
+    ;
+
+    class_<PyIMUGeomData, boost::shared_ptr<PyIMUGeomData>, bases<PySensorGeometry> >("IMUGeomData", DOXY_CLASS(SensorBase::IMUGeomData))
+    .def_readwrite("time_measurement",&PyIMUGeomData::time_measurement)
+    ;
+
+    class_<PyOdometryGeomData, boost::shared_ptr<PyOdometryGeomData>, bases<PySensorGeometry> >("OdometryGeomData", DOXY_CLASS(SensorBase::OdometryGeomData))
+    .def_readwrite("targetid",&PyOdometryGeomData::targetid)
+    ;
+
+    class_<PyTactileGeomData, boost::shared_ptr<PyTactileGeomData>, bases<PySensorGeometry> >("TactileGeomData", DOXY_CLASS(SensorBase::TactileGeomData))
+    .def_readwrite("thickness",&PyTactileGeomData::thickness)
+    ;
+
+    class_<PyActuatorGeomData, boost::shared_ptr<PyActuatorGeomData>, bases<PySensorGeometry> >("ActuatorGeomData", DOXY_CLASS(SensorBase::ActuatorGeomData))
+    .def_readwrite("maxtorque",&PyActuatorGeomData::maxtorque)
+    .def_readwrite("maxcurrent",&PyActuatorGeomData::maxcurrent)
+    .def_readwrite("nominalcurrent",&PyActuatorGeomData::nominalcurrent)
+    .def_readwrite("maxvelocity",&PyActuatorGeomData::maxvelocity)
+    .def_readwrite("maxacceleration",&PyActuatorGeomData::maxacceleration)
+    .def_readwrite("maxjerk",&PyActuatorGeomData::maxjerk)
+    .def_readwrite("staticfriction",&PyActuatorGeomData::staticfriction)
+    .def_readwrite("viscousfriction",&PyActuatorGeomData::viscousfriction)
     ;
 
     def("RaveCreateSensor",openravepy::RaveCreateSensor,args("env","name"),DOXY_FN1(RaveCreateSensor));

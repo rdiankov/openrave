@@ -39,6 +39,18 @@ public:
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
+            if( name == std::string("sensor_reference") ) {
+                // read the URL attribute
+                FOREACHC(itatt, atts) {
+                    if( itatt->first == "url" ) {
+                        size_t startindex = 0;
+                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
+                            startindex = 1;
+                        }
+                        _psensor->_pgeom->sensor_reference = itatt->second.substr(startindex);
+                    }
+                }
+            }
             ss.str("");
             return PE_Support;
         }
@@ -81,7 +93,7 @@ public:
                 ss >> _psensor->_pgeom->height;
             }
             else if( name == "sensor_reference" ) {
-                ss >> _psensor->_pgeom->sensor_reference;
+                // nothing to do here
             }
             else if( name == "measurement_time" ) {
                 dReal measurement_time=1;
@@ -369,11 +381,11 @@ public:
         ss << _pgeom->width << " " << _pgeom->height << " " << _numchannels;
         writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
         writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(1/framerate));
-        if( _channelformat.size() > 0 ) {
-            writer->AddChild("format",atts)->SetCharData(_channelformat);
-        }
+        writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
         if( _pgeom->sensor_reference.size() > 0 ) {
-            writer->AddChild("sensor_reference",atts)->SetCharData( _pgeom->sensor_reference);
+            atts.push_back(std::make_pair("url", std::string("#") + _pgeom->sensor_reference));
+            writer->AddChild("sensor_reference",atts);
+            atts.clear();
         }
         ss.str("");
         ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;

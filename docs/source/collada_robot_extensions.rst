@@ -742,6 +742,7 @@ Simple pin hole camera defined by an intrinsic matrix. The camera can support mu
   <intrinsic> | Contains a **float2x3_type** that specifies the intrinsic parameters defining the principal point, field of view, and skew. | 1
   <focal_length> | Contains a **float_type** that specifies the physical focal length of the camera. | 0 or 1
   <distortion_model> | The distortion model to use. It has a **type** attribute specifying the actual model type, and contains a **list_of_floats_type** that specifies the distortion coefficients of the model. | 0 or 1
+  <sensor_reference> | References another sensor's data when computing this sensor's data. The reference sensor is specified by a **url** attribute of type **xs:anyURI**. | 0 or more
 
 **type base_stereo_camera:**
 
