@@ -173,7 +173,7 @@ private:
 template<typename T>
 inline T SerializationValue(T f)
 {
-    return ( f > -1e-4f && f < 1e-4f ) ? static_cast<T>(0) : f;//boost::math::round(10000*f)*0.0001;
+    return ( f > -1e-4f && f < 1e-4f ) ? static_cast<T>(0) : f; //boost::math::round(10000*f)*0.0001;
 }
 
 inline void SerializeRound(std::ostream& o, float f)
@@ -459,7 +459,7 @@ public:
             KinBodyPtr noncollidingparent = itnoncolliding->first->GetParent(true);
             if( !noncollidingparent ) {
                 _mapLinkIsNonColliding.erase(itnoncolliding++);
-                    continue;
+                continue;
             }
             if( noncollidingparent != probot ) {
                 // check if body is currently being grabbed

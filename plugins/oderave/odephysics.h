@@ -234,13 +234,16 @@ The possible properties that can be set are: ";
         _jointgetvel[dJointTypeHinge2].push_back(dJointGetHinge2Angle1Rate);
         _jointgetvel[dJointTypeHinge2].push_back(dJointGetHinge2Angle2Rate);
     }
+    virtual ~ODEPhysicsEngine() {
+        _odespace->Destroy();
+    }
 
     virtual bool InitEnvironment()
     {
         _report.reset(new CollisionReport());
 
         _odespace->SetSynchronizationCallback(boost::bind(&ODEPhysicsEngine::_SyncCallback, shared_physics(),_1));
-        if( !_odespace->InitEnvironment() ) {
+        if( !_odespace->Init() ) {
             return false;
         }
         vector<KinBodyPtr> vbodies;

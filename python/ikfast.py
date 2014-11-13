@@ -1350,7 +1350,7 @@ class IKFastSolver(AutoReloader):
         self.degeneratecases = None
         self.kinematicshash = kinematicshash
         self.testconsistentvalues = None
-        self.maxcasedepth = 4 # the maximum depth of special/degenerate cases to process before system gives up
+        self.maxcasedepth = 3 # the maximum depth of special/degenerate cases to process before system gives up
         self.globalsymbols = [] # global symbols for substitutions
         self._scopecounter = 0 # a counter for debugging purposes that increaes every time a level changes
         self._dodebug = False
@@ -3162,10 +3162,10 @@ class IKFastSolver(AutoReloader):
         leftovervarstree = []
         origendbranchtree = endbranchtree
         solvemethods = []
-        if usesolvers & 1:
-            solvemethods.append(self.solveLiWoernleHiller)
-        if usesolvers & 2:
-            solvemethods.append(self.solveKohliOsvatic)
+#         if usesolvers & 1:
+#             solvemethods.append(self.solveLiWoernleHiller)
+#         if usesolvers & 2:
+#             solvemethods.append(self.solveKohliOsvatic)
         if usesolvers & 4:
             solvemethods.append(self.solveManochaCanny)
         for solvemethod in solvemethods:
@@ -3230,7 +3230,8 @@ class IKFastSolver(AutoReloader):
             solsubs += self.Variable(var).subs
         if len(curvars) > 0:
             self.sortComplexity(AllEquationsExtra)
-            self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)            
+            self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)
+            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
             leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
             leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
         else:
@@ -3849,7 +3850,7 @@ class IKFastSolver(AutoReloader):
             nummatrixsymbols = __builtin__.sum([1 for a in A if not a.is_number])
             if nummatrixsymbols > 10:
                 # if too many symbols, evaluate numerically
-                if not self.IsDeterminantNonZeroByEval(A):
+                if not self.IsDeterminantNonZeroByEval(A, evalfirst=nummatrixsymbols>50):
                     continue
                 log.info('found non-zero determinant by evaluation')
             else:
@@ -3863,6 +3864,7 @@ class IKFastSolver(AutoReloader):
             break
         if solution is None:
             raise self.CannotSolveError('failed to find %d linearly independent equations'%len(allmonomsleft))
+        
         reducedeqs = []
         for i in range(len(allmonomsleft)):
             var=S.One
@@ -4115,7 +4117,7 @@ class IKFastSolver(AutoReloader):
             return reducedeqs
         
         return numsymbolcoeffs, _computereducedequations
-
+    
     def solveManochaCanny(self,rawpolyeqs,solvejointvars,endbranchtree, AllEquationsExtra=None):
         """Solves the IK equations using eigenvalues/eigenvectors of a 12x12 quadratic eigenvalue problem. Method explained in
         
@@ -6283,7 +6285,7 @@ class IKFastSolver(AutoReloader):
             
         self._scopecounter+=1
         scopecounter = int(self._scopecounter)
-        log.info('c=%d, %s %s',self._scopecounter, othersolvedvars,curvars)
+        log.info('depth=%d c=%d, %s %s: cases=%r', len(currentcases) if currentcases is not None else 0, self._scopecounter, othersolvedvars,curvars, currentcases)
         solsubs = solsubs[:]
         freevarinvsubs = [(f[1],f[0]) for f in self.freevarsubs]
         solinvsubs = [(f[1],f[0]) for f in solsubs]
@@ -6808,9 +6810,9 @@ class IKFastSolver(AutoReloader):
         if len(prevbranch) == 0:
             raise self.CannotSolveError('failed to add solution!')
 
-        maxlevel2scopecounter = 400 # used to limit how deep the hierarchy goes or otherwise IK can get too big
-        if len(currentcases) >= self.maxcasedepth or (maxlevel2scopecounter > maxlevel2scopecounter and len(currentcases) >= 2):
-            log.warn('c=%d, %d levels deep in checking degenerate cases, skipping. curvars=%r, AllEquations=%r', scopecounter, self.maxcasedepth, curvars, AllEquations)
+        maxlevel2scopecounter = 300 # used to limit how deep the hierarchy goes or otherwise IK can get too big
+        if len(currentcases) >= self.maxcasedepth or (scopecounter > maxlevel2scopecounter and len(currentcases) >= 2):
+            log.warn('c=%d, %d levels deep in checking degenerate cases, skipping. curvars=%r, AllEquations=%r', scopecounter, len(currentcases), curvars, AllEquations)
             lastbranch.append(AST.SolverBreak('%d cases reached'%self.maxcasedepth, [(var,self.SimplifyAtan2(self._SubstituteGlobalSymbols(eq, originalGlobalSymbols))) for var, eq in currentcasesubs], othersolvedvars, solsubs, originalGlobalSymbols, endbranchtree))
             return prevbranch
         
@@ -8719,18 +8721,25 @@ class IKFastSolver(AutoReloader):
             
         return True
     
-    def IsDeterminantNonZeroByEval(self, A):
+    def IsDeterminantNonZeroByEval(self, A, evalfirst=True):
         """checks if a determinant is non-zero by evaluating all the possible solutions.
+        :param evalfirst: if True, then call evalf() first before any complicated operation in order to avoid freezes. Set this to false to get more accurate results when A is known to be simple.
         :return: True if there exist values where det(A) is not zero
         """
         N = A.shape[0]
         thresh = 0.01**N
         nummatrixsymbols = __builtin__.sum([1 for a in A if not a.is_number])
         if nummatrixsymbols == 0:
-            return A.evalf().det() > thresh # should evaluate first before deterimnant computation, or else might freeze
+            if evalfirst:
+                return A.evalf().det() > thresh
+            else:
+                return A.det().evalf() > thresh
         
         for testconsistentvalue in self.testconsistentvalues:
-            detvalue = A.subs(testconsistentvalue).evalf().det()
+            if evalfirst:
+                detvalue = A.subs(testconsistentvalue).evalf().det()
+            else:
+                detvalue = A.subs(testconsistentvalue).det().evalf()
             if abs(detvalue) > thresh:
                 return True
             

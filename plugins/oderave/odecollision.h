@@ -128,17 +128,17 @@ public:
         }
 #endif
 
-        _odespace->InitEnvironment();
+        _odespace->Init();
         geomray = dCreateRay(0, 1000.0f);     // 1000m (is this used?)
     }
-    ~ODECollisionChecker() {
+    virtual ~ODECollisionChecker() {
         if( geomray != NULL ) {
             dGeomDestroy(geomray);
             geomray = NULL;
         }
         // save to call DestroyEnvironment since it does not rely on the Environment lock
         DestroyEnvironment();
-        _odespace->DestroyEnvironment();
+        _odespace->Destroy();
     }
 
     bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
@@ -167,6 +167,7 @@ public:
 
     virtual void DestroyEnvironment()
     {
+        _odespace->DestroyEnvironment();
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
@@ -845,20 +846,32 @@ private:
         b2 = dGeomGetBody(o2);
 
         KinBody::LinkPtr pkb1,pkb2;
+        ODESpace::KinBodyInfo::LINK* podelinkinfo1 = NULL, *podelinkinfo2 = NULL;
+        
         if(!!b1 && dBodyGetData(b1)) {
-            pkb1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1))->GetLink();
+            podelinkinfo1 = (ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1);
+            pkb1 = podelinkinfo1->GetLink();
             if( !!pkb1 ) {
                 if( !pkb1->IsEnabled() || !pcb->IsActiveLink(pkb1->GetParent(),pkb1->GetIndex()) ) {
                     return;
                 }
             }
+            else {
+                RAVELOG_WARN_FORMAT("ode object still inside ODE world but openrave object %s was already deleted!", podelinkinfo1->bodylinkname);
+                return;
+            }
         }
-        if(!!b2 && dBodyGetData(b1)) {
-            pkb2 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2))->GetLink();
+        if(!!b2 && dBodyGetData(b2)) {
+            podelinkinfo2 = (ODESpace::KinBodyInfo::LINK*)dBodyGetData(b2);
+            pkb2 = podelinkinfo2->GetLink();
             if( !!pkb2 ) {
                 if( !pkb2->IsEnabled() || !pcb->IsActiveLink(pkb2->GetParent(),pkb2->GetIndex()) ) {
                     return;
                 }
+            }
+            else {
+                RAVELOG_WARN_FORMAT("ode object still inside ODE world but openrave object %s was already deleted!", podelinkinfo2->bodylinkname);
+                return;
             }
         }
 
@@ -891,6 +904,9 @@ private:
                 _report.plink2 = pkb2;
                 if( !!pkb1 && !!pkb2 ) {
                     _report.vLinkColliding.push_back(std::make_pair(pkb1, pkb2));
+                }
+                if( !pkb1 || !pkb2 ) {
+                    RAVELOG_WARN("one of the links is not specified\n");
                 }
 
                 if( _options & OpenRAVE::CO_Contacts ) {

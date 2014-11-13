@@ -132,6 +132,7 @@ public:
             KinBody::LinkWeakPtr _plink;
             bool _bEnabled;
             Transform tlinkmass, tlinkmassinv; // the local mass frame ODE was initialized with
+            std::string bodylinkname; // for debugging purposes
         };
 
         KinBodyInfo(boost::shared_ptr<ODEResources> ode) : _ode(ode)
@@ -186,12 +187,14 @@ public:
                     delete[] *itind;
                 }
                 (*itlink)->listvertices.clear();
+                (*itlink)->_bEnabled = false;
             }
             vlinks.resize(0);
 
             FOREACH(itjoint, vjoints) {
-                if( *itjoint )
+                if( *itjoint ) {
                     dJointDestroy(*itjoint);
+                }
             }
             vjoints.resize(0);
 
@@ -243,9 +246,11 @@ private:
     }
 
     virtual ~ODESpace() {
+        DestroyEnvironment();
+        Destroy();
     }
 
-    bool InitEnvironment()
+    bool Init()
     {
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
@@ -256,6 +261,12 @@ private:
         return true;
     }
 
+    void Destroy()
+    {
+        DestroyEnvironment();
+        _ode.reset();
+    }
+
     void DestroyEnvironment()
     {
         RAVELOG_VERBOSE("destroying ode collision environment\n");
@@ -264,7 +275,6 @@ private:
             (*itbody)->RemoveUserData(_userdatakey);
         }
         _setInitializedBodies.clear();
-        _ode.reset();
     }
 
     bool IsInitialized() {
@@ -364,6 +374,7 @@ private:
             }
 
             link->_plink = *itlink;
+            link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
             // Calculate ODE transform consisting of link origin + center of mass offset
             RaveTransform<dReal> t = (*itlink)->GetTransform() * link->tlinkmass;
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);

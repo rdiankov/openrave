@@ -216,8 +216,9 @@ class VisibilityModel(DatabaseGenerator):
             with self.env:
                 sensor = self.attachedsensor.GetSensor()
                 if sensor is not None: # set power to 0?
-                    sensordata = sensor.GetSensorGeometry(Sensor.Type.Camera)
-                    self.KK = sensordata.KK
+                    sensorgeom = sensor.GetSensorGeometry(Sensor.Type.Camera)
+                    sensordata = sensor.GetSensorData(Sensor.Type.Camera)
+                    self.KK = sensorgeom.KK.K
                     self.dims = sensordata.imagedata.shape
                         
                 with RobotStateSaver(self.robot):
