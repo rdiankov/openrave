@@ -1056,7 +1056,7 @@ public:
                     }
                     s << "]" << endl << "ikparameterization=\"" << twrist << "\"" << endl;
                     s << "raw ik command: ";
-                    GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                    GetIKFastCommand(s, twrist, pmanip);
                     FOREACH(itfree,vfreeparameters) {
                         s << *itfree << " ";
                     }
@@ -1085,7 +1085,7 @@ public:
                         s << "]" << endl << "ikparamin=\"" << twrist << "\"" << endl;
                         s << "ikparamout=\"" << twrist_out << "\"" << endl;
                         s << "raw ik command: ";
-                        GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                        GetIKFastCommand(s, twrist, pmanip);
                         FOREACH(itfree,vfreeparameters_out) {
                             s << *itfree << " ";
                         }
@@ -1144,7 +1144,7 @@ public:
                             s << "]" << endl << "in: " << twrist << endl;
                             s << "out: " << twrist_out << endl;
                             s << "raw ik command: ";
-                            GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                            GetIKFastCommand(s, twrist, pmanip);
                             FOREACH(itfree,vfreeparameters_out) {
                                 s << *itfree << " ";
                             }
@@ -1253,7 +1253,7 @@ public:
                             s << endl << "]" << endl << "in: " << twrist << endl;
                             s << "out: " << twrist_out << endl;
                             s << "raw ik command: ";
-                            GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                            GetIKFastCommand(s, twrist, pmanip);
                             FOREACH(itfree,vfreeparameters_out) {
                                 s << *itfree << " ";
                             }
@@ -1273,7 +1273,7 @@ public:
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         s.str("");
                         s << "raw ik command: ";
-                        GetIKFastCommand(s, pmanip->GetBase()->GetTransform().inverse()*twrist);
+                        GetIKFastCommand(s, twrist, pmanip);
                         FOREACH(itfree,vfreeparameters_real) {
                             s << *itfree << " ";
                         }
@@ -1307,10 +1307,12 @@ public:
         return true;
     }
 
-    static void GetIKFastCommand(std::ostream& o, const IkParameterization& param) {
+    static void GetIKFastCommand(std::ostream& o, const IkParameterization& globalparam, RobotBase::ManipulatorPtr pmanip)
+    {
+        IkParameterization param = pmanip->GetBase()->GetTransform().inverse()*globalparam;
         switch(param.GetType()) {
         case IKP_Transform6D: {
-            TransformMatrix tm = param.GetTransform6D();
+            TransformMatrix tm = param.GetTransform6D()*pmanip->GetLocalToolTransform().inverse(); ///< ik takes the original matrix
             o << tm.m[0] << " " << tm.m[1] << " " << tm.m[2] << " " << tm.trans[0] << " " << tm.m[4] << " " << tm.m[5] << " " << tm.m[6] << " " << tm.trans[1] << " " << tm.m[8] << " " << tm.m[9] << " " << tm.m[10] << " " << tm.trans[2] << " ";
             break;
         }

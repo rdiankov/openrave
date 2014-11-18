@@ -3162,10 +3162,10 @@ class IKFastSolver(AutoReloader):
         leftovervarstree = []
         origendbranchtree = endbranchtree
         solvemethods = []
-#         if usesolvers & 1:
-#             solvemethods.append(self.solveLiWoernleHiller)
-#         if usesolvers & 2:
-#             solvemethods.append(self.solveKohliOsvatic)
+        if usesolvers & 1:
+            solvemethods.append(self.solveLiWoernleHiller)
+        if usesolvers & 2:
+            solvemethods.append(self.solveKohliOsvatic)
         if usesolvers & 4:
             solvemethods.append(self.solveManochaCanny)
         for solvemethod in solvemethods:
@@ -3231,7 +3231,6 @@ class IKFastSolver(AutoReloader):
         if len(curvars) > 0:
             self.sortComplexity(AllEquationsExtra)
             self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)
-            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
             leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
             leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
         else:
@@ -4477,7 +4476,7 @@ class IKFastSolver(AutoReloader):
         reducedeqs = []
         # filled with equations where one variable is singled out
         reducedsinglevars = [None,None,None,None]
-        for peq in neweqs:
+        for ipeq, peq in enumerate(neweqs):
             coeff, factors = (peq[1]-peq[0]).factor_list()
             # check if peq[1] can factor out certain monoms                
             if len(factors) > 1:
@@ -4521,7 +4520,7 @@ class IKFastSolver(AutoReloader):
                     if self.CheckExpressionUnique(reducedeqs, eq):
                         reducedeqs.append(eq)
                     else:
-                        log.info('not unique: %r', eq)
+                        log.info('factors %d not unique: %r', len(factors), eq)
             else:
                 if peq[0] != S.Zero:
                     peq0dict = peq[0].as_dict()
@@ -4536,7 +4535,7 @@ class IKFastSolver(AutoReloader):
                     if self.CheckExpressionUnique(reducedeqs, eq):
                         reducedeqs.append(eq)
                     else:
-                        log.info('not unique: %r', eq)
+                        log.info('factors %d reduced not unique: %r', len(factors), eq)
         for ivar in range(2):
             if reducedsinglevars[2*ivar+0] is not None and reducedsinglevars[2*ivar+1] is not None:
                 # a0*cos = b0, a1*sin = b1
@@ -4549,7 +4548,7 @@ class IKFastSolver(AutoReloader):
         #for neweqs_test in combinations(neweqs_full, len(neweqs_full)-4):
         neweqs_test = neweqs_full
         allmonoms = set()
-        for peq in neweqs_test:
+        for ipeq, peq in enumerate(neweqs_test):
             allmonoms = allmonoms.union(set(peq[0].monoms()))
         allmonoms = list(allmonoms)
         allmonoms.sort()
@@ -5073,11 +5072,10 @@ class IKFastSolver(AutoReloader):
 #             pass
 #         
 
-
         exportcoeffeqs = None
         # only support ileftvar=0 for now
         for ileftvar in [0]:#range(len(htvars)):
-            # always take the equations 4 at a time
+            # always take the equations 4 at a time....?
             if len(newreducedeqs) == 3:
                 try:
                     exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
@@ -5406,6 +5404,16 @@ class IKFastSolver(AutoReloader):
                     
             raise self.CannotSolveError('failed to solve dialytically')
 
+        if 0:
+            # quadratic equations
+            iquadvar = 1
+            quadpoly0 = Poly(newreducedeqs[0].as_expr(), htvars[iquadvar])
+            quadpoly1 = Poly(newreducedeqs[2].as_expr(), htvars[iquadvar])
+            a0, b0, c0 = quadpoly0.coeffs()
+            a1, b1, c1 = quadpoly1.coeffs()
+            quadsolnum = (-a1*c0 + a0*c1).expand()
+            quadsoldenom = (-a1*b0 + a0*b1).expand()
+            
         if ileftvar > 0:
             raise self.CannotSolveError('solving equations dialytically succeeded with var index %d, unfortunately code generation supports only index 0'%ileftvar)
         
@@ -5838,6 +5846,7 @@ class IKFastSolver(AutoReloader):
                 eps = 10**-(self.precision-3)
                 Anumpy = numpy.array(numpy.array(A), numpy.float64)
                 if numpy.isnan(numpy.sum(Anumpy)):
+                    log.info('A has NaNs')
                     break
                 eigenvals = numpy.linalg.eigvals(Anumpy)
                 if all([Abs(f) > eps for f in eigenvals]):
@@ -5902,6 +5911,8 @@ class IKFastSolver(AutoReloader):
                     else:
                         linearlyindependent = True
                     break
+                else:
+                    log.info('not all eigenvalues are > 0: %r', eigenvals)
             if not linearlyindependent:
                 raise self.CannotSolveError('equations are not linearly independent')
 

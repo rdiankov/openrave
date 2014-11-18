@@ -1102,7 +1102,7 @@ def test_ik():
     valsubs = []
     freevalsubs = []
     for var,value in izip(self._jointvars,jointvalues):
-        newsubs = [(var,value),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
+        newsubs = [(var,Real(value)),(Symbol('c%s'%var.name),self.convertRealToRational(cos(value).evalf())),(Symbol('s%s'%var.name),self.convertRealToRational(sin(value).evalf())),(Symbol('t%s'%var.name),self.convertRealToRational(tan(value).evalf())),(Symbol('ht%s'%var.name),self.convertRealToRational(tan(value/2).evalf()))]
         valsubs += newsubs
         if not var in self._solvejointvars:
             freevalsubs += newsubs
