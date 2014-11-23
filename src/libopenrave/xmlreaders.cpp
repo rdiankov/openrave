@@ -334,10 +334,12 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     else if( xmlname == "diffusecolor" ) {
         _bOverwriteDiffuse = true;
         _ss >> _pgeom->_vDiffuseColor.x >> _pgeom->_vDiffuseColor.y >> _pgeom->_vDiffuseColor.z;
+        _pgeom->_vDiffuseColor.w = 1;
     }
     else if( xmlname == "ambientcolor" ) {
         _bOverwriteAmbient = true;
         _ss >> _pgeom->_vAmbientColor.x >> _pgeom->_vAmbientColor.y >> _pgeom->_vAmbientColor.z;
+        _pgeom->_vAmbientColor.w = 1;
     }
     else if( xmlname == "transparency" ) {
         _bOverwriteTransparency = true;
