@@ -641,6 +641,8 @@ public:
         __description = "Rosen's Basic RRT planner";
         _fGoalBiasProb = dReal(0.05);
         _bOneStep = false;
+        RegisterCommand("DumpTree", boost::bind(&BasicRrtPlanner::_DumpTreeCommand,this,_1,_2),
+                        "dumps the source and goal trees to $OPENRAVE_HOME/basicrrtdump.txt. The first N values are the DOF values, the last value is the parent index.\n");
     }
     virtual ~BasicRrtPlanner() {
     }
@@ -820,6 +822,16 @@ public:
         return _parameters;
     }
 
+    virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
+        std::string filename = RaveGetHomeDirectory() + string("/basicrrtdump.txt");
+        getline(is, filename);
+        boost::trim(filename);
+        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        _treeForward.DumpTree(f);
+        return true;
+    }
 protected:
     boost::shared_ptr<BasicRRTParameters> _parameters;
     dReal _fGoalBiasProb;
