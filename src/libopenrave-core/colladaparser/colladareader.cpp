@@ -2096,10 +2096,10 @@ public:
                 domProfile_common::domTechnique::domPhongRef pphong = daeSafeCast<domProfile_common::domTechnique::domPhong>(peffect->getDescendant(daeElement::matchType(domProfile_common::domTechnique::domPhong::ID())));
                 if( !!pphong ) {
                     if( !!pphong->getAmbient() && !!pphong->getAmbient()->getColor() ) {
-                        geom._vAmbientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
+                        geom._vAmbientColor = getVector3(pphong->getAmbient()->getColor()->getValue());
                     }
                     if( !!pphong->getDiffuse() && !!pphong->getDiffuse()->getColor() ) {
-                        geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
+                        geom._vDiffuseColor = getVector3(pphong->getDiffuse()->getColor()->getValue());
                     }
                     if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
                         geom._fTransparency = 1-static_cast<dReal>(pphong->getTransparency()->getFloat()->getValue());
