@@ -288,14 +288,8 @@ protected:
         }
 
         boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
-        Trajectory::TPOINT pt;
-
-        robot->SetActiveDOFValues(params->vinitialconfig);
-        pt.q = params->vinitialconfig;
-        ptraj->AddPoint(pt);
 
         boost::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
-
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
