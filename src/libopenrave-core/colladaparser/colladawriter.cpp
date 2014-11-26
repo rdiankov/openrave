@@ -1673,11 +1673,15 @@ private:
 
         domFx_common_color_or_textureRef pambient = daeSafeCast<domFx_common_color_or_texture>(pphong->add(COLLADA_ELEMENT_AMBIENT));
         domFx_common_color_or_texture::domColorRef pambientcolor = daeSafeCast<domFx_common_color_or_texture::domColor>(pambient->add(COLLADA_ELEMENT_COLOR));
-        _SetVector3(pambientcolor->getValue(), geom->GetAmbientColor());
+        Vector v = geom->GetAmbientColor();
+        v.w = 1-geom->GetTransparency(); // for phong lights, the 4th channel is required and it is the alpha value. alpha=1 meaning object is opaque.
+        _SetVector4(pambientcolor->getValue(), v);
 
         domFx_common_color_or_textureRef pdiffuse = daeSafeCast<domFx_common_color_or_texture>(pphong->add(COLLADA_ELEMENT_DIFFUSE));
         domFx_common_color_or_texture::domColorRef pdiffusecolor = daeSafeCast<domFx_common_color_or_texture::domColor>(pdiffuse->add(COLLADA_ELEMENT_COLOR));
-        _SetVector3(pdiffusecolor->getValue(), geom->GetDiffuseColor());
+        v = geom->GetDiffuseColor();
+        v.w = 1-geom->GetTransparency(); // for phong lights, the 4th channel is required and it is the alpha value. alpha=1 meaning object is opaque.
+        _SetVector4(pdiffusecolor->getValue(), v);
 
         domFx_common_float_or_paramRef ptransparency = daeSafeCast<domFx_common_float_or_param>(pphong->add(COLLADA_ELEMENT_TRANSPARENCY));
         daeSafeCast<domFx_common_float_or_param::domFloat>(ptransparency->add(COLLADA_ELEMENT_FLOAT))->setValue(1-geom->GetTransparency());

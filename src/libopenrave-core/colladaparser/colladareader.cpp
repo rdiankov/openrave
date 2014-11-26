@@ -2096,17 +2096,27 @@ public:
                 domProfile_common::domTechnique::domPhongRef pphong = daeSafeCast<domProfile_common::domTechnique::domPhong>(peffect->getDescendant(daeElement::matchType(domProfile_common::domTechnique::domPhong::ID())));
                 if( !!pphong ) {
                     if( !!pphong->getAmbient() && !!pphong->getAmbient()->getColor() ) {
-                        geom._vAmbientColor = getVector3(pphong->getAmbient()->getColor()->getValue());
+                        geom._vAmbientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
+                        if( pphong->getAmbient()->getColor()->getValue().getCount() >= 4 ) {
+                            // colors of the phong element in collada have the 4th value set to alpha.
+                            geom._fTransparency = 1-geom._vAmbientColor.w;
+                        }
+                        geom._vAmbientColor.w = 0; // not used in openrave
                     }
                     if( !!pphong->getDiffuse() && !!pphong->getDiffuse()->getColor() ) {
-                        geom._vDiffuseColor = getVector3(pphong->getDiffuse()->getColor()->getValue());
+                        geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
+                        if( pphong->getDiffuse()->getColor()->getValue().getCount() >= 4 ) {
+                            // colors of the phong element in collada have the 4th value set to alpha.
+                            geom._fTransparency = 1-geom._vDiffuseColor.w;
+                        }
+                        geom._vDiffuseColor.w = 0; // not used in openrave
                     }
                     if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
                         geom._fTransparency = 1-static_cast<dReal>(pphong->getTransparency()->getFloat()->getValue());
-                        if( geom._fTransparency >= 1 ) {
-                            RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%geom._fTransparency));
-                            geom._fTransparency = 0;
-                        }
+                    }
+                    if( geom._fTransparency >= 1 ) {
+                        RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%geom._fTransparency));
+                        geom._fTransparency = 0;
                     }
                 }
             }
@@ -3366,11 +3376,25 @@ public:
     }
 
     template <typename T> Vector getVector3(const T& t) {
-        return Vector(t[0],t[1],t[2],0);
+        Vector v;
+        for(int i = 0; i < t.getCount(); ++i) {
+            if( i >= 3 ) {
+                break;
+            }
+            v[i] = t[i];
+        }
+        return v;
     }
 
     template <typename T> Vector getVector4(const T& t) {
-        return Vector(t[0],t[1],t[2],t[3]);
+        Vector v;
+        for(int i = 0; i < t.getCount(); ++i) {
+            if( i >= 4 ) {
+                break;
+            }
+            v[i] = t[i];
+        }
+        return v;
     }
 
     // decompose a matrix into a scale and rigid transform (necessary for model scales)
