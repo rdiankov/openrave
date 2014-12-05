@@ -2505,7 +2505,9 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         if( (int)_pmanip->GetArmIndices().size() > itsample->_ikparam.GetDOF() ) {
             numRedundantSamplesForEEChecking = 40;
         }
-        bool bCheckEndEffector = true; //itsample->_ikparam.GetType() == IKP_Transform6D || (int)_pmanip->GetArmIndices().size() <= itsample->_ikparam.GetDOF();
+
+        bool bFullEndEffectorKnown = itsample->_ikparam.GetType() == IKP_Transform6D || _pmanip->GetArmDOF() <= itsample->_ikparam.GetDOF();
+        bool bCheckEndEffector = true;
         if( _ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions ) {
             // use requested end effector to be always ignored
             bCheckEndEffector = false;
@@ -2637,7 +2639,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);
             }
         }
-        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _ikfilteroptions|(bCheckEndEffector ? IKFO_IgnoreEndEffectorEnvCollisions : 0), _vikreturns);
+        bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _ikfilteroptions|(bFullEndEffectorKnown&&bCheckEndEffector ? IKFO_IgnoreEndEffectorEnvCollisions : 0), _vikreturns);
         if( --itsample->_numleft <= 0 || vfree.size() == 0 || !_searchfreeparameters ) {
             _listsamples.erase(itsample);
         }
