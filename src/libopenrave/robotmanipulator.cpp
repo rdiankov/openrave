@@ -829,19 +829,27 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
             tStartEE.rot = quatRotateDirection(_info._vdirection, ikparam.GetTranslationDirection5D().dir);
             tStartEE.trans = ikparam.GetTranslationDirection5D().pos;
             Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
+            bool bNotInCollision = false;
             for(int i = 0; i < numredundantsamples; ++i) {
                 if( !CheckEndEffectorCollision(tStartEE,report) ) {
-                    return false;
+                    // doesn't collide, but will need to verify that there actually exists an IK solution there...
+                    // if we accidentally return here even there's no IK solution, then later processes could waste a lot of time looking for it.
+                    bNotInCollision = true;
+                    break;
                 }
                 tStartEE.rot = quatMultiply(tStartEE.rot, qdelta);
             }
-            return true;
+            if( !bNotInCollision ) {
+                return true;
+            }
         }
-        RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
+        else {
+            RAVELOG_WARN_FORMAT("do not support redundant checking for iktype 0x%x", ikparam.GetType());
+        }
     }
 
     IkSolverBasePtr pIkSolver = GetIkSolver();
-    OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
+    //OPENRAVE_ASSERT_OP_FORMAT(GetArmDOF(), <=, ikparam.GetDOF(), "ikparam type 0x%x does not fully determine manipulator %s:%s end effector configuration", ikparam.GetType()%probot->GetName()%GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",probot->GetName()%GetName(),ORE_Failed);
     OPENRAVE_ASSERT_FORMAT(pIkSolver->Supports(ikparam.GetType()),"manipulator %s:%s ik solver %s does not support ik type 0x%x",probot->GetName()%GetName()%pIkSolver->GetXMLId()%ikparam.GetType(),ORE_InvalidState);
     BOOST_ASSERT(pIkSolver->GetManipulator() == shared_from_this() );
@@ -853,36 +861,44 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         localgoal=ikparam;
     }
 
-    // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
-    // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
-    std::vector< std::vector<dReal> > vsolutions;
-    if( !pIkSolver->SolveAll(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions,vsolutions) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
+    // if IK can be solved, then there exists a solution for the end effector that is not in collision
+    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), IKFO_CheckEnvCollisions) ) {
+        return false;
     }
-    RobotStateSaver saver(probot);
-    probot->SetActiveDOFs(GetArmIndices());
-    // have to check all solutions since the 6D transform can change even though the ik parameterization doesn't
-    std::list<Transform> listprevtransforms;
-    FOREACH(itsolution,vsolutions) {
-        probot->SetActiveDOFValues(*itsolution,false);
-        Transform t = GetTransform();
-        // check if previous transforms exist
-        bool bhassimilar = false;
-        FOREACH(ittrans,listprevtransforms) {
-            if( TransformDistanceFast(t,*ittrans) < g_fEpsilonLinear*10 ) {
-                bhassimilar = true;
-                break;
-            }
-        }
-        if( !bhassimilar ) {
-            if( CheckEndEffectorCollision(GetTransform(),report) ) {
-                return true;
-            }
-            listprevtransforms.push_back(t);
-        }
+    else {
+        return true;
     }
 
-    return false;
+//    // only care about the end effector position, so disable all time consuming options. still leave the custom options in case the user wants to call some custom stuff?
+//    // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
+//    std::vector< std::vector<dReal> > vsolutions;
+//    if( !pIkSolver->SolveAll(localgoal, IKFO_IgnoreSelfCollisions,vsolutions) ) {
+//        throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
+//    }
+//    RobotStateSaver saver(probot);
+//    probot->SetActiveDOFs(GetArmIndices());
+//    // have to check all solutions since the 6D transform can change even though the ik parameterization doesn't
+//    std::list<Transform> listprevtransforms;
+//    FOREACH(itsolution,vsolutions) {
+//        probot->SetActiveDOFValues(*itsolution,false);
+//        Transform t = GetTransform();
+//        // check if previous transforms exist
+//        bool bhassimilar = false;
+//        FOREACH(ittrans,listprevtransforms) {
+//            if( TransformDistanceFast(t,*ittrans) < g_fEpsilonLinear*10 ) {
+//                bhassimilar = true;
+//                break;
+//            }
+//        }
+//        if( !bhassimilar ) {
+//            if( !CheckEndEffectorCollision(GetTransform(),report) ) {
+//                return false;
+//            }
+//            listprevtransforms.push_back(t);
+//        }
+//    }
+//
+//    return true;
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report) const

@@ -2625,15 +2625,16 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                     itsample->_psampler->SetSpaceDOF(_pmanip->GetIkSolver()->GetNumFreeParameters());
                 }
                 itsample->_psampler->SampleSequence(vfree,1);
-                for(size_t i = 0; i < _vfreestart.size(); ++i) {
-                    vfree.at(i) += _vfreestart[i];
-                    if( vfree[i] < 0 ) {
-                        vfree[i] += 1;
-                    }
-                    if( vfree[i] > 1 ) {
-                        vfree[i] -= 1;
-                    }
-                }
+                // it's pretty dangerous to add _vfreestart since if it starts on a joint limit (0), then it will start exploring from each of the joint limits. rather, we want ik solutions that are away from joint limits
+//                for(size_t i = 0; i < _vfreestart.size(); ++i) {
+//                    vfree.at(i) += _vfreestart[i];
+//                    if( vfree[i] < 0 ) {
+//                        vfree[i] += 1;
+//                    }
+//                    if( vfree[i] > 1 ) {
+//                        vfree[i] -= 1;
+//                    }
+//                }
             }
             else {
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);

@@ -4617,13 +4617,31 @@ class IKFastSolver(AutoReloader):
         
         # check hacks for 5dof komatsu ik
         if 1:
-            if neweqs_simple[4][0]*tvar-neweqs_simple[5][0] == S.Zero:
-                reducedeqs.append((neweqs_simple[4][1]*tvar-neweqs_simple[5][1]).as_expr())
-            if ((neweqs_simple[0][0]*tvar - neweqs_simple[1][0])*Rational(-103651, 500000) + neweqs_simple[6][0]*tvar - neweqs_simple[7][0]).expand() == S.Zero:
-                reducedeqs.append(((neweqs_simple[0][1]*tvar - neweqs_simple[1][1])*Rational(-103651, 500000) + neweqs_simple[6][1]*tvar - neweqs_simple[7][1]).expand().as_expr())
-            if ((neweqs_simple[0][0]*tvar - neweqs_simple[1][0])*Rational(151,500) + (neweqs_simple[2][0]*tvar-neweqs_simple[3][0])*sqrt(2)) == S.Zero:
-                reducedeqs.append(((neweqs_simple[0][1]*tvar - neweqs_simple[1][1])*Rational(151,500) + (neweqs_simple[2][1]*tvar-neweqs_simple[3][1])*sqrt(2)).as_expr())
-        
+            for itest in range(0,len(neweqs_simple)-1,2):
+                if neweqs_simple[itest][0]*tvar-neweqs_simple[itest+1][0] == S.Zero:
+                    eq = (neweqs_simple[itest][1]*tvar-neweqs_simple[itest+1][1]).as_expr()
+                    if eq != S.Zero and self.CheckExpressionUnique(reducedeqs, eq):
+                        reducedeqs.append(eq)
+                if neweqs_simple[itest+1][0]*tvar-neweqs_simple[itest][0] == S.Zero:
+                    eq = (neweqs_simple[itest+1][1]*tvar-neweqs_simple[itest][1]).as_expr()
+                    if eq != S.Zero and self.CheckExpressionUnique(reducedeqs, eq):
+                        reducedeqs.append(eq)
+            for testrational in [Rational(-103651, 500000), Rational(-413850340369, 2000000000000), Rational(151,500), Rational(301463, 1000000)]:
+                if ((neweqs_simple[0][0]*tvar - neweqs_simple[1][0])*testrational + neweqs_simple[6][0]*tvar - neweqs_simple[7][0]).expand() == S.Zero:
+                    if (neweqs_simple[0][0]*tvar - neweqs_simple[1][0]) == S.Zero:
+                        eq = (neweqs_simple[6][1]*tvar - neweqs_simple[7][1]).expand().as_expr()
+                    else:
+                        eq = ((neweqs_simple[0][1]*tvar - neweqs_simple[1][1])*testrational + neweqs_simple[6][1]*tvar - neweqs_simple[7][1]).expand().as_expr()
+                    if self.CheckExpressionUnique(reducedeqs, eq):
+                        reducedeqs.append(eq)
+                if ((neweqs_simple[0][0]*tvar - neweqs_simple[1][0])*testrational + (neweqs_simple[2][0]*tvar-neweqs_simple[3][0])*sqrt(2)) == S.Zero:
+                    if (neweqs_simple[0][0]*tvar - neweqs_simple[1][0]) == S.Zero:
+                        eq = ((neweqs_simple[2][1]*tvar-neweqs_simple[3][1])*sqrt(2)).as_expr()
+                    else:
+                        eq = ((neweqs_simple[0][1]*tvar - neweqs_simple[1][1])*testrational + (neweqs_simple[2][1]*tvar-neweqs_simple[3][1])*sqrt(2)).as_expr()
+                    if self.CheckExpressionUnique(reducedeqs, eq):
+                        reducedeqs.append(eq)
+                    
         neweqs_test = neweqs2#neweqs_simple
         
         allmonoms = set()
@@ -4700,8 +4718,9 @@ class IKFastSolver(AutoReloader):
                         AUdetmat = AU2
                     else:
                         AUdetmat = AU2*AU2.transpose()
-                    if not self.IsDeterminantNonZeroByEval(AUdetmat):
+                    if not self.IsDeterminantNonZeroByEval(AUdetmat, len(rows)>9):
                         log.info('skipping dependent index %d', i)
+                        assert(AUdetmat.det()==S.Zero)
                         continue
                     AU = AU2
                     rows.append(i)
@@ -5024,13 +5043,14 @@ class IKFastSolver(AutoReloader):
         if len(reducedeqs) < 3:
             raise self.CannotSolveError('have need at least 3 reducedeqs (%d)'%len(reducedeqs))
         
-        log.info('reducing equations')
+        log.info('reducing %d equations', len(reducedeqs))
         newreducedeqs = []
         hassinglevariable = False
         for eq in reducedeqs:
             complexity = self.codeComplexity(eq)
             if complexity > 1500:
-                raise self.CannotSolveError('equation way too complex (%d), looking for another solution'%complexity)
+                log.warn('equation way too complex (%d), looking for another solution', complexity)
+                continue
             
             if complexity > 1500:
                 log.info('equation way too complex (%d), so try breaking it down', complexity)
@@ -5089,9 +5109,10 @@ class IKFastSolver(AutoReloader):
                         term *= othersymbols[imonom]**monom
                 eqnew += term
             newpeq = Poly(eqnew,htvars+nonhtvars)
-            newreducedeqs.append(newpeq)
-            hassinglevariable |= any([all([__builtin__.sum(monom)==monom[i] for monom in newpeq.monoms()]) for i in range(3)])
-                    
+            if newpeq != S.Zero:
+                newreducedeqs.append(newpeq)
+                hassinglevariable |= any([all([__builtin__.sum(monom)==monom[i] for monom in newpeq.monoms()]) for i in range(3)])
+                
         if hassinglevariable:
             log.info('hassinglevariable, trying with raw equations')
             AllEquations = []
@@ -5168,7 +5189,8 @@ class IKFastSolver(AutoReloader):
                         log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
 
                 if exportcoeffeqs is None:
-                    for dialyticeqs in combinations(newreducedeqs,6):
+                    filteredeqs = [peq for peq in newreducedeqs if peq.degree() <= 2] # has never worked for higher degrees than 2
+                    for dialyticeqs in combinations(filteredeqs,6):
                         try:
                             exportcoeffeqs,exportmonoms = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
                             break
@@ -6009,7 +6031,7 @@ class IKFastSolver(AutoReloader):
                         linearlyindependent = True
                     break
                 else:
-                    log.info('not all eigenvalues are > 0: %r', eigenvals)
+                    log.info('not all eigenvalues are > 0. min is %e', min([Abs(f) > eps for f in eigenvals]))
             if not linearlyindependent:
                 raise self.CannotSolveError('equations are not linearly independent')
 
@@ -8840,10 +8862,17 @@ class IKFastSolver(AutoReloader):
         :return: True if there exist values where det(A) is not zero
         """
         N = A.shape[0]
-        thresh = 0.005**N
-        if thresh > 1e-14:
-            # make sure thresh isn't too big...
-            thresh = 1e-14
+        thresh = 0.0005**N # when translationdirection5d is used with direction that is 6+ digits, the determinent gets small...
+        if evalfirst:
+            if thresh > 1e-14:
+                # make sure thresh isn't too big...
+                thresh = 1e-14
+        else:
+            # can have a tighter thresh since evaluating last...
+            if thresh > 1e-40:
+                # make sure thresh isn't too big...
+                thresh = 1e-40
+                
         nummatrixsymbols = __builtin__.sum([1 for a in A if not a.is_number])
         if nummatrixsymbols == 0:
             if evalfirst:
