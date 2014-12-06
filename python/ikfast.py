@@ -4720,7 +4720,6 @@ class IKFastSolver(AutoReloader):
                         AUdetmat = AU2*AU2.transpose()
                     if not self.IsDeterminantNonZeroByEval(AUdetmat, len(rows)>9):
                         log.info('skipping dependent index %d', i)
-                        assert(AUdetmat.det()==S.Zero)
                         continue
                     AU = AU2
                     rows.append(i)
@@ -5232,7 +5231,7 @@ class IKFastSolver(AutoReloader):
                             term *= denom**(maxdegree-monoms[igenoffset])
                             term *= num**(monoms[igenoffset])
                             for imonom, monom in enumerate(monoms):
-                                if imonom != igenoffset:
+                                if imonom != igenoffset and imonom < len(htvars):
                                     term *= htvars[imonom]**monom
                             eqnew += term
                         try:
@@ -5370,10 +5369,12 @@ class IKFastSolver(AutoReloader):
                         if htvars[2].name.find(usedvars[igenoffset].name) >= 0:
                             break
                     polyvars = htvars[0:2]
-                else:
+                elif len(htvars) > 1:
                     usedvar0solutions = solve(newreducedeqs[deg1index],htvars[1])
                     igenoffset = 1
                     polyvars = htvars[0:1] + nonhtvars
+                else:
+                    usedvar0solutions = []
                 processedequations = []
                 if len(usedvar0solutions) > 0:
                     usedvar0solution = usedvar0solutions[0]
@@ -7359,7 +7360,7 @@ class IKFastSolver(AutoReloader):
                     denom = fraction(halftansubs[i][1])[1]
                     term *= denom**(maxdenom[i/2]-monoms[i]-monoms[i+1])
                 complexityvalue = self.codeComplexity(term.expand())
-                if complexityvalue < 1000:
+                if complexityvalue < 450:
                     eqnew += simplify(term)
                 else:
                     # too big, so don't simplify?

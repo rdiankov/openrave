@@ -862,10 +862,19 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     }
 
     // if IK can be solved, then there exists a solution for the end effector that is not in collision
-    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), IKFO_CheckEnvCollisions) ) {
+    IkReturn ikreturn(IKRA_Success);
+    IkReturnPtr pikreturn(&ikreturn,OpenRAVE::utils::null_deleter());
+    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), IKFO_CheckEnvCollisions, pikreturn) ) {
         return false;
     }
     else {
+        if( (ikreturn._action&IKRA_RejectSelfCollision) != IKRA_RejectSelfCollision & (ikreturn._action&IKRA_RejectEnvCollision) != IKRA_RejectEnvCollision ) {
+            RAVELOG_VERBOSE_FORMAT("ik solution not found due to non-collision reasons (0x%x), returning true anway...", ikreturn._action);
+        }
+        if( !!report ) {
+            // solver failed, should have some way of initializing the report...
+            
+        }
         return true;
     }
 
