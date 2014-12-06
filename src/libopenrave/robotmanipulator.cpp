@@ -868,7 +868,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
         return false;
     }
     else {
-        if( (ikreturn._action&IKRA_RejectSelfCollision) != IKRA_RejectSelfCollision & (ikreturn._action&IKRA_RejectEnvCollision) != IKRA_RejectEnvCollision ) {
+        if( (ikreturn._action&IKRA_RejectSelfCollision) != IKRA_RejectSelfCollision && (ikreturn._action&IKRA_RejectEnvCollision) != IKRA_RejectEnvCollision ) {
             RAVELOG_VERBOSE_FORMAT("ik solution not found due to non-collision reasons (0x%x), returning true anway...", ikreturn._action);
         }
         if( !!report ) {
