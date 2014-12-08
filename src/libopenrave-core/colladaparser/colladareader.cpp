@@ -3377,7 +3377,7 @@ public:
 
     template <typename T> Vector getVector3(const T& t) {
         Vector v;
-        for(int i = 0; i < t.getCount(); ++i) {
+        for(size_t i = 0; i < t.getCount(); ++i) {
             if( i >= 3 ) {
                 break;
             }
@@ -3388,7 +3388,7 @@ public:
 
     template <typename T> Vector getVector4(const T& t) {
         Vector v;
-        for(int i = 0; i < t.getCount(); ++i) {
+        for(size_t i = 0; i < t.getCount(); ++i) {
             if( i >= 4 ) {
                 break;
             }

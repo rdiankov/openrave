@@ -55,6 +55,7 @@ void IkReturn::Clear()
     _mapdata.clear();
     _userdata.reset();
     _vsolution.resize(0);
+    //_reports.resize(0); // TODO
 }
 
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
