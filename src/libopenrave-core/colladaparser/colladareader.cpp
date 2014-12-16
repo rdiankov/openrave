@@ -1082,8 +1082,11 @@ public:
                                 // node is instantiated, so take the instance_node's URL instead! this is because it->_node is cloned.
                                 vmodel = _MakeFullURI(it->_inode->getUrl(), it->_inode->getUrl().getElement().cast()); //y_MakeFullURIFromId(it->_node->getId(),it->_inode);
                             }
-                            else {
+                            else if( !!it->_node->getId() ) {
                                 vmodel = _MakeFullURIFromId(it->_node->getId(),it->_node);
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("body %s has no node id", strname);
                             }
                             ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), !!it->_ipmodel ? _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel) : std::string(), vmodel);
                             pcolladainfo->_bindingModelURIs.push_back(mbinding);
