@@ -1614,14 +1614,16 @@ object GetUserData(UserDataPtr pdata)
 
 EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr pyenv)
 {
-    return pyenv->GetEnv();
+    return !pyenv ? EnvironmentBasePtr() : pyenv->GetEnv();
 }
 
 EnvironmentBasePtr GetEnvironment(object o)
 {
-    extract<PyEnvironmentBasePtr> pyenv(o);
-    if( pyenv.check() ) {
-        return ((PyEnvironmentBasePtr)pyenv)->GetEnv();
+    if( !IS_PYTHONOBJECT_NONE(o)) {
+        extract<PyEnvironmentBasePtr> pyenv(o);
+        if( pyenv.check() ) {
+            return ((PyEnvironmentBasePtr)pyenv)->GetEnv();
+        }
     }
     return EnvironmentBasePtr();
 }

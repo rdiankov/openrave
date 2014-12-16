@@ -1073,8 +1073,10 @@ public:
                 }
                 FOREACH(it, bindings.listInstanceModelBindings) {
                     if( it->_ikmodel == ikmodel && _CompareScopeElements(it->_listInstanceScopeKModel, listInstanceScope) > 0) {
-                        if( !!it->_ikmodel && !!it->_ipmodel && !!it->_node ) {
-                            mapModelIndices[it->_ipmodel] = std::make_pair((int)pcolladainfo->_bindingModelURIs.size(), it);
+                        if( !!it->_ikmodel && !!it->_node ) {
+                            if( !!it->_ipmodel ) {
+                                mapModelIndices[it->_ipmodel] = std::make_pair((int)pcolladainfo->_bindingModelURIs.size(), it);
+                            }
                             std::string vmodel;
                             if( !!it->_inode ) {
                                 // node is instantiated, so take the instance_node's URL instead! this is because it->_node is cloned.
@@ -1083,13 +1085,16 @@ public:
                             else {
                                 vmodel = _MakeFullURIFromId(it->_node->getId(),it->_node);
                             }
-                            ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel), vmodel);
+                            ColladaXMLReadable::ModelBinding mbinding(_MakeFullURI(it->_ikmodel->getUrl(), it->_ikmodel), !!it->_ipmodel ? _MakeFullURI(it->_ipmodel->getUrl(), it->_ipmodel) : std::string(), vmodel);
                             pcolladainfo->_bindingModelURIs.push_back(mbinding);
                         }
                         break;
                     }
                 }
                 listInstanceScope.pop_back();
+            }
+            if( pcolladainfo->_bindingModelURIs.size() == 0 ) {
+                RAVELOG_WARN_FORMAT("body %s does not have any binding model URIs, re-saving as external reference will not work", strname);
             }
 
             pcolladainfo->_bindingLinkSIDs.resize(pbody->GetLinks().size());

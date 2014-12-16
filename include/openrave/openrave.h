@@ -2703,10 +2703,14 @@ OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, cons
 OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, int dof) RAVE_DEPRECATED;
 
 /// \brief returned a fully cloned interface
+///
+/// \param preference the InterfaceBasePtr to clone
+/// \param cloningoptions combination of CO_*
+/// \param pcloneenv the environment to create the new clone in. If not specified, will use preference->GetEnv()
 template <typename T>
-inline boost::shared_ptr<T> RaveClone(boost::shared_ptr<T const> preference, int cloningoptions)
+inline boost::shared_ptr<T> RaveClone(boost::shared_ptr<T const> preference, int cloningoptions, EnvironmentBasePtr pcloneenv=EnvironmentBasePtr())
 {
-    InterfaceBasePtr pcloned = RaveCreateInterface(preference->GetEnv(), preference->GetInterfaceType(), preference->GetXMLId());
+    InterfaceBasePtr pcloned = RaveCreateInterface(!pcloneenv ? preference->GetEnv() : pcloneenv, preference->GetInterfaceType(), preference->GetXMLId());
     OPENRAVE_ASSERT_FORMAT(!!pcloned, "Failed to clone interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
     boost::shared_ptr<T> pclonedcast = boost::dynamic_pointer_cast<T>(pcloned);
     OPENRAVE_ASSERT_FORMAT(!!pclonedcast, "Interface created but failed to cast interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);

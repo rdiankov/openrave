@@ -740,23 +740,27 @@ object RaveGetLoadedInterfaces()
     return ointerfacenames;
 }
 
-PyInterfaceBasePtr RaveClone(PyInterfaceBasePtr pyreference, int cloningoptions)
+PyInterfaceBasePtr pyRaveClone(PyInterfaceBasePtr pyreference, int cloningoptions, PyEnvironmentBasePtr pyenv=PyEnvironmentBasePtr())
 {
-    InterfaceBasePtr pclone = OpenRAVE::RaveClone<InterfaceBase>(pyreference->GetInterfaceBase(), cloningoptions);
+    if( !pyenv ) {
+        pyenv = pyreference->GetEnv();
+    }
+    EnvironmentBasePtr penv = openravepy::GetEnvironment(pyenv);
+    InterfaceBasePtr pclone = OpenRAVE::RaveClone<InterfaceBase>(pyreference->GetInterfaceBase(), cloningoptions, penv);
     switch(pclone->GetInterfaceType()) {
-    case PT_Planner: return toPyPlanner(RaveInterfaceCast<PlannerBase>(pclone), pyreference->GetEnv());
-    case PT_Robot: return toPyRobot(RaveInterfaceCast<RobotBase>(pclone), pyreference->GetEnv());
-    case PT_SensorSystem: return toPySensorSystem(RaveInterfaceCast<SensorSystemBase>(pclone), pyreference->GetEnv());
-    case PT_Controller: return toPyController(RaveInterfaceCast<ControllerBase>(pclone), pyreference->GetEnv());
-    case PT_Module: return toPyModule(RaveInterfaceCast<ModuleBase>(pclone), pyreference->GetEnv());
-    case PT_InverseKinematicsSolver: return toPyIkSolver(RaveInterfaceCast<IkSolverBase>(pclone), pyreference->GetEnv());
-    case PT_KinBody: return toPyKinBody(RaveInterfaceCast<KinBody>(pclone), pyreference->GetEnv());
-    case PT_PhysicsEngine: return toPyPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(pclone), pyreference->GetEnv());
-    case PT_Sensor: return toPySensor(RaveInterfaceCast<SensorBase>(pclone), pyreference->GetEnv());
-    case PT_CollisionChecker: return toPyCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(pclone), pyreference->GetEnv());
-    case PT_Trajectory: return toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyreference->GetEnv());
-    case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyreference->GetEnv());
-    case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyreference->GetEnv());
+    case PT_Planner: return toPyPlanner(RaveInterfaceCast<PlannerBase>(pclone), pyenv);
+    case PT_Robot: return toPyRobot(RaveInterfaceCast<RobotBase>(pclone), pyenv);
+    case PT_SensorSystem: return toPySensorSystem(RaveInterfaceCast<SensorSystemBase>(pclone), pyenv);
+    case PT_Controller: return toPyController(RaveInterfaceCast<ControllerBase>(pclone), pyenv);
+    case PT_Module: return toPyModule(RaveInterfaceCast<ModuleBase>(pclone), pyenv);
+    case PT_InverseKinematicsSolver: return toPyIkSolver(RaveInterfaceCast<IkSolverBase>(pclone), pyenv);
+    case PT_KinBody: return toPyKinBody(RaveInterfaceCast<KinBody>(pclone), pyenv);
+    case PT_PhysicsEngine: return toPyPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(pclone), pyenv);
+    case PT_Sensor: return toPySensor(RaveInterfaceCast<SensorBase>(pclone), pyenv);
+    case PT_CollisionChecker: return toPyCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(pclone), pyenv);
+    case PT_Trajectory: return toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyenv);
+    case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyenv);
+    case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyenv);
     }
     throw openrave_exception("invalid interface type",ORE_InvalidArguments);
 }
@@ -1000,6 +1004,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(InterpolateQuatSquad_overloads, openravepy::Inte
 BOOST_PYTHON_FUNCTION_OVERLOADS(ComputePoseDistSqr_overloads, openravepy::ComputePoseDistSqr, 2, 3)
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineConfigurationSpecification_overloads, openravepy::pyRaveGetAffineConfigurationSpecification, 1, 3)
 BOOST_PYTHON_FUNCTION_OVERLOADS(pyRaveGetAffineDOFValuesFromTransform_overloads, openravepy::pyRaveGetAffineDOFValuesFromTransform, 2, 3)
+BOOST_PYTHON_FUNCTION_OVERLOADS(RaveClone_overloads, pyRaveClone, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractTransform_overloads, PyConfigurationSpecification::ExtractTransform, 3, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractIkParameterization_overloads, PyConfigurationSpecification::ExtractIkParameterization, 1, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractAffineValues_overloads, PyConfigurationSpecification::ExtractAffineValues, 3, 4)
@@ -1230,7 +1235,7 @@ void init_openravepy_global()
     def("RaveLoadPlugin",OpenRAVE::RaveLoadPlugin,args("filename"),DOXY_FN1(RaveLoadPlugins));
     def("RaveHasInterface",OpenRAVE::RaveHasInterface,args("type","name"),DOXY_FN1(RaveHasInterface));
     def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
-    def("RaveClone",openravepy::RaveClone,args("ref","cloningoptions"), DOXY_FN1(RaveClone));
+    def("RaveClone",openravepy::pyRaveClone,RaveClone_overloads(args("ref","cloningoptions", "cloneenv"), DOXY_FN1(RaveClone)));
     def("RaveGetIkTypeFromUniqueId",OpenRAVE::RaveGetIkTypeFromUniqueId,args("uniqueid"), DOXY_FN1(RaveGetIkTypeFromUniqueId));
     def("RaveGetIndexFromAffineDOF",OpenRAVE::RaveGetIndexFromAffineDOF, args("affinedofs","dof"), DOXY_FN1(RaveGetIndexFromAffineDOF));
     def("RaveGetAffineDOFFromIndex",OpenRAVE::RaveGetAffineDOFFromIndex, args("affinedofs","index"), DOXY_FN1(RaveGetAffineDOFFromIndex));
