@@ -349,8 +349,9 @@ protected:
     {
         g._type = GT_TriMesh;
         g._meshcollision.vertices.resize(pmesh->mPositions.size());
+        // faces are defined clockwise in X file, so flip Z and change the order of indices!
         for(size_t i = 0; i < pmesh->mPositions.size(); ++i) {
-            g._meshcollision.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y,pmesh->mPositions[i].z*_vScaleGeometry.z);
+            g._meshcollision.vertices[i] = Vector(pmesh->mPositions[i].x*_vScaleGeometry.x,pmesh->mPositions[i].y*_vScaleGeometry.y, -pmesh->mPositions[i].z*_vScaleGeometry.z);
         }
         size_t numindices = 0;
         for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
@@ -360,8 +361,8 @@ protected:
         std::vector<int>::iterator itindex = g._meshcollision.indices.begin();
         for(size_t iface = 0; iface < pmesh->mPosFaces.size(); ++iface) {
             for(size_t i = 2; i < pmesh->mPosFaces[iface].mIndices.size(); ++i) {
-                *itindex++ = pmesh->mPosFaces[iface].mIndices.at(0);
                 *itindex++ = pmesh->mPosFaces[iface].mIndices.at(1);
+                *itindex++ = pmesh->mPosFaces[iface].mIndices.at(0);
                 *itindex++ = pmesh->mPosFaces[iface].mIndices.at(i);
             }
         }
