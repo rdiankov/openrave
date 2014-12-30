@@ -1019,7 +1019,20 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) ) {
+        CollisionReportPtr report(new CollisionReport);
+        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, report) ) {
+            contactpoints = (int)report->contacts.size();
+            stringstream ss;
+            ss << (!!report->plink1 ? report->plink1->GetName() : "(null)") << ":"
+               << (!!report->plink2 ? report->plink2->GetName() : "(null)") << " at "
+               << contactpoints << "contacts" << endl;
+            for(int i = 0; i < contactpoints; ++i) {
+                CollisionReport::CONTACT& c = report->contacts[i];
+                ss << "contact" << i << ": pos=("
+                   << c.pos.x << ", " << c.pos.y << ", " << c.pos.z << "), norm=("
+                   << c.norm.x << ", " << c.norm.y << ", " << c.norm.z << ")" << endl;
+            }
+            RAVELOG_VERBOSE("endeffector is in collision, %s\n",ss.str());
             return false;
         }
         if( !pconstraintfn->SampleWithCamera(t,vsample) ) {
