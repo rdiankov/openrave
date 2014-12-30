@@ -1147,7 +1147,7 @@ public:
     object GetActiveDOFLimits() const
     {
         if( _probot->GetActiveDOF() == 0 ) {
-            return numeric::array(boost::python::list());
+            return boost::python::make_tuple(numeric::array(boost::python::list()), numeric::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
         }
         vector<dReal> lower, upper;
         _probot->GetActiveDOFLimits(lower,upper);

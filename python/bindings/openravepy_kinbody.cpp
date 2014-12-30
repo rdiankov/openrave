@@ -666,7 +666,8 @@ public:
     object GetCollisionData() {
         return toPyTriMesh(_plink->GetCollisionData());
     }
-    object ComputeLocalAABB(object otransform) const {
+    object ComputeLocalAABB() const { // TODO object otransform=object()
+        //if( IS_PYTHONOBJECT_NONE(otransform) ) {
         return toPyAABB(_plink->ComputeLocalAABB());
     }
 
@@ -1484,11 +1485,11 @@ object PyKinBody::GetDOFTorqueLimits() const
 object PyKinBody::GetDOFLimits(object oindices) const
 {
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
-        return numeric::array(boost::python::list());
+        return boost::python::make_tuple(numeric::array(boost::python::list()), numeric::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
     }
     vector<int> vindices = ExtractArray<int>(oindices);
     if( vindices.size() == 0 ) {
-        return numeric::array(boost::python::list());
+        return boost::python::make_tuple(numeric::array(boost::python::list()), numeric::array(boost::python::list())); // always need 2 since users can do lower, upper = GetDOFLimits()
     }
     vector<dReal> vlower, vupper, vtemplower, vtempupper;
     vlower.reserve(vindices.size());
