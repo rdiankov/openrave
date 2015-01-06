@@ -4815,8 +4815,8 @@ class IKFastSolver(AutoReloader):
                                     if abs(AUinvvalue[i,j]) > epsilon:#!= S.Zero:
                                         isnotzero[i,j] = 1
                     AUinv = zeros((AU.shape[0],AU.shape[1]))
-                    for i in range(AUinvvalue.shape[0]):
-                        for j in range(AUinvvalue.shape[1]):
+                    for i in range(AUinv.shape[0]):
+                        for j in range(AUinv.shape[1]):
                             if isnotzero[i,j] == 0:
                                 Asymbols[i][j] = None
                             else:
