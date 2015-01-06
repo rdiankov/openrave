@@ -618,6 +618,20 @@ class RunRobot(EnvironmentSetup):
         assert(report.plink1.GetParent() == target)
         assert(report.plink2.GetParent() == coltarget)
 
+    def test_cloneselfcollision(self):
+        # check to make sure cloned robots respect self-collision properties.
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+        
+        robot.SetDOFValues([3],[3])
+
+        cloned_robot = RaveCreateRobot(env, robot.GetXMLId())
+        cloned_robot.Clone(robot, 0)
+        env.Add(cloned_robot, True)
+
+        assert robot.CheckSelfCollision() # succeeds
+        assert cloned_robot.CheckSelfCollision() # fails
+        
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunRobot):

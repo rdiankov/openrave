@@ -27,6 +27,27 @@
 
 namespace configurationcache {
 
+/// \brief holds parameters for threshing the direction. if dot(manipdir, tooldir) > cosanglethresh, then ok
+class ManipDirectionThresh
+{
+public:
+    ManipDirectionThresh() : vManipDir(0,0,1), vGlobalDir(0,0,1), fCosAngleThresh(0.9999999) {
+    }
+    ManipDirectionThresh(const ManipDirectionThresh &r) : vManipDir(r.vManipDir), vGlobalDir(r.vGlobalDir), fCosAngleThresh(r.fCosAngleThresh) {
+    }
+
+    inline bool IsInConstraints(const Transform& tmanip) const
+    {
+        return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
+    }
+    
+    Vector vManipDir; ///< direction on the manipulator
+    Vector vGlobalDir; ///< direction in world coordinates
+    dReal fCosAngleThresh; ///< the cos angle threshold
+};
+
+typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
+
 class ConfigurationJitterer : public SpaceSamplerBase
 {
 public:
@@ -52,6 +73,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         "set a new result on a robot");
         RegisterCommand("SetNeighDistThresh",boost::bind(&ConfigurationJitterer::SetNeighDistThreshCommand,this,_1,_2),
                         "sets the minimum distance that nodes can be with respect to each other for the cache");
+        RegisterCommand("SetConstraintToolDirection", boost::bind(&ConfigurationJitterer::SetConstraintToolDirectionCommand,this,_1,_2),
+                        "constrains an axis of the manipulator around a cone. manipname + 7 values: vManipDir, vGlobalDir, fCosAngleThresh.");
         RegisterCommand("SetManipulatorBias",boost::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
@@ -229,6 +252,22 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         return true;
     }
 
+    bool SetConstraintToolDirectionCommand(std::ostream& sout, std::istream& sinput)
+    {
+        std::string manipname;
+        ManipDirectionThreshPtr thresh(new ManipDirectionThresh());
+        sinput >> manipname >> thresh->vManipDir.x >> thresh->vManipDir.y >> thresh->vManipDir.z >> thresh->vGlobalDir.x >> thresh->vGlobalDir.y >> thresh->vGlobalDir.z >> thresh->fCosAngleThresh;
+        if( !sinput ) {
+            return false;
+        }
+        RobotBase::ManipulatorConstPtr pmanip = _probot->GetManipulator(manipname);
+        if( !pmanip ) {
+            return false;
+        }
+        _pmanip = pmanip;
+        _pConstraintToolDirection = thresh;
+    }
+
     virtual int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(0);
@@ -380,6 +419,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
         vector<AABB> newLinkAABBs;
         bool bCollision = false;
+        bool bConstraintFailed = false;
         bool bConstraint = !!_neighstatefn;
 
         // have to test with perturbations since very small changes in angles can produce collision inconsistencies
@@ -423,13 +463,21 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             // don't need to set state since CheckPathAllConstraints does it
             _probot->SetActiveDOFValues(vnewdof);
+
+            if( !!_pConstraintToolDirection && !!_pmanip ) {
+                if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
+                    bConstraintFailed = true;
+                    break;
+                    
+                }
+            }
             if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report) ) {
                 bCollision = true;
                 break;
             }
         }
 
-        if( !bCollision || _maxjitter <= 0 ) {
+        if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
             return -1;
         }
 
@@ -624,7 +672,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             // check perturbation
             bCollision = false;
-            bool bConstraintFailed = false;
+            bConstraintFailed = false;
             FOREACH(itperturbation,perturbations) {
                 for(size_t j = 0; j < _deltadof.size(); ++j) {
                     _deltadof2[j] = *itperturbation;
@@ -653,6 +701,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
 
                 _probot->SetActiveDOFValues(_newdof2);
+                if( !!_pConstraintToolDirection ) {
+                    if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
+                        bConstraintFailed = true;
+                        break;
+                    }
+                }
+                
                 if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report)) {
                     bCollision = true;
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -815,6 +870,8 @@ protected:
     Vector _vbiasdirection; // direction to bias in workspace
     std::vector<dReal> _vbiasdofdirection; // direction to bias in configuration space (from jacobian)
     std::vector< std::vector<dReal> > _vbiasnullspace; // configuration nullspace that does not constraint rotation. vectors are unit
+
+    ManipDirectionThreshPtr _pConstraintToolDirection;
 
     bool _bSetResultOnRobot; ///< if true, will set the final result on the robot DOF values
     bool _busebiasing; ///< if true will bias the end effector along a certain direction using the jacobian and nullspace.
