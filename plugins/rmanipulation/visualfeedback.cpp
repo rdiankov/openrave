@@ -457,7 +457,7 @@ private:
         vector<Transform> _vcameras;         ///< camera transformations in local coord systems
     };
 
-    VisualFeedback(EnvironmentBasePtr penv) : ModuleBase(penv)
+    VisualFeedback(EnvironmentBasePtr penv) : ModuleBase(penv), _preport(new CollisionReport())
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_visualfeedback.jpg\n\
@@ -475,6 +475,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _fSampleRayDensity = 0.001;
         _fAllowableOcclusion = 0.1;
         _fRayMinDist = 0.02f;
+
         RegisterCommand("SetCameraAndTarget",boost::bind(&VisualFeedback::SetCameraAndTarget,this,_1,_2),
                         "Sets the camera index from the robot and its convex hull");
         RegisterCommand("ProcessVisibilityExtents",boost::bind(&VisualFeedback::ProcessVisibilityExtents,this,_1,_2),
@@ -1019,7 +1020,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper) ) {
+        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, _preport) ) {
+            RAVELOG_VERBOSE_FORMAT("endeffector is in collision, %s\n",_preport->__str__());
             return false;
         }
         if( !pconstraintfn->SampleWithCamera(t,vsample) ) {
@@ -1061,9 +1063,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
-        CollisionReportPtr preport(new CollisionReport());
-        if( _pmanip->CheckIndependentCollision(preport) ) {
-            RAVELOG_WARN(str(boost::format("robot independent links in collision: %s\n")%preport->__str__()));
+        if( _pmanip->CheckIndependentCollision(_preport) ) {
+            RAVELOG_WARN(str(boost::format("robot independent links in collision: %s\n")%_preport->__str__()));
             return false;
         }
 
@@ -1338,6 +1339,8 @@ protected:
     Transform _ttogripper;     ///< transforms a coord system to the gripper coordsystem
     vector<Transform> _visibilitytransforms;
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
+
+    CollisionReportPtr _preport;
 
     vector<Vector> _vconvexplanes;     ///< the planes defining the bounding visibility region (posive is inside)
     Vector _vcenterconvex;     ///< center point on the z=1 plane of the convex region
