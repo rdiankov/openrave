@@ -2208,7 +2208,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
     }
 
-    int i, numSteps = 1, nLargestStepIndex = 0;
+    int i, numSteps = 0, nLargestStepIndex = -1;
     std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
     BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
@@ -2266,6 +2266,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         start = 1;
     }
 
+    if( numSteps == 0 ) {
+        // everything is so small that there is no interpolation...
+        if( bCheckEnd && !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+            filterreturn->_configurations.insert(filterreturn->_configurations.end(), q1.begin(), q1.end());
+        }
+        
+        return 0;
+    }
+    
     for (i = 0; i < params->GetDOF(); i++) {
         _vtempconfig.at(i) = q0.at(i);
     }
@@ -2296,6 +2305,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
+                OPENRAVE_ASSERT_OP(RaveFabs(fLargestStepVelocity),>,g_fEpsilon);
                 timestep = fStep/fLargestStepVelocity;
             }
             else {
