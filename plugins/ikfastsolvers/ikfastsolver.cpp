@@ -348,9 +348,25 @@ public:
         bool NeedCheckEndEffectorEnvCollision() {
             return _bCheckEndEffectorEnvCollision;
         }
+
+        // set collision state to not check for end effector collisions
         void ResetCheckEndEffectorEnvCollision() {
             _bCheckEndEffectorEnvCollision = false;
             SetEnvironmentCollisionState();
+        }
+
+        void RestoreCheckEndEffectorEnvCollision() {
+            _bCheckEndEffectorEnvCollision = true;
+            if( _bDisabled ) {
+                _InitSavers();
+                for(size_t i = 0; i < _vchildlinks.size(); ++i) {
+                    _vchildlinks[i]->Enable(!!_vlinkenabled[i]);
+                }
+                FOREACH(it, _listGrabbedSavedStates) {
+                    it->Restore();
+                }
+                _bDisabled = false;
+            }
         }
 
 protected:
@@ -1167,7 +1183,16 @@ protected:
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+
+                bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+                    // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
+                    stateCheck.RestoreCheckEndEffectorEnvCollision();
+                }
                 IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret, 1, IKSP_MaxPriority);
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
+                }
                 nSameStateRepeatCount++;
                 _nSameStateRepeatCount = nSameStateRepeatCount;
                 retactionall |= retaction;
@@ -1327,7 +1352,16 @@ protected:
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
+
+                bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+                    // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
+                    stateCheck.RestoreCheckEndEffectorEnvCollision();
+                }
                 IkReturnAction retaction = _CallFilters(localret->_vsolution, pmanip, paramnew,localret, IKSP_MinPriority, 0);
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
+                }
                 nSameStateRepeatCount++;
                 _nSameStateRepeatCount = nSameStateRepeatCount;
                 retactionall |= retaction;
@@ -1458,7 +1492,16 @@ protected:
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
+
+                bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+                    // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
+                    stateCheck.RestoreCheckEndEffectorEnvCollision();
+                }
                 IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret);
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
+                }
                 nSameStateRepeatCount++;
                 _nSameStateRepeatCount = nSameStateRepeatCount;
                 retactionall |= retaction;
@@ -1548,8 +1591,18 @@ protected:
             return static_cast<IkReturnAction>(retactionall); // signals to continue
         }
 
-        FOREACH(itlocalikreturn, listlocalikreturns) {
-            _CallFinishCallbacks(*itlocalikreturn, pmanip, paramnewglobal);
+        if( listlocalikreturns.size() > 0 ) {
+            bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
+            if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+                // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
+                stateCheck.RestoreCheckEndEffectorEnvCollision();
+            }
+            FOREACH(itlocalikreturn, listlocalikreturns) {
+                _CallFinishCallbacks(*itlocalikreturn, pmanip, paramnewglobal);
+            }
+            if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
+                stateCheck.ResetCheckEndEffectorEnvCollision();
+            }
         }
         vikreturns.insert(vikreturns.end(),listlocalikreturns.begin(),listlocalikreturns.end());
         return static_cast<IkReturnAction>(retactionall); // signals to continue
