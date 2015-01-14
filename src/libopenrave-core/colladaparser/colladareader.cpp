@@ -236,7 +236,7 @@ public:
                         }
                     }
                     if( !bfound ) {
-                        RAVELOG_WARN(str(boost::format("could not find binding for axis: %s, %s\n")%kinematics_axis_info->getAxis()%pelt->getAttribute("sid")));
+                        RAVELOG_WARN_FORMAT("could not find binding for axis=%s, sid=%s, listAxisBindings.size()=%d", kinematics_axis_info->getAxis()%pelt->getAttribute("sid")%listAxisBindings.size());
                         return false;
                     }
                     return true;
@@ -966,7 +966,9 @@ public:
                             pparent = pparent->getParent();
                         }
                         BOOST_ASSERT(!!pparent);
-                        bindings.AddAxisInfo(daeSafeCast<domKinematics>(pparent)->getInstance_kinematics_model_array(), kinematics_axis_info, motion_axis_info);
+                        if( !bindings.AddAxisInfo(daeSafeCast<domKinematics>(pparent)->getInstance_kinematics_model_array(), kinematics_axis_info, motion_axis_info) ) {
+                            // most likely file forgot to write the bind elements.... this is frequent for external references. is there a way to automamte by looking at the external reference's bindings...?
+                        }
                     }
                     else {
                         RAVELOG_WARN(str(boost::format("failed to find kinematics axis %s\n")%motion_axis_info->getAxis()));
@@ -1272,7 +1274,7 @@ public:
         plink->_info._mass = 1.0;
         plink->_info._bStatic = false;
         plink->_info._t = getNodeParentTransform(pdomnode) * _ExtractFullTransform(pdomnode);
-        bool bhasgeometry = ExtractGeometries(pdomnode,plink,bindings,vprocessednodes);
+        bool bhasgeometry = ExtractGeometries(pdomnode, plink->_info._t, plink, bindings, vprocessednodes);
         if( !bhasgeometry ) {
             return KinBodyPtr();
         }
@@ -1629,7 +1631,7 @@ public:
         }
 
         if (!pdomlink) {
-            if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
+            if( !ExtractGeometries(pdomnode, pkinbody->GetLinks().size() > 0 ? pkinbody->GetTransform() : tParentLink,  plink,bindings, std::vector<std::string>()) ) {
                 RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
             }
         }
@@ -1642,7 +1644,7 @@ public:
             }
 
             // Get the geometry
-            if( !ExtractGeometries(pdomnode,plink,bindings,std::vector<std::string>()) ) {
+            if( !ExtractGeometries(pdomnode, pkinbody->GetLinks().size() > 0 ? pkinbody->GetTransform() : tParentLink, plink,bindings,std::vector<std::string>()) ) {
                 RAVELOG_DEBUG(str(boost::format("link %s has no geometry\n")%plink->GetName()));
             }
 
@@ -1985,7 +1987,7 @@ public:
     /// Extract Geometry and apply the transformations of the node
     /// \param pdomnode Node to extract the goemetry
     /// \param plink    Link of the kinematics model
-    bool ExtractGeometries(const domNodeRef pdomnode,KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
+    bool ExtractGeometries(const domNodeRef pdomnode, const Transform& tkinbodytrans, KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( !pdomnode ) {
             return false;
@@ -1997,7 +1999,7 @@ public:
             return false;
         }
 
-        RAVELOG_VERBOSE(str(boost::format("ExtractGeometry(node,link) of %s\n")%pdomnode->getName()));
+        RAVELOG_VERBOSE(str(boost::format("ExtractGeometries(node,link) of %s\n")%pdomnode->getName()));
 
         bool bhasgeometry = false;
         // For all child nodes of pdomnode
@@ -2015,7 +2017,7 @@ public:
                 continue;
             }
 
-            bhasgeometry |= ExtractGeometries(pdomnode->getNode_array()[i],plink, bindings, vprocessednodes);
+            bhasgeometry |= ExtractGeometries(pdomnode->getNode_array()[i], tkinbodytrans, plink, bindings, vprocessednodes);
             // Plink stayes the same for all children
             // replace pdomnode by child = pdomnode->getNode_array()[i]
             // hope for the best!
@@ -2053,8 +2055,10 @@ public:
             return false;
         }
 
-        TransformMatrix tnodeparent = getNodeParentTransform(pdomnode);
-        TransformMatrix tmnodegeom = (TransformMatrix) plink->_info._t.inverse() * tnodeparent * _ExtractFullTransform(pdomnode);
+        // WARNING if pdomnode comes from an external reference, then the top of its parent will point to the first visual node ever parsed, which might not be the current visual node! Therefore, have to stop as soon as the external reference visual hierarchy is done and then multiply by the kinbody transform.
+        TransformMatrix tnodeparent = tkinbodytrans * GetRelativeNodeParentTransform(pdomnode, bindings);
+        TransformMatrix tnodetrans = _ExtractFullTransform(pdomnode);
+        TransformMatrix tmnodegeom = (TransformMatrix) plink->_info._t.inverse() * tnodeparent * tnodetrans;
         Transform tnodegeom;
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
@@ -3351,6 +3355,23 @@ public:
         }
 
         return t;
+    }
+
+    /// Travels recursively the node parents of the given one  to extract the Transform arrays that affects the node given
+    /// Stop when the parent is equal to one of the top level nodes. Effectives, this returns the relative transform.
+    template <typename T> TransformMatrix GetRelativeNodeParentTransform(const T pelt, const KinematicsSceneBindings& bindings) {
+        domNodeRef pparent = daeSafeCast<domNode>(pelt->getParent());
+        if( !pparent ) {
+            return TransformMatrix();
+        }
+        FOREACHC(itbinding, bindings.listInstanceModelBindings) {
+            if( !!itbinding->_node ) {
+                if( itbinding->_node == pparent || itbinding->_node->getParent() == pparent ) {
+                    return TransformMatrix();
+                }
+            }
+        }
+        return GetRelativeNodeParentTransform(pparent, bindings) * _ExtractFullTransform(pparent);
     }
 
     /// Travels recursively the node parents of the given one
