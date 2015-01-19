@@ -384,7 +384,7 @@ public:
                 int options = 0xffff;
                 int iramp = 0;
                 FOREACHC(itramp,ramps){
-                    if(!checker.Check(*itramp,options)) {
+                    if(checker.Check(*itramp,options) != 0) {
                         _DumpTrajectory(ptraj, Level_Verbose);
                         RAVELOG_WARN_FORMAT("Ramp %d/%d of original traj invalid", iramp%ramps.size());
                         return PS_Failed;
@@ -565,7 +565,7 @@ public:
             if(!!pchecker) {
                 // part of original trajectory which might not have been processed with perturbations, so ignore them
                 int options = 0xffff; // no perturbation
-                if( !pchecker->Check(*itrampnd,options)) {
+                if( pchecker->Check(*itrampnd,options) != 0) {
                     // unfortunately happens sometimes when the robot is close to corners.. not sure if returning is failing is the right solution here..
                     RAVELOG_WARN("original ramp does not satisfy constraints!\n");
                     return PS_Failed;
@@ -920,12 +920,9 @@ public:
     }
 
 
-    virtual bool ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
+    virtual int ConfigFeasible(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
     {
-        if( _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options) != 0 ) {
-            return false;
-        }
-        return true;
+        return _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options);
     }
 
 /** \brief return true if all the links in _listCheckManipssatisfy the acceleration and velocity constraints
@@ -1023,7 +1020,7 @@ public:
         }
     }
 
-    virtual bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
+    virtual int SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
     {
         //_parameters->_setstatefn(a);
         if(_bmanipconstraints) {
@@ -1035,10 +1032,15 @@ public:
             if( pathreturn & CFO_CheckTimeBasedConstraints ) {
                 // time-related
             }
-            return false;
+            return pathreturn;
         }
         // Test for collision and/or dynamics has succeeded, now test for manip constraint
-        return !_bmanipconstraints || CheckManipConstraints(a,b,da, db, timeelapsed);
+        if( _bmanipconstraints && (options & CFO_CheckTimeBasedConstraints) ) {
+            if( !CheckManipConstraints(a,b,da, db, timeelapsed) ) {
+                return CFO_CheckTimeBasedConstraints;
+            }
+        }
+        return 0;
     }
 
 /*
@@ -1082,7 +1084,6 @@ public:
     {
         return _uniformsampler->SampleSequenceOneReal(IT_OpenEnd);
     }
-
 
 protected:
     ConstraintTrajectoryTimingParametersPtr _parameters;

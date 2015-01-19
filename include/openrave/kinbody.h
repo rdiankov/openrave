@@ -1666,7 +1666,7 @@ private:
         Note that this function calls the internal _ComputeLinkAccelerations function, so for users that are interested in overriding it, override _ComputeLinkAccelerations
         \param[in] dofaccelerations the accelerations of each of the DOF
         \param[out] linkaccelerations the linear and angular accelerations of link (in that order)
-        \param[in] externalaccelerations [optional] The external accelerations to add to each link. If this is null, will apply negative gravity to the base link.
+        \param[in] externalaccelerations [optional] The external accelerations to add to each link.
      */
     virtual void GetLinkAccelerations(const std::vector<dReal>& dofaccelerations, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
 
@@ -2071,7 +2071,7 @@ protected:
     /// for passive joints that are not mimic and are not static, will call Joint::GetVelocities to get their initial velocities (this is state dependent!)
     /// \param dofvelocities if size is 0, will assume all velocities are 0
     /// \param dofaccelerations if size is 0, will assume all accelerations are 0
-    /// \param[in] externalaccelerations [optional] The external accelerations to add to each link. If this is null, will apply negative gravity to the base link.
+    /// \param[in] externalaccelerations [optional] The external accelerations to add to each link. When doing inverse dynamics, should set the base link's acceleration to -gravity.
     virtual void _ComputeLinkAccelerations(const std::vector<dReal>& dofvelocities, const std::vector<dReal>& dofaccelerations, const std::vector< std::pair<Vector, Vector> >& linkvelocities, std::vector<std::pair<Vector,Vector> >& linkaccelerations, AccelerationMapConstPtr externalaccelerations=AccelerationMapConstPtr()) const;
 
     /// \brief Called to notify the body that certain groups of parameters have been changed.

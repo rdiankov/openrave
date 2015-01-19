@@ -42,8 +42,8 @@ class FeasibilityCheckerBase
 public:
     virtual ~FeasibilityCheckerBase() {
     }
-    virtual bool ConfigFeasible(const Vector& q1, const Vector& dq1, int options=0xffff)=0;
-    virtual bool SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options=0xffff)=0;
+    virtual int ConfigFeasible(const Vector& q1, const Vector& dq1, int options=0xffff)=0;
+    virtual int SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options=0xffff)=0;
     virtual bool NeedDerivativeForFeasibility() {
         return false;
     }
@@ -67,19 +67,26 @@ public:
 };
 
 /// Checks whether the ramp is feasible using exact checking
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters, int options=0xffff);
+///
+/// \return if non-zero then failed. The return code gives the cause of the failure. \see OpenRAVE::ConstraintFilterOptions enum.
+int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters, int options=0xffff);
 
 /// Checks whether the ramp is feasible using a piecewise linear approximation
 /// with tolerance tol
-bool CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Vector& tol, int options=0xffff);
-
+///
+/// \return if non-zero then failed. The return code gives the cause of the failure. \see OpenRAVE::ConstraintFilterOptions enum.
+int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Vector& tol, int options=0xffff);
 
 class RampFeasibilityChecker
 {
 public:
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,const Vector& tol);
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters);
-    bool Check(const ParabolicRampND& x, int options=0xffff);
+
+    /// \brief checks constraints given options
+    ///
+    /// \return if non-zero then failed. The return code gives the cause of the failure. \see OpenRAVE::ConstraintFilterOptions enum.
+    int Check(const ParabolicRampND& x, int options=0xffff);
 
     FeasibilityCheckerBase* feas;
     Vector tol;
