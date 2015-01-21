@@ -773,14 +773,14 @@ protected:
                 }
 
                 if( retcheck == CFO_CheckTimeBasedConstraints ) {
-                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp", iters);
+                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp, fcurmult=%f", iters%fcurmult);
                     for(size_t j = 0; j < vellimits.size(); ++j) {
                         // have to watch out that velocities don't drop under dx0 & dx1!
                         dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
                         vellimits[j] = max(vellimits[j]*fSearchVelAccelMult, fminvel);
                         accellimits[j] *= fSearchVelAccelMult;
-                        fcurmult *= fSearchVelAccelMult;
                     }
+                    fcurmult *= fSearchVelAccelMult;
                 }
                 else {
                     RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck);

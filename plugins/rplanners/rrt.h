@@ -327,6 +327,9 @@ Some python code to display data::\n\
             }
             else {
                 RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
+                }
                 _vecGoalNodes.push_back(NULL); // have to push back dummy or else indices will be messed up
             }
         }
