@@ -448,12 +448,14 @@ public:
                             if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
                                 temprampsnd.resize(0);
                                 CombineRamps(tempramps1d, temprampsnd);
-                                if( irampindex == 0 ) {
-                                    temprampsnd[0].TrimFront(fTrimEdgesTime);
-                                }
-                                else if( irampindex+1 == dynamicpath.ramps.size() ) {
-                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
-                                }
+
+                                // not necessary to trim again!?
+//                                if( irampindex == 0 ) {
+//                                    temprampsnd[0].TrimFront(fTrimEdgesTime);
+//                                }
+//                                else if( irampindex+1 == dynamicpath.ramps.size() ) {
+//                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
+//                                }
                                 bool bHasBadRamp=false;
                                 FOREACH(itnewrampnd, temprampsnd) {
                                     if( checker.Check(*itnewrampnd) != 0 ) {
