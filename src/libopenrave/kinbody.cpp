@@ -1022,7 +1022,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
 
         if( checklimits != CLA_Nothing && dofindex >= 0 ) {
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
-                if( pvalues[i] < vlower.at(dofindex+i)+g_fEpsilonJointLimit ) {
+                if( pvalues[i] < vlower.at(dofindex+i)-g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
                         RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %.15e<%.15e")%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
                     }
@@ -1031,7 +1031,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                     }
                     dummyvalues[i] = vlower[dofindex+i];
                 }
-                else if( pvalues[i] > vupper.at(dofindex+i)-g_fEpsilonJointLimit ) {
+                else if( pvalues[i] > vupper.at(dofindex+i)+g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
                         RAVELOG_WARN(str(boost::format("dof %d velocity is not in limits %.15e>%.15e")%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
                     }
