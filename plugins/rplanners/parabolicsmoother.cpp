@@ -32,9 +32,96 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
         // for now the checked points are the vertices of the bounding box
         // but this can be more general, e.g. the vertices of the convex hull
         std::list<Vector> checkpoints;
+
+        std::vector<int> vuseddofindices, vconfigindices;
     };
 
+    class MyRampFeasibilityChecker : public ParabolicRamp::RampFeasibilityChecker
+    {
+    public:
+        MyRampFeasibilityChecker(ParabolicRamp::FeasibilityCheckerBase* feas,const ParabolicRamp::Vector& tol) : ParabolicRamp::RampFeasibilityChecker(feas, tol) {
+        }
 
+        ParabolicRamp::CheckReturn Check2(const ParabolicRamp::ParabolicRampND& rampnd, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps)
+        {
+            // only set constraintchecked if all necessary constraints are checked
+            if( (options & constraintsmask) == constraintsmask ) {
+                rampnd.constraintchecked = 1;
+            }
+            OPENRAVE_ASSERT_OP(tol.size(), ==, rampnd.ramps.size());
+            for(size_t i = 0; i < tol.size(); ++i) {
+                OPENRAVE_ASSERT_OP(tol[i], >, 0);
+            }
+
+//            int ret1 = space->ConfigFeasible(rampnd.x1, rampnd.dx1, options);
+//            if( ret1 != 0 ) {
+//                return ret1;
+//            }
+           
+            std::vector<dReal> vswitchtimes;
+            _ExtractSwitchTimes(rampnd, vswitchtimes, true);
+            dReal fprev = 0;
+            std::vector<dReal> q0, q1, dq0, dq1;
+            //rampnd.Evaluate(0, q0);
+            //rampnd.Derivative(0, dq0);
+
+            int ret0 = feas->ConfigFeasible(rampnd.x0, rampnd.dx0, options);
+            if( ret0 != 0 ) {
+                return ParabolicRamp::CheckReturn(ret0);
+            }
+            int ret1 = feas->ConfigFeasible(rampnd.x1, rampnd.dx1, options);
+            if( ret1 != 0 ) {
+                return ParabolicRamp::CheckReturn(ret1);
+            }
+            
+            list<pair<int,int> > segs;
+            segs.push_back(pair<int,int>(0,vswitchtimes.size()-1));
+            std::vector< std::vector<ParabolicRamp::ParabolicRampND> > vOutputSegments(vswitchtimes.size()-1);
+            //Vector q1,q2, dq1, dq2;
+            while(!segs.empty()) {
+                int i=segs.front().first;
+                int j=segs.front().second;
+                segs.erase(segs.begin());
+                if(j == i+1) {
+                    //check path from t to tnext
+                    rampnd.Evaluate(vswitchtimes.at(i),q0);
+                    if( feas->NeedDerivativeForFeasibility() ) {
+                        rampnd.Derivative(vswitchtimes.at(i),dq0);
+                    }
+                    rampnd.Evaluate(vswitchtimes.at(j),q1);
+                    if( feas->NeedDerivativeForFeasibility() ) {
+                        rampnd.Derivative(vswitchtimes.at(j),dq1);
+                    }
+                    ParabolicRamp::CheckReturn retseg = feas->SegmentFeasible2(q0,q1, dq0, dq1, vswitchtimes.at(j)-vswitchtimes.at(i), options, vOutputSegments.at(i));
+                    if( retseg.retcode != 0 ) {
+                        return retseg;
+                    }
+                }
+                else {
+                    int k=(i+j)/2;
+                    rampnd.Evaluate(vswitchtimes.at(k),q0);
+                    if( feas->NeedDerivativeForFeasibility() ) {
+                        rampnd.Derivative(vswitchtimes.at(k),dq0);
+                    }
+                    ParabolicRamp::CheckReturn retconf = feas->ConfigFeasible(q0, dq0,options);
+                    if( retconf.retcode != 0 ) {
+                        return retconf;
+                    }
+                    segs.push_back(pair<int,int>(i,k));
+                    segs.push_back(pair<int,int>(k,j));
+                }
+            }
+
+            // check to make sure all vOutputSegments have ramps
+            outramps.resize(0);
+            for(size_t i = 0; i < vOutputSegments.size(); ++i) {
+                //OPENRAVE_ASSERT_OP(vOutputSegments[i].size(),>,0);
+                outramps.insert(outramps.end(), vOutputSegments[i].begin(), vOutputSegments[i].end());
+            }
+            return ParabolicRamp::CheckReturn(0);
+        }
+    };
+    
     /// \brief Compute the AABB that encloses all the links in linklist with respect to a coordinate system Tparent
     ///
     /// \param tparent is most likely the end effector of a manipulator
@@ -166,6 +253,7 @@ public:
                         // Compute the enclosing AABB and add its vertices to the checkpoints
                         AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                         _listCheckManips.push_back(ManipConstraintInfo());
+                        _parameters->_configurationspecification.ExtractUsedIndices(pmanip->GetRobot(), _listCheckManips.back().vuseddofindices, _listCheckManips.back().vconfigindices);
                         _listCheckManips.back().plink = endeffector;
                         ConvertAABBtoCheckPoints(enclosingaabb, _listCheckManips.back().checkpoints);
                         setCheckedManips.insert(endeffector);
@@ -344,7 +432,7 @@ public:
             FOREACH(it,tol) {
                 *it *= parameters->_pointtolerance;
             }
-            ParabolicRamp::RampFeasibilityChecker checker(this,tol);
+            MyRampFeasibilityChecker checker(this,tol);
 
             _progress._iteration = 0;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -435,7 +523,8 @@ public:
                     }
                     // part of original trajectory which might not have been processed with perturbations, so ignore perturbations
                     _bUsePerturbation = false;
-                    if( bCheck && checker.Check(rampndtrimmed) != 0 ) {
+                    std::vector<ParabolicRamp::ParabolicRampND> outramps;
+                    if( bCheck && checker.Check2(rampndtrimmed, 0xffff, outramps).retcode != 0 ) {
                         std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
                         // try to time scale, perhaps collision and dynamics will change
                         // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
@@ -458,7 +547,7 @@ public:
 //                                }
                                 bool bHasBadRamp=false;
                                 FOREACH(itnewrampnd, temprampsnd) {
-                                    if( checker.Check(*itnewrampnd) != 0 ) {
+                                    if( checker.Check2(*itnewrampnd, 0xffff, outramps).retcode != 0 ) {
                                         bHasBadRamp = true;
                                         break;
                                     }
@@ -581,7 +670,89 @@ public:
                 return CFO_CheckTimeBasedConstraints;
             }
         }
+
+        if( _parameters->fCosManipAngleThresh > -1+g_fEpsilonLinear ) {
+            // the configurations are getting constrained, therefore the path checked is not equal to the simply interpolated path by (a,b, da, db).
+        }
+        
         return 0;
+    }
+
+    virtual ParabolicRamp::CheckReturn SegmentFeasible2(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps)
+    {
+        outramps.resize(0);
+        if( timeelapsed <= g_fEpsilon ) {
+            return ParabolicRamp::CheckReturn(ConfigFeasible(a, da, options));
+        }
+        
+        if( _bUsePerturbation ) {
+            options |= CFO_CheckWithPerturbation;
+        }
+        bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1+g_fEpsilonLinear;
+        if(bExpectModifiedConfigurations || _bmanipconstraints) {
+            options |= CFO_FillCheckedConfiguration;
+            _constraintreturn->Clear();
+        }
+        try {
+            int ret = _parameters->CheckPathAllConstraints(a,b,da, db, timeelapsed, IT_OpenStart, options, _constraintreturn);
+            if( ret != 0 ) {
+                ParabolicRamp::CheckReturn checkret(ret);
+                if( ret == CFO_CheckTimeBasedConstraints ) {
+                    checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
+                }
+                return checkret;
+            }
+        }
+        catch(const std::exception& ex) {
+            // some constraints assume initial conditions for a and b are followed, however at this point a and b are sa
+            RAVELOG_VERBOSE_FORMAT("rrtparams path constraints threw an exception: %s", ex.what());
+            return ParabolicRamp::CheckReturn(0xffff); // could be anything
+        }
+        // Test for collision and/or dynamics has succeeded, now test for manip constraint
+        if( bExpectModifiedConfigurations ) {
+            // the configurations are getting constrained, therefore the path checked is not equal to the simply interpolated path by (a,b, da, db).
+            if( _constraintreturn->_configurationtimes.size() > 1 ) {
+                OPENRAVE_ASSERT_OP(_constraintreturn->_configurations.size(),==,_constraintreturn->_configurationtimes.size()*a.size());
+                outramps.resize(_constraintreturn->_configurationtimes.size()-1);
+                std::vector<dReal> curvel = da, newvel;
+                std::vector<dReal> curpos = a, newpos;
+                std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin() + a.size();
+                dReal curtime = 0;
+                for(size_t itime = 1; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += a.size()) {
+                    newpos.resize(0);
+                    newpos.insert(newpos.end(), it, it+a.size());
+                    newvel.resize(curpos.size());
+                    dReal deltatime = _constraintreturn->_configurationtimes[itime]-curtime;
+                    for(size_t idof = 0; idof < newvel.size(); ++idof) {
+                        newvel[idof] = 2*(newpos[idof] - curpos[idof])/deltatime - curvel[idof];
+                        if( RaveFabs(newvel[idof]) > _parameters->_vConfigVelocityLimit.at(idof)+g_fEpsilon ) {
+                            return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
+                        }
+                    }
+                    outramps.at(itime-1).SetPosVelTime(curpos, curvel, newpos, newvel, deltatime);
+                    outramps.at(itime-1).constraintchecked = 1;
+                    curtime = _constraintreturn->_configurationtimes[itime];
+                    curpos.swap(newpos);
+                    curvel.swap(newvel);
+                }
+            }
+        }
+
+        if( outramps.size() == 0 ) {
+            ParabolicRamp::ParabolicRampND newramp;
+            newramp.SetPosVelTime(a, da, b, db, timeelapsed);
+            newramp.constraintchecked = 1;
+            outramps.push_back(newramp);
+        }
+        
+        if( _bmanipconstraints && (options & CFO_CheckTimeBasedConstraints) ) {
+            ParabolicRamp::CheckReturn retmanip = _CheckManipConstraints2(outramps);
+            if( retmanip.retcode != 0 ) {
+                return retmanip;
+            }
+        }
+        
+        return ParabolicRamp::CheckReturn(0);
     }
 
     virtual ParabolicRamp::Real Rand()
@@ -616,6 +787,7 @@ protected:
             std::vector<dReal> vellimits, accellimits;
             std::vector<dReal> vswitchtimes;
             std::vector<dReal> x0, x1, dx0, dx1;
+            std::vector<ParabolicRamp::ParabolicRampND> outramps;
             for(size_t i=0; i+1<vpath.size(); i++) {
                 ParabolicRamp::ParabolicRampND& ramp = ramps[i];
                 ramp.x0 = vpath[i];
@@ -625,7 +797,7 @@ protected:
                 vellimits = _parameters->_vConfigVelocityLimit;
                 accellimits = _parameters->_vConfigAccelerationLimit;
                 dReal fmult = 0.9;
-                int retseg = -1;
+                ParabolicRamp::CheckReturn retseg(-1);
                 for(size_t itry = 0; itry < 30; ++itry) {
                     bool res=ramp.SolveMinTimeLinear(vellimits, accellimits);
                     _ExtractSwitchTimes(ramp, vswitchtimes);
@@ -635,30 +807,30 @@ protected:
                     for(size_t iswitch = 0; iswitch < vswitchtimes.size(); ++iswitch) {
                         ramp.Evaluate(vswitchtimes.at(iswitch), x1);
                         ramp.Derivative(vswitchtimes.at(iswitch), dx1);
-                        retseg = SegmentFeasible(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options);
-                        if( retseg != 0 ) {
+                        retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
+                        if( retseg.retcode != 0 ) {
                             break;
                         }
                         x0.swap(x1);
                         dx0.swap(dx1);
                         fprevtime = vswitchtimes[iswitch];
                     }
-                    if( retseg == 0 ) {
+                    if( retseg.retcode == 0 ) {
                         break;
                     }
-                    if( retseg == CFO_CheckTimeBasedConstraints ) {
+                    else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                         // slow the ramp down and try again
                         for(size_t j = 0; j < vellimits.size(); ++j) {
-                            vellimits.at(j) *= fmult;
-                            accellimits.at(j) *= fmult;
+                            vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
+                            accellimits.at(j) *= retseg.fTimeBasedSurpassMult;
                         }
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("initial ramp returned error 0x%x, giving up....", retseg);
-                        return retseg;
+                        RAVELOG_WARN_FORMAT("initial ramp returned error 0x%x, giving up....", retseg.retcode);
+                        return false;
                     }
                 }
-                if( retseg != 0 ) {
+                if( retseg.retcode != 0 ) {
                     // couldn't find anything...
                     return false;
                 }
@@ -684,6 +856,8 @@ protected:
         ParabolicRamp::Vector x0, x1, dx0, dx1;
         ParabolicRamp::DynamicPath intermediate;
         std::vector<dReal> vellimits(_parameters->_vConfigVelocityLimit.size()), accellimits(_parameters->_vConfigAccelerationLimit.size());
+        std::vector<ParabolicRamp::ParabolicRampND> accumoutramps, outramps;
+        
         dReal fSearchVelAccelMult = _parameters->fSearchVelAccelMult; // for slowing down when timing constraints
         dReal fstarttimemult = 1.0; // the start velocity/accel multiplier for the velocity and acceleration computations. If manip speed/accel or dynamics constraints are used, then this will track the last successful multipler. Basically if the last successful one is 0.1, it's very unlikely than a muliplier of 0.8 will meet the constraints the next time.
         for(int iters=0; iters<numIters; iters++) {
@@ -732,7 +906,7 @@ protected:
                 accellimits[j] = _parameters->_vConfigAccelerationLimit[j]*fstarttimemult;
             }
             dReal fcurmult = fstarttimemult;
-            for(size_t islowdowntry = 0; islowdowntry < 8; ++islowdowntry ) {
+            for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
                 bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
                 if(!res) {
                     break;
@@ -749,14 +923,15 @@ protected:
                     return -1;
                 }
 
-                int retcheck = 0;
+                accumoutramps.resize(0);
+                ParabolicRamp::CheckReturn retcheck(0);
                 for(size_t i=0; i<intermediate.ramps.size(); i++) {
                     if( i > 0 ) {
                         intermediate.ramps[i].x0 = intermediate.ramps[i-1].x1; // to remove noise?
                         intermediate.ramps[i].dx0 = intermediate.ramps[i-1].dx1; // to remove noise?
                     }
                     if( _parameters->SetStateValues(intermediate.ramps[i].x1) != 0 ) {
-                        retcheck = CFO_StateSettingError;
+                        retcheck.retcode = CFO_StateSettingError;
                         break;
                     }
                     _parameters->_getstatefn(intermediate.ramps[i].x1);
@@ -764,28 +939,31 @@ protected:
     //                for(size_t j = 0; j < intermediate.rams[i].x1.size(); ++j) {
     //                    intermediate.ramps[i].SolveFixedSwitchTime();
     //                }
-                    retcheck = check.Check(intermediate.ramps[i]);
-                    if( retcheck != 0) {
+
+                    retcheck = check.Check2(intermediate.ramps[i], 0xffff, outramps);
+                    if( retcheck.retcode != 0) {
                         break;
                     }
+                    accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
                 }
-                if(retcheck == 0) {
+                if(retcheck.retcode == 0) {
                     bsuccess = true;
                     break;
                 }
 
-                if( retcheck == CFO_CheckTimeBasedConstraints ) {
+                if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
                     RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp, fcurmult=%f", iters%fcurmult);
                     for(size_t j = 0; j < vellimits.size(); ++j) {
                         // have to watch out that velocities don't drop under dx0 & dx1!
                         dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
-                        vellimits[j] = max(vellimits[j]*fSearchVelAccelMult, fminvel);
-                        accellimits[j] *= fSearchVelAccelMult;
+                        vellimits[j] = max(vellimits[j]*retcheck.fTimeBasedSurpassMult, fminvel);
+                        accellimits[j] *= retcheck.fTimeBasedSurpassMult;
                     }
-                    fcurmult *= fSearchVelAccelMult;
+                    fcurmult *= retcheck.fTimeBasedSurpassMult;
+                    //fcurmult *= fSearchVelAccelMult;
                 }
                 else {
-                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck);
+                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck.retcode);
                     break;
                 }
             }
@@ -794,29 +972,33 @@ protected:
                 continue;
             }
 
+            if( accumoutramps.size() == 0 ) {
+                RAVELOG_WARN("accumulated ramps are empty!\n");
+                continue;
+            }
             fstarttimemult = min(1.0, fcurmult/fSearchVelAccelMult); // the new start time mult should be increased by one timemult
 
-            //perform shortcut
+            // perform shortcut. use accumoutramps rather than intermediate.ramps!
             shortcuts++;
             ramps[i1].TrimBack(ramps[i1].endTime-u1);
-            ramps[i1].x1 = intermediate.ramps.front().x0;
-            ramps[i1].dx1 = intermediate.ramps.front().dx0;
+            ramps[i1].x1 = accumoutramps.front().x0;
+            ramps[i1].dx1 = accumoutramps.front().dx0;
             ramps[i2].TrimFront(u2);
-            ramps[i2].x0 = intermediate.ramps.back().x1;
-            ramps[i2].dx0 = intermediate.ramps.back().dx1;
+            ramps[i2].x0 = accumoutramps.back().x1;
+            ramps[i2].dx0 = accumoutramps.back().dx1;
 
-            //replace intermediate ramps
+            // replace with accumoutramps
             for(int i=0; i<i2-i1-1; i++) {
                 ramps.erase(ramps.begin()+i1+1);
             }
-            ramps.insert(ramps.begin()+i1+1,intermediate.ramps.begin(),intermediate.ramps.end());
+            ramps.insert(ramps.begin()+i1+1,accumoutramps.begin(),accumoutramps.end());
 
             //check for consistency
             if( IS_DEBUGLEVEL(Level_Verbose) ) {
                 for(size_t i=0; i+1<ramps.size(); i++) {
                     for(size_t j = 0; j < ramps[i].x1.size(); ++j) {
-                        OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].x1[j]-ramps[i+1].x0[j]), <=, g_fEpsilon);
-                        OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].dx1[j]-ramps[i+1].dx0[j]), <=, g_fEpsilon);
+                        OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].x1[j]-ramps[i+1].x0[j]), <=, ParabolicRamp::EpsilonX);
+                        OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].dx1[j]-ramps[i+1].dx0[j]), <=, ParabolicRamp::EpsilonV);
                     }
                 }
             }
@@ -914,28 +1096,104 @@ protected:
         }
     }
 
-    /// \brief extracts the unique switch points for every 1D ramp. 0 is *not* included. endtime is included.
-    void _ExtractSwitchTimes(const ParabolicRamp::ParabolicRampND& rampnd, std::vector<dReal>& vswitchtimes)
+    /// checks at each ramp's edges
+    ParabolicRamp::CheckReturn _CheckManipConstraints2(const std::vector<ParabolicRamp::ParabolicRampND>& outramps)
+    {
+        vector<dReal> ac, qfill, vfill, afill;
+        dReal maxmanipspeed=0, maxmanipaccel=0;
+        std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
+        Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
+        FOREACHC(itramp, outramps) {
+            // have to check both ends!?
+            if(itramp->endTime<=g_fEpsilonLinear) {
+                continue;
+            }
+
+            //FOREACH(it,_constraintreturn->_configurationtimes) {
+            //vector<dReal> qc,vc;
+            //ramp.Evaluate(*it,qc);
+            //ramp.Derivative(*it,vc);
+            // Compute the velocity and accel of the end effector COM
+            FOREACHC(itmanipinfo,_listCheckManips) {
+                KinBodyPtr probot = itmanipinfo->plink->GetParent();
+                itramp->Accel(0, ac);
+                qfill.resize(itmanipinfo->vuseddofindices.size());
+                vfill.resize(itmanipinfo->vuseddofindices.size());
+                afill.resize(itmanipinfo->vuseddofindices.size());
+                for(size_t idof = 0; idof < itmanipinfo->vuseddofindices.size(); ++idof) {
+                    qfill[idof] = itramp->x0.at(itmanipinfo->vconfigindices.at(idof));
+                    vfill[idof] = itramp->dx0.at(itmanipinfo->vconfigindices.at(idof));
+                    afill[idof] = ac.at(itmanipinfo->vconfigindices.at(idof));
+                }
+                int endeffindex = itmanipinfo->plink->GetIndex();
+                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+
+                // Set robot to new state
+                probot->SetDOFValues(qfill, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFVelocities(vfill, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->GetLinkVelocities(endeffvels);
+                probot->GetLinkAccelerations(afill,endeffaccs);
+                endeffvellin = endeffvels.at(endeffindex).first;
+                endeffvelang = endeffvels.at(endeffindex).second;
+                endeffacclin = endeffaccs.at(endeffindex).first;
+                endeffaccang = endeffaccs.at(endeffindex).second;
+                Transform R = itmanipinfo->plink->GetTransform();
+                // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
+                FOREACH(itpoint,itmanipinfo->checkpoints) {
+                    Vector point = R.rotate(*itpoint);
+                    if(_parameters->maxmanipspeed>0) {
+                        Vector vpoint = endeffvellin + endeffvelang.cross(point);
+                        dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        if( maxmanipspeed < manipspeed ) {
+                            maxmanipspeed = manipspeed;
+                        }
+                        if( manipspeed > _parameters->maxmanipspeed) {
+                            return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->maxmanipspeed/manipspeed);
+                        }
+                    }
+                    if(_parameters->maxmanipaccel>0) {
+                        Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
+                        dReal manipaccel = RaveSqrt(apoint.lengthsqr3());
+                        if( maxmanipaccel < manipaccel ) {
+                            maxmanipaccel = manipaccel;
+                        }
+                        if(manipaccel > _parameters->maxmanipaccel) {
+                            return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->maxmanipaccel/manipaccel);
+                        }
+                    }
+                }
+            }
+        }
+        return ParabolicRamp::CheckReturn(0);
+    }
+
+    /// \brief extracts the unique switch points for every 1D ramp. endtime is included.
+    ///
+    /// \param binitialized if false then 0 is *not* included.
+    static void _ExtractSwitchTimes(const ParabolicRamp::ParabolicRampND& rampnd, std::vector<dReal>& vswitchtimes, bool bincludezero=false)
     {
         vswitchtimes.resize(0);
+        if( bincludezero ) {
+            vswitchtimes.push_back(0);
+        }
         vswitchtimes.push_back(rampnd.endTime);
         FOREACHC(itramp,rampnd.ramps) {
             vector<dReal>::iterator it;
             if( itramp->tswitch1 != 0 ) {
                 it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                if( it != vswitchtimes.end() && *it != itramp->tswitch1) {
+                if( it != vswitchtimes.end() && RaveFabs(*it - itramp->tswitch1) > ParabolicRamp::EpsilonT ) {
                     vswitchtimes.insert(it,itramp->tswitch1);
                 }
             }
-            if( itramp->tswitch1 != itramp->tswitch2 && itramp->tswitch2 != 0 ) {
+            if( RaveFabs(itramp->tswitch1 - itramp->tswitch2) > ParabolicRamp::EpsilonT && RaveFabs(itramp->tswitch2) > ParabolicRamp::EpsilonT ) {
                 it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch2);
-                if( it != vswitchtimes.end() && *it != itramp->tswitch2 ) {
+                if( it != vswitchtimes.end() && RaveFabs(*it - itramp->tswitch2) > ParabolicRamp::EpsilonT ) {
                     vswitchtimes.insert(it,itramp->tswitch2);
                 }
             }
-            if( itramp->ttotal != itramp->tswitch2 && itramp->ttotal != 0 ) {
+            if( RaveFabs(itramp->ttotal - itramp->tswitch2) > ParabolicRamp::EpsilonT && RaveFabs(itramp->ttotal) > ParabolicRamp::EpsilonT ) {
                 it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->ttotal);
-                if( it != vswitchtimes.end() && *it != itramp->ttotal ) {
+                if( it != vswitchtimes.end() && RaveFabs(*it - itramp->ttotal) > ParabolicRamp::EpsilonT ) {
                     vswitchtimes.insert(it,itramp->ttotal);
                 }
             }

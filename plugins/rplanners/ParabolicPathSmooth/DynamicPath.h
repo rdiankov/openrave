@@ -35,6 +35,14 @@
 
 namespace ParabolicRampInternal {
 
+struct CheckReturn
+{
+    CheckReturn(int retcode = 0, Real fmult=1.0) : retcode(retcode), fTimeBasedSurpassMult(fmult) {
+    }
+    int retcode; // one of CFO_X
+    Real fTimeBasedSurpassMult; // if retcode == CFO_CheckTimeBasedConstraints, then the multiplier of |max|/|cur|
+};
+
 /** @brief A base class for a feasibility checker.
  */
 class FeasibilityCheckerBase
@@ -44,6 +52,12 @@ public:
     }
     virtual int ConfigFeasible(const Vector& q1, const Vector& dq1, int options=0xffff)=0;
     virtual int SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options=0xffff)=0;
+
+    /// \brief extra feasibility checks has different output ramps (in case there are constraints that have to be applied)
+    virtual CheckReturn SegmentFeasible2(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options, std::vector<ParabolicRampND>& outramps) {
+        BOOST_ASSERT(0);
+        return 0;
+    }
     virtual bool NeedDerivativeForFeasibility() {
         return false;
     }
@@ -86,7 +100,12 @@ public:
     /// \brief checks constraints given options
     ///
     /// \return if non-zero then failed. The return code gives the cause of the failure. \see OpenRAVE::ConstraintFilterOptions enum.
-    int Check(const ParabolicRampND& x, int options=0xffff);
+    virtual int Check(const ParabolicRampND& x, int options=0xffff);
+
+    virtual CheckReturn Check2(const ParabolicRampND& rampnd, int options, std::vector<ParabolicRampND>&) {
+        BOOST_ASSERT(0);
+        return CheckReturn(0);
+    }
 
     FeasibilityCheckerBase* feas;
     Vector tol;

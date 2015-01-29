@@ -40,7 +40,7 @@ public:
     {
         return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
     }
-    
+
     Vector vManipDir; ///< direction on the manipulator
     Vector vGlobalDir; ///< direction in world coordinates
     dReal fCosAngleThresh; ///< the cos angle threshold
@@ -266,6 +266,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
         _pmanip = pmanip;
         _pConstraintToolDirection = thresh;
+        return true;
     }
 
     virtual int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
@@ -307,7 +308,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     virtual bool SetManipulatorBiasCommand(std::ostream& sout, std::istream& sinput)
     {
         std::string manipname;
-        Vector vbiasdirection(0,0,1);
+        Vector vbiasdirection(0,0,0.1);
         dReal nullsampleprob = 0.60, nullbiassampleprob = 0.50, deltasampleprob = 0.50;
         sinput >> manipname >> vbiasdirection.x >> vbiasdirection.y >> vbiasdirection.z >> nullsampleprob >> nullbiassampleprob >> deltasampleprob;
         RobotBase::ManipulatorConstPtr pmanip = _probot->GetManipulator(manipname);
@@ -317,7 +318,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         if( vbiasdirection.lengthsqr3() <= g_fEpsilon ) {
             return false;
         }
-        vbiasdirection.normalize3();
+        //vbiasdirection.normalize3();
         SetManipulatorBias(pmanip, vbiasdirection, nullsampleprob, nullbiassampleprob, deltasampleprob);
         return true;
     }
@@ -325,7 +326,6 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     void SetManipulatorBias(RobotBase::ManipulatorConstPtr pmanip, const Vector& vbiasdirection, dReal nullsampleprob, dReal nullbiassampleprob, dReal deltasampleprob)
     {
 #ifdef OPENRAVE_HAS_LAPACK
-        using namespace boost::numeric::ublas;
         _pmanip = pmanip;
         _vbiasdirection = vbiasdirection;
         _vbiasdofdirection.resize(0);
@@ -333,75 +333,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _nullsampleprob = nullsampleprob;
         _nullbiassampleprob = nullbiassampleprob;
         _deltasampleprob = deltasampleprob;
-
-        _pmanip->CalculateJacobian(_mjacobian);
-        boost::numeric::ublas::matrix<double, boost::numeric::ublas::column_major> J(3,_pmanip->GetArmIndices().size());
-        boost::numeric::ublas::vector<double> P(3);
-        for(size_t i = 0; i < 3; ++i) {
-            P(i) = _vbiasdirection[i];
-            for(size_t j = 0; j < _pmanip->GetArmIndices().size(); ++j) {
-                J(i,j) = _mjacobian[i][j]; // *_viweights.at(j), will have to scale output also?, needs testing
-            }
-        }
-
-        dReal zerothresh = 1e-7;
-        boost::numeric::ublas::vector<double> S(P.size());
-        size_t numdof = _pmanip->GetArmIndices().size();
-        boost::numeric::ublas::matrix<double, column_major> U(P.size(),P.size()), V(numdof,numdof);
-        // J * dofvelocities = P
-        // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
-        int ret = boost::numeric::bindings::lapack::gesdd('O','A',J,S,U,V);
-        if( ret != 0 ) {
-            RAVELOG_WARN("failed to compute SVD for jacobian, disabling bias\n");
-            return;
-        }
-        // diag(S) * transpose(V) * dofvelocities = transpose(U) * P = P2
-        // transpose(V) * dofvelocities = diag(1/S) * P2 = P3
-        boost::numeric::ublas::vector<double> P2 = prod(trans(U),P);
-        boost::numeric::ublas::vector<double> P3(numdof);
-        for(size_t i = 0; i < numdof; ++i) {
-            if( i < S.size() ) {
-                if( RaveFabs(S(i)) < zerothresh ) {
-                    P3(i) = 0;
-                }
-                else {
-                    P3(i) = P2(i)/S(i);
-                }
-            }
-            else {
-                P3(i) = 0;
-            }
-        }
-        // dofvelocities = P3
-        P3 = prod(trans(V),P3);
-        _vbiasdofdirection.resize(numdof);
-        for(size_t i = 0; i < numdof; ++i) {
-            _vbiasdofdirection[i] = P3(i);
-        }
-
-        size_t istart = 0;
-        for(istart = 0; istart < S.size(); ++istart ) {
-            if( RaveFabs(S(istart)) < zerothresh ) {
-                break;
-            }
-        }
-
         _busebiasing = true;
-
-        if( istart >= numdof ) {
-            // no _vbiasnullspace, so extract _vbiasdofdirection
-            _vbiasnullspace.resize(0);
-        }
-        else {
-            _vbiasnullspace.resize(numdof - istart);
-            for(size_t i = istart; i < numdof; ++i) {
-                _vbiasnullspace[i-istart].resize(numdof);
-                for(size_t j = 0; j < numdof; ++j) {
-                    _vbiasnullspace[i-istart][j] = V(i,j);
-                }
-            }
-        }
-
         RAVELOG_VERBOSE_FORMAT("set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", _nullsampleprob%_nullbiassampleprob%_deltasampleprob);
 #else
         throw OPENRAVE_EXCEPTION_FORMAT0("cannot set manipulator bias since lapack is not supported", ORE_CommandNotSupported);
@@ -468,7 +400,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
                     bConstraintFailed = true;
                     break;
-                    
+
                 }
             }
             if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report) ) {
@@ -486,9 +418,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             _cachehit = 0;
         }
 
-        bool bUsingBias = _vbiasdofdirection.size() > 0;
+        BOOST_ASSERT(!_busebiasing || _vbiasdofdirection.size() > 0);
         const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
 
+        bool busebiasing = _busebiasing;
         const int nMaxIterRadiusThresh=_maxiterations/2;
         const dReal imaxiterations = 2.0/dReal(_maxiterations);
         const dReal fJitterLowerThresh=0.2, fJitterHigherThresh=0.8;
@@ -502,7 +435,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             if( (iter%10) == 0 ) { // not sure what a good rate is...
                 _CallStatusFunctions(iter);
             }
-            if( bUsingBias && iter < (int)rayincs.size() ) {
+            if( busebiasing && iter < (int)rayincs.size() ) {
                 // start by checking samples directly above the current configuration
                 for (size_t j = 0; j < vnewdof.size(); ++j) {
                     vnewdof[j] = _curdof[j] + (rayincs[iter] * _vbiasdofdirection.at(j));
@@ -518,11 +451,11 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 bool samplebiasdir = false;
                 bool samplenull = false;
                 bool sampledelta = false;
-                if (_busebiasing && _ssampler->SampleSequenceOneReal() < _nullsampleprob)
+                if (busebiasing && _ssampler->SampleSequenceOneReal() < _nullsampleprob)
                 {
                     samplenull = true;
                 }
-                if (_busebiasing && _ssampler->SampleSequenceOneReal() < _nullbiassampleprob) {
+                if (busebiasing && _ssampler->SampleSequenceOneReal() < _nullbiassampleprob) {
                     samplebiasdir = true;
                 }
                 if( (!samplenull && !samplebiasdir) || _ssampler->SampleSequenceOneReal() < _deltasampleprob ) {
@@ -616,7 +549,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     Vector projboxpos = projdelta * _vLinkAABBs[ilink].pos;
 
                     Vector b;
-                    if( bUsingBias ) {
+                    if( busebiasing ) {
                         b = _vOriginalInvTransforms[ilink].rotate(_vbiasdirection); // inside link coordinate system
                     }
                     else {
@@ -707,7 +640,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         break;
                     }
                 }
-                
+
                 if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report)) {
                     bCollision = true;
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -779,6 +712,84 @@ protected:
             _vOriginalTransforms[i] = _vLinks[i]->GetTransform();
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
+#ifdef OPENRAVE_HAS_LAPACK
+        if( _busebiasing ) {
+            using namespace boost::numeric::ublas;
+            _pmanip->CalculateJacobian(_mjacobian);
+            boost::numeric::ublas::matrix<double, boost::numeric::ublas::column_major> J(3,_pmanip->GetArmIndices().size());
+            boost::numeric::ublas::vector<double> P(3);
+            for(size_t i = 0; i < 3; ++i) {
+                P(i) = _vbiasdirection[i];
+                for(size_t j = 0; j < _pmanip->GetArmIndices().size(); ++j) {
+                    J(i,j) = _mjacobian[i][j]; // *_viweights.at(j), will have to scale output also?, needs testing
+                }
+            }
+
+            dReal zerothresh = 1e-7;
+            boost::numeric::ublas::vector<double> S(P.size());
+            size_t numdof = _pmanip->GetArmIndices().size();
+            boost::numeric::ublas::matrix<double, column_major> U(P.size(),P.size()), V(numdof,numdof);
+            // J * dofvelocities = P
+            // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
+            int ret = boost::numeric::bindings::lapack::gesdd('O','A',J,S,U,V);
+            if( ret != 0 ) {
+                RAVELOG_WARN("failed to compute SVD for jacobian, disabling bias\n");
+                return;
+            }
+            // diag(S) * transpose(V) * dofvelocities = transpose(U) * P = P2
+            // transpose(V) * dofvelocities = diag(1/S) * P2 = P3
+            boost::numeric::ublas::vector<double> P2 = prod(trans(U),P);
+            boost::numeric::ublas::vector<double> P3(numdof);
+            for(size_t i = 0; i < numdof; ++i) {
+                if( i < S.size() ) {
+                    if( RaveFabs(S(i)) < zerothresh ) {
+                        P3(i) = 0;
+                    }
+                    else {
+                        P3(i) = P2(i)/S(i);
+                    }
+                }
+                else {
+                    P3(i) = 0;
+                }
+            }
+            // dofvelocities = P3
+            P3 = prod(trans(V),P3);
+            _vbiasdofdirection.resize(numdof);
+            for(size_t i = 0; i < numdof; ++i) {
+                _vbiasdofdirection[i] = P3(i);
+            }
+
+            size_t istart = 0;
+            for(istart = 0; istart < S.size(); ++istart ) {
+                if( RaveFabs(S(istart)) < zerothresh ) {
+                    break;
+                }
+            }
+
+            if( istart >= numdof ) {
+                // no _vbiasnullspace, so extract _vbiasdofdirection
+                _vbiasnullspace.resize(0);
+            }
+            else {
+                _vbiasnullspace.resize(numdof - istart);
+                for(size_t i = istart; i < numdof; ++i) {
+                    _vbiasnullspace[i-istart].resize(numdof);
+                    for(size_t j = 0; j < numdof; ++j) {
+                        _vbiasnullspace[i-istart][j] = V(i,j);
+                    }
+                }
+            }
+        }
+#endif
+
+        // update all the links (since geometry could have changed)
+        _vLinkAABBs.resize(_vLinks.size());
+        for(size_t i = 0; i < _vLinks.size(); ++i) {
+            _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
+        }
+
+
         if( !!_cache ) {
             _cache->Reset(); // need this here in order to invalidate cache.
         }
@@ -795,7 +806,7 @@ protected:
             }
         }
 
-        // only update starting at the grabbed
+        // update all the grabbed links
         _vLinkAABBs.resize(_vLinks.size());
         for(size_t i = _probot->GetLinks().size(); i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
@@ -867,7 +878,7 @@ protected:
     dReal _deltasampleprob;
     RobotBase::ManipulatorConstPtr _pmanip;
     boost::multi_array<OpenRAVE::dReal,2> _mjacobian;
-    Vector _vbiasdirection; // direction to bias in workspace
+    Vector _vbiasdirection; // direction to bias in workspace. magnitude is the max bias distance
     std::vector<dReal> _vbiasdofdirection; // direction to bias in configuration space (from jacobian)
     std::vector< std::vector<dReal> > _vbiasnullspace; // configuration nullspace that does not constraint rotation. vectors are unit
 

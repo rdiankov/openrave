@@ -2869,7 +2869,10 @@ void ParabolicRampND::Dilate(Real timeScale)
 
 void ParabolicRampND::TrimFront(Real tcut)
 {
-    PARABOLIC_RAMP_ASSERT(tcut <= endTime);
+    if( tcut > endTime ) {
+        PARABOLICWARN("Warning, cut time (%.15e) needs to be <= to total time (%.15e)\n",tcut, endTime);
+        PARABOLIC_RAMP_ASSERT(tcut <= endTime);
+    }
     Evaluate(tcut,x0);
     Derivative(tcut,dx0);
     endTime -= tcut;
