@@ -713,7 +713,11 @@ public:
             // the configurations are getting constrained, therefore the path checked is not equal to the simply interpolated path by (a,b, da, db).
             if( _constraintreturn->_configurationtimes.size() > 1 ) {
                 OPENRAVE_ASSERT_OP(_constraintreturn->_configurations.size(),==,_constraintreturn->_configurationtimes.size()*a.size());
-                outramps.resize(_constraintreturn->_configurationtimes.size()-1);
+                outramps.resize(0);
+                if( outramps.capacity() < _constraintreturn->_configurationtimes.size()-1 ) {
+                    outramps.reserve(_constraintreturn->_configurationtimes.size()-1);
+                }
+                
                 std::vector<dReal> curvel = da, newvel;
                 std::vector<dReal> curpos = a, newpos;
                 std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin() + a.size();
@@ -729,8 +733,12 @@ public:
                             return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
                         }
                     }
-                    outramps.at(itime-1).SetPosVelTime(curpos, curvel, newpos, newvel, deltatime);
-                    outramps.at(itime-1).constraintchecked = 1;
+                    if( deltatime > g_fEpsilon ) {
+                        ParabolicRamp::ParabolicRampND outramp;
+                        outramp.SetPosVelTime(curpos, curvel, newpos, newvel, deltatime);
+                        outramp.constraintchecked = 1;
+                        outramps.push_back(outramp);
+                    }
                     curtime = _constraintreturn->_configurationtimes[itime];
                     curpos.swap(newpos);
                     curvel.swap(newvel);
