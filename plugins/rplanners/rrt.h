@@ -711,22 +711,26 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
 
-        NodeBase* lastnode = NULL;
-        bool bSuccess = false;
+        NodeBase* lastnode = NULL; // the last node visited by the RRT
+        NodeBase* bestGoalNode = NULL; // the best goal node found already by the RRT. If this is not NULL, then RRT succeeded
+        dReal fBestGoalNodeDist = 0; // configuration distance from initial position to the goal node
 
         // the main planning loop
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
+        std::vector<dReal> vtempinitialconfig;
         PlannerAction callbackaction = PA_None;
         PlannerProgress progress;
         int iter = 0;
-        _goalindex = -1;
+        _goalindex = -1; // index into vgoalconfig if the goal is found
         _startindex = -1;
 
-        while(!bSuccess && iter < _parameters->_nMaxIterations) {
+        while(iter < _parameters->_nMaxIterations) {
             iter++;
-
+            if( !!bestGoalNode && iter >= _parameters->_nMinIterations ) {
+                break;
+            }
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
@@ -755,10 +759,24 @@ public:
             if( et == ET_Connected ) {
                 FOREACH(itgoal, _vecGoals) {
                     if( _parameters->_distmetricfn(*itgoal, _treeForward.GetVectorConfig(lastnode)) < 2*_parameters->_fStepLength ) {
-                        bSuccess = true;
-                        _goalindex = (int)(itgoal-_vecGoals.begin());
-                        RAVELOG_DEBUG(str(boost::format("found goal index: %d\n")%_goalindex));
-                        break;
+                        SimpleNode* pforward = (SimpleNode*)lastnode;
+                        while(1) {
+                            if(!pforward->rrtparent) {
+                                break;
+                            }
+                            pforward = pforward->rrtparent;
+                        }
+                        vtempinitialconfig = _treeForward.GetVectorConfig(pforward); // GetVectorConfig returns the same reference, so need to make a copy
+                        dReal fGoalNodeDist = _parameters->_distmetricfn(vtempinitialconfig, _treeForward.GetVectorConfig(lastnode));
+                        if( !bestGoalNode || fBestGoalNodeDist > fGoalNodeDist ) {
+                            bestGoalNode = lastnode;
+                            fBestGoalNodeDist = fGoalNodeDist;
+                            _goalindex = (int)(itgoal-_vecGoals.begin());
+                        }
+                        if( iter >= _parameters->_nMinIterations ) {
+                            RAVELOG_DEBUG(str(boost::format("found goal index: %d\n")%_goalindex));
+                            break;
+                        }
                     }
                 }
             }
@@ -766,10 +784,24 @@ public:
             // check the goal heuristic more often
             if(( et != ET_Failed) && !!_parameters->_goalfn ) {
                 if( _parameters->_goalfn(_treeForward.GetVectorConfig(lastnode)) <= 1e-4f ) {
-                    bSuccess = true;
-                    _goalindex = -1;
-                    RAVELOG_DEBUG("node at goal\n");
-                    break;
+                    SimpleNode* pforward = (SimpleNode*)lastnode;
+                    while(1) {
+                        if(!pforward->rrtparent) {
+                            break;
+                        }
+                        pforward = pforward->rrtparent;
+                    }
+                    vtempinitialconfig = _treeForward.GetVectorConfig(pforward); // GetVectorConfig returns the same reference, so need to make a copy
+                    dReal fGoalNodeDist = _parameters->_distmetricfn(vtempinitialconfig, _treeForward.GetVectorConfig(lastnode));
+                    if( !bestGoalNode || fBestGoalNodeDist > fGoalNodeDist ) {
+                        bestGoalNode = lastnode;
+                        fBestGoalNodeDist = fGoalNodeDist;
+                        _goalindex = -1;
+                        RAVELOG_DEBUG_FORMAT("found node at goal at dist=%f at %d iterations, computation time %fs", fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+                    }
+                    if( iter >= _parameters->_nMinIterations ) {
+                        break;
+                    }
                 }
             }
 
@@ -785,14 +817,14 @@ public:
                 return PS_Interrupted;
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
-                if( bSuccess ) {
+                if( !!bestGoalNode ) {
                     break;
                 }
             }
         }
 
-        if( !bSuccess ) {
-            RAVELOG_DEBUG("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
+        if( !bestGoalNode ) {
+            RAVELOG_DEBUG_FORMAT("plan failed, %fs",(0.001f*(float)(utils::GetMilliTime()-basetime)));
             return PS_Failed;
         }
 
@@ -800,7 +832,7 @@ public:
         _cachedpath.resize(0);
 
         // add nodes from the forward tree
-        SimpleNode* pforward = (SimpleNode*)lastnode;
+        SimpleNode* pforward = (SimpleNode*)bestGoalNode;
         while(1) {
             _cachedpath.insert(_cachedpath.begin(), pforward->q, pforward->q+dof);
             if(!pforward->rrtparent) {
@@ -846,67 +878,6 @@ protected:
 class ExplorationPlanner : public RrtPlanner<SimpleNode>
 {
 public:
-    class ExplorationParameters : public PlannerBase::PlannerParameters {
-public:
-        ExplorationParameters() : _fExploreProb(0), _nExpectedDataSize(100), _bProcessingExploration(false) {
-            _vXMLParameters.push_back("exploreprob");
-            _vXMLParameters.push_back("expectedsize");
-        }
-
-        dReal _fExploreProb;
-        int _nExpectedDataSize;
-
-protected:
-        bool _bProcessingExploration;
-        // save the extra data to XML
-        virtual bool serialize(std::ostream& O) const
-        {
-            if( !PlannerParameters::serialize(O) ) {
-                return false;
-            }
-            O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << endl;
-            O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << endl;
-            return !!O;
-        }
-
-        ProcessElement startElement(const std::string& name, const AttributesList &atts)
-        {
-            if( _bProcessingExploration ) {
-                return PE_Ignore;
-            }
-            switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
-            case PE_Pass: break;
-            case PE_Support: return PE_Support;
-            case PE_Ignore: return PE_Ignore;
-            }
-
-            _bProcessingExploration = name=="exploreprob"||name=="expectedsize";
-            return _bProcessingExploration ? PE_Support : PE_Pass;
-        }
-
-        // called at the end of every XML tag, _ss contains the data
-        virtual bool endElement(const std::string& name)
-        {
-            // _ss is an internal stringstream that holds the data of the tag
-            if( _bProcessingExploration ) {
-                if( name == "exploreprob") {
-                    _ss >> _fExploreProb;
-                }
-                else if( name == "expectedsize" ) {
-                    _ss >> _nExpectedDataSize;
-                }
-                else {
-                    RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
-                }
-                _bProcessingExploration = false;
-                return false;
-            }
-
-            // give a chance for the default parameters to get processed
-            return PlannerParameters::endElement(name);
-        }
-    };
-
     ExplorationPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nRRT-based exploration planner";
     }
@@ -949,7 +920,7 @@ protected:
                 NodeBase* pnode = _treeForward.GetNodeFromIndex(inode);
 
                 if( !_parameters->_sampleneighfn(vSampleConfig, _treeForward.GetVectorConfig(pnode), _parameters->_fStepLength) ) {
-                    return PS_Failed;
+                    continue;
                 }
                 if( GetParameters()->CheckPathAllConstraints(_treeForward.GetVectorConfig(pnode), vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                     _treeForward.InsertNode(pnode, vSampleConfig, 0);

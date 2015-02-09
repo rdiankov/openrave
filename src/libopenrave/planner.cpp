@@ -109,7 +109,8 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _checkpathconstraintsfn = boost::bind(&PlannerParameters::_CheckPathConstraintsOld, this, _1, _2, _3, _4);
 
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
-    _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>100</_nmaxiterations></_postprocessing>";
+    // should not verify initial path since coming from RRT. actually the linear smoother sometimes introduces small collisions due to the discrete nature of the collision checking, so also want to ignore those
+    _sPostProcessingParameters ="<_nmaxiterations>20</_nmaxiterations><_postprocessing planner=\"parabolicsmoother\"><_nmaxiterations>100</_nmaxiterations><verifyinitialpath>0</verifyinitialpath></_postprocessing>";
     _vXMLParameters.reserve(20);
     _vXMLParameters.push_back("configuration");
     _vXMLParameters.push_back("_vinitialconfig");

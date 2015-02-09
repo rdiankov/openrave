@@ -32,9 +32,9 @@ public:
         _vXMLParameters.push_back("expectedsize");
     }
 
-    dReal _fExploreProb;
-    int _nExpectedDataSize;
-
+    dReal _fExploreProb; ///< explore close to the neighbors already added
+    int _nExpectedDataSize; ///< the expected number of nodes of the RRT tree to expand to before returning a solution. This allows the RRT tree to build up 
+    
 protected:
     bool _bProcessingExploration;
     // save the extra data to XML
@@ -88,6 +88,9 @@ protected:
         return PlannerParameters::endElement(name);
     }
 };
+
+typedef boost::shared_ptr<ExplorationParameters> ExplorationParametersPtr;
+typedef boost::shared_ptr<ExplorationParameters const> ExplorationParametersConstPtr;
 
 class OPENRAVE_API RAStarParameters : public PlannerBase::PlannerParameters
 {
@@ -766,14 +769,16 @@ typedef boost::shared_ptr<RRTParameters> RRTParametersPtr;
 class OPENRAVE_API BasicRRTParameters : public RRTParameters
 {
 public:
-    BasicRRTParameters() : RRTParameters(), _fGoalBiasProb(0.05f), _nRRTExtentType(0), _bProcessingBasic(false) {
+    BasicRRTParameters() : RRTParameters(), _fGoalBiasProb(0.05f), _nRRTExtentType(0), _nMinIterations(0), _bProcessingBasic(false) {
         _vXMLParameters.push_back("goalbias");
         _vXMLParameters.push_back("nrrtextenttype");
+        _vXMLParameters.push_back("nminiterations");
     }
 
     dReal _fGoalBiasProb;
     int _nRRTExtentType; ///< the rrt extent type. if 0 then extend all the way to the sampled position. if 1, then just extend one step length before sampling again.
-
+    int _nMinIterations; ///< minimum iterations to do before returning a result unless user passes a PA_ReturnWithAnySolution interrupt. When the iterations are done, the RRT will choose the goal with the minimum configuration distance from the initial to return. By defautl it is 0.
+    
 protected:
     bool _bProcessingBasic;
     virtual bool serialize(std::ostream& O, int options=0) const
@@ -783,6 +788,7 @@ protected:
         }
         O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
         O << "<nrrtextenttype>" << _nRRTExtentType << "</nrrtextenttype>" << std::endl;
+        O << "<nminiterations>" << _nMinIterations << "</nminiterations>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -801,7 +807,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessingBasic = name=="goalbias" || name =="nrrtextenttype";
+        _bProcessingBasic = name=="goalbias" || name =="nrrtextenttype" || name=="nminiterations";
         return _bProcessingBasic ? PE_Support : PE_Pass;
     }
 
@@ -813,6 +819,9 @@ protected:
             }
             else if( name == "nrrtextenttype" ) {
                 _ss >> _nRRTExtentType;
+            }
+            else if( name == "nminiterations" ) {
+                _ss >> _nMinIterations;
             }
             else {
                 RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));
