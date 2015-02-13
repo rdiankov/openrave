@@ -37,13 +37,13 @@ set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PYTHON_SUGGESTS ipython python-qt4 
 
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY_INSTALL_DIR})" COMPONENT openrave)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}.py
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}.py
                  ${CMAKE_INSTALL_PREFIX}/bin/openrave.py)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-robot.py
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-robot.py
                  ${CMAKE_INSTALL_PREFIX}/bin/openrave-robot.py)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py
                  ${CMAKE_INSTALL_PREFIX}/bin/openrave-createplugin.py)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}
+  InstallSymlink(${OPENRAVEPY_VER_NAME}
                  ${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY_INSTALL_DIR}/_openravepy_)
 endif()
 
