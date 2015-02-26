@@ -371,7 +371,6 @@ class TestTrajectory(EnvironmentSetup):
         robot.SetDOFLimits(array([-4.1887902047863905, -2.0943951023931953,  0.                , -3.4906585039886591, -2.0943951023931953, -6.2831853071795862]),
                            array([ 4.1887902047863905,  2.0943951023931953,  2.8099800957108707, 3.4906585039886591,  2.0943951023931953,  6.2831853071795862]))
         controller_timestep = 0.00711111111111
-        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
         
         traj = RaveCreateTrajectory(robot.GetEnv(),'')
         traj.Init(robot.GetActiveConfigurationSpecification())

@@ -91,6 +91,29 @@ void TrajectoryBase::Sample(std::vector<dReal>& data, dReal time, const Configur
     ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),GetConfigurationSpecification(),1,GetEnv());
 }
 
+void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const
+{
+    std::vector<dReal> tempdata;
+    int dof = GetConfigurationSpecification().GetDOF();
+    data.resize(dof*times.size());
+    std::vector<dReal>::iterator itdata = data.begin();
+    for(size_t i = 0; i < times.size(); ++i, itdata += dof) {
+        Sample(tempdata, times[i]);
+        std::copy(tempdata.begin(), tempdata.end(), itdata);
+    }    
+}
+
+void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times, const ConfigurationSpecification& spec) const
+{
+    std::vector<dReal> tempdata;
+    data.resize(spec.GetDOF()*times.size());
+    std::vector<dReal>::iterator itdata = data.begin();
+    for(size_t i = 0; i < times.size(); ++i, itdata += spec.GetDOF()) {
+        Sample(tempdata, times[i], spec);
+        std::copy(tempdata.begin(), tempdata.end(), itdata);
+    }
+}
+
 void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const
 {
     RAVELOG_VERBOSE(str(boost::format("TrajectoryBase::GetWaypoints: calling slow implementation %s")%GetXMLId()));

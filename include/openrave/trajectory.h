@@ -77,6 +77,22 @@ public:
      */
     virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const;
 
+    /** \brief bulk samples the trajectory given a vector of times using the trajectory's specification.
+        
+        \param data[out] the sampled points depending on the times
+        \param times[in] the times to sample
+     */
+    virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const;
+    
+    /** \brief bulk samples the trajectory given a vector of times and a specific configuration specification.
+        
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param times[in] the times to sample
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times, const ConfigurationSpecification& spec) const;
+
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
     /// \brief return the number of waypoints
