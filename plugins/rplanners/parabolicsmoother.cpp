@@ -414,6 +414,7 @@ public:
             //dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             if( !_SetMilestones(dynamicpath.ramps, path) ) {
                 RAVELOG_WARN("failed to initialize ramps\n");
+                _DumpTrajectory(ptraj, Level_Debug);
                 return PS_Failed;
             }
         }
@@ -831,7 +832,8 @@ protected:
                     ramp.Evaluate(0, x0);
                     ramp.Derivative(0, dx0);
                     dReal fprevtime = 0;
-                    for(size_t iswitch = 0; iswitch < vswitchtimes.size(); ++iswitch) {
+                    size_t iswitch = 0;
+                    for(iswitch = 0; iswitch < vswitchtimes.size(); ++iswitch) {
                         ramp.Evaluate(vswitchtimes.at(iswitch), x1);
                         ramp.Derivative(vswitchtimes.at(iswitch), dx1);
                         retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
@@ -853,7 +855,17 @@ protected:
                         }
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("initial ramp returned error 0x%x, giving up....", retseg.retcode);
+                        std::stringstream ss;
+                        ss << "x0=[";
+                        SerializeValues(ss, x0);
+                        ss << "]; x1=[";
+                        SerializeValues(ss, x1);
+                        ss << "]; dx0=[";
+                        SerializeValues(ss, dx0);
+                        ss << "]; dx1=[";
+                        SerializeValues(ss, dx1);
+                        ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
+                        RAVELOG_WARN_FORMAT("initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned error 0x%x; %s giving up....", i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
                         return false;
                     }
                 }

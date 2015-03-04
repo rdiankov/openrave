@@ -87,4 +87,15 @@ inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal 
     return (t1.trans-t2.trans).lengthsqr3() + frotweight*facos; //*facos;
 }
 
+inline std::ostream& SerializeValues(std::ostream& O, const std::vector<dReal>& values, char delim=',')
+{
+    for(size_t i = 0; i < values.size(); ++i) {
+        if( i > 0 ) {
+            O << delim;
+        }
+        O << values[i];
+    }
+    return O;
+}
+
 #endif
