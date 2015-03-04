@@ -147,7 +147,7 @@ bool TrajectoryReader::endElement(const std::string& name)
             _ss >> _vdata[i];
         }
         if( !_ss ) {
-            RAVELOG_WARN("failed treading trajectory <data>\n");
+            throw OPENRAVE_EXCEPTION_FORMAT("failed reading %d numbers from trajectory <data> element", _vdata.size(), ORE_Assert);
         }
         else {
             _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);

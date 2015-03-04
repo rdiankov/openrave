@@ -454,7 +454,7 @@ Some python code to display data::\n\
                 int startindex = _vgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", values=[";
+                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", values=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
                         ss << _vgoalpaths.back().qall.at(_vgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
                     }
@@ -505,7 +505,7 @@ Some python code to display data::\n\
             ptraj->Init(_parameters->_configurationspecification);
         }
         ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
-        RAVELOG_DEBUG_FORMAT("plan success, iters=%d, path=%d points, computation time=%fs\n", progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        RAVELOG_DEBUG_FORMAT("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n", GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         return _ProcessPostPlanners(_robot,ptraj);
     }
 
@@ -774,7 +774,7 @@ public:
                             _goalindex = (int)(itgoal-_vecGoals.begin());
                         }
                         if( iter >= _parameters->_nMinIterations ) {
-                            RAVELOG_DEBUG(str(boost::format("found goal index: %d\n")%_goalindex));
+                            RAVELOG_DEBUG_FORMAT("env=%d, found goal index: %d", GetEnv()->GetId()%_goalindex);
                             break;
                         }
                     }
@@ -797,7 +797,7 @@ public:
                         bestGoalNode = lastnode;
                         fBestGoalNodeDist = fGoalNodeDist;
                         _goalindex = -1;
-                        RAVELOG_DEBUG_FORMAT("found node at goal at dist=%f at %d iterations, computation time %fs", fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+                        RAVELOG_DEBUG_FORMAT("env=%d, found node at goal at dist=%f at %d iterations, computation time %fs", GetEnv()->GetId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
                     }
                     if( iter >= _parameters->_nMinIterations ) {
                         break;
@@ -849,7 +849,7 @@ public:
         ptraj->Insert(ptraj->GetNumWaypoints(), vinsertvalues, _parameters->_configurationspecification);
 
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
-        RAVELOG_DEBUG(str(boost::format("plan success, path=%d points in %fs\n")%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))));
+        RAVELOG_DEBUG_FORMAT("env=%d, plan success, path=%d points in %fs", GetEnv()->GetId()%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime))));
         return status;
     }
 

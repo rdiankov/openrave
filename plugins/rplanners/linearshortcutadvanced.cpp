@@ -209,26 +209,27 @@ protected:
     void _SubsampleTrajectory(TrajectoryBasePtr ptraj, list< std::pair< vector<dReal>, dReal> >& listpath) const
     {
         PlannerParametersConstPtr parameters = GetParameters();
-        vector<dReal> q0(parameters->GetDOF()), dq(parameters->GetDOF());
+        vector<dReal> q0(parameters->GetDOF()), q1(parameters->GetDOF()), dq(parameters->GetDOF()), qcur(parameters->GetDOF()), dq2;
         vector<dReal> vtrajdata;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajdata,parameters->_configurationspecification);
 
         std::copy(vtrajdata.begin(),vtrajdata.begin()+parameters->GetDOF(),q0.begin());
         listpath.push_back(make_pair(q0,dReal(0)));
-
+        qcur = q0;
+        
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
-            std::copy(vtrajdata.begin()+(ipoint-1)*parameters->GetDOF(),vtrajdata.begin()+(ipoint)*parameters->GetDOF(),dq.begin());
-            std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q0.begin());
+            std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q1.begin());
+            dq = q1;            
             parameters->_diffstatefn(dq,q0);
             int i, numSteps = 1;
             vector<dReal>::const_iterator itres = parameters->_vConfigResolution.begin();
             for (i = 0; i < parameters->GetDOF(); i++,itres++) {
                 int steps;
                 if( *itres != 0 ) {
-                    steps = (int)(fabs(dq[i]) / *itres);
+                    steps = (int)(RaveFabs(dq[i]) / *itres);
                 }
                 else {
-                    steps = (int)(fabs(dq[i]) * 100);
+                    steps = (int)(RaveFabs(dq[i]) * 100);
                 }
                 if (steps > numSteps) {
                     numSteps = steps;
@@ -238,14 +239,33 @@ protected:
             FOREACH(it,dq) {
                 *it *= fisteps;
             }
-            for (int f = 0; f < numSteps; f++) {
-                dReal dist = parameters->_distmetricfn(listpath.back().first,q0);
-                listpath.push_back(make_pair(q0, dist));
-                if( !parameters->_neighstatefn(q0,dq,0) ) {
-                    RAVELOG_DEBUG("neighstatefn failed, perhaps non-linear constraints are used?\n");
-                    break;
+            int mult = 1;
+            for (int f = 1; f < numSteps; f++) {
+                bool bsuccess = false;
+                if( mult > 1 ) {
+                    dq2 = dq;
+                    FOREACHC(it, dq2) {
+                        *it *= mult;
+                    }
+                    bsuccess = parameters->_neighstatefn(qcur,dq2,0);
                 }
+                else {
+                    bsuccess = parameters->_neighstatefn(qcur,dq,0);
+                }
+                if( !bsuccess ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%mult);
+                    mult++;
+                    continue;
+                }
+                dReal dist = parameters->_distmetricfn(listpath.back().first,qcur);
+                listpath.push_back(make_pair(qcur, dist));
+                mult = 1;
             }
+            // always add the last point
+            dReal dist = parameters->_distmetricfn(listpath.back().first,q1);
+            listpath.push_back(make_pair(q1, dist));
+            q0.swap(q1);
+            qcur = q1;
         }
 
         std::copy(vtrajdata.end()-parameters->GetDOF(),vtrajdata.end(),q0.begin());

@@ -214,7 +214,9 @@ public:
         BOOST_ASSERT(_timeoffset>=0);
         BOOST_ASSERT(time >= -g_fEpsilon);
         _ComputeInternal();
-        _VerifySampling();
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            _VerifySampling();
+        }
         data.resize(0);
         data.resize(spec.GetDOF(),0);
         if( time >= GetDuration() ) {
@@ -405,7 +407,8 @@ protected:
     /// \brief assumes _ComputeInternal has finished
     void _VerifySampling() const
     {
-        BOOST_ASSERT(!_bChanged && _bInit);
+        BOOST_ASSERT(!_bChanged);
+        BOOST_ASSERT(_bInit);
         if( _bSamplingVerified ) {
             return;
         }

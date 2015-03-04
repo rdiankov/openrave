@@ -125,7 +125,7 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
     /// \brief Compute the AABB that encloses all the links in linklist with respect to a coordinate system Tparent
     ///
     /// \param tparent is most likely the end effector of a manipulator
-    AABB ComputeEnclosingAABB(std::list<KinBody::LinkPtr> linklist, const Transform& tparent)
+    AABB ComputeEnclosingAABB(const std::list<KinBody::LinkPtr>& linklist, const Transform& tparent)
     {
         Vector vmin, vmax;
         bool binitialized=false;
@@ -569,7 +569,7 @@ public:
                         }
                         if( !bSuccess ) {
                             RAVELOG_WARN_FORMAT("original ramp %d is in collision!", irampindex);
-                            _DumpTrajectory(ptraj, Level_Verbose);
+                            _DumpTrajectory(ptraj, Level_Debug);
                             return PS_Failed;
                         }
                     }
@@ -624,15 +624,15 @@ public:
             }
 
             OPENRAVE_ASSERT_OP(RaveFabs(dynamicpath.GetTotalTime()-_dummytraj->GetDuration()),<,0.001);
-            RAVELOG_DEBUG(str(boost::format("after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs")%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%dynamicpath.GetTotalTime()));
+            RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%dynamicpath.GetTotalTime());
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
-            _DumpTrajectory(ptraj, Level_Verbose);
-            RAVELOG_WARN_FORMAT("parabolic planner failed: %s", ex.what());
+            _DumpTrajectory(ptraj, Level_Debug);
+            RAVELOG_WARN_FORMAT("env=%d, parabolic planner failed, iter=%d: %s", GetEnv()->GetId()%_progress._iteration%ex.what());
             return PS_Failed;
         }
-        RAVELOG_DEBUG_FORMAT("path optimizing - computation time=%fs\n", (0.001f*(float)(utils::GetMilliTime()-basetime)));
+        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
@@ -641,7 +641,14 @@ public:
         if( _bUsePerturbation ) {
             options |= CFO_CheckWithPerturbation;
         }
-        return _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options);
+        try {
+            return _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options);
+        }
+        catch(const std::exception& ex) {
+            // some constraints assume initial conditions for a and b are followed, however at this point a and b are sa
+            RAVELOG_WARN_FORMAT("env=%d, rrtparams path constraints threw an exception: %s", GetEnv()->GetId()%ex.what());
+            return 0xffff; // could be anything
+        }
     }
 
     virtual int SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options)
@@ -661,13 +668,19 @@ public:
         }
         catch(const std::exception& ex) {
             // some constraints assume initial conditions for a and b are followed, however at this point a and b are sa
-            RAVELOG_VERBOSE_FORMAT("rrtparams path constraints threw an exception: %s", ex.what());
+            RAVELOG_WARN_FORMAT("env=%d, rrtparams path constraints threw an exception: %s", GetEnv()->GetId()%ex.what());
             return 0xffff; // could be anything
         }
         // Test for collision and/or dynamics has succeeded, now test for manip constraint
         if( _bmanipconstraints && (options & CFO_CheckTimeBasedConstraints) ) {
-            if( !_CheckManipConstraints(a,b,da, db, timeelapsed) ) {
-                return CFO_CheckTimeBasedConstraints;
+            try {
+                if( !_CheckManipConstraints(a,b,da, db, timeelapsed) ) {
+                    return CFO_CheckTimeBasedConstraints;
+                }
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%d, _CheckManipConstraints threw an exception: %s", GetEnv()->GetId()%ex.what());
+                return 0xffff; // could be anything
             }
         }
 
@@ -705,7 +718,7 @@ public:
         }
         catch(const std::exception& ex) {
             // some constraints assume initial conditions for a and b are followed, however at this point a and b are sa
-            RAVELOG_VERBOSE_FORMAT("rrtparams path constraints threw an exception: %s", ex.what());
+            RAVELOG_WARN_FORMAT("env=%d, rrtparams path constraints threw an exception: %s", GetEnv()->GetId()%ex.what());
             return ParabolicRamp::CheckReturn(0xffff); // could be anything
         }
         // Test for collision and/or dynamics has succeeded, now test for manip constraint
@@ -754,9 +767,15 @@ public:
         }
         
         if( _bmanipconstraints && (options & CFO_CheckTimeBasedConstraints) ) {
-            ParabolicRamp::CheckReturn retmanip = _CheckManipConstraints2(outramps);
-            if( retmanip.retcode != 0 ) {
-                return retmanip;
+            try {
+                ParabolicRamp::CheckReturn retmanip = _CheckManipConstraints2(outramps);
+                if( retmanip.retcode != 0 ) {
+                    return retmanip;
+                }
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("_CheckManipConstraints2 (modified=%d) threw an exception: %s", ((int)bExpectModifiedConfigurations)%ex.what());
+                return 0xffff; // could be anything
             }
         }
         
@@ -882,143 +901,164 @@ protected:
             if(i1 == i2) {
                 continue;
             }
-            //same ramp
-            dReal u1 = t1-rampStartTime[i1];
-            dReal u2 = t2-rampStartTime[i2];
-            PARABOLIC_RAMP_ASSERT(u1 >= 0);
-            PARABOLIC_RAMP_ASSERT(u1 <= ramps[i1].endTime+ParabolicRamp::EpsilonT);
-            PARABOLIC_RAMP_ASSERT(u2 >= 0);
-            PARABOLIC_RAMP_ASSERT(u2 <= ramps[i2].endTime+ParabolicRamp::EpsilonT);
-            u1 = ParabolicRamp::Min(u1,ramps[i1].endTime);
-            u2 = ParabolicRamp::Min(u2,ramps[i2].endTime);
-            ramps[i1].Evaluate(u1,x0);
-            if( _parameters->SetStateValues(x0) != 0 ) {
-                continue;
-            }
-            _parameters->_getstatefn(x0);
-            ramps[i2].Evaluate(u2,x1);
-            if( _parameters->SetStateValues(x1) != 0 ) {
-                continue;
-            }
-            _parameters->_getstatefn(x1);
-            ramps[i1].Derivative(u1,dx0);
-            ramps[i2].Derivative(u2,dx1);
-            ++_progress._iteration;
 
-            bool bsuccess = false;
-
-            for(size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
-                // have to watch out that velocities don't drop under dx0 & dx1!
-                dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
-                vellimits[j] = max(_parameters->_vConfigVelocityLimit[j]*fstarttimemult, fminvel);
-                accellimits[j] = _parameters->_vConfigAccelerationLimit[j]*fstarttimemult;
-            }
-            dReal fcurmult = fstarttimemult;
-            for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
-                bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
-                if(!res) {
-                    break;
+            uint32_t iIterProgress = 0; // used for debug purposes
+            try {
+                //same ramp
+                dReal u1 = t1-rampStartTime[i1];
+                dReal u2 = t2-rampStartTime[i2];
+                PARABOLIC_RAMP_ASSERT(u1 >= 0);
+                PARABOLIC_RAMP_ASSERT(u1 <= ramps[i1].endTime+ParabolicRamp::EpsilonT);
+                PARABOLIC_RAMP_ASSERT(u2 >= 0);
+                PARABOLIC_RAMP_ASSERT(u2 <= ramps[i2].endTime+ParabolicRamp::EpsilonT);
+                u1 = ParabolicRamp::Min(u1,ramps[i1].endTime);
+                u2 = ParabolicRamp::Min(u2,ramps[i2].endTime);
+                ramps[i1].Evaluate(u1,x0);
+                if( _parameters->SetStateValues(x0) != 0 ) {
+                    continue;
                 }
-                // check the new ramp time makes significant steps
-                dReal newramptime = intermediate.GetTotalTime();
-                if( newramptime+mintimestep > t2-t1 ) {
-                    // reject since it didn't make significant improvement
-                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected time=%fs\n", iters%(endTime-(t2-t1)+newramptime));
-                    break;
+                iIterProgress += 0x10000000;
+                _parameters->_getstatefn(x0);
+                iIterProgress += 0x10000000;
+                ramps[i2].Evaluate(u2,x1);
+                iIterProgress += 0x10000000;
+                if( _parameters->SetStateValues(x1) != 0 ) {
+                    continue;
                 }
+                iIterProgress += 0x10000000;
+                _parameters->_getstatefn(x1);
+                ramps[i1].Derivative(u1,dx0);
+                ramps[i2].Derivative(u2,dx1);
+                ++_progress._iteration;
 
-                if( _CallCallbacks(_progress) == PA_Interrupt ) {
-                    return -1;
+                bool bsuccess = false;
+
+                for(size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
+                    // have to watch out that velocities don't drop under dx0 & dx1!
+                    dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                    vellimits[j] = max(_parameters->_vConfigVelocityLimit[j]*fstarttimemult, fminvel);
+                    accellimits[j] = _parameters->_vConfigAccelerationLimit[j]*fstarttimemult;
                 }
-
-                accumoutramps.resize(0);
-                ParabolicRamp::CheckReturn retcheck(0);
-                for(size_t i=0; i<intermediate.ramps.size(); i++) {
-                    if( i > 0 ) {
-                        intermediate.ramps[i].x0 = intermediate.ramps[i-1].x1; // to remove noise?
-                        intermediate.ramps[i].dx0 = intermediate.ramps[i-1].dx1; // to remove noise?
-                    }
-                    if( _parameters->SetStateValues(intermediate.ramps[i].x1) != 0 ) {
-                        retcheck.retcode = CFO_StateSettingError;
+                dReal fcurmult = fstarttimemult;
+                for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
+                    bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
+                    iIterProgress += 0x1000;
+                    if(!res) {
                         break;
                     }
-                    _parameters->_getstatefn(intermediate.ramps[i].x1);
-                    // have to resolve for the ramp since the positions might have changed?
-    //                for(size_t j = 0; j < intermediate.rams[i].x1.size(); ++j) {
-    //                    intermediate.ramps[i].SolveFixedSwitchTime();
-    //                }
-
-                    retcheck = check.Check2(intermediate.ramps[i], 0xffff, outramps);
-                    if( retcheck.retcode != 0) {
+                    // check the new ramp time makes significant steps
+                    dReal newramptime = intermediate.GetTotalTime();
+                    if( newramptime+mintimestep > t2-t1 ) {
+                        // reject since it didn't make significant improvement
+                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected time=%fs\n", iters%(endTime-(t2-t1)+newramptime));
                         break;
                     }
-                    accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
-                }
-                if(retcheck.retcode == 0) {
-                    bsuccess = true;
-                    break;
-                }
 
-                if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
-                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp, fcurmult=%f", iters%fcurmult);
-                    for(size_t j = 0; j < vellimits.size(); ++j) {
-                        // have to watch out that velocities don't drop under dx0 & dx1!
-                        dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
-                        vellimits[j] = max(vellimits[j]*retcheck.fTimeBasedSurpassMult, fminvel);
-                        accellimits[j] *= retcheck.fTimeBasedSurpassMult;
+                    if( _CallCallbacks(_progress) == PA_Interrupt ) {
+                        return -1;
                     }
-                    fcurmult *= retcheck.fTimeBasedSurpassMult;
-                    //fcurmult *= fSearchVelAccelMult;
+
+                    iIterProgress += 0x1000;
+                    accumoutramps.resize(0);
+                    ParabolicRamp::CheckReturn retcheck(0);
+                    for(size_t i=0; i<intermediate.ramps.size(); i++) {
+                        iIterProgress += 0x10;
+                        if( i > 0 ) {
+                            intermediate.ramps[i].x0 = intermediate.ramps[i-1].x1; // to remove noise?
+                            intermediate.ramps[i].dx0 = intermediate.ramps[i-1].dx1; // to remove noise?
+                        }
+                        if( _parameters->SetStateValues(intermediate.ramps[i].x1) != 0 ) {
+                            retcheck.retcode = CFO_StateSettingError;
+                            break;
+                        }
+                        _parameters->_getstatefn(intermediate.ramps[i].x1);
+                        // have to resolve for the ramp since the positions might have changed?
+        //                for(size_t j = 0; j < intermediate.rams[i].x1.size(); ++j) {
+        //                    intermediate.ramps[i].SolveFixedSwitchTime();
+        //                }
+
+                        iIterProgress += 0x10;
+                        retcheck = check.Check2(intermediate.ramps[i], 0xffff, outramps);
+                        iIterProgress += 0x10;
+                        if( retcheck.retcode != 0) {
+                            break;
+                        }
+                        accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
+                    }
+                    iIterProgress += 0x1000;
+                    if(retcheck.retcode == 0) {
+                        bsuccess = true;
+                        break;
+                    }
+
+                    if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
+                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp, fcurmult=%f", iters%fcurmult);
+                        for(size_t j = 0; j < vellimits.size(); ++j) {
+                            // have to watch out that velocities don't drop under dx0 & dx1!
+                            dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                            vellimits[j] = max(vellimits[j]*retcheck.fTimeBasedSurpassMult, fminvel);
+                            accellimits[j] *= retcheck.fTimeBasedSurpassMult;
+                        }
+                        fcurmult *= retcheck.fTimeBasedSurpassMult;
+                        //fcurmult *= fSearchVelAccelMult;
+                    }
+                    else {
+                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck.retcode);
+                        break;
+                    }
+                    iIterProgress += 0x1000;
                 }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck.retcode);
-                    break;
+
+                if( !bsuccess ) {
+                    continue;
                 }
-            }
 
-            if( !bsuccess ) {
-                continue;
-            }
+                if( accumoutramps.size() == 0 ) {
+                    RAVELOG_WARN("accumulated ramps are empty!\n");
+                    continue;
+                }
+                fstarttimemult = min(1.0, fcurmult/fSearchVelAccelMult); // the new start time mult should be increased by one timemult
 
-            if( accumoutramps.size() == 0 ) {
-                RAVELOG_WARN("accumulated ramps are empty!\n");
-                continue;
-            }
-            fstarttimemult = min(1.0, fcurmult/fSearchVelAccelMult); // the new start time mult should be increased by one timemult
+                // perform shortcut. use accumoutramps rather than intermediate.ramps!
+                shortcuts++;
+                ramps[i1].TrimBack(ramps[i1].endTime-u1);
+                ramps[i1].x1 = accumoutramps.front().x0;
+                ramps[i1].dx1 = accumoutramps.front().dx0;
+                ramps[i2].TrimFront(u2);
+                ramps[i2].x0 = accumoutramps.back().x1;
+                ramps[i2].dx0 = accumoutramps.back().dx1;
 
-            // perform shortcut. use accumoutramps rather than intermediate.ramps!
-            shortcuts++;
-            ramps[i1].TrimBack(ramps[i1].endTime-u1);
-            ramps[i1].x1 = accumoutramps.front().x0;
-            ramps[i1].dx1 = accumoutramps.front().dx0;
-            ramps[i2].TrimFront(u2);
-            ramps[i2].x0 = accumoutramps.back().x1;
-            ramps[i2].dx0 = accumoutramps.back().dx1;
+                // replace with accumoutramps
+                for(int i=0; i<i2-i1-1; i++) {
+                    ramps.erase(ramps.begin()+i1+1);
+                }
+                ramps.insert(ramps.begin()+i1+1,accumoutramps.begin(),accumoutramps.end());
+                iIterProgress += 0x10000000;
 
-            // replace with accumoutramps
-            for(int i=0; i<i2-i1-1; i++) {
-                ramps.erase(ramps.begin()+i1+1);
-            }
-            ramps.insert(ramps.begin()+i1+1,accumoutramps.begin(),accumoutramps.end());
-
-            //check for consistency
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                for(size_t i=0; i+1<ramps.size(); i++) {
-                    for(size_t j = 0; j < ramps[i].x1.size(); ++j) {
-                        OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].x1[j]-ramps[i+1].x0[j]), <=, ParabolicRamp::EpsilonX);
-                        OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].dx1[j]-ramps[i+1].dx0[j]), <=, ParabolicRamp::EpsilonV);
+                //check for consistency
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    for(size_t i=0; i+1<ramps.size(); i++) {
+                        for(size_t j = 0; j < ramps[i].x1.size(); ++j) {
+                            OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].x1[j]-ramps[i+1].x0[j]), <=, ParabolicRamp::EpsilonX);
+                            OPENRAVE_ASSERT_OP(RaveFabs(ramps[i].dx1[j]-ramps[i+1].dx0[j]), <=, ParabolicRamp::EpsilonV);
+                        }
                     }
                 }
+                iIterProgress += 0x10000000;
+                
+                //revise the timing
+                rampStartTime.resize(ramps.size());
+                endTime=0;
+                for(size_t i=0; i<ramps.size(); i++) {
+                    rampStartTime[i] = endTime;
+                    endTime += ramps[i].endTime;
+                }
+                RAVELOG_VERBOSE("shortcut iter=%d endTime=%f\n",iters,endTime);
             }
-
-            //revise the timing
-            rampStartTime.resize(ramps.size());
-            endTime=0;
-            for(size_t i=0; i<ramps.size(); i++) {
-                rampStartTime[i] = endTime;
-                endTime += ramps[i].endTime;
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%d, exception happened during shortcut iteration progress=0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
+                // continue to next iteration...
             }
-            RAVELOG_VERBOSE("shortcut iter=%d endTime=%f\n",iters,endTime);
         }
         return shortcuts;
     }

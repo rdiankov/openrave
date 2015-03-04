@@ -262,8 +262,8 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                     iramp.tswitch2 = iramp.ttotal;
                 }
                 if(!iramp.IsValid()) {
-                    PARABOLIC_RAMP_PLOG("CombineRamps: Trimming caused ramp to become invalid\n");
-                    PARABOLIC_RAMP_PLOG("Old total time %g, new total time %g\n",oldTotal,iramp.ttotal);
+                    PARABOLICWARN("CombineRamps: Trimming caused ramp to become invalid\n");
+                    PARABOLICWARN("Old total time %g, new total time %g\n",oldTotal,iramp.ttotal);
                 }
                 PARABOLIC_RAMP_ASSERT(iramp.IsValid());
                 itramp->ramps[i] = iramp;
@@ -307,8 +307,19 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                 itramp->ramps[i].tswitch1 = 0;
                 itramp->ramps[i].v = itramp->dx1[i];
                 itramp->ramps[i].a1 = itramp->ramps[i].a2 = 0;
-                PARABOLIC_RAMP_ASSERT(itramp->ramps[i].IsValid());
-                PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
+                if( !itramp->ramps[i].IsValid() ) {
+                    // usually do to small epsilons...
+                    PARABOLICWARN("combined ramp is invalid, so try solving for new variables to validate it\n");
+                    if( !itramp->ramps[i].SolveMinAccel(tnext-t, 2*fabs(itramp->dx1[i])+0.1) ) {
+                        PARABOLICWARN("could not solve for min accel!\n");
+                        PARABOLIC_RAMP_ASSERT(0);
+                    }
+                }
+                else {
+                    PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
+                }
+                //PARABOLIC_RAMP_ASSERT(itramp->ramps[i].IsValid());
+                
             }
         }
         PARABOLIC_RAMP_ASSERT(itramp->IsValid());
