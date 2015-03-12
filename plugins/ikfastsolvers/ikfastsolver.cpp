@@ -1759,7 +1759,7 @@ protected:
     {
         std::vector<dReal> vFreeInc(vindices.size());
         for(size_t i = 0; i < vindices.size(); ++i) {
-            if( _vjointrevolute.at(i) ) {
+            if( _vjointrevolute.at(vindices[i]) ) {
                 vFreeInc[i] = _fFreeIncRevolute;
             }
             else {
