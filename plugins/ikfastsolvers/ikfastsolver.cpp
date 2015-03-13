@@ -1127,8 +1127,8 @@ protected:
         list<IkReturnPtr> listlocalikreturns; // orderd with respect to vravesols
 
         /// if have to check for closest solution, make sure this new solution is closer than best found so far
-        dReal d = dReal(1e30);
-
+        //dReal d = dReal(1e30);
+        
         int filteroptions = boost::get<2>(freeq0check);
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
             _ComputeAllSimilarJointAngles(vravesols, vravesol);
@@ -1137,7 +1137,7 @@ protected:
                 // if all the solutions are worse than the best, then ignore everything
                 vravesols2.reserve(vravesols.size());
                 FOREACH(itravesol, vravesols) {
-                    d = _ComputeGeometricConfigDistSqr(probot,itravesol->first,boost::get<1>(freeq0check));
+                    dReal d = _ComputeGeometricConfigDistSqr(probot,itravesol->first,boost::get<1>(freeq0check));
                     if( !(bestsolution.dist <= d) ) {
                         vravesols2.push_back(*itravesol);
                     }
@@ -1150,7 +1150,7 @@ protected:
         }
         else {
             if( boost::get<1>(freeq0check).size() == vravesol.size() ) {
-                d = _ComputeGeometricConfigDistSqr(probot,vravesol,boost::get<1>(freeq0check));
+                dReal d = _ComputeGeometricConfigDistSqr(probot,vravesol,boost::get<1>(freeq0check));
                 if( bestsolution.dist <= d ) {
                     return IKRA_Reject;
                 }
@@ -1300,14 +1300,13 @@ protected:
             return static_cast<IkReturnAction>(retactionall|IKRA_RejectKinematicsPrecision);
         }
         
-
         if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
             // order the listlocalikreturns depending on the distance to boost::get<1>(freeq0check), that way first solution is prioritized
             std::vector< std::pair<size_t, dReal> > vdists; vdists.reserve(listlocalikreturns.size());
             std::vector<IkReturnPtr> vtempikreturns; vtempikreturns.reserve(listlocalikreturns.size());
             FOREACH(itikreturn, listlocalikreturns) {
                 dReal soldist = _ComputeGeometricConfigDistSqr(probot,(*itikreturn)->_vsolution,boost::get<1>(freeq0check));
-                if( !(bestsolution.dist <= d) ) {
+                if( !(bestsolution.dist <= soldist) ) {
                     vdists.push_back(std::make_pair(vdists.size(), soldist));
                     vtempikreturns.push_back(*itikreturn);
                 }
@@ -1319,6 +1318,9 @@ protected:
             std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
             listlocalikreturns.clear();
             for(size_t i = 0; i < vdists.size(); ++i) {
+                std::vector<dReal>& vdata = vtempikreturns.at(vdists[i].first)->_mapdata["__distancetosol__"];
+                vdata.resize(1);
+                vdata[0] = vdists[i].second;
                 listlocalikreturns.push_back(vtempikreturns.at(vdists[i].first));
             }
         }
@@ -1371,11 +1373,12 @@ protected:
                 else if( retaction == IKRA_Success ) {
                     // success and the ikreturns are already ordered so that first one is with least distance.
                     bestsolution.ikreturn = localret;
+                    dReal d = 1e30;
                     if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
                         d = _ComputeGeometricConfigDistSqr(probot,localret->_vsolution,boost::get<1>(freeq0check));
                     }
                     bestsolution.dist = d;
-                    //listlocalikreturns.push_back(localret);
+                    listlocalikreturns.push_back(localret);
                     return IKRA_Success;
                 }
             }
@@ -1385,8 +1388,14 @@ protected:
         }
 
         OPENRAVE_ASSERT_OP(listlocalikreturns.size(),>,0);
-        bestsolution.dist = d;
         bestsolution.ikreturn = listlocalikreturns.front();
+        IkReturn::CustomData::iterator itdist = bestsolution.ikreturn->_mapdata.find("__distancetosol__");
+        if( itdist != bestsolution.ikreturn->_mapdata.end() ) {
+            bestsolution.dist = itdist->second.at(0);
+        }
+        else {
+            bestsolution.dist = 1e30;
+        }
         return IKRA_Success;
 //        // solution is valid, so replace the best
 //        size_t index = 0;
