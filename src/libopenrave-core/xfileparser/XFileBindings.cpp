@@ -194,13 +194,13 @@ protected:
         Transform tnode = transparent * ExtractTransform(node->mTrafoMatrix);
 
         RAVELOG_VERBOSE_FORMAT("level=%d, node=%s, parent=%s, children=%d, meshes=%d, pivot=%d", level%node->mName%(!node->mParent ? string() : node->mParent->mName)%node->mChildren.size()%node->mMeshes.size()%(!!node->mFramePivot));
-
+        
         Transform tflipyz;
         if( _bFlipYZ ) {
             tflipyz.rot = quatFromAxisAngle(Vector(PI/2,0,0));
         }
 
-        if( !!node->mFramePivot ) {
+        if( !!node->mFramePivot && node->mFramePivot->mJointIndex >= 1 ) { // joint indices that are 0 are attached to the base link?
             Transform tlocalpivot = ExtractTransform(node->mFramePivot->mPivotMatrix);
             Transform tpivot = tnode*tlocalpivot;
             KinBody::JointPtr pjoint(new KinBody::Joint(pbody));
@@ -249,6 +249,9 @@ protected:
                     // end effector?
                     _listendeffectors.push_back(make_pair(pchildlink,pchildlink->_info._t.inverse()*tflipyz*tpivot*tflipyz.inverse()));
                 }
+                if( node->mFramePivot->mAttribute & 8 ) {
+                    // also used, possibly revolute joint type?
+                }
 
                 pjoint->_info._name = _prefix+node->mFramePivot->mName;
                 pjoint->_info._bIsCircular[0] = false;
@@ -258,9 +261,12 @@ protected:
                     t = plink->_info._t.inverse()*t;
                 }
                 else {
-                    RAVELOG_DEBUG_FORMAT("parent link is not specified for joint %s, so taking first link", pjoint->_info._name);
+                    RAVELOG_DEBUG_FORMAT("level=%d parent link is not specified for joint %s, so taking first link", level%pjoint->_info._name);
                     plink = pbody->GetLinks().at(0);
                 }
+
+                RAVELOG_VERBOSE_FORMAT("level=%d added joint between %s %s", level%plink->GetName()%pchildlink->GetName());
+                
                 Vector vmotiondirection = Vector(node->mFramePivot->mMotionDirection.x, node->mFramePivot->mMotionDirection.y, node->mFramePivot->mMotionDirection.z);
                 vaxes[0] = t.rotate(vmotiondirection);
                 if( _bFlipYZ ) {
@@ -294,7 +300,17 @@ protected:
                     }
                 }
 
-                if( !pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1) ) {
+//                if( node->mFramePivot->mJointIndex == 0 ) {
+//                    if( pjoint->_info._linkname0 != pjoint->_info._linkname1 ) {
+//                        // possibly connected to the base?
+//                        pjoint->_info._type = KinBody::JointHinge;
+//                        pjoint->_info._bIsActive = false;
+//                        pjoint->_info._vlowerlimit[0] = pjoint->_info._vupperlimit[0] = 0;
+//                        pjoint->_vmimic[0].reset(); // remove any mimic
+//                        pbody->_vPassiveJoints.push_back(pjoint);
+//                    }
+//                }
+                if( node->mFramePivot->mJointIndex >= 1 && !pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1) ) {
                     pbody->_vecjoints.at(node->mFramePivot->mJointIndex-1) = pjoint;
                 }
                 else {
@@ -331,6 +347,9 @@ protected:
 
         FOREACH(it,node->mChildren) {
             _Read(pbody, plink, *it,tnode,level+1);
+            if( !plink && pbody->GetLinks().size() > 0 ) {
+                plink = pbody->GetLinks().at(0);
+            }
         }
     }
 
