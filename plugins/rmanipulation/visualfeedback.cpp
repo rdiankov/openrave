@@ -883,11 +883,27 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         // get all the camera positions and test them
         FOREACHC(itcamera, vtransforms) {
+            Transform tCameraInTarget = *itcamera;
+            Transform tTargetInWorld;
+            if( _sensorrobot == _robot ) {
+                //BOOST_ASSERT(0);
+                tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
+            }
+            else {
+                tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
+            }
+
             if( pconstraintfn->InConvexHull(*itcamera) ) {
-                if( !_pmanip->CheckEndEffectorCollision(*itcamera*_ttogripper) ) {
+                if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_ttogripper, _preport) ) {
                     if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
                         sout << *itcamera << " ";
                     }
+                    else {
+                        RAVELOG_VERBOSE("in convex hull and effector is free, but not occluded by rigid\n");
+                    }
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("in convex hull, but end effector collision: %s", _preport->__str__());
                 }
             }
         }
