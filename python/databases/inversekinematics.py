@@ -606,6 +606,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         outputlang = None
         ipython = None
         freeinc = None
+        ikfastmaxcasedepth = 3
         if options is not None:
             forceikbuild=options.force
             precision=options.precision
@@ -615,6 +616,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             ipython=options.ipython
             if options.freeinc is not None:
                 freeinc = [float64(s) for s in options.freeinc]
+            ikfastmaxcasedepth = options.maxcasedepth
         if self.manip.GetKinematicsStructureHash() == 'f17f58ee53cc9d185c2634e721af7cd3': # wam 4dof
             if iktype is None:
                 iktype=IkParameterizationType.Translation3D
@@ -643,7 +645,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 freejoints = [self.robot.GetJoints()[ind].GetName() for ind in self.manip.GetArmIndices()[3:]]
             if iktype==None:
                 iktype == IkParameterizationType.TranslationDirection5D
-        self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython)
+        self.generate(iktype=iktype,freejoints=freejoints,precision=precision,forceikbuild=forceikbuild,outputlang=outputlang,ipython=ipython,ikfastmaxcasedepth=ikfastmaxcasedepth)
         self.save()
 
     def getIndicesFromJointNames(self,freejoints):
@@ -1036,6 +1038,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                           help='Optional joint name specifying a free parameter of the manipulator. The value of a free joint is known at runtime, but not known at IK generation time. If nothing specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
         parser.add_option('--precision', action='store', type='int', dest='precision',default=8,
                           help='The precision to compute the inverse kinematics in, (default=%default).')
+        parser.add_option('--maxcasedepth', action='store', type='int', dest='maxcasedepth',default=3,
+                          help='The max depth to go into degenerate cases. If ikfast file is too big, try reducing this, (default=%default).')
         parser.add_option('--usecached', action='store_false', dest='force',default=True,
                           help='If set, will always try to use the cached ik c++ file, instead of generating a new one.')
         parser.add_option('--freeinc', action='append', type='float', dest='freeinc',default=None,
