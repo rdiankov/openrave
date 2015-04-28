@@ -66,12 +66,17 @@ public:
     PyCameraGeomData() {
         width = 0;
         height = 0;
+        measurement_time = 1;
+        gain = 1;
     }
     PyCameraGeomData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : intrinsics(pgeom->intrinsics)
     {
         width = pgeom->width;
         height = pgeom->height;
         sensor_reference = pgeom->sensor_reference;
+        target_region = pgeom->target_region;
+        measurement_time = pgeom->measurement_time;
+        gain = pgeom->gain;
     }
     virtual ~PyCameraGeomData() {
     }
@@ -84,12 +89,18 @@ public:
         geom->height = height;
         geom->intrinsics = intrinsics.GetCameraIntrinsics();
         geom->sensor_reference = sensor_reference;
+        geom->target_region = target_region;
+        geom->measurement_time = measurement_time;
+        geom->gain = gain;
         return geom;
     }
 
     PyCameraIntrinsics intrinsics;
     int width, height;
     std::string sensor_reference;
+    std::string target_region;
+    dReal measurement_time;
+    dReal gain;
 };
 
 class PyLaserGeomData : public PySensorGeometry
@@ -824,6 +835,9 @@ void init_openravepy_sensor()
     .def_readwrite("width",&PyCameraGeomData::width)
     .def_readwrite("height",&PyCameraGeomData::height)
     .def_readwrite("sensor_reference",&PyCameraGeomData::sensor_reference)
+    .def_readwrite("target_region",&PyCameraGeomData::target_region)
+    .def_readwrite("measurement_time",&PyCameraGeomData::measurement_time)
+    .def_readwrite("gain",&PyCameraGeomData::gain)
     .def_readwrite("KK",&PyCameraGeomData::intrinsics) // deprecated
     ;
 

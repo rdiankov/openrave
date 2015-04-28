@@ -35,7 +35,7 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 15> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference"}};
+            static boost::array<string, 17> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -96,12 +96,17 @@ public:
                 // nothing to do here
             }
             else if( name == "measurement_time" ) {
-                dReal measurement_time=1;
-                ss >> measurement_time;
-                _psensor->framerate = 1/measurement_time;
+                ss >> _psensor->_pgeom->measurement_time;
+                _psensor->framerate = 1/_psensor->_pgeom->measurement_time;
             }
             else if( name == "framerate" ) {
                 ss >> _psensor->framerate;
+            }
+            else if( name == "target_region" ) {
+                ss >> _psensor->_pgeom->target_region;
+            }
+            else if( name == "gain" ) {
+                ss >> _psensor->_pgeom->gain;
             }
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
@@ -380,7 +385,9 @@ public:
         ss.str("");
         ss << _pgeom->width << " " << _pgeom->height << " " << _numchannels;
         writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
-        writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(1/framerate));
+        writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(_pgeom->measurement_time));
+        writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(_pgeom->gain));
+        writer->AddChild("target_region",atts)->SetCharData(_pgeom->target_region);
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
         if( _pgeom->sensor_reference.size() > 0 ) {
             atts.push_back(std::make_pair("url", std::string("#") + _pgeom->sensor_reference));

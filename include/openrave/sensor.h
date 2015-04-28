@@ -207,7 +207,7 @@ public:
     class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
 public:
-        CameraGeomData() : width(0), height(0), KK(intrinsics) {
+        CameraGeomData() : width(0), height(0), measurement_time(1), gain(1), KK(intrinsics) {
         }
         virtual SensorType GetType() const {
             return ST_Camera;
@@ -219,12 +219,18 @@ public:
             width = r.width;
             height = r.height;
             sensor_reference = r.sensor_reference;
+            target_region = r.target_region;
+            measurement_time = r.measurement_time;
+            gain = r.gain;
             return *this;
         }
         
         std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
+        std::string target_region; ///< name of the kinbody that describes the region of interest for the camera. 
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
+        dReal measurement_time; ///< specifies time used to take one image (also known as exposure).
+        dReal gain; ///< camera gain setting
         CameraIntrinsics& KK;         ///< \deprecated (14/01/15)
     };
     class OPENRAVE_API JointEncoderGeomData : public SensorGeometry
