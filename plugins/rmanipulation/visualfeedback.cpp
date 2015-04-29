@@ -713,7 +713,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
-        _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensor()->GetSensorGeometry());
+        _pcamerageom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(psensor->GetSensor()->GetSensorGeometry());
         if( !bHasRayDensity ) {
             _fSampleRayDensity = 20.0f/_pcamerageom->KK.fx;
         }
@@ -1351,7 +1351,7 @@ protected:
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
     bool _bCameraOnManip;     ///< true if camera is attached to manipulator
-    boost::shared_ptr<SensorBase::CameraGeomData> _pcamerageom;
+    SensorBase::CameraGeomDataConstPtr _pcamerageom;
     Transform _ttogripper;     ///< transforms a coord system to the gripper coordsystem
     vector<Transform> _visibilitytransforms;
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
