@@ -35,7 +35,7 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 17> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain"}};
+            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain", "hardware_id"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -120,6 +120,9 @@ public:
                 if( !ss ) {
                     ss.clear();
                 }
+            }
+            else if( name == "hardware_id" ) {
+                ss >> _psensor->_pgeom->hardware_id;
             }
             else {
                 RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
@@ -388,6 +391,7 @@ public:
         writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(_pgeom->measurement_time));
         writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(_pgeom->gain));
         writer->AddChild("target_region",atts)->SetCharData(_pgeom->target_region);
+        writer->AddChild("target_region",atts)->SetCharData(_pgeom->hardware_id);
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
         if( _pgeom->sensor_reference.size() > 0 ) {
             atts.push_back(std::make_pair("url", std::string("#") + _pgeom->sensor_reference));

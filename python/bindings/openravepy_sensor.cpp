@@ -71,6 +71,7 @@ public:
     }
     PyCameraGeomData(boost::shared_ptr<SensorBase::CameraGeomData> pgeom) : intrinsics(pgeom->intrinsics)
     {
+        hardware_id = pgeom->hardware_id;
         width = pgeom->width;
         height = pgeom->height;
         sensor_reference = pgeom->sensor_reference;
@@ -85,6 +86,7 @@ public:
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
         boost::shared_ptr<SensorBase::CameraGeomData> geom(new SensorBase::CameraGeomData());
+        geom->hardware_id = hardware_id;
         geom->width = width;
         geom->height = height;
         geom->intrinsics = intrinsics.GetCameraIntrinsics();
@@ -95,6 +97,7 @@ public:
         return geom;
     }
 
+    std::string hardware_id;
     PyCameraIntrinsics intrinsics;
     int width, height;
     std::string sensor_reference;
@@ -832,6 +835,7 @@ void init_openravepy_sensor()
     ;
     class_<PyCameraGeomData, boost::shared_ptr<PyCameraGeomData>, bases<PySensorGeometry> >("CameraGeomData", DOXY_CLASS(SensorBase::CameraGeomData))
     .def_readwrite("intrinsics",&PyCameraGeomData::intrinsics)
+    .def_readwrite("hardware_id",&PyCameraGeomData::hardware_id)
     .def_readwrite("width",&PyCameraGeomData::width)
     .def_readwrite("height",&PyCameraGeomData::height)
     .def_readwrite("sensor_reference",&PyCameraGeomData::sensor_reference)

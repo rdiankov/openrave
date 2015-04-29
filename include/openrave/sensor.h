@@ -184,6 +184,12 @@ public:
         virtual ~SensorGeometry() {
         }
         virtual SensorType GetType() const = 0;
+
+        virtual SensorGeometry& operator=(const SensorGeometry& r) {
+            hardware_id = r.hardware_id;
+            return *this;
+        }
+        std::string hardware_id; ///< optional hardware identifier of the sensor
     };
     typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
     typedef boost::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
@@ -215,6 +221,7 @@ public:
 
         // need this because of the deprecated KK
         virtual CameraGeomData& operator=(const CameraGeomData& r) {
+            SensorGeometry::operator=(r);
             intrinsics = r.intrinsics;
             width = r.width;
             height = r.height;
