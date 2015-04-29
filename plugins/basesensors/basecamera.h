@@ -51,6 +51,18 @@ public:
                     }
                 }
             }
+            else if( name == std::string("target_region") ) {
+                // read the URL attribute
+                FOREACHC(itatt, atts) {
+                    if( itatt->first == "url" ) {
+                        size_t startindex = 0;
+                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
+                            startindex = 1;
+                        }
+                        _psensor->_pgeom->target_region = itatt->second.substr(startindex);
+                    }
+                }
+            }
             ss.str("");
             return PE_Support;
         }
@@ -103,7 +115,7 @@ public:
                 ss >> _psensor->framerate;
             }
             else if( name == "target_region" ) {
-                ss >> _psensor->_pgeom->target_region;
+                // nothing to do here
             }
             else if( name == "gain" ) {
                 ss >> _psensor->_pgeom->gain;
@@ -390,12 +402,16 @@ public:
         writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
         writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(_pgeom->measurement_time));
         writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(_pgeom->gain));
-        writer->AddChild("target_region",atts)->SetCharData(_pgeom->target_region);
-        writer->AddChild("target_region",atts)->SetCharData(_pgeom->hardware_id);
+        writer->AddChild("hardware_id",atts)->SetCharData(_pgeom->hardware_id);
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
         if( _pgeom->sensor_reference.size() > 0 ) {
             atts.push_back(std::make_pair("url", std::string("#") + _pgeom->sensor_reference));
             writer->AddChild("sensor_reference",atts);
+            atts.clear();
+        }
+        if( _pgeom->target_region.size() > 0 ) {
+            atts.push_back(std::make_pair("url", std::string("#") + _pgeom->target_region));
+            writer->AddChild("target_region",atts);
             atts.clear();
         }
         ss.str("");
