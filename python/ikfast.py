@@ -9177,6 +9177,8 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
                       help='Optional joint index specifying a free parameter of the manipulator. If not specified, assumes all joints not solving for are free parameters. Can be specified multiple times for multiple free parameters.')
     parser.add_option('--iktype', action='store', dest='iktype',default='transform6d',
                       help='The iktype to generate the ik for. Possible values are: %s'%(', '.join(name for name,fn in IKFastSolver.GetSolvers().iteritems())))
+    parser.add_option('--maxcasedepth', action='store', type='int', dest='maxcasedepth',default=3,
+                      help='The max depth to go into degenerate cases. If ikfast file is too big, try reducing this, (default=%default).')
     parser.add_option('--lang', action='store',type='string',dest='lang',default='cpp',
                       help='The language to generate the code in (default=%default), available=('+','.join(name for name,value in CodeGenerators.iteritems())+')')
     parser.add_option('--debug','-d', action='store', type='int',dest='debug',default=logging.INFO,
@@ -9200,6 +9202,7 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
             kinbody=env.ReadRobotXMLFile(options.robot)
             env.Add(kinbody)
             solver = IKFastSolver(kinbody,kinbody)
+            solver.maxcasedepth = options.maxcasedepth
             chaintree = solver.generateIkSolver(options.baselink,options.eelink,options.freeindices,solvefn=solvefn)
             code=solver.writeIkSolver(chaintree,lang=options.lang)
         finally:
