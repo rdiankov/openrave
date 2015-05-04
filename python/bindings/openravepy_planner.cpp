@@ -100,6 +100,16 @@ public:
             _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
         }
 
+        void SetInitialConfigVelocities(object o)
+        {
+            _paramswrite->_vInitialConfigVelocities = ExtractArray<dReal>(o);
+        }
+
+        void SetGoalConfigVelocities(object o)
+        {
+            _paramswrite->_vGoalConfigVelocities = ExtractArray<dReal>(o);
+        }
+
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, int options=0xffff, bool returnconfigurations=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -317,6 +327,8 @@ void init_openravepy_planner()
         .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
+        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::vInitialConfigVelocities")
+        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::vGoalConfigVelocities")
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)

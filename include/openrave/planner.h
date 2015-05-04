@@ -166,6 +166,8 @@ private:
             - _vConfigAccelerationLimit
             - _vConfigResolution
             - vinitialconfig
+            - _vInitialConfigVelocities - the initial velocities (at vinitialconfig) of the robot when starting to plan
+            - _vGoalConfigVelocities - the goal velocities (at vinitialconfig) of the robot when finishing the plan
             - _configurationspecification
             \throw openrave_exception If the configuration specification is invalid or points to targets that are not present in the environment.
          */
@@ -332,6 +334,9 @@ private:
         /// size always has to be a multiple of GetDOF()
         /// note: not all planners support multiple goals
         std::vector<dReal> vinitialconfig, vgoalconfig;
+        
+        /// \brief the initial velocities (at vinitialconfig) of the robot when starting to plan. If empty, then set to zero.
+        std::vector<dReal> _vInitialConfigVelocities, _vGoalConfigVelocities;
 
         /// \brief the absolute limits of the configuration space.
         std::vector<dReal> _vConfigLowerLimit, _vConfigUpperLimit;

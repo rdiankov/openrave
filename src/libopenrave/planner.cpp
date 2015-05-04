@@ -114,6 +114,8 @@ PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparame
     _vXMLParameters.reserve(20);
     _vXMLParameters.push_back("configuration");
     _vXMLParameters.push_back("_vinitialconfig");
+    _vXMLParameters.push_back("_vinitialconfigvelocities");
+    _vXMLParameters.push_back("_vgoalconfigvelocities");
     _vXMLParameters.push_back("_vgoalconfig");
     _vXMLParameters.push_back("_vconfiglowerlimit");
     _vXMLParameters.push_back("_vconfigupperlimit");
@@ -155,6 +157,8 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     _listInternalSamplers = r._listInternalSamplers;
 
     vinitialconfig.resize(0);
+    _vInitialConfigVelocities.resize(0);
+    _vGoalConfigVelocities.resize(0);
     vgoalconfig.resize(0);
     _configurationspecification = ConfigurationSpecification();
     _vConfigLowerLimit.resize(0);
@@ -204,11 +208,21 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
         O << *it << " ";
     }
     O << "</_vinitialconfig>" << endl;
+    O << "<_vinitialconfigvelocities>";
+    FOREACHC(it, _vInitialConfigVelocities) {
+        O << *it << " ";
+    }
+    O << "</_vinitialconfigvelocities>" << endl;
     O << "<_vgoalconfig>";
     FOREACHC(it, vgoalconfig) {
         O << *it << " ";
     }
     O << "</_vgoalconfig>" << endl;
+    O << "<_vgoalconfigvelocities>";
+    FOREACHC(it, _vGoalConfigVelocities) {
+        O << *it << " ";
+    }
+    O << "</_vgoalconfigvelocities>" << endl;
     O << "<_vconfiglowerlimit>";
     FOREACHC(it, _vConfigLowerLimit) {
         O << *it << " ";
@@ -292,7 +306,7 @@ BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const
         return PE_Support;
     }
 
-    static const boost::array<std::string,11> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_fsteplength","_postprocessing", "_nrandomgeneratorseed"}};
+    static const boost::array<std::string,13> names = {{"_vinitialconfig","_vgoalconfig","_vconfiglowerlimit","_vconfigupperlimit","_vconfigvelocitylimit","_vconfigaccelerationlimit","_vconfigresolution","_nmaxiterations","_fsteplength","_postprocessing", "_nrandomgeneratorseed", "_vinitialconfigvelocities", "_vgoalconfigvelocities"}};
     if( find(names.begin(),names.end(),name) != names.end() ) {
         __processingtag = name;
         return PE_Support;
@@ -326,8 +340,14 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
         if( name == "_vinitialconfig") {
             vinitialconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
         }
+        else if( name == "_vinitialconfigvelocities") {
+            _vInitialConfigVelocities = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        }
         else if( name == "_vgoalconfig") {
             vgoalconfig = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+        }
+        else if( name == "_vgoalconfigvelocities") {
+            _vGoalConfigVelocities = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
         }
         else if( name == "_vconfiglowerlimit") {
             _vConfigLowerLimit = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
@@ -432,6 +452,7 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     robot->GetActiveDOFAccelerationLimits(_vConfigAccelerationLimit);
     robot->GetActiveDOFResolutions(_vConfigResolution);
     robot->GetActiveDOFValues(vinitialconfig);
+    robot->GetActiveDOFVelocities(_vInitialConfigVelocities); // necessary?
     _configurationspecification = robot->GetActiveConfigurationSpecification();
 
     _neighstatefn = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
@@ -744,6 +765,8 @@ void PlannerBase::PlannerParameters::Validate() const
 {
     OPENRAVE_ASSERT_OP(_configurationspecification.GetDOF(),==,GetDOF());
     OPENRAVE_ASSERT_OP(vinitialconfig.size()%GetDOF(),==,0);
+    OPENRAVE_ASSERT_OP(_vInitialConfigVelocities.size()%GetDOF(),==,0);
+    OPENRAVE_ASSERT_OP(_vGoalConfigVelocities.size()%GetDOF(),==,0);
     OPENRAVE_ASSERT_OP(vgoalconfig.size()%GetDOF(),==,0);
     OPENRAVE_ASSERT_OP(_vConfigLowerLimit.size(),==,(size_t)GetDOF());
     OPENRAVE_ASSERT_OP(_vConfigUpperLimit.size(),==,(size_t)GetDOF());
