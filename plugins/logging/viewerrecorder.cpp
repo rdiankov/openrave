@@ -692,7 +692,11 @@ protected:
         AVOutputFormat *fmt = first_oformat;
 #endif
         while (fmt != NULL) {
+#if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
+            if( fmt->video_codec != AV_CODEC_ID_NONE && !!fmt->name ) {
+#else
             if( fmt->video_codec != CODEC_ID_NONE && !!fmt->name ) {
+#endif            
                 string mime_type;
                 if( !!fmt->mime_type ) {
                     mime_type = fmt->mime_type;
@@ -715,7 +719,7 @@ protected:
         AVCodec *codec;
 
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
-        AVCodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (AVCodecID)codecid;
+        AVCodecID video_codec = codecid == -1 ? AV_CODEC_ID_MPEG4 : (AVCodecID)codecid;
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
