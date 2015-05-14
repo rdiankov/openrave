@@ -121,3 +121,6 @@ set(crlibm_SOURCES ${crlibm_SOURCES}
 
 add_library(crlibm STATIC ${crlibm_SOURCES})
 set_target_properties(crlibm PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
+
+add_library(crlibm-native STATIC ${crlibm_SOURCES})
+set_target_properties(crlibm-native PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} ${NATIVE_COMPILE_FLAGS}")
