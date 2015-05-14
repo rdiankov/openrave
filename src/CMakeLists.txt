@@ -16,12 +16,12 @@ if( CRLIBM_FOUND )
   add_definitions("-DUSE_CRLIBM")
 
   # check the accuracy of the current math library with crlibm
-  add_executable(check_libm_accuracy check_libm_accuracy_main.cpp)
-  set_target_properties(check_libm_accuracy PROPERTIES COMPILE_FLAGS "${NATIVE_COMPILE_FLAGS}")
-  target_link_libraries(check_libm_accuracy ${NATIVE_CRLIBM_LIBRARY} ${STDC_LIBRARY})
+  add_executable(check_libm_accuracy-native check_libm_accuracy_main.cpp)
+  set_target_properties(check_libm_accuracy-native PROPERTIES COMPILE_FLAGS "${NATIVE_COMPILE_FLAGS}")
+  target_link_libraries(check_libm_accuracy-native ${NATIVE_CRLIBM_LIBRARY} ${STDC_LIBRARY})
   set(libm_accuracy_results_h "${CMAKE_CURRENT_BINARY_DIR}/libm_accuracy_results.h")
-  add_custom_command(TARGET check_libm_accuracy POST_BUILD
-    COMMAND check_libm_accuracy ARGS ${libm_accuracy_results_h}
+  add_custom_command(TARGET check_libm_accuracy-native POST_BUILD
+    COMMAND check_libm_accuracy-native ARGS ${libm_accuracy_results_h}
     COMMENT "Checking accuracy between libm and crlibm")
   add_definitions(-DLIBM_ACCURACY_RESULTS_H=\"${libm_accuracy_results_h}\")
 endif()
