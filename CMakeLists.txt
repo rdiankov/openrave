@@ -377,6 +377,8 @@ else()
   set(EXTRA_COMPILE_FLAGS "")
 endif()
 
+set(NATIVE_COMPILE_FLAGS "-march=native -mtune=native")
+
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
@@ -452,6 +454,9 @@ if( OPT_ACCURATEMATH AND NOT MSVC )
     message(STATUS "Using local crlibm")
     add_subdirectory(3rdparty/crlibm-1.0beta4)
     set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
+    set(NATIVE_CRLIBM_LIBRARY crlibm-native)
+  else()
+    set(NATIVE_CRLIBM_LIBRARY crlibm)
   endif()
   set(CRLIBM_FOUND 1)
   set(CRLIBM_LIBRARY crlibm)
