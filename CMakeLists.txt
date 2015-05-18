@@ -373,8 +373,10 @@ endforeach()
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
+  set(NATIVE_COMPILE_FLAGS "-march=native -mtune=native")
 else()
   set(EXTRA_COMPILE_FLAGS "")
+  set(NATIVE_COMPILE_FLAGS "")
 endif()
 
 # generate the md5 sum for all OpenRAVE interfaces
@@ -383,11 +385,11 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
 
 if( MSVC )
   if( EXTRA_MSVC_DEPEND )
-    add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
+    add_dependencies(cpp-gen-md5-native ${EXTRA_MSVC_DEPEND})
   endif()
-  set(CPPGENMD5 cpp-gen-md5)
+  set(CPPGENMD5 cpp-gen-md5-native)
 else()
-  set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5")
+  set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5-native")
 endif()
 
 set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h)
@@ -411,7 +413,7 @@ add_custom_command(
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h" OPENRAVE_ENVIRONMENT_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
        > "${interfacehashes_h}"
-  DEPENDS cpp-gen-md5
+  DEPENDS cpp-gen-md5-native
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/interface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h
@@ -452,6 +454,9 @@ if( OPT_ACCURATEMATH AND NOT MSVC )
     message(STATUS "Using local crlibm")
     add_subdirectory(3rdparty/crlibm-1.0beta4)
     set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
+    set(NATIVE_CRLIBM_LIBRARY crlibm-native)
+  else()
+    set(NATIVE_CRLIBM_LIBRARY crlibm)
   endif()
   set(CRLIBM_FOUND 1)
   set(CRLIBM_LIBRARY crlibm)
