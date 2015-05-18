@@ -2008,7 +2008,7 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
         }
     }
     ss.str("");
-    ss << width << " " << height << " " << 3; // _numchannels=3
+    ss << width << " " << height; // _numchannels=3
     writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
     writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
     writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
