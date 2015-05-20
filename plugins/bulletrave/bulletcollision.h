@@ -316,8 +316,8 @@ public:
             btPersistentManifold* contactManifold = _world->getDispatcher()->getManifoldByIndexInternal(i);
             int numContacts = contactManifold->getNumContacts();
 
-            btCollisionObject* obA = static_cast<btCollisionObject*>(contactManifold->getBody0());
-            btCollisionObject* obB = static_cast<btCollisionObject*>(contactManifold->getBody1());
+            const btCollisionObject* obA = static_cast<const btCollisionObject*>(contactManifold->getBody0());
+            const btCollisionObject* obB = static_cast<const btCollisionObject*>(contactManifold->getBody1());
 
             KinBody::LinkPtr plink0 = GetLinkFromCollision(obA);
             KinBody::LinkPtr plink1 = GetLinkFromCollision(obB);
@@ -332,7 +332,7 @@ public:
             }
 
             if( !!report ) {
-                report->numCols = numContacts;
+                //report->numCols = numContacts;
                 report->minDistance = 0;
                 report->plink1 = plink0;
                 report->plink2 = plink1;
@@ -609,7 +609,7 @@ public:
             }
 
             if( !!report ) {
-                report->numCols = 1;
+                //report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
                 report->plink1 = GetLinkFromCollision(const_cast<btCollisionObject*>(rayCallback.m_collisionObject));
 
@@ -678,7 +678,7 @@ public:
             }
 
             if( !!report ) {
-                report->numCols = 1;
+                //report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
                 report->plink1 = GetLinkFromCollision(const_cast<btCollisionObject*>(rayCallback.m_collisionObject));
 
@@ -742,7 +742,7 @@ public:
             }
 
             if( !!report ) {
-                report->numCols = 1;
+                //report->numCols = 1;
                 report->minDistance = (rayCallback.m_hitPointWorld-rayCallback.m_rayFromWorld).length();
                 report->plink1 = GetLinkFromCollision(const_cast<btCollisionObject*>(rayCallback.m_collisionObject));
 
