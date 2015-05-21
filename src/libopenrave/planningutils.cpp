@@ -2288,7 +2288,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         // given the nLargestStepIndex, determine the timestep for all joints
         dReal fLargestStepDelta = dQ.at(nLargestStepIndex)/dReal(numSteps);
         dReal fLargestStepAccel = _vtempaccelconfig.at(nLargestStepIndex);
-        dReal fLargestStepVelocity = dq0.at(nLargestStepIndex);
+        dReal fLargestStepInitialVelocity = dq0.at(nLargestStepIndex);
         dReal timesteproots[2], timestep=0;
         dReal fStep = 0;
         for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
@@ -2310,12 +2310,19 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
-                OPENRAVE_ASSERT_OP(RaveFabs(fLargestStepVelocity),>,g_fEpsilon);
-                timestep = fStep/fLargestStepVelocity;
+                OPENRAVE_ASSERT_OP(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon);
+                timestep = fStep/fLargestStepInitialVelocity;
             }
             else {
-                int numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepVelocity, -fStep, timesteproots[0], timesteproots[1]);
+                int numroots = mathextra::solvequad(fLargestStepAccel*0.5, _vtempvelconfig[nLargestStepIndex], -fStep, timesteproots[0], timesteproots[1]);
                 bool bfound = false;
+                for(int i = 0; i < numroots; ++i) {
+                    if( timesteproots[i] >= 0 && (!bfound || timestep > timesteproots[i]) ) {
+                        timestep = timesteproots[i];
+                        bfound = true;
+                    }
+                }
+                numroots = mathextra::solvequad(fLargestStepAccel*0.5, _vtempvelconfig[nLargestStepIndex], fStep, timesteproots[0], timesteproots[1]);
                 for(int i = 0; i < numroots; ++i) {
                     if( timesteproots[i] >= 0 && (!bfound || timestep > timesteproots[i]) ) {
                         timestep = timesteproots[i];
