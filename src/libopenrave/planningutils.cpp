@@ -2286,12 +2286,16 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
         // quadratic interpolation
         // given the nLargestStepIndex, determine the timestep for all joints
-        dReal fLargestStepDelta = dQ.at(nLargestStepIndex)/dReal(numSteps);
+        dReal fLargestStep = dQ.at(nLargestStepIndex);
+        dReal fLargestStepDelta = fLargestStep/dReal(numSteps);
         dReal fLargestStepAccel = _vtempaccelconfig.at(nLargestStepIndex);
         dReal fLargestStepInitialVelocity = dq0.at(nLargestStepIndex);
         dReal timesteproots[2], timestep=0;
         dReal fStep = 0;
-        for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
+        int istep = 0;
+        dReal prevtimestep = 0;
+        while(istep < numSteps && prevtimestep < timeelapsed) {
+            //for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
             int nstateret = 0;
             if( istep >= start ) {
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
@@ -2309,32 +2313,46 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return nstateret;
             }
+
+            dReal fBestNewStep = fStep+fLargestStepDelta;
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
                 OPENRAVE_ASSERT_OP(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon);
                 timestep = fStep/fLargestStepInitialVelocity;
             }
             else {
-                int numroots = mathextra::solvequad(fLargestStepAccel*0.5, _vtempvelconfig[nLargestStepIndex], -fStep, timesteproots[0], timesteproots[1]);
-                bool bfound = false;
-                for(int i = 0; i < numroots; ++i) {
-                    if( timesteproots[i] >= 0 && (!bfound || timestep > timesteproots[i]) ) {
-                        timestep = timesteproots[i];
-                        bfound = true;
-                    }
+                // check whether to go positive or negative direction
+                dReal fNewStep = fStep+fLargestStepDelta;
+
+                if( RaveFabs(fNewStep-fLargestStep) < 1e-7 ) { // in order to avoid solvequat not returning any solutions
+                    timestep = timeelapsed;
                 }
-                numroots = mathextra::solvequad(fLargestStepAccel*0.5, _vtempvelconfig[nLargestStepIndex], fStep, timesteproots[0], timesteproots[1]);
-                for(int i = 0; i < numroots; ++i) {
-                    if( timesteproots[i] >= 0 && (!bfound || timestep > timesteproots[i]) ) {
-                        timestep = timesteproots[i];
-                        bfound = true;
+                else {
+                    int numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
+                    bool bfound = false;
+                    for(int i = 0; i < numroots; ++i) {
+                        if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
+                            timestep = timesteproots[i];
+                            bfound = true;
+                        }
                     }
-                }
-                if( !bfound ) {
-                    RAVELOG_WARN("cannot take root for quadratic interpolation\n");
-                    if( !!filterreturn ) {
-                        filterreturn->_returncode = CFO_StateSettingError;
+                    fNewStep = fStep-fLargestStepDelta;
+                    numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
+                    for(int i = 0; i < numroots; ++i) {
+                        if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
+                            // going backwards!
+                            timestep = timesteproots[i];
+                            fBestNewStep = fNewStep;
+                            numSteps += 2;
+                            bfound = true;
+                        }
                     }
-                    return CFO_StateSettingError;
+                    if( !bfound ) {
+                        RAVELOG_WARN("cannot take root for quadratic interpolation\n");
+                        if( !!filterreturn ) {
+                            filterreturn->_returncode = CFO_StateSettingError;
+                        }
+                        return CFO_StateSettingError;
+                    }
                 }
             }
 
@@ -2351,14 +2369,24 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return nstateret;
             }
+            if( timestep > timeelapsed ) {
+                RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e", timestep%timeelapsed);
+                break;
+            }
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
-
             if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
                 return CFO_StateSettingError;
             }
+            fStep = fBestNewStep;
+            ++istep;
+            //RAVELOG_INFO_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
+            prevtimestep = timestep;
+        }
+        if( RaveFabs(fStep-fLargestStep) > RaveFabs(fLargestStepDelta) ) {
+            RAVELOG_WARN_FORMAT("fStep (%.15e) did not reach fLargestStep (%.15e). %.15e > %.15e", fStep%fLargestStep%RaveFabs(fStep-fLargestStep)%fLargestStepDelta);
         }
     }
     else {
