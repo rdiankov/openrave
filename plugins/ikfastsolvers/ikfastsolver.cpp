@@ -90,16 +90,17 @@ public:
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
     {
-        dReal fFreeIncRevolute=0.1, fFreeIncPrismaticNum=100;
-        sinput >> fFreeIncRevolute >> fFreeIncPrismaticNum >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
         _vFreeInc.resize(_vfreeparams.size());
         for(size_t i = 0; i < _vFreeInc.size(); ++i) {
+            dReal fFreeIncRevolute=0.1, fFreeIncPrismaticNum=100;
+            sinput >> fFreeIncRevolute >> fFreeIncPrismaticNum >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
             if( _vfreerevolute[i] ) {
                 _vFreeInc[i] = fFreeIncRevolute;
             }
             else {
                 _vFreeInc[i] = (_qupper.at(_vfreeparams[i])-_qlower.at(_vfreeparams[i]))/fFreeIncPrismaticNum;
             }
+            RAVELOG_VERBOSE(str(boost::format("  [%d] %f %f %f %f -> %f") % i % fFreeIncRevolute % fFreeIncPrismaticNum % _fFreeIncRevolute % _fFreeIncPrismaticNum % _vFreeInc[i]));
         }
         //RAVELOG_VERBOSE(str(boost::format("SetFreeIncrements: %f %f %f %f")%fFreeIncRevolute%fFreeIncPrismaticNum%_fFreeIncRevolute%_fFreeIncPrismaticNum));
         return !!sinput;
