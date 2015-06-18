@@ -2584,7 +2584,7 @@ class IKFastSolver(AutoReloader):
         # try to simplify basedir based on possible angles
         for i in range(3):
             value = None
-            for num in [3,4,5,6,7,8]:
+            for num in [3,4,5,6,7,8,12]:
                 if abs((basedir[i]-cos(pi/num))).evalf() <= (10**-self.precision):
                     value = cos(pi/num)
                     break
@@ -2903,7 +2903,7 @@ class IKFastSolver(AutoReloader):
             linklist = list(self.iterateThreeNonIntersectingAxes(solvejointvars,Links, LinksInv))
             # first try LiWoernleHiller since it is most robust
             for ilinklist, (T0links, T1links) in enumerate(linklist):
-                log.info('try group %d/%d', ilinklist, len(linklist))
+                log.info('try first group %d/%d', ilinklist, len(linklist))
                 try:
                     # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
                     if not self.has(T1links[-1], *solvejointvars):
@@ -2916,7 +2916,7 @@ class IKFastSolver(AutoReloader):
             if tree is None:
                 log.info('trying the rest of the general ik solvers')
                 for ilinklist, (T0links, T1links) in enumerate(linklist):
-                    log.info('try group %d/%d', ilinklist, len(linklist))
+                    log.info('try second group %d/%d', ilinklist, len(linklist))
                     try:
                         # if T1links[-1] doesn't have any symbols, put it over to T0links. Since T1links has the position unknowns, putting over the coefficients to T0links makes things simpler
                         if not self.has(T1links[-1], *solvejointvars):
@@ -3849,7 +3849,7 @@ class IKFastSolver(AutoReloader):
             nummatrixsymbols = __builtin__.sum([1 for a in A if not a.is_number])
             if nummatrixsymbols > 10:
                 # if too many symbols, evaluate numerically
-                if not self.IsDeterminantNonZeroByEval(A, evalfirst=nummatrixsymbols>50):
+                if not self.IsDeterminantNonZeroByEval(A, evalfirst=nummatrixsymbols>60): # pi_robot has 55 symbols and still finishes ok
                     continue
                 log.info('found non-zero determinant by evaluation')
             else:
@@ -4357,7 +4357,7 @@ class IKFastSolver(AutoReloader):
             
         if len(neweqs) < 8:
             raise self.CannotSolveError('found %d equations where coefficients of equations match! need at least 8'%len(neweqs))
-
+        
         AllPolyEquationsExtra = []
         for eq in AllEquationsExtra:
             mysubs = []
@@ -4718,7 +4718,15 @@ class IKFastSolver(AutoReloader):
                         AUdetmat = AU2
                     else:
                         AUdetmat = AU2*AU2.transpose()
-                    if not self.IsDeterminantNonZeroByEval(AUdetmat, len(rows)>9):
+                    # count number of fractions/symbols
+                    numausymbols = 0
+                    numaufractions = 0
+                    for f in AUdetmat:
+                        if not f.is_number:
+                            numausymbols += 1
+                        if f.is_rational and not f.is_integer:
+                            numaufractions += 1
+                    if not self.IsDeterminantNonZeroByEval(AUdetmat, len(rows)>9 and (numaufractions > 40 or numausymbols > 40)):
                         log.info('skipping dependent index %d', i)
                         continue
                     AU = AU2
@@ -4804,16 +4812,30 @@ class IKFastSolver(AutoReloader):
                     isnotzero = zeros((AU.shape[0],AU.shape[1]))
                     epsilon = 1e-15
                     epsilondet = 1e-30
+                    hasOneNonSingular = False
                     for itest,subs in enumerate(self.testconsistentvalues):
                         AUvalue = AU.subs(subs)
-                        AUdetvalue = AUvalue.evalf().det().evalf()
+                        isallnumbers = True
+                        for f in AUvalue:
+                            if not f.is_number:
+                                isallnumbers = False
+                                break
+                        if isallnumbers:
+                            # compute more precise determinant
+                            AUdetvalue = AUvalue.det()
+                        else:
+                            AUdetvalue = AUvalue.evalf().det().evalf()
                         if abs(AUdetvalue) > epsilondet:# != S.Zero:
+                            hasOneNonSingular = True
                             AUinvvalue = AUvalue.evalf().inv()
                             for i in range(AUinvvalue.shape[0]):
                                 for j in range(AUinvvalue.shape[1]):
                                     # since making numerical approximations, need a good value for zero
                                     if abs(AUinvvalue[i,j]) > epsilon:#!= S.Zero:
                                         isnotzero[i,j] = 1
+                    if not hasOneNonSingular:
+                        raise self.CannotSolveError('inverse matrix is always singular')
+                    
                     AUinv = zeros((AU.shape[0],AU.shape[1]))
                     for i in range(AUinv.shape[0]):
                         for j in range(AUinv.shape[1]):
@@ -5168,7 +5190,7 @@ class IKFastSolver(AutoReloader):
 #             return coupledsolutions,testvars
 #         except self.CannotSolveError:
 #             pass
-#       
+#
         exportcoeffeqs = None
         # only support ileftvar=0 for now
         for ileftvar in [0]:#range(len(htvars)):
@@ -5197,7 +5219,7 @@ class IKFastSolver(AutoReloader):
                             log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
             if exportcoeffeqs is not None:
                 break
-            
+
         if exportcoeffeqs is None:
             if len(nonhtvars) > 0 and newreducedeqs[0].degree:
                 log.info('try to solve one variable in terms of the others')
@@ -6171,7 +6193,7 @@ class IKFastSolver(AutoReloader):
                 # need to do 1234*group[3] hack in order to get the Poly domain to recognize group[3] (sympy 0.7.1)
                 p = Poly(eq+1234*group[3],group[0],group[1],group[2])
                 p -= Poly(1234*group[3], *p.gens, domain=p.domain)
-            except (PolynomialError, CoercionFailed), e:
+            except (PolynomialError, CoercionFailed, ZeroDivisionError), e:
                 continue
             changed = False
             listterms = list(p.terms())
@@ -8669,7 +8691,8 @@ class IKFastSolver(AutoReloader):
             for s in solutions:
                 processedsolution = s.subs(allsymbols+varsubsinv).subs(varsubs)
                 # trigsimp probably won't work on long solutions
-                if self.codeComplexity(processedsolution) < 5000:
+                if self.codeComplexity(processedsolution) < 2000: # complexity of 2032 for pi robot freezes
+                    log.info('solution complexity: %d', self.codeComplexity(processedsolution))
                     processedsolution = self.SimplifyTransform(self.trigsimp(processedsolution,othersolvedvars))
                 processedsolutions.append(processedsolution.subs(varsubs))
             if (varindex%2)==0:
@@ -8863,7 +8886,7 @@ class IKFastSolver(AutoReloader):
         :return: True if there exist values where det(A) is not zero
         """
         N = A.shape[0]
-        thresh = 0.0005**N # when translationdirection5d is used with direction that is 6+ digits, the determinent gets small...
+        thresh = 0.0003**N # when translationdirection5d is used with direction that is 6+ digits, the determinent gets small... pi_robot requires 0.0003**N
         if evalfirst:
             if thresh > 1e-14:
                 # make sure thresh isn't too big...
