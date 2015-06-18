@@ -858,7 +858,7 @@ protected:
                         }
                     }
                     else {
-                        std::stringstream ss;
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                         ss << "x0=[";
                         SerializeValues(ss, x0);
                         ss << "]; x1=[";

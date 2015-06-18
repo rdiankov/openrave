@@ -2284,6 +2284,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
+        // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+        if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+            return CFO_StateSettingError;
+        }
+        
         // quadratic interpolation
         // given the nLargestStepIndex, determine the timestep for all joints
         dReal fLargestStep = dQ.at(nLargestStepIndex);
@@ -2382,7 +2387,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             fStep = fBestNewStep;
             ++istep;
-            //RAVELOG_INFO_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
+            //RAVELOG_VERBOSE_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
             prevtimestep = timestep;
         }
         if( RaveFabs(fStep-fLargestStep) > RaveFabs(fLargestStepDelta) ) {
