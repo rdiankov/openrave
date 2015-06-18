@@ -237,7 +237,7 @@ inline void TokenizeString(std::string const& s, char const* d, C& ret, bool ski
     std::string::const_iterator beg;
     bool in_token = false;
     for( std::string::const_iterator it = s.begin(), end = s.end(); it != end; ++it ) {
-        if( delims[*it] ) {
+        if( delims[(unsigned char)*it] ) {
             if( in_token ) {
                 output.push_back(typename C::value_type(beg, it));
                 in_token = false;
