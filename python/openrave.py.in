@@ -215,7 +215,12 @@ if __name__ == "__main__":
                     try:
                         with env:
                             robots=env.GetRobots()
-                            robot=None if len(robots) == 0 else robots[0]
+                            robot=None
+                            if len(robots) > 0:
+                                # get robot that has largest DOF
+                                for testrobot in robots:
+                                    if robot is None or robot.GetDOF() < testrobot.GetDOF():
+                                        robot = testrobot
                             bodies=env.GetBodies()
                             body=None if len(bodies) == 0 else bodies[0]
                         if api_version == '0.10':
