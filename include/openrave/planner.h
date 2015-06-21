@@ -47,7 +47,12 @@ enum PlannerStatus
     PS_Failed = 0, ///< planner failed
     PS_HasSolution = 1, ///< planner succeeded
     PS_Interrupted = 2, ///< planning was interrupted, but can be resumed by calling PlanPath again
-    PS_InterruptedWithSolution = 3, /// planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
+    PS_InterruptedWithSolution = 3, ///< planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
+    PS_FailedDueToCollision = 0x00030000, ///< planner failed due to collision constraints
+    PS_FailedDueToInitial = 0x00040000, ///< failed due to initial configurations
+    PS_FailedDueToGoal = 0x00080000, ///< failed due to goal configurations
+    PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints
+    PS_FailedDueToIK = 0x00200000, ///< failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function

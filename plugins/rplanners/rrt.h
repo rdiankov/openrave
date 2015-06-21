@@ -697,7 +697,7 @@ public:
         }
 
         _bOneStep = _parameters->_nRRTExtentType == 1;
-        RAVELOG_DEBUG("RrtPlanner::InitPlan - RRT Planner Initialized\n");
+        RAVELOG_DEBUG_FORMAT("BasicRrtPlanner initialized _nRRTExtentType=%d", _parameters->_nRRTExtentType);
         return true;
     }
 

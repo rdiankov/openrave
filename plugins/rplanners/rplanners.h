@@ -373,7 +373,7 @@ public:
                 lastnode = pnode;
                 bHasAdded = true;
                 if( bOneStep ) {
-                    return ET_Connected;
+                    return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
                 }
             }
             _vCurConfig.swap(_vNewConfig);
