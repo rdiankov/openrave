@@ -50,7 +50,8 @@ endif()
 # ikfast component
 # install previous versions of ikfast also since don't know which sympy versino user will install
 install(FILES ikfast.py ikfast_sympy0_6.py DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ COMPONENT ${COMPONENT_PREFIX}ikfast)
-install(FILES ikfast.h ikfast_generator_cpp.py ikfast_generator_cpp_sympy0_6.py DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}ikfast)
+install(FILES ikfast.h DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}ikfast)
+install(FILES ikfast_generator_cpp.py ikfast_generator_cpp_sympy0_6.py DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ COMPONENT ${COMPONENT_PREFIX}ikfast)
 if( NOT OPENRAVE_USE_LOCAL_SYMPY )
   set(IKFAST_USES python-sympy python-mpmath)
 else()
