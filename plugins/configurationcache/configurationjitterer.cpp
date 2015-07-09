@@ -459,7 +459,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 // ramp of the jitter as iterations increase
                 dReal jitter = _maxjitter;
                 if( iter < nMaxIterRadiusThresh ) {
-                    jitter = _maxjitter*dReal(iter)*imaxiterations;
+                    jitter = _maxjitter*dReal(iter+1)*imaxiterations;
                 }
 
                 bool samplebiasdir = false;
@@ -494,6 +494,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             _deltadof[j] = jitter*f;
                         }
                     }
+                    deltasuccess = true;
                 }
 
                 if (!samplebiasdir && !samplenull && !deltasuccess) {
@@ -504,20 +505,19 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( fNullspaceMultiplier <= 0 ) {
                     fNullspaceMultiplier = fBias;
                 }
-                for (size_t j = 0; j < _vbiasnullspace.size(); ++j) {
-                    for (size_t k = 0; k < vnewdof.size(); ++k)
-                    {
-                        vnewdof[k] = _curdof[k];
-                        if (samplebiasdir) {
-                            vnewdof[k] += _ssampler->SampleSequenceOneReal() * _vbiasdofdirection[k];
-                        }
-                        if (samplenull) {
+                for (size_t k = 0; k < vnewdof.size(); ++k) {
+                    vnewdof[k] = _curdof[k];
+                    if (samplebiasdir) {
+                        vnewdof[k] += _ssampler->SampleSequenceOneReal() * _vbiasdofdirection[k];
+                    }
+                    if (samplenull) {
+                        for (size_t j = 0; j < _vbiasnullspace.size(); ++j) {
                             dReal nullx = (_ssampler->SampleSequenceOneReal()*2-1)*fNullspaceMultiplier;
                             vnewdof[k] += nullx * _vbiasnullspace[j][k];
                         }
-                        if (sampledelta) {
-                            vnewdof[k] += _deltadof[k];
-                        }
+                    }
+                    if (sampledelta) {
+                        vnewdof[k] += _deltadof[k];
                     }
                 }
             }

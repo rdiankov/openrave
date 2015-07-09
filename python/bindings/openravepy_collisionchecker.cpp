@@ -60,6 +60,7 @@ public:
         options = report->options;
         minDistance = report->minDistance;
         numWithinTol = report->numWithinTol;
+        nKeepPrevious = report->nKeepPrevious;
         if( !!report->plink1 ) {
             plink1 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(report->plink1), pyenv);
         }
@@ -107,7 +108,7 @@ public:
     dReal minDistance;
     int numWithinTol;
     boost::python::list contacts;
-
+    uint32_t nKeepPrevious;
     CollisionReportPtr report;
 };
 
@@ -676,6 +677,7 @@ void init_openravepy_collisionchecker()
     .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
     .def_readonly("contacts",&PyCollisionReport::contacts)
     .def_readonly("vLinkColliding",&PyCollisionReport::vLinkColliding)
+    .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
     .def("__str__",&PyCollisionReport::__str__)
     .def("__unicode__",&PyCollisionReport::__unicode__)
     ;

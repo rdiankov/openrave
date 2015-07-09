@@ -1691,17 +1691,32 @@ void CollisionReport::Reset(int coloptions)
 std::string CollisionReport::__str__() const
 {
     stringstream s;
-    s << "(";
-    if( !!plink1 ) {
-        s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
-    }
-    s << ")x(";
-    if( !!plink2 ) {
-        s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
-    }
-    s << ")";
     if( vLinkColliding.size() > 0 ) {
-        s << ", numpairs=" << vLinkColliding.size();
+        s << "pairs=" << vLinkColliding.size();
+        int index = 0;
+        FOREACH(itlinkpair, vLinkColliding) {
+            s << ", [" << index << "](";
+            if( !!itlinkpair->first ) {
+                s << itlinkpair->first->GetParent()->GetName() << ":" << itlinkpair->first->GetName();
+            }
+            s << ")x(";
+            if( !!itlinkpair->second ) {
+                s << itlinkpair->second->GetParent()->GetName() << ":" << itlinkpair->second->GetName();
+            }
+            s << ") ";
+            ++index;
+        }
+    }
+    else {
+        s << "(";
+        if( !!plink1 ) {
+            s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+        }
+        s << ")x(";
+        if( !!plink2 ) {
+            s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+        }
+        s << ")";
     }
     s << ", contacts="<<contacts.size();
     if( minDistance < 1e10 ) {
