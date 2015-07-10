@@ -289,7 +289,7 @@ public:
                 }
             }
         }
-        {
+        else {
             KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
             if( !!pbody ) {
                 KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
