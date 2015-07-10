@@ -5,7 +5,7 @@ if( OPT_BULLET )
   pkg_check_modules(bullet bullet)
 
   if(bullet_FOUND)
-    if( "${bullet_VERSION}" VERSION_GREATER "2.80" )
+    if( "${bullet_VERSION}" VERSION_GREATER "2.82" )
       message(STATUS "unsupported bullet version ${bullet_VERSION}")
     else()
       include_directories(${bullet_INCLUDE_DIRS})

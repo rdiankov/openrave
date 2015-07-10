@@ -473,7 +473,7 @@ private:
     bool _bPhysics;
 };
 
-static KinBody::LinkPtr GetLinkFromCollision(btCollisionObject* co) {
+static KinBody::LinkPtr GetLinkFromCollision(const btCollisionObject* co) {
     BOOST_ASSERT(co != NULL);
     return static_cast<BulletSpace::KinBodyInfo::LINK*>(co->getUserPointer())->plink;
 }

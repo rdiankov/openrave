@@ -178,12 +178,22 @@ public:
     };
 
     /// permanent properties of the sensors
-    class OPENRAVE_API SensorGeometry
+    class OPENRAVE_API SensorGeometry : public XMLReadable
     {
 public:
+        SensorGeometry(const std::string& xmlid) : XMLReadable(xmlid) {
+        }
         virtual ~SensorGeometry() {
         }
         virtual SensorType GetType() const = 0;
+
+        virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+        
+        virtual SensorGeometry& operator=(const SensorGeometry& r) {
+            hardware_id = r.hardware_id;
+            return *this;
+        }
+        std::string hardware_id; ///< optional hardware identifier of the sensor
     };
     typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
     typedef boost::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
@@ -191,7 +201,7 @@ public:
     class OPENRAVE_API LaserGeomData : public SensorGeometry
     {
 public:
-        LaserGeomData() : min_range(0), max_range(0), time_increment(0), time_scan(0) {
+        LaserGeomData() : SensorGeometry("Laser"), min_range(0), max_range(0), time_increment(0), time_scan(0) {
             min_angle[0] = min_angle[1] = max_angle[0] = max_angle[1] = resolution[0] = resolution[1] = 0;
         }
         virtual SensorType GetType() const {
@@ -204,10 +214,14 @@ public:
         dReal time_increment;         ///< time between individual measurements [seconds]
         dReal time_scan;         ///< time between scans [seconds]
     };
+
+    typedef boost::shared_ptr<LaserGeomData> LaserGeomDataPtr;
+    typedef boost::shared_ptr<LaserGeomData const> LaserGeomDataConstPtr;
+    
     class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
 public:
-        CameraGeomData() : width(0), height(0), KK(intrinsics) {
+        CameraGeomData() : SensorGeometry("Camera"), width(0), height(0), measurement_time(1), gain(1), KK(intrinsics) {
         }
         virtual SensorType GetType() const {
             return ST_Camera;
@@ -215,22 +229,34 @@ public:
 
         // need this because of the deprecated KK
         virtual CameraGeomData& operator=(const CameraGeomData& r) {
+            SensorGeometry::operator=(r);
             intrinsics = r.intrinsics;
             width = r.width;
             height = r.height;
             sensor_reference = r.sensor_reference;
+            target_region = r.target_region;
+            measurement_time = r.measurement_time;
+            gain = r.gain;
             return *this;
         }
+
+        virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
         
         std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
+        std::string target_region; ///< name of the kinbody that describes the region of interest for the camera. 
         CameraIntrinsics intrinsics;         ///< intrinsic matrix
         int width, height;         ///< width and height of image
+        dReal measurement_time; ///< specifies time used to take one image (also known as exposure).
+        dReal gain; ///< camera gain setting
         CameraIntrinsics& KK;         ///< \deprecated (14/01/15)
     };
+    typedef boost::shared_ptr<CameraGeomData> CameraGeomDataPtr;
+    typedef boost::shared_ptr<CameraGeomData const> CameraGeomDataConstPtr;
+
     class OPENRAVE_API JointEncoderGeomData : public SensorGeometry
     {
 public:
-        JointEncoderGeomData() : resolution(0) {
+        JointEncoderGeomData() : SensorGeometry("JointEncoder"), resolution(0) {
         }
         virtual SensorType GetType() const {
             return ST_JointEncoder;
@@ -240,6 +266,8 @@ public:
     class OPENRAVE_API Force6DGeomData : public SensorGeometry
     {
 public:
+        Force6DGeomData() : SensorGeometry("Force6D") {
+        }
         virtual SensorType GetType() const {
             return ST_Force6D;
         }
@@ -247,6 +275,8 @@ public:
     class OPENRAVE_API IMUGeomData : public SensorGeometry
     {
 public:
+        IMUGeomData() : SensorGeometry("IMU") {
+        }
         virtual SensorType GetType() const {
             return ST_IMU;
         }
@@ -255,6 +285,8 @@ public:
     class OPENRAVE_API OdometryGeomData : public SensorGeometry
     {
 public:
+        OdometryGeomData() : SensorGeometry("Odometry") {
+        }
         virtual SensorType GetType() const {
             return ST_Odometry;
         }
@@ -264,6 +296,8 @@ public:
     class OPENRAVE_API TactileGeomData : public SensorGeometry
     {
 public:
+        TactileGeomData() : SensorGeometry("Tactile") {
+        }
         virtual SensorType GetType() const {
             return ST_Tactile;
         }
@@ -285,6 +319,8 @@ public:
     class OPENRAVE_API ActuatorGeomData : public SensorGeometry
     {
 public:
+        ActuatorGeomData() : SensorGeometry("Actuator") {
+        }
         virtual SensorType GetType() const {
             return ST_Actuator;
         }
@@ -336,9 +372,9 @@ public:
 
     /// \brief Returns the sensor geometry. This method is thread safe.
     ///
-    /// \param type the requested sensor type to create. A sensor can support many types. If type is ST_Invalid, then returns a data structure
-    /// \return sensor geometry pointer, use delete to destroy it
-    virtual SensorGeometryPtr GetSensorGeometry(SensorType type=ST_Invalid) = 0;
+    /// \param type the requested sensor type to create. A sensor can support many types. If type is ST_Invalid, then returns any structure that represents the geometry.
+    /// \return sensor geometry
+    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type=ST_Invalid) = 0;
 
     /// \brief Sets a new geometry for the sensor
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry) OPENRAVE_DUMMY_IMPLEMENTATION;

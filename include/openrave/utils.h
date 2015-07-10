@@ -211,7 +211,9 @@ inline std::string ConvertToLowerCase(const std::string & s)
 
     from http://stackoverflow.com/questions/5505965/fast-string-splitting-with-multiple-delimiters
 
-    Usage:
+   \param skipempty if true, then will skip empty strings. otherwise will insert them. use false when order of parameters is necessary.
+   
+   Usage:
    \code
    std::vector<std::string> vstrings;
    TokenizeString("0.141 0.51411", " \n\t", vstrings);
@@ -224,7 +226,7 @@ inline std::string ConvertToLowerCase(const std::string & s)
 
  */
 template<typename C>
-inline void TokenizeString(std::string const& s, char const* d, C& ret)
+inline void TokenizeString(std::string const& s, char const* d, C& ret, bool skipempty=true)
 {
     C output;
     std::bitset<255> delims;
@@ -235,10 +237,13 @@ inline void TokenizeString(std::string const& s, char const* d, C& ret)
     std::string::const_iterator beg;
     bool in_token = false;
     for( std::string::const_iterator it = s.begin(), end = s.end(); it != end; ++it ) {
-        if( delims[*it] ) {
+        if( delims[(unsigned char)*it] ) {
             if( in_token ) {
                 output.push_back(typename C::value_type(beg, it));
                 in_token = false;
+            }
+            else if( !skipempty ) {
+                output.push_back(typename C::value_type()); // empty
             }
         }
         else if( !in_token ) {

@@ -256,7 +256,18 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     {
         std::string manipname;
         ManipDirectionThreshPtr thresh(new ManipDirectionThresh());
-        sinput >> manipname >> thresh->vManipDir.x >> thresh->vManipDir.y >> thresh->vManipDir.z >> thresh->vGlobalDir.x >> thresh->vGlobalDir.y >> thresh->vGlobalDir.z >> thresh->fCosAngleThresh;
+        sinput >> manipname;
+        if( manipname.size() == 0 ) {
+            // reset the tool direction
+            if( !!_pConstraintToolDirection ) {
+                if( !!_cache ) {
+                    _cache->Reset(); // need this here in order to invalidate cache.
+                }
+            }
+            _pConstraintToolDirection.reset();
+            return true;
+        }
+        sinput >> thresh->vManipDir.x >> thresh->vManipDir.y >> thresh->vManipDir.z >> thresh->vGlobalDir.x >> thresh->vGlobalDir.y >> thresh->vGlobalDir.z >> thresh->fCosAngleThresh;
         if( !sinput ) {
             return false;
         }
@@ -266,6 +277,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
         _pmanip = pmanip;
         _pConstraintToolDirection = thresh;
+        if( !!_cache ) {
+            _cache->Reset(); // need this here in order to invalidate cache.
+        }
         return true;
     }
 

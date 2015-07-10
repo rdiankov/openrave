@@ -629,6 +629,45 @@ public:
             }
         }
 
+        // post process the target_region field in each sensor's geometry (currently it is the raw collada URL)
+        std::vector<SensorBasePtr> vsensors;
+        _penv->GetSensors(vsensors);
+
+        std::vector<KinBodyPtr> vbodies;
+        _penv->GetBodies(vbodies);
+
+        FOREACH(itsensor, vsensors) {
+            if( (*itsensor)->Supports(SensorBase::ST_Camera) ) {
+                SensorBase::CameraGeomDataConstPtr pcamgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>((*itsensor)->GetSensorGeometry(SensorBase::ST_Camera));
+                if( pcamgeom->target_region.size() > 0 ) {
+                    std::string resolvedTargetRegion; // resolved name
+                    //daeURI uri(*_dae, pcamgeom->target_region);
+                    //RAVELOG_INFO_FORMAT("asdfasf: %s", _MakeFullURI(pcamgeom->target_region));//uri.getURI());
+                    // check if there's any URL matching pcamgeom->target_region
+                    FOREACHC(ittestbody, vbodies) {
+                        ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>((*ittestbody)->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
+                        if( !!pcolladainfo ) {
+                            FOREACHC(iturl, pcolladainfo->_articulated_systemURIs) {
+                                if( *iturl == pcamgeom->target_region ) {
+                                    resolvedTargetRegion = (*ittestbody)->GetName();
+                                    break;
+                                }
+                            }
+                            if( resolvedTargetRegion.size() > 0 ) {
+                                break;
+                            }
+                        }
+                    }
+                    if( resolvedTargetRegion.size() > 0 ) {
+                        SensorBase::CameraGeomDataPtr pnewcamgeom(new SensorBase::CameraGeomData());
+                        *pnewcamgeom = *pcamgeom;
+                        pnewcamgeom->target_region = resolvedTargetRegion;
+                        (*itsensor)->SetSensorGeometry(pnewcamgeom);
+                    }
+                }
+            }
+        }
+        
         RAVELOG_VERBOSE("collada read time %fs\n",(utils::GetNanoPerformanceTime()-starttime)*1e-9);
         return true;
     }
@@ -1041,7 +1080,7 @@ public:
         }
         else {
             if( !articulated_system->getKinematics() ) {
-                RAVELOG_WARN(str(boost::format("collada <kinematics> tag empty? instance_articulated_system=%s\n")%ias->getID()));
+                RAVELOG_WARN_FORMAT("collada <kinematics> tag empty? instance_articulated_system=%s", ias->getID());
                 return true;
             }
 
@@ -2850,6 +2889,9 @@ public:
     /// \brief Extract Sensors attached to a Robot
     void ExtractRobotAttachedSensors(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
+        std::list< std::pair<RobotBase::AttachedSensorPtr, daeElementRef> > listSensorsToExtract; // accumulate a list of sensor/element pairs to call _ExtractSensor on. This has to be done after all sensors have been processed.
+        std::map<std::string, std::string> mapSensorURLsToNames;
+        
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
             if( !pextra->getType() ) {
@@ -2876,22 +2918,48 @@ public:
                         }
                         pattachedsensor->_info._trelative = _ExtractFullTransformFromChildren(pframe_origin);
                     }
-                    if( !_ExtractSensor(pattachedsensor->psensor,tec->getChild("instance_sensor")) ) {
-                        RAVELOG_WARN(str(boost::format("cannot find instance_sensor for attached sensor %s:%s\n")%probot->GetName()%name));
+                    daeElementRef instance_sensor = tec->getChild("instance_sensor");
+                    if( !!instance_sensor ) {
+                        std::pair<SensorBasePtr, daeElementRef> result = _ExtractCreateSensor(instance_sensor);
+                        pattachedsensor->psensor = result.first;
+                        if( !!pattachedsensor->psensor ) {
+                            pattachedsensor->psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
+                            std::string instance_url = instance_sensor->getAttribute("url");
+                            mapSensorURLsToNames[instance_url] = pattachedsensor->psensor->GetName();
+                        }
+                        listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
-                    else {
-                        pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
-                    }
+                    
                     probot->GetAttachedSensors().push_back(pattachedsensor);
-                    pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
                 }
                 else {
                     RAVELOG_WARN(str(boost::format("cannot create robot %s attached sensor %s\n")%probot->GetName()%name));
                 }
             }
         }
+        
+        FOREACH(itextract, listSensorsToExtract) {
+            RobotBase::AttachedSensorPtr pattachedsensor = itextract->first;
+            if( !pattachedsensor->psensor ) {
+                continue;
+            }
+            
+            // Create the custom XML reader to read in the data (determined by users)
+            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->psensor->GetXMLId(),pattachedsensor->psensor, AttributesList());
+            if( !pcurreader ) {
+                pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
+                continue;
+            }
+            
+            if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
+                if( !!pcurreader->GetReadable() ) {
+                    pattachedsensor->psensor->SetReadableInterface(pattachedsensor->psensor->GetXMLId(),pcurreader->GetReadable());
+                }
+            }
+            pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
+        }
     }
-
+    
     /// \brief extract the robot manipulators
     void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
@@ -2955,15 +3023,17 @@ public:
         }
     }
 
-    /// \brief Extract an instance of a sensor
-    bool _ExtractSensor(SensorBasePtr& psensor, daeElementRef instance_sensor)
+    /// \brief Extractan instance of a sensor without parsing its data
+    ///
+    /// \return the newly created sensor
+    std::pair<SensorBasePtr, daeElementRef> _ExtractCreateSensor(daeElementRef instance_sensor)
     {
         if( !instance_sensor ) {
-            return false;
+            return std::make_pair(SensorBasePtr(), daeElementRef());
         }
         if( !instance_sensor->hasAttribute("url") ) {
             RAVELOG_WARN("instance_sensor has no url\n");
-            return false;
+            return std::make_pair(SensorBasePtr(), daeElementRef());
         }
 
         std::string instance_id = instance_sensor->getAttribute("id");
@@ -2971,36 +3041,62 @@ public:
         daeElementRef domsensor = daeURI(*instance_sensor,instance_url).getElement();
         if( !domsensor ) {
             RAVELOG_WARN(str(boost::format("failed to find senor id %s url=%s\n")%instance_id%instance_url));
-            return false;
+            return std::make_pair(SensorBasePtr(), daeElementRef());
         }
         if( !domsensor->hasAttribute("type") ) {
             RAVELOG_WARN("collada <sensor> needs type attribute\n");
-            return false;
+            return std::make_pair(SensorBasePtr(), daeElementRef());
         }
-        psensor = RaveCreateSensor(_penv, domsensor->getAttribute("type"));
-        if( !psensor ) {
-            return false;
-        }
-
-        // Create the custom XML reader to read in the data (determined by users)
-        BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,psensor->GetXMLId(),psensor, AttributesList());
-        if( !pcurreader ) {
-            pcurreader.reset();
-            return false;
-        }
-        if( _ProcessXMLReader(pcurreader,domsensor) ) {
-            if( !!pcurreader->GetReadable() ) {
-                psensor->SetReadableInterface(psensor->GetXMLId(),pcurreader->GetReadable());
-            }
-        }
-        return true;
+        return std::make_pair(RaveCreateSensor(_penv, domsensor->getAttribute("type")), domsensor);
     }
+    
+//    /// \brief Extract and parse an instance of a sensor
+//    bool _ExtractSensor(SensorBasePtr& psensor, daeElementRef instance_sensor)
+//    {
+//        if( !instance_sensor ) {
+//            return false;
+//        }
+//        if( !instance_sensor->hasAttribute("url") ) {
+//            RAVELOG_WARN("instance_sensor has no url\n");
+//            return false;
+//        }
+//
+//        std::string instance_id = instance_sensor->getAttribute("id");
+//        std::string instance_url = instance_sensor->getAttribute("url");
+//        daeElementRef domsensor = daeURI(*instance_sensor,instance_url).getElement();
+//        if( !domsensor ) {
+//            RAVELOG_WARN(str(boost::format("failed to find senor id %s url=%s\n")%instance_id%instance_url));
+//            return false;
+//        }
+//        if( !domsensor->hasAttribute("type") ) {
+//            RAVELOG_WARN("collada <sensor> needs type attribute\n");
+//            return false;
+//        }
+//        psensor = RaveCreateSensor(_penv, domsensor->getAttribute("type"));
+//        if( !psensor ) {
+//            return false;
+//        }
+//
+//        // Create the custom XML reader to read in the data (determined by users)
+//        BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,psensor->GetXMLId(),psensor, AttributesList());
+//        if( !pcurreader ) {
+//            pcurreader.reset();
+//            return false;
+//        }
+//        if( _ProcessXMLReader(pcurreader,domsensor) ) {
+//            if( !!pcurreader->GetReadable() ) {
+//                psensor->SetReadableInterface(psensor->GetXMLId(),pcurreader->GetReadable());
+//            }
+//        }
+//        return true;
+//    }
 
     /// \brief feed the collada data into the base readers xml class
     ///
     /// \param preader the reader returned from RaveCallXMLReader
     /// \param elt the parent element (usually <extra>)
-    static bool _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt)
+    /// \param mapURLsToNames map of URLs to names
+    bool _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt, const std::map<std::string, std::string>& mapURLsToNames = std::map<std::string, std::string>())
     {
         daeTArray<daeElementRef> children;
         elt->getChildren(children);
@@ -3011,11 +3107,23 @@ public:
             children[i]->getAttributes(domatts);
             atts.clear();
             for(size_t j = 0; j < domatts.getCount(); ++j) {
-                atts.push_back(make_pair(domatts[j].name,domatts[j].value));
+                if( std::string(domatts[j].name) == "url" ) {
+                    std::map<std::string, std::string>::const_iterator itname = mapURLsToNames.find(domatts[j].value);
+                    if( itname != mapURLsToNames.end() ) {
+                        atts.push_back(make_pair(domatts[j].name,itname->second));
+                    }
+                    else {
+                        // push back the fully resolved name
+                        atts.push_back(make_pair(domatts[j].name, _MakeFullURI(xsAnyURI(*_dae, domatts[j].value), elt)));
+                    }
+                }
+                else {
+                    atts.push_back(make_pair(domatts[j].name,domatts[j].value));
+                }
             }
             BaseXMLReader::ProcessElement action = preader->startElement(xmltag,atts);
             if( action  == BaseXMLReader::PE_Support ) {
-                _ProcessXMLReader(preader,children[i]);
+                _ProcessXMLReader(preader,children[i], mapURLsToNames);
                 preader->characters(children[i]->getCharData());
                 if( preader->endElement(xmltag) ) {
                     return true;
@@ -3731,7 +3839,7 @@ private:
                 string extratype = arr[i]->getType();
                 BaseXMLReaderPtr preader = RaveCallXMLReader(pbody->IsRobot() ? PT_Robot : PT_KinBody, extratype, pbody,atts);
                 if( !!preader ) {
-                    if( _ProcessXMLReader(preader,arr[i]) ) {
+                    if( _ProcessXMLReader(preader, arr[i]) ) {
                         if( !!preader->GetReadable() ) {
                             pbody->SetReadableInterface(extratype,preader->GetReadable());
                         }

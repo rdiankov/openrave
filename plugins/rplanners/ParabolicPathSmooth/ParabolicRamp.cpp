@@ -2993,11 +2993,17 @@ inline Real BrakeTime(Real x,Real v,Real xbound)
 
 inline Real BrakeAccel(Real x,Real v,Real xbound)
 {
+    // there's a degenerate case here when both 2.0*(xbound-x) and v*v are close to 0
+    Real coeff0 = 2.0*(xbound-x);
+    Real coeff1 = v*v;
+//    if( Abs(coeff0) <= EpsilonV && Abs(coeff1) <= EpsilonV ) {
+//        return 0;
+//    }
     Real a;
-    bool res=SafeEqSolve(2.0*(xbound-x),-v*v,EpsilonV,-Inf,Inf,a);
+    bool res=SafeEqSolve(coeff0,-coeff1,EpsilonV,-Inf,Inf,a);
     if(!res) {
         PARABOLICWARN("Warning, couldn't solve braking acceleration equation:\n");
-        PARABOLICWARN("%.15e*a + %.15e = 0\n",2.0*(xbound-x),v*v);
+        PARABOLICWARN("%.15e*a + %.15e = 0\n", coeff0, coeff1);
         return 0;
     }
     return a;
@@ -3575,6 +3581,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
     
     //now we have a candidate end time -- repeat looking through solutions
     //until we have solved all ramps
+    std::vector<ParabolicRamp1D> tempramps;
     int numiters = 0;
     int maxiters=10;
     bool solved = true;
@@ -3582,6 +3589,9 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         ++numiters;
         solved = true;
         for(size_t i=0; i<ramps.size(); i++) {
+            if( ramps[i].size() == 0 ) {
+                PARABOLICWARN("ramp[%d] has 0 size, numiters=%d, multidofinterp=%d", i, numiters, multidofinterp);
+            }
             PARABOLIC_RAMP_ASSERT(ramps[i].size() > 0);
             if(vmax[i]==0 || amax[i]==0) {
                 // ?
@@ -3599,28 +3609,31 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
 
             //now solve minimum acceleration within bounds
             if( multidofinterp == 2 ) {
-                if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],ramps[i])) {
+                if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],tempramps)) {
                     // because SolveMaxAccel doesn't check for boundaries, this could fail
                     PARABOLIC_RAMP_PLOG("Failed solving bounded max accel for joint %d\n",i);
                     endTime *= 1.05;
                     solved = false;
                     break;
                 }
+                ramps[i] = tempramps;
             }
             else if( multidofinterp == 1 ) {
-                if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],ramps[i])) {
+                if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],tempramps)) {
                     endTime *= 1.05;
                     solved = false;
                     break;
                 }
+                ramps[i] = tempramps;
             }
             else {
-                if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,vmax[i],xmin[i],xmax[i],ramps[i])) {
+                if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,vmax[i],xmin[i],xmax[i],tempramps)) {
                     PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
                     endTime *= 1.05;
                     solved = false;
                     break;
                 }
+                ramps[i] = tempramps;
             }
 
             //now check accel/velocity bounds

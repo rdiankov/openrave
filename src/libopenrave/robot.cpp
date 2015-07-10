@@ -113,16 +113,16 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     o << (!pdata ? -1 : pdata->GetType()) << " ";
     // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
     if( !!psensor ) {
-        SensorBase::SensorGeometryPtr prawgeom = psensor->GetSensorGeometry();
+        SensorBase::SensorGeometryConstPtr prawgeom = psensor->GetSensorGeometry();
         if( !!prawgeom ) {
             switch(prawgeom->GetType()) {
             case SensorBase::ST_Laser: {
-                boost::shared_ptr<SensorBase::LaserGeomData> pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData>(prawgeom);
+                SensorBase::LaserGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData const>(prawgeom);
                 o << pgeom->min_angle[0] << " " << pgeom->max_angle[0] << " " << pgeom->resolution[0] << " " << pgeom->max_range << " ";
                 break;
             }
             case SensorBase::ST_Camera: {
-                boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(prawgeom);
+                SensorBase::CameraGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(prawgeom);
                 o << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << pgeom->width << " " << pgeom->height << " ";
                 break;
             }
@@ -2226,7 +2226,7 @@ void RobotBase::_ComputeInternalInformation()
             throw OPENRAVE_EXCEPTION_FORMAT("sensor name \"%s\" is not valid", (*itsensor)->GetName(), ORE_Failed);
         }
         if( !!(*itsensor)->GetSensor() ) {
-            stringstream ss; ss << GetName() << "_" << (*itsensor)->GetName(); // global unique name?
+            stringstream ss; ss << GetName() << ":" << (*itsensor)->GetName(); // global unique name?
             (*itsensor)->GetSensor()->SetName(ss.str());
         }
         sensorindex++;

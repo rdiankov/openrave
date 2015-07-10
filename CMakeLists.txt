@@ -373,11 +373,11 @@ endforeach()
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
+  set(NATIVE_COMPILE_FLAGS "-march=native -mtune=native")
 else()
   set(EXTRA_COMPILE_FLAGS "")
+  set(NATIVE_COMPILE_FLAGS "")
 endif()
-
-set(NATIVE_COMPILE_FLAGS "-march=native -mtune=native")
 
 # generate the md5 sum for all OpenRAVE interfaces
 add_subdirectory(cpp-gen-md5)
@@ -385,11 +385,11 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
 
 if( MSVC )
   if( EXTRA_MSVC_DEPEND )
-    add_dependencies(cpp-gen-md5 ${EXTRA_MSVC_DEPEND})
+    add_dependencies(cpp-gen-md5-native ${EXTRA_MSVC_DEPEND})
   endif()
-  set(CPPGENMD5 cpp-gen-md5)
+  set(CPPGENMD5 cpp-gen-md5-native)
 else()
-  set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5")
+  set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5-native")
 endif()
 
 set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h)
@@ -413,7 +413,7 @@ add_custom_command(
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h" OPENRAVE_ENVIRONMENT_HASH
        "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
        > "${interfacehashes_h}"
-  DEPENDS cpp-gen-md5
+  DEPENDS cpp-gen-md5-native
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/interface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h
@@ -701,9 +701,19 @@ endif()
 # function expression parser library
 find_package(FPARSER 4.4.3)
 if( NOT FPARSER_FOUND )
-  message(STATUS "compiling local fparser library")
-  add_subdirectory(3rdparty/fparser-4.5)
-  set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+  if( PKG_CONFIG_FOUND )
+    pkg_search_module(FPARSER fparser)
+  endif()
+  if( NOT FPARSER_FOUND )
+    message(STATUS "compiling local fparser library")
+    add_subdirectory(3rdparty/fparser-4.5)
+    set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+  else()
+    set(FPARSER_CXX_FLAGS "${FPARSER_CFLAGS}")
+    set(FPARSER_LINK_FLAGS "${FPARSER_LDFLAGS}")
+    message(STATUS "using fparser from pkg-config, cflags: ${FPARSER_CFLAGS}, link flags: ${FPARSER_LINK_FLAGS}")
+    set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+  endif()
 endif()
 
 message(STATUS "compiling local convexdecomposition library")

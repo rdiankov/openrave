@@ -77,7 +77,7 @@ public:
         QtImageWindow(SensorBasePtr psensor) : QWidget(NULL), _psensor(psensor) {
             _pdata = boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
             _pdatanew = boost::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
-            _pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(_psensor->GetSensorGeometry(SensorBase::ST_Camera));
+            _pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry(SensorBase::ST_Camera));
             if( !_pdata || !_pgeom ) {
                 throw openrave_exception(str(boost::format("QtImageWindow: failed to create sensor data for sensor %s")%_psensor->GetName()));
             }
@@ -117,7 +117,7 @@ private:
         QLabel *_label;
         SensorBasePtr _psensor;
         boost::shared_ptr<SensorBase::CameraSensorData> _pdatanew, _pdata;
-        boost::shared_ptr<SensorBase::CameraGeomData> _pgeom;
+        SensorBase::CameraGeomDataConstPtr _pgeom;
 #if QT_VERSION < 0x040400 // qt4.4+
         vector<uint8_t> vimagedata;
 #endif

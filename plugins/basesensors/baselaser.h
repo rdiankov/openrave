@@ -286,14 +286,14 @@ public:
         return true;
     }
 
-    virtual SensorGeometryPtr GetSensorGeometry(SensorType type)
+    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
     {
-        if(( type == ST_Invalid) ||( type == ST_Laser) ) {
+        if( type == ST_Invalid || type == ST_Laser ) {
             LaserGeomData* pgeom = new LaserGeomData();
             *pgeom = *_pgeom;
-            return SensorGeometryPtr(pgeom);
+            return SensorGeometryConstPtr(pgeom);
         }
-        return SensorGeometryPtr();
+        return SensorGeometryConstPtr();
     }
 
     virtual SensorDataPtr CreateSensorData(SensorType type)

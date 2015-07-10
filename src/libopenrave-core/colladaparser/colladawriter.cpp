@@ -2036,7 +2036,17 @@ private:
     void _WriteAttachedSensors(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
     {
         if (probot->GetAttachedSensors().size() > 0) {
+            std::map<RobotBase::AttachedSensorPtr, std::string> mapAttachedSensorIDs;
             size_t sensorindex = 0;
+            FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
+                SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
+                if( !!popenravesensor ) {
+                    string strsensor = str(boost::format("robot%d_sensor%d")%probot->GetEnvironmentId()%sensorindex);
+                    mapAttachedSensorIDs[*itattachedsensor] = strsensor;
+                    sensorindex++;
+                }
+            }
+            
             FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setName((*itattachedsensor)->GetName().c_str());
@@ -2049,21 +2059,53 @@ private:
 
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
-                    string strsensor = str(boost::format("robot%d_sensor%d")%probot->GetEnvironmentId()%sensorindex);
+                    string strsensor = mapAttachedSensorIDs[*itattachedsensor];
+                    sensorindex++;
                     string strurl = string("#") + strsensor;
                     //  Sensor definition into 'library_sensors'
                     daeElementRef domsensor = _sensorsLib->add("sensor");
                     domsensor->setAttribute("id", strsensor.c_str());
-                    domsensor->setAttribute("name", strsensor.c_str());
+                    domsensor->setAttribute("name", popenravesensor->GetName().c_str());
                     domsensor->setAttribute("type", popenravesensor->GetXMLId().c_str());
                     BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(domsensor));
-                    popenravesensor->Serialize(extrawriter,0);
+                    SensorBase::SensorGeometryConstPtr pgeom = popenravesensor->GetSensorGeometry();
+                    bool bSerialize = true;
+                    if( !!pgeom ) {
+                        // have to handle some geometry types specially
+                        if( pgeom->GetType() == SensorBase::ST_Camera ) {
+                            SensorBase::CameraGeomData camgeom = *boost::static_pointer_cast<SensorBase::CameraGeomData const>(pgeom);
+                            if( camgeom.target_region.size() > 0 ) {
+                                // have to convert to equivalent collada url
+                                KinBodyPtr ptargetbody = probot->GetEnv()->GetKinBody(camgeom.target_region);
+                                if( !!ptargetbody ) {
+                                    camgeom.target_region = std::string("#") + _GetMotionId(ptargetbody);
+                                }
+                                else {
+                                    RAVELOG_INFO_FORMAT("resetting target_region %s since not present in environment anymore", camgeom.target_region);
+                                    camgeom.target_region = "";
+                                }
+                            }
+                            if( camgeom.sensor_reference.size() > 0 ) {
+                                // have to convert to equivalent collada url
+                                FOREACH(itattid, mapAttachedSensorIDs) {
+                                    if( camgeom.sensor_reference == itattid->first->GetSensor()->GetName() ) {
+                                        camgeom.sensor_reference = std::string("#") + itattid->second;
+                                        break;
+                                    }
+                                }
+                            }
+                            camgeom.Serialize(extrawriter,0);
+                            bSerialize = false;
+                        }
+                        if( bSerialize ) {
+                            pgeom->Serialize(extrawriter,0);
+                        }
+                    }
 
                     // instantiate it in the attached esnsors
                     daeElementRef isensor = ptec->add("instance_sensor");
                     isensor->setAttribute("url", strurl.c_str());
                 }
-                sensorindex++;
             }
         }
     }
@@ -2196,6 +2238,9 @@ private:
 
     virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
         return str(boost::format("link%d")%plink->GetIndex());
+    }
+    virtual std::string _GetMotionId(KinBodyConstPtr pbody) {
+        return str(boost::format("body%d_motion")%pbody->GetEnvironmentId());
     }
 
     virtual std::string _GetGeometryId(KinBody::LinkConstPtr plink, int igeom) {
