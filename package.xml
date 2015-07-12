@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package>
+  <name>OpenRAVE</name>
+  <version>0.9.0</version>
+  <description>The openrave package</description>
+
+  <maintainer email="todo@todo.todo">todo</maintainer>
+
+  <license>LGPLv3</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
