@@ -1260,7 +1260,13 @@ protected:
                             ss << "]";
                             RAVELOG_VERBOSE(ss.str());
                         }
-                        return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        if( paramnewglobal.GetType() == IKP_Transform6D ) {
+                            return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        }
+                        else {
+                            // end effector could change depending on the solution
+                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision); // stop the search
+                        }
                     }
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
@@ -1560,7 +1566,14 @@ protected:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
-                        return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        if( paramnewglobal.GetType() == IKP_Transform6D ) {
+                            // 6D so end effector is determined
+                            return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        }
+                        else {
+                            // end effector could change depending on the solution
+                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision); // stop the search
+                        }
                     }
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
