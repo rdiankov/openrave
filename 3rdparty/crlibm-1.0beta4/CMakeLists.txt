@@ -125,5 +125,5 @@ set_target_properties(crlibm PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
 # also build a native version for checking libm on the host machine at build-time
 add_library(crlibm-native STATIC ${crlibm_SOURCES})
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  set_target_properties(crlibm-native PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} -march=native -mtune=native")
+  set_target_properties(crlibm-native PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} ${NATIVE_COMPILE_FLAGS}")
 endif()

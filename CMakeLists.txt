@@ -373,7 +373,7 @@ endforeach()
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
   add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
   set(EXTRA_COMPILE_FLAGS "-fPIC")
-  set(NATIVE_COMPILE_FLAGS "-march=native -mtune=native")
+  set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
 else()
   set(EXTRA_COMPILE_FLAGS "")
   set(NATIVE_COMPILE_FLAGS "")
