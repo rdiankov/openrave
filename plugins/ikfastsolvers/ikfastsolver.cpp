@@ -1241,7 +1241,7 @@ protected:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
-                if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -1564,7 +1564,7 @@ protected:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
-                if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
                         if( paramnewglobal.GetType() == IKP_Transform6D ) {
                             // 6D so end effector is determined
