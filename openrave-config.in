@@ -73,6 +73,9 @@ while test $# -gt 0; do
     --share-dir)
       echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_SHARE_DIR@
       ;;
+    --plugins-dir)
+      echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_PLUGINS_INSTALL_DIR@
+      ;;
     --usage)
       echo "${usage}"
       exit 0

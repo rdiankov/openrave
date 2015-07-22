@@ -153,7 +153,7 @@ endif()
 
 set(OPENRAVE_SHARE_DIR "share/openrave-${OPENRAVE_SOVERSION}" CACHE PATH "Relative path for shared OpenRAVE data")
 set(OPENRAVE_DATA_INSTALL_DIR "${OPENRAVE_SHARE_DIR}" CACHE PATH "Scene and robot files installation directory")
-set(OPENRAVE_PLUGINS_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/plugins" CACHE PATH "OpenRAVE plugins installation directory")
+set(OPENRAVE_PLUGINS_INSTALL_DIR "lib${LIB_SUFFIX}/openrave${OPENRAVE_SOVERSION}-plugins" CACHE PATH "OpenRAVE plugins installation directory")
 set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
