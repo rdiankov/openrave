@@ -400,7 +400,7 @@ public:
 #endif
 #endif
 
-        RAVELOG_INFO("text server listening on port %d\n",_nPort);
+        RAVELOG_DEBUG("text server listening on port %d\n",_nPort);
         _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,this)));
         _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,this)));
         bInitThread = true;

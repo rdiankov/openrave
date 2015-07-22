@@ -25,9 +25,6 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 
 set(LIB_SUFFIX CACHE STRING "suffix for the library directory need for x86-64 systems that use lib64 ")
 
-# The RPATH to be used when installing
-set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}")
-
 # Add the automatically determined parts of the RPATH
 # which point to directories outside the build tree to the install RPATH
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -167,6 +164,9 @@ endif()
 set(OPENRAVE_PLUGINS_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PLUGINS_INSTALL_DIR}" CACHE PATH "Absolute dir for plugins on target OS path, used to write to header file")
 set(OPENRAVE_DATA_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_DATA_INSTALL_DIR}" CACHE PATH "Absolute dir for data on target OS path, used to write to header file")
 set(OPENRAVE_PYTHON_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PYTHON_INSTALL_DIR}" CACHE PATH "Absolute dir for python on target OS path, used to write to header file")
+
+# The RPATH to be used when installing
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_PLUGINS_INSTALL_ABSOLUTE_DIR}")
 
 #define OPENRAVE_PLUGINS_INSTALL_DIR 
 #define OPENRAVE_DATA_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_DATA_INSTALL_DIR@"
