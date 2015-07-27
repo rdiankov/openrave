@@ -5971,7 +5971,7 @@ class IKFastSolver(AutoReloader):
         for ileftvar in range(len(dummys)):
             leftvar = dummys[ileftvar]
             try:
-                exportcoeffeqs,exportmonoms,numrepeating = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
+                localexportcoeffeqs,localexportmonoms,localnumrepeating = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
                 if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
                     exportcoeffeqs = localexportcoeffeqs
                     exportmonoms = localexportmonoms
@@ -7635,7 +7635,7 @@ class IKFastSolver(AutoReloader):
                     for ileftvar in range(2):
                         # TODO, sometimes this works and sometimes this doesn't
                         try:
-                            localMall, localallmonoms,numrepeating = self.solveDialytically(newreducedeqs,ileftvar,returnmatrix=True)
+                            localMall, localallmonoms,localnumrepeating = self.solveDialytically(newreducedeqs,ileftvar,returnmatrix=True)
                             if localMall is not None and localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
                                 Mall = localMall
                                 allmonoms = localallmonoms
