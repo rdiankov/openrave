@@ -271,6 +271,10 @@ public:
         return ReturnTransform(_pviewer->GetCameraTransform());
     }
 
+    float GetCameraDistanceToFocus() {
+        return _pviewer->GetCameraDistanceToFocus();
+    }
+
     object GetCameraImage(int width, int height, object extrinsic, object oKK)
     {
         vector<float> vKK = ExtractArray<float>(oKK);
@@ -331,6 +335,7 @@ void init_openravepy_viewer()
                        .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
                        .def("SetBkgndColor",&PyViewerBase::SetBkgndColor,DOXY_FN(ViewerBase,SetBkgndColor))
                        .def("GetCameraTransform",&PyViewerBase::GetCameraTransform, DOXY_FN(ViewerBase,GetCameraTransform))
+                       .def("GetCameraDistanceToFocus", &PyViewerBase::GetCameraDistanceToFocus, DOXY_FN(ViewerBase, GetCameraDistanceToFocus))
                        .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"), DOXY_FN(ViewerBase,GetCameraImage))
         ;
 

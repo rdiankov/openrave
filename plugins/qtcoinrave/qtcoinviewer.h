@@ -143,6 +143,7 @@ public:
 
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
+    virtual float GetCameraDistanceToFocus() const;
     virtual void SetBkgndColor(const RaveVector<float>& color);
 
     virtual void PrintCamera();
@@ -420,7 +421,8 @@ public:
     int _videocodec;
 
     RaveTransform<float>     _initSelectionTrans;           ///< initial tarnsformation of selected item
-    RaveTransform<float> _Tcamera;
+    RaveTransform<float> _Tcamera; ///< current camera transform, read-only
+    float _focalDistance;  ///< current focal distance of the camera, read-only
     geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
     unsigned int _fb;
@@ -463,7 +465,7 @@ public:
     KinBody::LinkPtr _ptrackinglink; ///< current link tracking
     RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
     Transform _tTrackingCameraVelocity; ///< camera velocity
-    float  _fTrackingRadius; ///< how far from the coord system camera shoud be
+
     //@}
     
     // data relating to playback
