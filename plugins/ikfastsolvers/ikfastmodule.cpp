@@ -202,7 +202,7 @@ public:
             uint32_t ikfastversion = 0;
             sversion >> std::hex >> ikfastversion;
             if( ikfastversion < 60 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("ikfast version %d not supported", ikfastversion, ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("ikfast version %d not supported"), ikfastversion, ORE_InvalidArguments);
             }
             std::stringstream ss;
 #ifdef OPENRAVE_IKFAST_FLOAT32
@@ -217,7 +217,7 @@ public:
                 newfunctions->_library = shared_from_this();
                 return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc);
             }
-            throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("uninitialized ikfast functions"),ORE_InvalidState);
         }
 
         const vector<string>& GetIkNames() const {
@@ -245,7 +245,7 @@ public:
             if( !!_ikdouble ) {
                 return _ikdouble->_GetIkType();
             }
-            throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("uninitialized ikfast functions"),ORE_InvalidState);
         }
         std::string GetIkFastVersion() {
 #ifdef OPENRAVE_IKFAST_FLOAT32
@@ -256,7 +256,7 @@ public:
             if( !!_ikdouble ) {
                 return _ikdouble->_GetIkFastVersion();
             }
-            throw OPENRAVE_EXCEPTION_FORMAT0("uninitialized ikfast functions",ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("uninitialized ikfast functions"),ORE_InvalidState);
         }
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
@@ -440,7 +440,7 @@ public:
                 }
             }
             if(iktype == IKP_None) {
-                throw openrave_exception(str(boost::format("could not find iktype %s")%striktype));
+                throw openrave_exception(str(boost::format(_("could not find iktype %s"))%striktype));
             }
         }
 
@@ -629,7 +629,7 @@ public:
             return _PerfTiming<double>(sout,lib->_ikdouble,num, maxtime);
         }
         else {
-            throw openrave_exception("bad real size");
+            throw openrave_exception(_("bad real size"));
         }
         return true;
     }

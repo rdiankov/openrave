@@ -350,7 +350,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _busebiasing = true;
         RAVELOG_VERBOSE_FORMAT("set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", _nullsampleprob%_nullbiassampleprob%_deltasampleprob);
 #else
-        throw OPENRAVE_EXCEPTION_FORMAT0("cannot set manipulator bias since lapack is not supported", ORE_CommandNotSupported);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot set manipulator bias since lapack is not supported"), ORE_CommandNotSupported);
 #endif
     }
 

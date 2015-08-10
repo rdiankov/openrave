@@ -38,7 +38,7 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             I.seekg((size_t)pos+ppsize);
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("error, failed to find </PlannerParameters> in %s",buf.str(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </PlannerParameters> in %s"),buf.str(),ORE_InvalidArguments);
         }
         pp._plannerparametersdepth = 0;
         LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,utils::null_deleter()), pbuf.c_str(), ppsize);
@@ -197,7 +197,7 @@ int PlannerBase::PlannerParameters::SetStateValues(const std::vector<dReal>& val
         _setstatefn(values);
         return 0;
     }
-    throw openrave_exception("need to set PlannerParameters::_setstatevaluesfn");
+    throw openrave_exception(_("need to set PlannerParameters::_setstatevaluesfn"));
 }
 
 bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) const
@@ -703,7 +703,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
                     ss << *itindex << " ";
                 }
                 if( !pconfigsampler->SendCommand(ssout,ss) ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to set body %s configuration to %s",pbody->GetName()%ss.str(), ORE_Assert);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set body %s configuration to %s"),pbody->GetName()%ss.str(), ORE_Assert);
                 }
             }
             boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first, diffstatefns[isavegroup].first));
@@ -739,7 +739,7 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
 //        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grab" ) {
 //        }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("group %s not supported for for planner parameters configuration",g.name,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("group %s not supported for for planner parameters configuration"),g.name,ORE_InvalidArguments);
         }
     }
     _diffstatefn = boost::bind(_CallDiffStateFns,diffstatefns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);

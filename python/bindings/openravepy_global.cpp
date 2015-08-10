@@ -762,7 +762,7 @@ PyInterfaceBasePtr pyRaveClone(PyInterfaceBasePtr pyreference, int cloningoption
     case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyenv);
     case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyenv);
     }
-    throw openrave_exception("invalid interface type",ORE_InvalidArguments);
+    throw openrave_exception(_("invalid interface type"),ORE_InvalidArguments);
 }
 
 object quatFromAxisAngle1(object oaxis)

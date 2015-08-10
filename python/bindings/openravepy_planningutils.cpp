@@ -274,7 +274,7 @@ public:
                 listparameterizationsPtr.push_back(ikparam);
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT0("ManipulatorIKGoalSampler parameterizations need to be all IkParameterization objeccts",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("ManipulatorIKGoalSampler parameterizations need to be all IkParameterization objeccts"),ORE_InvalidArguments);
             }
         }
         dReal fsampleprob=1;

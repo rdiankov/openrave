@@ -35,7 +35,7 @@ public:
     {
         std::ifstream f(filename.c_str());
         if( !f ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to read %s filename",filename,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to read %s filename"),filename,ORE_InvalidArguments);
         }
         f.seekg(0,ios::end);
         std::vector<char> filedata(static_cast<size_t>(f.tellg())+1, 0); // need a null-terminator
@@ -58,7 +58,7 @@ public:
     {
         std::ifstream f(filename.c_str());
         if( !f ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to read %s filename",filename,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to read %s filename"),filename,ORE_InvalidArguments);
         }
         f.seekg(0,ios::end);
         std::vector<char> filedata(static_cast<size_t>(f.tellg())+1, 0); // need a null-terminator

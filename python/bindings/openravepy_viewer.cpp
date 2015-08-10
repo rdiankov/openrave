@@ -231,11 +231,11 @@ public:
     object RegisterCallback(object properties, object fncallback)
     {
         if( !fncallback ) {
-            throw openrave_exception("callback not specified");
+            throw openrave_exception(_("callback not specified"));
         }
         UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
-            throw openrave_exception("no registration callback returned");
+            throw openrave_exception(_("no registration callback returned"));
         }
         return openravepy::GetUserData(p);
     }
@@ -243,11 +243,11 @@ public:
     object RegisterItemSelectionCallback(object fncallback)
     {
         if( !fncallback ) {
-            throw openrave_exception("callback not specified");
+            throw openrave_exception(_("callback not specified"));
         }
         UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
         if( !p ) {
-            throw openrave_exception("no registration callback returned");
+            throw openrave_exception(_("no registration callback returned"));
         }
         return openravepy::GetUserData(p);
     }
@@ -279,12 +279,12 @@ public:
     {
         vector<float> vKK = ExtractArray<float>(oKK);
         if( vKK.size() != 4 ) {
-            throw openrave_exception("KK needs to be of size 4");
+            throw openrave_exception(_("KK needs to be of size 4"));
         }
         SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
         vector<uint8_t> memory;
         if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) ) {
-            throw openrave_exception("failed to get camera image");
+            throw openrave_exception(_("failed to get camera image"));
         }
         std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
         return toPyArray(memory,dims);
