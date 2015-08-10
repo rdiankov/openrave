@@ -425,7 +425,7 @@ protected:
             const string& name = _spec._vgroups[i].name;
             for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
                 if( _vderivoffsets.at(_spec._vgroups[i].offset+j) < -2 && _vintegraloffsets.at(_spec._vgroups[i].offset+j) < -2 ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("%s interpolation group '%s' needs derivatives/integrals for sampling",interpolation%name,ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("%s interpolation group '%s' needs derivatives/integrals for sampling"),interpolation%name,ORE_InvalidArguments);
                 }
             }
         }
@@ -776,7 +776,7 @@ protected:
                 }
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation does not have all data",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cubic interpolation does not have all data"),ORE_InvalidArguments);
             }
         }
         else {
@@ -817,7 +817,7 @@ protected:
                 }
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation does not have all data",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cubic interpolation does not have all data"),ORE_InvalidArguments);
             }
         }
         else {
@@ -868,7 +868,7 @@ protected:
                 }
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation does not have all data",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cubic interpolation does not have all data"),ORE_InvalidArguments);
             }
         }
         else {
@@ -938,7 +938,7 @@ protected:
                 }
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cubic interpolation does not have all data",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cubic interpolation does not have all data"),ORE_InvalidArguments);
             }
         }
         else {

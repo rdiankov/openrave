@@ -232,7 +232,7 @@ public:
                             }
                         }
                         if( !bSuccess ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0("original ramp is in collision!", ORE_Assert);
+                            throw OPENRAVE_EXCEPTION_FORMAT0(_("original ramp is in collision!"), ORE_Assert);
                         }
                     }
                     _bUsePerturbation = true; // re-enable

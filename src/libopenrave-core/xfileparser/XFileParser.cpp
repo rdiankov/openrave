@@ -120,7 +120,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
 
     // check header
     if( strncmp( P, "xof ", 4) != 0)
-        throw DeadlyImportError( "Header mismatch, file is not an XFile.");
+        throw DeadlyImportError( _("Header mismatch, file is not an XFile.") );
 
     // read version. It comes in a four byte format such as "0302"
     mMajorVersion = (unsigned int)(P[4] - 48) * 10 + (unsigned int)(P[5] - 48);
@@ -148,7 +148,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
         mIsBinaryFormat = true;
         compressed = true;
     }
-    else ThrowException( boost::str(boost::format("Unsupported xfile format '%c%c%c%c'")
+    else ThrowException( boost::str( boost::format( _("Unsupported xfile format '%c%c%c%c'") )
                                     % P[8] % P[9] % P[10] % P[11]));
 
     // float size
@@ -158,7 +158,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
                        + (unsigned int)(P[15] - 48);
 
     if( mBinaryFloatSize != 32 && mBinaryFloatSize != 64)
-        ThrowException( boost::str( boost::format( "Unknown float size %1% specified in xfile header.")
+        ThrowException( boost::str( boost::format( _("Unknown float size %1% specified in xfile header.") )
                                     % mBinaryFloatSize));
 
     P += 16;
@@ -167,7 +167,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
     if (compressed)
     {
 #ifndef OPENRAVE_HAS_ZLIB
-        throw DeadlyImportError("Assimp was built without compressed X support");
+        throw DeadlyImportError(_("Assimp was built without compressed X support"));
 #else
 /* ///////////////////////////////////////////////////////////////////////
  * COMPRESSED X FILE FORMAT
@@ -213,14 +213,14 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
             AI_SWAP2(ofs); P1 += 2;
 
             if (ofs >= MSZIP_BLOCK)
-                throw DeadlyImportError("X: Invalid offset to next MSZIP compressed block");
+                throw DeadlyImportError(_("X: Invalid offset to next MSZIP compressed block"));
 
             // check magic word
             uint16_t magic = *((uint16_t*)P1);
             AI_SWAP2(magic); P1 += 2;
 
             if (magic != MSZIP_MAGIC)
-                throw DeadlyImportError("X: Unsupported compressed format, expected MSZIP header");
+                throw DeadlyImportError(_("X: Unsupported compressed format, expected MSZIP header"));
 
             // and advance to the next offset
             P1 += ofs;
@@ -245,7 +245,7 @@ XFileParserOpenRAVE::XFileParserOpenRAVE( const std::vector<char>& pBuffer)
             // and decompress the data ....
             int ret = ::inflate( &stream, Z_SYNC_FLUSH );
             if (ret != Z_OK && ret != Z_STREAM_END)
-                throw DeadlyImportError("X: Failed to decompress MSZIP-compressed data");
+                throw DeadlyImportError(_("X: Failed to decompress MSZIP-compressed data"));
 
             ::inflateReset( &stream );
             ::inflateSetDictionary( &stream, (const Bytef*)out, MSZIP_BLOCK - stream.avail_out );
@@ -361,7 +361,7 @@ void XFileParserOpenRAVE::ParseDataObjectTemplate()
             break;
 
         if( s.length() == 0)
-            ThrowException( "Unexpected end of file reached while parsing template definition");
+            ThrowException(_("Unexpected end of file reached while parsing template definition"));
     }
 }
 
@@ -413,7 +413,7 @@ void XFileParserOpenRAVE::ParseDataObjectFrame( Node* pParent)
     {
         std::string objectName = GetNextToken();
         if (objectName.size() == 0)
-            ThrowException( "Unexpected end of file reached while parsing frame");
+            ThrowException(_("Unexpected end of file reached while parsing frame"));
 
         if( objectName == "}")
             // frame finished
@@ -506,7 +506,7 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
     {
         unsigned int numIndices = ReadInt();
         if( numIndices < 3)
-            ThrowException( boost::str( boost::format( "Invalid index count %1% for face %2%.") % numIndices % a));
+            ThrowException( boost::str( boost::format( _("Invalid index count %1% for face %2%.")) % numIndices % a));
 
         // read indices
         Face& face = pMesh->mPosFaces[a];
@@ -522,7 +522,7 @@ void XFileParserOpenRAVE::ParseDataObjectMesh( Mesh* pMesh)
         std::string objectName = GetNextToken();
 
         if( objectName.size() == 0) {
-            ThrowException( "Unexpected end of file while parsing mesh structure");
+            ThrowException( _("Unexpected end of file while parsing mesh structure") );
         }
         else
         if( objectName == "}")
@@ -627,7 +627,7 @@ void XFileParserOpenRAVE::ParseDataObjectMeshNormals( Mesh* pMesh)
     // read normal indices
     unsigned int numFaces = ReadInt();
     if( numFaces != pMesh->mPosFaces.size())
-        ThrowException( "Normal face count does not match vertex face count.");
+        ThrowException( _("Normal face count does not match vertex face count.") );
 
     for( unsigned int a = 0; a < numFaces; a++)
     {
@@ -649,13 +649,13 @@ void XFileParserOpenRAVE::ParseDataObjectMeshTextureCoords( Mesh* pMesh)
 {
     readHeadOfDataObject();
     if( pMesh->mNumTextures + 1 > AI_MAX_NUMBER_OF_TEXTURECOORDS)
-        ThrowException( "Too many sets of texture coordinates");
+        ThrowException( _("Too many sets of texture coordinates") );
 
     std::vector<aiVector2D>& coords = pMesh->mTexCoords[pMesh->mNumTextures++];
 
     unsigned int numCoords = ReadInt();
     if( numCoords != pMesh->mPositions.size())
-        ThrowException( "Texture coord count does not match vertex count");
+        ThrowException( _("Texture coord count does not match vertex count") );
 
     coords.resize( numCoords);
     for( unsigned int a = 0; a < numCoords; a++)
@@ -669,19 +669,19 @@ void XFileParserOpenRAVE::ParseDataObjectMeshVertexColors( Mesh* pMesh)
 {
     readHeadOfDataObject();
     if( pMesh->mNumColorSets + 1 > AI_MAX_NUMBER_OF_COLOR_SETS)
-        ThrowException( "Too many colorsets");
+        ThrowException( _("Too many colorsets") );
     std::vector<aiColor4D>& colors = pMesh->mColors[pMesh->mNumColorSets++];
 
     unsigned int numColors = ReadInt();
     if( numColors != pMesh->mPositions.size())
-        ThrowException( "Vertex color count does not match vertex count");
+        ThrowException( _("Vertex color count does not match vertex count") );
 
     colors.resize( numColors, aiColor4D( 0, 0, 0, 1));
     for( unsigned int a = 0; a < numColors; a++)
     {
         unsigned int index = ReadInt();
         if( index >= pMesh->mPositions.size())
-            ThrowException( "Vertex color index out of bounds");
+            ThrowException( _("Vertex color index out of bounds") );
 
         colors[index] = ReadRGBA();
         // HACK: (thom) Maxon Cinema XPort plugin puts a third separator here, kwxPort puts a comma.
@@ -710,7 +710,7 @@ void XFileParserOpenRAVE::ParseDataObjectMeshMaterialList( Mesh* pMesh)
     // some models have a material index count of 1... to be able to read them we
     // replicate this single material index on every face
     if( numMatIndices != pMesh->mPosFaces.size() && numMatIndices != 1)
-        ThrowException( "Per-Face material index count does not match face count.");
+        ThrowException( _("Per-Face material index count does not match face count.") );
 
     // read per-face material indices
     for( unsigned int a = 0; a < numMatIndices; a++)
@@ -734,7 +734,7 @@ void XFileParserOpenRAVE::ParseDataObjectMeshMaterialList( Mesh* pMesh)
     {
         std::string objectName = GetNextToken();
         if( objectName.size() == 0)
-            ThrowException( "Unexpected end of file while parsing mesh material list.");
+            ThrowException( _("Unexpected end of file while parsing mesh material list.") );
         else
         if( objectName == "}")
             // material list finished
@@ -789,7 +789,7 @@ void XFileParserOpenRAVE::ParseDataObjectMaterial( Material* pMaterial)
     {
         std::string objectName = GetNextToken();
         if( objectName.size() == 0)
-            ThrowException( "Unexpected end of file while parsing mesh material");
+            ThrowException( _("Unexpected end of file while parsing mesh material") );
         else
         if( objectName == "}")
             // material finished
@@ -839,7 +839,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationSet()
     {
         std::string objectName = GetNextToken();
         if( objectName.length() == 0)
-            ThrowException( "Unexpected end of file while parsing animation set.");
+            ThrowException( _("Unexpected end of file while parsing animation set.") );
         else
         if( objectName == "}")
             // animation set finished
@@ -868,7 +868,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimation( Animation* pAnim)
         std::string objectName = GetNextToken();
 
         if( objectName.length() == 0)
-            ThrowException( "Unexpected end of file while parsing animation.");
+            ThrowException( _("Unexpected end of file while parsing animation.") );
         else
         if( objectName == "}")
             // animation finished
@@ -917,7 +917,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
         {
             // read count
             if( ReadInt() != 4)
-                ThrowException( "Invalid number of arguments for quaternion key in animation");
+                ThrowException( _("Invalid number of arguments for quaternion key in animation") );
 
             aiQuatKey key;
             key.mTime = double( time);
@@ -936,7 +936,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
         {
             // read count
             if( ReadInt() != 3)
-                ThrowException( "Invalid number of arguments for vector key in animation");
+                ThrowException( _("Invalid number of arguments for vector key in animation") );
 
             aiVectorKey key;
             key.mTime = double( time);
@@ -955,7 +955,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
         {
             // read count
             if( ReadInt() != 16)
-                ThrowException( "Invalid number of arguments for matrix key in animation");
+                ThrowException( _("Invalid number of arguments for matrix key in animation") );
 
             // read matrix
             MatrixKey key;
@@ -975,7 +975,7 @@ void XFileParserOpenRAVE::ParseDataObjectAnimationKey( AnimBone* pAnimBone)
         }
 
         default:
-            ThrowException( boost::str( boost::format( "Unknown key type %1% in animation.") % keyType));
+            ThrowException( boost::str( boost::format( _("Unknown key type %1% in animation.") ) % keyType));
             break;
         } // end switch
 
@@ -1013,7 +1013,7 @@ void XFileParserOpenRAVE::ParseUnknownDataObject()
     {
         std::string t = GetNextToken();
         if( t.length() == 0)
-            ThrowException( "Unexpected end of file while parsing unknown segment.");
+            ThrowException( _("Unexpected end of file while parsing unknown segment.") );
 
         if( t == "{")
             break;
@@ -1027,7 +1027,7 @@ void XFileParserOpenRAVE::ParseUnknownDataObject()
         std::string t = GetNextToken();
 
         if( t.length() == 0)
-            ThrowException( "Unexpected end of file while parsing unknown segment.");
+            ThrowException( _("Unexpected end of file while parsing unknown segment.") );
 
         if( t == "{")
             ++counter;
@@ -1042,7 +1042,7 @@ void XFileParserOpenRAVE::ParseUnknownDataObject()
 void XFileParserOpenRAVE::CheckForClosingBrace()
 {
     if( GetNextToken() != "}")
-        ThrowException( "Closing brace expected.");
+        ThrowException( _("Closing brace expected.") );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1053,7 +1053,7 @@ void XFileParserOpenRAVE::CheckForSemicolon()
         return;
 
     if( GetNextToken() != ";")
-        ThrowException( "Semicolon expected.");
+        ThrowException( _("Semicolon expected.") );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1065,7 +1065,7 @@ void XFileParserOpenRAVE::CheckForSeparator()
 
     std::string token = GetNextToken();
     if( token != "," && token != ";")
-        ThrowException( "Separator character (';' or ',') expected.");
+        ThrowException( _("Separator character (';' or ',') expected.") );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1094,7 +1094,7 @@ void XFileParserOpenRAVE::readHeadOfDataObject( std::string* poName)
             *poName = nameOrBrace;
 
         if( GetNextToken() != "{")
-            ThrowException( "Opening brace expected.");
+            ThrowException( _("Opening brace expected.") );
     }
 }
 
@@ -1262,20 +1262,20 @@ void XFileParserOpenRAVE::GetNextTokenAsString( std::string& poString)
 
     FindNextNoneWhiteSpace();
     if( P >= End)
-        ThrowException( "Unexpected end of file while parsing string");
+        ThrowException( _("Unexpected end of file while parsing string") );
 
     if( *P != '"')
-        ThrowException( "Expected quotation mark.");
+        ThrowException( _("Expected quotation mark.") );
     ++P;
 
     while( P < End && *P != '"')
         poString.append( P++, 1);
 
     if( P >= End-1)
-        ThrowException( "Unexpected end of file while parsing string");
+        ThrowException( _("Unexpected end of file while parsing string") );
 
     if( P[1] != ';' || P[0] != '"')
-        ThrowException( "Expected quotation mark and semicolon at the end of a string.");
+        ThrowException( _("Expected quotation mark and semicolon at the end of a string.") );
     P+=2;
 }
 
@@ -1354,7 +1354,7 @@ unsigned int XFileParserOpenRAVE::ReadInt()
 
         // at least one digit expected
         if( !isdigit( *P))
-            ThrowException( "Number expected.");
+            ThrowException( _("Number expected.") );
 
         // read digits
         unsigned int number = 0;
@@ -1490,7 +1490,7 @@ void XFileParserOpenRAVE::ThrowException( const std::string& pText)
     if( mIsBinaryFormat)
         throw DeadlyImportError( pText);
     else
-        throw DeadlyImportError( boost::str( boost::format( "Line %d: %s") % mLineNumber % pText));
+        throw DeadlyImportError( boost::str( boost::format( _("Line %d: %s") ) % mLineNumber % pText));
 }
 
 

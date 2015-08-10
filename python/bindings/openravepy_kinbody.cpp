@@ -514,7 +514,7 @@ public:
                 _pgeometry->SetCollisionMesh(mesh);
             }
             else {
-                throw openrave_exception("bad trimesh");
+                throw openrave_exception(_("bad trimesh"));
             }
         }
 
@@ -751,7 +751,7 @@ public:
         for(size_t i = 0; i < geometries.size(); ++i) {
             PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
             if( !pygeom ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.GeometryInfo",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
             geometries[i] = pygeom->GetGeometryInfo();
         }
@@ -778,7 +778,7 @@ public:
         for(size_t i = 0; i < geometries.size(); ++i) {
             PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
             if( !pygeom ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.GeometryInfo",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
             geometries[i] = pygeom->GetGeometryInfo();
         }
@@ -1042,28 +1042,28 @@ public:
         vector<dReal> vlower = ExtractArray<dReal>(olower);
         vector<dReal> vupper = ExtractArray<dReal>(oupper);
         if(( vlower.size() != vupper.size()) ||( (int)vlower.size() != _pjoint->GetDOF()) ) {
-            throw openrave_exception("limits are wrong dimensions");
+            throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetLimits(vlower,vupper);
     }
     void SetVelocityLimits(object omaxlimits) {
         vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
-            throw openrave_exception("limits are wrong dimensions");
+            throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetVelocityLimits(vmaxlimits);
     }
     void SetAccelerationLimits(object omaxlimits) {
         vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
-            throw openrave_exception("limits are wrong dimensions");
+            throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetAccelerationLimits(vmaxlimits);
     }
     void SetTorqueLimits(object omaxlimits) {
         vector<dReal> vmaxlimits = ExtractArray<dReal>(omaxlimits);
         if( (int)vmaxlimits.size() != _pjoint->GetDOF() ) {
-            throw openrave_exception("limits are wrong dimensions");
+            throw openrave_exception(_("limits are wrong dimensions"));
         }
         _pjoint->SetTorqueLimits(vmaxlimits);
     }
@@ -1317,7 +1317,7 @@ KinBodyPtr PyKinBody::GetBody()
 bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw, const std::string& uri)
 {
     if( vboxes.shape()[1] != 6 ) {
-        throw openrave_exception("boxes needs to be a Nx6 vector\n");
+        throw openrave_exception(_("boxes needs to be a Nx6 vector\n"));
     }
     std::vector<AABB> vaabbs(vboxes.shape()[0]);
     for(size_t i = 0; i < vaabbs.size(); ++i) {
@@ -1329,7 +1329,7 @@ bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bD
 bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw, const std::string& uri)
 {
     if( vspheres.shape()[1] != 4 ) {
-        throw openrave_exception("spheres needs to be a Nx4 vector\n");
+        throw openrave_exception(_("spheres needs to be a Nx4 vector\n"));
     }
     std::vector<Vector> vvspheres(vspheres.shape()[0]);
     for(size_t i = 0; i < vvspheres.size(); ++i) {
@@ -1345,7 +1345,7 @@ bool PyKinBody::InitFromTrimesh(object pytrimesh, bool bDraw, const std::string&
         return _pbody->InitFromTrimesh(mesh,bDraw,uri);
     }
     else {
-        throw openrave_exception("bad trimesh");
+        throw openrave_exception(_("bad trimesh"));
     }
 }
 
@@ -1355,7 +1355,7 @@ bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
     for(size_t i = 0; i < geometries.size(); ++i) {
         PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(ogeometries[i]);
         if( !pygeom ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.GeometryInfo",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
@@ -1382,7 +1382,7 @@ void PyKinBody::_ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfo
     for(size_t i = 0; i < vlinkinfos.size(); ++i) {
         PyLinkInfoPtr pylink = boost::python::extract<PyLinkInfoPtr>(olinkinfos[i]);
         if( !pylink ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.LinkInfo",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.LinkInfo"),ORE_InvalidArguments);
         }
         vlinkinfos[i] = pylink->GetLinkInfo();
     }
@@ -1394,7 +1394,7 @@ void PyKinBody::_ParseJointInfos(object ojointinfos, std::vector<KinBody::JointI
     for(size_t i = 0; i < vjointinfos.size(); ++i) {
         PyJointInfoPtr pyjoint = boost::python::extract<PyJointInfoPtr>(ojointinfos[i]);
         if( !pyjoint ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.JointInfo",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.JointInfo"),ORE_InvalidArguments);
         }
         vjointinfos[i] = pyjoint->GetJointInfo();
     }
@@ -1793,7 +1793,7 @@ void PyKinBody::SetLinkTransformations(object transforms, object odoflastvalues)
 {
     size_t numtransforms = len(transforms);
     if( numtransforms != _pbody->GetLinks().size() ) {
-        throw openrave_exception("number of input transforms not equal to links");
+        throw openrave_exception(_("number of input transforms not equal to links"));
     }
     std::vector<Transform> vtransforms(numtransforms);
     for(size_t i = 0; i < numtransforms; ++i) {
@@ -1983,7 +1983,7 @@ void PyKinBody::SetDOFWeights(object o)
     }
     vector<dReal> values = ExtractArray<dReal>(o);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFWeights(values);
 }
@@ -1995,7 +1995,7 @@ void PyKinBody::SetDOFResolutions(object o)
     }
     vector<dReal> values = ExtractArray<dReal>(o);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFResolutions(values);
 }
@@ -2008,7 +2008,7 @@ void PyKinBody::SetDOFLimits(object olower, object oupper, object oindices)
     vector<dReal> vlower = ExtractArray<dReal>(olower), vupper = ExtractArray<dReal>(oupper);
     if( IS_PYTHONOBJECT_NONE(oindices) ) {
         if( (int)vlower.size() != GetDOF() || (int)vupper.size() != GetDOF() ) {
-            throw openrave_exception("values do not equal to body degrees of freedom");
+            throw openrave_exception(_("values do not equal to body degrees of freedom"));
         }
         _pbody->SetDOFLimits(vlower,vupper);
     }
@@ -2028,7 +2028,7 @@ void PyKinBody::SetDOFVelocityLimits(object o)
     }
     vector<dReal> values = ExtractArray<dReal>(o);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFVelocityLimits(values);
 }
@@ -2040,7 +2040,7 @@ void PyKinBody::SetDOFAccelerationLimits(object o)
     }
     vector<dReal> values = ExtractArray<dReal>(o);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFAccelerationLimits(values);
 }
@@ -2052,7 +2052,7 @@ void PyKinBody::SetDOFTorqueLimits(object o)
     }
     vector<dReal> values = ExtractArray<dReal>(o);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFTorqueLimits(values);
 }
@@ -2064,7 +2064,7 @@ void PyKinBody::SetDOFValues(object o)
     }
     vector<dReal> values = ExtractArray<dReal>(o);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFValues(values,KinBody::CLA_CheckLimits);
 }
@@ -2076,7 +2076,7 @@ void PyKinBody::SetTransformWithDOFValues(object otrans,object ojoints)
     }
     vector<dReal> values = ExtractArray<dReal>(ojoints);
     if( (int)values.size() != GetDOF() ) {
-        throw openrave_exception("values do not equal to body degrees of freedom");
+        throw openrave_exception(_("values do not equal to body degrees of freedom"));
     }
     _pbody->SetDOFValues(values,ExtractTransform(otrans),KinBody::CLA_CheckLimits);
 }

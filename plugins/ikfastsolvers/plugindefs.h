@@ -85,4 +85,6 @@ BOOST_TYPEOF_REGISTER_TEMPLATE(IkSolution, 1)
 BOOST_TYPEOF_REGISTER_TEMPLATE(IkSolutionList, 1)
 #endif
 
+#define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_ikfastsolvers", msgid)
+
 #endif

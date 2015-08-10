@@ -1,0 +1,65 @@
+# English translations for PACKAGE package.
+# Copyright (C) 2015 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2015.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-08-10 16:28+0900\n"
+"PO-Revision-Date: 2015-08-10 16:28+0900\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ASCII\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: plugins/rplanners/parabolicretimer.cpp:266 plugins/rplanners/cubicretimer.cpp:271
+msgid "_ComputeMinimumTimeAffine not implemented"
+msgstr "_ComputeMinimumTimeAffine not implemented"
+
+#: plugins/rplanners/cubicretimer.cpp:287
+msgid "_ComputeMinimumTimeIk not implemented"
+msgstr "_ComputeMinimumTimeIk not implemented"
+
+#: plugins/rplanners/parabolicretimer.cpp:270 plugins/rplanners/cubicretimer.cpp:275
+msgid "_ComputeVelocitiesAffine not implemented"
+msgstr "_ComputeVelocitiesAffine not implemented"
+
+#: plugins/rplanners/cubicretimer.cpp:291
+msgid "_ComputeVelocitiesIk not implemented"
+msgstr "_ComputeVelocitiesIk not implemented"
+
+#: plugins/rplanners/parabolicretimer.cpp:278 plugins/rplanners/cubicretimer.cpp:283
+msgid "_WriteAffine not implemented"
+msgstr "_WriteAffine not implemented"
+
+#: plugins/rplanners/cubicretimer.cpp:300
+msgid "_WriteIk not implemented"
+msgstr "_WriteIk not implemented"
+
+#: plugins/rplanners/parabolicretimer.cpp:359 plugins/rplanners/parabolicretimer.cpp:454 plugins/rplanners/parabolicretimer.cpp:575 plugins/rplanners/parabolicretimer.cpp:732 plugins/rplanners/linearretimer.cpp:220
+#, c-format
+msgid "does not support parameterization 0x%x"
+msgstr "does not support parameterization 0x%x"
+
+#: plugins/rplanners/trajectoryretimer.h:132
+#, c-format
+msgid "lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"
+msgstr "lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"
+
+#: plugins/rplanners/parabolicretimer.cpp:274 plugins/rplanners/cubicretimer.cpp:279 plugins/rplanners/cubicretimer.cpp:295
+msgid "not implemented"
+msgstr "not implemented"
+
+#: plugins/rplanners/subparabolicsmoother.cpp:235
+msgid "original ramp is in collision!"
+msgstr "original ramp is in collision!"
+
+#: plugins/rplanners/trajectoryretimer.h:138
+#, c-format
+msgid "upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"
+msgstr "upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"

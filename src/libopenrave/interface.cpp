@@ -80,7 +80,7 @@ bool InterfaceBase::RemoveUserData(const std::string& key) const
 void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     if( !preference ) {
-        throw openrave_exception("invalid cloning reference",ORE_InvalidArguments);
+        throw openrave_exception(_("invalid cloning reference"),ORE_InvalidArguments);
     }
     // cannot clone the user data since it can be environment dependent!
     //__mapUserData = preference->__mapUserData;
@@ -100,14 +100,14 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
     string cmd;
     sinput >> cmd;
     if( !sinput ) {
-        throw openrave_exception("invalid command",ORE_InvalidArguments);
+        throw openrave_exception(_("invalid command"),ORE_InvalidArguments);
     }
     boost::shared_ptr<InterfaceCommand> interfacecmd;
     {
         boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
         CMDMAP::iterator it = __mapCommands.find(cmd);
         if( it == __mapCommands.end() ) {
-            throw openrave_exception(str(boost::format("failed to find command '%s' in interface %s\n")%cmd.c_str()%GetXMLId()),ORE_CommandNotSupported);
+            throw openrave_exception(str(boost::format(_("failed to find command '%s' in interface %s\n"))%cmd.c_str()%GetXMLId()),ORE_CommandNotSupported);
         }
         interfacecmd = it->second;
     }
@@ -129,10 +129,10 @@ void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::I
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
     if((cmdname.size() == 0)|| !utils::IsValidName(cmdname) ||(_stricmp(cmdname.c_str(),"commands") == 0)) {
-        throw openrave_exception(str(boost::format("command '%s' invalid")%cmdname),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format(_("command '%s' invalid"))%cmdname),ORE_InvalidArguments);
     }
     if( __mapCommands.find(cmdname) != __mapCommands.end() ) {
-        throw openrave_exception(str(boost::format("command '%s' already registered")%cmdname),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format(_("command '%s' already registered"))%cmdname),ORE_InvalidArguments);
     }
     __mapCommands[cmdname] = boost::shared_ptr<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
 }
