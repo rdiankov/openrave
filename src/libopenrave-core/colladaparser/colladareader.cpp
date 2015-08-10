@@ -4132,7 +4132,7 @@ private:
                     eq = _ExtractMathML(proot, pkinbody, children[ic],bindings);
                 }
                 else {
-                    throw openrave_exception(str(boost::format("_ExtractMathML: do not support element %s in mathml")%childname),ORE_CommandNotSupported);
+                    throw openrave_exception(str(boost::format(_("_ExtractMathML: do not support element %s in mathml"))%childname),ORE_CommandNotSupported);
                 }
             }
         }
@@ -4368,7 +4368,7 @@ private:
                 eq += str(boost::format("atanh(%s)")%_ExtractMathML(proot,pkinbody,children[1],bindings));
             }
             else if((childname == "implies")||(childname == "forall")||(childname == "exists")||(childname == "conjugate")||(childname == "arg")||(childname == "real")||(childname == "imaginary")||(childname == "lcm")||(childname == "factorial")||(childname == "xor")) {
-                throw openrave_exception(str(boost::format("_ExtractMathML: %s function in <apply> tag not supported")%childname),ORE_CommandNotSupported);
+                throw openrave_exception(str(boost::format(_("_ExtractMathML: %s function in <apply> tag not supported"))%childname),ORE_CommandNotSupported);
             }
             else if( childname == "csymbol" ) {
                 if( children[0]->getAttribute("encoding")==string("text/xml") ) {

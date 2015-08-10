@@ -69,7 +69,7 @@ public:
         void SetRobotActiveJoints(PyRobotBasePtr robot)
         {
             if( !_paramswrite ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("PlannerParameters needs to be non-const",ORE_Failed);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("PlannerParameters needs to be non-const"),ORE_Failed);
             }
             _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
         }
@@ -233,11 +233,11 @@ public:
     object RegisterPlanCallback(object fncallback)
     {
         if( !fncallback ) {
-            throw openrave_exception("callback not specified");
+            throw openrave_exception(_("callback not specified"));
         }
         UserDataPtr p = _pplanner->RegisterPlanCallback(boost::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,_1));
         if( !p ) {
-            throw openrave_exception("no registration callback returned");
+            throw openrave_exception(_("no registration callback returned"));
         }
         return toPyUserData(p);
     }

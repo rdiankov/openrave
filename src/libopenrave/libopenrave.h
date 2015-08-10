@@ -645,4 +645,5 @@ class Environment;
 using namespace OpenRAVE;
 using namespace std;
 
+#define _(msgid) OpenRAVE::RaveGetText("openrave", msgid)
 #endif

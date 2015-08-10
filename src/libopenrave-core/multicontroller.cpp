@@ -64,11 +64,11 @@ public:
     {
         boost::mutex::scoped_lock lock(_mutex);
         if( nControlTransformation && !!_ptransformcontroller ) {
-            throw openrave_exception("controller already attached for transformation",ORE_InvalidArguments);
+            throw openrave_exception(_("controller already attached for transformation"),ORE_InvalidArguments);
         }
         FOREACHC(it,dofindices) {
             if( !!_vcontrollersbydofs.at(*it) ) {
-                throw openrave_exception(str(boost::format("controller already attached to dof %d")%*it));
+                throw openrave_exception(str(boost::format(_("controller already attached to dof %d"))%*it));
             }
         }
         if( !controller->Init(_probot,dofindices,nControlTransformation) ) {

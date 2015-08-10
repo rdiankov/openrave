@@ -103,7 +103,7 @@ void RobotBase::Manipulator::SetName(const std::string& name)
     RobotBasePtr probot=GetRobot();
     FOREACHC(itmanip,probot->GetManipulators()) {
         if( *itmanip != shared_from_this() && name == (*itmanip)->GetName() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator name change '%s'->'%s' is colliding with other manipulator", _info._name%name, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator name change '%s'->'%s' is colliding with other manipulator"), _info._name%name, ORE_InvalidArguments);
         }
     }
     _info._name=name;
@@ -377,7 +377,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         break;
     }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",iktype,ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("invalid ik type 0x%x"),iktype,ORE_InvalidArguments);
     }
     return ikp;
 }
@@ -481,7 +481,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         break;
     }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("invalid ik type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("invalid ik type 0x%x"),ikparam.GetType(),ORE_InvalidArguments);
     }
     return ikp;
 }
@@ -882,7 +882,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
 //    // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
 //    std::vector< std::vector<dReal> > vsolutions;
 //    if( !pIkSolver->SolveAll(localgoal, IKFO_IgnoreSelfCollisions,vsolutions) ) {
-//        throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
+//        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find ik solution for type 0x%x"),ikparam.GetType(),ORE_InvalidArguments);
 //    }
 //    RobotStateSaver saver(probot);
 //    probot->SetActiveDOFs(GetArmIndices());
@@ -933,7 +933,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
     // is it necessary to call with IKFO_IgnoreJointLimits knowing that the robot will never reach those solutions?
     std::vector< std::vector<dReal> > vsolutions;
     if( !pIkSolver->SolveAll(localgoal, vector<dReal>(), IKFO_IgnoreSelfCollisions,vsolutions) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to find ik solution for type 0x%x",ikparam.GetType(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find ik solution for type 0x%x"),ikparam.GetType(),ORE_InvalidArguments);
     }
     RobotStateSaver saver(probot);
     probot->SetActiveDOFs(GetArmIndices());
@@ -1245,7 +1245,7 @@ const std::string& RobotBase::Manipulator::GetInverseKinematicsStructureHash(IkP
 void RobotBase::Manipulator::_ComputeInternalInformation()
 {
     if( !utils::IsValidName(_info._name) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("manipulator name \"%s\" is not valid", GetName(), ORE_Failed);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator name \"%s\" is not valid"), GetName(), ORE_Failed);
     }
     RobotBasePtr probot(__probot);
     __pBase = probot->GetLink(_info._sBaseLinkName);

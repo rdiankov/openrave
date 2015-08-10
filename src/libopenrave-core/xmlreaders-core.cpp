@@ -1511,7 +1511,7 @@ public:
         }
         else if((xmlname == "limits")||(xmlname == "limitsrad")||(xmlname == "limitsdeg")) {
             if( _bNegateJoint ) {
-                throw openrave_exception("cannot specify <limits> with <lostop> and <histop>, choose one");
+                throw openrave_exception(_("cannot specify <limits> with <lostop> and <histop>, choose one"));
             }
             dReal fmult = xmlname == "limitsdeg" ? fRatio : dReal(1.0);
             vector<dReal> values = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
@@ -1650,7 +1650,7 @@ public:
                 }
                 break;
             default:
-                throw openrave_exception(str(boost::format("bad joint type: 0x%x")%_pjoint->_info._type));
+                throw openrave_exception(str(boost::format(_("bad joint type: 0x%x"))%_pjoint->_info._type));
                 break;
             }
         }
@@ -2128,7 +2128,7 @@ public:
             if( _pcurreader->endElement(xmlname) ) {
                 if( xmlname == "body" ) {
                     if( !_plink )
-                        throw openrave_exception("link should be valid");
+                        throw openrave_exception(_("link should be valid"));
 
                     if( _plink->_index < 0 ) {
                         // not in array yet
@@ -3226,7 +3226,7 @@ public:
     EnvironmentXMLReader(EnvironmentBasePtr penv, const AttributesList &atts, bool bInEnvironment) : _penv(penv), _bInEnvironment(bInEnvironment)
     {
         if( !_penv ) {
-            throw openrave_exception("need valid environment",ORE_InvalidArguments);
+            throw openrave_exception(_("need valid environment"),ORE_InvalidArguments);
         }
         FOREACHC(itatt,atts) {
             if( itatt->first == "file" ) {
@@ -3265,7 +3265,7 @@ public:
         FOREACHC(itname,RaveGetInterfaceNamesMap()) {
             if( xmlname == itname->second ) {
                 if( !!_pinterface ) {
-                    throw openrave_exception("interface should not be initialized");
+                    throw openrave_exception(_("interface should not be initialized"));
                 }
                 _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",atts);
                 if( !_pcurreader ) {
@@ -3464,7 +3464,7 @@ BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType ty
     case PT_SpaceSampler: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SpaceSampler>(penv,pinterface,xmltag,atts));
     }
 
-    throw openrave_exception(str(boost::format("could not create interface of type %d")%type),ORE_InvalidArguments);
+    throw openrave_exception(str(boost::format(_("could not create interface of type %d"))%type),ORE_InvalidArguments);
 }
 
 class GlobalInterfaceXMLReader : public StreamXMLReader
@@ -3494,17 +3494,17 @@ public:
         FOREACHC(itname,RaveGetInterfaceNamesMap()) {
             if( xmlname == itname->second ) {
                 if( !!_pinterface ) {
-                    throw openrave_exception("interface should not be initialized");
+                    throw openrave_exception(_("interface should not be initialized"));
                 }
                 _pcurreader = CreateInterfaceReader(_penv,itname->first,_pinterface,"",newatts);
                 if( !_pinterface ) {
-                    throw openrave_exception(str(boost::format("failed to create interface %s")%itname->second));
+                    throw openrave_exception(str(boost::format(_("failed to create interface %s"))%itname->second));
                 }
                 return PE_Support;
             }
         }
 
-        throw openrave_exception(str(boost::format("invalid interface tag %s")%xmlname));
+        throw openrave_exception(str(boost::format(_("invalid interface tag %s"))%xmlname));
     }
 
     virtual bool endElement(const std::string& xmlname)

@@ -168,7 +168,7 @@ const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFro
         }
     }
     if(bestmatch==0xffffffff) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to find group %s",name,ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find group %s"),name,ORE_InvalidArguments);
     }
     return *itbestgroup;
 }
@@ -196,7 +196,7 @@ ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(
         }
     }
     if(bestmatch==0xffffffff) {
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to find group %s",name,ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find group %s"),name,ORE_InvalidArguments);
     }
     return *itbestgroup;
 }
@@ -519,7 +519,7 @@ ConfigurationSpecification ConfigurationSpecification::GetTimeDerivativeSpecific
         pgroup = &snapgroups;
     }
     else {
-        throw OPENRAVE_EXCEPTION_FORMAT0("invalid timederivative",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid timederivative"),ORE_InvalidArguments);
     }
 
     FOREACHC(itgroup,_vgroups) {
@@ -580,7 +580,7 @@ int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const
             std::vector<std::string> newtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             if( newtokens.size() >= 2 && tokens.size() >= 2 ) {
                 if( newtokens[1] == tokens[1] ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("new group '%s' conflicts with existing group '%s'",name%_vgroups[i].name,ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("new group '%s' conflicts with existing group '%s'"),name%_vgroups[i].name,ORE_InvalidArguments);
                 }
             }
         }
@@ -798,7 +798,7 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                     }
                 }
                 else {
-                    throw OPENRAVE_EXCEPTION_FORMAT("do not know how to merge group '%s' into '%s'",itrgroup->name%itcompatgroup->name,ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("do not know how to merge group '%s' into '%s'"),itrgroup->name%itcompatgroup->name,ORE_InvalidArguments);
                 }
             }
         }
@@ -829,7 +829,7 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     case 1: searchname = "affine_velocities"; break;
     case 2: searchname = "affine_accelerations"; break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("bad time derivative %d",timederivative,ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("bad time derivative %d"),timederivative,ORE_InvalidArguments);
     }
     FOREACHC(itgroup,_vgroups) {
         if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
@@ -861,7 +861,7 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
     case 0: searchname = "ikparam_values"; break;
     case 1: searchname = "ikparam_velocities"; break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("bad time derivative %d",timederivative,ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("bad time derivative %d"),timederivative,ORE_InvalidArguments);
     }
     FOREACHC(itgroup,_vgroups) {
         if( itgroup->name.size() >= searchname.size() && itgroup->name.substr(0,searchname.size()) == searchname ) {
@@ -944,7 +944,7 @@ bool ConfigurationSpecification::ExtractAffineValues(std::vector<dReal>::iterato
     case 1: searchname = "affine_velocities"; break;
     case 2: searchname = "affine_accelerations"; break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
@@ -985,7 +985,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
@@ -1034,7 +1034,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT0("bad time derivative",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
     bool bfound = false;
     FOREACHC(itgroup,_vgroups) {
@@ -1198,7 +1198,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
 //        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
 //        }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("group %s not supported for for planner parameters configuration",g.name,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("group %s not supported for for planner parameters configuration"),g.name,ORE_InvalidArguments);
         }
     }
     fn.reset(new SetConfigurationStateFn(boost::bind(CallSetStateValuesFns, setstatefns, GetDOF(), nMaxDOFForGroup, _1,0)));
@@ -1283,7 +1283,7 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
 //        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
 //        }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("group %s not supported for for planner parameters configuration",g.name,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("group %s not supported for for planner parameters configuration"),g.name,ORE_InvalidArguments);
         }
     }
     fn.reset(new GetConfigurationStateFn(boost::bind(CallGetStateFns,getstatefns, GetDOF(), nMaxDOFForGroup, _1)));
@@ -1438,7 +1438,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                 }
                 else {
-                    throw OPENRAVE_EXCEPTION_FORMAT("source affine information not present '%s'\n",gsource.name,ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("source affine information not present '%s'\n"),gsource.name,ORE_InvalidArguments);
                 }
             }
             else {
@@ -1452,7 +1452,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             }
             if( vtransferindices.size() == 0 ) {
                 if( targettokens.size() < 3 ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("target affine information not present '%s'\n",gtarget.name,ORE_InvalidArguments);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("target affine information not present '%s'\n"),gtarget.name,ORE_InvalidArguments);
                 }
                 else {
                     affinetarget = boost::lexical_cast<int>(targettokens.at(2));
@@ -1558,13 +1558,13 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 iktypesource = static_cast<IkParameterizationType>(boost::lexical_cast<int>(sourcetokens[1]));
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT("ikparam type not present '%s'\n",gsource.name,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("ikparam type not present '%s'\n"),gsource.name,ORE_InvalidArguments);
             }
             if( targettokens.size() >= 2 ) {
                 iktypetarget = static_cast<IkParameterizationType>(boost::lexical_cast<int>(targettokens[1]));
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT("ikparam type not present '%s'\n",gtarget.name,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("ikparam type not present '%s'\n"),gtarget.name,ORE_InvalidArguments);
             }
 
             if( iktypetarget == iktypesource ) {
@@ -1581,7 +1581,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
         else if( targettokens.at(0) == std::string("grab") ) {
             std::vector<int> vsourceindices(gsource.dof), vtargetindices(gtarget.dof);
             if( (int)sourcetokens.size() < gsource.dof+2 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("source tokens '%s' do not have %d dof indices, guessing....", gsource.name%gsource.dof, ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("source tokens '%s' do not have %d dof indices, guessing...."), gsource.name%gsource.dof, ORE_InvalidArguments);
             }
             else {
                 for(int i = 0; i < gsource.dof; ++i) {
@@ -1589,7 +1589,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 }
             }
             if( (int)targettokens.size() < gtarget.dof+2 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("target tokens '%s' do not match dof '%d', guessing....", gtarget.name%gtarget.dof, ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("target tokens '%s' do not match dof '%d', guessing...."), gtarget.name%gtarget.dof, ORE_InvalidArguments);
             }
             else {
                 for(int i = 0; i < gtarget.dof; ++i) {
@@ -1617,7 +1617,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             // TODO
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("unsupported token conversion: %s",gtarget.name,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported token conversion: %s"),gtarget.name,ORE_InvalidArguments);
         }
 
         for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
@@ -1798,7 +1798,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             I.seekg((size_t)pos+ppsize);
         }
         else {
-            throw OPENRAVE_EXCEPTION_FORMAT("error, failed to find </configuration> in %s",buf.str(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </configuration> in %s"),buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
         LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);

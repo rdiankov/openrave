@@ -25,9 +25,11 @@
 #ifndef _WIN32
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <libintl.h>
 #endif
 
 #include <locale>
+#include <set>
 
 #include "plugindatabase.h"
 
@@ -307,6 +309,7 @@ dReal RaveCeil(dReal f) {
 
 #endif
 
+static std::set<std::string> _gettextDomainsInitialized;
 static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 
 /// there is only once global openrave state. It is created when openrave
@@ -383,8 +386,12 @@ public:
         _crlibm_fpu_state = crlibm_init();
 #endif
         try {
+            // TODO: eventually we should remove this call to set global locale for the process
+            // and imbue each stringstream with the correct locale.
+
             // set to the classic locale so that number serialization/hashing works correctly
-            std::locale::global(std::locale::classic());
+            // std::locale::global(std::locale::classic());
+            std::locale::global(std::locale(std::locale(""), std::locale::classic(), std::locale::numeric));
         }
         catch(const std::runtime_error& e) {
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
@@ -549,7 +556,7 @@ protected:
     {
         READERSMAP::iterator it = _mapreaders[type].find(xmltag);
         if( it == _mapreaders[type].end() ) {
-            //throw openrave_exception(str(boost::format("No function registered for interface %s xml tag %s")%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
+            //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
             return BaseXMLReaderPtr();
         }
         return it->second(pinterface,atts);
@@ -572,7 +579,7 @@ protected:
     {
         std::map<InterfaceType,std::string>::const_iterator it = _mapinterfacenames.find(type);
         if( it == _mapinterfacenames.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Invalid type %d specified", type, ORE_Failed);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("Invalid type %d specified"), type, ORE_Failed);
         }
         return it->second;
     }
@@ -644,7 +651,7 @@ protected:
     std::string FindLocalFile(const std::string& _filename, const std::string& curdir)
     {
 #ifndef HAVE_BOOST_FILESYSTEM
-        throw OPENRAVE_EXCEPTION_FORMAT0("need to compile with boost::filesystem",ORE_Assert);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("need to compile with boost::filesystem"),ORE_Assert);
 #else
         if( _filename.size() == 0 ) {
             return std::string();
@@ -1160,6 +1167,20 @@ int RaveGetDataAccess()
     return RaveGlobal::instance()->GetDataAccess();
 }
 
+const char *RaveGetText(const std::string& domainname, const char *msgid)
+{
+#ifndef _WIN32
+    if (_gettextDomainsInitialized.find(domainname) == _gettextDomainsInitialized.end())
+    {
+        bindtextdomain(domainname.c_str(), OPENRAVE_LOCALE_INSTALL_DIR);
+        _gettextDomainsInitialized.insert(domainname);
+    }
+    return dgettext(domainname.c_str(), msgid);
+#else
+    return msgid;
+#endif
+}
+
 const std::map<IkParameterizationType,std::string>& IkParameterization::GetIkParameterizationMap(int alllowercase)
 {
     return RaveGlobal::instance()->GetIkParameterizationMap(alllowercase);
@@ -1173,7 +1194,7 @@ IkParameterizationType IkParameterization::GetIkTypeFromUniqueId(int uniqueid)
             return static_cast<IkParameterizationType>(it->first|(uniqueid&IKP_VelocityDataBit));
         }
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("no ik exists of unique id 0x%x"),uniqueid,ORE_InvalidArguments);
 }
 
 ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation, const std::string& robotname, const std::string& manipname)
@@ -1283,7 +1304,7 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         break;
     }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
     if( ikparam._mapCustomData.size() > 0 ) {
         O << ikparam._mapCustomData.size() << " ";
@@ -1391,7 +1412,7 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
         I >> ikparam._transform.rot.x >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
         break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
     ikparam._mapCustomData.clear();
     if( type & IKP_CustomDataBit ) {
@@ -1448,7 +1469,7 @@ int RaveGetIndexFromAffineDOF(int affinedofs, DOFAffine _dof)
     if( dof&DOF_RotationQuat ) {
         return index;
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("unspecified dof 0x%x, 0x%x",affinedofs%dof,ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("unspecified dof 0x%x, 0x%x"),affinedofs%dof,ORE_InvalidArguments);
 }
 
 DOFAffine RaveGetAffineDOFFromIndex(int affinedofs, int requestedindex)
@@ -1482,7 +1503,7 @@ DOFAffine RaveGetAffineDOFFromIndex(int affinedofs, int requestedindex)
     if( index <= requestedindex && index+4 > requestedindex && (affinedofs&DOF_RotationQuat) ) {
         return DOF_RotationQuat;
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("requested index out of bounds %d (affinemask=0x%x)",requestedindex%affinedofs, ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("requested index out of bounds %d (affinemask=0x%x)"),requestedindex%affinedofs, ORE_InvalidArguments);
 }
 
 int RaveGetAffineDOF(int affinedofs)
@@ -2089,7 +2110,7 @@ CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p
     _p = p;
     if( !_p->SetCollisionOptions(newoptions) ) {
         if( required ) {
-            throw openrave_exception(str(boost::format("Failed to set collision options %d in checker %s\n")%newoptions%_p->GetXMLId()));
+            throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%newoptions%_p->GetXMLId()));
         }
     }
 }
