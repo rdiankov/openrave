@@ -12,33 +12,34 @@ else(NOT GETTEXT_MSGFMT_EXECUTABLE)
     foreach(LANG ${LANGUAGES})
         file(
             GLOB DOMAINS
-            RELATIVE ${CMAKE_SOURCE_DIR}/locale/${LANG}/LC_MESSAGES 
-            ${CMAKE_SOURCE_DIR}/locale/${LANG}/LC_MESSAGES/*.po
+            RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/${LANG}/LC_MESSAGES
+            ${CMAKE_CURRENT_SOURCE_DIR}/${LANG}/LC_MESSAGES/*.po
         )
         foreach(DOMAIN ${DOMAINS})
             get_filename_component(DOMAIN ${DOMAIN} NAME_WE)
 
             add_custom_command(
-                OUTPUT ${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES
+                OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES
                 COMMAND ${CMAKE_COMMAND} -E make_directory
-                    ${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES
+                    ${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES
             )
 
             add_custom_command(
-                OUTPUT ${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES/${DOMAIN}.mo
+                OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES/${DOMAIN}.mo
                 COMMAND ${GETTEXT_MSGFMT_EXECUTABLE}
                     --verbose --check-format --check-domain
-                    --output-file=${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES/${DOMAIN}.mo
-                    ${CMAKE_SOURCE_DIR}/locale/${LANG}/LC_MESSAGES/${DOMAIN}.po
+                    --output-file=${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES/${DOMAIN}.mo
+                    ${CMAKE_CURRENT_SOURCE_DIR}/${LANG}/LC_MESSAGES/${DOMAIN}.po
                 DEPENDS
-                    ${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES
-                    ${CMAKE_SOURCE_DIR}/locale/${LANG}/LC_MESSAGES/${DOMAIN}.po
+                    ${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES
+                    ${CMAKE_CURRENT_SOURCE_DIR}/${LANG}/LC_MESSAGES/${DOMAIN}.po
             )
 
-            install(FILES ${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES/${DOMAIN}.mo
-                    DESTINATION ${OPENRAVE_LOCALE_INSTALL_ABSOLUTE_DIR}/${LANG}/LC_MESSAGES)
+            install(
+                FILES ${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES/${DOMAIN}.mo
+                DESTINATION ${OPENRAVE_LOCALE_INSTALL_DIR}/${LANG}/LC_MESSAGES)
 
-            set(locale-deps ${locale-deps} ${CMAKE_BINARY_DIR}/locale/${LANG}/LC_MESSAGES/${DOMAIN}.mo)
+            set(locale-deps ${locale-deps} ${CMAKE_CURRENT_BINARY_DIR}/${LANG}/LC_MESSAGES/${DOMAIN}.mo)
 
         endforeach(DOMAIN ${DOMAINS})
     endforeach(LANG ${LANGUAGES})
