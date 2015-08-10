@@ -211,7 +211,7 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     _videocodec = -1;
     _bRenderFiguresInCamera = false;
     _focalDistance = 0.0;
-    
+
     //vlayout = new QVBoxLayout(this);
     view1 = new QGroupBox(this);
     //vlayout->addWidget(view1, 1);
@@ -2342,6 +2342,9 @@ bool QtCoinViewer::_ShowCommand(ostream& sout, istream& sinput)
     sinput >> showtype;
     if( showtype ) {
         _pviewer->show();
+        // just in case?
+        SoDB::enableRealTimeSensor(true);
+        SoSceneManager::enableRealTimeUpdate(true);
     }
     else {
         _pviewer->hide();
