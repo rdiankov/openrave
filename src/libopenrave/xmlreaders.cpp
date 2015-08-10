@@ -269,7 +269,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         }
     }
 
-    static boost::array<string,11> tags = { { "translation", "rotationmat", "rotationaxis", "quat", "diffusecolor", "ambientcolor", "transparency", "render", "extents", "radius", "height"}};
+    static boost::array<string,13> tags = { { "translation", "rotationmat", "rotationaxis", "quat", "diffusecolor", "ambientcolor", "transparency", "render", "extents", "halfextents", "fullextents", "radius", "height"}};
     if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
         return PE_Support;
     }
@@ -356,9 +356,14 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             }
             break;
         case GT_Box:
-            if( xmlname == "extents" ) {
+            if( xmlname == "extents" || xmlname == "halfextents" ) {
                 _ss >> _pgeom->_vGeomData.x >> _pgeom->_vGeomData.y >> _pgeom->_vGeomData.z;
             }
+            else if( xmlname == "fullextents" ) {
+                _ss >> _pgeom->_vGeomData.x >> _pgeom->_vGeomData.y >> _pgeom->_vGeomData.z;
+                _pgeom->_vGeomData *= 0.5;
+            }
+
             break;
         case GT_Cylinder:
             if( xmlname == "radius") {
