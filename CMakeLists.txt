@@ -822,14 +822,20 @@ if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-core.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
-    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
+    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
+
+    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
+
 
     if( BASH_COMPLETION_DIR )
-      get_filename_component(BASH_COMPLETION_ABSOLUTE_DIR ${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR} ABSOLUTE)
-      get_filename_component(BASH_COMPLETION_SHARE_DIR ${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR} ABSOLUTE)
-      file(RELATIVE_PATH BASH_COMPLETION_RELATIVE_DIR ${BASH_COMPLETION_ABSOLUTE_DIR} ${BASH_COMPLETION_SHARE_DIR})
-      InstallSymlink(${BASH_COMPLETION_RELATIVE_DIR}/openrave_completion.bash ${BASH_COMPLETION_ABSOLUTE_DIR}/openrave_completion.bash)
+      get_filename_component(BASH_COMPLETION_ABSOLUTE_DIR ${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR} ABSOLUTE)
+
+      get_filename_component(BASH_COMPLETION_SHARE_DIR ${CMAKE_INSTALL_PREFIX}/${OPENRAVE_SHARE_DIR} ABSOLUTE)
+
+      file(RELATIVE_PATH BASH_COMPLETION_RELATIVE_DIR ${BASH_COMPLETION_ABSOLUTE_DIR} ${BASH_COMPLETION_SHARE_DIR})
+
+      InstallSymlink(${BASH_COMPLETION_RELATIVE_DIR}/openrave_completion.bash ${BASH_COMPLETION_ABSOLUTE_DIR}/openrave_completion.bash)
+
     endif()
   endif()
   # don't need symlinks
@@ -886,7 +892,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   endforeach()
 
   # base
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev "octave3.2-headers|liboctave-dev" "collada-dom-dev (>=2.4.0)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev liblapack-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU debhelper cmake python-dev libxml2-dev libboost-dev ffmpeg zlib1g-dev python-numpy "python-sympy (>=0.6.3)" desktop-file-utils libboost-filesystem-dev libboost-system-dev libboost-python-dev libboost-thread-dev libboost-date-time-dev "octave3.2-headers|liboctave-dev" "collada-dom-dev (>=2.4.0)" pkg-config "fparser-dev (>=4.4.3)" libhdf5-serial-dev liblapack-dev gettext)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
