@@ -473,7 +473,7 @@ public:
             RAVELOG_WARN("ode doesn't support CO_Distance\n");
             return false;
         }
-        throw openrave_exception("This type of collision checking is not yet implemented in the ODE collision checker.\n",OpenRAVE::ORE_NotImplemented);
+        throw openrave_exception(_("This type of collision checking is not yet implemented in the ODE collision checker.\n"),OpenRAVE::ORE_NotImplemented);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)

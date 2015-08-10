@@ -1,5 +1,5 @@
 # Japanese translations for OpenRAVE package.
-# Copyright (C) 2015 THE OPENRAVE'S COPYRIGHT HOLDER
+# Copyright (C) 2015 Rosen Diankov <rosen.diankov@gmail.com>
 # This file is distributed under the same license as the OpenRAVE package.
 # Automatically generated, 2015.
 #

@@ -268,36 +268,36 @@ protected:
     }
 
     dReal _ComputeMinimumTimeAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeMinimumTimeAffine not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_ComputeMinimumTimeAffine not implemented"), ORE_NotImplemented);
     }
 
     void _ComputeVelocitiesAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesAffine not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_ComputeVelocitiesAffine not implemented"), ORE_NotImplemented);
     }
 
     bool _CheckAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("not implemented"), ORE_NotImplemented);
     }
 
     bool _WriteAffine(GroupInfoConstPtr info, int affinedofs, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_WriteAffine not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_WriteAffine not implemented"), ORE_NotImplemented);
     }
 
     dReal _ComputeMinimumTimeIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeMinimumTimeIk not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_ComputeMinimumTimeIk not implemented"), ORE_NotImplemented);
     }
 
     void _ComputeVelocitiesIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_ComputeVelocitiesIk not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_ComputeVelocitiesIk not implemented"), ORE_NotImplemented);
     }
 
     bool _CheckIk(GroupInfoConstPtr info, IkParameterizationType iktype, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata, int checkoptions) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("not implemented"), ORE_NotImplemented);
         return true;
     }
 
     bool _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_WriteIk not implemented", ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("_WriteIk not implemented"), ORE_NotImplemented);
     }
 
     void _WriteTrajectory(TrajectoryBasePtr ptraj, const ConfigurationSpecification& newspec, const std::vector<dReal>& data) {

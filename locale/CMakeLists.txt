@@ -2,7 +2,8 @@ set(LANGUAGES
     en_US
     ja_JP
 )
-set(DOMAINS openrave)
+
+file(GLOB DOMAINS RELATIVE ${CMAKE_SOURCE_DIR}/locale/domains ${CMAKE_SOURCE_DIR}/locale/domains/*)
 
 find_program(GETTEXT_MSGFMT_EXECUTABLE msgfmt)
 if(NOT GETTEXT_MSGFMT_EXECUTABLE)

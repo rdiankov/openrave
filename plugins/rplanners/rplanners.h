@@ -21,6 +21,8 @@
 
 #include <boost/pool/pool.hpp>
 
+#define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_rplanners", msgid)
+
 enum ExtendType {
     ET_Failed=0,
     ET_Sucess=1,

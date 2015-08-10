@@ -1,0 +1,60 @@
+# English translations for PACKAGE package.
+# Copyright (C) 2015 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2015.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-08-10 16:28+0900\n"
+"PO-Revision-Date: 2015-08-10 16:28+0900\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ASCII\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:632
+msgid "bad real size"
+msgstr "bad real size"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:443
+#, c-format
+msgid "could not find iktype %s"
+msgstr "could not find iktype %s"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:880 plugins/ikfastsolvers/ikfastsolver.cpp:1017
+#, c-format
+msgid "don't support ik parameterization 0x%x"
+msgstr "don't support ik parameterization 0x%x"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:185
+#, c-format
+msgid "free parameter idx %d out of bounds\n"
+msgstr "free parameter idx %d out of bounds\n"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:567 plugins/ikfastsolvers/ikfastsolver.cpp:595
+msgid "free parameters not equal"
+msgstr "free parameters not equal"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:1813
+#, c-format
+msgid "ik solver %s (dof=%d) does not support iktype 0x%x"
+msgstr "ik solver %s (dof=%d) does not support iktype 0x%x"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:205
+#, c-format
+msgid "ikfast version %d not supported"
+msgstr "ikfast version %d not supported"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:215
+#, c-format
+msgid "manipulator %s not found in robot"
+msgstr "manipulator %s not found in robot"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:220 plugins/ikfastsolvers/ikfastmodule.cpp:248 plugins/ikfastsolvers/ikfastmodule.cpp:259
+msgid "uninitialized ikfast functions"
+msgstr "uninitialized ikfast functions"
