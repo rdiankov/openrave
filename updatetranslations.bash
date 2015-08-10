@@ -2,6 +2,7 @@
 set -e
 
 SCRIPT=$(basename $0)
+ROOT=$(readlink -e $0 | xargs dirname)
 LANGUAGES="en_US ja_JP"
 C_CPP_DIRS="src/libopenrave src/libopenrave-core python/bindings"
 PYTHON_DIRS="python"
@@ -12,15 +13,6 @@ function usage
     echo "       Maintainer script to update locale files for openrave"
     echo
     exit 1
-}
-
-function root
-{
-    while [[ ! -e .git ]]; do
-        DIR=$(pwd | xargs dirname)
-        [ "${DIR}" != "$(pwd)" ] || ( echo "${SCRIPT}: git repository not found" >&2; exit 1 )
-        cd "${DIR}"
-    done
 }
 
 function make_pot
@@ -83,7 +75,7 @@ function make_mo
 }
 
 # go to root of repository
-root
+cd "${ROOT}"
 
 # make pot
 make_pot

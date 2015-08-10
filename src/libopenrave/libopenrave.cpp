@@ -1167,7 +1167,7 @@ int RaveGetDataAccess()
     return RaveGlobal::instance()->GetDataAccess();
 }
 
-const char *RaveGetText(const std::string& domainname, const char *msgid)
+const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid)
 {
 #ifndef _WIN32
     if (_gettextDomainsInitialized.find(domainname) == _gettextDomainsInitialized.end())

@@ -52,7 +52,7 @@
 #include "bindings.h"
 #include "docstrings.h"
 
-#define _(msgid) OpenRAVE::RaveGetText("openrave", msgid)
+#define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave", msgid)
 
 #define CHECK_POINTER(p) { \
         if( !(p) ) { throw openrave_exception(boost::str(boost::format(_("[%s:%d]: invalid pointer"))%__PRETTY_FUNCTION__%__LINE__)); } \

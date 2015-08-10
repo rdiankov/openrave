@@ -2789,7 +2789,7 @@ OPENRAVE_API int RaveGetDataAccess();
     \param msgid message id to look for
     \return if a translation was found, it is converted to the locale's codeset and returned. The resulting string is statically allocated and must not be modified or freed. Otherwise msgid is returned.
  */
-OPENRAVE_API const char *RaveGetText(const std::string& domainname, const char *msgid);
+OPENRAVE_API const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid);
 
 //@}
 
