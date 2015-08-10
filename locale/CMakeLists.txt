@@ -1,3 +1,4 @@
+if(NOT WIN32)
 set(LANGUAGES
     en_US
     ja_JP
@@ -38,3 +39,4 @@ foreach(LANG ${LANGUAGES})
 endforeach(LANG ${LANGUAGES})
 
 add_custom_target(locale ALL DEPENDS ${locale-deps})
+endif(NOT WIN32)
