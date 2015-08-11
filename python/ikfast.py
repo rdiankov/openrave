@@ -4614,7 +4614,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     eq = eq.subs(self.freevarsubs)
                     if self.CheckExpressionUnique(reducedeqs, eq):
-                        assert(0)
+                        #assert(0)
                         reducedeqs.append(eq)
                     else:
                         log.info('factors %d not unique: %r', len(factors), eq)
