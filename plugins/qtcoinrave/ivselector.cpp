@@ -618,7 +618,7 @@ void IvJointDragger::GetMessage(ostream& sout)
     pbody->GetDOFValues(vjoints);
 
     sout << "Selected " << selectedItem->GetName() << " (id=" << pbody->GetNetworkId() << ")" << endl
-         << std::fixed << std::setprecision(3)
+         << std::fixed << std::setprecision(4)
          << "  joint " << _jointname << " (" << _iJointIndex << ") "  << " = " << vjoints[_iJointIndex];
 
     if( pbody->GetBody()->GetJoints()[_iJointIndex]->GetType() != KinBody::JointSlider ) {

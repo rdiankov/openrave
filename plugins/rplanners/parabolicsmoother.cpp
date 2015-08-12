@@ -26,6 +26,8 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
 {
     struct ManipConstraintInfo
     {
+        RobotBase::ManipulatorPtr pmanip;
+        
         // the end-effector link of the manipulator
         KinBody::LinkPtr plink;
         // the points to check for in the end effector coordinate system
@@ -33,7 +35,8 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
         // but this can be more general, e.g. the vertices of the convex hull
         std::list<Vector> checkpoints;
 
-        std::vector<int> vuseddofindices, vconfigindices;
+        std::vector<int> vuseddofindices; ///< a vector of unique DOF indices targetted for the body
+        std::vector<int> vconfigindices; ///< for every index in vuseddofindices, returns the first configuration space index it came from
     };
 
     class MyRampFeasibilityChecker : public ParabolicRamp::RampFeasibilityChecker
@@ -253,6 +256,7 @@ public:
                         // Compute the enclosing AABB and add its vertices to the checkpoints
                         AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                         _listCheckManips.push_back(ManipConstraintInfo());
+                        _listCheckManips.back().pmanip = pmanip;
                         _parameters->_configurationspecification.ExtractUsedIndices(pmanip->GetRobot(), _listCheckManips.back().vuseddofindices, _listCheckManips.back().vconfigindices);
                         _listCheckManips.back().plink = endeffector;
                         ConvertAABBtoCheckPoints(enclosingaabb, _listCheckManips.back().checkpoints);
@@ -1162,7 +1166,8 @@ protected:
     /// checks at each ramp's edges
     ParabolicRamp::CheckReturn _CheckManipConstraints2(const std::vector<ParabolicRamp::ParabolicRampND>& outramps)
     {
-        vector<dReal> ac, qfill, vfill, afill;
+        vector<dReal> ac, qfillactive, vfillactive; // the active DOF
+        vector<dReal> afill; // full robot DOF
         dReal maxmanipspeed=0, maxmanipaccel=0;
         std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
         Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
@@ -1180,20 +1185,20 @@ protected:
             FOREACHC(itmanipinfo,_listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
                 itramp->Accel(0, ac);
-                qfill.resize(itmanipinfo->vuseddofindices.size());
-                vfill.resize(itmanipinfo->vuseddofindices.size());
-                afill.resize(itmanipinfo->vuseddofindices.size());
-                for(size_t idof = 0; idof < itmanipinfo->vuseddofindices.size(); ++idof) {
-                    qfill[idof] = itramp->x0.at(itmanipinfo->vconfigindices.at(idof));
-                    vfill[idof] = itramp->dx0.at(itmanipinfo->vconfigindices.at(idof));
-                    afill[idof] = ac.at(itmanipinfo->vconfigindices.at(idof));
+                qfillactive.resize(itmanipinfo->vuseddofindices.size());
+                vfillactive.resize(itmanipinfo->vuseddofindices.size());
+                afill.resize(probot->GetDOF());
+                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
+                    qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
+                    vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
+                    afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
                 }
                 int endeffindex = itmanipinfo->plink->GetIndex();
                 KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
 
                 // Set robot to new state
-                probot->SetDOFValues(qfill, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->SetDOFVelocities(vfill, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFVelocities(vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                 probot->GetLinkVelocities(endeffvels);
                 probot->GetLinkAccelerations(afill,endeffaccs);
                 endeffvellin = endeffvels.at(endeffindex).first;

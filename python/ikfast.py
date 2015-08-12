@@ -4639,7 +4639,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     eq = peq[1].as_expr().subs(self.freevarsubs)
                     if self.CheckExpressionUnique(reducedeqs, eq):
-                        print 'hooooooooooooo'
+                        #print 'hooooooooooooo'
                         reducedeqs.append(eq)
                     else:
                         log.info('factors %d reduced not unique: %r', len(factors), eq)
