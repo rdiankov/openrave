@@ -122,7 +122,8 @@ public:
         _pintchecker->SetGeometryGroup(groupname);
     }
 
-    virtual const std::string& GetGeometryGroup() {
+    virtual const std::string& GetGeometryGroup() const
+    {
         return _pintchecker->GetGeometryGroup();
     }
 

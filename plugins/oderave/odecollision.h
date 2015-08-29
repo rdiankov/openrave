@@ -141,6 +141,16 @@ public:
         _odespace->Destroy();
     }
 
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        CollisionCheckerBase::Clone(preference, cloningoptions);
+        boost::shared_ptr<ODECollisionChecker const > r = boost::dynamic_pointer_cast<ODECollisionChecker const>(preference);
+        _odespace->SetGeometryGroup(r->GetGeometryGroup());
+        _options = r->_options;
+        _nMaxStartContacts = r->_nMaxStartContacts;
+        _nMaxContacts = r->_nMaxContacts;
+    }
+    
     bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
     {
         sinput >> _nMaxContacts;
@@ -793,7 +803,7 @@ public:
         _odespace->SetGeometryGroup(groupname);
     }
 
-    const std::string& GetGeometryGroup()
+    const std::string& GetGeometryGroup() const
     {
         return _odespace->GetGeometryGroup();
     }
