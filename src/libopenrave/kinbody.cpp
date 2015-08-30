@@ -4337,8 +4337,15 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
     FOREACHC(itlink, r->_veclinks) {
         LinkPtr pnewlink(new Link(shared_kinbody()));
+        // TODO should create a Link::Clone method
         *pnewlink = **itlink; // be careful of copying pointers
         pnewlink->_parent = shared_kinbody();
+        // have to copy all the geometries too!
+        std::vector<Link::GeometryPtr> vnewgeometries(pnewlink->_vGeometries.size());
+        for(size_t igeom = 0; igeom < vnewgeometries.size(); ++igeom) {
+            vnewgeometries[igeom].reset(new Link::Geometry(pnewlink, pnewlink->_vGeometries[igeom]->_info));
+        }
+        pnewlink->_vGeometries = vnewgeometries;
         _veclinks.push_back(pnewlink);
     }
 
