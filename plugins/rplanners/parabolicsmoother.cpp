@@ -308,6 +308,14 @@ public:
             return PS_Failed;
         }
 
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            // store the trajectory
+            string filename = str(boost::format("%s/parabolicsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+            ofstream f(filename.c_str());
+            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+            f << *_parameters;
+            RAVELOG_VERBOSE_FORMAT("saved parabolic parameters to %s", filename);
+        }
         _DumpTrajectory(ptraj, Level_Verbose);
 
         // save velocities
