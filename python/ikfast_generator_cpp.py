@@ -333,7 +333,7 @@ inline double IKlog(double f) { return log(f); }
 
 // there are checkpoints in ikfast that are evaluated to make sure they are 0. This threshold speicfies by how much they can deviate
 #ifndef IKFAST_EVALCOND_THRESH
-#define IKFAST_EVALCOND_THRESH ((IkReal)0.00001)
+#define IKFAST_EVALCOND_THRESH ((IkReal)0.000005)
 #endif
 
 
@@ -1319,12 +1319,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             log.warn('polynomial %s is of degree 0!', node.poly)
             return 'continue; // poly is 0\n'
         polyroots=self.using_polyroots(D)
-        maxD = D # max D of all polynomial equations
-        if node.polybackup is not None:
-            maxD = max(D, node.polybackup.degree(0))
         name = node.jointname
         polyvar = node.poly.gens[0].name
-        code = 'IkReal op[%d+1], zeror[%d];\nint numroots;\n'%(maxD,maxD)
+        code = 'IkReal op[%d+1], zeror[%d];\nint numroots;\n'%(D,D)
         numevals = 0
         if node.postcheckforzeros is not None:
             numevals = max(numevals,len(node.postcheckforzeros))
@@ -1342,18 +1339,8 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
 #             code += self.writeEquations(lambda k: var,value)
         polydict = node.poly.as_dict()
         code += self.writeEquations(lambda i: 'op[%d]'%(i),[polydict.get((i,),S.Zero) for i in range(D,-1,-1)])
-        code += '%s(op,zeror,numroots);\n'%(polyroots)
-        if node.polybackup is not None:
-            origequations = self.copyequations()
-            code += 'if( numroots == 0 ) {\n'
-            polydictbackup = node.polybackup.as_dict()
-            Dbackup = node.polybackup.degree(0)
-            polyrootsbackup = self.using_polyroots(Dbackup)
-            code += self.writeEquations(lambda i: 'op[%d]'%(i),[polydictbackup.get((i,),S.Zero) for i in range(Dbackup,-1,-1)])
-            code += '%s(op,zeror,numroots);\n'%(polyrootsbackup)
-            code += '}\n'
-            self.dictequations = origequations
-        code += 'IkReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*maxD,name,len(node.jointeval)*maxD,name,len(node.jointeval)*maxD,name,len(node.jointeval))
+        code += "%s(op,zeror,numroots);\n"%(polyroots)
+        code += 'IkReal %sarray[%d], c%sarray[%d], s%sarray[%d], temp%sarray[%d];\n'%(name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval)*D,name,len(node.jointeval))
         code += 'int numsolutions = 0;\n'
         code += 'for(int i%s = 0; i%s < numroots; ++i%s)\n{\n'%(name,name,name)
         fcode = 'IkReal %s = zeror[i%s];\n'%(polyvar,name)
@@ -1371,7 +1358,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += fcode
         code += '}\n'
 
-        allnumsolutions = maxD*len(node.jointeval)
+        allnumsolutions = D*len(node.jointeval)
         if allnumsolutions >= 256:
             log.error('num solutions is %d>=256, which exceeds unsigned char',allnumsolutions)
         code += 'bool %svalid[%d]={%s};\n'%(name,allnumsolutions,','.join(['true']*allnumsolutions))
@@ -1382,7 +1369,6 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         if node.AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
         code += '\n'
-
         if node.postcheckforzeros is not None and len(node.postcheckforzeros) > 0:
             fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckforzeros)
             fcode += 'if( '
@@ -1393,8 +1379,6 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
         if node.postcheckfornonzeros is not None and len(node.postcheckfornonzeros) > 0:
-            #fcode = self.writeEquations(lambda i: 'j3evalpoly[%d]'%(i),node.postcheckfornonzeros)
-
             fcode = self.writeEquations(lambda i: '%sevalpoly[%d]'%(name,i),node.postcheckfornonzeros)
             fcode += 'if( '
             for i in range(len(node.postcheckfornonzeros)):
