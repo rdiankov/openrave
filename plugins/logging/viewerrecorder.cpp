@@ -672,10 +672,7 @@ protected:
                 url_fclose(&_output->pb);
 #endif
             }
-            if( _output->streams[0] ) {
-                av_freep(&_output->streams[0]);
-            }
-            av_free(_output);
+            avformat_free_context(_output);
             _output = NULL;
         }
         _bWroteURL = _bWroteHeader = false;
@@ -737,7 +734,7 @@ protected:
         BOOST_ASSERT(!!fmt);
 
         _frameindex = 0;
-        _output = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
+        _output = avformat_alloc_context();
         BOOST_ASSERT(!!_output);
 
         _output->oformat = fmt;
