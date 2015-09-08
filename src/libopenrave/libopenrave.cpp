@@ -2028,7 +2028,7 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     SensorGeometry::Serialize(writer, options);
     AttributesList atts;
     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    ss << KK.fx << " 0 " << KK.cx << " 0 " << KK.fx << " " << KK.cy;
+    ss << KK.fx << " 0 " << KK.cx << " 0 " << KK.fy << " " << KK.cy;
     writer->AddChild("intrinsic",atts)->SetCharData(ss.str());
     ss.str("");
     ss << KK.focal_length;
