@@ -2376,7 +2376,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             if( timestep > timeelapsed ) {
                 RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e", timestep%timeelapsed);
-                break;
+                //break;
+                // this is a bug, just return false
+                return CFO_StateSettingError;
             }
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
@@ -2392,6 +2394,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
         if( RaveFabs(fStep-fLargestStep) > RaveFabs(fLargestStepDelta) ) {
             RAVELOG_WARN_FORMAT("fStep (%.15e) did not reach fLargestStep (%.15e). %.15e > %.15e", fStep%fLargestStep%RaveFabs(fStep-fLargestStep)%fLargestStepDelta);
+            // this is a bug, just return false
+            return CFO_StateSettingError;
         }
     }
     else {
