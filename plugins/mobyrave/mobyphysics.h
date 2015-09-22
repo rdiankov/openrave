@@ -15,13 +15,13 @@
 
 
 #include <openrave/plugin.h>
-#include <boost/bind.hpp>
-#include <iostream>
-//#include <Moby/TimeSteppingSimulator.h>
+//#include <boost/bind.hpp>
+
+#include "mobyspace.h"
 
 //using namespace Moby;
-using namespace OpenRAVE;
-using namespace std;
+//using namespace OpenRAVE;
+//using namespace std;
 
 class MobyPhysicsEngine : public PhysicsEngineBase
 {
@@ -32,17 +32,11 @@ class MobyPhysicsEngine : public PhysicsEngineBase
     inline boost::shared_ptr<MobyPhysicsEngine const> shared_physics_const() const {
         return boost::dynamic_pointer_cast<MobyPhysicsEngine const>(shared_from_this());
     }*/
-private:
-    //boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
 
 public:
     MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv) 
     {
-        std::cout << "creating Moby simulator" << std::endl;
-
         // create the simulator reference 
-        //_sim = boost::shared_ptr<Moby::TimeSteppingSimulator>( new Moby::TimeSteppingSimulator() );
-
         // TODO: map any environment settings into the simulator settings
 
         // TODO: map any kinematic bodies
@@ -54,22 +48,28 @@ public:
         
     }
     virtual ~MobyPhysicsEngine() {}
-    
+
+/*  
+    // artifact of BulletPhysics template.  Necessary for Moby?  
     bool SetStaticBodyTransform(ostream& sout, istream& sinput)
     
     {
         return true;
 	
     }
+*/
+
     virtual bool InitEnvironment()
     {
-        std::cout << "initializing Moby simulation" << std::endl;
+        RAVELOG_INFO( "init Moby physics environment\n" );
+        //std::cout << "initializing Moby simulation" << std::endl;
         
         return true;
     }
 
     virtual void DestroyEnvironment()
     {
+        RAVELOG_INFO( "destroy Moby physics environment\n" );
        
     }
 

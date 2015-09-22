@@ -6,7 +6,7 @@ if(MOBY_FOUND)
   message(STATUS "Building MobyRAVE")
   include_directories(${MOBY_INCLUDE_DIRS})
   link_directories(${OPENRAVE_LINK_DIRS} ${MOBY_INCLUDE_DIRS})
-  add_library(mobyrave SHARED mobyrave.cpp mobyphysics.h plugindefs.h)
+  add_library(mobyrave SHARED mobyrave.cpp mobyphysics.h mobyspace.h plugindefs.h)
   target_link_libraries(mobyrave libopenrave ${MOBY_LIBRARIES})
   set_target_properties(mobyrave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 

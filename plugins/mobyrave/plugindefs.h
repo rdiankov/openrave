@@ -59,6 +59,11 @@
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
 
+/*
+// This section is commented because it may have been copied from an older
+// version.  The active code following this was modeled from bulletrave and
+// properly compiles.  TODO: Remove this commented code when validated
+
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_mobyrave", msgid)
 
 using namespace std;
@@ -99,5 +104,11 @@ using OpenRAVE::ControllerBase;
 using OpenRAVE::AttributesList;
 
 #endif
+
+//#endif
+*/
+
+using namespace std;
+using namespace OpenRAVE;
 
 #endif
