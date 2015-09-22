@@ -16,7 +16,8 @@
 
 #include <openrave/plugin.h>
 #include <boost/bind.hpp>
-
+#include <iostream>
+//#include <Moby/TimeSteppingSimulator.h>
 
 //using namespace Moby;
 using namespace OpenRAVE;
@@ -31,11 +32,26 @@ class MobyPhysicsEngine : public PhysicsEngineBase
     inline boost::shared_ptr<MobyPhysicsEngine const> shared_physics_const() const {
         return boost::dynamic_pointer_cast<MobyPhysicsEngine const>(shared_from_this());
     }*/
-
+private:
+    //boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
 
 public:
-    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv) {
-       
+    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv) 
+    {
+        std::cout << "creating Moby simulator" << std::endl;
+
+        // create the simulator reference 
+        //_sim = boost::shared_ptr<Moby::TimeSteppingSimulator>( new Moby::TimeSteppingSimulator() );
+
+        // TODO: map any environment settings into the simulator settings
+
+        // TODO: map any kinematic bodies
+      //  std::vector<KinBodyPtr> rvbodies;
+       // Moby::PrimitivePtr moprimitive
+           
+        // TODO: map any robots
+       // std::vector<RobotBasePtr> rvrobots;
+        
     }
     virtual ~MobyPhysicsEngine() {}
     
@@ -47,6 +63,7 @@ public:
     }
     virtual bool InitEnvironment()
     {
+        std::cout << "initializing Moby simulation" << std::endl;
         
         return true;
     }
@@ -56,16 +73,24 @@ public:
        
     }
 
-     virtual bool InitKinBody(KinBodyPtr pbody)
+    virtual bool InitKinBody(KinBodyPtr pbody)
     {
-       
+        // TODO: create a body?
        // return !!pinfo;
     }
 
 
     virtual void RemoveKinBody(KinBodyPtr pbody)
     {
-        
+/*
+        std::string id = pbody->GetName();
+        Moby::DynamicBodyPtr mobody = _sim->find_dynamic_body( id );
+        if( !mobody ) {
+          // sanity check here.  Not sure of appropriate OpenRave response,
+          // throw or just ignore?
+        }
+        _sim->remove_dynamic_body( mobody );
+*/
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
@@ -134,7 +159,21 @@ public:
     }
 
     virtual void SetGravity(const Vector& gravity)
-    {
+    {     
+       // Note: in Moby, gravity is a recurrent force assigned at the
+       // individual body level and not through a singular gravity method
+       // at the sim level.  The number of recurrent forces is variable,
+       // so there may be more than one value in the list for any body.
+       // Therefore, must find the correct recurrent force in the set for
+       // each body
+
+       // RigidBodyPtr mobody;
+       // for each mobody in sim
+       //   std::list<Moby::RecurrentForcePtr> forces = mobody->get_recurrent_forces(); 
+       //   for each force in forces
+       //     if force == _gravity
+       //       force = gravity   
+
        _gravity = gravity;
     }
 
@@ -145,7 +184,19 @@ public:
 
     virtual void SimulateStep(dReal fTimeElapsed)
     {
-   
+        // step_size = 0.001;
+        // int steps = (int)(fTimeElapsed / step_size);
+        // for i to steps
+        //   _sim->step( steo_size );
+
+        /*
+        double dt = 0.001;
+        // TODO: compute the number of integration steps in elapsed time
+        unsigned steps = 10; // Note: this is arbitrary at this point 
+        for( unsigned i = 0; i < steps; i++ ) {
+            _sim->step( dt );
+        }
+        */
     }
 
 private :
