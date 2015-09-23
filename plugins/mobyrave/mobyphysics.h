@@ -26,15 +26,16 @@
 class MobyPhysicsEngine : public PhysicsEngineBase
 {
 
-   /* inline boost::shared_ptr<MobyPhysicsEngine> shared_physics() {
+    inline boost::shared_ptr<MobyPhysicsEngine> shared_physics() {
         return boost::dynamic_pointer_cast<MobyPhysicsEngine>(shared_from_this());
     }
+
     inline boost::shared_ptr<MobyPhysicsEngine const> shared_physics_const() const {
         return boost::dynamic_pointer_cast<MobyPhysicsEngine const>(shared_from_this());
-    }*/
+    }
 
 public:
-    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv) 
+    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv), _space(new MobySpace(penv, GetPhysicsInfo, true)), _StepSize(0.001) 
     {
         // create the simulator reference 
         // TODO: map any environment settings into the simulator settings
@@ -57,7 +58,22 @@ public:
     {
         RAVELOG_INFO( "init Moby physics environment\n" );
         //std::cout << "initializing Moby simulation" << std::endl;
+        _space->SetSynchronizationCallback(boost::bind(&MobyPhysicsEngine::_SyncCallback, shared_physics(),_1));
+
+        _sim.reset(new Moby::TimeSteppingSimulator());
+
+        if(!_space->InitEnvironment(_sim)) {
+            return false;
+        }        
         
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies); 
+        FOREACHC(itbody, vbodies) { 
+            InitKinBody(*itbody);
+        }
+
+        SetGravity(_gravity);
+
         return true;
     }
 
@@ -69,22 +85,17 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        // TODO: create a body?
-       // return !!pinfo;
+        MobySpace::KinBodyInfoPtr pinfo = _space->InitKinBody(pbody);
+        pbody->SetUserData("mobyphysics", pinfo);
+        return !!pinfo;
     }
 
 
     virtual void RemoveKinBody(KinBodyPtr pbody)
     {
-/*
-        std::string id = pbody->GetName();
-        Moby::DynamicBodyPtr mobody = _sim->find_dynamic_body( id );
-        if( !mobody ) {
-          // sanity check here.  Not sure of appropriate OpenRave response,
-          // throw or just ignore?
+        if( !!pbody ) {
+            pbody->RemoveUserData("mobyphysics");
         }
-        _sim->remove_dynamic_body( mobody );
-*/
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
@@ -178,27 +189,64 @@ public:
 
     virtual void SimulateStep(dReal fTimeElapsed)
     {
-        // step_size = 0.001;
-        // int steps = (int)(fTimeElapsed / step_size);
-        // for i to steps
-        //   _sim->step( steo_size );
+        // The requested fTimeElapsed may be large in comparison to a 
+        // an integration step size that is accurate.  Current 
+        // configuration dictates an fTimeElapsed of 1ms which is at 
+        // the upper bound of accuracy for integration steps.  Some
+        // logic should be emplaced to select for an accurate 
+        // integration step if fTimeElapsed is set larger than 1ms
+        // For now, assume fTimeElapsed is 1ms.
 
-        /*
-        double dt = 0.001;
-        // TODO: compute the number of integration steps in elapsed time
-        unsigned steps = 10; // Note: this is arbitrary at this point 
-        for( unsigned i = 0; i < steps; i++ ) {
-            _sim->step( dt );
+/*
+        dReal endOfStepTime = ?;
+        dReal t = ?;
+        do {
+            // compute the least sized step requested
+            //dReal actualStep = fTimeElapsed < _StepSize ? fTimeElapsed : _StepSize;
+
+            // if actualStep is equal to _StepSize, there may be some residual time 
+            // after a number of steps so need to compute the last fragment of time 
+            // as accurately as possible and therefore the above actualStep 
+            // computation is too simplistic
+
+            _sim->step( actualStep );
+            t += actualStep;        // naive fp adding will have error here
+        } while(t<endOfStepTime);
+*/
+        _sim->step(fTimeElapsed);
+
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+            MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
+            FOREACH(itlink, pinfo->vlinks) {
+                Transform t = MobySpace::GetTransform((*itlink)->get_pose());
+                (*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
+            }
+            pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
-        */
     }
 
-private :
-
+    dReal _StepSize;
     Vector _gravity;
-   
 
+private:
+    static MobySpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
+    {
+        return boost::dynamic_pointer_cast<MobySpace::KinBodyInfo>(pbody->GetUserData("mobyphysics"));
+    }
+
+    void _SyncCallback(MobySpace::KinBodyInfoConstPtr pinfo)
+    {
+        Ravelin::SVelocityd zerov = Ravelin::SVelocityd::zero(Moby::GLOBAL);
+
+        // reset dynamics
+        FOREACH(itlink, pinfo->vlinks) {
+            (*itlink)->set_velocity(zerov);
+        }
+    }
+
+    boost::shared_ptr<MobySpace> _space;
+    boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
 };
-
-
 
