@@ -39,12 +39,6 @@ public:
         // create the simulator reference 
         // TODO: map any environment settings into the simulator settings
 
-        // TODO: map any kinematic bodies
-      //  std::vector<KinBodyPtr> rvbodies;
-       // Moby::PrimitivePtr moprimitive
-           
-        // TODO: map any robots
-       // std::vector<RobotBasePtr> rvrobots;
         
     }
     virtual ~MobyPhysicsEngine() {}

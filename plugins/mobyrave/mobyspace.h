@@ -20,8 +20,10 @@
 #include "plugindefs.h"
 
 #include <Moby/TimeSteppingSimulator.h>
+#include <Moby/RCArticulatedBody.h>
 #include <Moby/RigidBody.h>
 #include <Moby/Joint.h>
+#include <Moby/TriangleMeshPrimitive.h>
 #include <Ravelin/MatrixNd.h>
 #include <Ravelin/Vector3d.h>
 #include <Ravelin/Pose3d.h>
@@ -29,9 +31,14 @@
 #include <iostream>  // temp... bypass RAVELOG for now
 
 // manages a space of Moby objects
+// Note that if inheriting from Moby::Simulator then shared_from_this lies
+//  at the bottom of the inheritence tree for Simulator.
+//
+//class MobySpace : public Moby::TimeSteppingSimulator
 class MobySpace : public boost::enable_shared_from_this<MobySpace>
 {
     inline boost::weak_ptr<MobySpace> weak_space() {
+        //return boost::dynamic_pointer_cast<MobySpace>(shared_from_this());
         return shared_from_this();
     }
 
@@ -47,48 +54,28 @@ public:
             virtual ~LINK() {
             }
 
-            virtual void getWorldTransform(Ravelin::MatrixNd& comWorldTrans) const
+            // TODO: Transform may need to internally pass pose and pose
+            // may need to be maintained for the link
+            virtual void GetWorldTransform(Ravelin::MatrixNd& comWorldTrans) const
             {
                 comWorldTrans = GetRavelinTransform( plink->GetTransform()*tlocal );
             }
 
-            virtual void setWorldTransform(const Ravelin::MatrixNd& comWorldTrans)
+            virtual void SetWorldTransform(const Ravelin::MatrixNd& comWorldTrans)
             {
                 plink->SetTransform(GetTransform(comWorldTrans)*tlocal.inverse());
             }
 
-            KinBody::LinkPtr plink;
             Moby::RigidBodyPtr _body;
-            Transform tlocal;     /// local offset transform to account for inertias not aligned to axes
-/*
-            virtual void getWorldTransform(btTransform& centerOfMassWorldTrans ) const
-            {
-                //centerOfMassWorldTrans = m_centerOfMassOffset.inverse() * m_graphicsWorldTrans;
-                centerOfMassWorldTrans = GetBtTransform(plink->GetTransform()*tlocal);
-            }
-
-            virtual void setWorldTransform(const btTransform& centerOfMassWorldTrans)
-            {
-                //m_graphicsWorldTrans = centerOfMassWorldTrans * m_centerOfMassOffset;
-                //RAVELOG_INFO(plink->GetName()); //This info is eats up the terminal
-                plink->SetTransform(GetTransform(centerOfMassWorldTrans)*tlocal.inverse());
-            }
-
-            boost::shared_ptr<btCollisionObject> obj;
-            boost::shared_ptr<btRigidBody> _rigidbody;
-            boost::shared_ptr<btCollisionShape> shape;
-            list<boost::shared_ptr<btCollisionShape> > listchildren;
-            list<boost::shared_ptr<btStridingMeshInterface> > listmeshes;
-
             KinBody::LinkPtr plink;
             Transform tlocal;     /// local offset transform to account for inertias not aligned to axes
-*/
         };
-/*
-        KinBodyInfo(boost::shared_ptr<btCollisionWorld> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
+
+        KinBodyInfo(boost::shared_ptr<Moby::Simulator> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
             nLastStamp = 0;
-            _worlddynamics = boost::dynamic_pointer_cast<btDiscreteDynamicsWorld>(_world);
         }
+
+
         virtual ~KinBodyInfo() {
             Reset();
         }
@@ -96,36 +83,20 @@ public:
         void Reset()
         {
             FOREACH(itlink, vlinks) {
-                if( _bPhysics && !(*itlink)->plink->IsStatic()) {
-                    _worlddynamics->removeRigidBody((*itlink)->_rigidbody.get());
-                }
-                else {
-                    _world->removeCollisionObject((*itlink)->obj.get());
-                }
+                // in Moby all bodies in the simulated world are DynamicBody
+                _world->remove_dynamic_body((*itlink)->_body);
             }
-            FOREACH(itjoint,_mapjoints) {
-                _worlddynamics->removeConstraint(itjoint->second.get());
-            }
-            _mapjoints.clear(); // have to remove constraints first
-            vlinks.resize(0);
-            _geometrycallback.reset();
         }
 
         KinBodyPtr pbody;     ///< body associated with this structure
-        int nLastStamp;
-
+        int nLastStamp;     // verify if necessary
         std::vector<boost::shared_ptr<LINK> > vlinks;     ///< if body is disabled, then geom is static (it can't be connected to a joint!)
-        ///< the pointer to this Link is the userdata
-        typedef std::map< KinBody::JointConstPtr, boost::shared_ptr<btTypedConstraint> > MAPJOINTS;
-        MAPJOINTS _mapjoints;
         UserDataPtr _geometrycallback;
         boost::weak_ptr<MobySpace> _mobyspace;
 
 private:
-        boost::shared_ptr<btCollisionWorld> _world;
-        boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
-        bool _bPhysics;
-*/
+        boost::shared_ptr<Moby::Simulator> _world;
+        bool _bPhysics;     // verify if necessary
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -139,38 +110,117 @@ private:
     }
 
     //bool InitEnvironment(boost::shared_ptr<btCollisionWorld> world)
-    bool InitEnvironment(void* world)
+    bool InitEnvironment(boost::shared_ptr<Moby::TimeSteppingSimulator> world)
     {
 
-        std::cout << "Creating Moby simulator: " << std::endl;
-
-        _sim = boost::shared_ptr<Moby::TimeSteppingSimulator>( new Moby::TimeSteppingSimulator() );
+        //_world = boost::shared_ptr<Moby::TimeSteppingSimulator>( new Moby::TimeSteppingSimulator() );
   
-        if( !_sim ) {
-            std::cout << "Failed" << std::endl;
-        } else {
-            std::cout << "Success" << std::endl;
-        }
-/*
         _world = world;
-        _worlddynamics = boost::dynamic_pointer_cast<btDiscreteDynamicsWorld>(_world);
-        btGImpactCollisionAlgorithm::registerAlgorithm((btCollisionDispatcher*)_world->getDispatcher());
-        //btConcaveConcaveCollisionAlgorithm::registerAlgorithm(_world->getDispatcher());
-*/
+
         return true;
     }
 
     void DestroyEnvironment()
     {
-/*
         _world.reset();
-        _worlddynamics.reset();
-*/
     }
 
     //KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the values needs to be changed. There will be an XML interface for fmargin.
     KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), double fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the values needs to be changed. There will be an XML interface for fmargin.
     {
+	KinBody::KinBodyStateSaver saver(pbody);
+	pbody->SetTransform(Transform());
+	std::vector<dReal> vzeros(pbody->GetDOF(), 0);
+	pbody->SetDOFValues(vzeros);
+	
+        if( !pinfo ) {
+            pinfo.reset(new KinBodyInfo(_world,_bPhysics));
+        }
+        pinfo->Reset();
+        pinfo->pbody = pbody;
+        pinfo->_mobyspace = weak_space();
+        pinfo->vlinks.reserve(pbody->GetLinks().size());
+
+        //Create an articulated body
+        Moby::RCArticulatedBodyPtr mobody( new Moby::RCArticulatedBody() );
+
+        FOREACHC(itlink, pbody->GetLinks()) {
+            boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+
+            // create a Moby::RigidBody
+            // NOTE: the mass reference frame may not be centered.  
+            //   Do the Moby primitives generally assume a centered frame?
+            AABB bb = (*itlink)->ComputeLocalAABB();
+            Moby::PrimitivePtr prim(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+            Moby::RigidBodyPtr child(new Moby::RigidBody());
+            prim->set_mass((*itlink)->GetMass());
+            
+            child->set_visualization_data(prim->create_visualization());
+            child->set_inertia(prim->get_inertia());
+            child->set_enabled(true);
+            // TODO: set contact parameters?
+            
+            // NOTE: mass is a link component and numerous geometries may
+            //   be attached to the link.  Per Rosen, the link geometry
+            //   can instead be approximated with a box instead rather than
+            //   trying to match the whole set of geometric primitives 
+            //   so the below should be reconsidered 
+
+            /*
+            FOREACHC(itgeom, (*itlink)->GetGeometries()) {
+                KinBody::Link::GeometryPtr geom = *itgeom;
+                Moby::RigidBodyPtr child(new Moby::RigidBody());
+                Moby::PrimitivePtr prim;
+                //KinBody::GeometryInfo info = 
+                switch(geom->GetType()) {
+                case GT_None:
+                    break;
+                case GT_Box: {
+                    //child.reset(new btBoxShape(GetBtVector(geom->GetBoxExtents())));
+                    Ravelin::Vector3d len = GetRavelinVector(geom->GetBoxExtents())*2;
+                    prim = Moby::PrimitivePtr(new Moby::BoxPrimitive(len.x(),len.y(),len.z()));
+                    prim->set_mass(geom->GetMass());
+
+                    child->set_visualization_data(prim->create_visualization());
+                    child->set_inertia(prim->get_inertia());
+                    child->set_enabled(true);
+                    // TODO: set contact parameters?
+                    }
+                    break;
+                case GT_Sphere:
+                    //child.reset(new btSphereShape(geom->GetSphereRadius()));
+                    prim = Moby::PrimitivePtr(new Moby::SpherePrimitive(geom->GetSphereRadius()));
+                    prim->set_mass(geom->GetMass());
+
+                    child->set_visualization_data(prim->create_visualization());
+                    child->set_inertia(prim->get_inertia());
+                    child->set_enabled(true);
+                    // TODO: set contact parameters?
+                    break;
+                case GT_Cylinder:
+                    // cylinder axis aligned to Y
+                    //child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
+                    prim = Moby::PrimitivePtr(new Moby::CylinderPrimitive(geom->GetCylinderRadius(),geom->GetCylinderHeight()));
+                    prim->set_mass(geom->GetMass());
+
+                    child->set_visualization_data(prim->create_visualization());
+                    child->set_inertia(prim->get_inertia());
+                    child->set_enabled(true);
+                    // TODO: set contact parameters?
+                    break;
+                case GT_TriMesh: {
+                    prim = Moby::PrimitivePtr(new Moby::TriangleMeshPrimitive());
+                    // TODO: build primitive
+                    // TODO: add the primitive to the object
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
+            */
+        }
+
 /*
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -400,7 +450,6 @@ private:
 
     void Synchronize()
     {
-/*
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
@@ -410,36 +459,32 @@ private:
                 _Synchronize(pinfo);
             }
         }
-*/
     }
 
     void Synchronize(KinBodyConstPtr pbody)
     {
-/*
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->pbody == pbody );
         if( pinfo->nLastStamp != pbody->GetUpdateStamp() ) {
             _Synchronize(pinfo);
         }
-*/
     }
 
     //boost::shared_ptr<btCollisionObject> GetLinkBody(KinBody::LinkConstPtr plink)
     Moby::RigidBodyPtr GetLinkBody(KinBody::LinkConstPtr plink)
     {
-/*
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
-        return pinfo->vlinks.at(plink->GetIndex())->obj;
-*/
+        return pinfo->vlinks.at(plink->GetIndex());
     }
 
     //boost::shared_ptr<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
     Moby::JointPtr GetJoint(KinBody::JointConstPtr pjoint)
     {
-/*
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
+/*
+        // TODO:
         KinBodyInfo::MAPJOINTS::const_iterator it;
         it =  pinfo->_mapjoints.find(pjoint);   //  --> fixed bug
         BOOST_ASSERT(it != pinfo->_mapjoints.end());
@@ -448,9 +493,7 @@ private:
     }
 
     void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) {
-/*
         _synccallback = synccallback;
-*/
     }
 
     // NOTE: Probably should get pose due to frame references
@@ -472,23 +515,18 @@ private:
 
     static inline Ravelin::Vector3d GetRavelinVector(const Vector &v)
     {
-/*
-        return btVector3(v.x,v.y,v.z);
-*/
+        return Ravelin::Vector3d(v.x,v.y,v.z);
     }
     bool IsInitialized() {
-/*
-       		// return !!_world;
-		return !!_worlddynamics;
-*/
+        return !!_world;
     }
 
 
-/*
 private:
 
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
+/*
         vector<Transform> vtrans;
         std::vector<int> dofbranches;
         pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
@@ -500,8 +538,10 @@ private:
         if( !!_synccallback ) {
             _synccallback(pinfo);
         }
+*/
     }
 
+/*
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
@@ -526,7 +566,8 @@ private:
 private:
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
-    boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
+    boost::shared_ptr<Moby::TimeSteppingSimulator> _world;
+    SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 
 };
