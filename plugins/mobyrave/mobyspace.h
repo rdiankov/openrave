@@ -47,12 +47,12 @@ public:
             virtual ~LINK() {
             }
 
-            virtual void GetWorldTransform(Ravelin::Transform3d& comWorldTrans) const
+            virtual void GetWorldPose(Ravelin::Pose3d& comWorldTrans) const
             {
-                comWorldTrans = GetRavelinTransform( plink->GetTransform()*tlocal );
+                comWorldTrans = GetRavelinPose( plink->GetTransform()*tlocal );
             }
 
-            virtual void SetWorldTransform(const Ravelin::Transform3d& comWorldTrans)
+            virtual void SetWorldPose(const Ravelin::Pose3d& comWorldTrans)
             {
                 plink->SetTransform(GetTransform(comWorldTrans)*tlocal.inverse());
             }
@@ -256,12 +256,12 @@ private:
         _synccallback = synccallback;
     }
 
-    static inline Transform GetTransform(const Ravelin::Transform3d &t)
+    static inline Transform GetTransform(const Ravelin::Pose3d &p)
     {
-        return Transform(Vector(t.q.w, t.q.x, t.q.y, t.q.z), Vector(t.x.x(), t.x.y(), t.x.z()));
+        return Transform(Vector(p.q.w, p.q.x, p.q.y, p.q.z), Vector(p.x.x(), p.x.y(), p.x.z()));
     }
 
-    static inline Ravelin::Transform3d GetRavelinTransform(const Transform &t)
+    static inline Ravelin::Pose3d GetRavelinPose(const Transform &t)
     {
         // TODO assertion sanity check
         OPENRAVE_ASSERT_OP(RaveFabs(t.rot.lengthsqr4()-1),<=,0.01);
@@ -270,7 +270,7 @@ private:
         //   as modeled from bulletspace.h.  Reason for this mapping 
         //   unclear.
 
-        return(Ravelin::Transform3d(Ravelin::Quatd(t.rot.y, t.rot.z, t.rot.w, t.rot.x), GetRavelinOrigin(t.trans)));
+        return(Ravelin::Pose3d(Ravelin::Quatd(t.rot.y, t.rot.z, t.rot.w, t.rot.x), GetRavelinOrigin(t.trans)));
     }
 
     static inline Ravelin::Origin3d GetRavelinOrigin(const Vector &v)
@@ -282,27 +282,23 @@ private:
         return !!_world;
     }
 
-
 private:
 
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
-/*
         vector<Transform> vtrans;
         std::vector<int> dofbranches;
         pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {
-            pinfo->vlinks[i]->obj->getWorldTransform() = GetBtTransform(vtrans[i]*pinfo->vlinks[i]->tlocal);
+            pinfo->vlinks[i]->_body->set_pose(GetRavelinPose(vtrans[i]*pinfo->vlinks[i]->tlocal));
         }
         if( !!_synccallback ) {
             _synccallback(pinfo);
         }
-*/
     }
 
-/*
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
     {
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
@@ -315,14 +311,6 @@ private:
         BOOST_ASSERT(pinfo->pbody==pbody);
         InitKinBody(pbody,pinfo);
     }
-
-    EnvironmentBasePtr _penv;
-    GetInfoFn GetInfo;
-    boost::shared_ptr<btCollisionWorld> _world;
-    boost::shared_ptr<btDiscreteDynamicsWorld> _worlddynamics;
-    SynchronizeCallbackFn _synccallback;
-    bool _bPhysics;
-*/
 
 private:
     EnvironmentBasePtr _penv;
