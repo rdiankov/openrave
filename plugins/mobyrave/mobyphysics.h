@@ -35,7 +35,7 @@ class MobyPhysicsEngine : public PhysicsEngineBase
     }
 
 public:
-    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv), _space(new MobySpace(penv, GetPhysicsInfo, true)), _StepSize(0.001) 
+    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
     {
         // create the simulator reference 
         // TODO: map any environment settings into the simulator settings
@@ -79,14 +79,24 @@ public:
 
     virtual void DestroyEnvironment()
     {
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+            (*itbody)->RemoveUserData("mobyphysics");
+        }
         RAVELOG_INFO( "destroy Moby physics environment\n" );
-       
+        _space->DestroyEnvironment();
+
+       // clean up any other resources here
     }
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
         MobySpace::KinBodyInfoPtr pinfo = _space->InitKinBody(pbody);
         pbody->SetUserData("mobyphysics", pinfo);
+
+        // set any body specific parameters here
+
         return !!pinfo;
     }
 
@@ -100,13 +110,13 @@ public:
 
     virtual bool SetPhysicsOptions(int physicsoptions)
     {
-       // _options = physicsoptions;
+        _options = physicsoptions;
         return true;
     }
 
     virtual int GetPhysicsOptions() const
     {
-        //return _options;
+        return _options;
     }
 
     virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) {
@@ -179,6 +189,25 @@ public:
        //     if force == _gravity
        //       force = gravity   
 
+        vector<KinBodyPtr> vbodies;
+        GetEnv()->GetBodies(vbodies);
+        FOREACHC(itbody, vbodies) {
+            MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
+            FOREACH(itlink, pinfo->vlinks) {
+                //Transform t = MobySpace::GetTransform((*itlink)->get_pose());
+                //(*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
+/*
+                // the following doesn't appear to be the correct approach, so
+                // requested Evan's feedback about how to change gravity online
+                std::list<RecurrentForcePtr> forces = Moby::RecurrentForces (*itlink)->get_recurrent_forces();
+                for( std::list<RecurrentForcePtr>::iterator it=forces.begin(); it!=forces.end(); it++) 
+                {
+                  //if((*it)==)
+                }
+*/
+            }
+        }
+        
        _gravity = gravity;
     }
 
@@ -246,6 +275,7 @@ private:
         }
     }
 
+    int _options;
     boost::shared_ptr<MobySpace> _space;
     boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
 };

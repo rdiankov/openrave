@@ -119,7 +119,7 @@ private:
 	pbody->SetTransform(Transform());
 	std::vector<dReal> vzeros(pbody->GetDOF(), 0);
 	pbody->SetDOFValues(vzeros);
-	
+
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo(_world,_bPhysics));
         }
@@ -128,164 +128,174 @@ private:
         pinfo->_mobyspace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
 
-        std::vector<Moby::RigidBodyPtr> molinks;
-        std::vector<Moby::JointPtr> mojoints;
+        // ?: if pbody is robot then rcarticulatedbody otherwise rigidbody
+	// does IsRobot imply that the KinBody is hierarchical?
+        if( pbody->IsRobot() ){
 
-        //std::map<std::string, Moby::RigidBodyPtr> link_map;
-
-        FOREACHC(itlink, pbody->GetLinks()) {
-            boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
-            link->id = (*itlink)->GetName();
-
-            // create a Moby::RigidBody
-            // NOTE: the mass reference frame may not be centered.  
-            //   Do the Moby primitives generally assume a centered frame?
-            AABB bb = (*itlink)->ComputeLocalAABB();
-            Moby::PrimitivePtr prim(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
-            Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
-
-            //Moby::RigidBodyPtr child(new Moby::RigidBody());
-            prim->set_mass((*itlink)->GetMass());
-            
-            link->set_visualization_data(prim->create_visualization());
-            link->set_inertia(prim->get_inertia());
-            link->set_enabled(true);
-
-            // TODO: validate inertial setup for primitive
-
-            // TODO: set contact parameters?
-           
-            pinfo->vlinks.push_back(link);
-            molinks.push_back(link);
-            //link_map.insert(std::pair<std::string,Moby::RigidBodyPtr>(link->id,link));
-        }
-
-        vector<KinBody::JointPtr> vbodyjoints; vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
-        vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
-        vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
-        // ?: Do PassiveJoints -> fixed joints/welds
-
-        FOREACH(itjoint, vbodyjoints) {
-            // create a moby joint
-
-            Moby::RigidBodyPtr body0, body1;
-            Moby::JointPtr joint;
-
-            if( !!(*itjoint)->GetFirstAttached() ) {
-                body0 = pinfo->vlinks.at((*itjoint)->GetFirstAttached()->GetIndex());
-            }
-            if( !!(*itjoint)->GetSecondAttached() ) {
-                body1 = pinfo->vlinks.at((*itjoint)->GetSecondAttached()->GetIndex());
-            }
-            if( !body0 || !body1 ) {
-                RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
-                continue;
-            }
-            
-            Transform t0inv = GetTransform(body0->get_pose()).inverse();
-            Transform t1inv = GetTransform(body1->get_pose()).inverse();
-            
-            switch((*itjoint)->GetType()) {
-            case KinBody::JointHinge: {
-                boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
-                joint = rjoint;
-
-                // ?: what reference frame is the KinBody Joint information in?
-                // Answer will affect the construction of the joint location below
-
-                Ravelin::Pose3d pose;
-
-                pose.rpose = body1->get_pose();
-                pose.update_relative_pose(Moby::GLOBAL);
-                Ravelin::Vector3d loc(pose.x[0], pose.x[1], pose.x[2], Moby::GLOBAL);
-                joint->set_location(loc, body0, body1);
-
-                // set axis
-                //(*itjoint)->GetAnchor();
-                //(*itjoint)->GetAxis(0);
-/*
-                btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
-                btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
-                btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
-                btVector3 axisInB = GetBtVector(t1inv.rotate((*itjoint)->GetAxis(0)));
-                boost::shared_ptr<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
-                //hinge->setParam(BT_CONSTRAINT_STOP_ERP,0.8);
-                //hinge->setParam(BT_CONSTRAINT_STOP_CFM,0);
-                //hinge->setParam(BT_CONSTRAINT_CFM,0);
-                vector<dReal> vupper,vlower;
-                (*itjoint)->GetLimits(vlower,vupper);
-                hinge->setLimit(vlower.at(0),vupper.at(0),0.9f,0.9f,1.0f);
-                if( !(*itjoint)->IsCircular(0) ) {
-                    vector<dReal> vlower, vupper;
-                    (*itjoint)->GetLimits(vlower,vupper);
-                    btScalar orInitialAngle = (*itjoint)->GetValue(0);
-                    btScalar btInitialAngle = hinge->getHingeAngle();
-                    btScalar lower_adj, upper_adj;
-                    btScalar diff = (btInitialAngle + orInitialAngle);
-                    lower_adj = diff - vupper.at(0);
-                    upper_adj = diff - vlower.at(0);
-                    hinge->setLimit(lower_adj,upper_adj);
-                }
-                joint = hinge;
-*/
-                break;
-            }
-            case KinBody::JointSlider: {
-                boost::shared_ptr<Moby::PrismaticJoint> pjoint(new Moby::PrismaticJoint);
-                joint = pjoint;
-/*
-                Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
-                btTransform frameInA = GetBtTransform(t0inv*tslider);
-                btTransform frameInB = GetBtTransform(t1inv*tslider);
-                joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
-*/
-                break;
-            }
-            case KinBody::JointSpherical: {
-                boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
-                joint = sjoint;
-/*
-                btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
-                btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
-                boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
-                joint = spherical;
-*/
-                break;
-            }
-            case KinBody::JointUniversal: {
-                boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
-                joint = sjoint;
-
+            // TODO: this is only the case for the construction of an articulated robot
+            //   Rigid bodies should be created as RigidBody   
+            // RCArticulated body at the root of the hierarchy
+            Moby::RCArticulatedBodyPtr morcab(new Moby::RCArticulatedBody());
+    
+            std::vector<Moby::RigidBodyPtr> molinks;
+            std::vector<Moby::JointPtr> mojoints;
+    
+            //std::map<std::string, Moby::RigidBodyPtr> link_map;
+    
+            FOREACHC(itlink, pbody->GetLinks()) {
+                boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+                link->id = (*itlink)->GetName();
+    
+                // create a Moby::RigidBody
+                // NOTE: the mass reference frame may not be centered.  
+                //   Do the Moby primitives generally assume a centered frame?
+                AABB bb = (*itlink)->ComputeLocalAABB();
+                Moby::PrimitivePtr prim(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+                Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
+    
+                //Moby::RigidBodyPtr child(new Moby::RigidBody());
+                prim->set_mass((*itlink)->GetMass());
                 
-                break;
+                link->set_visualization_data(prim->create_visualization());
+                link->set_inertia(prim->get_inertia());
+                link->set_enabled(true);
+    
+                // TODO: validate inertial setup for primitive
+    
+                // TODO: set contact parameters?
+               
+                pinfo->vlinks.push_back(link);
+                molinks.push_back(link);
+                //link_map.insert(std::pair<std::string,Moby::RigidBodyPtr>(link->id,link));
             }
-            case KinBody::JointHinge2:
-                RAVELOG_ERROR("hinge2 joint not supported by Moby\n");
-                break;
-            default:
-                RAVELOG_ERROR("unknown joint type 0x%8.8x\n", (*itjoint)->GetType());
-                break;
+    
+            vector<KinBody::JointPtr> vbodyjoints; vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+            vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
+            vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
+            // ?: Do PassiveJoints -> fixed joints/welds
+    
+            FOREACH(itjoint, vbodyjoints) {
+                // create a moby joint
+    
+                Moby::RigidBodyPtr body0, body1;
+                Moby::JointPtr joint;
+    
+                if( !!(*itjoint)->GetFirstAttached() ) {
+                    body0 = pinfo->vlinks.at((*itjoint)->GetFirstAttached()->GetIndex());
+                }
+                if( !!(*itjoint)->GetSecondAttached() ) {
+                    body1 = pinfo->vlinks.at((*itjoint)->GetSecondAttached()->GetIndex());
+                }
+                if( !body0 || !body1 ) {
+                    RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
+                    continue;
+                }
+                
+                //Transform t0inv = GetTransform(body0->get_pose()).inverse();
+                //Transform t1inv = GetTransform(body1->get_pose()).inverse();
+                
+                switch((*itjoint)->GetType()) {
+                case KinBody::JointHinge: {
+                    boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
+                    joint = rjoint;
+    
+                    // ?: what reference frame is the KinBody Joint information in?
+                    // Answer will affect the construction of the joint location below
+    
+                    Ravelin::Pose3d pose;
+    
+                    pose.rpose = body1->get_pose();
+                    pose.update_relative_pose(Moby::GLOBAL);
+                    Ravelin::Vector3d loc(pose.x[0], pose.x[1], pose.x[2], Moby::GLOBAL);
+                    joint->set_location(loc, body0, body1);
+    
+                    // set axis
+                    //(*itjoint)->GetAnchor();
+                    //(*itjoint)->GetAxis(0);
+    /*
+                    btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
+                    btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
+                    btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
+                    btVector3 axisInB = GetBtVector(t1inv.rotate((*itjoint)->GetAxis(0)));
+                    boost::shared_ptr<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
+                    //hinge->setParam(BT_CONSTRAINT_STOP_ERP,0.8);
+                    //hinge->setParam(BT_CONSTRAINT_STOP_CFM,0);
+                    //hinge->setParam(BT_CONSTRAINT_CFM,0);
+                    vector<dReal> vupper,vlower;
+                    (*itjoint)->GetLimits(vlower,vupper);
+                    hinge->setLimit(vlower.at(0),vupper.at(0),0.9f,0.9f,1.0f);
+                    if( !(*itjoint)->IsCircular(0) ) {
+                        vector<dReal> vlower, vupper;
+                        (*itjoint)->GetLimits(vlower,vupper);
+                        btScalar orInitialAngle = (*itjoint)->GetValue(0);
+                        btScalar btInitialAngle = hinge->getHingeAngle();
+                        btScalar lower_adj, upper_adj;
+                        btScalar diff = (btInitialAngle + orInitialAngle);
+                        lower_adj = diff - vupper.at(0);
+                        upper_adj = diff - vlower.at(0);
+                        hinge->setLimit(lower_adj,upper_adj);
+                    }
+                    joint = hinge;
+    */
+                    break;
+                }
+                case KinBody::JointSlider: {
+                    boost::shared_ptr<Moby::PrismaticJoint> pjoint(new Moby::PrismaticJoint);
+                    joint = pjoint;
+    /*
+                    Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
+                    btTransform frameInA = GetBtTransform(t0inv*tslider);
+                    btTransform frameInB = GetBtTransform(t1inv*tslider);
+                    joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
+    */
+                    break;
+                }
+                case KinBody::JointSpherical: {
+                    boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
+                    joint = sjoint;
+    /*
+                    btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
+                    btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
+                    boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
+                    joint = spherical;
+    */
+                    break;
+                }
+                case KinBody::JointUniversal: {
+                    boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
+                    joint = sjoint;
+    
+                    
+                    break;
+                }
+                case KinBody::JointHinge2:
+                    RAVELOG_ERROR("hinge2 joint not supported by Moby\n");
+                    break;
+                default:
+                    RAVELOG_ERROR("unknown joint type 0x%8.8x\n", (*itjoint)->GetType());
+                    break;
+                }
+    
+                if( !!joint ) {
+    
+    
+                    // add the joint to the set of joints
+                    mojoints.push_back(joint);
+                }
             }
-
-            if( !!joint ) {
-
-
-                // add the joint to the set of joints
-                mojoints.push_back(joint);
-            }
+    
+            // set fixed base
+            // TODO: determine whether object has fixed base and branch for the following if so
+            morcab->set_floating_base(false);
+    
+            // add the links and joints to the articulated body
+            morcab->set_links_and_joints(molinks,mojoints);
         }
-
-        // TODO: this is only the case for the construction of an articulated robot
-        //   Rigid bodies should be created as RigidBody   
-        // RCArticulated body at the root of the hierarchy
-        Moby::RCArticulatedBodyPtr morcab(new Moby::RCArticulatedBody());
-
-        // set fixed base
-        // TODO: determine whether object has fixed base and branch for the following if so
-        morcab->set_floating_base(false);
-
-        // add the links and joints to the articulated body
-        morcab->set_links_and_joints(molinks,mojoints);
+        else
+        {
+            //rigid body
+        }
+        return pinfo;
     }
 
     void Synchronize()
