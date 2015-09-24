@@ -19,6 +19,8 @@
 
 #include "mobyspace.h"
 
+#include <Moby/GravityForce.h>
+
 //using namespace Moby;
 //using namespace OpenRAVE;
 //using namespace std;
@@ -175,38 +177,23 @@ public:
 
     virtual void SetGravity(const Vector& gravity)
     {     
-       // Note: in Moby, gravity is a recurrent force assigned at the
-       // individual body level and not through a singular gravity method
-       // at the sim level.  The number of recurrent forces is variable,
-       // so there may be more than one value in the list for any body.
-       // Therefore, must find the correct recurrent force in the set for
-       // each body
+        // if this is the first time setting gravity, initialize the Moby
+        //  gravity force object and assign it to all bodies in the sim
+        if( !_mobyGravity ) {
+            _mobyGravity = boost::shared_ptr<Moby::GravityForce>(new Moby::GravityForce());
 
-       // RigidBodyPtr mobody;
-       // for each mobody in sim
-       //   std::list<Moby::RecurrentForcePtr> forces = mobody->get_recurrent_forces(); 
-       //   for each force in forces
-       //     if force == _gravity
-       //       force = gravity   
-
-        vector<KinBodyPtr> vbodies;
-        GetEnv()->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies) {
-            MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
-            FOREACH(itlink, pinfo->vlinks) {
-                //Transform t = MobySpace::GetTransform((*itlink)->get_pose());
-                //(*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
-/*
-                // the following doesn't appear to be the correct approach, so
-                // requested Evan's feedback about how to change gravity online
-                std::list<RecurrentForcePtr> forces = Moby::RecurrentForces (*itlink)->get_recurrent_forces();
-                for( std::list<RecurrentForcePtr>::iterator it=forces.begin(); it!=forces.end(); it++) 
-                {
-                  //if((*it)==)
+            vector<KinBodyPtr> vbodies;
+            GetEnv()->GetBodies(vbodies);
+            FOREACHC(itbody, vbodies) {
+                MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
+                FOREACH(itlink, pinfo->vlinks) {
+                    (*itlink)->get_recurrent_forces().push_back(_mobyGravity);
                 }
-*/
             }
         }
+
+        // update the Moby gravity force object
+        _mobyGravity->gravity = Ravelin::Vector3d(gravity.x, gravity.y, gravity.z);
         
        _gravity = gravity;
     }
@@ -278,5 +265,6 @@ private:
     int _options;
     boost::shared_ptr<MobySpace> _space;
     boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
+    boost::shared_ptr<Moby::GravityForce> _mobyGravity;
 };
 
