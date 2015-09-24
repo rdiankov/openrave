@@ -152,6 +152,18 @@ public:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         std::vector<dReal> vsolution;
         pmanip->GetRobot()->GetDOFValues(vsolution, pmanip->GetArmIndices());
+        // do sanity check to make sure that current robot manip is consistent with param
+        dReal ikworkspacedist = pmanip->GetIkParameterization(param.GetType(), false).ComputeDistanceSqr(param);
+        if( ikworkspacedist > _ikthreshold ) {
+            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "ignoring bad ik for " << pmanip->GetRobot()->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            FOREACHC(itvalue,vsolution) {
+                ss << *itvalue << ", ";
+            }
+            ss << "]" << endl;
+            throw OPENRAVE_EXCEPTION_FORMAT0(ss.str(), ORE_InvalidArguments);
+        }
+        
         return _CallFilters(vsolution, pmanip, param, ikreturn, minpriority, maxpriority);
     }
 
@@ -1297,7 +1309,7 @@ protected:
         if( ikworkspacedist > _ikthreshold ) {
             BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
             FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
                 ss << *itvalue << ", ";
             }
@@ -1604,7 +1616,7 @@ protected:
         if( ikworkspacedist > _ikthreshold ) {
             BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
             FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
                 ss << *itvalue << ", ";
             }
