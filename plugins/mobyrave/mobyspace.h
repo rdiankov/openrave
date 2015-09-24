@@ -58,7 +58,8 @@ public:
                 plink->SetTransform(GetTransform(comWorldTrans)*tlocal.inverse());
             }
 
-            //Moby::RigidBodyPtr _body;
+            Moby::PrimitivePtr _primitive;
+
             KinBody::LinkPtr plink;
             Transform tlocal;     /// local offset transform to account for inertias not aligned to axes
         };
@@ -100,7 +101,7 @@ private:
     virtual ~MobySpace() {
     }
 
-    bool InitEnvironment(boost::shared_ptr<Moby::TimeSteppingSimulator> world)
+    bool InitEnvironment(boost::shared_ptr<Moby::Simulator> world)
     {
  
         _world = world;
@@ -128,18 +129,43 @@ private:
         pinfo->_mobyspace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
 
-        // ?: if pbody is robot then rcarticulatedbody otherwise rigidbody
-	// does IsRobot imply that the KinBody is hierarchical?
-        if( pbody->IsRobot() ){
+        if(pbody->GetLinks().size() == 1) 
+        {
+            RAVELOG_ERROR("Request to map a KinBody as a RigidBody\n");
 
-            // TODO: this is only the case for the construction of an articulated robot
-            //   Rigid bodies should be created as RigidBody   
+            // Note: this branch implies that there is only one link
+            FOREACHC(itlink, pbody->GetLinks()) {
+                boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+                link->id = (*itlink)->GetName();
+    
+                // create a Moby::RigidBody
+                // NOTE: the mass reference frame may not be centered.  
+                //   Do the Moby primitives generally assume a centered frame?
+                AABB bb = (*itlink)->ComputeLocalAABB();
+                link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+                Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
+    
+                link->_primitive->set_mass((*itlink)->GetMass()); 
+                link->set_visualization_data(link->_primitive->create_visualization());
+                link->set_inertia(link->_primitive->get_inertia());
+                link->set_enabled(true);
+    
+                // TODO: validate inertial setup for primitive
+    
+                // TODO: set contact parameters?
+               
+                pinfo->vlinks.push_back(link);
+            }
+        }
+        else if(pbody->GetLinks().size() > 1)
+        {
+            RAVELOG_ERROR("Request to map a KinBody as a ArticulatedBody\n");
+
             // RCArticulated body at the root of the hierarchy
             Moby::RCArticulatedBodyPtr morcab(new Moby::RCArticulatedBody());
     
-            std::vector<Moby::RigidBodyPtr> molinks;
-            std::vector<Moby::JointPtr> mojoints;
-    
+            std::vector<Moby::RigidBodyPtr> molinks; 
+            molinks.reserve(pbody->GetLinks().size());
             //std::map<std::string, Moby::RigidBodyPtr> link_map;
     
             FOREACHC(itlink, pbody->GetLinks()) {
@@ -150,14 +176,12 @@ private:
                 // NOTE: the mass reference frame may not be centered.  
                 //   Do the Moby primitives generally assume a centered frame?
                 AABB bb = (*itlink)->ComputeLocalAABB();
-                Moby::PrimitivePtr prim(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+                link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
                 Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
     
-                //Moby::RigidBodyPtr child(new Moby::RigidBody());
-                prim->set_mass((*itlink)->GetMass());
-                
-                link->set_visualization_data(prim->create_visualization());
-                link->set_inertia(prim->get_inertia());
+                link->_primitive->set_mass((*itlink)->GetMass()); 
+                link->set_visualization_data(link->_primitive->create_visualization());
+                link->set_inertia(link->_primitive->get_inertia());
                 link->set_enabled(true);
     
                 // TODO: validate inertial setup for primitive
@@ -169,11 +193,15 @@ private:
                 //link_map.insert(std::pair<std::string,Moby::RigidBodyPtr>(link->id,link));
             }
     
-            vector<KinBody::JointPtr> vbodyjoints; vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+            vector<KinBody::JointPtr> vbodyjoints;
+            vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
             // ?: Do PassiveJoints -> fixed joints/welds
     
+            std::vector<Moby::JointPtr> mojoints;
+            mojoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+
             FOREACH(itjoint, vbodyjoints) {
                 // create a moby joint
     
@@ -283,7 +311,7 @@ private:
                     mojoints.push_back(joint);
                 }
             }
-    
+     
             // set fixed base
             // TODO: determine whether object has fixed base and branch for the following if so
             morcab->set_floating_base(false);
@@ -293,8 +321,11 @@ private:
         }
         else
         {
-            //rigid body
+            RAVELOG_ERROR("Request to map a KinBody with no links\n");
         }
+
+        saver.Restore();
+
         return pinfo;
     }
 
@@ -400,7 +431,7 @@ private:
 private:
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
-    boost::shared_ptr<Moby::TimeSteppingSimulator> _world;
+    boost::shared_ptr<Moby::Simulator> _world;
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 

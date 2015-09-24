@@ -19,6 +19,7 @@
 
 #include "mobyspace.h"
 
+#include <Moby/TimeSteppingSimulator.h>
 #include <Moby/GravityForce.h>
 
 //using namespace Moby;
@@ -39,10 +40,8 @@ class MobyPhysicsEngine : public PhysicsEngineBase
 public:
     MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
     {
-        // create the simulator reference 
         // TODO: map any environment settings into the simulator settings
 
-        
     }
     virtual ~MobyPhysicsEngine() {}
 
@@ -63,17 +62,21 @@ public:
         _space->SetSynchronizationCallback(boost::bind(&MobyPhysicsEngine::_SyncCallback, shared_physics(),_1));
 
         _sim.reset(new Moby::TimeSteppingSimulator());
+        //_sim.reset(new Moby::Simulator());      // getting a null pointer except on the integrator using Sim class
 
+        RAVELOG_INFO( "Moby simulator object created\n" );
         if(!_space->InitEnvironment(_sim)) {
             return false;
         }        
         
+        RAVELOG_INFO( "Initializing bodies\n" );
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies); 
         FOREACHC(itbody, vbodies) { 
             InitKinBody(*itbody);
         }
 
+        RAVELOG_INFO( "setting gravity\n" );
         SetGravity(_gravity);
 
         return true;
@@ -194,8 +197,9 @@ public:
 
         // update the Moby gravity force object
         _mobyGravity->gravity = Ravelin::Vector3d(gravity.x, gravity.y, gravity.z);
-        
-       _gravity = gravity;
+       
+        // update the local OpenRave gravity variable  
+        _gravity = gravity;
     }
 
     virtual Vector GetGravity()
@@ -211,7 +215,8 @@ public:
         // the upper bound of accuracy for integration steps.  Some
         // logic should be emplaced to select for an accurate 
         // integration step if fTimeElapsed is set larger than 1ms
-        // For now, assume fTimeElapsed is 1ms.
+        // For now, assume fTimeElapsed is a resonable value for 
+        // accurate integration
 
 /*
         dReal endOfStepTime = ?;
@@ -229,6 +234,9 @@ public:
             t += actualStep;        // naive fp adding will have error here
         } while(t<endOfStepTime);
 */
+        
+
+        //RAVELOG_INFO( "attempting to step\n" );
         _sim->step(fTimeElapsed);
 
         vector<KinBodyPtr> vbodies;
@@ -241,6 +249,7 @@ public:
             }
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
+        //RAVELOG_INFO( "completed step\n" );
     }
 
     dReal _StepSize;
@@ -264,7 +273,7 @@ private:
 
     int _options;
     boost::shared_ptr<MobySpace> _space;
-    boost::shared_ptr<Moby::TimeSteppingSimulator> _sim;
+    boost::shared_ptr<Moby::Simulator> _sim; 
     boost::shared_ptr<Moby::GravityForce> _mobyGravity;
 };
 
