@@ -27,6 +27,7 @@
 #include <Moby/PrismaticJoint.h>
 #include <Moby/UniversalJoint.h>
 #include <Moby/SphericalJoint.h>
+#include <Moby/GravityForce.h>
 
 // manages a space of Moby objects
 class MobySpace : public boost::enable_shared_from_this<MobySpace>
@@ -36,7 +37,6 @@ class MobySpace : public boost::enable_shared_from_this<MobySpace>
     }
 
 public:
-
     // information about the kinematics of the body
     class KinBodyInfo : public UserData
     {
@@ -131,7 +131,7 @@ private:
 
         if(pbody->GetLinks().size() == 1) 
         {
-            RAVELOG_ERROR("Request to map a KinBody as a RigidBody\n");
+            RAVELOG_INFO("Request to map a KinBody as a RigidBody\n");
 
             // Note: this branch implies that there is only one link
             FOREACHC(itlink, pbody->GetLinks()) {
@@ -144,22 +144,31 @@ private:
                 AABB bb = (*itlink)->ComputeLocalAABB();
                 link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
                 Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
+                RAVELOG_INFO(str(boost::format("m[%f]\n") % (*itlink)->GetMass())); 
     
                 link->_primitive->set_mass((*itlink)->GetMass()); 
                 link->set_visualization_data(link->_primitive->create_visualization());
                 link->set_inertia(link->_primitive->get_inertia());
                 link->set_enabled(true);
-    
+                link->get_recurrent_forces().push_back(gravity);
+  
+                // watch reference frames 
+                link->set_pose(GetRavelinPose((*itlink)->GetTransform()));
+ 
                 // TODO: validate inertial setup for primitive
     
                 // TODO: set contact parameters?
-               
+              
+                link->plink = *itlink; 
                 pinfo->vlinks.push_back(link);
+                _world->add_dynamic_body(link);
             }
+
+            RAVELOG_INFO("Completed RigidBody map\n");
         }
         else if(pbody->GetLinks().size() > 1)
         {
-            RAVELOG_ERROR("Request to map a KinBody as a ArticulatedBody\n");
+            RAVELOG_INFO("Request to map a KinBody as a ArticulatedBody\n");
 
             // RCArticulated body at the root of the hierarchy
             Moby::RCArticulatedBodyPtr morcab(new Moby::RCArticulatedBody());
@@ -321,7 +330,7 @@ private:
         }
         else
         {
-            RAVELOG_ERROR("Request to map a KinBody with no links\n");
+            RAVELOG_INFO("Request to map a KinBody with no links\n");
         }
 
         saver.Restore();
@@ -397,6 +406,8 @@ private:
     bool IsInitialized() {
         return !!_world;
     }
+
+    boost::shared_ptr<Moby::GravityForce> gravity;
 
 private:
 
