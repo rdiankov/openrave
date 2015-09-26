@@ -192,11 +192,16 @@ private:
                 link->set_visualization_data(link->_primitive->create_visualization());
                 link->set_inertia(link->_primitive->get_inertia());
                 link->set_enabled(true);
+                link->get_recurrent_forces().push_back(gravity);
     
+                // watch reference frames 
+                link->set_pose(GetRavelinPose((*itlink)->GetTransform()));
+
                 // TODO: validate inertial setup for primitive
     
                 // TODO: set contact parameters?
                
+                link->plink = *itlink; 
                 pinfo->vlinks.push_back(link);
                 molinks.push_back(link);
                 //link_map.insert(std::pair<std::string,Moby::RigidBodyPtr>(link->id,link));
@@ -228,8 +233,8 @@ private:
                     continue;
                 }
                 
-                //Transform t0inv = GetTransform(body0->get_pose()).inverse();
-                //Transform t1inv = GetTransform(body1->get_pose()).inverse();
+                //Transform t0inv = GetTransform(*body0->get_pose().get()).inverse();
+                //Transform t1inv = GetTransform(*body1->get_pose().get()).inverse();
                 
                 switch((*itjoint)->GetType()) {
                 case KinBody::JointHinge: {
@@ -237,14 +242,8 @@ private:
                     joint = rjoint;
     
                     // ?: what reference frame is the KinBody Joint information in?
-                    // Answer will affect the construction of the joint location below
-    
-                    Ravelin::Pose3d pose;
-    
-                    pose.rpose = body1->get_pose();
-                    pose.update_relative_pose(Moby::GLOBAL);
-                    Ravelin::Vector3d loc(pose.x[0], pose.x[1], pose.x[2], Moby::GLOBAL);
-                    joint->set_location(loc, body0, body1);
+                    // Answer will affect the construction of the joint location below 
+                    joint->set_location(Ravelin::Vector3d(body1->get_pose()), body0, body1);
     
                     // set axis
                     //(*itjoint)->GetAnchor();
@@ -327,6 +326,7 @@ private:
     
             // add the links and joints to the articulated body
             morcab->set_links_and_joints(molinks,mojoints);
+            _world->add_dynamic_body(morcab);
         }
         else
         {

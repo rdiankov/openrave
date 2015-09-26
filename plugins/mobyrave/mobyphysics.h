@@ -129,6 +129,12 @@ public:
     }
     // For each of the following Get and Set methods velocity and torque return false until validated
     // In what reference frames should the velocities be get and set?  link local frame (not com frame) w.r.t. global frame
+    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
+    {
+        
+        return false;
+    }
+
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
         
@@ -235,7 +241,7 @@ public:
             // compute the least sized step requested
             //dReal actualStep = fTimeElapsed < _StepSize ? fTimeElapsed : _StepSize;
 
-            // if actualStep is equal to _StepSize, there may be some residual time 
+            // if actualStep is equal to _StepSize, there may be some residual time             // after a number of steps so need to compute the last fragment of time 
             // after a number of steps so need to compute the last fragment of time 
             // as accurately as possible and therefore the above actualStep 
             // computation is too simplistic
@@ -254,8 +260,8 @@ public:
         for(std::vector<Moby::DynamicBodyPtr>::iterator it=dbs.begin(); it!=dbs.end();it++) 
         {
             Moby::RigidBodyPtr rb = boost::dynamic_pointer_cast<Moby::RigidBody>(*it);
-            Ravelin::Pose3d pose = rb->get_pose();
-            RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose.x.x() % pose.x.y() % pose.x.z())); 
+            boost::shared_ptr<const Ravelin::Pose3d> pose = rb->get_mixed_pose();
+            RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose->x.x() % pose->x.y() % pose->x.z())); 
         } 
         // -dbg
 
@@ -265,21 +271,13 @@ public:
             MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
             RAVELOG_INFO(str(boost::format("bodies.size[%u], links.size[%u]\n") % vbodies.size() % pinfo->vlinks.size())); 
             FOREACH(itlink, pinfo->vlinks) {
-                Transform t = MobySpace::GetTransform((*itlink)->get_pose());
+                Transform t = MobySpace::GetTransform(*(*itlink)->get_pose().get());
                 (*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
 
                  // +dbg
                  double vt = _sim->current_time;
-                 Ravelin::Pose3d pose = (*itlink)->get_pose();
-                 //std::list<Moby::RecurrentForcePtr> lrf = (*itlink)->get_recurrent_forces();
-                 //RAVELOG_INFO(str(boost::format("lrf.size[%u]\n") % lrf.size())); 
-                 //for( std::list<Moby::RecurrentForcePtr>::iterator it=lrf.begin(); it!=lrf.end(); it++) 
-                 //{
-                 //    boost::shared_ptr<Moby::GravityForce> g = boost::dynamic_pointer_cast<Moby::GravityForce>(*it);
-                 //    if( !g ) continue;
-                 //    RAVELOG_INFO(str(boost::format("g[%f,%f,%f]\n") % g->gravity.x() % g->gravity.y() % g->gravity.z())); 
-                 //}
-                 RAVELOG_INFO(str(boost::format("vt[%f], x[%f,%f,%f]\n") % vt % pose.x.x() % pose.x.y() % pose.x.z())); 
+                 boost::shared_ptr<const Ravelin::Pose3d> pose = (*itlink)->get_pose();
+                 RAVELOG_INFO(str(boost::format("vt[%f], x[%f,%f,%f]\n") % vt % pose->x.x() % pose->x.y() % pose->x.z())); 
                  // -dbg
             }
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
