@@ -1589,6 +1589,8 @@ class IKFastSolver(AutoReloader):
                         elif joint.IsMimic(iaxis):
                             # get the mimic equation
                             var = joint.GetMimicEquation(iaxis)
+                            for itestjoint, testjoint in enumerate(chainjoints):
+                                var = var.replace(testjoint.GetName(), 'j%d'%itestjoint)
                             # this needs to be reduced!
                             cosvar = cos(var)
                             sinvar = sin(var)
