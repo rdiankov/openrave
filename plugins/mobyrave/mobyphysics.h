@@ -191,7 +191,11 @@ public:
 
     virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
     {
-       
+        Moby::JointPtr joint = _space->GetJoint(pjoint);
+        if(!!joint) {
+            joint->add_force(_space->GetRavelinVectorN(pTorques));
+            RAVELOG_INFO( "set torque on joint\n" );
+        }
        
         return false;
     
@@ -259,9 +263,12 @@ public:
         RAVELOG_INFO(str(boost::format("dbs.size[%u]\n") % dbs.size()));
         for(std::vector<Moby::DynamicBodyPtr>::iterator it=dbs.begin(); it!=dbs.end();it++) 
         {
+            // attempt to cast
             Moby::RigidBodyPtr rb = boost::dynamic_pointer_cast<Moby::RigidBody>(*it);
-            boost::shared_ptr<const Ravelin::Pose3d> pose = rb->get_mixed_pose();
-            RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose->x.x() % pose->x.y() % pose->x.z())); 
+            if(rb) {
+                boost::shared_ptr<const Ravelin::Pose3d> pose = rb->get_mixed_pose();
+                RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose->x.x() % pose->x.y() % pose->x.z())); 
+            }
         } 
         // -dbg
 

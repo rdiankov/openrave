@@ -41,11 +41,12 @@ public:
     class KinBodyInfo : public UserData
     {
 public:
-        // Note: may need to inherit from DynamicBody instead
         class LINK : public Moby::RigidBody
         {
 public:
-            virtual ~LINK() {
+            virtual ~LINK() 
+            {
+
             }
 
             virtual void GetWorldPose(Ravelin::Pose3d& comWorldTrans) const
@@ -58,18 +59,18 @@ public:
                 plink->SetTransform(GetTransform(comWorldTrans)*tlocal.inverse());
             }
 
-            Moby::PrimitivePtr _primitive;
-
-            KinBody::LinkPtr plink;
-            Transform tlocal;     /// local offset transform to account for inertias not aligned to axes
+            Moby::PrimitivePtr _primitive;  // for modeling the inertia of the link
+            KinBody::LinkPtr plink;         // link back to openrave correspondent
+            Transform tlocal;               // center of mass frame
         };
 
-        KinBodyInfo(boost::shared_ptr<Moby::Simulator> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) {
+        KinBodyInfo(boost::shared_ptr<Moby::Simulator> world, bool bPhysics) : _world(world), _bPhysics(bPhysics) 
+        {
             nLastStamp = 0;
         }
 
-
-        virtual ~KinBodyInfo() {
+        virtual ~KinBodyInfo() 
+        {
             Reset();
         }
 
@@ -85,7 +86,6 @@ public:
         std::vector<boost::shared_ptr<LINK> > vlinks;     
         UserDataPtr _geometrycallback;
         boost::weak_ptr<MobySpace> _mobyspace;
-
 private:
         boost::shared_ptr<Moby::Simulator> _world;
         bool _bPhysics;
@@ -96,9 +96,14 @@ private:
     typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
-    MobySpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {
+    MobySpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) 
+    {
+
     }
-    virtual ~MobySpace() {
+
+    virtual ~MobySpace() 
+    {
+
     }
 
     bool InitEnvironment(boost::shared_ptr<Moby::Simulator> world)
@@ -121,7 +126,8 @@ private:
 	std::vector<dReal> vzeros(pbody->GetDOF(), 0);
 	pbody->SetDOFValues(vzeros);
 
-        if( !pinfo ) {
+        if( !pinfo ) 
+        {
             pinfo.reset(new KinBodyInfo(_world,_bPhysics));
         }
         pinfo->Reset();
@@ -131,201 +137,203 @@ private:
 
         if(pbody->GetLinks().size() == 1) 
         {
-            RAVELOG_INFO("Request to map a KinBody as a RigidBody\n");
-
             // Note: this branch implies that there is only one link
-            FOREACHC(itlink, pbody->GetLinks()) {
+            FOREACHC(itlink, pbody->GetLinks()) 
+            {
                 boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
-                link->id = (*itlink)->GetName();
-    
-                // create a Moby::RigidBody
-                // NOTE: the mass reference frame may not be centered.  
-                //   Do the Moby primitives generally assume a centered frame?
+
+                // compute a box to approximate link inertial properties
                 AABB bb = (*itlink)->ComputeLocalAABB();
                 link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
-                Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
-                RAVELOG_INFO(str(boost::format("m[%f]\n") % (*itlink)->GetMass())); 
-    
-                link->_primitive->set_mass((*itlink)->GetMass()); 
-                link->set_visualization_data(link->_primitive->create_visualization());
-                link->set_inertia(link->_primitive->get_inertia());
-                link->set_enabled(true);
-                link->get_recurrent_forces().push_back(gravity);
-  
-                // watch reference frames 
-                link->set_pose(GetRavelinPose((*itlink)->GetTransform()));
- 
-                // TODO: validate inertial setup for primitive
-    
-                // TODO: set contact parameters?
-              
-                link->plink = *itlink; 
-                pinfo->vlinks.push_back(link);
-                _world->add_dynamic_body(link);
-            }
+                link->_primitive->set_mass((*itlink)->GetMass());
 
-            RAVELOG_INFO("Completed RigidBody map\n");
+                // assign link parameters
+                link->id = (*itlink)->GetName();                      // identity  
+                link->set_inertia(link->_primitive->get_inertia());   // inertia
+                link->set_enabled(true);                              // enable physics  
+                link->get_recurrent_forces().push_back(gravity);      // s.t. gravity
+
+                // assign transforms (Note: maintain the order of this section)
+                link->tlocal = (*itlink)->GetLocalMassFrame();        // com frame transform
+                link->set_pose(GetRavelinPose((*itlink)->GetTransform()*link->tlocal)); // pose
+
+                // check for a static link
+                if( (*itlink)->IsStatic() ) 
+                {
+                    link->set_enabled(false);          // disable to fix to the world         
+                }
+
+                // TODO: set contact parameters
+
+                // add the link reference to all relevant containers               
+                link->plink = *itlink;             // ref back to openrave link
+                pinfo->vlinks.push_back(link);     // ref for link indexing 
+   
+                _world->add_dynamic_body(link);    // add the body to the world
+            }
         }
         else if(pbody->GetLinks().size() > 1)
         {
-            RAVELOG_INFO("Request to map a KinBody as a ArticulatedBody\n");
-
             // RCArticulated body at the root of the hierarchy
             Moby::RCArticulatedBodyPtr morcab(new Moby::RCArticulatedBody());
-    
-            std::vector<Moby::RigidBodyPtr> molinks; 
-            molinks.reserve(pbody->GetLinks().size());
-            //std::map<std::string, Moby::RigidBodyPtr> link_map;
-    
-            FOREACHC(itlink, pbody->GetLinks()) {
-                boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
-                link->id = (*itlink)->GetName();
-    
-                // create a Moby::RigidBody
-                // NOTE: the mass reference frame may not be centered.  
-                //   Do the Moby primitives generally assume a centered frame?
-                AABB bb = (*itlink)->ComputeLocalAABB();
-                link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
-                Ravelin::Vector3d com(bb.pos.x,bb.pos.y,bb.pos.z);
-    
-                link->_primitive->set_mass((*itlink)->GetMass()); 
-                link->set_visualization_data(link->_primitive->create_visualization());
-                link->set_inertia(link->_primitive->get_inertia());
-                link->set_enabled(true);
-                link->get_recurrent_forces().push_back(gravity);
-    
-                // watch reference frames 
-                link->set_pose(GetRavelinPose((*itlink)->GetTransform()));
 
-                // TODO: validate inertial setup for primitive
+            // initialize the articulated body parameters 
+            morcab->id = pbody->GetName();
+            morcab->algorithm_type = Moby::RCArticulatedBody::eCRB;
+            morcab->set_floating_base(true);   // assume floating base until static link found
     
-                // TODO: set contact parameters?
-               
-                link->plink = *itlink; 
-                pinfo->vlinks.push_back(link);
-                molinks.push_back(link);
-                //link_map.insert(std::pair<std::string,Moby::RigidBodyPtr>(link->id,link));
-            }
+            // make allocations for links and joints
+            std::vector<Moby::RigidBodyPtr> molinks;   // for adding the links to the articulated body
+            molinks.reserve(pbody->GetLinks().size());
     
+            // ?: Do PassiveJoints -> fixed joints/welds
             vector<KinBody::JointPtr> vbodyjoints;
             vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
-            // ?: Do PassiveJoints -> fixed joints/welds
-    
-            std::vector<Moby::JointPtr> mojoints;
+            std::vector<Moby::JointPtr> mojoints;      // for adding the joints to the articulated body
             mojoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
 
-            FOREACH(itjoint, vbodyjoints) {
-                // create a moby joint
+            // iterate over the set of links in the OpenRave environment
+            // create a link for each and insert them into the Moby articulated body
+            FOREACHC(itlink, pbody->GetLinks()) 
+            {
+                boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+
+                // compute a box to approximate link inertial properties
+                AABB bb = (*itlink)->ComputeLocalAABB();
+                link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+                link->_primitive->set_mass((*itlink)->GetMass());
+
+                // assign link parameters
+                link->id = (*itlink)->GetName();                      // identity  
+                link->set_inertia(link->_primitive->get_inertia());   // inertia
+                link->set_enabled(true);                              // physics enabled  
+                link->get_recurrent_forces().push_back(gravity);      // s.t. gravity
+
+                // assign transforms (Note: maintain the order of this section)
+                link->tlocal = (*itlink)->GetLocalMassFrame();        // com frame transform
+                link->set_pose(GetRavelinPose((*itlink)->GetTransform()*link->tlocal)); // pose
+
+                // check for a static link
+                if( (*itlink)->IsStatic() ) {
+                    link->set_enabled(false);          // disable to fix to the world         
+                    morcab->set_floating_base(false);  // opt for a fixed base for kinematic chain
+                }
+
+                // TODO: set contact parameters
+
+                // add the link reference to all relevant containers               
+                link->plink = *itlink;             // ref back to openrave link
+                pinfo->vlinks.push_back(link);     // ref for link indexing    
+                molinks.push_back(link);           // ref for Moby articulated body definition
+            }
     
-                Moby::RigidBodyPtr body0, body1;
+            // iterate over the set of joints in the OpenRave environment
+            // create a joint for each and insert them into the Moby articulated body
+            FOREACH(itjoint, vbodyjoints) 
+            {
+    
+                Moby::RigidBodyPtr inboard, outboard; // inboard=parent, outboard=child
                 Moby::JointPtr joint;
-    
+   
+                // validate that there are two link references for the joint   
                 if( !!(*itjoint)->GetFirstAttached() ) {
-                    body0 = pinfo->vlinks.at((*itjoint)->GetFirstAttached()->GetIndex());
+                    inboard = pinfo->vlinks.at((*itjoint)->GetFirstAttached()->GetIndex());
                 }
                 if( !!(*itjoint)->GetSecondAttached() ) {
-                    body1 = pinfo->vlinks.at((*itjoint)->GetSecondAttached()->GetIndex());
+                    outboard = pinfo->vlinks.at((*itjoint)->GetSecondAttached()->GetIndex());
                 }
-                if( !body0 || !body1 ) {
+                if( !inboard || !outboard ) {
                     RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
                     continue;
                 }
-                
-                //Transform t0inv = GetTransform(*body0->get_pose().get()).inverse();
-                //Transform t1inv = GetTransform(*body1->get_pose().get()).inverse();
-                
-                switch((*itjoint)->GetType()) {
-                case KinBody::JointHinge: {
-                    boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
-                    joint = rjoint;
+                  
+                switch((*itjoint)->GetType()) 
+                {
+                    case KinBody::JointHinge: 
+                    {
+                        // map a Moby revolute joint
+                        boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
+                        rjoint->id = (*itjoint)->GetName();
+        
+                        // set the location of the joint with respect to body0 and body1
+                        Vector anchor = (*itjoint)->GetAnchor();
+                        rjoint->set_location(Ravelin::Vector3d(anchor[0], anchor[1], anchor[2], Moby::GLOBAL), inboard, outboard);
     
-                    // ?: what reference frame is the KinBody Joint information in?
-                    // Answer will affect the construction of the joint location below 
-                    joint->set_location(Ravelin::Vector3d(body1->get_pose()), body0, body1);
+                        // set the joint axis w.r.t. the global frame
+                        Vector axis = (*itjoint)->GetAxis(0);
+                        rjoint->set_axis(Ravelin::Vector3d(axis[0],axis[1],axis[2],Moby::GLOBAL));    
     
-                    // set axis
-                    //(*itjoint)->GetAnchor();
-                    //(*itjoint)->GetAxis(0);
-    /*
-                    btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
-                    btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
-                    btVector3 axisInA = GetBtVector(t0inv.rotate((*itjoint)->GetAxis(0)));
-                    btVector3 axisInB = GetBtVector(t1inv.rotate((*itjoint)->GetAxis(0)));
-                    boost::shared_ptr<btHingeConstraint> hinge(new btHingeConstraint(*body0, *body1, pivotInA, pivotInB, axisInA, axisInB));
-                    //hinge->setParam(BT_CONSTRAINT_STOP_ERP,0.8);
-                    //hinge->setParam(BT_CONSTRAINT_STOP_CFM,0);
-                    //hinge->setParam(BT_CONSTRAINT_CFM,0);
-                    vector<dReal> vupper,vlower;
-                    (*itjoint)->GetLimits(vlower,vupper);
-                    hinge->setLimit(vlower.at(0),vupper.at(0),0.9f,0.9f,1.0f);
-                    if( !(*itjoint)->IsCircular(0) ) {
-                        vector<dReal> vlower, vupper;
+                        // get the joint limits
+                        vector<dReal> vupper,vlower;
                         (*itjoint)->GetLimits(vlower,vupper);
-                        btScalar orInitialAngle = (*itjoint)->GetValue(0);
-                        btScalar btInitialAngle = hinge->getHingeAngle();
-                        btScalar lower_adj, upper_adj;
-                        btScalar diff = (btInitialAngle + orInitialAngle);
-                        lower_adj = diff - vupper.at(0);
-                        upper_adj = diff - vlower.at(0);
-                        hinge->setLimit(lower_adj,upper_adj);
+    
+                        // TODO: set joint limits
+    
+                        // convert the revolute reference to a generalized joint
+                        joint = rjoint;
+    
+                        break;
                     }
-                    joint = hinge;
-    */
-                    break;
+                    case KinBody::JointSlider: 
+                    {
+                        // map a Moby prismatic joint
+                        boost::shared_ptr<Moby::PrismaticJoint> pjoint(new Moby::PrismaticJoint);
+                        joint = pjoint;
+        /*
+                        Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
+                        btTransform frameInA = GetBtTransform(t0inv*tslider);
+                        btTransform frameInB = GetBtTransform(t1inv*tslider);
+                        joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
+        */
+                        break;
+                    }
+                    case KinBody::JointSpherical: 
+                    {
+                        boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
+                        joint = sjoint;
+        /*
+                        btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
+                        btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
+                        boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
+                        joint = spherical;
+        */
+                        break;
+                    }
+                    case KinBody::JointUniversal: 
+                    {
+                        boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
+                        joint = sjoint;
+                        
+                        break;
+                    }
+                    case KinBody::JointHinge2:
+                    {
+                        RAVELOG_ERROR("hinge2 joint not supported by Moby\n");
+                        break;
+                    }
+                    default:
+                    {
+                        RAVELOG_ERROR("unknown joint type 0x%8.8x\n", (*itjoint)->GetType());
+                        break;
+                    }
                 }
-                case KinBody::JointSlider: {
-                    boost::shared_ptr<Moby::PrismaticJoint> pjoint(new Moby::PrismaticJoint);
-                    joint = pjoint;
-    /*
-                    Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
-                    btTransform frameInA = GetBtTransform(t0inv*tslider);
-                    btTransform frameInB = GetBtTransform(t1inv*tslider);
-                    joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
-    */
-                    break;
-                }
-                case KinBody::JointSpherical: {
-                    boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
-                    joint = sjoint;
-    /*
-                    btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
-                    btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
-                    boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
-                    joint = spherical;
-    */
-                    break;
-                }
-                case KinBody::JointUniversal: {
-                    boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
-                    joint = sjoint;
     
-                    
-                    break;
-                }
-                case KinBody::JointHinge2:
-                    RAVELOG_ERROR("hinge2 joint not supported by Moby\n");
-                    break;
-                default:
-                    RAVELOG_ERROR("unknown joint type 0x%8.8x\n", (*itjoint)->GetType());
-                    break;
-                }
-    
-                if( !!joint ) {
-    
-    
+                if( !!joint ) 
+                { 
                     // add the joint to the set of joints
                     mojoints.push_back(joint);
+                    _mapJoints.insert(std::pair<KinBody::JointPtr,Moby::JointPtr>(*itjoint,joint));
                 }
             }
      
-            // set fixed base
-            // TODO: determine whether object has fixed base and branch for the following if so
-            morcab->set_floating_base(false);
-    
             // add the links and joints to the articulated body
             morcab->set_links_and_joints(molinks,mojoints);
+            // add gravity to the articulated body
+            morcab->get_recurrent_forces().push_back(gravity);
+
+            // add the articulated body to the world
             _world->add_dynamic_body(morcab);
         }
         else
@@ -342,7 +350,8 @@ private:
     {
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
-        FOREACHC(itbody, vbodies) {
+        FOREACHC(itbody, vbodies) 
+        {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             BOOST_ASSERT( pinfo->pbody == *itbody );
             if( pinfo->nLastStamp != (*itbody)->GetUpdateStamp() ) {
@@ -355,7 +364,8 @@ private:
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->pbody == pbody );
-        if( pinfo->nLastStamp != pbody->GetUpdateStamp() ) {
+        if( pinfo->nLastStamp != pbody->GetUpdateStamp() ) 
+        {
             _Synchronize(pinfo);
         }
     }
@@ -369,21 +379,28 @@ private:
 
     Moby::JointPtr GetJoint(KinBody::JointConstPtr pjoint)
     {
-        KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
-        BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
+        std::map<KinBody::JointConstPtr, Moby::JointPtr>::iterator it;
+        Moby::JointPtr joint;
 
-        // TODO: How are we mapping joints?
+        it = _mapJoints.find(pjoint);
+        if(it != _mapJoints.end()) 
+        {
+            joint = it->second;
+        }
 
-        // return joint;
+        return joint;
     }
 
-    void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) {
+    void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) 
+    {
         _synccallback = synccallback;
     }
 
     static inline Transform GetTransform(const Ravelin::Pose3d &p)
     {
-        return Transform(Vector(p.q.w, p.q.x, p.q.y, p.q.z), Vector(p.x.x(), p.x.y(), p.x.z()));
+        Ravelin::Pose3d t( p );
+        t.update_relative_pose(Moby::GLOBAL);
+        return Transform(Vector(t.q.w, t.q.x, t.q.y, t.q.z), Vector(t.x.x(), t.x.y(), t.x.z()));
     }
 
     static inline Ravelin::Pose3d GetRavelinPose(const Transform &t)
@@ -395,7 +412,7 @@ private:
         //   as modeled from bulletspace.h.  Reason for this mapping 
         //   unclear.
 
-        return(Ravelin::Pose3d(Ravelin::Quatd(t.rot.y, t.rot.z, t.rot.w, t.rot.x), GetRavelinOrigin(t.trans)));
+        return(Ravelin::Pose3d(Ravelin::Quatd(t.rot.y, t.rot.z, t.rot.w, t.rot.x), GetRavelinOrigin(t.trans), Moby::GLOBAL));
     }
 
     static inline Ravelin::Origin3d GetRavelinOrigin(const Vector &v)
@@ -403,7 +420,17 @@ private:
         return Ravelin::Origin3d(v.x, v.y, v.z);
     }
 
-    bool IsInitialized() {
+    static inline Ravelin::VectorNd GetRavelinVectorN(const std::vector<dReal>& vector)
+    {
+        Ravelin::VectorNd result( vector.size() );
+        for(unsigned i=0; i < vector.size(); i++) {
+            result[i] = vector[i];
+        }
+        return result;
+    }
+
+    bool IsInitialized() 
+    {
         return !!_world;
     }
 
@@ -418,10 +445,12 @@ private:
         pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
-        for(size_t i = 0; i < vtrans.size(); ++i) {
+        for(size_t i = 0; i < vtrans.size(); ++i) 
+        {
             pinfo->vlinks[i]->set_pose(GetRavelinPose(vtrans[i]*pinfo->vlinks[i]->tlocal));
         }
-        if( !!_synccallback ) {
+        if( !!_synccallback ) 
+        {
             _synccallback(pinfo);
         }
     }
@@ -431,7 +460,8 @@ private:
         EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
         KinBodyInfoPtr pinfo = GetInfo(pbody);
-        if( !pinfo ) {
+        if( !pinfo ) 
+        {
             return;
         }
         BOOST_ASSERT(boost::shared_ptr<MobySpace>(pinfo->_mobyspace) == shared_from_this());
@@ -446,14 +476,19 @@ private:
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 
+    std::map<KinBody::JointConstPtr, Moby::JointPtr> _mapJoints;
+    
+
 };
 /*
-static KinBody::LinkPtr GetLinkFromCollision(const btCollisionObject* co) {
+static KinBody::LinkPtr GetLinkFromCollision(const btCollisionObject* co) 
+{
     BOOST_ASSERT(co != NULL);
     return static_cast<MobySpace::KinBodyInfo::LINK*>(co->getUserPointer())->plink;
 }
 
-static KinBody::LinkPtr GetLinkFromProxy(btBroadphaseProxy* proxy) {
+static KinBody::LinkPtr GetLinkFromProxy(btBroadphaseProxy* proxy) 
+{
     return GetLinkFromCollision(static_cast<btCollisionObject*>(proxy->m_clientObject));
 }
 */
@@ -468,7 +503,8 @@ public:
         BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
         KinBody::LinkPtr plink0 = GetLinkFromProxy(proxy0);
         KinBody::LinkPtr plink1 = GetLinkFromProxy(proxy1);
-        if( !plink0->IsEnabled() || !plink1->IsEnabled() ) {
+        if( !plink0->IsEnabled() || !plink1->IsEnabled() ) 
+        {
             return false;
         }
         return CheckLinks(plink0,plink1);
