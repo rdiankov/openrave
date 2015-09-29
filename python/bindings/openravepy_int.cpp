@@ -1561,6 +1561,15 @@ public:
         return openravepy::GetUserData(_penv->GetUserData());
     }
 
+    void SetUnitMult(object o){
+        
+        _penv->SetUnitMult(1);
+
+    }
+    object GetUnitMult() const{
+        return _penv->GetUnitMult();
+    }
+
     bool __eq__(PyEnvironmentBasePtr p) {
         return !!p && _penv==p->_penv;
     }
@@ -1986,6 +1995,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
+                    .def("GetUnitMult",&PyEnvironmentBase::GetUnitMult, DOXY_FN(InterfaceBase,GetUserData))
+                    .def("SetUnitMult",&PyEnvironmentBase::SetUnitMult, DOXY_FN(InterfaceBase,GetUserData))
                     .def("__enter__",&PyEnvironmentBase::__enter__)
                     .def("__exit__",&PyEnvironmentBase::__exit__)
                     .def("__eq__",&PyEnvironmentBase::__eq__)
