@@ -52,12 +52,12 @@ public:
         _space->SetSynchronizationCallback(boost::bind(&MobyPhysicsEngine::_SyncCallback, shared_physics(),_1));
 
         // +basic simulator
-        _sim.reset(new Moby::Simulator());
-        _sim->integrator = boost::shared_ptr<Moby::Integrator>(new Moby::EulerIntegrator());
+        //_sim.reset(new Moby::Simulator());
+        //_sim->integrator = boost::shared_ptr<Moby::Integrator>(new Moby::EulerIntegrator());
         // -basic simulator
 
         // +simulator with constraints (limits and contact)
-        //_sim.reset(new Moby::TimeSteppingSimulator());
+        _sim.reset(new Moby::TimeSteppingSimulator());
         // -simulator with constraints (limits and contact)
 
         if(!_space->InitEnvironment(_sim)) {

@@ -29,6 +29,8 @@
 #include <Moby/SphericalJoint.h>
 #include <Moby/GravityForce.h>
 
+typedef void (*ControllerCallbackFn)(boost::shared_ptr<Moby::DynamicBody>,double,void*);
+
 // manages a space of Moby objects
 class MobySpace : public boost::enable_shared_from_this<MobySpace>
 {
@@ -269,8 +271,16 @@ private:
                         vector<dReal> vupper,vlower;
                         (*itjoint)->GetLimits(vlower,vupper);
     
-                        // TODO: set joint limits
-    
+                        // set joint limits
+                        if( vlower.size() )
+                        {
+                            rjoint->lolimit = vlower.at(0);
+                        }
+                        if( vupper.size() )
+                        {
+                            rjoint->hilimit = vupper.at(0);
+                        }
+
                         // convert the revolute reference to a generalized joint
                         joint = rjoint;
     
@@ -280,13 +290,33 @@ private:
                     {
                         // map a Moby prismatic joint
                         boost::shared_ptr<Moby::PrismaticJoint> pjoint(new Moby::PrismaticJoint);
+                        pjoint->id = (*itjoint)->GetName();
+        
+                        // set the location of the joint with respect to body0 and body1
+                        Vector anchor = (*itjoint)->GetAnchor();
+                        pjoint->set_location(Ravelin::Vector3d(anchor[0], anchor[1], anchor[2], Moby::GLOBAL), inboard, outboard);
+    
+                        // set the joint axis w.r.t. the global frame
+                        Vector axis = (*itjoint)->GetAxis(0);
+                        pjoint->set_axis(Ravelin::Vector3d(axis[0],axis[1],axis[2],Moby::GLOBAL));    
+    
+                        // get the joint limits
+                        vector<dReal> vupper,vlower;
+                        (*itjoint)->GetLimits(vlower,vupper);
+    
+                        // set joint limits
+                        if( vlower.size() )
+                        {
+                            pjoint->lolimit = vlower[0];
+                        }
+                        if( vupper.size() )
+                        {
+                            pjoint->hilimit = vupper[0];
+                        }
+ 
+                        // convert the prismatic reference to a generalized joint
                         joint = pjoint;
-        /*
-                        Transform tslider; tslider.rot = quatRotateDirection(Vector(1,0,0),(*itjoint)->GetAxis(0));
-                        btTransform frameInA = GetBtTransform(t0inv*tslider);
-                        btTransform frameInB = GetBtTransform(t1inv*tslider);
-                        joint.reset(new btSliderConstraint(*body0, *body1, frameInA, frameInB, true));
-        */
+
                         break;
                     }
                     case KinBody::JointSpherical: 
@@ -333,6 +363,14 @@ private:
             // add gravity to the articulated body
             morcab->get_recurrent_forces().push_back(gravity);
 
+/*
+            //morcab->controller = boost::bind(&MobySpace::_Controller,shared_from_this(),_3);
+            //morcab->controller = &MobySpace::_Controller;
+            void (*f)(Moby::DynamicBodyPtr, double, void*);
+            f = boost::bind(&MobySpace::_Controller, shared_from_this(), _1, _2, _3);
+            //f = boost::bind(&MobySpace::_Controller, this, _1, _2, _3);
+            //morcab->controller = (ControllerCallbackFn)boost::bind(&MobySpace::_Controller, shared_from_this(), _3);
+*/
             // add the articulated body to the world
             _world->add_dynamic_body(morcab);
         }
@@ -394,6 +432,11 @@ private:
     void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) 
     {
         _synccallback = synccallback;
+    }
+
+    void ClearBuffers(void) 
+    {
+        //
     }
 
     static inline Transform GetTransform(const Ravelin::Pose3d &p)
@@ -469,12 +512,24 @@ private:
         InitKinBody(pbody,pinfo);
     }
 
+
+/*
+    void SetControllerCallback(const  &controllercallback) 
+    {
+        _controllercallback = controllercallback;
+    }
+*/
+    void _Controller( Moby::DynamicBodyPtr db, double t, void* ) {
+        
+    }
+
 private:
     EnvironmentBasePtr _penv;
     GetInfoFn GetInfo;
     boost::shared_ptr<Moby::Simulator> _world;
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
+    //ControllerCallbackFn _controllercallback;
 
     std::map<KinBody::JointConstPtr, Moby::JointPtr> _mapJoints;
     
