@@ -1561,13 +1561,14 @@ public:
         return openravepy::GetUserData(_penv->GetUserData());
     }
 
-    void SetUnitMult(object o){
-        
-        _penv->SetUnitMult(1);
-
+    void SetUnit(std::string unitname, dReal unitmult){
+        _penv->SetUnit(std::make_pair(unitname, unitmult));
     }
-    object GetUnitMult() const{
-        return _penv->GetUnitMult();
+
+    object GetUnit() const{
+        std::pair<std::string, dReal> unit = _penv->GetUnit();
+        return boost::python::make_tuple(unit.first, unit.second);
+        
     }
 
     bool __eq__(PyEnvironmentBasePtr p) {
@@ -1995,8 +1996,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
-                    .def("GetUnitMult",&PyEnvironmentBase::GetUnitMult, DOXY_FN(InterfaceBase,GetUserData))
-                    .def("SetUnitMult",&PyEnvironmentBase::SetUnitMult, DOXY_FN(InterfaceBase,GetUserData))
+                    .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(InterfaceBase,GetUserData))
+                    .def("SetUnit",&PyEnvironmentBase::SetUnit, args("unitname","unitmult"),  DOXY_FN(InterfaceBase,GetUserData))
                     .def("__enter__",&PyEnvironmentBase::__enter__)
                     .def("__exit__",&PyEnvironmentBase::__exit__)
                     .def("__eq__",&PyEnvironmentBase::__eq__)
