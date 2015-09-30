@@ -127,33 +127,85 @@ public:
     virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) {
         return false;
     }
-    // For each of the following Get and Set methods velocity and torque return false until validated
-    // In what reference frames should the velocities be get and set?  link local frame (not com frame) w.r.t. global frame
+
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: this implementation is not additive yet
     virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
     {
-        
-        return false;
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
+        boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Ravelin::Quatd(0,0,0,1), _space->GetRavelinOrigin(position), Moby::GLOBAL));
+        _space->SetImpulse(body, _space->GetRavelinSForce(force, Vector(0,0,0), pose));
+
+        return true;
     }
 
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: w.r.t to what reference frame?
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
+        if( !body )
+        {
+            return false;
+        }
+
+        boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Moby::GLOBAL));
         
-        return false;
-    }
-    virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
-    {
-        
-        return false;
+        Ravelin::SVelocityd v(angularvel[0],angularvel[1],angularvel[2],linearvel[0],linearvel[1],linearvel[2], pose);
+
+        _space->SetVelocity(body, v);
+
+        return true;
     }
 
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: w.r.t to what reference frame?
+    virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
+    {
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        FOREACHC(itlink, pbody->GetLinks()) 
+        {
+            int idx = (*itlink)->GetIndex();
+            Moby::RigidBodyPtr body = _space->GetLinkBody(*itlink);
+            if(!!body) 
+            {
+                boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Moby::GLOBAL));
+                Vector omega = velocities.at(idx).first;
+                Vector dx = velocities.at(idx).second;
+
+                Ravelin::SVelocityd v(omega[0],omega[1],omega[2],dx[0],dx[1],dx[2], pose);
+
+                _space->SetVelocity(body, v);
+                
+            }
+        }
+
+        return true;
+    }
+
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: w.r.t to what reference frame?
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
-        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
-        Moby::RigidBodyPtr rb = _space->GetLinkBody(plink);
-        if( !!rb )
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
+        if( !body )
         {
-            Ravelin::SVelocityd svel = rb->get_velocity();
+            return false;
         }
+
+        Ravelin::SVelocityd svel = body->get_velocity();
+        Ravelin::Vector3d dx = svel.get_linear();
+        Ravelin::Vector3d omega = svel.get_angular();
+
+        // what frame is the velocity w.r.t.
+        //dx.update_relative_pose(Moby::GLOBAL);
+        //omega.update_relative_pose(Moby::GLOBAL);
+
+        linearvel = Vector(dx[0],dx[1],dx[2]);
+        angularvel = Vector(omega[0],omega[1],omega[2]);
 /*
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
@@ -167,43 +219,100 @@ public:
             linearvel = angularvel = Vector(0,0,0);
         }
 */
-        return false;
+        return true;
     }
 
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: w.r.t to what reference frame?
     virtual bool GetLinkVelocities(KinBodyConstPtr pbody, std::vector<std::pair<Vector,Vector> >& velocities)
     {
-       
+        velocities.resize(0);
+        velocities.resize(pbody->GetLinks().size());
 
-        return false;
+        FOREACHC(itlink, pbody->GetLinks()) 
+        {
+            Moby::RigidBodyPtr body = _space->GetLinkBody(*itlink);
+            if(!!body) 
+            {
+                Ravelin::SVelocityd svel = body->get_velocity();
+                Ravelin::Vector3d dx = svel.get_linear();
+                Ravelin::Vector3d omega = svel.get_angular();
+
+                // what frame is the velocity w.r.t.
+                //dx.update_relative_pose(Moby::GLOBAL);
+                //omega.update_relative_pose(Moby::GLOBAL);
+
+                velocities.at((*itlink)->GetIndex()).first = Vector(dx[0],dx[1],dx[2]);
+                velocities.at((*itlink)->GetIndex()).second = Vector(omega[0],omega[1],omega[2]);
+            }
+        }
+
+        return true;
     }
 
+    // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
     virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity)
     {
         
         return false;
     }
 
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
     virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity)
     {
-       
-        return false;
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        Moby::JointPtr joint = _space->GetJoint(pjoint);
+        if( !joint )
+        {
+            return false;
+        }
+
+        Ravelin::VectorNd dq = (joint->qd);
+
+        // what frame is the velocity w.r.t.
+
+        pJointVelocity = std::vector<dReal>( dq.size() );
+        for( unsigned i = 0; i < dq.size(); i++ )
+        {
+            pJointVelocity[i] = dq[i];
+        }
+
+        return true;
     }
 
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: this implementation is not additive yet
     virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
     {
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::JointPtr joint = _space->GetJoint(pjoint);
-        if(!!joint) {
-            joint->add_force(_space->GetRavelinVectorN(pTorques));
-            RAVELOG_INFO( "set torque on joint\n" );
-        }
-       
-        return false;
+        _space->SetControl(joint, _space->GetRavelinVectorN(pTorques));
+
+        return true;
     
     }
 
+    // Note: this implementation may not reflect a synchronized environment
+    // Note: this implementation is not additive yet
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
-       
+        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
+        boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_inertial_pose() ) );
+        //boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_pose() ) );
+        _space->SetImpulse(body, _space->GetRavelinSForce(Vector(0,0,0), torque, pose));
+
+        return true;
+    }
+
+    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
+    {
+        return false;
+    }
+
+    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force, Vector& torque)
+    {
         return false;
     }
 
@@ -289,6 +398,7 @@ public:
             }
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
+        _space->ClearBuffers();
         //RAVELOG_INFO( "completed step\n" );
     }
 

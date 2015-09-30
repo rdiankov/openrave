@@ -171,7 +171,11 @@ private:
                 link->plink = *itlink;             // ref back to openrave link
                 pinfo->vlinks.push_back(link);     // ref for link indexing 
    
-                _world->add_dynamic_body(link);    // add the body to the world
+                // register the controller callback; necessary for writing state and controls
+                link->register_controller_callback( boost::bind( &MobySpace::_Controller,shared_from_this(),_1,_2,_3) );
+
+                // add the body to the world
+                _world->add_dynamic_body(link);
             }
         }
         else if(pbody->GetLinks().size() > 1)
@@ -362,15 +366,8 @@ private:
             morcab->set_links_and_joints(molinks,mojoints);
             // add gravity to the articulated body
             morcab->get_recurrent_forces().push_back(gravity);
-
-/*
-            //morcab->controller = boost::bind(&MobySpace::_Controller,shared_from_this(),_3);
-            //morcab->controller = &MobySpace::_Controller;
-            void (*f)(Moby::DynamicBodyPtr, double, void*);
-            f = boost::bind(&MobySpace::_Controller, shared_from_this(), _1, _2, _3);
-            //f = boost::bind(&MobySpace::_Controller, this, _1, _2, _3);
-            //morcab->controller = (ControllerCallbackFn)boost::bind(&MobySpace::_Controller, shared_from_this(), _3);
-*/
+            // register the controller callback; necessary for writing state and controls
+            morcab->register_controller_callback( boost::bind( &MobySpace::_Controller,shared_from_this(),_1,_2,_3) );
             // add the articulated body to the world
             _world->add_dynamic_body(morcab);
         }
@@ -429,6 +426,62 @@ private:
         return joint;
     }
 
+    // add an add parameter and implement additions
+    void SetControl(Moby::JointPtr joint, Ravelin::VectorNd u)
+    {
+        if(!joint) 
+        {
+            return;
+        }
+
+        std::map<Moby::JointPtr, Ravelin::VectorNd>::iterator mit = _mapControls.find(joint);
+        if( mit == _mapControls.end() ) 
+        {
+            _mapControls.insert(std::pair<Moby::JointPtr, Ravelin::VectorNd>(joint, u));
+        }
+        else
+        {
+            (*mit).second = u;
+        }
+    }
+
+    // add an add parameter and implement additions
+    void SetImpulse(Moby::RigidBodyPtr body, Ravelin::SForced force)
+    {
+        if(!body) 
+        {
+            return;
+        }
+
+        std::map<Moby::RigidBodyPtr, Ravelin::SForced>::iterator mit = _mapImpulses.find(body);
+        if( mit == _mapImpulses.end() ) 
+        {
+            _mapImpulses.insert(std::pair<Moby::RigidBodyPtr, Ravelin::SForced>(body, force));
+        }
+        else
+        {
+            (*mit).second = force;
+        }
+    }
+
+    void SetVelocity(Moby::RigidBodyPtr body, Ravelin::SVelocityd velocity)
+    {
+        if(!body) 
+        {
+            return;
+        }
+
+        std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocities.find(body);
+        if( mit == _mapVelocities.end() ) 
+        {
+            _mapVelocities.insert(std::pair<Moby::RigidBodyPtr, Ravelin::SVelocityd>(body, velocity));
+        }
+        else
+        {
+            (*mit).second = velocity;
+        }
+    }
+
     void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) 
     {
         _synccallback = synccallback;
@@ -436,7 +489,9 @@ private:
 
     void ClearBuffers(void) 
     {
-        //
+        _mapControls.clear();
+        _mapImpulses.clear();
+        _mapVelocities.clear();
     }
 
     static inline Transform GetTransform(const Ravelin::Pose3d &p)
@@ -448,19 +503,21 @@ private:
 
     static inline Ravelin::Pose3d GetRavelinPose(const Transform &t)
     {
-        // TODO assertion sanity check
         OPENRAVE_ASSERT_OP(RaveFabs(t.rot.lengthsqr4()-1),<=,0.01);
 
-        // TODO: check with Rosen on the Quaternion parameter ordering
-        //   as modeled from bulletspace.h.  Reason for this mapping 
-        //   unclear.
-
-        return(Ravelin::Pose3d(Ravelin::Quatd(t.rot.y, t.rot.z, t.rot.w, t.rot.x), GetRavelinOrigin(t.trans), Moby::GLOBAL));
+        Ravelin::Quatd q(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
+        Ravelin::Origin3d x = GetRavelinOrigin(t.trans);
+        return(Ravelin::Pose3d(q, x, Moby::GLOBAL));
     }
 
     static inline Ravelin::Origin3d GetRavelinOrigin(const Vector &v)
     {
         return Ravelin::Origin3d(v.x, v.y, v.z);
+    }
+
+    static inline Ravelin::SForced GetRavelinSForce(const Vector& force, const Vector& torque, boost::shared_ptr<Ravelin::Pose3d> pose)
+    {
+        return Ravelin::SForced(Ravelin::Vector3d(force[0],force[1],force[2],Moby::GLOBAL), Ravelin::Vector3d(torque[0],torque[1],torque[2]),pose);
     }
 
     static inline Ravelin::VectorNd GetRavelinVectorN(const std::vector<dReal>& vector)
@@ -481,6 +538,8 @@ private:
 
 private:
 
+    // synchronize may need to work with a buffer tied to the controller callback
+    // function 
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
@@ -512,15 +571,92 @@ private:
         InitKinBody(pbody,pinfo);
     }
 
+    // the callback controller function.  
+    // Moby requires that controls be applied inside a callback
+    // this function ensures openrave is able to update controls
+    void _Controller( Moby::DynamicBodyPtr db, const double& t, void* ) {
+        //RAVELOG_INFO(str(boost::format("body %s asked for controls\n") % db->id));
 
-/*
-    void SetControllerCallback(const  &controllercallback) 
-    {
-        _controllercallback = controllercallback;
-    }
-*/
-    void _Controller( Moby::DynamicBodyPtr db, double t, void* ) {
-        
+        // input buffer for controls and state
+        // output buffer for state?
+
+        // how does this relate to _Synchronize?
+
+        // try to process as an articulated body
+        Moby::ArticulatedBodyPtr ab = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(db);
+        if(!!ab) 
+        {
+            std::vector<Moby::JointPtr> joints = ab->get_joints();
+            std::vector<Moby::RigidBodyPtr> links = ab->get_links();
+
+            // process joint controls
+            for(std::vector<Moby::JointPtr>::iterator vit = joints.begin(); vit != joints.end(); vit++)
+            {
+                std::map<Moby::JointPtr, Ravelin::VectorNd>::iterator mit = _mapControls.find(*vit);
+                if( mit == _mapControls.end() ) 
+                {
+                    continue;
+                }
+                RAVELOG_INFO(str(boost::format("applying torque\n")));
+                (*vit)->add_force((*mit).second);
+            }
+
+            // process link velocities
+            for(std::vector<Moby::RigidBodyPtr>::iterator vit = links.begin(); vit != links.end(); vit++)
+            {
+                std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocities.find(*vit);
+                if( mit == _mapVelocities.end() ) 
+                {
+                    continue;
+                }
+                RAVELOG_INFO(str(boost::format("setting velocity\n")));
+                (*vit)->set_velocity((*mit).second);
+            }
+
+            // process link impulses
+            for(std::vector<Moby::RigidBodyPtr>::iterator vit = links.begin(); vit != links.end(); vit++)
+            {
+                std::map<Moby::RigidBodyPtr, Ravelin::SForced>::iterator mit = _mapImpulses.find(*vit);
+                if( mit == _mapImpulses.end() ) 
+                {
+                    continue;
+                }
+                RAVELOG_INFO(str(boost::format("applying force\n")));
+                (*vit)->add_force((*mit).second);
+            }
+ 
+            // done with processing for this dynamic body so exit here
+            return; 
+        }
+
+        // otherwise try to process as a rigid body
+        Moby::RigidBodyPtr rb = boost::dynamic_pointer_cast<Moby::RigidBody>(db);
+        if(!!rb) 
+        {
+
+            // process body velocity
+            {
+                std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocities.find(rb);
+                if( mit != _mapVelocities.end() ) 
+                {
+                    RAVELOG_INFO(str(boost::format("setting velocity\n")));
+                    rb->set_velocity((*mit).second);
+                }
+            }
+
+            // process body impulses
+            {
+                std::map<Moby::RigidBodyPtr, Ravelin::SForced>::iterator mit = _mapImpulses.find(rb);
+                if( mit != _mapImpulses.end() ) 
+                {
+                    RAVELOG_INFO(str(boost::format("applying force\n")));
+                    rb->add_force((*mit).second);
+                }
+            }
+
+            // done with processing for this dynamic body so exit here
+            return; 
+        }
     }
 
 private:
@@ -529,43 +665,14 @@ private:
     boost::shared_ptr<Moby::Simulator> _world;
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
-    //ControllerCallbackFn _controllercallback;
 
     std::map<KinBody::JointConstPtr, Moby::JointPtr> _mapJoints;
-    
+    std::map<Moby::JointPtr, Ravelin::VectorNd> _mapControls;
+    std::map<Moby::RigidBodyPtr, Ravelin::SForced> _mapImpulses;
+    std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd> _mapVelocities;
 
 };
-/*
-static KinBody::LinkPtr GetLinkFromCollision(const btCollisionObject* co) 
-{
-    BOOST_ASSERT(co != NULL);
-    return static_cast<MobySpace::KinBodyInfo::LINK*>(co->getUserPointer())->plink;
-}
 
-static KinBody::LinkPtr GetLinkFromProxy(btBroadphaseProxy* proxy) 
-{
-    return GetLinkFromCollision(static_cast<btCollisionObject*>(proxy->m_clientObject));
-}
-*/
-/*
-class OpenRAVEFilterCallback : public btOverlapFilterCallback
-{
-public:
-    virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const = 0;
-    virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
-    {
-        BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );
-        BOOST_ASSERT( static_cast<btCollisionObject*>(proxy1->m_clientObject) != NULL );
-        KinBody::LinkPtr plink0 = GetLinkFromProxy(proxy0);
-        KinBody::LinkPtr plink1 = GetLinkFromProxy(proxy1);
-        if( !plink0->IsEnabled() || !plink1->IsEnabled() ) 
-        {
-            return false;
-        }
-        return CheckLinks(plink0,plink1);
-    }
-};
-*/
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(MobySpace)
