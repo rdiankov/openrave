@@ -3281,7 +3281,7 @@ public:
             return PE_Support;
         }
 
-        static boost::array<string, 8> tags = { { "bkgndcolor", "camrotaxis", "camrotationaxis", "camrotmat", "camtrans", "camfocal", "bkgndcolor", "plugin"}};
+        static boost::array<string, 9> tags = { { "bkgndcolor", "camrotaxis", "camrotationaxis", "camrotmat", "camtrans", "camfocal", "bkgndcolor", "plugin", "unit"}};
         if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
             _processingtag = xmlname;
             return PE_Support;
@@ -3407,6 +3407,11 @@ public:
             string pluginname;
             _ss >> pluginname;
             RaveLoadPlugin(pluginname);
+        }
+        else if(xmlname == "unit"){
+            std::pair<std::string, dReal> unit;
+            _ss >> unit.first >> unit.second;
+            _penv->SetUnit(unit);
         }
 
         if( xmlname !=_processingtag ) {
