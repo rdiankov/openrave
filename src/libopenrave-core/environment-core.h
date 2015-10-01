@@ -125,7 +125,8 @@ public:
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
-
+        _unit = std::make_pair("meter",1.0); //default unit settings
+            
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -1811,6 +1812,17 @@ public:
         }
     }
 
+    virtual std::pair<std::string, dReal> GetUnit() const
+    {
+        return _unit;
+    }
+    
+    virtual void SetUnit(std::pair<std::string, dReal> unit)
+    {
+        _unit = unit;
+    }
+
+
 protected:
 
     void _SetDefaultGravity()
@@ -2501,6 +2513,8 @@ protected:
 
     vector<KinBody::BodyState> _vPublishedBodies;
     string _homedirectory;
+    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters 
+
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 
     list<InterfaceBasePtr> _listOwnedInterfaces;

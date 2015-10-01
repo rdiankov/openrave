@@ -615,6 +615,17 @@ public:
     /// declaring variables with stdcall can be a little complex
     virtual void SetDebugLevel(int level) = 0;
     virtual int GetDebugLevel() const = 0;
+
+    /// \brief unit - (name, mult factor to meters)
+    ///
+    /// \return pair of unit name and multiplication factor to convert to meters
+    virtual std::pair<std::string, dReal> GetUnit() const = 0;
+
+    /// \brief setter for saving the units
+    ///
+    /// \param name and mult factor to meters pair
+    virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
+
     //@}
 
     /// \brief returns the unique id of the environment
