@@ -2452,10 +2452,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
             if( timestep > timeelapsed+1e-7 ) {
-                RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e", timestep%timeelapsed);
-                //break;
-                // this is a bug, just return false
-                return CFO_StateSettingError;
+                // expected...
+                //RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e", timestep%timeelapsed);
+                break;
+                //return CFO_StateSettingError;
             }
             else if( timestep > timeelapsed ) {
                 timestep = timeelapsed; // get rid of small epsilons
