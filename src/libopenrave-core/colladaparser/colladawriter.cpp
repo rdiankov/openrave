@@ -388,8 +388,9 @@ private:
             authoringtool->setValue("OpenRAVE Collada Writer v0.3.5");
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
-            units->setMeter(1);
-            units->setName("meter");
+            std::pair<std::string, dReal> unit = _penv->GetUnit();
+            units->setMeter(unit.second);
+            units->setName(unit.first.c_str());
 
             domAsset::domUp_axisRef zup = daeSafeCast<domAsset::domUp_axis>( asset->add( COLLADA_ELEMENT_UP_AXIS ) );
             zup->setValue(UP_AXIS_Z_UP);
