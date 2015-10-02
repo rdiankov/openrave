@@ -2223,14 +2223,14 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 else {
                     steps = (int)(RaveFabs(dQ[i]) * 100);
-                }   
+                }
             }
             else {
                 // 0.5*a*t**2 + v0*t + x0 = x
                 dReal inflectiontime = -dq0.at(i) / _vtempaccelconfig.at(i);
                 if( inflectiontime >= 0 && inflectiontime < timeelapsed ) {
                     // have to count double
-                    dReal inflectionpoint = -0.5*dq0.at(i)*inflectiontime;
+                    dReal inflectionpoint = 0.5*dq0.at(i)*inflectiontime;
                     dReal dist = RaveFabs(inflectionpoint) + RaveFabs(dQ.at(i)-inflectionpoint);
                     if (*itres != 0) {
                         steps = (int)(dist / *itres);
@@ -2239,14 +2239,22 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         steps = (int)(dist * 100);
                     }
                 }
+                else {
+                    if( *itres != 0 ) {
+                        steps = (int)(RaveFabs(dQ[i]) / *itres);
+                    }
+                    else {
+                        steps = (int)(RaveFabs(dQ[i]) * 100);
+                    }
+                }
             }
 
             totalsteps += steps;
             if (steps > numSteps) {
                 numSteps = steps;
                 nLargestStepIndex = i;
-            } 
-        }        
+            }
+        }
     }
     else {
         for (i = 0; i < params->GetDOF(); i++,itres++) {
@@ -2336,15 +2344,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal fLargestInflection = dQ.at(nLargestStepIndex); // the max/min
         dReal fLargestTraveledDistance = fLargestInflection;
         dReal fLargestStepDelta;
-        if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
+        if( RaveFabs(fLargestStepAccel) > g_fEpsilonLinear ) {
             dReal fInflectionTime = -fLargestStepInitialVelocity / fLargestStepAccel;
             if( fInflectionTime >= 0 && fInflectionTime < timeelapsed ) {
                 // quadratic hits its min/max during the time interval
                 fLargestInflectionTime = fInflectionTime;
-                fLargestInflection = -0.5*fLargestStepInitialVelocity*fLargestInflectionTime;
+                fLargestInflection = 0.5*fLargestStepInitialVelocity*fLargestInflectionTime;
                 fLargestTraveledDistance = RaveFabs(fLargestInflection) + RaveFabs(dQ.at(nLargestStepIndex) - fLargestInflection);
                 fLargestStepDelta = fLargestTraveledDistance/numSteps;
-                if( fLargestInflection < 0 ) {
+                if( fLargestInflection < 0 || (RaveFabs(fLargestInflection)<=g_fEpsilonLinear && dQ.at(nLargestStepIndex)<0) ) {
                     fLargestStepDelta = -fLargestStepDelta;
                 }
             }
@@ -2355,7 +2363,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         else {
             fLargestStepDelta = fLargestTraveledDistance/dReal(numSteps);
         }
-        
+
         dReal timesteproots[2], timestep=0;
         dReal fStep = 0;
         int istep = 0;
@@ -2382,7 +2390,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             dReal fBestNewStep = bSurpassedInflection ? (fStep-fLargestStepDelta) : (fStep+fLargestStepDelta);
-            
+
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
                 OPENRAVE_ASSERT_OP(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon);
                 timestep = fStep/fLargestStepInitialVelocity;
@@ -2408,7 +2416,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
 
                     if( !bfound && !bSurpassedInflection ) {
-                        fNewStep = fStep;//-fLargestStepDelta;
+                        fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
                         for(int i = 0; i < numroots; ++i) {
                             if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
