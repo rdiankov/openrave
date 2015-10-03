@@ -2457,6 +2457,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     break;
                 }
                 RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d", timestep%timeelapsed%istep%numSteps);
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
                 return CFO_StateSettingError;
             }
             else if( timestep > timeelapsed ) {
@@ -2467,6 +2470,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
             if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
                 return CFO_StateSettingError;
             }
             fStep = fBestNewStep;
@@ -2476,6 +2482,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
         if( RaveFabs(fStep-fLargestStep) > RaveFabs(fLargestStepDelta) ) {
             RAVELOG_WARN_FORMAT("fStep (%.15e) did not reach fLargestStep (%.15e). %.15e > %.15e", fStep%fLargestStep%RaveFabs(fStep-fLargestStep)%fLargestStepDelta);
+            if( !!filterreturn ) {
+                filterreturn->_returncode = CFO_StateSettingError;
+            }
             // this is a bug, just return false
             return CFO_StateSettingError;
         }
