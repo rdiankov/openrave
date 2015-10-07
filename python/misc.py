@@ -327,6 +327,48 @@ def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     else:
         raise NotImplemented('iktype %s'%str(ikparam.GetType()))
 
+def DrawIkparam2(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
+    """draws an IkParameterization
+
+    """
+    if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
+        return [DrawAxes(env,ikparam.GetTransform6DPose(),dist,linewidth,coloradd)]
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationDirection5D:
+        ray = ikparam.GetTranslationDirection5D()
+        colors=numpy.array([[0,0,0],[1,0,0]])
+        if coloradd is not None:
+            colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
+
+        # have to draw the arrow
+        dirangle = numpy.pi/6
+        arrowc = numpy.cos(dirangle)*dist*0.1
+        arrows = numpy.sin(dirangle)*dist*0.1
+        arrowdirs = numpy.array([[0, 0, 0], [0, 0, dist],
+                                 [0, 0, dist], [arrows, 0, dist-arrowc],
+                                 [0, 0, dist], [-arrows, 0, dist-arrowc],
+                                 [0, 0, dist], [0, arrows, dist-arrowc],
+                                 [0, 0, dist], [0, -arrows, dist-arrowc]])
+        q = openravepy_int.quatRotateDirection([0,0,1], ray.dir())
+        realarrowlines = openravepy_ext.quatRotateArrayT(q, arrowdirs) + numpy.tile(ray.pos(), (len(arrowdirs),1))
+        return [env.drawlinelist(realarrowlines[:2,:].flatten(),linewidth,colors=colors), env.drawlinelist(realarrowlines[2:].flatten(),linewidth,colors=colors[1])] + [env.plot3(ray.pos(), 4*linewidth, colors=[0.5,0,0])]
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.Translation3D:
+        if coloradd is not None:
+            colors = numpy.array([coloradd])
+        else:
+            colors=numpy.array([[0,0,0]])
+        return [env.plot3(ikparam.GetTranslation3D(),linewidth,colors=colors)]
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationXAxisAngleZNorm4D:
+        pos,angle = ikparam.GetTranslationXAxisAngleZNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,0,angle])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+    
+    else:
+        raise NotImplemented('iktype %s'%str(ikparam.GetType()))
+
 def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
     angles = numpy.arange(0, 2*numpy.pi+0.1, 0.1)
     R = openravepy_int.matrixFromQuat(openravepy_int.quatRotateDirection([0,0,1],normal))
