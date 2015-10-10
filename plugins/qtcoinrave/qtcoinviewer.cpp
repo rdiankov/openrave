@@ -2377,6 +2377,7 @@ bool QtCoinViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
         }
         else {
             RAVELOG_WARN("failed to get tracking link relative trans\n");
+            _tTrackingLinkRelative = Transform(); // use the identity
         }
     }
     if( bresetvelocity ) {
