@@ -465,6 +465,7 @@ private:
             return false;
         }
         _CreateScene(scenename);
+
         domPhysics_scene::domTechnique_commonRef common = daeSafeCast<domPhysics_scene::domTechnique_common>(_scene.pscene->add(COLLADA_ELEMENT_TECHNIQUE_COMMON));
 
         //  Create gravity
@@ -473,8 +474,11 @@ private:
         g->getValue().set3 (vgravity.x, vgravity.y, vgravity.z);
 
         std::list<boost::shared_ptr<instance_articulated_system_output> > listModelDatabase;
+        int globalid = 0;
         FOREACHC(itbody,listbodies) {
             BOOST_ASSERT((*itbody)->GetEnv()==_penv);
+            _mapBodyIds[*itbody] = globalid++;
+
             boost::shared_ptr<instance_articulated_system_output> iasout;
             if( _CheckForExternalWrite(*itbody) ) {
                 iasout = _WriteKinBodyExternal(*itbody,_scene.kiscene);
@@ -499,6 +503,8 @@ private:
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
+        _mapBodyIds[probot] = 0;
+
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(probot) ) {
             iasout = _WriteKinBodyExternal(probot,_scene.kiscene);
@@ -521,6 +527,8 @@ private:
         }
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
+        _mapBodyIds[pbody] = 0;
+
         boost::shared_ptr<instance_articulated_system_output> iasout;
         if( _CheckForExternalWrite(pbody) ) {
             iasout = _WriteKinBodyExternal(pbody,_scene.kiscene);
@@ -583,7 +591,7 @@ private:
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(KinBodyPtr pbody, domInstance_kinematics_sceneRef ikscene)
     {
         RAVELOG_DEBUG(str(boost::format("writing body %s as external reference")%pbody->GetName()));
-        string asid = str(boost::format("body%d")%pbody->GetEnvironmentId());
+        string asid = str(boost::format("body%d")%_mapBodyIds[pbody]);
         //string asmid = str(boost::format("%s_motion")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
         string iasmid = str(boost::format("%s_motion_inst")%asid);
@@ -627,7 +635,7 @@ private:
                 domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 param->setSid(sparamref.c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(pcolladainfo->_bindingAxesSIDs[idof].kmodelaxissidref.c_str());
-                
+
                 dReal dofvalue = vjointvalues.at(idof);
                 if( pbody->IsDOFRevolute(idof) ) {
                     dofvalue *= 180/M_PI;
@@ -636,7 +644,7 @@ private:
                 domKinematics_newparamRef paramvalue = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                 paramvalue->setSid(sparamrefvalue.c_str());
                 paramvalue->add(COLLADA_TYPE_FLOAT)->setCharData(boost::lexical_cast<std::string>(dofvalue));
-                
+
                 std::string sidref = str(boost::format("%s/%s")%_GetNodeId(pbody)%pcolladainfo->_bindingAxesSIDs[idof].nodesid);
                 if( ias != ias_external ) {
                     BOOST_ASSERT(!!articulated_system_motion);
@@ -733,7 +741,7 @@ private:
 
                 // write bindings
                 {
-                    std::string smodelref = str(boost::format("ikmodel_extern%d_%d")%pbody->GetEnvironmentId()%imodel);
+                    std::string smodelref = str(boost::format("ikmodel_extern%d_%d")%_mapBodyIds[pbody]%imodel);
                     domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                     param->setSid(smodelref.c_str());
                     daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itmodel->ikmodelsidref.c_str());
@@ -743,7 +751,7 @@ private:
                         // have to write another level of parameters
                         domKinematics_newparamRef param2 = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
                         daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%smodelref).c_str());
-                        smodelref = str(boost::format("ikmodel%d_%d")%pbody->GetEnvironmentId()%imodel);
+                        smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody]%imodel);
                         param2->setSid(smodelref.c_str());
                     }
                     iasout->vkinematicsbindings.push_back(make_pair(smodelref, sidref));
@@ -765,7 +773,7 @@ private:
                     }
                 }
                 ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
-                ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%pbody->GetEnvironmentId()).c_str());
+                ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%_mapBodyIds[pbody]).c_str());
                 ipmout->pmout.reset(new physics_model_output()); // need a physics model output in case this is a robot and is grabbing links
                 ipmout->pmout->pbody = pbody;
                 ipmout->pmout->vrigidbodysids.resize(pbody->GetLinks().size());
@@ -822,8 +830,8 @@ private:
     /// \brief Write robot in a given scene
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBody(KinBodyPtr pbody)
     {
-        RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%pbody->GetEnvironmentId()%pbody->GetName()));
-        string asid = str(boost::format("body%d")%pbody->GetEnvironmentId());
+        RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%_mapBodyIds[pbody]%pbody->GetName()));
+        string asid = str(boost::format("body%d")%_mapBodyIds[pbody]);
         string askid = str(boost::format("%s_kinematics")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
         string iassid = str(boost::format("%s_inst")%asmid);
@@ -904,7 +912,7 @@ private:
             domKinematics_newparamRef param_circular = daeSafeCast<domKinematics_newparam>(kai->add(COLLADA_ELEMENT_NEWPARAM));
             param_circular->setSid("circular");
             daeSafeCast<domKinematics_newparam::domBool>(param_circular->add(COLLADA_ELEMENT_BOOL))->setValue(pjoint->IsCircular(iaxis));
-            
+
             domKinematics_newparamRef param_planning_weight = daeSafeCast<domKinematics_newparam>(kai->add(COLLADA_ELEMENT_NEWPARAM));
             param_planning_weight->setSid("planning_weight");
             daeSafeCast<domKinematics_newparam::domFloat>(param_planning_weight->add(COLLADA_ELEMENT_FLOAT))->setValue(pjoint->GetWeight(iaxis));
@@ -916,7 +924,7 @@ private:
             domKinematics_indexRef index = daeSafeCast<domKinematics_index>(kai->add(COLLADA_ELEMENT_INDEX));
             index->setSemantic("OpenRAVE");
             daeSafeCast<domCommon_int_or_param::domInt>(index->add(COLLADA_ELEMENT_INT))->setValue(idof);
-            
+
             //  Motion axis info
             domMotion_axis_infoRef mai = daeSafeCast<domMotion_axis_info>(mt->add(COLLADA_ELEMENT_AXIS_INFO));
             mai->setSid(maxis_infosid.c_str());
@@ -957,12 +965,12 @@ private:
             string valuesid;
             if( kas.valuesid.size() > 0 ) {
                 KinBody::JointConstPtr pjoint = ikmout->kmout->vaxissids.at(iaxissid).pjoint;
-                int iaxis = ikmout->kmout->vaxissids.at(iaxissid).iaxis;
-                dReal valuemult = 1.0;
-                if( pjoint->IsRevolute(iaxis) ) {
-                    valuemult = 180.0/M_PI;
-                }
-                
+//                int iaxis = ikmout->kmout->vaxissids.at(iaxissid).iaxis;
+//                dReal valuemult = 1.0;
+//                if( pjoint->IsRevolute(iaxis) ) {
+//                    valuemult = 180.0/M_PI;
+//                }
+
                 domKinematics_newparamRef abmvalue = daeSafeCast<domKinematics_newparam>(ias_motion->add(COLLADA_ELEMENT_NEWPARAM));
                 abmvalue->setSid(str(boost::format("%s_%s")%asmid%kas.valuesid).c_str());
                 daeSafeCast<domKinematics_newparam::domSIDREF>(abmvalue->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%askid%kas.valuesid).c_str());
@@ -1019,7 +1027,7 @@ private:
     virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
         EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
-        RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%pbody->GetEnvironmentId()%pbody->GetName()));
+        RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody]%pbody->GetName()));
         boost::shared_ptr<kinematics_model_output> kmout = WriteKinematics_model(pbody);
 
         boost::shared_ptr<instance_kinematics_model_output> ikmout(new instance_kinematics_model_output());
@@ -1337,7 +1345,7 @@ private:
                 itaxissid->joint_sidref = kmodelid + itaxissid->sid.substr(index);
             }
         }
-        
+
         if( IsWrite("link_info") ) {
             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
             string digits = boost::lexical_cast<std::string>(std::numeric_limits<OpenRAVE::dReal>::digits10);
@@ -1503,7 +1511,7 @@ private:
         pmout.reset(new physics_model_output());
         pmout->pbody = pbody;
         pmout->pmodel = daeSafeCast<domPhysics_model>(_physicsModelsLib->add(COLLADA_ELEMENT_PHYSICS_MODEL));
-        string pmodelid = str(boost::format("pmodel%d")%pbody->GetEnvironmentId());
+        string pmodelid = str(boost::format("pmodel%d")%_mapBodyIds[pbody]);
         pmout->pmodel->setId(pmodelid.c_str());
         pmout->pmodel->setName(pbody->GetName().c_str());
         Transform tbaseinv = pbody->GetTransform().inverse();
@@ -1703,7 +1711,7 @@ private:
         else {
             _scene.kscene->setName("Kinematics Scene");
         }
-        
+
         // Create instance kinematics scene
         _scene.kiscene = daeSafeCast<domInstance_kinematics_scene>(_globalscene->add( COLLADA_ELEMENT_INSTANCE_KINEMATICS_SCENE ));
         _scene.kiscene->setUrl(str(boost::format("#%s")%_scene.kscene->getId()).c_str());
@@ -1759,6 +1767,8 @@ private:
                 _scene.piscene->setName("Physics Scene");
             }
         }
+
+        _mapBodyIds.clear(); // reset the tracked bodies
     }
 
     /** \brief Write link of a kinematic body
@@ -1828,7 +1838,7 @@ private:
             domLink::domAttachment_fullRef pattfull = daeSafeCast<domLink::domAttachment_full>(pdomlink->add(COLLADA_TYPE_ATTACHMENT_FULL));
             string jointid = str(boost::format("%s/joint%d")%strModelUri%itjoint->first);
             pattfull->setJoint(jointid.c_str());
-            
+
             LINKOUTPUT childinfo = _WriteLink(pchild, pattfull, pnode, strModelUri, vjoints);
             out.listusedlinks.insert(out.listusedlinks.end(),childinfo.listusedlinks.begin(),childinfo.listusedlinks.end());
 
@@ -2042,12 +2052,12 @@ private:
             FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
-                    string strsensor = str(boost::format("robot%d_sensor%d")%probot->GetEnvironmentId()%sensorindex);
+                    string strsensor = str(boost::format("robot%d_sensor%d")%_mapBodyIds[probot]%sensorindex);
                     mapAttachedSensorIDs[*itattachedsensor] = strsensor;
                     sensorindex++;
                 }
             }
-            
+
             FOREACHC(itattachedsensor, probot->GetAttachedSensors()) {
                 domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
                 pextra->setName((*itattachedsensor)->GetName().c_str());
@@ -2228,10 +2238,10 @@ private:
     }
 
     virtual std::string _GetNodeId(KinBodyConstPtr pbody) {
-        return str(boost::format("visual%d")%pbody->GetEnvironmentId());
+        return str(boost::format("visual%d")%_mapBodyIds[pbody]);
     }
     virtual std::string _GetNodeId(KinBody::LinkConstPtr plink) {
-        return str(boost::format("v%d.node%d")%plink->GetParent()->GetEnvironmentId()%plink->GetIndex());
+        return str(boost::format("v%d.node%d")%_mapBodyIds[plink->GetParent()]%plink->GetIndex());
     }
     virtual std::string _GetNodeSid(KinBody::LinkConstPtr plink) {
         return str(boost::format("node%d")%plink->GetIndex());
@@ -2241,11 +2251,11 @@ private:
         return str(boost::format("link%d")%plink->GetIndex());
     }
     virtual std::string _GetMotionId(KinBodyConstPtr pbody) {
-        return str(boost::format("body%d_motion")%pbody->GetEnvironmentId());
+        return str(boost::format("body%d_motion")%_mapBodyIds[pbody]);
     }
 
     virtual std::string _GetGeometryId(KinBody::LinkConstPtr plink, int igeom) {
-        return str(boost::format("g%d_%s_geom%d")%plink->GetParent()->GetEnvironmentId()%_GetLinkSid(plink)%igeom);
+        return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()]%_GetLinkSid(plink)%igeom);
     }
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
         int index = pjoint->GetJointIndex();
@@ -2262,7 +2272,7 @@ private:
     }
 
     virtual std::string _GetKinematicsModelId(KinBodyConstPtr pbody) {
-        return str(boost::format("kmodel%d")%pbody->GetEnvironmentId());
+        return str(boost::format("kmodel%d")%_mapBodyIds[pbody]);
     }
 
     /// \brief compute the link transform when all joints are zero (regardless of mimic joints). This is the state
@@ -2324,6 +2334,7 @@ private:
     std::set<std::string> _setForceWriteOptions;
     std::set<std::string> _setSkipWriteOptions;
 
+    std::map<KinBodyConstPtr, int> _mapBodyIds; ///< map from body to unique collada ids
     bool _bExternalRefAllBodies; ///< if true, attempts to externally write all bodies
     bool _bForceWriteAll; ///< if true, attemps to write all modifiable data to externally saved bodies
     bool _bReuseSimilar; ///< if true, attemps to resuse similar looking meshes and structures to reduce size
