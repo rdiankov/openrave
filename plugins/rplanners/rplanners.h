@@ -617,7 +617,7 @@ private:
                 // only take the children whose distances are within the bound
                 FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                     dReal curdist = _ComputeDistance((*itchild)->q, vquerystate);
-                    if( curdist < bestnode.second && bestnode.first->_usenn) {
+                    if( !bestnode.first || (curdist < bestnode.second && bestnode.first->_usenn)) {
                         bestnode = make_pair(*itchild, curdist);
                     }
                     _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
