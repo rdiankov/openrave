@@ -23,10 +23,6 @@
 #include <Moby/EulerIntegrator.h>
 #include <Moby/GravityForce.h>
 
-//using namespace Moby;
-//using namespace OpenRAVE;
-//using namespace std;
-
 class MobyPhysicsEngine : public PhysicsEngineBase
 {
 
@@ -38,13 +34,101 @@ class MobyPhysicsEngine : public PhysicsEngineBase
         return boost::dynamic_pointer_cast<MobyPhysicsEngine const>(shared_from_this());
     }
 
-public:
-    MobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& ss) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
+    class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
-        // TODO: map any environment settings into the simulator settings
+    public:
+        PhysicsPropertiesXMLReader(boost::shared_ptr<MobyPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
+        }
+
+        virtual ProcessElement startElement(const string& name, const AttributesList& atts) {
+            if( !!_pcurreader ) {
+                if( _pcurreader->startElement(name,atts) == PE_Support ) {
+                    return PE_Support;
+                }
+                return PE_Ignore;
+            }
+
+            if( find(GetTags().begin(),GetTags().end(),name) == GetTags().end() ) {
+                return PE_Pass;
+            }
+            _ss.str("");
+            return PE_Support;
+        }
+
+        virtual bool endElement(const string& name)
+        {
+            if( name == "mobyproperties" )
+                return true;
+	    else if( name == "gains" ) {
+                string jointid;
+                dReal gains[3];
+
+                _ss >> jointid;
+                _ss >> gains[0] >> gains[1] >> gains[2];
+        
+                _physics->_mapJointGains.insert(pair<string, vector<dReal> >(jointid, vector<dReal>(gains, gains+3) ));
+
+                //RAVELOG_INFO(str(boost::format("read joint[%s] gains[%f,%f,%f]\n") % jointid % gains[0] % gains[1] % gains[2]));
+            }
+            else {
+                RAVELOG_ERROR("unknown field %s\n", name.c_str());
+            }
+
+            if( !_ss ) {
+                RAVELOG_WARN(str(boost::format("error parsing %s\n")%name));
+            }
+
+            return false;
+        }
+
+        virtual void characters(const string& ch)
+        {
+            if( !!_pcurreader ) {
+                _pcurreader->characters(ch);
+            }
+            else {
+                _ss.clear();
+                _ss << ch;
+            }
+        }
+
+        static const boost::array<string, 1>& GetTags() {
+        static const boost::array<string, 1> tags = {{"gains"}};
+            return tags;
+        }
+
+protected:
+        BaseXMLReaderPtr _pcurreader;
+        boost::shared_ptr<MobyPhysicsEngine> _physics;
+        stringstream _ss;
+    };
+
+public:
+
+    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    {
+    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<MobyPhysicsEngine>(ptr),atts));
+    }
+
+    MobyPhysicsEngine(EnvironmentBasePtr penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
+    {
+	stringstream ss;
+	__description = ":Interface Authors: James Taylor and Rosen Diankov\n\nInterface to `Moby Physics Engine <https://github.com/PositronicsLab/Moby/>`_\n";
+
+        dReal gains[3] = {1.0,1.0,1.0};  // default gain values
+        _mapJointGains.insert(pair<string, vector<dReal> >("default", vector<dReal>(gains, gains+3) ));
+
+        FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
+            ss << "**" << *it << "**, ";
+        }
+        ss << "\n\n";
+        RAVELOG_INFO( "processed xml\n" );
+    }
+
+    virtual ~MobyPhysicsEngine() 
+    {
 
     }
-    virtual ~MobyPhysicsEngine() {}
 
     virtual bool InitEnvironment()
     {
@@ -65,8 +149,8 @@ public:
         }
 
         // if the gravity force is uninitialized create the reference        
-        if( !_space->gravity ) {
-            _space->gravity.reset( new Moby::GravityForce());
+        if( !_space->_gravity ) {
+            _space->_gravity.reset( new Moby::GravityForce());
         }     
    
         vector<KinBodyPtr> vbodies;
@@ -101,6 +185,7 @@ public:
         pbody->SetUserData("mobyphysics", pinfo);
 
         // set any body specific parameters here
+        _space->MapGains(pbody, _mapJointGains);
 
         return !!pinfo;
     }
@@ -114,6 +199,7 @@ public:
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
+                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
     {
         _options = physicsoptions;
         return true;
@@ -124,18 +210,19 @@ public:
         return _options;
     }
 
-    virtual bool SetPhysicsOptions(std::ostream& sout, std::istream& sinput) {
+    virtual bool SetPhysicsOptions(ostream& sout, istream& sinput) {
         return false;
     }
 
     // Note: this implementation may not reflect a synchronized environment
-    // Note: this implementation is not additive yet
+    // Note: this implementation is only additive
     virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
     {
         //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
         boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Ravelin::Quatd(0,0,0,1), _space->GetRavelinOrigin(position), Moby::GLOBAL));
-        _space->SetImpulse(body, _space->GetRavelinSForce(force, Vector(0,0,0), pose));
+                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
+        _space->AddImpulse(body, _space->GetRavelinSForce(force, Vector(0,0,0), pose));
 
         return true;
     }
@@ -143,6 +230,7 @@ public:
     // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
+                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
     {
         //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
@@ -162,7 +250,7 @@ public:
 
     // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
-    virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
+    virtual bool SetLinkVelocities(KinBodyPtr pbody, const vector<pair<Vector,Vector> >& velocities)
     {
         //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         FOREACHC(itlink, pbody->GetLinks()) 
@@ -224,7 +312,7 @@ public:
 
     // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
-    virtual bool GetLinkVelocities(KinBodyConstPtr pbody, std::vector<std::pair<Vector,Vector> >& velocities)
+    virtual bool GetLinkVelocities(KinBodyConstPtr pbody, vector<pair<Vector,Vector> >& velocities)
     {
         velocities.resize(0);
         velocities.resize(pbody->GetLinks().size());
@@ -251,7 +339,7 @@ public:
     }
 
     // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
-    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity)
+    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const vector<dReal>& pJointVelocity)
     {
         
         return false;
@@ -259,7 +347,7 @@ public:
 
     // Note: this implementation may not reflect a synchronized environment
     // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity)
+    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, vector<dReal>& pJointVelocity)
     {
         //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::JointPtr joint = _space->GetJoint(pjoint);
@@ -272,7 +360,7 @@ public:
 
         // what frame is the velocity w.r.t.
 
-        pJointVelocity = std::vector<dReal>( dq.size() );
+        pJointVelocity = vector<dReal>( dq.size() );
         for( unsigned i = 0; i < dq.size(); i++ )
         {
             pJointVelocity[i] = dq[i];
@@ -282,26 +370,26 @@ public:
     }
 
     // Note: this implementation may not reflect a synchronized environment
-    // Note: this implementation is not additive yet
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
+    // Note: this implementation is only additive
+    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const vector<dReal>& pTorques)
     {
         //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::JointPtr joint = _space->GetJoint(pjoint);
-        _space->SetControl(joint, _space->GetRavelinVectorN(pTorques));
+        _space->AddControl(joint, _space->GetRavelinVectorN(pTorques));
 
         return true;
     
     }
 
     // Note: this implementation may not reflect a synchronized environment
-    // Note: this implementation is not additive yet
+    // Note: this implementation is only additive
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
         //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
         boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_inertial_pose() ) );
         //boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_pose() ) );
-        _space->SetImpulse(body, _space->GetRavelinSForce(Vector(0,0,0), torque, pose));
+        _space->AddImpulse(body, _space->GetRavelinSForce(Vector(0,0,0), torque, pose));
 
         return true;
     }
@@ -319,13 +407,13 @@ public:
     virtual void SetGravity(const Vector& gravity)
     {     
         // if gravity has not been initialized create the reference
-        if(!_space->gravity) 
+        if(!_space->_gravity) 
         {
-            _space->gravity.reset( new Moby::GravityForce());
+            _space->_gravity.reset( new Moby::GravityForce());
         }
 
         // update the Moby gravity force object
-        _space->gravity->gravity = Ravelin::Vector3d(gravity.x, gravity.y, gravity.z);
+        _space->_gravity->gravity = Ravelin::Vector3d(gravity.x, gravity.y, gravity.z);
        
         // update the local OpenRave gravity variable  
         _gravity = gravity;
@@ -338,6 +426,18 @@ public:
 
     virtual void SimulateStep(dReal fTimeElapsed)
     {
+        //+dbg
+/*
+        static bool first = true;
+        if(first) {
+            for(map<string,vector<dReal> >::iterator it = _space->_mapJointGains.begin(); it != _space->_mapJointGains.end(); it++) {
+                RAVELOG_INFO(str(boost::format("gain[%s]: [%f,%f,%f]\n") % it->first % it->second[0] % it->second[1] % it->second[2]));
+            }
+            first = false;
+        }
+*/
+        //-dbg
+
         // The requested fTimeElapsed may be large in comparison to a 
         // an integration step size that is accurate.  Current 
         // configuration dictates an fTimeElapsed of 1ms which is at 
@@ -368,15 +468,15 @@ public:
         _sim->step(fTimeElapsed);
 
         // +dbg
-        std::vector<Moby::DynamicBodyPtr> dbs = _sim->get_dynamic_bodies();
-        RAVELOG_INFO(str(boost::format("dbs.size[%u]\n") % dbs.size()));
-        for(std::vector<Moby::DynamicBodyPtr>::iterator it=dbs.begin(); it!=dbs.end();it++) 
+        vector<Moby::DynamicBodyPtr> dbs = _sim->get_dynamic_bodies();
+        //RAVELOG_INFO(str(boost::format("dbs.size[%u]\n") % dbs.size()));
+        for(vector<Moby::DynamicBodyPtr>::iterator it=dbs.begin(); it!=dbs.end();it++) 
         {
             // attempt to cast
             Moby::RigidBodyPtr rb = boost::dynamic_pointer_cast<Moby::RigidBody>(*it);
             if(rb) {
                 boost::shared_ptr<const Ravelin::Pose3d> pose = rb->get_mixed_pose();
-                RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose->x.x() % pose->x.y() % pose->x.z())); 
+                //RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose->x.x() % pose->x.y() % pose->x.z())); 
             }
         } 
         // -dbg
@@ -385,25 +485,96 @@ public:
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
-            RAVELOG_INFO(str(boost::format("bodies.size[%u], links.size[%u]\n") % vbodies.size() % pinfo->vlinks.size())); 
+            //RAVELOG_INFO(str(boost::format("bodies.size[%u], links.size[%u]\n") % vbodies.size() % pinfo->vlinks.size())); 
             FOREACH(itlink, pinfo->vlinks) {
                 Transform t = MobySpace::GetTransform(*(*itlink)->get_pose().get());
                 (*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
 
                  // +dbg
-                 double vt = _sim->current_time;
+                 //double vt = _sim->current_time;
                  boost::shared_ptr<const Ravelin::Pose3d> pose = (*itlink)->get_pose();
-                 RAVELOG_INFO(str(boost::format("vt[%f], x[%f,%f,%f]\n") % vt % pose->x.x() % pose->x.y() % pose->x.z())); 
+                 //RAVELOG_INFO(str(boost::format("vt[%f], x[%f,%f,%f]\n") % vt % pose->x.x() % pose->x.y() % pose->x.z())); 
                  // -dbg
             }
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
-        _space->ClearBuffers();
         //RAVELOG_INFO( "completed step\n" );
+    }
+
+    dReal GetTime()
+    {
+        return _sim->current_time;
+    }
+
+    bool SendCommand(ostream& os, istream& is)
+    {
+        string cmd;
+        is >> cmd;
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+
+        if( cmd == "setposition" ) {
+            string jointname;
+            unsigned axis;
+            dReal value;
+
+            for(unsigned i = 0; i < 3; i++)
+            {
+                if(i==0) {
+                    is >> jointname;
+                } else if(i==1) {
+                    is >> axis;
+                } else { // i==2
+                    is >> value;
+                }
+
+                if( !is ) {
+                    RAVELOG_WARN("setposition bad command\n");
+                    return false;
+                }
+            }
+
+            Moby::JointPtr joint = _space->GetJoint(jointname);
+            if( !!joint )
+            {
+                _space->SetPosition(joint, axis, value);
+                return true;
+            }
+            RAVELOG_WARN("setposition invalid joint\n");
+            return false;
+        }
+
+        throw openrave_exception(str(boost::format(("command %s supported"))%cmd),OpenRAVE::ORE_CommandNotSupported);
+        return false;
+    }
+
+    bool GetGains(RobotBasePtr probot, int dofIndex, vector<dReal>& gains) {
+        map<KinBodyPtr, map<int, vector<dReal> > >::iterator bit;
+        bit = _space->_mapGains.find(probot);
+        if(bit == _space->_mapGains.end() )
+        {
+            //RAVELOG_INFO(str(boost::format("Could not locate gains for robot %s.\n") % probot->GetName() ));
+            return false;
+        }
+        
+        map<int, vector<dReal> >::iterator dit;    // dof iterator
+        dit = bit->second.find(dofIndex);
+        if(dit == bit->second.end() )
+        {
+            //RAVELOG_INFO(str(boost::format("Could not locate gains for dofIndex %d.\n") % dofIndex ));
+            return false;
+        }
+     
+        gains = dit->second;
+        //RAVELOG_INFO(str(boost::format("Found gains [%f,%f,%f] for dofIndex %d.\n") % gains[0] % gains[1] % gains[2] % dofIndex ));
+ 
+        return true;
     }
 
     dReal _StepSize;
     Vector _gravity;
+    boost::shared_ptr<MobySpace> _space;
+
+    map<string, vector<dReal> > _mapJointGains;
 
 private:
     static MobySpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
@@ -422,7 +593,6 @@ private:
     }
 
     int _options;
-    boost::shared_ptr<MobySpace> _space;
     boost::shared_ptr<Moby::Simulator> _sim; 
 };
 

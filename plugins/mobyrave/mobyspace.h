@@ -85,7 +85,7 @@ public:
 
         KinBodyPtr pbody;     ///< body associated with this structure
         int nLastStamp;
-        std::vector<boost::shared_ptr<LINK> > vlinks;     
+        vector<boost::shared_ptr<LINK> > vlinks;     
         UserDataPtr _geometrycallback;
         boost::weak_ptr<MobySpace> _mobyspace;
 private:
@@ -110,7 +110,6 @@ private:
 
     bool InitEnvironment(boost::shared_ptr<Moby::Simulator> world)
     {
- 
         _world = world;
 
         return true;
@@ -121,11 +120,174 @@ private:
         _world.reset();
     }
 
+    inline boost::shared_ptr<KinBodyInfo::LINK> DeriveLink(KinBodyInfoPtr pinfo, boost::shared_ptr<KinBody::Link> plink) {
+
+        boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+
+        // add the link reference to all relevant containers               
+        link->plink = plink;               // ref back to OpenRave link
+        pinfo->vlinks.push_back(link);     // ref for link indexing 
+
+        // compute a box to approximate link inertial properties
+        AABB bb = plink->ComputeLocalAABB();
+        link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+        link->_primitive->set_mass(plink->GetMass());
+
+        // assign link parameters
+        link->id = plink->GetName();                          // identity  
+        link->set_inertia(link->_primitive->get_inertia());   // inertia
+        link->set_enabled(true);                              // enable physics
+        link->get_recurrent_forces().push_back(_gravity);      // gravity
+
+        // assign transforms (Note: maintain the order of this section)
+        link->tlocal = plink->GetLocalMassFrame();       // com frame transform
+        link->set_pose(GetRavelinPose(plink->GetTransform()*link->tlocal)); // pose
+
+        // check for a static link
+        if( plink->IsStatic() ) {
+            link->set_enabled(false);    // disable physics to fix to the world 
+        }
+
+        // allocate _mapImpulses for the link
+        pair<map<Moby::RigidBodyPtr, vector<Ravelin::SForced> >::iterator, bool> it;
+        it = _mapImpulses.insert(pair<Moby::RigidBodyPtr, vector<Ravelin::SForced> >(link, vector<Ravelin::SForced>()));
+        it.first->second.reserve(1);
+
+        // TODO: set contact parameters
+
+        return link;
+    }
+
+    inline Moby::JointPtr DeriveJoint(KinBodyInfoPtr pinfo, boost::shared_ptr<KinBody::Joint> pjoint) {
+        Moby::RigidBodyPtr inboard, outboard; // inboard=parent, outboard=child
+        Moby::JointPtr joint;
+   
+        // validate that there are two link references for the joint   
+        if( !!pjoint->GetFirstAttached() ) {
+            inboard = pinfo->vlinks.at(pjoint->GetFirstAttached()->GetIndex());
+        }
+        if( !!pjoint->GetSecondAttached() ) {
+            outboard = pinfo->vlinks.at(pjoint->GetSecondAttached()->GetIndex());
+        }
+        if( !inboard || !outboard ) {
+            RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%pjoint->GetName()));
+            return joint;  // null
+        }
+          
+        switch(pjoint->GetType()) 
+        {
+            case KinBody::JointHinge: 
+            {
+                // map a Moby revolute joint
+                boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
+                rjoint->id = pjoint->GetName();
+        
+                // set the location of the joint with respect to body0 and body1
+                Vector anchor = pjoint->GetAnchor();
+                rjoint->set_location(Ravelin::Vector3d(anchor[0], anchor[1], anchor[2], Moby::GLOBAL), inboard, outboard);
+    
+                // set the joint axis w.r.t. the global frame
+                Vector axis = pjoint->GetAxis(0);
+                rjoint->set_axis(Ravelin::Vector3d(axis[0],axis[1],axis[2],Moby::GLOBAL));    
+    
+                // get the joint limits
+                vector<dReal> vupper,vlower;
+                pjoint->GetLimits(vlower,vupper);
+    
+                // set joint limits
+                if( vlower.size() )
+                {
+                    rjoint->lolimit = vlower.at(0);
+                }
+                if( vupper.size() )
+                {
+                    rjoint->hilimit = vupper.at(0);
+                }
+
+                // convert the revolute reference to a generalized joint
+                joint = rjoint;
+    
+                break;
+            }
+            case KinBody::JointSlider: 
+            {
+                // map a Moby prismatic joint
+                boost::shared_ptr<Moby::PrismaticJoint> sjoint(new Moby::PrismaticJoint);
+                sjoint->id = pjoint->GetName();
+        
+                // set the location of the joint with respect to body0 and body1
+                Vector anchor = pjoint->GetAnchor();
+                sjoint->set_location(Ravelin::Vector3d(anchor[0], anchor[1], anchor[2], Moby::GLOBAL), inboard, outboard);
+    
+                // set the joint axis w.r.t. the global frame
+                Vector axis = pjoint->GetAxis(0);
+                sjoint->set_axis(Ravelin::Vector3d(axis[0],axis[1],axis[2],Moby::GLOBAL));    
+    
+                // get the joint limits
+                vector<dReal> vupper,vlower;
+                pjoint->GetLimits(vlower,vupper);
+    
+                // set joint limits
+                if( vlower.size() )
+                {
+                    sjoint->lolimit = vlower[0];
+                }
+                if( vupper.size() )
+                {
+                    sjoint->hilimit = vupper[0];
+                }
+ 
+                // convert the prismatic reference to a generalized joint
+                joint = sjoint;
+
+                break;
+            }
+            case KinBody::JointSpherical: 
+            {
+                boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
+                joint = sjoint;
+                break;
+            }
+            case KinBody::JointUniversal: 
+            {
+                boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
+                joint = sjoint;
+                
+                break;
+            }
+            case KinBody::JointHinge2:
+            {
+                RAVELOG_ERROR("hinge2 joint not supported by Moby\n");
+                break;
+            }
+            default:
+            {
+                RAVELOG_ERROR("unknown joint type 0x%8.8x\n", pjoint->GetType());
+                break;
+            }
+        }
+
+        if(!joint) 
+        {
+            return joint;  // null
+        }
+
+        // allocate _mapControls for the joint
+        pair<map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator, bool> it;
+        it = _mapControls.insert(pair<Moby::JointPtr, vector<Ravelin::VectorNd> >(joint, vector<Ravelin::VectorNd>() ));
+        it.first->second.reserve(1);
+
+        // allocate _mapGains for this joint
+        
+
+        return joint;
+    } 
+
     KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), double fmargin=0.0005) 
     {
 	KinBody::KinBodyStateSaver saver(pbody);
 	pbody->SetTransform(Transform());
-	std::vector<dReal> vzeros(pbody->GetDOF(), 0);
+	vector<dReal> vzeros(pbody->GetDOF(), 0);
 	pbody->SetDOFValues(vzeros);
 
         if( !pinfo ) 
@@ -137,46 +299,22 @@ private:
         pinfo->_mobyspace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
 
+        // allocate a gain map for this kinbody
+        _mapGains.insert(pair<KinBodyPtr, map<int, vector<dReal> > >(pbody, map<int, vector<dReal> >()));
+
         if(pbody->GetLinks().size() == 1) 
         {
-            // Note: this branch implies that there is only one link
-            FOREACHC(itlink, pbody->GetLinks()) 
-            {
-                boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+            // branch already asserted size
+            boost::shared_ptr<KinBody::Link> plink = pbody->GetLinks()[0];
 
-                // compute a box to approximate link inertial properties
-                AABB bb = (*itlink)->ComputeLocalAABB();
-                link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
-                link->_primitive->set_mass((*itlink)->GetMass());
+            // initialize the Moby compatible link by deriving from the OpenRave link
+            boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(pinfo, plink);
+                            
+            // register the controller callback; necessary for writing state and controls
+            link->register_controller_callback( boost::bind( &MobySpace::_Controller,shared_from_this(),_1,_2,_3) );
 
-                // assign link parameters
-                link->id = (*itlink)->GetName();                      // identity  
-                link->set_inertia(link->_primitive->get_inertia());   // inertia
-                link->set_enabled(true);                              // enable physics  
-                link->get_recurrent_forces().push_back(gravity);      // s.t. gravity
-
-                // assign transforms (Note: maintain the order of this section)
-                link->tlocal = (*itlink)->GetLocalMassFrame();        // com frame transform
-                link->set_pose(GetRavelinPose((*itlink)->GetTransform()*link->tlocal)); // pose
-
-                // check for a static link
-                if( (*itlink)->IsStatic() ) 
-                {
-                    link->set_enabled(false);          // disable to fix to the world         
-                }
-
-                // TODO: set contact parameters
-
-                // add the link reference to all relevant containers               
-                link->plink = *itlink;             // ref back to openrave link
-                pinfo->vlinks.push_back(link);     // ref for link indexing 
-   
-                // register the controller callback; necessary for writing state and controls
-                link->register_controller_callback( boost::bind( &MobySpace::_Controller,shared_from_this(),_1,_2,_3) );
-
-                // add the body to the world
-                _world->add_dynamic_body(link);
-            }
+            // add the body to the world
+            _world->add_dynamic_body(link);
         }
         else if(pbody->GetLinks().size() > 1)
         {
@@ -189,7 +327,7 @@ private:
             morcab->set_floating_base(true);   // assume floating base until static link found
     
             // make allocations for links and joints
-            std::vector<Moby::RigidBodyPtr> molinks;   // for adding the links to the articulated body
+            vector<Moby::RigidBodyPtr> molinks;   // for adding the links to the articulated body
             molinks.reserve(pbody->GetLinks().size());
     
             // ?: Do PassiveJoints -> fixed joints/welds
@@ -197,175 +335,50 @@ private:
             vbodyjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
-            std::vector<Moby::JointPtr> mojoints;      // for adding the joints to the articulated body
+            vector<Moby::JointPtr> mojoints;      // for adding the joints to the articulated body
             mojoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
 
             // iterate over the set of links in the OpenRave environment
             // create a link for each and insert them into the Moby articulated body
             FOREACHC(itlink, pbody->GetLinks()) 
             {
-                boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+                // initialize the Moby compatible link by deriving from the OpenRave link
+                boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(pinfo, *itlink);
 
-                // compute a box to approximate link inertial properties
-                AABB bb = (*itlink)->ComputeLocalAABB();
-                link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
-                link->_primitive->set_mass((*itlink)->GetMass());
-
-                // assign link parameters
-                link->id = (*itlink)->GetName();                      // identity  
-                link->set_inertia(link->_primitive->get_inertia());   // inertia
-                link->set_enabled(true);                              // physics enabled  
-                link->get_recurrent_forces().push_back(gravity);      // s.t. gravity
-
-                // assign transforms (Note: maintain the order of this section)
-                link->tlocal = (*itlink)->GetLocalMassFrame();        // com frame transform
-                link->set_pose(GetRavelinPose((*itlink)->GetTransform()*link->tlocal)); // pose
-
-                // check for a static link
+                // if a static link opt for a fixed based for the whole kinematic chain
                 if( (*itlink)->IsStatic() ) {
-                    link->set_enabled(false);          // disable to fix to the world         
-                    morcab->set_floating_base(false);  // opt for a fixed base for kinematic chain
+                    morcab->set_floating_base(false);
                 }
 
-                // TODO: set contact parameters
-
-                // add the link reference to all relevant containers               
-                link->plink = *itlink;             // ref back to openrave link
-                pinfo->vlinks.push_back(link);     // ref for link indexing    
-                molinks.push_back(link);           // ref for Moby articulated body definition
+                // add the link to the set used to initialize the Moby articulated body
+                molinks.push_back(link);
             }
     
             // iterate over the set of joints in the OpenRave environment
             // create a joint for each and insert them into the Moby articulated body
             FOREACH(itjoint, vbodyjoints) 
             {
-    
-                Moby::RigidBodyPtr inboard, outboard; // inboard=parent, outboard=child
-                Moby::JointPtr joint;
-   
-                // validate that there are two link references for the joint   
-                if( !!(*itjoint)->GetFirstAttached() ) {
-                    inboard = pinfo->vlinks.at((*itjoint)->GetFirstAttached()->GetIndex());
-                }
-                if( !!(*itjoint)->GetSecondAttached() ) {
-                    outboard = pinfo->vlinks.at((*itjoint)->GetSecondAttached()->GetIndex());
-                }
-                if( !inboard || !outboard ) {
-                    RAVELOG_ERROR(str(boost::format("joint %s needs to be attached to two bodies!\n")%(*itjoint)->GetName()));
-                    continue;
-                }
-                  
-                switch((*itjoint)->GetType()) 
+                // initialize the Moby joint by deriving from the OpenRave joint
+                Moby::JointPtr joint = DeriveJoint(pinfo, *itjoint);
+
+                // if the initialization failed, move on to next joint 
+                if( !joint ) 
                 {
-                    case KinBody::JointHinge: 
-                    {
-                        // map a Moby revolute joint
-                        boost::shared_ptr<Moby::RevoluteJoint> rjoint(new Moby::RevoluteJoint);
-                        rjoint->id = (*itjoint)->GetName();
-        
-                        // set the location of the joint with respect to body0 and body1
-                        Vector anchor = (*itjoint)->GetAnchor();
-                        rjoint->set_location(Ravelin::Vector3d(anchor[0], anchor[1], anchor[2], Moby::GLOBAL), inboard, outboard);
-    
-                        // set the joint axis w.r.t. the global frame
-                        Vector axis = (*itjoint)->GetAxis(0);
-                        rjoint->set_axis(Ravelin::Vector3d(axis[0],axis[1],axis[2],Moby::GLOBAL));    
-    
-                        // get the joint limits
-                        vector<dReal> vupper,vlower;
-                        (*itjoint)->GetLimits(vlower,vupper);
-    
-                        // set joint limits
-                        if( vlower.size() )
-                        {
-                            rjoint->lolimit = vlower.at(0);
-                        }
-                        if( vupper.size() )
-                        {
-                            rjoint->hilimit = vupper.at(0);
-                        }
+                    continue;
+                } 
 
-                        // convert the revolute reference to a generalized joint
-                        joint = rjoint;
-    
-                        break;
-                    }
-                    case KinBody::JointSlider: 
-                    {
-                        // map a Moby prismatic joint
-                        boost::shared_ptr<Moby::PrismaticJoint> pjoint(new Moby::PrismaticJoint);
-                        pjoint->id = (*itjoint)->GetName();
-        
-                        // set the location of the joint with respect to body0 and body1
-                        Vector anchor = (*itjoint)->GetAnchor();
-                        pjoint->set_location(Ravelin::Vector3d(anchor[0], anchor[1], anchor[2], Moby::GLOBAL), inboard, outboard);
-    
-                        // set the joint axis w.r.t. the global frame
-                        Vector axis = (*itjoint)->GetAxis(0);
-                        pjoint->set_axis(Ravelin::Vector3d(axis[0],axis[1],axis[2],Moby::GLOBAL));    
-    
-                        // get the joint limits
-                        vector<dReal> vupper,vlower;
-                        (*itjoint)->GetLimits(vlower,vupper);
-    
-                        // set joint limits
-                        if( vlower.size() )
-                        {
-                            pjoint->lolimit = vlower[0];
-                        }
-                        if( vupper.size() )
-                        {
-                            pjoint->hilimit = vupper[0];
-                        }
- 
-                        // convert the prismatic reference to a generalized joint
-                        joint = pjoint;
+                // add the joint to the set used to initialize the Moby articulated body
+                mojoints.push_back(joint);
 
-                        break;
-                    }
-                    case KinBody::JointSpherical: 
-                    {
-                        boost::shared_ptr<Moby::SphericalJoint> sjoint(new Moby::SphericalJoint);
-                        joint = sjoint;
-        /*
-                        btVector3 pivotInA = GetBtVector(t0inv * (*itjoint)->GetAnchor());
-                        btVector3 pivotInB = GetBtVector(t1inv * (*itjoint)->GetAnchor());
-                        boost::shared_ptr<btPoint2PointConstraint> spherical(new btPoint2PointConstraint(*body0, *body1, pivotInA, pivotInB));
-                        joint = spherical;
-        */
-                        break;
-                    }
-                    case KinBody::JointUniversal: 
-                    {
-                        boost::shared_ptr<Moby::UniversalJoint> sjoint(new Moby::UniversalJoint);
-                        joint = sjoint;
-                        
-                        break;
-                    }
-                    case KinBody::JointHinge2:
-                    {
-                        RAVELOG_ERROR("hinge2 joint not supported by Moby\n");
-                        break;
-                    }
-                    default:
-                    {
-                        RAVELOG_ERROR("unknown joint type 0x%8.8x\n", (*itjoint)->GetType());
-                        break;
-                    }
-                }
-    
-                if( !!joint ) 
-                { 
-                    // add the joint to the set of joints
-                    mojoints.push_back(joint);
-                    _mapJoints.insert(std::pair<KinBody::JointPtr,Moby::JointPtr>(*itjoint,joint));
-                }
+                // add the joint to the OpenRave joint to Moby joint map
+                _mapJointId.insert(pair<string,KinBody::JointConstPtr>((*itjoint)->GetName(), *itjoint));
+                _mapJoint.insert(pair<KinBody::JointConstPtr,Moby::JointPtr>(*itjoint,joint));
             }
      
             // add the links and joints to the articulated body
             morcab->set_links_and_joints(molinks,mojoints);
             // add gravity to the articulated body
-            morcab->get_recurrent_forces().push_back(gravity);
+            morcab->get_recurrent_forces().push_back(_gravity);
             // register the controller callback; necessary for writing state and controls
             morcab->register_controller_callback( boost::bind( &MobySpace::_Controller,shared_from_this(),_1,_2,_3) );
             // add the articulated body to the world
@@ -379,6 +392,49 @@ private:
         saver.Restore();
 
         return pinfo;
+    }
+
+    void MapGains(KinBodyPtr pbody, map<string, vector<dReal> > mapJointIdToGains ) {
+        //RAVELOG_INFO(str(boost::format("mapping gains for kinbody %s.\n") % pbody->GetName() ));
+        map<KinBodyPtr, map<int, vector<dReal> > >::iterator bit;    // body iterator
+        bit = _mapGains.find(pbody);
+        if(bit == _mapGains.end() )
+        {
+            //RAVELOG_INFO(str(boost::format("_mapGains has no references for %s.\n") % pbody->GetName() ));
+            // _mapGains has no references to this kinbody.  Either the kinbody has
+            // no joints and therefore has no gains or something failed in the earlier
+            // allocation step.  Either case bail out.
+            return;  
+        }
+        
+        // iterate over the kinbody joints and find any jointid-gain correspondence
+        // and copy the gain data if found.
+        vector<KinBody::JointPtr> joints;
+        joints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+        joints.insert(joints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
+        joints.insert(joints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
+
+        FOREACH(itjoint, joints) 
+        {
+            map<string, vector<dReal> >::iterator jit;            // joint name iterator
+            jit = mapJointIdToGains.find((*itjoint)->GetName());         
+            if(jit == mapJointIdToGains.end() )
+            {
+                jit = mapJointIdToGains.find("default");
+                if(jit == mapJointIdToGains.end() ) {
+                    //RAVELOG_INFO(str(boost::format("_mapJointIdToGains has no references for %s and no default.\n") % pbody->GetName() ));
+                    // mapJointIdToGains has no references to this joint and no default.  
+                    continue;
+                }
+            }
+
+            // found an acceptable correspondence so copy the gains to the dof index based map
+            std::pair<map<int,vector<dReal> >::iterator, bool > result;
+            result = bit->second.insert(pair<int, vector<dReal> >((*itjoint)->GetDOFIndex(), jit->second) );
+
+            //RAVELOG_INFO(str(boost::format("mapped index %d with gains [%f,%f,%f].\n") % (*itjoint)->GetDOFIndex() % result.first->second[0] % result.first->second[1] % result.first->second[2] ));
+}
+
     }
 
     void Synchronize()
@@ -407,63 +463,88 @@ private:
 
     Moby::RigidBodyPtr GetLinkBody(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
+        KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());                
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
         return pinfo->vlinks.at(plink->GetIndex());
     }
 
-    Moby::JointPtr GetJoint(KinBody::JointConstPtr pjoint)
+    Moby::JointPtr GetJoint(string id)
     {
-        std::map<KinBody::JointConstPtr, Moby::JointPtr>::iterator it;
-        Moby::JointPtr joint;
-
-        it = _mapJoints.find(pjoint);
-        if(it != _mapJoints.end()) 
+        map<string, KinBody::JointConstPtr>::iterator it;
+        it = _mapJointId.find(id);
+        if( it == _mapJointId.end() ) 
         {
-            joint = it->second;
-        }
-
-        return joint;
+            return Moby::JointPtr();  //null
+        } 
+        return GetJoint(it->second);
     }
 
-    // add an add parameter and implement additions
-    void SetControl(Moby::JointPtr joint, Ravelin::VectorNd u)
+    Moby::JointPtr GetJoint(KinBody::JointConstPtr pjoint)
+    {
+        map<KinBody::JointConstPtr, Moby::JointPtr>::iterator it;
+        it = _mapJoint.find(pjoint);
+        if(it == _mapJoint.end()) 
+        {
+            return Moby::JointPtr();  // null
+        }
+        return it->second;
+    }
+
+/*
+    dReal GetPosition(Moby::JointPtr joint, unsigned axis)
+    {
+        if(!joint || axis >= joint->num_dof())
+        {
+            return 0; // should throw instead
+        }
+        return joint->q[axis];
+    }
+*/
+    void SetPosition(Moby::JointPtr joint, unsigned axis, dReal value)
+    {
+        if(!joint || axis >= joint->num_dof())
+        {
+            return;
+        }
+        joint->q[axis] = value;
+    }
+
+    void AddControl(Moby::JointPtr joint, Ravelin::VectorNd u)
     {
         if(!joint) 
         {
             return;
         }
 
-        std::map<Moby::JointPtr, Ravelin::VectorNd>::iterator mit = _mapControls.find(joint);
-        if( mit == _mapControls.end() ) 
+        map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator it;
+
+        it = _mapControls.find(joint);
+
+        if(it != _mapControls.end()) 
         {
-            _mapControls.insert(std::pair<Moby::JointPtr, Ravelin::VectorNd>(joint, u));
-        }
-        else
-        {
-            (*mit).second = u;
+            it->second.push_back(u);
         }
     }
 
-    // add an add parameter and implement additions
-    void SetImpulse(Moby::RigidBodyPtr body, Ravelin::SForced force)
+    void AddImpulse(Moby::RigidBodyPtr body, Ravelin::SForced force)
     {
         if(!body) 
         {
             return;
         }
 
-        std::map<Moby::RigidBodyPtr, Ravelin::SForced>::iterator mit = _mapImpulses.find(body);
-        if( mit == _mapImpulses.end() ) 
+        map<Moby::RigidBodyPtr, vector<Ravelin::SForced> >::iterator it;
+
+        it = _mapImpulses.find(body);
+
+        if( it != _mapImpulses.end() ) 
         {
-            _mapImpulses.insert(std::pair<Moby::RigidBodyPtr, Ravelin::SForced>(body, force));
-        }
-        else
-        {
-            (*mit).second = force;
+            it->second.push_back(force);
+            //RAVELOG_INFO(str(boost::format("adding a force\n")));
         }
     }
 
+    // not validated and probably not valid
     void SetVelocity(Moby::RigidBodyPtr body, Ravelin::SVelocityd velocity)
     {
         if(!body) 
@@ -471,10 +552,10 @@ private:
             return;
         }
 
-        std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocities.find(body);
-        if( mit == _mapVelocities.end() ) 
+        map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocity.find(body);
+        if( mit == _mapVelocity.end() ) 
         {
-            _mapVelocities.insert(std::pair<Moby::RigidBodyPtr, Ravelin::SVelocityd>(body, velocity));
+            _mapVelocity.insert(pair<Moby::RigidBodyPtr, Ravelin::SVelocityd>(body, velocity));
         }
         else
         {
@@ -485,13 +566,6 @@ private:
     void SetSynchronizationCallback(const SynchronizeCallbackFn &synccallback) 
     {
         _synccallback = synccallback;
-    }
-
-    void ClearBuffers(void) 
-    {
-        _mapControls.clear();
-        _mapImpulses.clear();
-        _mapVelocities.clear();
     }
 
     static inline Transform GetTransform(const Ravelin::Pose3d &p)
@@ -520,7 +594,7 @@ private:
         return Ravelin::SForced(Ravelin::Vector3d(force[0],force[1],force[2],Moby::GLOBAL), Ravelin::Vector3d(torque[0],torque[1],torque[2]),pose);
     }
 
-    static inline Ravelin::VectorNd GetRavelinVectorN(const std::vector<dReal>& vector)
+    static inline Ravelin::VectorNd GetRavelinVectorN(const vector<dReal>& vector)
     {
         Ravelin::VectorNd result( vector.size() );
         for(unsigned i=0; i < vector.size(); i++) {
@@ -534,8 +608,6 @@ private:
         return !!_world;
     }
 
-    boost::shared_ptr<Moby::GravityForce> gravity;
-
 private:
 
     // synchronize may need to work with a buffer tied to the controller callback
@@ -543,7 +615,7 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
-        std::vector<int> dofbranches;
+        vector<int> dofbranches;
         pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
@@ -586,45 +658,53 @@ private:
         Moby::ArticulatedBodyPtr ab = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(db);
         if(!!ab) 
         {
-            std::vector<Moby::JointPtr> joints = ab->get_joints();
-            std::vector<Moby::RigidBodyPtr> links = ab->get_links();
+            vector<Moby::JointPtr> joints = ab->get_joints();
+            vector<Moby::RigidBodyPtr> links = ab->get_links();
 
             // process joint controls
-            for(std::vector<Moby::JointPtr>::iterator vit = joints.begin(); vit != joints.end(); vit++)
+            for(vector<Moby::JointPtr>::iterator jit = joints.begin(); jit != joints.end(); jit++)
             {
-                std::map<Moby::JointPtr, Ravelin::VectorNd>::iterator mit = _mapControls.find(*vit);
+                map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator mit = _mapControls.find(*jit);
                 if( mit == _mapControls.end() ) 
                 {
                     continue;
                 }
-                RAVELOG_INFO(str(boost::format("applying torque\n")));
-                (*vit)->add_force((*mit).second);
+                //RAVELOG_INFO(str(boost::format("applying torques\n")));
+                for(vector<Ravelin::VectorNd>::iterator vit = mit->second.begin(); vit != mit->second.end(); vit++ )
+                {
+                    (*jit)->add_force((*vit));
+                }
+                mit->second.clear();
             }
 
             // process link velocities
-            for(std::vector<Moby::RigidBodyPtr>::iterator vit = links.begin(); vit != links.end(); vit++)
+            for(vector<Moby::RigidBodyPtr>::iterator vit = links.begin(); vit != links.end(); vit++)
             {
-                std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocities.find(*vit);
-                if( mit == _mapVelocities.end() ) 
+                map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocity.find(*vit);
+                if( mit == _mapVelocity.end() ) 
                 {
                     continue;
                 }
-                RAVELOG_INFO(str(boost::format("setting velocity\n")));
+                //RAVELOG_INFO(str(boost::format("setting velocity\n")));
                 (*vit)->set_velocity((*mit).second);
             }
 
             // process link impulses
-            for(std::vector<Moby::RigidBodyPtr>::iterator vit = links.begin(); vit != links.end(); vit++)
+            for(vector<Moby::RigidBodyPtr>::iterator lit = links.begin(); lit != links.end(); lit++)
             {
-                std::map<Moby::RigidBodyPtr, Ravelin::SForced>::iterator mit = _mapImpulses.find(*vit);
+                map<Moby::RigidBodyPtr, vector<Ravelin::SForced> >::iterator mit = _mapImpulses.find(*lit);
                 if( mit == _mapImpulses.end() ) 
                 {
                     continue;
                 }
-                RAVELOG_INFO(str(boost::format("applying force\n")));
-                (*vit)->add_force((*mit).second);
+                //RAVELOG_INFO(str(boost::format("applying forces\n")));
+                for(vector<Ravelin::SForced>::iterator vit = mit->second.begin(); vit != mit->second.end(); vit++ )
+                {
+                    (*lit)->add_force((*vit));
+                }
+                mit->second.clear();
             }
- 
+
             // done with processing for this dynamic body so exit here
             return; 
         }
@@ -636,21 +716,25 @@ private:
 
             // process body velocity
             {
-                std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocities.find(rb);
-                if( mit != _mapVelocities.end() ) 
+                map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocity.find(rb);
+                if( mit != _mapVelocity.end() ) 
                 {
-                    RAVELOG_INFO(str(boost::format("setting velocity\n")));
+                    //RAVELOG_INFO(str(boost::format("setting velocity\n")));
                     rb->set_velocity((*mit).second);
                 }
             }
 
             // process body impulses
             {
-                std::map<Moby::RigidBodyPtr, Ravelin::SForced>::iterator mit = _mapImpulses.find(rb);
+                map<Moby::RigidBodyPtr, vector<Ravelin::SForced> >::iterator mit = _mapImpulses.find(rb);
                 if( mit != _mapImpulses.end() ) 
                 {
-                    RAVELOG_INFO(str(boost::format("applying force\n")));
-                    rb->add_force((*mit).second);
+                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
+                    for(vector<Ravelin::SForced>::iterator vit = mit->second.begin(); vit != mit->second.end(); vit++ )
+                    {
+                        rb->add_force((*vit));
+                    }
+                    mit->second.clear();
                 }
             }
 
@@ -666,10 +750,26 @@ private:
     SynchronizeCallbackFn _synccallback;
     bool _bPhysics;
 
-    std::map<KinBody::JointConstPtr, Moby::JointPtr> _mapJoints;
-    std::map<Moby::JointPtr, Ravelin::VectorNd> _mapControls;
-    std::map<Moby::RigidBodyPtr, Ravelin::SForced> _mapImpulses;
-    std::map<Moby::RigidBodyPtr, Ravelin::SVelocityd> _mapVelocities;
+    // templated comparator for comparing the value of two shared pointers
+    // used predominantly to ensure maps keyed on shared pointers are hashed properly
+    template<class T>
+    class _CompareSharedPtrs {
+    public:
+       bool operator()(boost::shared_ptr<T> a, boost::shared_ptr<T> b) const {
+          return a.get() < b.get();
+       }
+    };
+
+    map<string, KinBody::JointConstPtr> _mapJointId;
+    map<KinBody::JointConstPtr, Moby::JointPtr, _CompareSharedPtrs<KinBody::Joint const> > _mapJoint;
+
+    map<Moby::JointPtr, vector<Ravelin::VectorNd>, _CompareSharedPtrs<Moby::Joint> > _mapControls;
+    map<Moby::RigidBodyPtr, vector<Ravelin::SForced>, _CompareSharedPtrs<Moby::RigidBody> > _mapImpulses;
+    map<Moby::RigidBodyPtr, Ravelin::SVelocityd, _CompareSharedPtrs<Moby::RigidBody> > _mapVelocity;
+
+public:
+    map<KinBodyPtr, map<int, vector<dReal> >, _CompareSharedPtrs<KinBody> > _mapGains;
+    boost::shared_ptr<Moby::GravityForce> _gravity;
 
 };
 
