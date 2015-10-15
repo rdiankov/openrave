@@ -573,9 +573,9 @@ private:
         return uri;
     }
 
-    daeURI _ComputeBestURI(const std::list<std::string>& listURIs) {
+    daeURI _ComputeBestURI(const std::list< std::pair<std::string, bool> >& listURIs) {
         FOREACHC(ituri, listURIs) {
-            daeURI uri(_ComputeExternalURI(daeURI(*_dae,*ituri)));
+            daeURI uri(_ComputeExternalURI(daeURI(*_dae,ituri->first)));
             if( _listIgnoreExternalURIs.size() == 0 ) {
                 return uri;
             }

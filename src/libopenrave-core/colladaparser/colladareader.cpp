@@ -648,7 +648,7 @@ public:
                         ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>((*ittestbody)->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
                         if( !!pcolladainfo ) {
                             FOREACHC(iturl, pcolladainfo->_articulated_systemURIs) {
-                                if( *iturl == pcamgeom->target_region ) {
+                                if( iturl->first == pcamgeom->target_region ) {
                                     resolvedTargetRegion = (*ittestbody)->GetName();
                                     break;
                                 }
@@ -1024,7 +1024,17 @@ public:
             // write the axis parameters
             ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
             if( !!pcolladainfo ) {
-                pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
+                // check if any URIs in pcolladainfo->_articulated_systemURIs are external. If yes, and current ias->getUrl() is inside this document, do not add
+                bool bHasExternal = false;
+                FOREACHC(ittesturipair, pcolladainfo->_articulated_systemURIs) {
+                    if( ittesturipair->second ) {
+                        bHasExternal = true;
+                    }
+                }
+                bool bIsExternal = ias->getUrl().getReferencedDocument() != _dom->getDocument();
+                if( !bHasExternal || bIsExternal || pcolladainfo->_articulated_systemURIs.size() == 0 ) {
+                    pcolladainfo->_articulated_systemURIs.push_front(std::make_pair(_MakeFullURI(ias->getUrl(),ias), bIsExternal));
+                }
                 pcolladainfo->_bindingAxesSIDs.resize(pbody->GetDOF());
                 // go through each parameter and see what axis it resolves to
                 for(size_t iparam = 0; iparam < ias->getNewparam_array().getCount(); ++iparam) {
@@ -1065,7 +1075,9 @@ public:
                                     string kmodeluri = _MakeFullURI(ikmodel->getUrl(), ikmodel);
                                     FOREACH(itmodel,pcolladainfo->_bindingModelURIs) {
                                         if( itmodel->kmodel == kmodeluri ) {
-                                            itmodel->ikmodelsidref = param->getSIDREF()->getValue();
+                                            if( itmodel->ikmodelsidref.size() == 0 ) { // if opening an external reference, this will already have been initialized with the external reference's ikmodelsidref, so need to preserve it!
+                                                itmodel->ikmodelsidref = param->getSIDREF()->getValue();
+                                            }
                                         }
                                     }
                                 }
@@ -1102,7 +1114,8 @@ public:
             }
 
             ColladaXMLReadablePtr pcolladainfo(new ColladaXMLReadable());
-            pcolladainfo->_articulated_systemURIs.push_front(_MakeFullURI(ias->getUrl(),ias));
+            bool bIsExternal = ias->getUrl().getReferencedDocument() != _dom->getDocument();
+            pcolladainfo->_articulated_systemURIs.push_front(std::make_pair(_MakeFullURI(ias->getUrl(),ias), bIsExternal));
             std::map<domInstance_physics_modelRef, std::pair<int, std::list<InstanceModelBinding>::iterator> > mapModelIndices;
             for(size_t ik = 0; ik < articulated_system->getKinematics()->getInstance_kinematics_model_array().getCount(); ++ik) {
                 domInstance_kinematics_modelRef ikmodel = articulated_system->getKinematics()->getInstance_kinematics_model_array()[ik];
