@@ -1971,9 +1971,9 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
                 code2 = cStringIO.StringIO()
                 code2.write('CheckValue<IkReal> %s = IKatan2WithCheck(IkReal('%iktansymbol)
                 code3,sepcodelist = self._WriteExprCode(expr.args[0], code2)
-                code2.write('),')
+                code2.write('),IkReal(')
                 code4,sepcodelist2 = self._WriteExprCode(expr.args[1], code2)
-                code2.write(',IKFAST_ATAN2_MAGTHRESH);\nif(!%s.valid){\ncontinue;\n}\n'%iktansymbol)
+                code2.write('),IKFAST_ATAN2_MAGTHRESH);\nif(!%s.valid){\ncontinue;\n}\n'%iktansymbol)
                 sepcodelist += sepcodelist2
                 sepcodelist.append(code2.getvalue())
                 

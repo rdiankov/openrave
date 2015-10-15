@@ -859,25 +859,24 @@ protected:
 
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
-        int got_packet=0;
+        int got_packet = 0;
         AVPacket pkt;
         av_init_packet(&pkt);
-        pkt.data = (uint8_t*)_outbuf;
-        pkt.size = _outbuf_size;
         int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
         if( ret < 0 ) {
+            av_destruct_packet(&pkt);
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
-        if (got_packet ) {
+        if( got_packet ) {
             if( _stream->codec->coded_frame) {
                 _stream->codec->coded_frame->pts       = pkt.pts;
                 _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
+            if( av_write_frame(_output, &pkt) < 0) {
+                av_destruct_packet(&pkt);
+                throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
+            }
         }
-        if( av_write_frame(_output, &pkt) < 0) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
-        }
-        pkt.data = NULL;
         av_destruct_packet(&pkt);
 #else
         int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);

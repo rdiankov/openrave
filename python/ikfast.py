@@ -1589,6 +1589,8 @@ class IKFastSolver(AutoReloader):
                         elif joint.IsMimic(iaxis):
                             # get the mimic equation
                             var = joint.GetMimicEquation(iaxis)
+                            for itestjoint, testjoint in enumerate(chainjoints):
+                                var = var.replace(testjoint.GetName(), 'j%d'%itestjoint)
                             # this needs to be reduced!
                             cosvar = cos(var)
                             sinvar = sin(var)
@@ -1959,7 +1961,10 @@ class IKFastSolver(AutoReloader):
         return checkforzeros
 
     def ComputeSolutionComplexity(self,sol,solvedvars,unsolvedvars):
-        # for all solutions, check if there is a divide by zero
+        """
+        for all solutions, check if there is a divide by zero
+        fills checkforzeros for the solution
+        """
         sol.checkforzeros = sol.getPresetCheckForZeros()
         sol.score = 20000*sol.numsolutions()
         try:
@@ -3127,14 +3132,14 @@ class IKFastSolver(AutoReloader):
                 Ree[i,j] = Symbol('new_r%d%d'%(i,j))
         try:
             T1sub = T1.subs(solvedvarsubs)
-            for i in range(3):
-                for j in range(3):
-                    self.globalsymbols.append((Ree[i,j],T1sub[i,j]))
             othersolvedvars = self.freejointvars if solveRotationFirst else transvars+self.freejointvars
             AllEquations = self.buildEquationsFromRotation(T0links,Ree,rotvars,othersolvedvars)
             self.checkSolvability(AllEquations,rotvars,othersolvedvars)
             currotvars = rotvars[:]
             rottree += self.SolveAllEquations(AllEquations,curvars=currotvars,othersolvedvars=othersolvedvars,solsubs=self.freevarsubs[:],endbranchtree=storesolutiontree)
+            for i in range(3):
+                for j in range(3):
+                    self.globalsymbols.append((Ree[i,j],T1sub[i,j]))
 
             if len(rottree) == 0:
                 raise self.CannotSolveError('could not solve for all rotation variables: %s:%s'%(str(freevar),str(freevalue)))
@@ -5986,7 +5991,12 @@ class IKFastSolver(AutoReloader):
                     for j in range(A.shape[1]):
                         A[i,j] = self._SubstituteGlobalSymbols(A[i,j]).subs(subs).evalf()
                 eps = 10**-(self.precision-3)
-                Anumpy = numpy.array(numpy.array(A), numpy.float64)
+                try:
+                    Anumpy = numpy.array(numpy.array(A), numpy.float64)
+                except ValueError, e:
+                    log.warn(u'could not convert to numpy array: %s', e)
+                    continue
+                
                 if numpy.isnan(numpy.sum(Anumpy)):
                     log.info('A has NaNs')
                     break
@@ -6435,7 +6445,7 @@ class IKFastSolver(AutoReloader):
         
         if unknownvars is None:
             unknownvars = []
-            
+
         self._scopecounter+=1
         scopecounter = int(self._scopecounter)
         log.info('depth=%d c=%d, %s %s: cases=%r', len(currentcases) if currentcases is not None else 0, self._scopecounter, othersolvedvars,curvars, currentcases)

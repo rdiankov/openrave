@@ -2357,6 +2357,7 @@ bool QtCoinViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     bool bresetvelocity = true;
     std::string bodyname, linkname;
     float focalDistance = 0.0;
+    Transform tTrackingLinkRelative;
     sinput >> bodyname >> linkname >> focalDistance >> bresetvelocity;
     if( focalDistance > 0 ) {
         GetCamera()->focalDistance = focalDistance; // TODO is this thread safe?
@@ -2369,6 +2370,16 @@ bool QtCoinViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
         return false;
     }
     _ptrackinglink = pbody->GetLink(linkname);
+    if( !!_ptrackinglink ) {
+        sinput >> tTrackingLinkRelative;
+        if( !!sinput ) {
+            _tTrackingLinkRelative = tTrackingLinkRelative;
+        }
+        else {
+            RAVELOG_WARN("failed to get tracking link relative trans\n");
+            _tTrackingLinkRelative = Transform(); // use the identity
+        }
+    }
     if( bresetvelocity ) {
         _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
     }
@@ -3107,8 +3118,8 @@ void QtCoinViewer::_UpdateCameraTransform(float fTimeElapsed)
         KinBody::LinkPtr ptrackinglink = _ptrackinglink;
         if( !!ptrackinglink ) {
             bTracking = true;
-            tTrack = ptrackinglink->GetTransform();
-            tTrack.trans = ptrackinglink->ComputeAABB().pos;
+            tTrack = ptrackinglink->GetTransform()*_tTrackingLinkRelative;
+            //tTrack.trans = ptrackinglink->ComputeAABB().pos;
         }
         RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
         if( !!ptrackingmanip ) {
