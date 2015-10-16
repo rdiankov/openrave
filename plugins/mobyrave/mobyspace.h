@@ -280,14 +280,11 @@ private:
         //RAVELOG_INFO(str(boost::format("mapping gains for kinbody %s.\n") % pbody->GetName() ));
         // allocate _mapGains for this joint
         
-
         return joint;
     } 
 
     KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), double fmargin=0.0005) 
     {
-	KinBody::KinBodyStateSaver saver(pbody);
-	pbody->SetTransform(Transform());
 	vector<dReal> vzeros(pbody->GetDOF(), 0);
 	pbody->SetDOFValues(vzeros);
 
@@ -389,8 +386,6 @@ private:
         {
             RAVELOG_INFO("Request to map a KinBody with no links\n");
         }
-
-        saver.Restore();
 
         return pinfo;
     }
@@ -518,9 +513,7 @@ private:
         }
 
         map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator it;
-
         it = _mapControls.find(joint);
-
         if(it != _mapControls.end()) 
         {
             it->second.push_back(u);
@@ -535,9 +528,7 @@ private:
         }
 
         map<Moby::RigidBodyPtr, vector<Ravelin::SForced> >::iterator it;
-
         it = _mapImpulses.find(body);
-
         if( it != _mapImpulses.end() ) 
         {
             it->second.push_back(force);

@@ -343,7 +343,6 @@ public:
     // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
     virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const vector<dReal>& pJointVelocity)
     {
-        
         return false;
     }
 
