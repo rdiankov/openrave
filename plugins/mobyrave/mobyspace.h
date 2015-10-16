@@ -137,11 +137,11 @@ private:
         link->id = plink->GetName();                          // identity  
         link->set_inertia(link->_primitive->get_inertia());   // inertia
         link->set_enabled(true);                              // enable physics
-        link->get_recurrent_forces().push_back(_gravity);      // gravity
+        link->get_recurrent_forces().push_back(_gravity);     // gravity
 
         // assign transforms (Note: maintain the order of this section)
-        link->tlocal = plink->GetLocalMassFrame();       // com frame transform
-        link->set_pose(GetRavelinPose(plink->GetTransform()*link->tlocal)); // pose
+        link->tlocal = plink->GetLocalMassFrame();            // com frame transform
+        _SetPose(link, plink->GetTransform()*link->tlocal);   // set the pose
 
         // check for a static link
         if( plink->IsStatic() ) {
@@ -277,6 +277,7 @@ private:
         it = _mapControls.insert(pair<Moby::JointPtr, vector<Ravelin::VectorNd> >(joint, vector<Ravelin::VectorNd>() ));
         it.first->second.reserve(1);
 
+        //RAVELOG_INFO(str(boost::format("mapping gains for kinbody %s.\n") % pbody->GetName() ));
         // allocate _mapGains for this joint
         
 
@@ -580,8 +581,9 @@ private:
         OPENRAVE_ASSERT_OP(RaveFabs(t.rot.lengthsqr4()-1),<=,0.01);
 
         Ravelin::Quatd q(t.rot.y, t.rot.z, t.rot.w, t.rot.x);
+        q.normalize();
         Ravelin::Origin3d x = GetRavelinOrigin(t.trans);
-        return(Ravelin::Pose3d(q, x, Moby::GLOBAL));
+        return Ravelin::Pose3d(q, x, Moby::GLOBAL);
     }
 
     static inline Ravelin::Origin3d GetRavelinOrigin(const Vector &v)
@@ -621,12 +623,19 @@ private:
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) 
         {
-            pinfo->vlinks[i]->set_pose(GetRavelinPose(vtrans[i]*pinfo->vlinks[i]->tlocal));
+            _SetPose(pinfo->vlinks[i], vtrans[i]*pinfo->vlinks[i]->tlocal);
         }
         if( !!_synccallback ) 
         {
             _synccallback(pinfo);
         }
+    }
+
+    void _SetPose(boost::shared_ptr<KinBodyInfo::LINK> link, Transform t) 
+    {
+        Ravelin::Pose3d pose = GetRavelinPose(t);
+        pose.update_relative_pose(link->get_pose()->rpose);
+        link->set_pose(pose);
     }
 
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
@@ -651,8 +660,6 @@ private:
 
         // input buffer for controls and state
         // output buffer for state?
-
-        // how does this relate to _Synchronize?
 
         // try to process as an articulated body
         Moby::ArticulatedBodyPtr ab = boost::dynamic_pointer_cast<Moby::ArticulatedBody>(db);

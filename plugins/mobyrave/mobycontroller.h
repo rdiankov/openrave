@@ -76,12 +76,22 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _gjointvalues.reset(new ConfigurationSpecification::Group());
                 _gjointvalues->offset = 0;
                 _gjointvalues->dof = _dofindices.size();
-                stringstream ss;
-                ss << "joint_values " << _probot->GetName();
+                stringstream ss_val;
+                ss_val << "joint_values " << _probot->GetName();
                 FOREACHC(it, _dofindices) {
-                    ss << " " << *it;
+                    ss_val << " " << *it;
                 }
-                _gjointvalues->name = ss.str();
+                _gjointvalues->name = ss_val.str();
+
+                _gjointvelocities.reset(new ConfigurationSpecification::Group());
+                _gjointvelocities->offset = 6;
+                _gjointvelocities->dof = _dofindices.size();
+                stringstream ss_vel;
+                ss_vel << "joint_velocities " << _probot->GetName();
+                FOREACHC(it, _dofindices) {
+                    ss_vel << " " << *it;
+                }
+                _gjointvelocities->name = ss_vel.str();
             }
             if( nControlTransformation ) {
                 _gtransform.reset(new ConfigurationSpecification::Group());
@@ -91,7 +101,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
 
             //_aggregateError.resize(_probot->GetDOF() );
-            _aggregateError.resize(_probot->GetDOF()); memset(&_aggregateError[0], 0, _aggregateError.size()*sizeof(_aggregateError[0]));
+            _aggregateError.resize(_probot->GetDOF()); memset(&_aggregateError[0], 0, _aggregateError.size()*sizeof(dReal));
             
         }
         RAVELOG_INFO(str(boost::format("Controller Initialized\n")));
@@ -175,6 +185,19 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvalues->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
                 if( _bTrajHasJoints ) {
                     _samplespec._vgroups.push_back(*_gjointvalues);
+                }
+            }
+            if( !!_gjointvelocities ) {
+                // have to reset the name since _gjointvalues can be using an old one
+                stringstream ss;
+                ss << "joint_velocities " << _probot->GetName();
+                FOREACHC(it, _dofindices) {
+                    ss << " " << *it;
+                }
+                _gjointvalues->name = ss.str();
+                _bTrajHasJoints = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gjointvelocities->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
+                if( _bTrajHasJoints ) {
+                    _samplespec._vgroups.push_back(*_gjointvelocities);
                 }
             }
             _bTrajHasTransform = false;
@@ -327,21 +350,40 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 }
             }
 
-            vector<dReal> vdofvalues;
-            if( _bTrajHasJoints && _dofindices.size() > 0 ) {
-                vdofvalues.resize(_dofindices.size());
-                _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), _probot, _dofindices, 0);
-            }
+            // sample the trajectory for the current time
+            vector<dReal> sample;
+            ptraj->Sample(sample, _fCommandTime, _samplespec);
+///*
+            std::cout << "sample: ";
+            for(unsigned i = 0; i < sample.size(); i++) 
+            {
+                std::cout << sample[i] << ", ";
+            } 
+            std::cout << endl;
+//*/
+            // get the joint positions from the trajectory
+            vector<ConfigurationSpecification::Group>::const_iterator pit;
+            pit = _samplespec.FindCompatibleGroup("joint_values", false);
+            vector<dReal> vdofvalues(pit->dof);
+            for(int i = 0; i < pit->dof; i++) 
+            {
+                vdofvalues[i] = sample[i+pit->offset];
+            } 
 
+            // get the joint velocities from the trajectory
+            vector<ConfigurationSpecification::Group>::const_iterator vit;
+            vit = _samplespec.FindCompatibleGroup("joint_velocities", false);
+            vector<dReal> desiredvelocity(vit->dof);
+            for(int i = 0; i < vit->dof; i++) 
+            {
+                desiredvelocity[i] = sample[i+vit->offset];
+            } 
+
+            // compute the controls
             Transform t;
             if( _bTrajHasTransform && _nControlTransformation ) {
                 _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
                 if( vdofvalues.size() > 0 ) {
-                    std::vector<dReal> desiredvelocity; 
-                    _probot->GetDOFVelocityLimits(desiredvelocity);
-                    //_SetDOFValues(vdofvalues,t, _fCommandTime > 0 ? fTimeElapsed : 0);
-                    //_SetControls(vdofvalues, desiredvelocity,t, _fCommandTime > 0 ? fTimeElapsed : 0);
-                    //_SetControls(_vecdesired, desiredvelocity,t, _fCommandTime > 0 ? fTimeElapsed : 0);
                     _SetControls(vdofvalues, desiredvelocity,t, _fCommandTime > 0 ? fTimeElapsed : 0);
                 }
                 else {
@@ -349,11 +391,6 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 }
             }
             else if( vdofvalues.size() > 0 ) {
-                std::vector<dReal> desiredvelocity; 
-                _probot->GetDOFVelocityLimits(desiredvelocity);
-                //_SetDOFValues(vdofvalues, _fCommandTime > 0 ? fTimeElapsed : 0);
-                //_SetControls(vdofvalues, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
-                //_SetControls(_vecdesired, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
                 _SetControls(vdofvalues, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
             }
 
@@ -379,6 +416,41 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _ptraj.reset();
             }
         }
+/*
+        else 
+        {
+
+            // compute controls to maintain the robot in a steady state
+            // Note: this won't quite work as intended because the desired positions 
+            // are based on current position and not on the position of the arm when this
+            // branch was first entered.  Should use _vecdesired instead, but need to clarify
+            // when SetDesired might be called for a steady state robot
+
+            vector<KinBody::JointPtr> vbodyjoints;
+            vbodyjoints.reserve(_probot->GetJoints().size()+_probot->GetPassiveJoints().size());
+            vbodyjoints.insert(vbodyjoints.end(),_probot->GetJoints().begin(),_probot->GetJoints().end());
+            vbodyjoints.insert(vbodyjoints.end(),_probot->GetPassiveJoints().begin(),_probot->GetPassiveJoints().end());
+
+            // make a set of current positions for each joint
+            int dof = _probot->GetDOF();
+            vector<dReal> vdofvalues(dof);
+            FOREACH(itjoint, vbodyjoints) 
+            {
+                int axis = 0;
+                vdofvalues[(*itjoint)->GetDOFIndex()] = (*itjoint)->GetValue(axis);
+            }
+
+            // make a zero joint velocity for each joint
+            vector<dReal> desiredvelocity(dof);
+            for(int i = 0; i < dof; i++) 
+            {
+                desiredvelocity[i] = 0;
+            } 
+
+            // compute the controls
+            _SetControls(vdofvalues, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
+        }
+*/
 
         if( _vecdesired.size() > 0 ) {
             if( _nControlTransformation ) {
@@ -393,20 +465,24 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         }
     }
 
-    virtual bool IsDone() {
+    virtual bool IsDone() 
+    {
         return _bIsDone;
     }
-    virtual dReal GetTime() const {
+
+    virtual dReal GetTime() const 
+    {
         return _fCommandTime;
     }
-    virtual RobotBasePtr GetRobot() const {
+
+    virtual RobotBasePtr GetRobot() const 
+    {
         return _probot;
     }
 
 private:
     virtual void _SetControls(const std::vector<dReal>& desiredposition, const std::vector<dReal>& desiredvelocity, dReal timeelapsed)
     {
-        //RAVELOG_INFO(str(boost::format("SetControls called\n")));
         vector<dReal> torques(_probot->GetDOF());
         vector<dReal> position, velocity;
         _probot->GetDOFValues(position);
@@ -425,13 +501,10 @@ private:
                 continue;
             }
 
-            //RAVELOG_INFO(str(boost::format("read joint[%s] gains[%f,%f,%f].\n") % _probot->GetJointFromDOFIndex(*it)->GetName() % gains[0] % gains[1] % gains[2] ));
-
             dReal errP = desiredposition.at(*it) - position.at(*it);
             dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
             dReal errI = _aggregateError.at(*it);
 
-            // gains need to come from xml and be configured per joint 
             dReal kP = gains[0];
             dReal kD = gains[1];
             dReal kI = gains[2];
@@ -441,27 +514,20 @@ private:
             dReal I = kI * errI;
 
             RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % mobyPhysics->GetTime() % errP % errD % errI ));
-            //RAVELOG_INFO(str(boost::format("kP[%f], kD[%f], kI[%f].\n") % kP % kD % kI ));
 
             torques.at(*it) = P + I + D; 
 
             RAVELOG_INFO(str(boost::format("computed torque[%f].\n") % torques.at(*it) ));
-            //curvalues.at(*it) = values.at(i++);
-            //curvel.at(*it) = 0;
 
             KinBody::JointPtr joint = _probot->GetJointFromDOFIndex(*it);
 
             vector<dReal> u(1);
             u[0] = torques.at(*it);
 
-            _aggregateError.at(*it) += u[0];
+            _aggregateError.at(*it) += errP;
             mobyPhysics->AddJointTorque( joint, u );
         }
-
-
-
-
-        
+  
 /*
         vector<dReal> prevvalues, curvalues, curvel;
         _probot->GetDOFValues(prevvalues);
@@ -482,6 +548,51 @@ private:
     }
     virtual void _SetControls(const std::vector<dReal>& desiredposition, const std::vector<dReal>& desiredvelocity, const Transform &t, dReal timeelapsed)
     {
+        vector<dReal> torques(_probot->GetDOF());
+        vector<dReal> position, velocity;
+        _probot->GetDOFValues(position);
+        _probot->GetDOFVelocities(velocity);
+
+        boost::shared_ptr<MobyPhysicsEngine> mobyPhysics = boost::dynamic_pointer_cast<MobyPhysicsEngine>(_penv->GetPhysicsEngine());
+
+        FOREACH(it,_dofindices) {
+            vector<dReal> gains;
+            mobyPhysics->GetGains(_probot, (*it), gains);
+
+            if(gains.size() < 3) 
+            {
+                // the number of gains is insufficient
+                RAVELOG_INFO(str(boost::format("expecting 3 gain values but found %d instead.  Cannot compute PID control.\n") % gains.size() ));
+                continue;
+            }
+
+            dReal errP = desiredposition.at(*it) - position.at(*it);
+            dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
+            dReal errI = _aggregateError.at(*it);
+
+            // gains need to come from xml and be configured per joint 
+            dReal kP = gains[0];
+            dReal kD = gains[1];
+            dReal kI = gains[2];
+
+            dReal P = kP * errP;
+            dReal D = kD * errD;
+            dReal I = kI * errI;
+
+            RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % mobyPhysics->GetTime() % errP % errD % errI ));
+
+            torques.at(*it) = P + I + D; 
+
+            RAVELOG_INFO(str(boost::format("computed torque[%f].\n") % torques.at(*it) ));
+
+            KinBody::JointPtr joint = _probot->GetJointFromDOFIndex(*it);
+
+            vector<dReal> u(1);
+            u[0] = torques.at(*it);
+
+            _aggregateError.at(*it) += errP;
+            mobyPhysics->AddJointTorque( joint, u );
+        }
 /*
         BOOST_ASSERT(_nControlTransformation);
         vector<dReal> prevvalues, curvalues, curvel;
@@ -666,7 +777,7 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
+    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
     boost::mutex _mutex;
 
     vector<dReal> _aggregateError;

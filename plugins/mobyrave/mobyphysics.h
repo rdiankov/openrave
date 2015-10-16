@@ -59,6 +59,15 @@ class MobyPhysicsEngine : public PhysicsEngineBase
         {
             if( name == "mobyproperties" )
                 return true;
+	    else if( name == "gravity" ) {
+                Vector g;
+
+                _ss >> g[0] >> g[1] >> g[2];
+        
+                _physics->SetGravity(g);
+
+                //RAVELOG_INFO(str(boost::format("read joint[%s] gains[%f,%f,%f]\n") % jointid % gains[0] % gains[1] % gains[2]));
+            }
 	    else if( name == "gains" ) {
                 string jointid;
                 dReal gains[3];
@@ -92,8 +101,8 @@ class MobyPhysicsEngine : public PhysicsEngineBase
             }
         }
 
-        static const boost::array<string, 1>& GetTags() {
-        static const boost::array<string, 1> tags = {{"gains"}};
+        static const boost::array<string, 2>& GetTags() {
+        static const boost::array<string, 2> tags = {{"gains", "gravity"}};
             return tags;
         }
 
@@ -199,7 +208,6 @@ public:
     }
 
     virtual bool SetPhysicsOptions(int physicsoptions)
-                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
     {
         _options = physicsoptions;
         return true;
@@ -214,25 +222,21 @@ public:
         return false;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: this implementation is only additive
     virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
         boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Ravelin::Quatd(0,0,0,1), _space->GetRavelinOrigin(position), Moby::GLOBAL));
-                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
         _space->AddImpulse(body, _space->GetRavelinSForce(force, Vector(0,0,0), pose));
 
         return true;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
-                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
         if( !body )
         {
@@ -248,11 +252,10 @@ public:
         return true;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const vector<pair<Vector,Vector> >& velocities)
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(pbody);
         FOREACHC(itlink, pbody->GetLinks()) 
         {
             int idx = (*itlink)->GetIndex();
@@ -273,11 +276,10 @@ public:
         return true;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
         if( !body )
         {
@@ -310,10 +312,10 @@ public:
         return true;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: w.r.t to what reference frame?
     virtual bool GetLinkVelocities(KinBodyConstPtr pbody, vector<pair<Vector,Vector> >& velocities)
     {
+        _space->Synchronize(pbody);
         velocities.resize(0);
         velocities.resize(pbody->GetLinks().size());
 
@@ -345,11 +347,10 @@ public:
         return false;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
     virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, vector<dReal>& pJointVelocity)
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(pjoint->GetParent());
         Moby::JointPtr joint = _space->GetJoint(pjoint);
         if( !joint )
         {
@@ -369,11 +370,10 @@ public:
         return true;
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: this implementation is only additive
     virtual bool AddJointTorque(KinBody::JointPtr pjoint, const vector<dReal>& pTorques)
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(pjoint->GetParent());
         Moby::JointPtr joint = _space->GetJoint(pjoint);
         _space->AddControl(joint, _space->GetRavelinVectorN(pTorques));
 
@@ -381,14 +381,12 @@ public:
     
     }
 
-    // Note: this implementation may not reflect a synchronized environment
     // Note: this implementation is only additive
     virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
     {
-        //_space->Synchronize(KinBodyConstPtr(plink->GetParent()));
+        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
         boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_inertial_pose() ) );
-        //boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_pose() ) );
         _space->AddImpulse(body, _space->GetRavelinSForce(Vector(0,0,0), torque, pose));
 
         return true;
@@ -426,44 +424,6 @@ public:
 
     virtual void SimulateStep(dReal fTimeElapsed)
     {
-        //+dbg
-/*
-        static bool first = true;
-        if(first) {
-            for(map<string,vector<dReal> >::iterator it = _space->_mapJointGains.begin(); it != _space->_mapJointGains.end(); it++) {
-                RAVELOG_INFO(str(boost::format("gain[%s]: [%f,%f,%f]\n") % it->first % it->second[0] % it->second[1] % it->second[2]));
-            }
-            first = false;
-        }
-*/
-        //-dbg
-
-        // The requested fTimeElapsed may be large in comparison to a 
-        // an integration step size that is accurate.  Current 
-        // configuration dictates an fTimeElapsed of 1ms which is at 
-        // the upper bound of accuracy for integration steps.  Some
-        // logic should be emplaced to select for an accurate 
-        // integration step if fTimeElapsed is set larger than 1ms
-        // For now, assume fTimeElapsed is a resonable value for 
-        // accurate integration
-
-/*
-        dReal endOfStepTime = ?;
-        dReal t = ?;
-        do {
-            // compute the least sized step requested
-            //dReal actualStep = fTimeElapsed < _StepSize ? fTimeElapsed : _StepSize;
-
-            // if actualStep is equal to _StepSize, there may be some residual time             // after a number of steps so need to compute the last fragment of time 
-            // after a number of steps so need to compute the last fragment of time 
-            // as accurately as possible and therefore the above actualStep 
-            // computation is too simplistic
-
-            _sim->step( actualStep );
-            t += actualStep;        // naive fp adding will have error here
-        } while(t<endOfStepTime);
-*/
-        
         //RAVELOG_INFO( "attempting to step\n" );
         _sim->step(fTimeElapsed);
 
