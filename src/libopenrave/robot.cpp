@@ -1446,6 +1446,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     OPENRAVE_ASSERT_FORMAT(!!plink && plink->GetParent() == shared_kinbody(), "robot %s grabbing link needs to be part of robot",GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(),"robot %s cannot grab itself",GetName(), ORE_InvalidArguments);
 
+    //uint64_t starttime0 = utils::GetMicroTime();
+
     // if grabbing, check if the transforms are different. If they are, then update the transform
     GrabbedPtr pPreviousGrabbed;
     FOREACHC(itgrabbed, _vGrabbedBodies) {
@@ -1461,7 +1463,6 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     // new body velocity is measured from robot link
     std::pair<Vector, Vector> velocity = plink->GetVelocity();
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
-
     if( !!pPreviousGrabbed ) {
         dReal disterror = TransformDistance2(t*pPreviousGrabbed->_troot, tbody);
         if( pPreviousGrabbed->_plinkrobot == plink && disterror <= g_fEpsilonLinear ) {
@@ -1480,9 +1481,19 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,plink));
     pgrabbed->_troot = t.inverse() * tbody;
-    pgrabbed->_ProcessCollidingLinks(std::set<int>());
+    //uint64_t starttime1 = utils::GetMicroTime();
+    // always ignore links that are statically attached to plink (ie assume they are always colliding with the body)
+    
+    std::vector<boost::shared_ptr<Link> > vattachedlinks;
+    plink->GetRigidlyAttachedLinks(vattachedlinks);
+    std::set<int> setRobotLinksToIgnore;
+    FOREACHC(itlink, vattachedlinks) {
+        setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+    }
+    pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
+    //uint64_t starttime2 = utils::GetMicroTime();
     try {
         // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
         _AttachBody(pbody);
@@ -1492,7 +1503,9 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         _vGrabbedBodies.pop_back();
         throw;
     }
+    //uint64_t starttime3 = utils::GetMicroTime();
     _PostprocessChangedParameters(Prop_RobotGrabbed);
+    //RAVELOG_DEBUG_FORMAT("env=%d, post process elapsed (%d) %fs, %fs, %fs, %fs", GetEnv()->GetId()%vattachedlinks.size()%(1e-6*(starttime1-starttime0))%(1e-6*(starttime2-starttime0))%(1e-6*(starttime3-starttime0))%(1e-6*(utils::GetMicroTime()-starttime0)));
     return true;
 }
 

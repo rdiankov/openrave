@@ -295,73 +295,7 @@ public:
     /// Use the robot's self-collision checker if possible
     /// resets all cached data and re-evaluates the collisions
     /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
-    void _ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
-    {
-        _setRobotLinksToIgnore = setRobotLinksToIgnore;
-        _listNonCollidingLinks.clear();
-        _mapLinkIsNonColliding.clear();
-        KinBodyPtr pgrabbedbody(_pgrabbedbody);
-        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkrobot->GetParent());
-        EnvironmentBasePtr penv = probot->GetEnv();
-        CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
-        if( !pchecker ) {
-            pchecker = penv->GetCollisionChecker();
-        }
-        CollisionOptionsStateSaver colsaver(pchecker,0); // have to reset the collision options
-
-        {
-            // have to enable all the links in order to compute accurate _mapLinkIsNonColliding info
-            KinBody::KinBodyStateSaver grabbedbodysaver(pgrabbedbody, KinBody::Save_LinkEnable);
-            pgrabbedbody->Enable(true);
-            KinBody::KinBodyStateSaver robotsaver(probot, KinBody::Save_LinkEnable);
-            probot->Enable(true);
-
-            // check collision with all links to see which are valid
-            FOREACHC(itlink, probot->GetLinks()) {
-                int noncolliding = 0;
-                if( find(_vattachedlinks.begin(),_vattachedlinks.end(), *itlink) == _vattachedlinks.end() ) {
-                    if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
-                        if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) == setRobotLinksToIgnore.end() ) {
-                            noncolliding = 1;
-                        }
-                    }
-                }
-                _mapLinkIsNonColliding[*itlink] = noncolliding;
-            }
-
-            std::vector<KinBody::LinkPtr > vbodyattachedlinks;
-            FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
-                boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-                bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-                KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
-                if( bsamelink ) {
-                    pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
-                }
-                if( pothergrabbedbody != pgrabbedbody ) {
-                    KinBody::KinBodyStateSaver othergrabbedbodysaver(pothergrabbedbody, KinBody::Save_LinkEnable);
-                    pothergrabbedbody->Enable(true);
-                    FOREACHC(itlink, pothergrabbedbody->GetLinks()) {
-                        int noncolliding = 0;
-                        if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
-                        }
-                        else if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
-                            noncolliding = 1;
-                        }
-                        _mapLinkIsNonColliding[*itlink] = noncolliding;
-                    }
-                }
-            }
-        }
-
-        if( pgrabbedbody->IsEnabled() ) {
-            FOREACH(itnoncolliding, _mapLinkIsNonColliding) {
-                if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
-                    //RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
-                    _listNonCollidingLinks.push_back(itnoncolliding->first);
-                }
-            }
-        }
-    }
+    void _ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore);
 
     inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
         return _vattachedlinks;
