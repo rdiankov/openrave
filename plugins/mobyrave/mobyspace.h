@@ -582,7 +582,7 @@ private:
         return Ravelin::Origin3d(v.x, v.y, v.z);
     }
 
-    static inline Ravelin::SForced GetRavelinSForce(const Vector& force, const Vector& torque, boost::shared_ptr<Ravelin::Pose3d> pose)
+    static inline Ravelin::SForced GetRavelinSForce(const Vector& force, const Vector& torque, boost::shared_ptr<const Ravelin::Pose3d> pose)
     {
         return Ravelin::SForced(Ravelin::Vector3d(force[0],force[1],force[2],Moby::GLOBAL), Ravelin::Vector3d(torque[0],torque[1],torque[2]),pose);
     }
@@ -662,7 +662,8 @@ private:
             // process joint controls
             for(vector<Moby::JointPtr>::iterator jit = joints.begin(); jit != joints.end(); jit++)
             {
-                map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator mit = _mapControls.find(*jit);
+
+               map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator mit = _mapControls.find(*jit);
                 if( mit == _mapControls.end() ) 
                 {
                     continue;

@@ -233,7 +233,7 @@ public:
         return true;
     }
 
-    // Note: w.r.t to what reference frame?
+    // Note: velocities w.r.t to the body's inertial reference frame
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
@@ -243,16 +243,14 @@ public:
             return false;
         }
 
-        boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Moby::GLOBAL));
-        
-        Ravelin::SVelocityd v(angularvel[0],angularvel[1],angularvel[2],linearvel[0],linearvel[1],linearvel[2], pose);
-
+        Ravelin::SVelocityd v(angularvel[0],angularvel[1],angularvel[2],linearvel[0],linearvel[1],linearvel[2], body->get_inertial_pose());
+ 
         _space->SetVelocity(body, v);
 
         return true;
     }
 
-    // Note: w.r.t to what reference frame?
+    // Note: velocities w.r.t to the respective body's inertial reference frame
     virtual bool SetLinkVelocities(KinBodyPtr pbody, const vector<pair<Vector,Vector> >& velocities)
     {
         _space->Synchronize(pbody);
@@ -262,14 +260,12 @@ public:
             Moby::RigidBodyPtr body = _space->GetLinkBody(*itlink);
             if(!!body) 
             {
-                boost::shared_ptr<Ravelin::Pose3d> pose(new Ravelin::Pose3d(Moby::GLOBAL));
                 Vector omega = velocities.at(idx).first;
                 Vector dx = velocities.at(idx).second;
 
-                Ravelin::SVelocityd v(omega[0],omega[1],omega[2],dx[0],dx[1],dx[2], pose);
+                Ravelin::SVelocityd v(omega[0],omega[1],omega[2],dx[0],dx[1],dx[2], body->get_inertial_pose());
 
                 _space->SetVelocity(body, v);
-                
             }
         }
 
@@ -290,25 +286,9 @@ public:
         Ravelin::Vector3d dx = svel.get_linear();
         Ravelin::Vector3d omega = svel.get_angular();
 
-        // what frame is the velocity w.r.t.
-        //dx.update_relative_pose(Moby::GLOBAL);
-        //omega.update_relative_pose(Moby::GLOBAL);
-
         linearvel = Vector(dx[0],dx[1],dx[2]);
         angularvel = Vector(omega[0],omega[1],omega[2]);
-/*
-        _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
-        boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
-        if (!!rigidbody) {
-            btVector3 pf = rigidbody->getLinearVelocity();
-            linearvel = Vector(pf[0],pf[1],pf[2]);
-            pf = rigidbody->getAngularVelocity();
-            angularvel = Vector(pf[0],pf[1],pf[2]);
-        }
-        else {
-            linearvel = angularvel = Vector(0,0,0);
-        }
-*/
+
         return true;
     }
 
@@ -327,10 +307,6 @@ public:
                 Ravelin::SVelocityd svel = body->get_velocity();
                 Ravelin::Vector3d dx = svel.get_linear();
                 Ravelin::Vector3d omega = svel.get_angular();
-
-                // what frame is the velocity w.r.t.
-                //dx.update_relative_pose(Moby::GLOBAL);
-                //omega.update_relative_pose(Moby::GLOBAL);
 
                 velocities.at((*itlink)->GetIndex()).first = Vector(dx[0],dx[1],dx[2]);
                 velocities.at((*itlink)->GetIndex()).second = Vector(omega[0],omega[1],omega[2]);
@@ -373,6 +349,17 @@ public:
     virtual bool AddJointTorque(KinBody::JointPtr pjoint, const vector<dReal>& pTorques)
     {
         _space->Synchronize(pjoint->GetParent());
+
+        ElectricMotorActuatorInfoPtr motor_info = pjoint->GetInfo()._infoElectricMotor;
+        if(!motor_info) 
+        {
+            //RAVELOG_INFO(str(boost::format("motor info was nothing\n")));
+        }
+        else
+        {
+            //RAVELOG_INFO(str(boost::format("motor parameters: gear_ratio[%f], assigned_power_rating[%f], max_speed[%f], no_load_speed[%f], stall_torque[%f], nominal_torque[%f], rotor_inertia[%f], torque_constant[%f], nominal_voltage[%f], speed_constant[%f], starting_current[%f], terminal_resistance[%f]\n") % motor_info->gear_ratio % motor_info->assigned_power_rating % motor_info->max_speed % motor_info->no_load_speed % motor_info->stall_torque % motor_info->nominal_torque % motor_info->rotor_inertia % motor_info->torque_constant % motor_info->nominal_voltage % motor_info->speed_constant % motor_info->starting_current % motor_info->terminal_resistance )); 
+        }
+
         Moby::JointPtr joint = _space->GetJoint(pjoint);
         _space->AddControl(joint, _space->GetRavelinVectorN(pTorques));
 
@@ -385,8 +372,7 @@ public:
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
-        boost::shared_ptr<Ravelin::Pose3d> pose( new Ravelin::Pose3d( body->get_inertial_pose() ) );
-        _space->AddImpulse(body, _space->GetRavelinSForce(Vector(0,0,0), torque, pose));
+        _space->AddImpulse(body, _space->GetRavelinSForce(Vector(0,0,0), torque, body->get_inertial_pose()));
 
         return true;
     }
