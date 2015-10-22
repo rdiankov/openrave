@@ -51,14 +51,9 @@ public:
 
             }
 
-            virtual void GetWorldPose(Ravelin::Pose3d& comWorldTrans) const
+            virtual void SetWorldTransform(const Transform& comWorldTrans)
             {
-                comWorldTrans = GetRavelinPose( plink->GetTransform()*tlocal );
-            }
-
-            virtual void SetWorldPose(const Ravelin::Pose3d& comWorldTrans)
-            {
-                plink->SetTransform(GetTransform(comWorldTrans)*tlocal.inverse());
+                plink->SetTransform(comWorldTrans*tlocal.inverse());
             }
 
             Moby::PrimitivePtr _primitive;  // for modeling the inertia of the link
@@ -141,7 +136,10 @@ private:
 
         // assign transforms (Note: maintain the order of this section)
         link->tlocal = plink->GetLocalMassFrame();            // com frame transform
-        _SetPose(link, plink->GetTransform()*link->tlocal);   // set the pose
+        // initialize the moby based pose for the link
+        Ravelin::Pose3d pose = GetRavelinPose(plink->GetTransform()*link->tlocal);
+        pose.update_relative_pose(link->get_pose()->rpose);
+        link->set_pose(pose);
 
         // check for a static link
         if( plink->IsStatic() ) {
@@ -614,19 +612,12 @@ private:
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) 
         {
-            _SetPose(pinfo->vlinks[i], vtrans[i]*pinfo->vlinks[i]->tlocal);
+            pinfo->vlinks[i]->SetWorldTransform(vtrans[i]);
         }
         if( !!_synccallback ) 
         {
             _synccallback(pinfo);
         }
-    }
-
-    void _SetPose(boost::shared_ptr<KinBodyInfo::LINK> link, Transform t) 
-    {
-        Ravelin::Pose3d pose = GetRavelinPose(t);
-        pose.update_relative_pose(link->get_pose()->rpose);
-        link->set_pose(pose);
     }
 
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)

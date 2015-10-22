@@ -43,8 +43,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
+
+        _tuningLog.open( "gainerror", std::ofstream::out | std::ofstream::trunc );
     }
     virtual ~MobyPIDController() {
+
+        _tuningLog.close();
     }
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
@@ -112,6 +116,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
         RAVELOG_INFO(str(boost::format("Controller Initialized\n")));
         _bPause = false;
+
         return true;
     }
 
@@ -497,6 +502,8 @@ private:
         _probot->GetDOFValues(position);
         _probot->GetDOFVelocities(velocity);
 
+        _tuningLog << _mobyPhysics->GetTime();
+
         FOREACH(it,_dofindices) {
             vector<dReal> gains;
             double gearRatio = 1;     // assume a 1-to-1 gear ratio
@@ -532,7 +539,11 @@ private:
                 continue;
             }
 
+            // P delta may wrap the unit circle interval, so correct.
             dReal errP = desiredposition.at(*it) - position.at(*it);
+            errP = errP > PI ? -(2 * PI - errP) : errP;
+            errP = errP < -PI ? -(-2 * PI + errP) : errP;
+
             dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
             dReal errI = _aggregateError.at(*it);
 
@@ -543,6 +554,8 @@ private:
             dReal P = kP * errP;
             dReal D = kD * errD;
             dReal I = kI * errI;
+
+            _tuningLog << " " << errP << " " << errD << " " << errI;
 
             RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % _mobyPhysics->GetTime() % errP % errD % errI ));
 
@@ -571,6 +584,7 @@ private:
             _mobyPhysics->AddJointTorque( pjoint, u );
         }
   
+        _tuningLog << std::endl;
 /*
         vector<dReal> prevvalues, curvalues, curvel;
         _probot->GetDOFValues(prevvalues);
@@ -878,6 +892,7 @@ private:
     boost::shared_ptr<MobyPhysicsEngine> _mobyPhysics;
     std::vector<dReal> _prevVelocities;
 
+    std::ofstream _tuningLog;
 };
 
 ControllerBasePtr CreateMobyPIDController(EnvironmentBasePtr penv, std::istream& sinput)
