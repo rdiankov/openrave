@@ -288,7 +288,7 @@ void ViewerWidget::SetViewport(int width, int height)
 {
     _osgview->getCamera()->setViewport(0,0,width,height);
     _osghudview->getCamera()->setViewport(0,0,width,height);
-    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0, 100));
+    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0, 1000));
 }
 
 QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )

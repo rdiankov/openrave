@@ -202,8 +202,8 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 
         // add 3 cylinder+cone axes
         for(int i = 0; i < 3; ++i) {
-            // set a diffuse color
-            osg::Group* psep = new osg::Group();
+            osg::MatrixTransform* psep = new osg::MatrixTransform();
+            psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
 
             // set a diffuse color
             osg::StateSet* state = psep->getOrCreateStateSet();
@@ -909,7 +909,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 
     // setup the world axis correctly
     osg::Matrix m = osg::Matrix::lookAt(eye, center, up);
-    m.setTrans(width/2 - 50, -height/2 + 50, -50);
+    m.setTrans(width/2 - 40, -height/2 + 40, -50);
     _ivWorldAxis->setMatrix(m);
 
     _Tcamera = GetRaveTransformFromMatrix(osg::Matrix::inverse(osg::Matrix::lookAt(eye, center, up)));
