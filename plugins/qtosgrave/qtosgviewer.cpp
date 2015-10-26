@@ -74,11 +74,41 @@ typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
 
 QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
 {
+    //
+    // initialize member variables
+    //
+
+    objectTree = NULL;
+    detailsTree = NULL;
+    _focalDistance = 0.0;
+    _fTrackAngleToUp = 0.3;
+
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
-    int qtosgbuild = 0;
+
+    //
+    // read viewer parameters
+    //
+
+    int qtosgbuild = 0; // not used
     bool bCreateStatusBar = true, bCreateMenu = true;
     int nAlwaysOnTopFlag = 0; // 1 - add on top flag (keep others), 2 - add on top flag (remove others)
     sinput >> qtosgbuild >> bCreateStatusBar >> bCreateMenu >> nAlwaysOnTopFlag;
+
+    //
+    // figure out window flags
+    //
+
+    if (nAlwaysOnTopFlag != 0) {
+        Qt::WindowFlags flags = Qt::Window | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint;
+        if (nAlwaysOnTopFlag == 1) {
+            flags |= windowFlags();
+        }
+        setWindowFlags(flags);
+    }
+    
+    //
+    // figure out window title
+    //
 
     _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
@@ -87,38 +117,31 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     else {
         _name += " (Stable Release)";
     }
-
     setWindowTitle(_name.c_str());
-    if(  bCreateStatusBar ) {
+
+    if(bCreateStatusBar) {
         statusBar()->showMessage(tr("Status Bar"));
     }
 
     __description = ":Interface Author: Gustavo Puche, Rosen Diankov\n\nProvides a viewer based on Open Scene Graph.";
-//    RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera,this,_1,_2),
-//                    "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
-//    RegisterCommand("SetFeedbackVisibility",boost::bind(&QtOSGViewer::_SetFeedbackVisibility,this,_1,_2),
-//                    "Accepts 0/1 value that decides whether to render the cross hairs");
-//    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_SetFeedbackVisibility,this,_1,_2),
-//                    "Accepts 0/1 value that decides whether to render the cross hairs");
-//    RegisterCommand("Resize",boost::bind(&QtOSGViewer::_CommandResize,this,_1,_2),
-//                    "Accepts width x height to resize internal video frame");
-//    RegisterCommand("SaveBodyLinkToVRML",boost::bind(&QtOSGViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
-//                    "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
-//    RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
-//                    "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
-//    RegisterCommand("StartViewerLoop", boost::bind(&QtOSGViewer::_StartViewerLoopCommand, this, _1, _2),
-//                    "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
-//    RegisterCommand("Show", boost::bind(&QtOSGViewer::_ShowCommand, this, _1, _2),
-//                    "executs the show directly");
-//    RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
-//                    "camera tracks the link maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
-//    RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
-//                    "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
-//    RegisterCommand("SetTrackingAngleToUp", boost::bind(&QtOSGViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
-//                    "sets a new angle to up");
+
+    RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera, this, _1, _2),
+                    "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+    RegisterCommand("SetFeedbackVisibility",boost::bind(&QtOSGViewer::_SetFeedbackVisibility, this, _1, _2),
+                    "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_SetFeedbackVisibility, this, _1, _2),
+                    "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
+                    "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
+    RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
+                    "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
+    RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
+                    "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, focalDistance");
+    RegisterCommand("SetTrackingAngleToUp", boost::bind(&QtOSGViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
+                    "sets a new angle to up");
 
     _bLockEnvironment = true;
-    _InitGUI(bCreateStatusBar);
+    _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
 }
 
@@ -146,16 +169,9 @@ QtOSGViewer::~QtOSGViewer()
     _condUpdateModels.notify_all();
 }
 
-void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
+void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 {
     osg::ArgumentParser arguments(0, NULL);
-
-//    _qCentralWidget.reset(new QWidget());
-//    _qCentralWidget->adjustSize();
-//    _qCentralLayout = new QGridLayout;
-//    _qCentralLayout->addWidget(_posgWidget,0,0);
-//    _qCentralWidget->setLayout(_qCentralLayout);
-//    setCentralWidget(_qCentralWidget);
 
     _posgWidget = new ViewerWidget(GetEnv());
     setCentralWidget(_posgWidget);
@@ -164,17 +180,93 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
     _ivRoot = new osg::Group();
     _ivRoot->ref();
 
+    _ivFigureRoot = new osg::Group();   
+    _ivRoot->addChild(_ivFigureRoot);
+
+    // create world axis
+
+    _ivWorldAxis = new osg::MatrixTransform();
+    _posgWidget->GetCameraHUD()->addChild(_ivWorldAxis);
+
+    {
+        osg::Vec4f colors[] = {
+            osg::Vec4f(0,0,1,1),
+            osg::Vec4f(0,1,0,1),
+            osg::Vec4f(1,0,0,1)
+        };
+        osg::Quat rotations[] = {
+            osg::Quat(0, osg::Vec3f(0,0,1)),
+            osg::Quat(-M_PI/2.0, osg::Vec3f(1,0,0)),
+            osg::Quat(M_PI/2.0, osg::Vec3f(0,1,0))
+        };
+
+        // add 3 cylinder+cone axes
+        for(int i = 0; i < 3; ++i) {
+            // set a diffuse color
+            osg::Group* psep = new osg::Group();
+
+            // set a diffuse color
+            osg::StateSet* state = psep->getOrCreateStateSet();
+            osg::Material* mat = new osg::Material;
+            mat->setDiffuse(osg::Material::FRONT, colors[i]);
+            mat->setAmbient(osg::Material::FRONT, colors[i]);
+            state->setAttribute( mat );
+
+            osg::Matrix matrix;
+            osg::MatrixTransform* protation = new osg::MatrixTransform();
+            matrix.makeRotate(rotations[i]);
+            protation->setMatrix(matrix);
+
+            matrix.makeIdentity();
+            osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
+            matrix.setTrans(osg::Vec3f(0,0,16.0f));
+            pcyltrans->setMatrix(matrix);
+
+            // make SoCylinder point towards z, not y
+            osg::Cylinder* cy = new osg::Cylinder();
+            cy->setRadius(2.0f);
+            cy->setHeight(32.0f);
+            osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
+            osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
+            gcyl->addDrawable(sdcyl.get());
+
+            osg::Cone* cone = new osg::Cone();
+            cone->setRadius(4.0f);
+            cone->setHeight(16.0f);
+
+            osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
+            osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
+            gcone->addDrawable(sdcone.get());
+
+            matrix.makeIdentity();
+            osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
+            matrix.setTrans(osg::Vec3f(0,0,32.0f));
+            pconetrans->setMatrix(matrix);
+
+            psep->addChild(protation);
+            protation->addChild(pcyltrans);
+            pcyltrans->addChild(gcyl.get());
+            protation->addChild(pconetrans);
+            pconetrans->addChild(gcone.get());
+            _ivWorldAxis->addChild(psep);
+        }
+    }
+
     _qtree = new QTreeView;
 
     _CreateActions();
-    _CreateMenus();
-    _CreateToolsBar();
+    
     if( bCreateStatusBar ) {
         _CreateStatusBar();
     }
-    _CreateDockWidgets();
 
-    resize(1024, 750);
+    if ( bCreateMenu ) {
+        _CreateMenus();
+        _CreateToolsBar();
+        _CreateDockWidgets();
+    }
+
+    resize(1024, 768);
 
     // toggle switches
     _bDisplayGrid = false;
@@ -194,6 +286,8 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
     _bManipTracking = false;
     _bAntialiasing = false;
     _viewGeometryMode = VG_RenderOnly;
+    _bRenderFiguresInCamera = true;
+    _bDisplayFeedBack = true;
 }
 
 void QtOSGViewer::customEvent(QEvent * e)
@@ -348,7 +442,11 @@ void QtOSGViewer::_Reset()
         itbody->first->RemoveUserData(_userdatakey);
     }
     _mapbodies.clear();
-    objectTree->clear();
+
+    if (objectTree != NULL) {
+        objectTree->clear();
+    }
+    
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
@@ -640,7 +738,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     _posgWidget->SelectRobot(item->text(0).toAscii().data());
 
     //  Clears details
-    detailsTree->clear();
+    if (detailsTree != NULL) {
+        detailsTree->clear();
+    }
 
     QList<QTreeWidgetItem*> items;
 
@@ -649,7 +749,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
             std::ostringstream strs;
 
             //  Set Title
-            detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            if (detailsTree != NULL) {
+                detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            }
 
             robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toAscii().data());
             link  = robot->GetLink(item->text(0).toAscii().data());
@@ -665,12 +767,16 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         }
         else {
             //  Set Title
-            detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            if (detailsTree != NULL) {
+                detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            }
         }
     }
     else {
         //  Set Title
-        detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+        if (detailsTree != NULL) {
+            detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+        }
         kinbody = GetEnv()->GetKinBody(item->text(0).toAscii().data());
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
             std::ostringstream strs;
@@ -682,7 +788,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     }
 
     //  Add Items to details panel
-    detailsTree->insertTopLevelItems(0, items);
+    if (detailsTree != NULL) {
+        detailsTree->insertTopLevelItems(0, items);
+    }
 }
 
 QTreeWidget* QtOSGViewer::_CreateObjectTree()
@@ -789,95 +897,204 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
-//    SbVec3f pos = GetCamera()->position.getValue();
-//    _Tcamera.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
-//
-//    SbVec3f axis;
-//    float fangle;
-//    GetCamera()->orientation.getValue(axis, fangle);
-//    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
-//
-//    if( fTimeElapsed > 0 ) {
-//        // animate the camera if necessary
-//        bool bTracking=false;
-//        Transform tTrack;
-//        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
-//        if( !!ptrackinglink ) {
-//            bTracking = true;
-//            tTrack = ptrackinglink->GetTransform();
-//            tTrack.trans = ptrackinglink->ComputeAABB().pos;
-//        }
-//        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
-//        if( !!ptrackingmanip ) {
-//            bTracking = true;
-//            tTrack = ptrackingmanip->GetTransform();
-//        }
-//
-//        if( bTracking ) {
-//            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-//            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
-//            vlookatdir -= vup*vup.dot3(vlookatdir);
-//            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
-//            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
-//            if( flookatlen > g_fEpsilon ) {
-//                vlookatdir *= 1/flookatlen;
-//            }
-//            else {
-//                vlookatdir = Vector(1,0,0);
-//            }
-//            vup -= vlookatdir*vlookatdir.dot3(vup);
-//            vup.normalize3();
-//
-//            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
-//            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
-//            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
-//            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
-//            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
-//            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
-//            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
-//
-//            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_fTrackingRadius;
-//
-//            if(1) {
-//                // PID animation
-//                float pconst = 0.02;
-//                float dconst = 0.2;
-//                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
-//                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
-//                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
-//
-//                pconst = 0.001;
-//                dconst = 0.04;
-//                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
-//                newquat += pconst*(vDestQuat - _Tcamera.rot);
-//                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
-//                newquat.normalize4();
-//                // have to make sure newquat's y vector aligns with vup
-//
-//                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
-//                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
-//                _Tcamera.trans = newtrans;
-//                _Tcamera.rot = newquat;
-//            }
-//            else {
-//                _Tcamera.trans = vDestPos;
-//                _Tcamera.rot = vDestQuat;
-//            }
-//            GetCamera()->position.setValue(_Tcamera.trans.x, _Tcamera.trans.y, _Tcamera.trans.z);
-//            GetCamera()->orientation.setValue(_Tcamera.rot.y, _Tcamera.rot.z, _Tcamera.rot.w, _Tcamera.rot.x);
-//        }
-//    }
-//
-//    int width = centralWidget()->size().width();
-//    int height = centralWidget()->size().height();
-//    _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
-//
-//    _camintrinsics.fy = 0.5*height/RaveTan(0.5f*GetCamera()->heightAngle.getValue());
-//    _camintrinsics.fx = (float)width*_camintrinsics.fy/((float)height*GetCamera()->aspectRatio.getValue());
-//    _camintrinsics.cx = (float)width/2;
-//    _camintrinsics.cy = (float)height/2;
-//    _camintrinsics.focal_length = GetCamera()->nearDistance.getValue();
-//    _camintrinsics.distortion_model = "";
+    // set the viewport size correctly so we can draw stuff on the hud using window coordinates
+    int width = centralWidget()->size().width();
+    int height = centralWidget()->size().height();
+    _posgWidget->SetViewport(width, height);
+
+    // read the current camera transform
+    osg::Vec3d eye, center, up;
+    _posgWidget->GetCameraManipulator()->getTransformation(eye, center, up);
+    osg::Vec3d lv(center - eye);
+
+    // setup the world axis correctly
+    osg::Matrix m = osg::Matrix::lookAt(eye, center, up);
+    m.setTrans(width/2 - 50, -height/2 + 50, -50);
+    _ivWorldAxis->setMatrix(m);
+
+    _Tcamera = GetRaveTransformFromMatrix(osg::Matrix::inverse(osg::Matrix::lookAt(eye, center, up)));
+    _focalDistance = lv.length();
+
+    if( fTimeElapsed > 0 ) {
+        // animate the camera if necessary
+        bool bTracking=false;
+        Transform tTrack;
+        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
+        if( !!ptrackinglink ) {
+            bTracking = true;
+            tTrack = ptrackinglink->GetTransform()*_tTrackingLinkRelative;
+            //tTrack.trans = ptrackinglink->ComputeAABB().pos;
+        }
+        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
+        if( !!ptrackingmanip ) {
+            bTracking = true;
+            tTrack = ptrackingmanip->GetTransform();
+        }
+
+        if( bTracking ) {
+            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
+            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
+            vlookatdir -= vup*vup.dot3(vlookatdir);
+            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
+            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
+            if( flookatlen > g_fEpsilon ) {
+                vlookatdir *= 1/flookatlen;
+            }
+            else {
+                vlookatdir = Vector(1,0,0);
+            }
+            vup -= vlookatdir*vlookatdir.dot3(vup);
+            vup.normalize3();
+
+            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
+            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
+            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
+            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
+            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
+            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
+            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
+
+            // focal distance is the tracking radius. ie how far from the coord system camera shoud be
+            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_focalDistance;
+
+            if(1) {
+                // PID animation
+                float pconst = 0.02;
+                float dconst = 0.2;
+                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
+                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
+                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
+
+                pconst = 0.001;
+                dconst = 0.04;
+                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
+                newquat += pconst*(vDestQuat - _Tcamera.rot);
+                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
+                newquat.normalize4();
+                // have to make sure newquat's y vector aligns with vup
+
+                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
+                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
+                _Tcamera.trans = newtrans;
+                _Tcamera.rot = newquat;
+            }
+            else {
+                _Tcamera.trans = vDestPos;
+                _Tcamera.rot = vDestQuat;
+            }
+
+            _SetCameraTransform();
+        }
+    }
+
+    double fovy, aspectRatio, zNear, zFar;
+    _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+
+    _camintrinsics.fy = fovy;
+    _camintrinsics.fx = aspectRatio * fovy;
+    _camintrinsics.cx = _posgWidget->GetCamera()->getViewport()->width() / 2;
+    _camintrinsics.cy = _posgWidget->GetCamera()->getViewport()->height() / 2;
+    _camintrinsics.focal_length = zNear;
+    _camintrinsics.distortion_model = "";
+
+    /*
+    int width = centralWidget()->size().width();
+    int height = centralWidget()->size().height();
+    _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
+
+    _focalDistance = GetCamera()->focalDistance.getValue();
+    _camintrinsics.fy = 0.5*height/RaveTan(0.5f*GetCamera()->heightAngle.getValue());
+    _camintrinsics.fx = (float)width*_camintrinsics.fy/((float)height*GetCamera()->aspectRatio.getValue());
+    _camintrinsics.cx = (float)width/2;
+    _camintrinsics.cy = (float)height/2;
+    _camintrinsics.focal_length = GetCamera()->nearDistance.getValue();
+    _camintrinsics.distortion_model = "";
+    */
+}
+
+bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
+{
+    sinput >> _bRenderFiguresInCamera;
+    return !!sinput;
+}
+
+bool QtOSGViewer::_SetFeedbackVisibility(ostream& sout, istream& sinput)
+{
+    sinput >> _bDisplayFeedBack;
+    // ViewToggleFeedBack(_bDisplayFeedBack);
+    return !!sinput;
+}
+
+bool QtOSGViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
+{
+    dReal nearplane=0.01f;
+    sinput >> nearplane;
+    // EnvMessagePtr pmsg(new SetNearPlaneMessage(shared_viewer(), (void**)NULL, nearplane));
+    // pmsg->callerexecute(false);
+    return true;
+}
+
+bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
+{
+    bool bresetvelocity = true;
+    std::string bodyname, linkname;
+    float focalDistance = 0.0;
+    Transform tTrackingLinkRelative;
+    sinput >> bodyname >> linkname >> focalDistance >> bresetvelocity;
+    if( focalDistance > 0 ) {
+        _SetCameraDistanceToFocus(focalDistance);
+    }
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
+    if( !pbody ) {
+        return false;
+    }
+    _ptrackinglink = pbody->GetLink(linkname);
+    if( !!_ptrackinglink ) {
+        sinput >> tTrackingLinkRelative;
+        if( !!sinput ) {
+            _tTrackingLinkRelative = tTrackingLinkRelative;
+        }
+        else {
+            RAVELOG_WARN("failed to get tracking link relative trans\n");
+            _tTrackingLinkRelative = Transform(); // use the identity
+        }
+    }
+    if( bresetvelocity ) {
+        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    }
+    return !!_ptrackinglink;
+}
+
+bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
+{
+    bool bresetvelocity = true;
+    std::string robotname, manipname;
+    float focalDistance = 0.0;
+    sinput >> robotname >> manipname >> focalDistance >> bresetvelocity;
+    if( focalDistance > 0 ) {
+        _SetCameraDistanceToFocus(focalDistance);
+    }
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    RobotBasePtr probot = GetEnv()->GetRobot(robotname);
+    if( !probot ) {
+        return false;
+    }
+    _ptrackingmanip = probot->GetManipulator(manipname);
+    if( bresetvelocity ) {
+        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    }
+    return !!_ptrackingmanip;
+}
+
+bool QtOSGViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
+{
+    sinput >> _fTrackAngleToUp;
+    return true;
 }
 
 int QtOSGViewer::main(bool bShow)
@@ -931,14 +1148,41 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 {
     return false;
 }
+
+void QtOSGViewer::_SetCameraTransform()
+{
+    osg::Vec3d eye, center, up;
+    osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
+    _posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);
+}
+
+void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
+{
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    _Tcamera = trans*trot;
+
+    if (focalDistance > 0) {
+        _focalDistance = focalDistance;
+    }
+
+    _SetCameraTransform();
+    _UpdateCameraTransform(0);
+}
+
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
-//  RAVELOG_INFO("[SetCamera]\n");
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
 }
-//void QtOSGViewer::SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
-//{
-//  RAVELOG_INFO("[SetCameraLookAt]\n");
-//}
+
+void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
+{
+    if (focalDistance > 0) {
+        _focalDistance = focalDistance;
+    }
+
+    _SetCameraTransform();
+    _UpdateCameraTransform(0);
+}
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 {
@@ -946,6 +1190,12 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     return _Tcamera*trot;
+}
+
+float QtOSGViewer::GetCameraDistanceToFocus() const
+{
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
+    return _focalDistance;
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
@@ -969,32 +1219,165 @@ SensorBase::CameraIntrinsics QtOSGViewer::GetCameraIntrinsics2() const
     return intr;
 }
 
+void QtOSGViewer::_Draw(osg::Switch *handle, osg::Vec3Array *vertices, osg::Vec4Array *colors, osg::PrimitiveSet::Mode mode, osg::StateAttribute *attribute)
+{
+    osg::ref_ptr<osg::Group> parent = new osg::Group;
+    osg::ref_ptr<osg::MatrixTransform> trans = new osg::MatrixTransform;
+    osg::ref_ptr<osg::Group> child = new osg::Group;
+    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+    osg::ref_ptr<osg::Geometry> geometry = new osg::Geometry;
+
+    geometry->setVertexArray(vertices);
+    vertices->unref();
+
+    geometry->setColorArray(colors);
+    colors->unref();
+
+    geometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+
+    geometry->addPrimitiveSet(new osg::DrawArrays(mode, 0, vertices->size()));
+    geometry->getOrCreateStateSet()->setAttribute(attribute, osg::StateAttribute::ON);
+
+    geometry->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
+    geometry->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);     
+    geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent"); 
+    geometry->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN); 
+
+    geode->addDrawable(geometry);
+
+    child->addChild(geode);
+    trans->addChild(child);
+    parent->addChild(trans);
+    handle->addChild(parent);
+    _ivFigureRoot->addChild(handle);
+    handle->unref();
+}
+
 GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
-    return GraphHandlePtr();
+    osg::Switch* handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        ppoints = (float*)((char*)ppoints + stride);
+
+        vcolors->push_back(osg::Vec4f(color.x, color.y, color.z, color.w));        
+    }
+
+    handle->ref();
+    vvertices->ref();
+    vcolors->ref();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize)));
+
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
 {
-    return GraphHandlePtr();
+    osg::Switch* handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        ppoints = (float*)((char*)ppoints + stride);
+
+        if (bhasalpha) {
+            vcolors->push_back(osg::Vec4f(colors[i * 4 + 0], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]));
+        } else {
+            vcolors->push_back(osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f));
+        }
+    }
+    
+    handle->ref();
+    vvertices->ref();
+    vcolors->ref();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize)));
+
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    return GraphHandlePtr();
+    osg::Switch* handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        ppoints = (float*)((char*)ppoints + stride);
+
+        vcolors->push_back(osg::Vec4f(color.x, color.y, color.z, color.w));
+    }
+
+    handle->ref();
+    vvertices->ref();
+    vcolors->ref();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, new osg::LineWidth(fwidth)));
+
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    return GraphHandlePtr();
+    osg::Switch* handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        ppoints = (float*)((char*)ppoints + stride);
+        vcolors->push_back(osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f));
+    }
+    
+    handle->ref();
+    vvertices->ref();
+    vcolors->ref();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, new osg::LineWidth(fwidth)));
+
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    return GraphHandlePtr();
+    osg::Switch* handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        ppoints = (float*)((char*)ppoints + stride);
+
+        vcolors->push_back(osg::Vec4f(color.x, color.y, color.z, color.w));
+    }
+
+    handle->ref();
+    vvertices->ref();
+    vcolors->ref();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, new osg::LineWidth(fwidth)));
+
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    return GraphHandlePtr();
+    osg::Switch* handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        ppoints = (float*)((char*)ppoints + stride);
+
+        vcolors->push_back(osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f));
+    }
+    
+    handle->ref();
+    vvertices->ref();
+    vcolors->ref();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, new osg::LineWidth(fwidth)));
+
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
@@ -1009,13 +1392,8 @@ GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVec
 
 GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
-//    void* pret = new SoSeparator();
-//    EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), (SoSeparator*)pret, tplane,vextents,vtexture));
-//    pmsg->callerexecute();
-
     return GraphHandlePtr();
 }
-
 
 GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
@@ -1024,18 +1402,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
 
 GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
 {
-
-
-    //    void* pret = new SoSeparator();
-    //    EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, colors));
-    //    pmsg->callerexecute();
-
     return GraphHandlePtr();
-}
-
-void QtOSGViewer::closegraph(void* handle)
-{
-
 }
 
 void QtOSGViewer::_Deselect()
@@ -1064,12 +1431,11 @@ void QtOSGViewer::StopPlaybackTimer()
 
 void QtOSGViewer::SetSize(int w, int h)
 {
-    RAVELOG_VERBOSE("----->>>> ViewerSetSize(int w, int h)\n");
-
+    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h));
 }
 void QtOSGViewer::Move(int x, int y)
 {
-    RAVELOG_VERBOSE("----->>>> ViewerMove(int x, int y)\n");
+    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
 void QtOSGViewer::SetName(const string& ptitle)
@@ -1176,10 +1542,10 @@ void QtOSGViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode));
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
                     }
                     else {
-                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode));
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode), ITEM_DELETER);
                     }
                     newdata = true;
 
@@ -1252,8 +1618,10 @@ void QtOSGViewer::UpdateFromModel()
     _RepaintWidgets(GetRoot());
 
     if (newdata) {
-        //  Fill tree widget with robot and joints
-        _FillObjectTree(objectTree);
+        if (objectTree != NULL) {
+            //  Fill tree widget with robot and joints
+            _FillObjectTree(objectTree);
+        }
     }
 }
 
@@ -1360,6 +1728,35 @@ void QtOSGViewer::EnvironmentSync()
     if( !_bModelsUpdated ) {
         RAVELOG_WARNA("failed to update models from environment sync\n");
     }
+}
+
+osg::Switch* QtOSGViewer::_CreateGraphHandle()
+{
+    osg::Switch* handle = new osg::Switch;
+    handle->setAllChildrenOn();
+    return handle;
+}
+
+void QtOSGViewer::_CloseGraphHandle(osg::Switch* handle)
+{
+    _ivFigureRoot->removeChild(handle);
+    handle->unref();
+}
+
+void QtOSGViewer::_SetGraphTransform(osg::Switch* handle, const RaveTransform<float> t)
+{
+    SetMatrixTransform(handle->getChild(0)->asGroup()->getChild(0)->asTransform()->asMatrixTransform(), t);
+    handle->unref();
+}
+
+void QtOSGViewer::_SetGraphShow(osg::Switch* handle, bool bShow)
+{
+    if (bShow) {
+        handle->setAllChildrenOn();
+    } else {
+        handle->setAllChildrenOff();
+    }
+    handle->unref();
 }
 
 UserDataPtr QtOSGViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)

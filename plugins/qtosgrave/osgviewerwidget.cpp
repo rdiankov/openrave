@@ -22,13 +22,15 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
     _InitializeLights(5);
     _actualKinbody = "";
     _osgview = new osgViewer::View();
+    _osghudview = new osgViewer::View();
 
     //  Improve FPS to 60 per viewer
     setThreadingModel(osgViewer::CompositeViewer::CullDrawThreadPerContext);
 
-    QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100), _osgview );
+    QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100), _osgview, _CreateHUDCamera(0,0,100,100), _osghudview);
     QGridLayout* grid = new QGridLayout;
     grid->addWidget(widgetview, 0, 0);
+    grid->setContentsMargins(1, 1, 1, 1);
     setLayout(grid);
 
     //  Sets pickhandler
@@ -282,26 +284,44 @@ void ViewerWidget::_ClearDragger()
     }
 }
 
-QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view)
+void ViewerWidget::SetViewport(int width, int height)
+{
+    _osgview->getCamera()->setViewport(0,0,width,height);
+    _osghudview->getCamera()->setViewport(0,0,width,height);
+    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0, 100));
+}
+
+QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
 {
     view->setCamera( camera );
+    hudview->setCamera( hudcamera );
     addView( view );
+    addView( hudview );
+
     view->addEventHandler( new osgViewer::StatsHandler );
-    view->setCameraManipulator( new osgGA::TrackballManipulator );
+
+    _osgCameraManipulator = new osgGA::TrackballManipulator;
+    view->setCameraManipulator( _osgCameraManipulator );
+
+    _osgCameraHUD = new osg::MatrixTransform;
+    hudcamera->addChild( _osgCameraHUD );
+    _osgCameraHUD->setMatrix(osg::Matrix::identity());
 
     GraphicsWindowQt* gw = dynamic_cast<GraphicsWindowQt*>( camera->getGraphicsContext() );
+    hudcamera->setGraphicsContext(gw);
+    hudcamera->setViewport(0,0,gw->getTraits()->width, gw->getTraits()->height);
     return gw ? gw->getGraphWidget() : NULL;
 }
 
-osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h, const std::string& name, bool windowDecoration)
+osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h)
 {
     osg::DisplaySettings* ds = osg::DisplaySettings::instance().get();
 
     //ds->setNumMultiSamples(4); //  Anti aliasing, necessary?
 
     osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
-    traits->windowName = name;
-    traits->windowDecoration = windowDecoration;
+    traits->windowName = "";
+    traits->windowDecoration = false;
     traits->x = x;
     traits->y = y;
     traits->width = w;
@@ -313,11 +333,33 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
     traits->samples = ds->getNumMultiSamples();
 
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
-    camera->setGraphicsContext( new GraphicsWindowQt(traits.get()) );
+    camera->setGraphicsContext(new GraphicsWindowQt(traits.get()));
     
-    camera->setClearColor( osg::Vec4(0.95, 1.0, 0.98, 1.0) );
-    camera->setViewport( new osg::Viewport(0, 0, traits->width, traits->height) );
+    camera->setClearColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+    camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
     camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
+
+    return camera;
+}
+
+osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, int h)
+{
+    osg::ref_ptr<osg::Camera> camera(new osg::Camera());    
+    camera->setProjectionMatrix(osg::Matrix::ortho(-1,1,-1,1,1,10));
+
+    // draw subgraph after main camera view.
+    camera->setRenderOrder(osg::Camera::POST_RENDER);
+
+    // only clear the depth buffer
+    camera->setClearMask(GL_DEPTH_BUFFER_BIT);
+
+    // we don't want the camera to grab event focus from the viewers main camera(s).
+    camera->setAllowEventFocus(false);
+
+    // set the view matrix
+    camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    camera->setViewMatrix(osg::Matrix::identity());
+
     return camera;
 }
 
@@ -582,20 +624,22 @@ void ViewerWidget::_InitializeLights(int nlights)
     // Create 3 Lights
     osg::Vec4 lightColors[] = { osg::Vec4(1.0, 1.0, 1.0, 1.0),
                                 osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0),
-                                osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0)};
+                                osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0) };
 
     osg::Vec3 lightPosition[] = { osg::Vec3(0, 0, 3.5),
                                   osg::Vec3(2, -2.5, 2.5), osg::Vec3(-2, -2.5, 2.5),
-                                  osg::Vec3(2, 2.5, 2.5),osg::Vec3(-2, 2.5, 2.5)};
+                                  osg::Vec3(2, 2.5, 2.5), osg::Vec3(-2, 2.5, 2.5) };
+
     osg::Vec3 lightDirection[] = {osg::Vec3(0.0, 0.0, -1.0),
                                   osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0),
-                                  osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0)};
+                                  osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0) };
+
     int lightid = 0;
     for (int i = 0; i < nlights; i++)
     {
-        osg::ref_ptr<osg::Geode> lightMarker = new osg::Geode();
-        lightMarker->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(), 1)));
-        lightMarker->getOrCreateStateSet()->setAttribute(createSimpleMaterial(lightColors[i]));
+        // osg::ref_ptr<osg::Geode> lightMarker = new osg::Geode();
+        // lightMarker->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(), 1)));
+        // lightMarker->getOrCreateStateSet()->setAttribute(createSimpleMaterial(lightColors[i]));
 
         osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
 
@@ -612,7 +656,7 @@ void ViewerWidget::_InitializeLights(int nlights)
 
         _vLightTransform[i] = new osg::PositionAttitudeTransform();
         _vLightTransform[i]->addChild(lightSource);
-        _vLightTransform[i]->addChild(lightMarker);
+        // _vLightTransform[i]->addChild(lightMarker);
         _vLightTransform[i]->setPosition(lightPosition[i]);
         _vLightTransform[i]->setScale(osg::Vec3(0.1,0.1,0.1));
         _osgLightsGroup->addChild(_vLightTransform[i]);
@@ -631,6 +675,21 @@ void ViewerWidget::_UpdateCoreFromViewer()
             pitem->UpdateFromIv();
         }
     }
+}
+
+osg::Camera *ViewerWidget::GetCamera()
+{
+    return _osgview->getCamera();
+}
+
+osgGA::TrackballManipulator *ViewerWidget::GetCameraManipulator()
+{
+    return _osgCameraManipulator;
+}
+
+osg::MatrixTransform *ViewerWidget::GetCameraHUD()
+{
+    return _osgCameraHUD;
 }
 
 void ViewerWidget::_StoreMatrixTransform()

@@ -47,7 +47,7 @@ public:
     virtual bool GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK);
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
-//  virtual void SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup);
+    virtual float GetCameraDistanceToFocus() const;
     virtual RaveTransform<float> GetCameraTransform() const;
     virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const;
     virtual SensorBase::CameraIntrinsics GetCameraIntrinsics2() const;
@@ -69,7 +69,6 @@ public:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
 
-    virtual void closegraph(void* handle);
     virtual void _Deselect();
 
     //	TODO : Specific QtOsgRave functions
@@ -203,14 +202,53 @@ public slots:
 
 protected:
 
+    class PrivateGraphHandle : public GraphHandle
+    {
+    public:
+        PrivateGraphHandle(QtOSGViewerWeakPtr wviewer, osg::Switch* handle) : _handle(handle), _wviewer(wviewer) {
+            BOOST_ASSERT(_handle != NULL);
+        }
+        virtual ~PrivateGraphHandle() {
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
+            if(!!viewer) {
+                _handle->ref();
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle));
+            }
+        }
+
+        virtual void SetTransform(const RaveTransform<float>& t)
+        {
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
+            if(!!viewer) {
+                _handle->ref();
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t));
+            }
+        }
+
+        virtual void SetShow(bool bShow)
+        {
+            boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
+            if(!!viewer) {
+                _handle->ref();
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow));
+            }
+        }
+
+        osg::ref_ptr<osg::Switch> _handle;
+        QtOSGViewerWeakPtr _wviewer;
+    };
+
     inline QtOSGViewerPtr shared_viewer() {
         return boost::static_pointer_cast<QtOSGViewer>(shared_from_this());
+    }
+    inline QtOSGViewerWeakPtr weak_viewer() {
+        return QtOSGViewerWeakPtr(shared_viewer());
     }
     inline QtOSGViewerConstPtr shared_viewer_const() const {
         return boost::static_pointer_cast<QtOSGViewer const>(shared_from_this());
     }
 
-    virtual void _InitGUI(bool bCreateStatusBar);
+    virtual void _InitGUI(bool bCreateStatusBar, bool bCreateMenu);
     
     /// \brief Update model and camera transform
     virtual void _UpdateEnvironment(float fTimeElapsed);
@@ -221,6 +259,16 @@ protected:
 
     /// \brief reset the camera depending on its mode
     virtual void _UpdateCameraTransform(float fTimeElapsed);
+    virtual void _SetCameraTransform();
+
+    virtual osg::Switch* _CreateGraphHandle();
+    virtual void _CloseGraphHandle(osg::Switch* handle);
+    virtual void _SetGraphTransform(osg::Switch* handle, const RaveTransform<float> t);
+    virtual void _SetGraphShow(osg::Switch* handle, bool bShow);
+
+    virtual void _Draw(osg::Switch *handle, osg::Vec3Array *vertices, osg::Vec4Array *colors, osg::PrimitiveSet::Mode mode, osg::StateAttribute *attribute);
+    virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
+    virtual void _SetCameraDistanceToFocus(float focalDistance);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
@@ -255,6 +303,13 @@ protected:
     
     void _DeleteItemCallback(Item* pItem);
 
+    bool _SetFiguresInCamera(ostream& sout, istream& sinput);
+    bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
+    bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
+    bool _TrackLinkCommand(ostream& sout, istream& sinput);
+    bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
+    bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
+
     // Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions;
     list<Item*> _listRemoveItems; ///< raw points of items to be deleted, triggered from _DeleteItemCallback
@@ -264,6 +319,8 @@ protected:
     
     // Rendering
     osg::ref_ptr<osg::Group> _ivRoot;        ///< root node
+    osg::ref_ptr<osg::Group> _ivFigureRoot;        ///< 
+    osg::ref_ptr<osg::MatrixTransform> _ivWorldAxis;
     osg::ref_ptr<osg::Node> _selectedNode;
     osg::ref_ptr<osgManipulator::Dragger>    _pdragger;
     
@@ -273,6 +330,7 @@ protected:
     
     RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item
     RaveTransform<float> _Tcamera;
+    float _focalDistance;  ///< current focal distance of the camera, read-only
     geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
     std::string _name;
@@ -401,6 +459,17 @@ protected:
     bool _bQuitMainLoop;
     bool _bUpdateEnvironment;    
     bool _bLockEnvironment; ///< if true, should lock the environment.
+
+    /// tracking parameters
+    //@{
+    KinBody::LinkPtr _ptrackinglink; ///< current link tracking
+    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
+    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
+    Transform _tTrackingCameraVelocity; ///< camera velocity
+    float _fTrackAngleToUp; ///< tilt a little when looking at the point
+    //@}
+
+    bool _bRenderFiguresInCamera;
 
     friend class ItemSelectionCallbackData;
     friend class ViewerThreadCallbackData;

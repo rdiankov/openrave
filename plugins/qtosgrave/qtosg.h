@@ -91,49 +91,54 @@ using namespace std;
 
 namespace qtosgrave {
 
-/// returns the Transform from a Coin3D SoTransform object
-inline RaveTransform<float> GetRaveTransform(const osg::MatrixTransform* ptrans)
+inline RaveTransform<float> GetRaveTransformFromMatrix(const osg::Matrix &m)
 {
-    //    Debug
-//  RAVELOG_INFO("\t\tGetRaveTransform(ptrans)\n");
-
-    osg::Matrix m;
+    // Debug
     osg::Quat q;
     osg::Vec3d v;
     osg::Vec4d qua;
 
-    //  Review Quaternion assign
+    // Review Quaternion assign
     RaveTransform<float> t;
     assert( ptrans != NULL );
 
-    m = ptrans->getMatrix();
     q = m.getRotate();
 
-    //  Normalize quat prevents Core crash
+    // Normalize quat prevents Core crash
     qua = q.asVec4();
     qua.normalize();
     q.set(qua);
 
     t.rot = Vector(q[3], q[0], q[1], q[2]);
-//  t.rot = Vector(q[0], q[1], q[2],q[3]);
     v = m.getTrans();
     t.trans = Vector(v[0], v[1], v[2]);
     return t;
 }
 
-
 /// sets the transform of a Coin3D SoTransform object
-inline void SetMatrixTransform(osg::MatrixTransform* ptrans, const RaveTransform<float>& t)
+inline osg::Matrix GetMatrixFromRaveTransform(const RaveTransform<float> &t)
 {
-    //    Debug
-//  RAVELOG_INFO("\t\tSetMatrixTransform(ptrans,t)\n");
+    osg::Matrix m;
+    osg::Matrix mR, mT;
 
-    osg::Matrix mR,mT;
-    mR.makeRotate(osg::Quat(t.rot.y, t.rot.z, t.rot.w,t.rot.x));
+    mR.makeRotate(osg::Quat(t.rot.y, t.rot.z, t.rot.w, t.rot.x));
     mT.makeTranslate(t.trans.x, t.trans.y, t.trans.z);
 
-    ptrans->preMult(mT);
-    ptrans->preMult(mR);
+    m.preMult(mT);
+    m.preMult(mR);
+    return m;
+}
+
+/// returns the Transform from a Coin3D SoTransform object
+inline RaveTransform<float> GetRaveTransform(const osg::MatrixTransform *ptrans)
+{
+    return GetRaveTransformFromMatrix(ptrans->getMatrix());
+}
+
+/// sets the transform of a Coin3D SoTransform object
+inline void SetMatrixTransform(osg::MatrixTransform *ptrans, const RaveTransform<float> &t)
+{
+    ptrans->setMatrix(GetMatrixFromRaveTransform(t));
 }
 
 }
@@ -143,11 +148,14 @@ inline void SetMatrixTransform(osg::MatrixTransform* ptrans, const RaveTransform
 #include <osg/Material>
 #include <osg/ShapeDrawable>
 #include <osg/Camera>
+#include <osg/Point>
+#include <osg/LineWidth>
 #include <QtGui>
 #include <osgDB/ReadFile>
 #include <osgUtil/Optimizer>
 #include <osgViewer/View>
 #include <osgViewer/ViewerEventHandlers>
+#include <osgFX/Cartoon>
 
 #include <osgManipulator/Dragger>
 

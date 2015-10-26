@@ -91,16 +91,22 @@ public:
     /// \brief Select the link picked
     void SelectLink(osg::Node* node);
 
+    void SetViewport(int width, int height);
+    osg::Camera *GetCamera();
+    osgGA::TrackballManipulator *GetCameraManipulator();
+    osg::MatrixTransform *GetCameraHUD();
+
 protected:
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();
 
     /// \brief Create a viewer widget
-    QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view );
+    QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
 
     /// \brief Create Open GL Context
-    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h, const std::string& name="", bool windowDecoration=false);
+    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h );
+    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h );
 
     /// \brief Find an OSG Node with the name given
     osg::Node* _FindNamedNode(const std::string& searchName, osg::Node* currNode);
@@ -188,6 +194,7 @@ protected:
     osg::ref_ptr<osgManipulator::Dragger> _dragger; ///< There is only one dragger at the same time
     osg::ref_ptr<osg::MatrixTransform> _selection; ///< Transform applied by dragger
     osg::ref_ptr<osg::Node> _selected; ///< Object selected by dragger
+    osg::ref_ptr<osg::MatrixTransform> _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
     
     std::string _actualKinbody; ///< Kinematic body selected or robot
     std::string _draggerName; ///< Actual dragger selected
@@ -198,6 +205,8 @@ protected:
     std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _vLightTransform;
     osg::ref_ptr<osg::StateSet> _lightStateSet;
     osg::ref_ptr<osgViewer::View> _osgview;
+    osg::ref_ptr<osgViewer::View> _osghudview;
+    osg::ref_ptr<osgGA::TrackballManipulator> _osgCameraManipulator;
     
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;

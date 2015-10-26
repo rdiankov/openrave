@@ -220,6 +220,14 @@ void KinBodyItem::Load()
             if( !bSucceeded || _viewmode == VG_RenderCollision ) {
                 float x,y,z,w;
 
+                osg::ref_ptr<osg::Material> mat = new osg::Material;
+                float transparency = orgeom->GetTransparency();
+                if( _viewmode == VG_RenderCollision && bSucceeded ) {
+                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+                    transparency = 0.5f;
+                }
+
                 // create custom
                 if( psep == NULL ) {
                     psep = new osg::Group();
@@ -227,7 +235,7 @@ void KinBodyItem::Load()
 
                 // set a diffuse color
                 osg::StateSet* state = psep->getOrCreateStateSet();
-                osg::ref_ptr<osg::Material> mat = new osg::Material;
+                
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
                 z = orgeom->GetDiffuseColor().z;
@@ -247,15 +255,15 @@ void KinBodyItem::Load()
                 mat->setShininess( osg::Material::FRONT_AND_BACK, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
-                mat->setTransparency(osg::Material::FRONT_AND_BACK,orgeom->GetTransparency());
+                // getting the object to be displayed with transparency
+                if (transparency > 0) {
+                    mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
 
-                if( _viewmode == VG_RenderCollision && bSucceeded ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-                    mat->setTransparency(osg::Material::FRONT_AND_BACK,0.5f);
+                    state->setRenderBinDetails(0, "transparent"); 
+                    state->setMode(GL_BLEND, osg::StateAttribute::ON); 
+                    state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN); 
                 }
-
-                state->setAttribute( mat.get() );
+                state->setAttributeAndModes(mat);
 
                 switch(orgeom->GetType()) {
                 //  Geometry is defined like a Sphere
