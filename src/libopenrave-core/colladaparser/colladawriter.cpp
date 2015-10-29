@@ -297,7 +297,7 @@ private:
     ColladaWriter(EnvironmentBaseConstPtr penv, const AttributesList& atts) : _dom(NULL), _penv(penv)
     {
         _doc = NULL;
-        _globalunit = 1.0;
+        //_globalunit = 1.0;
         daeErrorHandler::setErrorHandler(this);
         RAVELOG_VERBOSE("init COLLADA writer version: %s, namespace: %s\n", COLLADA_VERSION, COLLADA_NAMESPACE);
         _dae = GetGlobalDAE();
@@ -341,7 +341,7 @@ private:
                 _vForceResolveOpenRAVEScheme = itatt->second;
             }
             else if( itatt->first == "unit" ) {
-                _globalunit = boost::lexical_cast<dReal>(itatt->second);
+                //_globalunit = boost::lexical_cast<dReal>(itatt->second);
             }
             else if( itatt->first == "reusesimilar" ) {
                 _bReuseSimilar = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
@@ -2326,7 +2326,7 @@ private:
     domLibrary_geometriesRef _geometriesLib;
     domTechniqueRef _sensorsLib, _actuatorsLib;     ///< custom libraries
     SCENE _scene;
-    dReal _globalunit; ///< how many real-world meters in one distance unit
+    //dReal _globalunit; ///< how many real-world meters in one distance unit
     EnvironmentBaseConstPtr _penv;
     std::list<kinbody_models> _listkinbodies;
     std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme

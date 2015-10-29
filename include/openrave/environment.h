@@ -618,12 +618,12 @@ public:
 
     /// \brief unit - (name, mult factor to meters)
     ///
-    /// \return pair of unit name and multiplication factor to convert to meters
+    /// \return (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
     virtual std::pair<std::string, dReal> GetUnit() const = 0;
 
-    /// \brief setter for saving the units
+    /// \brief set units for the current environment.
     ///
-    /// \param name and mult factor to meters pair
+    /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
     virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
 
     //@}

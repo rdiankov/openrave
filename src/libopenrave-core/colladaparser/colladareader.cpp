@@ -253,7 +253,7 @@ public:
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
-        _fGlobalScale = 1;
+        _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
             RAVELOG_WARN("collada-dom compiled with 32-bit floating-point, so there might be precision errors\n");
@@ -372,11 +372,11 @@ public:
 
     bool _InitPostOpen(const AttributesList& atts)
     {
-        _fGlobalScale = 1;
+        _fGlobalScale = 1.0/_penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( !!_dom->getAsset() ) {
             if( !!_dom->getAsset()->getUnit() ) {
-                _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
+                _fGlobalScale *= _dom->getAsset()->getUnit()->getMeter();
             }
 
             // check the authoring tool
