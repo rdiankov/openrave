@@ -6583,8 +6583,11 @@ class IKFastSolver(AutoReloader):
                 rawsolutions = []
             for solution in rawsolutions:
                 #solution.subs(freevarinvsubs)
-                self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
-                solutions.append((solution,Symbol(solution.jointname)))
+                try:
+                    self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
+                    solutions.append((solution,Symbol(solution.jointname)))
+                except self.CannotSolveError, e:
+                    log.warn(u'equation failed to compute solution complexity: %s', solution.jointeval)
             if len(rawsolutions) > 0: # solving a pair is rare, so any solution will do
                 break
                         
