@@ -57,29 +57,41 @@ class MobyPhysicsEngine : public PhysicsEngineBase
 
         virtual bool endElement(const string& name)
         {
-            if( name == "mobyproperties" )
+            if( name == "mobyproperties" ) 
+            {
                 return true;
-	    else if( name == "gravity" ) {
+            }
+	    else if( name == "gravity" ) 
+            {
                 Vector g;
 
                 _ss >> g[0] >> g[1] >> g[2];
         
                 _physics->SetGravity(g);
-
-                //RAVELOG_INFO(str(boost::format("read joint[%s] gains[%f,%f,%f]\n") % jointid % gains[0] % gains[1] % gains[2]));
             }
-	    else if( name == "gains" ) {
-                string jointid;
-                dReal gains[3];
+            else if( name == "kp" || name == "tpi" || name == "kvp" || name == "tvi" ) 
+            {
+                string robotid;
+                dReal k[6];
 
-                _ss >> jointid;
-                _ss >> gains[0] >> gains[1] >> gains[2];
-        
-                _physics->_mapJointGains.insert(pair<string, vector<dReal> >(jointid, vector<dReal>(gains, gains+3) ));
+                _ss >> robotid;
+                _ss >> k[0] >> k[1] >> k[2] >> k[3] >> k[4] >> k[5];
 
-                //RAVELOG_INFO(str(boost::format("read joint[%s] gains[%f,%f,%f]\n") % jointid % gains[0] % gains[1] % gains[2]));
+                // query the gain buffer to see if a map exists for the robotid
+                map<string, map<string,vector<dReal> > >::iterator rit;
+                rit = _physics->_mapGainBuffer.find(robotid);
+                if( rit == _physics->_mapGainBuffer.end() ) 
+                {
+                    // the gain map for robot does not exist yet, so allocate one 
+                    _physics->_mapGainBuffer.insert(pair<string, map<string, vector<dReal> > >( robotid, map<string, vector<dReal> >() ));
+                    rit = _physics->_mapGainBuffer.find(robotid);
+                }
+                
+                // add the gains into the robot map
+                rit->second.insert(pair<string, vector<dReal> >(name, vector<dReal>(k, k+6)));
             }
-            else {
+            else 
+            {
                 RAVELOG_ERROR("unknown field %s\n", name.c_str());
             }
 
@@ -101,8 +113,8 @@ class MobyPhysicsEngine : public PhysicsEngineBase
             }
         }
 
-        static const boost::array<string, 2>& GetTags() {
-        static const boost::array<string, 2> tags = {{"gains", "gravity"}};
+        static const boost::array<string, 5>& GetTags() {
+        static const boost::array<string, 5> tags = {{"gravity","kp","tpi","kvp","tvi"}};
             return tags;
         }
 
@@ -124,9 +136,21 @@ public:
 	stringstream ss;
 	__description = ":Interface Authors: James Taylor and Rosen Diankov\n\nInterface to `Moby Physics Engine <https://github.com/PositronicsLab/Moby/>`_\n";
 
+/*
         dReal gains[3] = {1.0,1.0,1.0};  // default gain values
-        _mapJointGains.insert(pair<string, vector<dReal> >("default", vector<dReal>(gains, gains+3) ));
+        _mapGainBuffer.insert(pair<string, vector<dReal> >("default", vector<dReal>(gains, gains+3) ));
+*/
 
+/*
+        vector<dReal> gainKP;
+        vector<dReal> gainTPI;
+        vector<dReal> gainKVP;
+        vector<dReal> gainTVI;
+       _gainKP.resize(_probot->GetDOF()); memset(&_gainKP[0], 0, _gainKP.size()*sizeof(dReal));
+       _gainTPI.resize(_probot->GetDOF()); memset(&_gainTPI[0], 0, _gainTPI.size()*sizeof(dReal));
+       _gainKVP.resize(_probot->GetDOF()); memset(&_gainKVP[0], 0, _gainKVP.size()*sizeof(dReal));
+       _gainTVI.resize(_probot->GetDOF()); memset(&_gainTVI[0], 0, _gainTVI.size()*sizeof(dReal));
+*/
         FOREACHC(it, PhysicsPropertiesXMLReader::GetTags()) {
             ss << "**" << *it << "**, ";
         }
@@ -194,7 +218,12 @@ public:
         pbody->SetUserData("mobyphysics", pinfo);
 
         // set any body specific parameters here
-        _space->MapGains(pbody, _mapJointGains);
+        map<string, map<string, vector<dReal> > >::iterator bit;   // body iterator
+        bit = _mapGainBuffer.find(pbody->GetName());
+        if(bit != _mapGainBuffer.end() )
+        {
+            _space->MapGains(pbody, bit->second );
+        }
 
         return !!pinfo;
     }
@@ -492,6 +521,7 @@ public:
         return false;
     }
 
+/*
     bool GetGains(RobotBasePtr probot, int dofIndex, vector<dReal>& gains) {
         map<KinBodyPtr, map<int, vector<dReal> > >::iterator bit;
         bit = _space->_mapGains.find(probot);
@@ -514,12 +544,39 @@ public:
  
         return true;
     }
+*/
+    bool GetGain(RobotBasePtr probot, int dofIndex, string gainid, dReal& gainval) {
+        map<KinBodyPtr, map<string, vector<dReal> > >::iterator bit;
+        bit = _space->_mapGains.find(probot);
+        if(bit == _space->_mapGains.end() )
+        {
+            //RAVELOG_INFO(str(boost::format("Could not locate gains for robot %s.\n") % probot->GetName() ));
+            return false;
+        }
+        
+        map<string, vector<dReal> >::iterator git;
+        git = bit->second.find( gainid );
+        if( git == bit->second.end() )
+        {
+            return false;
+        }
+
+        if( dofIndex < 0 || ((unsigned)dofIndex) >= git->second.size() )
+        {
+            return false;
+        }
+
+        gainval = git->second[dofIndex];
+ 
+        return true;
+    }
 
     dReal _StepSize;
     Vector _gravity;
     boost::shared_ptr<MobySpace> _space;
 
-    map<string, vector<dReal> > _mapJointGains;
+    //map<string, vector<dReal> > _mapGainBuffer;
+    map<string, map<string,vector<dReal> > > _mapGainBuffer;
 
 private:
     static MobySpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)

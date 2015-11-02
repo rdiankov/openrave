@@ -511,7 +511,7 @@ private:
         _tuningLog << _mobyPhysics->GetTime();
 
         FOREACH(it,_dofindices) {
-            vector<dReal> gains;
+            //vector<dReal> gains;
             double gearRatio = 1;     // assume a 1-to-1 gear ratio
             double torqueNominal = 0;
             double torqueStall = 0;
@@ -539,6 +539,7 @@ private:
                 //torqueNominal = torqueStall;
             }
 
+/*
             // get the gains
             _mobyPhysics->GetGains(_probot, (*it), gains);
 
@@ -547,6 +548,25 @@ private:
                 // the number of gains is insufficient
                 RAVELOG_INFO(str(boost::format("expecting 3 gain values but found %d instead.  Cannot compute PID control.\n") % gains.size() ));
                 continue;
+            }
+*/
+            dReal kP = 0, kD = 0, kI = 0, tPI = 0, kVP = 0, tVI = 0;
+
+            if( !_mobyPhysics->GetGain(_probot, (*it), "kp", kP ) ) 
+            {
+                kP = 0;
+            }
+            if( !_mobyPhysics->GetGain(_probot, (*it), "tpi", tPI ) ) 
+            {
+                tPI = 0;
+            }
+            if( !_mobyPhysics->GetGain(_probot, (*it), "kvp", kVP ) ) 
+            {
+                kVP = 0;
+            }
+            if( !_mobyPhysics->GetGain(_probot, (*it), "tvi", tVI ) ) 
+            {
+                tVI = 0;
             }
 
             dReal ddx = 0;
@@ -563,15 +583,17 @@ private:
             dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
             dReal errI = _aggregateError.at(*it);
 
+/*
             dReal kP = gains[0];
             dReal kD = gains[1];
             dReal kI = gains[2];
-
+*/
             dReal P = kP * errP;
             dReal D = kD * errD;
             dReal I = kI * errI;
 
 
+            //RAVELOG_INFO(str(boost::format("vt[%f], kP[%f], tPI[%f], kVP[%f], tVI{%f}.\n") % _mobyPhysics->GetTime() % kP % tPI % kVP % tVI ));
             //RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % _mobyPhysics->GetTime() % errP % errD % errI ));
 
             torqueAtMotorOut = P + I + D;
@@ -634,6 +656,7 @@ private:
             KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
             ElectricMotorActuatorInfoPtr motor_info = pjoint->GetInfo()._infoElectricMotor;
 
+/*
             vector<dReal> gains;
             _mobyPhysics->GetGains(_probot, (*it), gains);
 
@@ -643,16 +666,37 @@ private:
                 RAVELOG_INFO(str(boost::format("expecting 3 gain values but found %d instead.  Cannot compute PID control.\n") % gains.size() ));
                 continue;
             }
+*/
+            dReal kP = 0, kD = 0, kI = 0, tPI = 0, kVP = 0, tVI = 0;
+
+            if( !_mobyPhysics->GetGain(_probot, (*it), "kp", kP ) ) 
+            {
+                kP = 0;
+            }
+            if( !_mobyPhysics->GetGain(_probot, (*it), "tpi", tPI ) ) 
+            {
+                tPI = 0;
+            }
+            if( !_mobyPhysics->GetGain(_probot, (*it), "kvp", kVP ) ) 
+            {
+                kVP = 0;
+            }
+            if( !_mobyPhysics->GetGain(_probot, (*it), "tvi", tVI ) ) 
+            {
+                tVI = 0;
+            }
+
 
             dReal errP = desiredposition.at(*it) - position.at(*it);
             dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
             dReal errI = _aggregateError.at(*it);
 
+/*
             // gains need to come from xml and be configured per joint 
             dReal kP = gains[0];
             dReal kD = gains[1];
             dReal kI = gains[2];
-
+*/
             dReal P = kP * errP;
             dReal D = kD * errD;
             dReal I = kI * errI;

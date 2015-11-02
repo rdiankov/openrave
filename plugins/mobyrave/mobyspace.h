@@ -296,7 +296,8 @@ private:
         pinfo->vlinks.reserve(pbody->GetLinks().size());
 
         // allocate a gain map for this kinbody
-        _mapGains.insert(pair<KinBodyPtr, map<int, vector<dReal> > >(pbody, map<int, vector<dReal> >()));
+        //_mapGains.insert(pair<KinBodyPtr, map<int, vector<dReal> > >(pbody, map<int, vector<dReal> >()));
+        _mapGains.insert(pair<KinBodyPtr, map<string, vector<dReal> > >(pbody, map<string, vector<dReal> >()));
 
         if(pbody->GetLinks().size() == 1) 
         {
@@ -387,7 +388,7 @@ private:
 
         return pinfo;
     }
-
+/*
     void MapGains(KinBodyPtr pbody, map<string, vector<dReal> > mapJointIdToGains ) {
         //RAVELOG_INFO(str(boost::format("mapping gains for kinbody %s.\n") % pbody->GetName() ));
         map<KinBodyPtr, map<int, vector<dReal> > >::iterator bit;    // body iterator
@@ -427,8 +428,60 @@ private:
             result = bit->second.insert(pair<int, vector<dReal> >((*itjoint)->GetDOFIndex(), jit->second) );
 
             //RAVELOG_INFO(str(boost::format("mapped index %d with gains [%f,%f,%f].\n") % (*itjoint)->GetDOFIndex() % result.first->second[0] % result.first->second[1] % result.first->second[2] ));
-}
+        }
+    }
+*/
+    void MapGains(KinBodyPtr pbody, map<string, vector<dReal> >& mapRobotGains ) {
+        //RAVELOG_INFO(str(boost::format("mapping gains for kinbody %s.\n") % pbody->GetName() ));
+        map<KinBodyPtr, map<string, vector<dReal> > >::iterator bit;    // body iterator
+        bit = _mapGains.find(pbody);
+        if(bit == _mapGains.end() )
+        {
+            //RAVELOG_INFO(str(boost::format("_mapGains has no references for %s.\n") % pbody->GetName() ));
+            // _mapGains has no references to this kinbody.  Either the kinbody has
+            // no joints and therefore has no gains or something failed in the earlier
+            // allocation step.  Either case bail out.
+            return;  
+        }
 
+        //bit->second.insert( pair<KinBodyPtr, map<string, vector<dReal> > >(pbody, mapRobotGains));
+
+        bit->second = mapRobotGains;
+
+        for( map<string,vector<dReal> >::iterator git = bit->second.begin(); git != bit->second.end(); git++)
+        {
+            RAVELOG_INFO(str(boost::format("%s.\n") % git->first ));
+        }
+        
+        // iterate over the kinbody joints and find any jointid-gain correspondence
+        // and copy the gain data if found.
+/*
+        vector<KinBody::JointPtr> joints;
+        joints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
+        joints.insert(joints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
+        joints.insert(joints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
+
+        FOREACH(itjoint, joints) 
+        {
+            map<string, vector<dReal> >::iterator jit;            // joint name iterator
+            jit = mapJointIdToGains.find((*itjoint)->GetName());         
+            if(jit == mapJointIdToGains.end() )
+            {
+                jit = mapJointIdToGains.find("default");
+                if(jit == mapJointIdToGains.end() ) {
+                    //RAVELOG_INFO(str(boost::format("_mapJointIdToGains has no references for %s and no default.\n") % pbody->GetName() ));
+                    // mapJointIdToGains has no references to this joint and no default.  
+                    continue;
+                }
+            }
+
+            // found an acceptable correspondence so copy the gains to the dof index based map
+            std::pair<map<int,vector<dReal> >::iterator, bool > result;
+            result = bit->second.insert(pair<int, vector<dReal> >((*itjoint)->GetDOFIndex(), jit->second) );
+
+            //RAVELOG_INFO(str(boost::format("mapped index %d with gains [%f,%f,%f].\n") % (*itjoint)->GetDOFIndex() % result.first->second[0] % result.first->second[1] % result.first->second[2] ));
+        }
+*/
     }
 
     void Synchronize()
@@ -758,7 +811,8 @@ private:
     map<Moby::RigidBodyPtr, Ravelin::SVelocityd, _CompareSharedPtrs<Moby::RigidBody> > _mapVelocity;
 
 public:
-    map<KinBodyPtr, map<int, vector<dReal> >, _CompareSharedPtrs<KinBody> > _mapGains;
+    //map<KinBodyPtr, map<int, vector<dReal> >, _CompareSharedPtrs<KinBody> > _mapGains;
+    map<KinBodyPtr, map<string, vector<dReal> >, _CompareSharedPtrs<KinBody> > _mapGains;
     boost::shared_ptr<Moby::GravityForce> _gravity;
 
 };
