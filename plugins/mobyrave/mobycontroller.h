@@ -44,10 +44,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _fSpeed = 1;
         _nControlTransformation = 0;
 
+        _stateLog.open( "state", std::ofstream::out | std::ofstream::trunc );
         _tuningLog.open( "gainerror", std::ofstream::out | std::ofstream::trunc );
     }
     virtual ~MobyPIDController() {
 
+        _stateLog.close();
         _tuningLog.close();
     }
 
@@ -475,7 +477,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _vecdesired.resize(0);
         }
 
-        _LogJointAccelerations();
+        _LogJointAccelerations(fTimeElapsed);
         _firstStep = false;
     }
 
@@ -497,17 +499,22 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 private:
     virtual void _SetControls(const std::vector<dReal>& desiredposition, const std::vector<dReal>& desiredvelocity, dReal timeelapsed)
     {
+        // for debugging and testing assume a single manipulator
+        RobotBase::ManipulatorPtr manip = _probot->GetManipulators()[0];
+
         //vector<dReal> torques(_probot->GetDOF());
         vector<dReal> position, velocity;
         _probot->GetDOFValues(position);
         _probot->GetDOFVelocities(velocity);
 
+        _stateLog << _mobyPhysics->GetTime();
         _tuningLog << _mobyPhysics->GetTime();
 
         FOREACH(it,_dofindices) {
             vector<dReal> gains;
             double gearRatio = 1;     // assume a 1-to-1 gear ratio
             double torqueNominal = 0;
+            double torqueStall = 0;
 
             double torqueAtMotorOut;
             double torqueAtGearboxOut;
@@ -527,6 +534,9 @@ private:
                     gearRatio = motorInfo->gear_ratio;
                 }
                 torqueNominal = motorInfo->nominal_torque;
+                torqueStall = motorInfo->stall_torque;
+
+                //torqueNominal = torqueStall;
             }
 
             // get the gains
@@ -537,6 +547,12 @@ private:
                 // the number of gains is insufficient
                 RAVELOG_INFO(str(boost::format("expecting 3 gain values but found %d instead.  Cannot compute PID control.\n") % gains.size() ));
                 continue;
+            }
+
+            dReal ddx = 0;
+
+            if(!_firstStep) {
+                ddx = _accelerations.at(*it);
             }
 
             // P delta may wrap the unit circle interval, so correct.
@@ -555,26 +571,29 @@ private:
             dReal D = kD * errD;
             dReal I = kI * errI;
 
-            _tuningLog << " " << errP << " " << errD << " " << errI;
 
-            RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % _mobyPhysics->GetTime() % errP % errD % errI ));
+            //RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % _mobyPhysics->GetTime() % errP % errD % errI ));
 
             torqueAtMotorOut = P + I + D;
-
+///*
             // if the motor output torque is greater than the nominal torque is a ceiling (also nominal torque has to be set to trigger)
             if( torqueNominal > 0 && fabs(torqueAtMotorOut) > torqueNominal ) 
             {
                 double sign = torqueAtMotorOut / fabs(torqueAtMotorOut);
                 torqueAtMotorOut = sign * torqueNominal;
             }
-  
-            torqueAtGearboxOut = torqueAtMotorOut / gearRatio;
+//*/  
+            torqueAtGearboxOut = torqueAtMotorOut * gearRatio;
 
             //torques.at(*it) = gearRatio * (P + I + D);
             //torques.at(*it) = P + I + D;
 
             //RAVELOG_INFO(str(boost::format("computed torque[%f].\n") % torques.at(*it) ));
-            RAVELOG_INFO(str(boost::format("torque motor[%f], gearbox[%f].\n") % torqueAtMotorOut % torqueAtGearboxOut ));
+            //RAVELOG_INFO(str(boost::format("torque motor[%f], gearbox[%f].\n") % torqueAtMotorOut % torqueAtGearboxOut ));
+
+            _stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << torqueAtGearboxOut;
+            //_stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << ddx;
+            _tuningLog << " " << errP << " " << errD << " " << errI;
 
             vector<dReal> u(1);
             //u[0] = torques.at(*it);
@@ -584,6 +603,7 @@ private:
             _mobyPhysics->AddJointTorque( pjoint, u );
         }
   
+        _stateLog << std::endl;
         _tuningLog << std::endl;
 /*
         vector<dReal> prevvalues, curvalues, curvel;
@@ -801,12 +821,13 @@ private:
         }
     }
 
-    void _LogJointAccelerations(void)
+    void _LogJointAccelerations(dReal dt)
     {
-        bool echo = true;
+        bool echo = false;
 
-        vector<dReal> accelerations;
         vector<dReal> velocities;
+        // allocate a vector for accelerations
+        _accelerations.resize(_probot->GetDOF()); memset(&_accelerations[0], 0, _accelerations.size()*sizeof(dReal));
 
         // read velocities(i) for all joints
         _probot->GetDOFVelocities(velocities);
@@ -814,9 +835,6 @@ private:
         // if there has been a preceding step, read velocity(i-1) and compute accelerations
         if(!_firstStep)
         {        
-            // allocate a vector for accelerations
-            accelerations.resize(_probot->GetDOF()); memset(&accelerations[0], 0, accelerations.size()*sizeof(dReal));
-
             if(echo) 
             {
                 std::cout << "accelerations{ ";
@@ -825,13 +843,13 @@ private:
             // compute accelerations and output if desired
             FOREACH(it,_dofindices)
             {
-                accelerations[*it] = velocities[*it] - _prevVelocities[*it];
+                _accelerations[*it] = (velocities[*it] - _prevVelocities[*it]) / dt;
 
                 if(echo) 
                 {
                     if(*it) 
                         std::cout << ", ";
-                    std::cout << *it << ":" << accelerations[*it];
+                    std::cout << *it << ":" << _accelerations[*it];
                 }
             }
 
@@ -891,8 +909,10 @@ private:
     bool _firstStep;
     boost::shared_ptr<MobyPhysicsEngine> _mobyPhysics;
     std::vector<dReal> _prevVelocities;
+    vector<dReal> _accelerations;
 
     std::ofstream _tuningLog;
+    std::ofstream _stateLog;
 };
 
 ControllerBasePtr CreateMobyPIDController(EnvironmentBasePtr penv, std::istream& sinput)
