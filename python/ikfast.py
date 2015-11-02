@@ -3210,12 +3210,23 @@ class IKFastSolver(AutoReloader):
                     if rawpolyeqs2[splitindex] is not None:
                         rawpolyeqs=rawpolyeqs2[splitindex]
                         endbranchtree=[AST.SolverSequence([leftovervarstree])]
+                        unusedsymbols = []
+                        for solvejointvar in solvejointvars:
+                            usedinequs = any([var in rawpolyeqs[0][0].gens or var in rawpolyeqs[0][1] for var in self.Variable(solvejointvar).vars])
+                            if not usedinequs:
+                                unusedsymbols += self.Variable(solvejointvar).vars
                         AllEquationsExtra = []
+                        AllEquationsExtraPruned = [] # prune equations for variables that are not used in rawpolyeqs
                         for i in range(3):
                             for j in range(4):
-                                AllEquationsExtra.append(self.SimplifyTransform(T0[i,j]-T1[i,j]))
+                                # have to make sure that any variable not in rawpolyeqs[0][0].gens and rawpolyeqs[0][1].gens is not used
+                                eq = self.SimplifyTransform(T0[i,j]-T1[i,j])
+                                if not eq.has(*unusedsymbols):
+                                    AllEquationsExtraPruned.append(eq)
+                                AllEquationsExtra.append(eq)
+                        self.sortComplexity(AllEquationsExtraPruned)
                         self.sortComplexity(AllEquationsExtra)
-                        coupledsolutions,usedvars = solvemethod(rawpolyeqs,solvejointvars,endbranchtree=endbranchtree,AllEquationsExtra=AllEquationsExtra)
+                        coupledsolutions,usedvars = solvemethod(rawpolyeqs,solvejointvars,endbranchtree=endbranchtree,AllEquationsExtra=AllEquationsExtraPruned)
                         break
                 except self.CannotSolveError, e:
                     if rawpolyeqs2[splitindex] is not None and len(rawpolyeqs2[splitindex]) > 0:
@@ -4731,7 +4742,12 @@ class IKFastSolver(AutoReloader):
                             numausymbols += 1
                         if f.is_rational and not f.is_integer:
                             numaufractions += 1
-                    if not self.IsDeterminantNonZeroByEval(AUdetmat, len(rows)>9 and (numaufractions > 40 or numausymbols > 40)):
+                            # if fraction is really huge, give it more counts (the bigger it is, the slower it takes to compute)
+                            flength = len(str(f))
+                            numaufractions += int(flength/20)
+                    #d = AUdetmat.det().evalf()
+                    #if d == S.Zero:
+                    if not self.IsDeterminantNonZeroByEval(AUdetmat, len(rows)>9 and (numaufractions > 120 or numausymbols > 40)):
                         log.info('skipping dependent index %d', i)
                         continue
                     AU = AU2
@@ -4916,7 +4932,11 @@ class IKFastSolver(AutoReloader):
                         if b != S.Zero:
                             allzeros = False
                     if not allzeros:
-                        AUinv = AU.inv()
+                        try:
+                            AUinv = AU.inv()
+                        except ValueError, e:
+                            raise self.CannotSolveError(u'failed to invert matrix: %e'%e)
+                        
                         BUresult = AUinv*BU
                         C = AL*BUresult-BL
                     else:
@@ -5224,7 +5244,7 @@ class IKFastSolver(AutoReloader):
                             log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
             if exportcoeffeqs is not None:
                 break
-
+        
         if exportcoeffeqs is None:
             if len(nonhtvars) > 0 and newreducedeqs[0].degree:
                 log.info('try to solve one variable in terms of the others')
