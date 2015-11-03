@@ -377,7 +377,7 @@ public:
         if( !!_dom->getAsset() ) {
             // do not modify _fGlobalScale here since _GetUnitScale propagates up the hierarchy
             if( !!_dom->getAsset()->getUnit() ) {
-                //_fGlobalScale *= _dom->getAsset()->getUnit()->getMeter();
+                _fGlobalScale *= _dom->getAsset()->getUnit()->getMeter();
             }
 
             // check the authoring tool
