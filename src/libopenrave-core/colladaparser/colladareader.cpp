@@ -2115,6 +2115,7 @@ public:
         Transform tnodegeom;
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
+        vscale *= _GetUnitScale(pdomnode, _fGlobalScale); // TODO should track the scale per each listGeometryInfos
 
         FOREACH(itgeominfo, listGeometryInfos) {
             //  Switch between different type of geometry PRIMITIVES
@@ -4654,12 +4655,12 @@ private:
         return newname;
     }
 
-    inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)
+    inline dReal _GetUnitScale(daeElementRef pelt, dReal startscale)
     {
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter();
+            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);
