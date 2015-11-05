@@ -6220,6 +6220,10 @@ class IKFastSolver(AutoReloader):
         neweq = None
         for group in groups:
             try:
+                if self.codeComplexity(eq) > 400:
+                    log.warn(u'equation too complex to simplify for rot norm: %s', eq)
+                    continue
+                
                 # need to do 1234*group[3] hack in order to get the Poly domain to recognize group[3] (sympy 0.7.1)
                 p = Poly(eq+1234*group[3],group[0],group[1],group[2])
                 p -= Poly(1234*group[3], *p.gens, domain=p.domain)
