@@ -1538,8 +1538,6 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
-    _AttachBody(pbody);
-    _AttachBody(pbody);
     try {
         // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
         _AttachBody(pbody);
