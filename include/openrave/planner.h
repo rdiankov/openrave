@@ -53,6 +53,7 @@ enum PlannerStatus
     PS_FailedDueToGoal = 0x00080000, ///< failed due to goal configurations
     PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints
     PS_FailedDueToIK = 0x00200000, ///< failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)
+    PS_FailedDueToVelocityConstraints = 0x00400000, ///< failed due to velocity constraints
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function

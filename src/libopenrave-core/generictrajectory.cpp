@@ -395,7 +395,9 @@ protected:
             _vdeltainvtime.at(0) = 1/_vtrajdata.at(_timeoffset);
             for(size_t i = 1; i < _vaccumtime.size(); ++i) {
                 dReal deltatime = _vtrajdata[_spec.GetDOF()*i+_timeoffset];
-                BOOST_ASSERT(deltatime>=0);
+                if( deltatime < 0 ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("deltatime (%.15e) is < 0 at point %d/%d", deltatime%i%_vaccumtime.size(), ORE_InvalidState);
+                }
                 _vdeltainvtime[i] = 1/deltatime;
                 _vaccumtime[i] = _vaccumtime[i-1] + deltatime;
             }
