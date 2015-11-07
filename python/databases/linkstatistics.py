@@ -256,13 +256,14 @@ class LinkStatisticsModel(DatabaseGenerator):
         """
         with self.env:
             if type == 0:
+                unittometer = self.env.GetUnit()[1]
                 linkvolumes = array([self._GetValue(linkstat['volume']) for linkstat in self.linkstats])
                 def getweight(ijoint,volumeinfo):
                     if ijoint < 0:
                         accumvolume = sum(linkvolumes)
                     else:
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
-                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume)**weightexp
+                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume*unittometer**5)**weightexp # have to convert the units to meters in order to get weight to mean something!
                     if weight <= 0:
                         log.warn('joint %d has weight=%e, setting to 1e-3'%(ijoint,weight))
                         weight = 1e-3
