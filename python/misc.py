@@ -405,9 +405,13 @@ def ComputeCylinderYMesh(radius,height,angledelta=0.1):
     return vertices,numpy.array(indices)
 
 
-def TSP(solutions,distfn):
+def TSP(solutions,distfn=None):
     """solution to travelling salesman problem. orders the set of solutions such that visiting them one after another is fast.
     """
+    if distfn is None:
+        # create a dummy distance fn
+        distfn = lambda x,y: sum((x-y)**2)
+    
     newsolutions = numpy.array(solutions)
     for i in range(newsolutions.shape[0]-2):
         n = newsolutions.shape[0]-i-1

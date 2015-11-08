@@ -7978,7 +7978,14 @@ class IKFastSolver(AutoReloader):
             if Poly(eqnew,varsym.htvar).TC() != S.Zero and numvar >= 1 and numvar <= 2:
                 try:
                     tempsolutions = solve(eqnew,varsym.htvar)
-                    jointsolutions = [2*atan(self.SimplifyTransform(self.trigsimp(s.subs(symbols),othersolvedvars))) for s in tempsolutions]
+                    jointsolutions = []
+                    for s in tempsolutions:
+                        simplifiedeq = self.SimplifyTransform(self.trigsimp(s.subs(symbols),othersolvedvars))
+                        try:
+                            jointsolutions.append(2*atan(simplifiedeq))
+                        except RuntimeError, e:
+                            log.warn('failed to take atan of equation, most likely it is too big: %s', e)
+                    
                     if all([self.isValidSolution(s) and s != S.Zero for s in jointsolutions]) and len(jointsolutions)>0:
                         returnfirstsolutions.append(AST.SolverSolution(var.name,jointeval=jointsolutions,isHinge=self.IsHinge(var.name)))
                         hasdividebyzero = any([len(self.checkForDivideByZero(self._SubstituteGlobalSymbols(s)))>0 for s in jointsolutions])
