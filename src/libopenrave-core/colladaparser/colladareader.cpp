@@ -253,7 +253,7 @@ public:
         daeErrorHandler::setErrorHandler(this);
         _bOpeningZAE = false;
         _bSkipGeometry = false;
-        _fGlobalScale = 1;
+        _fGlobalScale = 1.0/penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
             RAVELOG_WARN("collada-dom compiled with 32-bit floating-point, so there might be precision errors\n");
@@ -372,11 +372,12 @@ public:
 
     bool _InitPostOpen(const AttributesList& atts)
     {
-        _fGlobalScale = 1;
+        _fGlobalScale = 1.0/_penv->GetUnit().second;
         _bBackCompatValuesInRadians = false;
         if( !!_dom->getAsset() ) {
+            // do not modify _fGlobalScale here since _GetUnitScale propagates up the hierarchy
             if( !!_dom->getAsset()->getUnit() ) {
-                _fGlobalScale = _dom->getAsset()->getUnit()->getMeter();
+                _fGlobalScale *= _dom->getAsset()->getUnit()->getMeter();
             }
 
             // check the authoring tool
@@ -2114,6 +2115,7 @@ public:
         Transform tnodegeom;
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
+        vscale *= _GetUnitScale(pdomnode, _fGlobalScale); // TODO should track the scale per each listGeometryInfos
 
         FOREACH(itgeominfo, listGeometryInfos) {
             //  Switch between different type of geometry PRIMITIVES
@@ -2986,17 +2988,28 @@ public:
                 string name = pextra->getAttribute("name");
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
+                    KinBody::JointPtr pjoint;
+                    domJointRef pdomjoint;
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                         daeElementRef pchild = tec->getContents()[ic];
                         if( pchild->getElementName() == string("bind_actuator") ) {
                             std::pair<KinBody::JointPtr, domJointRef> result = _getJointFromRef(pchild->getAttribute("joint").c_str(),as,probot, bindings);
-                            KinBody::JointPtr pjoint = result.first;
-                            domJointRef pdomjoint = result.second;
+                            pjoint = result.first;
+                            pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
                                 listOrderedJoints.push_back(pjoint);
                             }
                             else {
                                 RAVELOG_WARN(str(boost::format("failed to find joint %s in actuator %s\n")%pchild->getAttribute("joint")%name));
+                            }
+                        }
+                    }
+                    if( !!pjoint ) {
+                        // look for actuators
+                        for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
+                            daeElementRef pchild = tec->getContents()[ic];
+                            if( pchild->getElementName() == string("instance_actuator") ) {
+                                pjoint->_info._infoElectricMotor = _ExtractElectricMotorActuatorInfo(pchild);
                             }
                         }
                     }
@@ -3053,7 +3066,7 @@ public:
         std::string instance_url = instance_sensor->getAttribute("url");
         daeElementRef domsensor = daeURI(*instance_sensor,instance_url).getElement();
         if( !domsensor ) {
-            RAVELOG_WARN(str(boost::format("failed to find senor id %s url=%s\n")%instance_id%instance_url));
+            RAVELOG_WARN(str(boost::format("failed to find sensor id %s url=%s\n")%instance_id%instance_url));
             return std::make_pair(SensorBasePtr(), daeElementRef());
         }
         if( !domsensor->hasAttribute("type") ) {
@@ -3061,6 +3074,82 @@ public:
             return std::make_pair(SensorBasePtr(), daeElementRef());
         }
         return std::make_pair(RaveCreateSensor(_penv, domsensor->getAttribute("type")), domsensor);
+    }
+
+    /// \brief Extractan instance of a actuator without parsing its data
+    ///
+    /// \return the newly created actuator
+    ElectricMotorActuatorInfoPtr _ExtractElectricMotorActuatorInfo(daeElementRef instance_actuator)
+    {
+        if( !instance_actuator ) {
+            return ElectricMotorActuatorInfoPtr();
+        }
+        if( !instance_actuator->hasAttribute("url") ) {
+            RAVELOG_WARN("instance_actuator has no url\n");
+            return ElectricMotorActuatorInfoPtr();
+        }
+
+        std::string instance_id = instance_actuator->getAttribute("id");
+        std::string instance_url = instance_actuator->getAttribute("url");
+        daeElementRef domactuator = daeURI(*instance_actuator,instance_url).getElement();
+        if( !domactuator ) {
+            RAVELOG_WARN(str(boost::format("failed to find actuator id %s url=%s\n")%instance_id%instance_url));
+            return ElectricMotorActuatorInfoPtr();
+        }
+        if( !domactuator->hasAttribute("type") ) {
+            RAVELOG_WARN("collada <actuator> needs type attribute\n");
+            return ElectricMotorActuatorInfoPtr();
+        }
+
+        ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
+        for(size_t ic = 0; ic < domactuator->getChildren().getCount(); ++ic) {
+            daeElementRef pchild = domactuator->getChildren()[ic];
+            if( pchild->getElementName() == string("gear_ratio") ) {
+                pinfo->gear_ratio = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("assigned_power_rating") ) {
+                pinfo->assigned_power_rating = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("max_speed") ) {
+                pinfo->max_speed = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("no_load_speed") ) {
+                pinfo->no_load_speed = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("stall_torque") ) {
+                pinfo->stall_torque = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("nominal_torque") ) {
+                pinfo->nominal_torque = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("rotor_inertia") ) {
+                pinfo->rotor_inertia = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("torque_constant") ) {
+                pinfo->torque_constant = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("nominal_voltage") ) {
+                pinfo->nominal_voltage = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("speed_constant") ) {
+                pinfo->speed_constant = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("starting_current") ) {
+                pinfo->starting_current = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("terminal_resistance") ) {
+                pinfo->terminal_resistance = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("speed_torque_point") ) {
+                std::stringstream ss(pchild->getCharData());
+                std::vector<dReal> vpoints((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
+                pinfo->speed_torque_points.resize(vpoints.size()/2);
+                for(size_t ipoint = 0; ipoint < vpoints.size(); ipoint += 2) {
+                    pinfo->speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
+                }
+            }
+        }
+        return pinfo;
     }
     
 //    /// \brief Extract and parse an instance of a sensor
@@ -4653,12 +4742,12 @@ private:
         return newname;
     }
 
-    inline static dReal _GetUnitScale(daeElementRef pelt, dReal startscale)
+    inline dReal _GetUnitScale(daeElementRef pelt, dReal startscale)
     {
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter();
+            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);

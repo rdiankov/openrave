@@ -246,9 +246,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                     else:
                         pass
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
-            crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
-            self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
-
+            if len(self.affinevolumes) >= 6:
+                crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
+                self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
+            
     def setRobotWeights(self,weightexp=0.3333,type=0,weightmult=10.0):
         """sets the weights for the robot.
         weightexp is the exponent for the final weights to help reduce the max:min (default is 1/3 which results in 50:1)
@@ -256,13 +257,14 @@ class LinkStatisticsModel(DatabaseGenerator):
         """
         with self.env:
             if type == 0:
+                unittometer = self.env.GetUnit()[1]
                 linkvolumes = array([self._GetValue(linkstat['volume']) for linkstat in self.linkstats])
                 def getweight(ijoint,volumeinfo):
                     if ijoint < 0:
                         accumvolume = sum(linkvolumes)
                     else:
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
-                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume)**weightexp
+                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume*unittometer**5)**weightexp # have to convert the units to meters in order to get weight to mean something!
                     if weight <= 0:
                         log.warn('joint %d has weight=%e, setting to 1e-3'%(ijoint,weight))
                         weight = 1e-3
@@ -275,8 +277,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     dofweights += [w]*j.GetDOF()
                 self.robot.SetDOFWeights(dofweights)
-                self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
-                self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
+                if len(self.affinevolumes) >= 3:
+                    self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
+                if len(self.affinevolumes) >= 6:
+                    self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
             elif type == 1:
                 # set everything to 1
                 for j in self.robot.GetJoints():
@@ -298,9 +302,13 @@ class LinkStatisticsModel(DatabaseGenerator):
         self.generate(samplingdelta=samplingdelta)
         self.save()
     def generate(self,samplingdelta=None,**kwargs):
+        """
+        :param computeaffinevolumes: if True will compute affine volumes
+        """
         if not self.cdmodel.load():
             self.cdmodel.autogenerate()
         #self.cdmodel.setrobot()
+        computeaffinevolumes = kwargs.get('computeaffinevolumes', True)
         self.samplingdelta=samplingdelta if samplingdelta is not None else 0.02
         with self.robot:
             self.robot.SetTransform(eye(4))
@@ -403,32 +411,33 @@ class LinkStatisticsModel(DatabaseGenerator):
                         del kdtree
             del jointvolumes_points # not used anymore, so free memory
             self.affinevolumes = [None]*6
-            # compute for rotation around axes
-            for i in [2]:
-                log.info('rotation %s',('x','y','z')[i])
-                axis = array((0,0,0))
-                axis[i] = 1.0
-                R = rotationMatrixFromQuat(quatRotateDirection(axis,[0,0,1]))
-                volume = dot(robotvolume,transpose(R))
-                # get the cross sections and a dV/dAngle measure
-                crossarea = c_[sqrt(sum(volume[:,0:2]**2,1)),volume[:,2:]]
-                crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
-                # compute simple statistics and compress the joint volume
-                volumedelta = sum(crossarea[:,0])*density**2
-                volumecom = r_[tile(mean(crossarea[:,0]),2),mean(crossarea[:,1])]
-                volume = sum(crossarea[:,0]**2*pi)*density**2
-                self.affinevolumes[3+i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volume':volume}
-            for i in range(3):
-                log.info('translation %s',('x','y','z')[i])
-                indices = range(3)
-                indices.remove(i)
-                crossarea = robotvolume[:,indices]
-                crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
-                volumedelta = len(crossarea)*density**2
-                volumecom = mean(robotvolume,0)
-                volume = len(robotvolume)*self.samplingdelta**3
-                volumeinertia = cov(robotvolume,rowvar=0,bias=1)*volume
-                self.affinevolumes[i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
+            if computeaffinevolumes:
+                # compute for rotation around axes
+                for i in [2]:
+                    log.info('rotation %s',('x','y','z')[i])
+                    axis = array((0,0,0))
+                    axis[i] = 1.0
+                    R = rotationMatrixFromQuat(quatRotateDirection(axis,[0,0,1]))
+                    volume = dot(robotvolume,transpose(R))
+                    # get the cross sections and a dV/dAngle measure
+                    crossarea = c_[sqrt(sum(volume[:,0:2]**2,1)),volume[:,2:]]
+                    crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                    # compute simple statistics and compress the joint volume
+                    volumedelta = sum(crossarea[:,0])*density**2
+                    volumecom = r_[tile(mean(crossarea[:,0]),2),mean(crossarea[:,1])]
+                    volume = sum(crossarea[:,0]**2*pi)*density**2
+                    self.affinevolumes[3+i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volume':volume}
+                for i in range(3):
+                    log.info('translation %s',('x','y','z')[i])
+                    indices = range(3)
+                    indices.remove(i)
+                    crossarea = robotvolume[:,indices]
+                    crossarea = crossarea[self.PrunePointsKDTree(crossarea, density**2, 1,k=50),:]
+                    volumedelta = len(crossarea)*density**2
+                    volumecom = mean(robotvolume,0)
+                    volume = len(robotvolume)*self.samplingdelta**3
+                    volumeinertia = cov(robotvolume,rowvar=0,bias=1)*volume
+                    self.affinevolumes[i] = {'crossarea':crossarea,'volumedelta':volumedelta,'volumecom':volumecom,'volumeinertia':volumeinertia,'volume':volume}
 
     @staticmethod
     def ComputeSweptVolume(volumepoints,axis,minangle,maxangle,samplingdelta):
