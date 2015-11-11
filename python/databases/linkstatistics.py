@@ -277,9 +277,9 @@ class LinkStatisticsModel(DatabaseGenerator):
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     dofweights += [w]*j.GetDOF()
                 self.robot.SetDOFWeights(dofweights)
-                if len(self.affinevolumes) >= 3:
+                if len(self.affinevolumes) >= 3 and self.affinevolumes[0] is not None and self.affinevolumes[1] is not None and self.affinevolumes[2] is not None:
                     self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
-                if len(self.affinevolumes) >= 6:
+                if len(self.affinevolumes) >= 6 and self.affinevolumes[3+2] is not None:
                     self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
             elif type == 1:
                 # set everything to 1
