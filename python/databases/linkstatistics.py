@@ -246,9 +246,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                     else:
                         pass
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
-            crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
-            self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
-
+            if len(self.affinevolumes) >= 6:
+                crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
+                self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
+            
     def setRobotWeights(self,weightexp=0.3333,type=0,weightmult=10.0):
         """sets the weights for the robot.
         weightexp is the exponent for the final weights to help reduce the max:min (default is 1/3 which results in 50:1)
@@ -276,8 +277,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     dofweights += [w]*j.GetDOF()
                 self.robot.SetDOFWeights(dofweights)
-                self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
-                self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
+                if len(self.affinevolumes) >= 3:
+                    self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
+                if len(self.affinevolumes) >= 6:
+                    self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
             elif type == 1:
                 # set everything to 1
                 for j in self.robot.GetJoints():
