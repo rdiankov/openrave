@@ -8098,11 +8098,11 @@ class IKFastSolver(AutoReloader):
                         if scomplexity > 1200 or ccomplexity > 1200:
                             log.debug('equation too complex for single variable solution (%d,%d).... (probably wrong?)',scomplexity,ccomplexity)
                             break
-                        if scomplexity < 500:
+                        if scomplexity < 500 and len(str(svarfrac[1])) < 600: # if fractions are too long, then will take a long time to simplify, so also checkout the length fo the entire equation
                             svarfrac[1] = simplify(svarfrac[1])
                         if self.chop(svarfrac[1])== 0:
                             break
-                        if ccomplexity < 500:
+                        if ccomplexity < 500 and len(str(cvarfrac[1])) < 600:
                             cvarfrac[1] = simplify(cvarfrac[1])
                         if self.chop(cvarfrac[1])== 0:
                             break
@@ -8134,8 +8134,19 @@ class IKFastSolver(AutoReloader):
                             if svarsolsimp.is_number and cvarsolsimp.is_number:
                                 if Abs(svarsolsimp**2+cvarsolsimp**2-S.One).evalf() > 1e-10:
                                     log.debug('%s solution: atan2(%s,%s), sin/cos not on circle so ignoring',var.name,svarsolsimp,cvarsolsimp)
-                                    continue    
-                            expandedsol = atan2check(svarsolsimp,cvarsolsimp)
+                                    continue
+                            svarsolsimpcomplexity = self.codeComplexity(svarsolsimp)
+                            cvarsolsimpcomplexity = self.codeComplexity(cvarsolsimp)
+                            if svarsolsimpcomplexity > 3000 or cvarsolsimpcomplexity > 3000:
+                                log.warn('new substituted solutions too complex: %d, %d', svarsolsimpcomplexity, cvarsolsimpcomplexity)
+                                continue
+                            
+                            try:
+                                expandedsol = atan2check(svarsolsimp,cvarsolsimp)
+                            except RuntimeError, e:
+                                log.warn(u'most likely got recursion error when calling atan2: %s', e)
+                                continue
+                            
                             solversolution.FeasibleIsZeros = False
                             log.debug('%s solution: atan2 check for joint',var.name)
                         solversolution.jointeval.append(expandedsol)
