@@ -246,7 +246,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                     else:
                         pass
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
-            if len(self.affinevolumes) >= 6:
+            if len(self.affinevolumes) >= 6 and self.affinevolumes[3+2] is not None:
                 crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
                 self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
             
