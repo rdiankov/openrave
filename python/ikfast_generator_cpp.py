@@ -316,14 +316,14 @@ inline double IKsqr(double f) { return f*f; }
 inline float IKlog(float f) { return logf(f); }
 inline double IKlog(double f) { return log(f); }
 
-// allows asin and acos to exceed 1
+// allows asin and acos to exceed 1. has to be smaller than thresholds used for branch conds and evaluation
 #ifndef IKFAST_SINCOS_THRESH
-#define IKFAST_SINCOS_THRESH ((IkReal)2e-6)
+#define IKFAST_SINCOS_THRESH ((IkReal)1e-7)
 #endif
 
-// used to check input to atan2 for degenerate cases
+// used to check input to atan2 for degenerate cases. has to be smaller than thresholds used for branch conds and evaluation
 #ifndef IKFAST_ATAN2_MAGTHRESH
-#define IKFAST_ATAN2_MAGTHRESH ((IkReal)2e-6)
+#define IKFAST_ATAN2_MAGTHRESH ((IkReal)1e-7)
 #endif
 
 // minimum distance of separate solutions
@@ -333,7 +333,7 @@ inline double IKlog(double f) { return log(f); }
 
 // there are checkpoints in ikfast that are evaluated to make sure they are 0. This threshold speicfies by how much they can deviate
 #ifndef IKFAST_EVALCOND_THRESH
-#define IKFAST_EVALCOND_THRESH ((IkReal)0.000005)
+#define IKFAST_EVALCOND_THRESH ((IkReal)0.00001)
 #endif
 
 
