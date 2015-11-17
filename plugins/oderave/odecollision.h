@@ -141,6 +141,16 @@ public:
         _odespace->Destroy();
     }
 
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        CollisionCheckerBase::Clone(preference, cloningoptions);
+        boost::shared_ptr<ODECollisionChecker const > r = boost::dynamic_pointer_cast<ODECollisionChecker const>(preference);
+        _odespace->SetGeometryGroup(r->GetGeometryGroup());
+        _options = r->_options;
+        _nMaxStartContacts = r->_nMaxStartContacts;
+        _nMaxContacts = r->_nMaxContacts;
+    }
+    
     bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
     {
         sinput >> _nMaxContacts;
@@ -473,7 +483,7 @@ public:
             RAVELOG_WARN("ode doesn't support CO_Distance\n");
             return false;
         }
-        throw openrave_exception("This type of collision checking is not yet implemented in the ODE collision checker.\n",OpenRAVE::ORE_NotImplemented);
+        throw openrave_exception(_("This type of collision checking is not yet implemented in the ODE collision checker.\n"),OpenRAVE::ORE_NotImplemented);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
@@ -793,7 +803,7 @@ public:
         _odespace->SetGeometryGroup(groupname);
     }
 
-    const std::string& GetGeometryGroup()
+    const std::string& GetGeometryGroup() const
     {
         return _odespace->GetGeometryGroup();
     }
@@ -937,8 +947,19 @@ private:
                 if( !!pcb->_report ) {
                     pcb->_report->plink1 = _report.plink1;
                     pcb->_report->plink2 = _report.plink2;
-                    pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
-                    pcb->_report->contacts.swap(_report.contacts);
+                    if( _options & OpenRAVE::CO_AllLinkCollisions ) {
+                        FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
+                            if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
+                                
+                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
+                            }
+                        }
+                        pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
+                    }
+                    else {
+                        pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
+                        pcb->_report->contacts.swap(_report.contacts);
+                    }
                 }
             }
 
@@ -1035,8 +1056,19 @@ private:
                 if( !!pcb->_report ) {
                     pcb->_report->plink1 = _report.plink1;
                     pcb->_report->plink2 = _report.plink2;
-                    pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
-                    pcb->_report->contacts.swap(_report.contacts);
+                    if( _options & OpenRAVE::CO_AllLinkCollisions ) {
+                        FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
+                            if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
+                                
+                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
+                            }
+                        }
+                        pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
+                    }
+                    else {
+                        pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
+                        pcb->_report->contacts.swap(_report.contacts);
+                    }
                 }
             }
 
@@ -1118,6 +1150,7 @@ private:
             int N = _GeomCollide(o1,o2,vcontacts, !!pcb->_report && !!(_options & OpenRAVE::CO_Contacts));
             if (N) {
                 if(!!pcb->_report || pcb->GetCallbacks().size() > 0 ) {
+                    _report.Reset(_options);
                     _report.plink1 = pcb->_plink;
                     _report.plink2 = pkb1 != pcb->_plink ? pkb1 : pkb2;
                     if( !!_report.plink1 && !!_report.plink2 ) {
@@ -1139,6 +1172,7 @@ private:
                             if( !!_report.plink2 && _report.plink2->ValidateContactNormal(vcontacts[i].geom.pos,vnorm) ) {
                                 distance = -distance;
                             }
+                            _report.minDistance = distance;
                             _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[i].geom.pos,vnorm,distance));
                         }
                     }
@@ -1154,8 +1188,19 @@ private:
                     if( !!pcb->_report ) {
                         pcb->_report->plink1 = _report.plink1;
                         pcb->_report->plink2 = _report.plink2;
-                        pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
-                        pcb->_report->contacts.swap(_report.contacts);
+                        if( _options & OpenRAVE::CO_AllLinkCollisions ) {
+                            FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
+                                if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
+                                    
+                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
+                                }
+                            }
+                            pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
+                        }
+                        else {
+                            pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
+                            pcb->_report->contacts.swap(_report.contacts);
+                        }
                     }
                 }
 

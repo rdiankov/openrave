@@ -84,12 +84,15 @@ public:
     /// \brief Set the camera transformation.
     ///
     /// \param trans new camera transformation in the world coordinate system
-    /// \param focalDistance The new focal distance of the camera (higher values is higher zoom). If 0, then the previous focal distance is preserved.
-    virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0) OPENRAVE_DUMMY_IMPLEMENTATION;
+    /// \param distanceToFocus The new distance of the camera to the center of its rotation (higher values is higher zoom). If 0, then the previous focal distance is preserved.
+    virtual void SetCamera(const RaveTransform<float>& trans, float distanceToFocus=0) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Return the current camera transform that the viewer is rendering the environment at.
     virtual RaveTransform<float> GetCameraTransform() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief Return the distance to the camera focus position (ie center of rotation)
+    virtual float GetCameraDistanceToFocus() const OPENRAVE_DUMMY_IMPLEMENTATION;
+    
     /// \brief Return the closest camera intrinsics that the viewer is rendering the environment at.
     virtual geometry::RaveCameraIntrinsics<float> GetCameraIntrinsics() const OPENRAVE_DUMMY_IMPLEMENTATION;
 

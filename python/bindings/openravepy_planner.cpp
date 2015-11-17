@@ -69,7 +69,7 @@ public:
         void SetRobotActiveJoints(PyRobotBasePtr robot)
         {
             if( !_paramswrite ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("PlannerParameters needs to be non-const",ORE_Failed);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("PlannerParameters needs to be non-const"),ORE_Failed);
             }
             _paramswrite->SetRobotActiveJoints(openravepy::GetRobot(robot));
         }
@@ -98,6 +98,16 @@ public:
         void SetInitialConfig(object o)
         {
             _paramswrite->vinitialconfig = ExtractArray<dReal>(o);
+        }
+
+        void SetInitialConfigVelocities(object o)
+        {
+            _paramswrite->_vInitialConfigVelocities = ExtractArray<dReal>(o);
+        }
+
+        void SetGoalConfigVelocities(object o)
+        {
+            _paramswrite->_vGoalConfigVelocities = ExtractArray<dReal>(o);
         }
 
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, int options=0xffff, bool returnconfigurations=false)
@@ -223,11 +233,11 @@ public:
     object RegisterPlanCallback(object fncallback)
     {
         if( !fncallback ) {
-            throw openrave_exception("callback not specified");
+            throw openrave_exception(_("callback not specified"));
         }
         UserDataPtr p = _pplanner->RegisterPlanCallback(boost::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,_1));
         if( !p ) {
-            throw openrave_exception("no registration callback returned");
+            throw openrave_exception(_("no registration callback returned"));
         }
         return toPyUserData(p);
     }
@@ -317,6 +327,8 @@ void init_openravepy_planner()
         .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
+        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::vInitialConfigVelocities")
+        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::vGoalConfigVelocities")
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)

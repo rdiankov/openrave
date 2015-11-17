@@ -17,6 +17,7 @@
 #ifndef RAVE_ENVIRONMENT_H
 #define RAVE_ENVIRONMENT_H
 
+#include "ravep.h"
 #include "colladaparser/colladacommon.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -27,7 +28,7 @@
 
 #define CHECK_INTERFACE(pinterface) { \
         if( (pinterface)->GetEnv() != shared_from_this() ) \
-            throw openrave_exception(str(boost::format("Interface %s:%s is from a different environment")%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()),ORE_InvalidArguments); \
+            throw openrave_exception(str(boost::format(_("Interface %s:%s is from a different environment"))%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()),ORE_InvalidArguments); \
 } \
 
 #define CHECK_COLLISION_BODY(body) { \
@@ -124,7 +125,8 @@ public:
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
-
+        _unit = std::make_pair("meter",1.0); //default unit settings
+            
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -422,7 +424,7 @@ public:
         else {
             boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
             if (!lock.owns_lock()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             listModules.clear();
             FOREACHC(it, _listModules) {
@@ -559,7 +561,7 @@ public:
         case PT_Viewer: _AddViewer(RaveInterfaceCast<ViewerBase>(pinterface)); break;
         case PT_Sensor: _AddSensor(RaveInterfaceCast<SensorBase>(pinterface),bAnonymous); break;
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT("Interface %d cannot be added to the environment",pinterface->GetInterfaceType(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("Interface %d cannot be added to the environment"),pinterface->GetInterfaceType(),ORE_InvalidArguments);
         }
     }
 
@@ -568,7 +570,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
         if( !utils::IsValidName(pbody->GetName()) ) {
-            throw openrave_exception(str(boost::format("kinbody name: \"%s\" is not valid")%pbody->GetName()));
+            throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%pbody->GetName()));
         }
         if( !_CheckUniqueName(KinBodyConstPtr(pbody),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
@@ -600,10 +602,10 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
         if( !robot->IsRobot() ) {
-            throw openrave_exception(str(boost::format("kinbody \"%s\" is not a robot")%robot->GetName()));
+            throw openrave_exception(str(boost::format(_("kinbody \"%s\" is not a robot"))%robot->GetName()));
         }
         if( !utils::IsValidName(robot->GetName()) ) {
-            throw openrave_exception(str(boost::format("kinbody name: \"%s\" is not valid")%robot->GetName()));
+            throw openrave_exception(str(boost::format(_("kinbody name: \"%s\" is not valid"))%robot->GetName()));
         }
         if( !_CheckUniqueName(KinBodyConstPtr(robot),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
@@ -636,7 +638,7 @@ public:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
         CHECK_INTERFACE(psensor);
         if( !utils::IsValidName(psensor->GetName()) ) {
-            throw openrave_exception(str(boost::format("sensor name: \"%s\" is not valid")%psensor->GetName()));
+            throw openrave_exception(str(boost::format(_("sensor name: \"%s\" is not valid"))%psensor->GetName()));
         }
         if( !_CheckUniqueName(SensorBaseConstPtr(psensor),!bAnonymous) ) {
             // continue to add random numbers until a unique name is found
@@ -992,7 +994,7 @@ public:
         else {
             boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
             if (!lock.owns_lock()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             bodies = _vecbodies;
         }
@@ -1007,7 +1009,7 @@ public:
         else {
             boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
             if (!lock.owns_lock()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             robots = _vecrobots;
         }
@@ -1022,7 +1024,7 @@ public:
         else {
             boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
             if (!lock.owns_lock()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             _GetSensors(vsensors);
         }
@@ -1105,7 +1107,7 @@ public:
                 (*itviewer)->RemoveKinBody(robot);
             }
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
-                throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
+                throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
             }
         }
 
@@ -1191,7 +1193,7 @@ public:
                 (*itviewer)->RemoveKinBody(robot);
             }
             if( std::find(_vecrobots.begin(),_vecrobots.end(),robot) != _vecrobots.end() ) {
-                throw openrave_exception(str(boost::format("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n")%robot->GetName()));
+                throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
             }
         }
 
@@ -1209,7 +1211,7 @@ public:
             }
         }
         else if( _IsIVData(data) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("iv data not supported",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("iv data not supported"),ORE_InvalidArguments);
         }
         else {
             InterfaceBasePtr pinterface = robot;
@@ -1238,7 +1240,7 @@ public:
                 (*itviewer)->RemoveKinBody(body);
             }
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
-                throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
+                throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
             }
         }
 
@@ -1322,7 +1324,7 @@ public:
                 (*itviewer)->RemoveKinBody(body);
             }
             if( std::find(_vecbodies.begin(),_vecbodies.end(),body) != _vecbodies.end() ) {
-                throw openrave_exception(str(boost::format("KinBody::Init for %s, cannot Init a body while it is added to the environment\n")%body->GetName()));
+                throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
             }
         }
 
@@ -1340,7 +1342,7 @@ public:
             }
         }
         else if( _IsIVData(data) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("iv data not supported",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("iv data not supported"),ORE_InvalidArguments);
         }
         else {
             InterfaceBasePtr pinterface = body;
@@ -1764,7 +1766,7 @@ public:
         else {
             boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
             if (!lock.owns_lock()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             vbodies = _vPublishedBodies;
         }
@@ -1780,7 +1782,7 @@ public:
         else {
             boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
             if (!lock.owns_lock()) {
-                throw OPENRAVE_EXCEPTION_FORMAT("timeout of %f s failed",(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             _UpdatePublishedBodies();
         }
@@ -1809,6 +1811,17 @@ public:
             _vPublishedBodies.push_back(state);
         }
     }
+
+    virtual std::pair<std::string, dReal> GetUnit() const
+    {
+        return _unit;
+    }
+    
+    virtual void SetUnit(std::pair<std::string, dReal> unit)
+    {
+        _unit = unit;
+    }
+
 
 protected:
 
@@ -1923,7 +1936,7 @@ protected:
                     bCollisionCheckerChanged = true;
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone collision checker %s: %s", r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker %s: %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
         }
@@ -1941,7 +1954,7 @@ protected:
                     bPhysicsEngineChanged = true;
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to clone physics engine %s: %s", r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone physics engine %s: %s"), r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
         }
@@ -2202,7 +2215,7 @@ protected:
         FOREACHC(itbody,_vecbodies) {
             if(( *itbody != pbody) &&( (*itbody)->GetName() == pbody->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format("env=%d, body %s does not have unique name")%GetId()%pbody->GetName()));
+                    throw openrave_exception(str(boost::format(_("env=%d, body %s does not have unique name"))%GetId()%pbody->GetName()));
                 }
                 return false;
             }
@@ -2214,7 +2227,7 @@ protected:
         FOREACHC(itsensor,_listSensors) {
             if(( *itsensor != psensor) &&( (*itsensor)->GetName() == psensor->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format("env=%d, sensor %s does not have unique name")%GetId()%psensor->GetName()));
+                    throw openrave_exception(str(boost::format(_("env=%d, sensor %s does not have unique name"))%GetId()%psensor->GetName()));
                 }
                 return false;
             }
@@ -2226,7 +2239,7 @@ protected:
         FOREACHC(itviewer,_listViewers) {
             if(( *itviewer != pviewer) &&( (*itviewer)->GetName() == pviewer->GetName()) ) {
                 if( bDoThrow ) {
-                    throw openrave_exception(str(boost::format("env=%d, viewer '%s' does not have unique name")%GetId()%pviewer->GetName()));
+                    throw openrave_exception(str(boost::format(_("env=%d, viewer '%s' does not have unique name"))%GetId()%pviewer->GetName()));
                 }
                 return false;
             }
@@ -2500,6 +2513,8 @@ protected:
 
     vector<KinBody::BodyState> _vPublishedBodies;
     string _homedirectory;
+    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters 
+
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 
     list<InterfaceBasePtr> _listOwnedInterfaces;

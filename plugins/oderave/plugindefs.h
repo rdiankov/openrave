@@ -59,6 +59,8 @@
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
 
+#define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_oderave", msgid)
+
 using namespace std;
 
 // OpenRAVE includes a dReal typedef which could cause conflict with ODEs, so don't include it

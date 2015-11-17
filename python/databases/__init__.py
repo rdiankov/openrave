@@ -28,7 +28,7 @@ try:
 except:
     import pickle
 
-from .. import openravepy_int
+from .. import openravepy_int, openrave_exception
 from .. import metaclass
 from ..misc import OpenRAVEGlobalArguments
 import os.path
@@ -194,7 +194,14 @@ class DatabaseGenerator(metaclass.AutoReloader):
                 env.Load(options.robot,robotatts)
                 # TODO: if exception is raised after this point, program exits with glibc double-link list corruption. most likely something in Load?
                 if len(env.GetRobots()) > 0:
-                    robot = env.GetRobots()[0]
+                    # get the first robot with DOF > 0
+                    robot = None
+                    for robot in env.GetRobots():
+                        if robot.GetDOF() > 0:
+                            break
+                    if robot is None or robot.GetDOF() == 0:
+                        raise openrave_exception('there is no robot with DOF > 0')
+                    
                 elif allowkinbody:
                     robot = env.GetBodies()[0]
                 assert(robot is not None)
@@ -205,7 +212,10 @@ class DatabaseGenerator(metaclass.AutoReloader):
                         if len(indices) > 0:
                             robot.SetActiveManipulator(indices[0])
                     else:
-                        robot.SetActiveManipulator([i for i,m in enumerate(robot.GetManipulators()) if m.GetName()==options.manipname][0])
+                        for i,m in enumerate(robot.GetManipulators()):
+                            if m.GetName()==options.manipname:
+                                robot.SetActiveManipulator(m)
+                                break
             model = Model(robot=robot)
             destroyenv = False
             return options,model

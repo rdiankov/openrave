@@ -501,7 +501,7 @@ private:
             FOREACH(itbody, vbodies) {
                 KinBodyConstPtr pbody(*itbody);
                 KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
-                if( !pinfo ) {
+                if( !!pinfo ) {
                     InitKinBody(pbody,pinfo);
                 }
             }

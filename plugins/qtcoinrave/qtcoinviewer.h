@@ -143,6 +143,7 @@ public:
 
     virtual bool WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension);
     virtual void SetCamera(const RaveTransform<float>& trans, float focalDistance=0);
+    virtual float GetCameraDistanceToFocus() const;
     virtual void SetBkgndColor(const RaveVector<float>& color);
 
     virtual void PrintCamera();
@@ -240,7 +241,7 @@ protected:
 
 protected:
     void _InitConstructor(std::istream& sinput);
-    
+
     class PrivateGraphHandle : public GraphHandle
     {
 public:
@@ -357,9 +358,9 @@ public:
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
-    
+
     void _SetNearPlane(dReal nearplane);
-    
+
     // selection and deselection handling
     static void _SelectHandler(void *, class SoPath *);
     static void _DeselectHandler(void *, class SoPath *);
@@ -420,7 +421,8 @@ public:
     int _videocodec;
 
     RaveTransform<float>     _initSelectionTrans;           ///< initial tarnsformation of selected item
-    RaveTransform<float> _Tcamera;
+    RaveTransform<float> _Tcamera; ///< current camera transform, read-only
+    float _focalDistance;  ///< current focal distance of the camera, read-only
     geometry::RaveCameraIntrinsics<float> _camintrinsics;
 
     unsigned int _fb;
@@ -461,11 +463,12 @@ public:
     /// tracking parameters
     //@{
     KinBody::LinkPtr _ptrackinglink; ///< current link tracking
+    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
     RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
     Transform _tTrackingCameraVelocity; ///< camera velocity
-    float  _fTrackingRadius; ///< how far from the coord system camera shoud be
+
     //@}
-    
+
     // data relating to playback
     bool _bStopped;
     bool _bTimeInitialized;
@@ -526,65 +529,65 @@ public:
 };
 
 /*class ScreenRendererWidget : public QWidget
-{
+   {
     Q_OBJECT
 
-public:
+   public:
     ScreenRendererWidget();
 
-public slots:
+   public slots:
     void Animate();
 
-protected:
+   protected:
      void paintEvent(QPaintEvent *event);
 
-private:
+   private:
     EnvironmentBasePtr _penv;
     boost::shared_ptr<QtCoinViewer> _openraveviewer;
     std::vector<uint8_t> _memory;
     //QBasicTimer _timer;
-};
+   };
 
-class QtCoinViewerProxy : public QGraphicsProxyWidget
-{
+   class QtCoinViewerProxy : public QGraphicsProxyWidget
+   {
     Q_OBJECT
     //Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
 
-public:
+   public:
     QtCoinViewerProxy(QGraphicsItem* parent = 0);
     virtual ~QtCoinViewerProxy() {
     }
 
 
-//    QString text() const
-//    {
-//        return widget->text();
-//    }
-//
-//    void setText(const QString& text)
-//    {
-//        if (text != widget->text()) {
-//            widget->setText(text);
-//            emit textChanged();
-//        }
-//    }
-//
-//Q_SIGNALS:
-//    void clicked(bool);
-//    void textChanged();
+   //    QString text() const
+   //    {
+   //        return widget->text();
+   //    }
+   //
+   //    void setText(const QString& text)
+   //    {
+   //        if (text != widget->text()) {
+   //            widget->setText(text);
+   //            emit textChanged();
+   //        }
+   //    }
+   //
+   //Q_SIGNALS:
+   //    void clicked(bool);
+   //    void textChanged();
 
-};
+   };
 
-class QOpenRAVEWidgetsPlugin : public QDeclarativeExtensionPlugin
-{
+   class QOpenRAVEWidgetsPlugin : public QDeclarativeExtensionPlugin
+   {
     Q_OBJECT
-public:
+   public:
     void registerTypes(const char *uri)
     {
         //RAVELOG_INFO("registering %s to OpenRAVECoinViewer\n", uri);
         qmlRegisterType<QtCoinViewerProxy>(uri, 1, 0, "OpenRAVECoinViewer");
     }
-};*/
+   };*/
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

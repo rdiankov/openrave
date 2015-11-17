@@ -837,7 +837,7 @@ public:
         for(size_t i = 0; i < vmanipinfos.size(); ++i) {
             PyManipulatorInfoPtr pymanip = boost::python::extract<PyManipulatorInfoPtr>(omanipinfos[i]);
             if( !pymanip ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.ManipInfo",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ManipInfo"),ORE_InvalidArguments);
             }
             vmanipinfos[i] = pymanip->GetManipulatorInfo();
         }
@@ -845,7 +845,7 @@ public:
         for(size_t i = 0; i < vattachedsensorinfos.size(); ++i) {
             PyAttachedSensorInfoPtr pyattachedsensor = boost::python::extract<PyAttachedSensorInfoPtr>(oattachedsensorinfos[i]);
             if( !pyattachedsensor ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to KinBody.AttachedsensorInfo",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.AttachedsensorInfo"),ORE_InvalidArguments);
             }
             vattachedsensorinfos[i] = pyattachedsensor->GetAttachedSensorInfo();
         }
@@ -1294,7 +1294,7 @@ public:
         for(size_t i = 0; i < vgrabbedinfos.size(); ++i) {
             PyGrabbedInfoPtr pygrabbed = boost::python::extract<PyGrabbedInfoPtr>(ograbbedinfos[i]);
             if( !pygrabbed ) {
-                throw OPENRAVE_EXCEPTION_FORMAT0("cannot cast to Robot.GrabbedInfo",ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to Robot.GrabbedInfo"),ORE_InvalidArguments);
             }
             vgrabbedinfos[i] = pygrabbed->GetGrabbedInfo();
         }

@@ -25,9 +25,11 @@
 #ifndef _WIN32
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <libintl.h>
 #endif
 
 #include <locale>
+#include <set>
 
 #include "plugindatabase.h"
 
@@ -307,6 +309,7 @@ dReal RaveCeil(dReal f) {
 
 #endif
 
+static std::set<std::string> _gettextDomainsInitialized;
 static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 
 /// there is only once global openrave state. It is created when openrave
@@ -383,8 +386,12 @@ public:
         _crlibm_fpu_state = crlibm_init();
 #endif
         try {
+            // TODO: eventually we should remove this call to set global locale for the process
+            // and imbue each stringstream with the correct locale.
+
             // set to the classic locale so that number serialization/hashing works correctly
-            std::locale::global(std::locale::classic());
+            // std::locale::global(std::locale::classic());
+            std::locale::global(std::locale(std::locale(""), std::locale::classic(), std::locale::numeric));
         }
         catch(const std::runtime_error& e) {
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
@@ -549,7 +556,7 @@ protected:
     {
         READERSMAP::iterator it = _mapreaders[type].find(xmltag);
         if( it == _mapreaders[type].end() ) {
-            //throw openrave_exception(str(boost::format("No function registered for interface %s xml tag %s")%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
+            //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
             return BaseXMLReaderPtr();
         }
         return it->second(pinterface,atts);
@@ -572,7 +579,7 @@ protected:
     {
         std::map<InterfaceType,std::string>::const_iterator it = _mapinterfacenames.find(type);
         if( it == _mapinterfacenames.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Invalid type %d specified", type, ORE_Failed);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("Invalid type %d specified"), type, ORE_Failed);
         }
         return it->second;
     }
@@ -644,7 +651,7 @@ protected:
     std::string FindLocalFile(const std::string& _filename, const std::string& curdir)
     {
 #ifndef HAVE_BOOST_FILESYSTEM
-        throw OPENRAVE_EXCEPTION_FORMAT0("need to compile with boost::filesystem",ORE_Assert);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("need to compile with boost::filesystem"),ORE_Assert);
 #else
         if( _filename.size() == 0 ) {
             return std::string();
@@ -1160,6 +1167,20 @@ int RaveGetDataAccess()
     return RaveGlobal::instance()->GetDataAccess();
 }
 
+const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid)
+{
+#ifndef _WIN32
+    if (_gettextDomainsInitialized.find(domainname) == _gettextDomainsInitialized.end())
+    {
+        bindtextdomain(domainname.c_str(), OPENRAVE_LOCALE_INSTALL_DIR);
+        _gettextDomainsInitialized.insert(domainname);
+    }
+    return dgettext(domainname.c_str(), msgid);
+#else
+    return msgid;
+#endif
+}
+
 const std::map<IkParameterizationType,std::string>& IkParameterization::GetIkParameterizationMap(int alllowercase)
 {
     return RaveGlobal::instance()->GetIkParameterizationMap(alllowercase);
@@ -1173,7 +1194,7 @@ IkParameterizationType IkParameterization::GetIkTypeFromUniqueId(int uniqueid)
             return static_cast<IkParameterizationType>(it->first|(uniqueid&IKP_VelocityDataBit));
         }
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("no ik exists of unique id 0x%x",uniqueid,ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("no ik exists of unique id 0x%x"),uniqueid,ORE_InvalidArguments);
 }
 
 ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation, const std::string& robotname, const std::string& manipname)
@@ -1187,7 +1208,7 @@ ConfigurationSpecification IkParameterization::GetConfigurationSpecification(IkP
         spec._vgroups[0].name += robotname;
         spec._vgroups[0].name += " ";
         if( manipname.size() > 0 ) {
-        spec._vgroups[0].name += manipname;
+            spec._vgroups[0].name += manipname;
         }
     }
     spec._vgroups[0].interpolation = interpolation;
@@ -1283,7 +1304,7 @@ std::ostream& operator<<(std::ostream& O, const IkParameterization &ikparam)
         break;
     }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
     if( ikparam._mapCustomData.size() > 0 ) {
         O << ikparam._mapCustomData.size() << " ";
@@ -1391,7 +1412,7 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
         I >> ikparam._transform.rot.x >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
         break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("does not support parameterization 0x%x", ikparam.GetType(),ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
     }
     ikparam._mapCustomData.clear();
     if( type & IKP_CustomDataBit ) {
@@ -1448,7 +1469,7 @@ int RaveGetIndexFromAffineDOF(int affinedofs, DOFAffine _dof)
     if( dof&DOF_RotationQuat ) {
         return index;
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("unspecified dof 0x%x, 0x%x",affinedofs%dof,ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("unspecified dof 0x%x, 0x%x"),affinedofs%dof,ORE_InvalidArguments);
 }
 
 DOFAffine RaveGetAffineDOFFromIndex(int affinedofs, int requestedindex)
@@ -1482,7 +1503,7 @@ DOFAffine RaveGetAffineDOFFromIndex(int affinedofs, int requestedindex)
     if( index <= requestedindex && index+4 > requestedindex && (affinedofs&DOF_RotationQuat) ) {
         return DOF_RotationQuat;
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("requested index out of bounds %d (affinemask=0x%x)",requestedindex%affinedofs, ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("requested index out of bounds %d (affinemask=0x%x)"),requestedindex%affinedofs, ORE_InvalidArguments);
 }
 
 int RaveGetAffineDOF(int affinedofs)
@@ -1691,17 +1712,32 @@ void CollisionReport::Reset(int coloptions)
 std::string CollisionReport::__str__() const
 {
     stringstream s;
-    s << "(";
-    if( !!plink1 ) {
-        s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
-    }
-    s << ")x(";
-    if( !!plink2 ) {
-        s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
-    }
-    s << ")";
     if( vLinkColliding.size() > 0 ) {
-        s << ", numpairs=" << vLinkColliding.size();
+        s << "pairs=" << vLinkColliding.size();
+        int index = 0;
+        FOREACH(itlinkpair, vLinkColliding) {
+            s << ", [" << index << "](";
+            if( !!itlinkpair->first ) {
+                s << itlinkpair->first->GetParent()->GetName() << ":" << itlinkpair->first->GetName();
+            }
+            s << ")x(";
+            if( !!itlinkpair->second ) {
+                s << itlinkpair->second->GetParent()->GetName() << ":" << itlinkpair->second->GetName();
+            }
+            s << ") ";
+            ++index;
+        }
+    }
+    else {
+        s << "(";
+        if( !!plink1 ) {
+            s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
+        }
+        s << ")x(";
+        if( !!plink2 ) {
+            s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
+        }
+        s << ")";
     }
     s << ", contacts="<<contacts.size();
     if( minDistance < 1e10 ) {
@@ -1854,6 +1890,85 @@ void TriMesh::serialize(std::ostream& o, int options) const
     }
 }
 
+
+void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
+{
+    _setRobotLinksToIgnore = setRobotLinksToIgnore;
+    _listNonCollidingLinks.clear();
+    _mapLinkIsNonColliding.clear();
+    KinBodyPtr pgrabbedbody(_pgrabbedbody);
+    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkrobot->GetParent());
+    EnvironmentBasePtr penv = probot->GetEnv();
+    CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
+    if( !pchecker ) {
+        pchecker = penv->GetCollisionChecker();
+    }
+    CollisionOptionsStateSaver colsaver(pchecker,0); // have to reset the collision options
+    {
+        // have to enable all the links in order to compute accurate _mapLinkIsNonColliding info
+        KinBody::KinBodyStateSaver grabbedbodysaver(pgrabbedbody, KinBody::Save_LinkEnable);
+        pgrabbedbody->Enable(true);
+        KinBody::KinBodyStateSaver robotsaver(probot, KinBody::Save_LinkEnable);
+        probot->Enable(true);
+
+        //uint64_t starttime = utils::GetMicroTime();
+
+        // check collision with all links to see which are valid
+        int numchecked = 0;
+        FOREACHC(itlink, probot->GetLinks()) {
+            int noncolliding = 0;
+            if( find(_vattachedlinks.begin(),_vattachedlinks.end(), *itlink) == _vattachedlinks.end() ) {
+                if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) == setRobotLinksToIgnore.end() ) {
+                    ++numchecked;
+                    //uint64_t localstarttime = utils::GetMicroTime();
+                    if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        noncolliding = 1;
+                    }
+                    //RAVELOG_DEBUG_FORMAT("check %s col %s %s %fs", pchecker->GetXMLId()%(*itlink)->GetName()%pgrabbedbody->GetName()%(1e-6*(utils::GetMicroTime()-localstarttime)));
+                }
+            }
+            _mapLinkIsNonColliding[*itlink] = noncolliding;
+        }
+
+        //uint64_t starttime1 = utils::GetMicroTime();
+        
+        std::vector<KinBody::LinkPtr > vbodyattachedlinks;
+        FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
+            boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
+            KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+            if( bsamelink ) {
+                pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
+            }
+            if( pothergrabbedbody != pgrabbedbody ) {
+                KinBody::KinBodyStateSaver othergrabbedbodysaver(pothergrabbedbody, KinBody::Save_LinkEnable);
+                pothergrabbedbody->Enable(true);
+                FOREACHC(itlink, pothergrabbedbody->GetLinks()) {
+                    int noncolliding = 0;
+                    if( bsamelink && find(vbodyattachedlinks.begin(),vbodyattachedlinks.end(), *itlink) != vbodyattachedlinks.end() ) {
+                    }
+                    else if( !pchecker->CheckCollision(KinBody::LinkConstPtr(*itlink), pgrabbedbody) ) {
+                        noncolliding = 1;
+                    }
+                    _mapLinkIsNonColliding[*itlink] = noncolliding;
+                }
+            }
+        }
+
+        //uint64_t starttime2 = utils::GetMicroTime();
+        //RAVELOG_DEBUG_FORMAT("env=%d, process links %d %fs %fs", probot->GetEnv()->GetId()%numchecked%(1e-6*(starttime1-starttime))%(1e-6*(starttime2-starttime)));
+    }
+
+    if( pgrabbedbody->IsEnabled() ) {
+        FOREACH(itnoncolliding, _mapLinkIsNonColliding) {
+            if( itnoncolliding->second && itnoncolliding->first->IsEnabled() ) {
+                //RAVELOG_VERBOSE(str(boost::format("non-colliding link %s for grabbed body %s")%(*itlink)->GetName()%pgrabbedbody->GetName()));
+                _listNonCollidingLinks.push_back(itnoncolliding->first);
+            }
+        }
+    }
+}
+
 std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh)
 {
     trimesh.serialize(O,0);
@@ -1979,6 +2094,52 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
+void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    AttributesList atts;
+    if( hardware_id.size() > 0 ) {
+        writer->AddChild("hardware_id",atts)->SetCharData(hardware_id);
+    }
+}
+
+void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    SensorGeometry::Serialize(writer, options);
+    AttributesList atts;
+    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    ss << KK.fx << " 0 " << KK.cx << " 0 " << KK.fy << " " << KK.cy;
+    writer->AddChild("intrinsic",atts)->SetCharData(ss.str());
+    ss.str("");
+    ss << KK.focal_length;
+    writer->AddChild("focal_length",atts)->SetCharData(ss.str());
+    if( KK.distortion_model.size() > 0 ) {
+        writer->AddChild("distortion_model",atts)->SetCharData(KK.distortion_model);
+        if( KK.distortion_coeffs.size() > 0 ) {
+            ss.str("");
+            FOREACHC(it, KK.distortion_coeffs) {
+                ss << *it << " ";
+            }
+            writer->AddChild("distortion_coeffs",atts)->SetCharData(ss.str());
+        }
+    }
+    ss.str("");
+    ss << width << " " << height; // _numchannels=3
+    writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
+    writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
+    writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
+    //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+    if( sensor_reference.size() > 0 ) {
+        atts.push_back(std::make_pair("url", sensor_reference));
+        writer->AddChild("sensor_reference",atts);
+        atts.clear();
+    }
+    if( target_region.size() > 0 ) {
+        atts.push_back(std::make_pair("url", target_region));
+        writer->AddChild("target_region",atts);
+        atts.clear();
+    }
+}
+
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
@@ -2028,7 +2189,7 @@ CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p
     _p = p;
     if( !_p->SetCollisionOptions(newoptions) ) {
         if( required ) {
-            throw openrave_exception(str(boost::format("Failed to set collision options %d in checker %s\n")%newoptions%_p->GetXMLId()));
+            throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%newoptions%_p->GetXMLId()));
         }
     }
 }

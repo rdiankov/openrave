@@ -22,12 +22,15 @@
 
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
+// QTBUG-22829 alternative workaround
+#ifndef Q_MOC_RUN
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/vector.hpp>
 #include <boost/typeof/std/list.hpp>
 #include <boost/typeof/std/map.hpp>
 #include <boost/typeof/std/set.hpp>
 #include <boost/typeof/std/string.hpp>
+#endif
 
 #define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); )
@@ -58,6 +61,9 @@
 #include <iostream>
 #include <sstream>
 
+// QTBUG-22829 alternative workaround
+#ifndef Q_MOC_RUN
+
 #include <boost/bind.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>
@@ -65,6 +71,8 @@
 #include <boost/array.hpp>
 #include <boost/function.hpp>
 #include <boost/algorithm/string.hpp>
+
+#endif
 
 using namespace OpenRAVE;
 using namespace std;

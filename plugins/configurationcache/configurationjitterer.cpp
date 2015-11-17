@@ -256,7 +256,18 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     {
         std::string manipname;
         ManipDirectionThreshPtr thresh(new ManipDirectionThresh());
-        sinput >> manipname >> thresh->vManipDir.x >> thresh->vManipDir.y >> thresh->vManipDir.z >> thresh->vGlobalDir.x >> thresh->vGlobalDir.y >> thresh->vGlobalDir.z >> thresh->fCosAngleThresh;
+        sinput >> manipname;
+        if( manipname.size() == 0 ) {
+            // reset the tool direction
+            if( !!_pConstraintToolDirection ) {
+                if( !!_cache ) {
+                    _cache->Reset(); // need this here in order to invalidate cache.
+                }
+            }
+            _pConstraintToolDirection.reset();
+            return true;
+        }
+        sinput >> thresh->vManipDir.x >> thresh->vManipDir.y >> thresh->vManipDir.z >> thresh->vGlobalDir.x >> thresh->vGlobalDir.y >> thresh->vGlobalDir.z >> thresh->fCosAngleThresh;
         if( !sinput ) {
             return false;
         }
@@ -266,6 +277,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
         _pmanip = pmanip;
         _pConstraintToolDirection = thresh;
+        if( !!_cache ) {
+            _cache->Reset(); // need this here in order to invalidate cache.
+        }
         return true;
     }
 
@@ -336,7 +350,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _busebiasing = true;
         RAVELOG_VERBOSE_FORMAT("set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", _nullsampleprob%_nullbiassampleprob%_deltasampleprob);
 #else
-        throw OPENRAVE_EXCEPTION_FORMAT0("cannot set manipulator bias since lapack is not supported", ORE_CommandNotSupported);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot set manipulator bias since lapack is not supported"), ORE_CommandNotSupported);
 #endif
     }
 
@@ -445,7 +459,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 // ramp of the jitter as iterations increase
                 dReal jitter = _maxjitter;
                 if( iter < nMaxIterRadiusThresh ) {
-                    jitter = _maxjitter*dReal(iter)*imaxiterations;
+                    jitter = _maxjitter*dReal(iter+1)*imaxiterations;
                 }
 
                 bool samplebiasdir = false;
@@ -480,6 +494,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             _deltadof[j] = jitter*f;
                         }
                     }
+                    deltasuccess = true;
                 }
 
                 if (!samplebiasdir && !samplenull && !deltasuccess) {
@@ -490,20 +505,19 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( fNullspaceMultiplier <= 0 ) {
                     fNullspaceMultiplier = fBias;
                 }
-                for (size_t j = 0; j < _vbiasnullspace.size(); ++j) {
-                    for (size_t k = 0; k < vnewdof.size(); ++k)
-                    {
-                        vnewdof[k] = _curdof[k];
-                        if (samplebiasdir) {
-                            vnewdof[k] += _ssampler->SampleSequenceOneReal() * _vbiasdofdirection[k];
-                        }
-                        if (samplenull) {
+                for (size_t k = 0; k < vnewdof.size(); ++k) {
+                    vnewdof[k] = _curdof[k];
+                    if (samplebiasdir) {
+                        vnewdof[k] += _ssampler->SampleSequenceOneReal() * _vbiasdofdirection[k];
+                    }
+                    if (samplenull) {
+                        for (size_t j = 0; j < _vbiasnullspace.size(); ++j) {
                             dReal nullx = (_ssampler->SampleSequenceOneReal()*2-1)*fNullspaceMultiplier;
                             vnewdof[k] += nullx * _vbiasnullspace[j][k];
                         }
-                        if (sampledelta) {
-                            vnewdof[k] += _deltadof[k];
-                        }
+                    }
+                    if (sampledelta) {
+                        vnewdof[k] += _deltadof[k];
                     }
                 }
             }

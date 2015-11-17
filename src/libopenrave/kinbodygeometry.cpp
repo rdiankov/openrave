@@ -216,7 +216,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         break;
     }
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("unrecognized geom type %d!", _type, ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized geom type %d!"), _type, ORE_InvalidArguments);
     }
 
     return true;
@@ -291,7 +291,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         }
         break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT("unknown geometry type %d", _info._type, ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
     }
 
     return ab;

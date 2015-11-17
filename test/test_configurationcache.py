@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
+from openravepy import openravepy_configurationcache
 
 import imp
 
@@ -26,14 +27,14 @@ class TestConfigurationCache(EnvironmentSetup):
                 cachepath = path
                 break
         assert(cachepath is not None)
-        self.openravepy_configurationcache = imp.load_dynamic('openravepy_configurationcache',cachepath)
+        openravepy_configurationcache = imp.load_dynamic('openravepy_configurationcache',cachepath)
 
     def test_insertandquery(self):
         self.LoadEnv('data/lab1.env.xml')
         env=self.env
         robot=env.GetRobots()[0]
         robot.SetActiveDOFs(range(7))
-        cache=self.openravepy_configurationcache.ConfigurationCache(robot)
+        cache=openravepy_configurationcache.ConfigurationCache(robot)
 
         values = robot.GetActiveDOFValues()
         inserted = cache.InsertConfiguration(values, None)
@@ -151,7 +152,7 @@ class TestConfigurationCache(EnvironmentSetup):
         env=self.env
         robot=env.GetRobots()[0]
         robot.SetActiveDOFs(range(7))
-        cache=self.openravepy_configurationcache.ConfigurationCache(robot)
+        cache=openravepy_configurationcache.ConfigurationCache(robot)
         cache.SetFreeSpaceThresh(1)
         values = robot.GetActiveDOFValues()
         inserted = cache.InsertConfiguration(values, None)

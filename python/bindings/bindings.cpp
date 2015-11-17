@@ -20,7 +20,7 @@ template< typename T >
 struct get_dtype
 {
     static const char * name() {
-        throw std::logic_error( "get_dtype not specialised for this type" );
+        throw std::logic_error("get_dtype not specialised for this type");
     }
 };
 
@@ -116,11 +116,11 @@ struct numpy_multi_array_converter
     {
         object numpy = object( handle<>(::PyImport_Import(object("numpy").ptr())));
         if( !numpy  ) {
-            throw std::logic_error( "Could not import numpy" );
+            throw std::logic_error("Could not import numpy");
         }
         object array_function = numpy.attr("empty");
         if( !array_function  ) {
-            throw std::logic_error( "Could not find array function" );
+            throw std::logic_error("Could not find array function");
         }
 
         //create a numpy array to put it in

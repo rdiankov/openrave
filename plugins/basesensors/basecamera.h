@@ -35,7 +35,7 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 15> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference"}};
+            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain", "hardware_id"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
@@ -43,11 +43,25 @@ public:
                 // read the URL attribute
                 FOREACHC(itatt, atts) {
                     if( itatt->first == "url" ) {
-                        size_t startindex = 0;
-                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
-                            startindex = 1;
-                        }
-                        _psensor->_pgeom->sensor_reference = itatt->second.substr(startindex);
+                        _psensor->_pgeom->sensor_reference = itatt->second;
+//                        size_t startindex = 0;
+//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
+//                            startindex = 1;
+//                        }
+//                        _psensor->_pgeom->sensor_reference = itatt->second.substr(startindex);
+                    }
+                }
+            }
+            else if( name == std::string("target_region") ) {
+                // read the URL attribute
+                FOREACHC(itatt, atts) {
+                    if( itatt->first == "url" ) {
+                        _psensor->_pgeom->target_region = itatt->second;
+//                        size_t startindex = 0;
+//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
+//                            startindex = 1;
+//                        }
+//                        _psensor->_pgeom->target_region = itatt->second.substr(startindex);
                     }
                 }
             }
@@ -96,12 +110,17 @@ public:
                 // nothing to do here
             }
             else if( name == "measurement_time" ) {
-                dReal measurement_time=1;
-                ss >> measurement_time;
-                _psensor->framerate = 1/measurement_time;
+                ss >> _psensor->_pgeom->measurement_time;
+                _psensor->framerate = 1/_psensor->_pgeom->measurement_time;
             }
             else if( name == "framerate" ) {
                 ss >> _psensor->framerate;
+            }
+            else if( name == "target_region" ) {
+                // nothing to do here
+            }
+            else if( name == "gain" ) {
+                ss >> _psensor->_pgeom->gain;
             }
             else if( name == "power" ) {
                 ss >> _psensor->_bPower;
@@ -115,6 +134,9 @@ public:
                 if( !ss ) {
                     ss.clear();
                 }
+            }
+            else if( name == "hardware_id" ) {
+                ss >> _psensor->_pgeom->hardware_id;
             }
             else {
                 RAVELOG_WARN(str(boost::format("bad tag: %s")%name));
@@ -263,14 +285,14 @@ public:
         return true;
     }
 
-    virtual SensorGeometryPtr GetSensorGeometry(SensorType type)
+    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
-            return SensorGeometryPtr(boost::shared_ptr<CameraGeomData>(pgeom));
+            return SensorGeometryConstPtr(boost::shared_ptr<CameraGeomData>(pgeom));
         }
-        return SensorGeometryPtr();
+        return SensorGeometryConstPtr();
     }
 
     virtual SensorDataPtr CreateSensorData(SensorType type)
@@ -360,36 +382,12 @@ public:
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const
     {
+        _pgeom->Serialize(writer, options);
         AttributesList atts;
-        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        ss << _pgeom->KK.fx << " 0 " << _pgeom->KK.cx << " 0 " << _pgeom->KK.fx << " " << _pgeom->KK.cy;
-        writer->AddChild("intrinsic",atts)->SetCharData(ss.str());
-        ss.str("");
-        ss << _pgeom->KK.focal_length;
-        writer->AddChild("focal_length",atts)->SetCharData(ss.str());
-        if( _pgeom->KK.distortion_model.size() > 0 ) {
-            writer->AddChild("distortion_model",atts)->SetCharData(_pgeom->KK.distortion_model);
-            if( _pgeom->KK.distortion_coeffs.size() > 0 ) {
-                ss.str("");
-                FOREACHC(it, _pgeom->KK.distortion_coeffs) {
-                    ss << *it << " ";
-                }
-                writer->AddChild("distortion_coeffs",atts)->SetCharData(ss.str());
-            }
-        }
-        ss.str("");
-        ss << _pgeom->width << " " << _pgeom->height << " " << _numchannels;
-        writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
-        writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(1/framerate));
-        writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-        if( _pgeom->sensor_reference.size() > 0 ) {
-            atts.push_back(std::make_pair("url", std::string("#") + _pgeom->sensor_reference));
-            writer->AddChild("sensor_reference",atts);
-            atts.clear();
-        }
-        ss.str("");
+        stringstream ss;
         ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;
         writer->AddChild("color",atts)->SetCharData(ss.str());
+        writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     }
 
 protected:

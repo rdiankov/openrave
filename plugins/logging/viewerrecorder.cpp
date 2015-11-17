@@ -672,10 +672,7 @@ protected:
                 url_fclose(&_output->pb);
 #endif
             }
-            if( _output->streams[0] ) {
-                av_freep(&_output->streams[0]);
-            }
-            av_free(_output);
+            avformat_free_context(_output);
             _output = NULL;
         }
         _bWroteURL = _bWroteHeader = false;
@@ -692,7 +689,11 @@ protected:
         AVOutputFormat *fmt = first_oformat;
 #endif
         while (fmt != NULL) {
+#if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
+            if( fmt->video_codec != AV_CODEC_ID_NONE && !!fmt->name ) {
+#else
             if( fmt->video_codec != CODEC_ID_NONE && !!fmt->name ) {
+#endif            
                 string mime_type;
                 if( !!fmt->mime_type ) {
                     mime_type = fmt->mime_type;
@@ -715,7 +716,7 @@ protected:
         AVCodec *codec;
 
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
-        AVCodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (AVCodecID)codecid;
+        AVCodecID video_codec = codecid == -1 ? AV_CODEC_ID_MPEG4 : (AVCodecID)codecid;
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
@@ -733,7 +734,7 @@ protected:
         BOOST_ASSERT(!!fmt);
 
         _frameindex = 0;
-        _output = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
+        _output = avformat_alloc_context();
         BOOST_ASSERT(!!_output);
 
         _output->oformat = fmt;
@@ -858,25 +859,24 @@ protected:
 
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
-        int got_packet=0;
+        int got_packet = 0;
         AVPacket pkt;
         av_init_packet(&pkt);
-        pkt.data = (uint8_t*)_outbuf;
-        pkt.size = _outbuf_size;
         int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
         if( ret < 0 ) {
+            av_destruct_packet(&pkt);
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
-        if (got_packet ) {
+        if( got_packet ) {
             if( _stream->codec->coded_frame) {
                 _stream->codec->coded_frame->pts       = pkt.pts;
                 _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
+            if( av_write_frame(_output, &pkt) < 0) {
+                av_destruct_packet(&pkt);
+                throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
+            }
         }
-        if( av_write_frame(_output, &pkt) < 0) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
-        }
-        pkt.data = NULL;
         av_destruct_packet(&pkt);
 #else
         int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);

@@ -153,6 +153,18 @@ public:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         std::vector<dReal> vsolution;
         pmanip->GetRobot()->GetDOFValues(vsolution, pmanip->GetArmIndices());
+        // do sanity check to make sure that current robot manip is consistent with param
+        dReal ikworkspacedist = pmanip->GetIkParameterization(param.GetType(), false).ComputeDistanceSqr(param);
+        if( ikworkspacedist > _ikthreshold ) {
+            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            ss << "ignoring bad ik for " << pmanip->GetRobot()->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            FOREACHC(itvalue,vsolution) {
+                ss << *itvalue << ", ";
+            }
+            ss << "]" << endl;
+            throw OPENRAVE_EXCEPTION_FORMAT0(ss.str(), ORE_InvalidArguments);
+        }
+        
         return _CallFilters(vsolution, pmanip, param, ikreturn, minpriority, maxpriority);
     }
 
@@ -183,7 +195,7 @@ public:
         _vfreeparamscales.resize(0);
         FOREACH(itfree, _vfreeparams) {
             if( *itfree < 0 || *itfree >= (int)_qlower.size() ) {
-                throw openrave_exception(str(boost::format("free parameter idx %d out of bounds\n")%*itfree));
+                throw openrave_exception(str(boost::format(_("free parameter idx %d out of bounds\n"))%*itfree));
             }
             if( _qupper[*itfree] > _qlower[*itfree] ) {
                 _vfreeparamscales.push_back(1.0f/(_qupper[*itfree]-_qlower[*itfree]));
@@ -202,6 +214,7 @@ public:
     {
         if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
             RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(_iktype)%_kinematicshash));
+            return false;
         }
         RobotBasePtr probot = pmanip->GetRobot();
         bool bfound = false;
@@ -213,7 +226,7 @@ public:
             }
         }
         if( !bfound ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s not found in robot", pmanip->GetName(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s not found in robot"), pmanip->GetName(), ORE_InvalidArguments);
         }
 
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
@@ -565,7 +578,7 @@ protected:
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         if( vFreeParameters.size() != _vfreeparams.size() ) {
-            throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
+            throw openrave_exception(_("free parameters not equal"),ORE_InvalidArguments);
         }
         if( !!ikreturn ) {
             ikreturn->Clear();
@@ -593,7 +606,7 @@ protected:
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
         if( vFreeParameters.size() != _vfreeparams.size() ) {
-            throw openrave_exception("free parameters not equal",ORE_InvalidArguments);
+            throw openrave_exception(_("free parameters not equal"),ORE_InvalidArguments);
         }
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
@@ -878,7 +891,7 @@ protected:
             return false;
         }
 
-        throw openrave_exception(str(boost::format("don't support ik parameterization 0x%x")%param.GetType()),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format(_("don't support ik parameterization 0x%x"))%param.GetType()),ORE_InvalidArguments);
     }
 
     bool _CallIk2(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
@@ -1015,7 +1028,7 @@ protected:
             return false;
         }
 
-        throw openrave_exception(str(boost::format("don't support ik parameterization 0x%x")%param.GetType()),ORE_InvalidArguments);
+        throw openrave_exception(str(boost::format(_("don't support ik parameterization 0x%x"))%param.GetType()),ORE_InvalidArguments);
     }
 
     static bool SortSolutionDistances(const pair<size_t,dReal>& p1, const pair<size_t,dReal>& p2)
@@ -1242,7 +1255,7 @@ protected:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
-                if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -1261,7 +1274,13 @@ protected:
                             ss << "]";
                             RAVELOG_VERBOSE(ss.str());
                         }
-                        return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        if( paramnewglobal.GetType() == IKP_Transform6D ) {
+                            return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        }
+                        else {
+                            // end effector could change depending on the solution
+                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision); // stop the search
+                        }
                     }
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
@@ -1292,7 +1311,7 @@ protected:
         if( ikworkspacedist > _ikthreshold ) {
             BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
             FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
                 ss << *itvalue << ", ";
             }
@@ -1559,9 +1578,16 @@ protected:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
-                if( paramnewglobal.GetType() == IKP_Transform6D || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
-                        return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        if( paramnewglobal.GetType() == IKP_Transform6D ) {
+                            // 6D so end effector is determined
+                            return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
+                        }
+                        else {
+                            // end effector could change depending on the solution
+                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision); // stop the search
+                        }
                     }
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
@@ -1592,7 +1618,7 @@ protected:
         if( ikworkspacedist > _ikthreshold ) {
             BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-            ss << "ignoring bad ik for " << pmanip->GetName() << ":" << probot->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
+            ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
             FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
                 ss << *itvalue << ", ";
             }
@@ -1798,7 +1824,7 @@ protected:
                 return ikdummy;
             }
         }
-        throw OPENRAVE_EXCEPTION_FORMAT("ik solver %s (dof=%d) does not support iktype 0x%x", GetXMLId()%_nTotalDOF%param.GetType(), ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("ik solver %s (dof=%d) does not support iktype 0x%x"), GetXMLId()%_nTotalDOF%param.GetType(), ORE_InvalidArguments);
     }
 
     RobotBase::ManipulatorWeakPtr _pmanip;

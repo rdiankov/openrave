@@ -697,7 +697,7 @@ public:
         }
 
         _bOneStep = _parameters->_nRRTExtentType == 1;
-        RAVELOG_DEBUG("RrtPlanner::InitPlan - RRT Planner Initialized\n");
+        RAVELOG_DEBUG_FORMAT("BasicRrtPlanner initialized _nRRTExtentType=%d", _parameters->_nRRTExtentType);
         return true;
     }
 
@@ -711,7 +711,7 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
 
-        NodeBase* lastnode = NULL; // the last node visited by the RRT
+        NodeBasePtr lastnode; // the last node visited by the RRT
         NodeBase* bestGoalNode = NULL; // the best goal node found already by the RRT. If this is not NULL, then RRT succeeded
         dReal fBestGoalNodeDist = 0; // configuration distance from initial position to the goal node
 
@@ -726,6 +726,8 @@ public:
         _goalindex = -1; // index into vgoalconfig if the goal is found
         _startindex = -1;
 
+        int numfoundgoals = 0;
+        
         while(iter < _parameters->_nMaxIterations) {
             iter++;
             if( !!bestGoalNode && iter >= _parameters->_nMinIterations ) {
@@ -783,24 +785,40 @@ public:
 
             // check the goal heuristic more often
             if(( et != ET_Failed) && !!_parameters->_goalfn ) {
-                if( _parameters->_goalfn(_treeForward.GetVectorConfig(lastnode)) <= 1e-4f ) {
-                    SimpleNode* pforward = (SimpleNode*)lastnode;
-                    while(1) {
-                        if(!pforward->rrtparent) {
+                // have to check all the newly created nodes since anyone could be already in the goal (do not have to do this with _vecGoals since that is being sampled)
+                bool bfound = false;
+                SimpleNode* ptestnode = (SimpleNode*)lastnode;
+                while(!!ptestnode && ptestnode->_userdata==0) { // when userdata is 0, then it hasn't been checked for goal yet
+                    if( _parameters->_goalfn(_treeForward.GetVectorConfig(ptestnode)) <= 1e-4f ) {
+                        bfound = true;
+                        numfoundgoals++;
+                        ptestnode->_userdata = 1;
+                        SimpleNode* pforward = ptestnode;
+                        while(1) {
+                            if(!pforward->rrtparent) {
+                                break;
+                            }
+                            pforward = pforward->rrtparent;
+                        }
+                        vtempinitialconfig = _treeForward.GetVectorConfig(pforward); // GetVectorConfig returns the same reference, so need to make a copy
+                        dReal fGoalNodeDist = _parameters->_distmetricfn(vtempinitialconfig, _treeForward.GetVectorConfig(ptestnode));
+                        if( !bestGoalNode || fBestGoalNodeDist > fGoalNodeDist ) {
+                            bestGoalNode = ptestnode;
+                            fBestGoalNodeDist = fGoalNodeDist;
+                            _goalindex = -1;
+                            RAVELOG_DEBUG_FORMAT("env=%d, found node at goal at dist=%f at %d iterations, computation time %fs", GetEnv()->GetId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+                        }
+                    }
+
+                    ptestnode->_userdata = 1;
+                    ptestnode = ptestnode->rrtparent;
+                }
+                if( bfound ) {
+                    if( iter >= _parameters->_nMinIterations ) {
+                        // check how many times we've got a goal?
+                        if( numfoundgoals >= _parameters->_minimumgoalpaths ) {
                             break;
                         }
-                        pforward = pforward->rrtparent;
-                    }
-                    vtempinitialconfig = _treeForward.GetVectorConfig(pforward); // GetVectorConfig returns the same reference, so need to make a copy
-                    dReal fGoalNodeDist = _parameters->_distmetricfn(vtempinitialconfig, _treeForward.GetVectorConfig(lastnode));
-                    if( !bestGoalNode || fBestGoalNodeDist > fGoalNodeDist ) {
-                        bestGoalNode = lastnode;
-                        fBestGoalNodeDist = fGoalNodeDist;
-                        _goalindex = -1;
-                        RAVELOG_DEBUG_FORMAT("env=%d, found node at goal at dist=%f at %d iterations, computation time %fs", GetEnv()->GetId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
-                    }
-                    if( iter >= _parameters->_nMinIterations ) {
-                        break;
                     }
                 }
             }
@@ -932,7 +950,7 @@ public:
                 if( !_parameters->_samplefn(vSampleConfig) ) {
                     continue;
                 }
-                NodeBase* plastnode;
+                NodeBasePtr plastnode;
                 if( _treeForward.Extend(vSampleConfig, plastnode, true) == ET_Connected ) {
                     RAVELOG_DEBUG_FORMAT("size %d", _treeForward.GetNumNodes());
                 }

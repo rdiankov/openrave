@@ -255,19 +255,44 @@ bool eig2(const T* pfmat, T* peigs, T& fv1x, T& fv1y, T& fv2x, T& fv2y)
 template <typename T>
 inline int solvequad(T a, T b, T c, T& r1, T& r2)
 {
-    T d = b * b - (T)4 * c * a + (T)1e-16;
+    if(a == 0) {
+        if(b == 0) {
+            if(c == 0) {
+                return 0;
+            }
+            // invalid equation
+            return 0;
+        }
+        r1=r2=-c/b;
+        return 1;
+    }
+    
+    T d = b * b - (T)4 * c * a;
     if( d < 0 ) {
-        return 0;
+        if( d < -(T)1e-16) {
+            return 0;
+        }
+        // d is close to 0, so most likely floating precision error
+        d = 0;
     }
     if( d < (T)1e-16 ) {
         r1 = r2 = (T)-0.5 * b / a;
         return 1;
     }
-    // two roots
+    // two roots. need to explicitly divide by a to preserve precision
     d = sqrt(d);
-    T ainv = 1/(2*a);
-    r1 = (-b+d)*ainv;
-    r2 = (-b-d)*ainv;
+    if(fabs(-b - d) < fabs(a)) {
+        r1 = 0.5 * (-b + d)/a;
+    }
+    else {
+        r1 = 2.0 * c / (-b-d);
+    }
+    if(fabs(-b + d) < fabs(a)) {
+        r2 = 0.5 * (-b-d) / a;
+    }
+    else {
+        r2 = 2.0 * c / (-b+d);
+    }
     return 2;
 }
 

@@ -26,6 +26,8 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
 {
     struct ManipConstraintInfo
     {
+        RobotBase::ManipulatorPtr pmanip;
+        
         // the end-effector link of the manipulator
         KinBody::LinkPtr plink;
         // the points to check for in the end effector coordinate system
@@ -33,7 +35,8 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
         // but this can be more general, e.g. the vertices of the convex hull
         std::list<Vector> checkpoints;
 
-        std::vector<int> vuseddofindices, vconfigindices;
+        std::vector<int> vuseddofindices; ///< a vector of unique DOF indices targetted for the body
+        std::vector<int> vconfigindices; ///< for every index in vuseddofindices, returns the first configuration space index it came from
     };
 
     class MyRampFeasibilityChecker : public ParabolicRamp::RampFeasibilityChecker
@@ -253,6 +256,7 @@ public:
                         // Compute the enclosing AABB and add its vertices to the checkpoints
                         AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                         _listCheckManips.push_back(ManipConstraintInfo());
+                        _listCheckManips.back().pmanip = pmanip;
                         _parameters->_configurationspecification.ExtractUsedIndices(pmanip->GetRobot(), _listCheckManips.back().vuseddofindices, _listCheckManips.back().vconfigindices);
                         _listCheckManips.back().plink = endeffector;
                         ConvertAABBtoCheckPoints(enclosingaabb, _listCheckManips.back().checkpoints);
@@ -304,6 +308,14 @@ public:
             return PS_Failed;
         }
 
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            // store the trajectory
+            string filename = str(boost::format("%s/parabolicsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+            ofstream f(filename.c_str());
+            f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+            f << *_parameters;
+            RAVELOG_VERBOSE_FORMAT("saved parabolic parameters to %s", filename);
+        }
         _DumpTrajectory(ptraj, Level_Verbose);
 
         // save velocities
@@ -525,53 +537,56 @@ public:
                     // part of original trajectory which might not have been processed with perturbations, so ignore perturbations
                     _bUsePerturbation = false;
                     std::vector<ParabolicRamp::ParabolicRampND> outramps;
-                    if( bCheck && checker.Check2(rampndtrimmed, 0xffff, outramps).retcode != 0 ) {
-                        std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
-                        // try to time scale, perhaps collision and dynamics will change
-                        // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
-                        bool bSuccess = false;
-                        dReal mult = 1.05;
-                        dReal endTime = rampndtrimmed.endTime;
-                        for(size_t idilate = 0; idilate < 5; ++idilate ) {
-                            tempramps1d.resize(0);
-                            endTime *= mult;
-                            if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
-                                temprampsnd.resize(0);
-                                CombineRamps(tempramps1d, temprampsnd);
+                    if( bCheck ) {
+                        ParabolicRamp::CheckReturn checkret = checker.Check2(rampndtrimmed, 0xffff, outramps);
+                        if( checkret.retcode != 0 ) {
+                            std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
+                            // try to time scale, perhaps collision and dynamics will change
+                            // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
+                            bool bSuccess = false;
+                            dReal mult = 1.05;
+                            dReal endTime = rampndtrimmed.endTime;
+                            for(size_t idilate = 0; idilate < 5; ++idilate ) {
+                                tempramps1d.resize(0);
+                                endTime *= mult;
+                                if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                    temprampsnd.resize(0);
+                                    CombineRamps(tempramps1d, temprampsnd);
 
-                                // not necessary to trim again!?
-//                                if( irampindex == 0 ) {
-//                                    temprampsnd[0].TrimFront(fTrimEdgesTime);
-//                                }
-//                                else if( irampindex+1 == dynamicpath.ramps.size() ) {
-//                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
-//                                }
-                                bool bHasBadRamp=false;
-                                FOREACH(itnewrampnd, temprampsnd) {
-                                    if( checker.Check2(*itnewrampnd, 0xffff, outramps).retcode != 0 ) {
-                                        bHasBadRamp = true;
-                                        break;
-                                    }
-                                }
-                                if( !bHasBadRamp ) {
-                                    if( bTrimmed ) {
-                                        // have to retime the original ramp without trimming
-                                        if( !ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                    // not necessary to trim again!?
+    //                                if( irampindex == 0 ) {
+    //                                    temprampsnd[0].TrimFront(fTrimEdgesTime);
+    //                                }
+    //                                else if( irampindex+1 == dynamicpath.ramps.size() ) {
+    //                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
+    //                                }
+                                    bool bHasBadRamp=false;
+                                    FOREACH(itnewrampnd, temprampsnd) {
+                                        if( checker.Check2(*itnewrampnd, 0xffff, outramps).retcode != 0 ) {
+                                            bHasBadRamp = true;
                                             break;
                                         }
-                                        temprampsnd.resize(0);
-                                        CombineRamps(tempramps1d, temprampsnd);
                                     }
-                                    bSuccess = true;
-                                    break;
+                                    if( !bHasBadRamp ) {
+                                        if( bTrimmed ) {
+                                            // have to retime the original ramp without trimming
+                                            if( !ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                                break;
+                                            }
+                                            temprampsnd.resize(0);
+                                            CombineRamps(tempramps1d, temprampsnd);
+                                        }
+                                        bSuccess = true;
+                                        break;
+                                    }
+                                    mult += 0.05;
                                 }
-                                mult += 0.05;
                             }
-                        }
-                        if( !bSuccess ) {
-                            RAVELOG_WARN_FORMAT("original ramp %d is in collision!", irampindex);
-                            _DumpTrajectory(ptraj, Level_Debug);
-                            return PS_Failed;
+                            if( !bSuccess ) {
+                                RAVELOG_WARN_FORMAT("original ramp %d does not satisfy contraints. check retcode=0x%x!", irampindex%checkret.retcode);
+                                _DumpTrajectory(ptraj, Level_Debug);
+                                return PS_Failed;
+                            }
                         }
                     }
                     _bUsePerturbation = true; // re-enable
@@ -855,7 +870,7 @@ protected:
                         }
                     }
                     else {
-                        std::stringstream ss;
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                         ss << "x0=[";
                         SerializeValues(ss, x0);
                         ss << "]; x1=[";
@@ -1159,7 +1174,8 @@ protected:
     /// checks at each ramp's edges
     ParabolicRamp::CheckReturn _CheckManipConstraints2(const std::vector<ParabolicRamp::ParabolicRampND>& outramps)
     {
-        vector<dReal> ac, qfill, vfill, afill;
+        vector<dReal> ac, qfillactive, vfillactive; // the active DOF
+        vector<dReal> afill; // full robot DOF
         dReal maxmanipspeed=0, maxmanipaccel=0;
         std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
         Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
@@ -1177,20 +1193,20 @@ protected:
             FOREACHC(itmanipinfo,_listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
                 itramp->Accel(0, ac);
-                qfill.resize(itmanipinfo->vuseddofindices.size());
-                vfill.resize(itmanipinfo->vuseddofindices.size());
-                afill.resize(itmanipinfo->vuseddofindices.size());
-                for(size_t idof = 0; idof < itmanipinfo->vuseddofindices.size(); ++idof) {
-                    qfill[idof] = itramp->x0.at(itmanipinfo->vconfigindices.at(idof));
-                    vfill[idof] = itramp->dx0.at(itmanipinfo->vconfigindices.at(idof));
-                    afill[idof] = ac.at(itmanipinfo->vconfigindices.at(idof));
+                qfillactive.resize(itmanipinfo->vuseddofindices.size());
+                vfillactive.resize(itmanipinfo->vuseddofindices.size());
+                afill.resize(probot->GetDOF());
+                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
+                    qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
+                    vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
+                    afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
                 }
                 int endeffindex = itmanipinfo->plink->GetIndex();
                 KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
 
                 // Set robot to new state
-                probot->SetDOFValues(qfill, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->SetDOFVelocities(vfill, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFVelocities(vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                 probot->GetLinkVelocities(endeffvels);
                 probot->GetLinkAccelerations(afill,endeffaccs);
                 endeffvellin = endeffvels.at(endeffindex).first;

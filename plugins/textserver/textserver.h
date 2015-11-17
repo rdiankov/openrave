@@ -400,7 +400,7 @@ public:
 #endif
 #endif
 
-        RAVELOG_INFO("text server listening on port %d\n",_nPort);
+        RAVELOG_DEBUG("text server listening on port %d\n",_nPort);
         _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,this)));
         _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,this)));
         bInitThread = true;
@@ -1286,7 +1286,7 @@ protected:
                 return false;
             }
 
-            boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(psensor->GetSensorGeometry());
+            SensorBase::CameraGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(psensor->GetSensorGeometry());
 
             if( (int)pcameradata->vimagedata.size() != pgeom->width*pgeom->height*3 ) {
                 RAVELOG_ERROR(str(boost::format("image data wrong size %d != %d\n")%pcameradata->vimagedata.size()%(pgeom->width*pgeom->height*3)));

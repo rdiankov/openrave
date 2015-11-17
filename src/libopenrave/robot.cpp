@@ -113,16 +113,16 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     o << (!pdata ? -1 : pdata->GetType()) << " ";
     // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
     if( !!psensor ) {
-        SensorBase::SensorGeometryPtr prawgeom = psensor->GetSensorGeometry();
+        SensorBase::SensorGeometryConstPtr prawgeom = psensor->GetSensorGeometry();
         if( !!prawgeom ) {
             switch(prawgeom->GetType()) {
             case SensorBase::ST_Laser: {
-                boost::shared_ptr<SensorBase::LaserGeomData> pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData>(prawgeom);
+                SensorBase::LaserGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData const>(prawgeom);
                 o << pgeom->min_angle[0] << " " << pgeom->max_angle[0] << " " << pgeom->resolution[0] << " " << pgeom->max_range << " ";
                 break;
             }
             case SensorBase::ST_Camera: {
-                boost::shared_ptr<SensorBase::CameraGeomData> pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData>(prawgeom);
+                SensorBase::CameraGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(prawgeom);
                 o << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << pgeom->width << " " << pgeom->height << " ";
                 break;
             }
@@ -700,7 +700,7 @@ void RobotBase::SetActiveDOFVelocities(const std::vector<dReal>& velocities, uin
             angularvel.z = *pAffineValues++;
         }
         else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("quaternions not supported",ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("quaternions not supported"),ORE_InvalidArguments);
         }
 
         if( _vActiveDOFIndices.size() == 0 ) {
@@ -760,7 +760,7 @@ void RobotBase::GetActiveDOFVelocities(std::vector<dReal>& velocities) const
         *pVelocities++ = angularvel.z;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("quaternions not supported",ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("quaternions not supported"),ORE_InvalidArguments);
     }
 }
 
@@ -1236,11 +1236,11 @@ void RobotBase::CalculateActiveRotationJacobian(int index, const Vector& q, std:
         ind++;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s rotation 3d not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
         ind += 3;
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s quaternion not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
         ind += 4;
     }
 }
@@ -1314,10 +1314,10 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
 
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_Rotation3D ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s rotation 3d not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s rotation 3d not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
     }
     else if( _nAffineDOFs & OpenRAVE::DOF_RotationQuat ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("robot %s quaternion not supported, affine=%d",GetName()%_nAffineDOFs,ORE_NotImplemented);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("robot %s quaternion not supported, affine=%d"),GetName()%_nAffineDOFs,ORE_NotImplemented);
 
         // most likely wrong
         Transform t; t.rot = quatInverse(_vRotationQuatLimitStart);
@@ -1378,7 +1378,7 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
             }
         }
         if( requestedoptions & ~(AO_Enabled|AO_ActiveDOFs) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("does not support adjacentoptions %d",adjacentoptions,ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("does not support adjacentoptions %d"),adjacentoptions,ORE_InvalidArguments);
         }
 
         // compute it
@@ -1446,6 +1446,8 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     OPENRAVE_ASSERT_FORMAT(!!plink && plink->GetParent() == shared_kinbody(), "robot %s grabbing link needs to be part of robot",GetName(),ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(),"robot %s cannot grab itself",GetName(), ORE_InvalidArguments);
 
+    //uint64_t starttime0 = utils::GetMicroTime();
+
     // if grabbing, check if the transforms are different. If they are, then update the transform
     GrabbedPtr pPreviousGrabbed;
     FOREACHC(itgrabbed, _vGrabbedBodies) {
@@ -1461,7 +1463,6 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     // new body velocity is measured from robot link
     std::pair<Vector, Vector> velocity = plink->GetVelocity();
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
-
     if( !!pPreviousGrabbed ) {
         dReal disterror = TransformDistance2(t*pPreviousGrabbed->_troot, tbody);
         if( pPreviousGrabbed->_plinkrobot == plink && disterror <= g_fEpsilonLinear ) {
@@ -1480,9 +1481,19 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
 
     GrabbedPtr pgrabbed(new Grabbed(pbody,plink));
     pgrabbed->_troot = t.inverse() * tbody;
-    pgrabbed->_ProcessCollidingLinks(std::set<int>());
+    //uint64_t starttime1 = utils::GetMicroTime();
+    // always ignore links that are statically attached to plink (ie assume they are always colliding with the body)
+    
+    std::vector<boost::shared_ptr<Link> > vattachedlinks;
+    plink->GetRigidlyAttachedLinks(vattachedlinks);
+    std::set<int> setRobotLinksToIgnore;
+    FOREACHC(itlink, vattachedlinks) {
+        setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+    }
+    pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
+    //uint64_t starttime2 = utils::GetMicroTime();
     try {
         // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
         _AttachBody(pbody);
@@ -1492,7 +1503,9 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         _vGrabbedBodies.pop_back();
         throw;
     }
+    //uint64_t starttime3 = utils::GetMicroTime();
     _PostprocessChangedParameters(Prop_RobotGrabbed);
+    //RAVELOG_DEBUG_FORMAT("env=%d, post process elapsed (%d) %fs, %fs, %fs, %fs", GetEnv()->GetId()%vattachedlinks.size()%(1e-6*(starttime1-starttime0))%(1e-6*(starttime2-starttime0))%(1e-6*(starttime3-starttime0))%(1e-6*(utils::GetMicroTime()-starttime0)));
     return true;
 }
 
@@ -1525,8 +1538,6 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
-    _AttachBody(pbody);
-    _AttachBody(pbody);
     try {
         // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
         _AttachBody(pbody);
@@ -1710,7 +1721,7 @@ void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
                 return;
             }
         }
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", pmanip->GetName(), ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find manipulator with name: %s"), pmanip->GetName(), ORE_InvalidArguments);
     }
 }
 
@@ -1723,7 +1734,7 @@ RobotBase::ManipulatorPtr RobotBase::SetActiveManipulator(const std::string& man
                 return _pManipActive;
             }
         }
-        throw OPENRAVE_EXCEPTION_FORMAT("failed to find manipulator with name: %s", manipname, ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find manipulator with name: %s"), manipname, ORE_InvalidArguments);
     }
     _pManipActive.reset();
     return _pManipActive;
@@ -1760,7 +1771,7 @@ RobotBase::ManipulatorPtr RobotBase::AddManipulator(const RobotBase::Manipulator
                 break;
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT("manipulator with name %s already exists",manipinfo._name,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator with name %s already exists"),manipinfo._name,ORE_InvalidArguments);
             }
         }
     }
@@ -1803,7 +1814,7 @@ RobotBase::AttachedSensorPtr RobotBase::AddAttachedSensor(const RobotBase::Attac
                 break;
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT("attached sensor with name %s already exists",attachedsensorinfo._name,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("attached sensor with name %s already exists"),attachedsensorinfo._name,ORE_InvalidArguments);
             }
         }
     }
@@ -2223,10 +2234,10 @@ void RobotBase::_ComputeInternalInformation()
             (*itsensor)->_info._name = ss.str();
         }
         else if( !utils::IsValidName((*itsensor)->GetName()) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("sensor name \"%s\" is not valid", (*itsensor)->GetName(), ORE_Failed);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("sensor name \"%s\" is not valid"), (*itsensor)->GetName(), ORE_Failed);
         }
         if( !!(*itsensor)->GetSensor() ) {
-            stringstream ss; ss << GetName() << "_" << (*itsensor)->GetName(); // global unique name?
+            stringstream ss; ss << GetName() << ":" << (*itsensor)->GetName(); // global unique name?
             (*itsensor)->GetSensor()->SetName(ss.str());
         }
         sensorindex++;

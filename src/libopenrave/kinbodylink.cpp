@@ -348,7 +348,7 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
     else {
         std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
         if( it == _info._mapExtraGeometries.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("could not find geometries %s for link %s",groupname%GetName(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),groupname%GetName(),ORE_InvalidArguments);
         }
         pvinfos = &it->second;
     }
@@ -363,7 +363,7 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
 {
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(groupname);
     if( it == _info._mapExtraGeometries.end() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("geometry group %s does not exist for link %s", groupname%GetName(), ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
     }
     return it->second;
 }

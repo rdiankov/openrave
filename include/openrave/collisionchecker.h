@@ -129,7 +129,7 @@ public:
     /// \brief Gets the geometry group this collision checker is tracking.
     ///
     /// If empty, collision checker is not tracking any specific groups.
-    virtual const std::string& GetGeometryGroup() OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual const std::string& GetGeometryGroup() const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief initialize the checker with the current environment and gather all current bodies in the environment and put them in its collision space
     virtual bool InitEnvironment() = 0;

@@ -64,6 +64,9 @@
 #include <fstream>
 #include <sstream>
 
+// QTBUG-22829 alternative workaround
+#ifndef Q_MOC_RUN
+
 #include <boost/version.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
@@ -79,6 +82,8 @@
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
 //#include <boost/cstdint.hpp>
+
+#endif
 
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
@@ -572,19 +577,19 @@ DefineRavePrintfA(_VERBOSELEVEL)
 
 #define IS_DEBUGLEVEL(level) ((OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level))
 
-#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] " s)%(__PRETTY_FUNCTION__)%(__LINE__)),errorcode)
+#define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(s)),errorcode)
 
 /// adds the function name and line number to an openrave exception
-#define OPENRAVE_EXCEPTION_FORMAT(s, args,errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] " s)%(__PRETTY_FUNCTION__)%(__LINE__)%args),errorcode)
+#define OPENRAVE_EXCEPTION_FORMAT(s, args, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] ")%(__PRETTY_FUNCTION__)%(__LINE__)) + boost::str(boost::format(s)%args),errorcode)
 
-#define OPENRAVE_ASSERT_FORMAT(testexpr, s, args, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)%args),errorcode); } }
+#define OPENRAVE_ASSERT_FORMAT(testexpr, s, args, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)) + boost::str(boost::format(s)%args),errorcode); } }
 
-#define OPENRAVE_ASSERT_FORMAT0(testexpr, s, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)),errorcode); } }
+#define OPENRAVE_ASSERT_FORMAT0(testexpr, s, errorcode) { if( !(testexpr) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] (%s) failed %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# testexpr)%(s)),errorcode); } }
 
 // note that expr1 and expr2 will be evaluated twice if not equal
-#define OPENRAVE_ASSERT_OP_FORMAT(expr1,op,expr2,s, args, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%args),errorcode); } }
+#define OPENRAVE_ASSERT_OP_FORMAT(expr1,op,expr2,s, args, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)) + boost::str(boost::format(s)%args),errorcode); } }
 
-#define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) " s)%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),errorcode); } }
+#define OPENRAVE_ASSERT_OP_FORMAT0(expr1,op,expr2,s, errorcode) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)%(s)),errorcode); } }
 
 #define OPENRAVE_ASSERT_OP(expr1,op,expr2) { if( !((expr1) op (expr2)) ) { throw OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s %s %s, (eval %s %s %s) ")%(__PRETTY_FUNCTION__)%(__LINE__)%(# expr1)%(# op)%(# expr2)%(expr1)%(# op)%(expr2)),ORE_Assert); } }
 
@@ -2782,6 +2787,14 @@ OPENRAVE_API void RaveSetDataAccess(int accessoptions);
 ///
 /// \see RaveSetDataAccess
 OPENRAVE_API int RaveGetDataAccess();
+
+/** \brief Returns the gettext translated string of the given message id
+
+    \param domainname translation domain name
+    \param msgid message id to look for
+    \return if a translation was found, it is converted to the locale's codeset and returned. The resulting string is statically allocated and must not be modified or freed. Otherwise msgid is returned.
+ */
+OPENRAVE_API const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid);
 
 //@}
 

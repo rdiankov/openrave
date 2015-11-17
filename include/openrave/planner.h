@@ -47,7 +47,13 @@ enum PlannerStatus
     PS_Failed = 0, ///< planner failed
     PS_HasSolution = 1, ///< planner succeeded
     PS_Interrupted = 2, ///< planning was interrupted, but can be resumed by calling PlanPath again
-    PS_InterruptedWithSolution = 3, /// planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
+    PS_InterruptedWithSolution = 3, ///< planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
+    PS_FailedDueToCollision = 0x00030000, ///< planner failed due to collision constraints
+    PS_FailedDueToInitial = 0x00040000, ///< failed due to initial configurations
+    PS_FailedDueToGoal = 0x00080000, ///< failed due to goal configurations
+    PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints
+    PS_FailedDueToIK = 0x00200000, ///< failed due to inverse kinematics (could be due to collisions or velocity constraints, but don't know)
+    PS_FailedDueToVelocityConstraints = 0x00400000, ///< failed due to velocity constraints
 };
 
 /// \brief action to send to the planner while it is planning. This is usually done by the user-specified planner callback function
@@ -166,6 +172,8 @@ private:
             - _vConfigAccelerationLimit
             - _vConfigResolution
             - vinitialconfig
+            - _vInitialConfigVelocities - the initial velocities (at vinitialconfig) of the robot when starting to plan
+            - _vGoalConfigVelocities - the goal velocities (at vinitialconfig) of the robot when finishing the plan
             - _configurationspecification
             \throw openrave_exception If the configuration specification is invalid or points to targets that are not present in the environment.
          */
@@ -332,6 +340,9 @@ private:
         /// size always has to be a multiple of GetDOF()
         /// note: not all planners support multiple goals
         std::vector<dReal> vinitialconfig, vgoalconfig;
+        
+        /// \brief the initial velocities (at vinitialconfig) of the robot when starting to plan. If empty, then set to zero.
+        std::vector<dReal> _vInitialConfigVelocities, _vGoalConfigVelocities;
 
         /// \brief the absolute limits of the configuration space.
         std::vector<dReal> _vConfigLowerLimit, _vConfigUpperLimit;
