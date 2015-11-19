@@ -246,9 +246,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                     else:
                         pass
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
-            crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
-            self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
-
+            if len(self.affinevolumes) >= 6 and self.affinevolumes[3+2] is not None:
+                crossarea = self._GetValue(self.affinevolumes[3+2]['crossarea'])
+                self.robot.SetAffineRotationAxisResolution(tile(xyzdelta/numpy.max(crossarea[:,0]),4))
+            
     def setRobotWeights(self,weightexp=0.3333,type=0,weightmult=10.0):
         """sets the weights for the robot.
         weightexp is the exponent for the final weights to help reduce the max:min (default is 1/3 which results in 50:1)
@@ -256,13 +257,14 @@ class LinkStatisticsModel(DatabaseGenerator):
         """
         with self.env:
             if type == 0:
+                unittometer = self.env.GetUnit()[1]
                 linkvolumes = array([self._GetValue(linkstat['volume']) for linkstat in self.linkstats])
                 def getweight(ijoint,volumeinfo):
                     if ijoint < 0:
                         accumvolume = sum(linkvolumes)
                     else:
                         accumvolume = sum(array([volume for ilink,volume in enumerate(linkvolumes) if self.robot.DoesAffect(ijoint,ilink)]))
-                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume)**weightexp
+                    weight=(self._GetValue(volumeinfo['volumedelta'])*accumvolume*unittometer**5)**weightexp # have to convert the units to meters in order to get weight to mean something!
                     if weight <= 0:
                         log.warn('joint %d has weight=%e, setting to 1e-3'%(ijoint,weight))
                         weight = 1e-3
@@ -275,8 +277,10 @@ class LinkStatisticsModel(DatabaseGenerator):
                 for w,j in izip(jweights,self.robot.GetJoints()):
                     dofweights += [w]*j.GetDOF()
                 self.robot.SetDOFWeights(dofweights)
-                self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
-                self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
+                if len(self.affinevolumes) >= 3 and self.affinevolumes[0] is not None and self.affinevolumes[1] is not None and self.affinevolumes[2] is not None:
+                    self.robot.SetAffineTranslationWeights([getweight(-1,self.affinevolumes[i]) for i in range(3)])
+                if len(self.affinevolumes) >= 6 and self.affinevolumes[3+2] is not None:
+                    self.robot.SetAffineRotationAxisWeights(tile(getweight(-1,self.affinevolumes[3+2]),4)) # only z axis
             elif type == 1:
                 # set everything to 1
                 for j in self.robot.GetJoints():

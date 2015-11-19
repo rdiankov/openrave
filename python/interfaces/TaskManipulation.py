@@ -60,6 +60,11 @@ class TaskManipulation:
         clone.robot = envother.GetRobot(self.robot.GetName())
         envother.Add(clone.prob,True,clone.args)
         return clone
+    
+    def SetRobot(self, robot):
+        self.robot = robot
+        return self.prob.SendCommand(u'setrobot '+robot.GetName())
+    
     def GraspPlanning(self,graspindices=None,grasps=None,target=None,approachoffset=0,destposes=None,seedgrasps=None,seeddests=None,seedik=None,maxiter=None,randomgrasps=None,randomdests=None, execute=None,outputtraj=None,grasptranslationstepmult=None,graspfinestep=None,outputtrajobj=None,gmodel=None,paddedgeometryinfo=None,steplength=None,releasegil=False):
         """See :ref:`module-taskmanipulation-graspplanning`
 
