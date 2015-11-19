@@ -6014,7 +6014,7 @@ class IKFastSolver(AutoReloader):
                 eps = 10**-(self.precision-3)
                 try:
                     Anumpy = numpy.array(numpy.array(A), numpy.float64)
-                except ValueError, e:
+                except (TypeError, ValueError), e:
                     log.warn(u'could not convert to numpy array: %s', e)
                     continue
                 
