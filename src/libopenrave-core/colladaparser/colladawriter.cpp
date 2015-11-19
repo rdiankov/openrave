@@ -269,7 +269,7 @@ public:
             static const std::string _format("collada");
             return _format;
         }
-        virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts) {
+        virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) {
             daeElementRef childelt = _elt->add(xmltag.c_str());
             if( !childelt ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("collada writer failed to create child %s from parent %s"),xmltag%_elt->getElementName(),ORE_InvalidArguments);
@@ -1001,6 +1001,39 @@ private:
             ptec->setProfile("OpenRAVE");
             daeElementRef bind_actuator = ptec->add("bind_actuator");
             bind_actuator->setAttribute("joint",str(boost::format("%sjoint%d")%kmodelid%(*itjoint)->GetJointIndex()).c_str());
+
+            if( !!(*itjoint)->GetInfo()._infoElectricMotor ) {
+                ElectricMotorActuatorInfoPtr infoElectricMotor = (*itjoint)->GetInfo()._infoElectricMotor;
+                daeElementRef instance_actuator = ptec->add("instance_actuator");
+
+                std::string stractuator = str(boost::format("body%d_actuator%d")%_mapBodyIds[pbody->GetEnvironmentId()]%(*itjoint)->GetJointIndex());
+                std::string url = std::string("#") + stractuator;
+                instance_actuator->setAttribute("url",url.c_str());
+                
+                // add the motor actuator to the library
+                daeElementRef domactuator = _actuatorsLib->add("actuator");
+                domactuator->setAttribute("id", stractuator.c_str());
+                domactuator->setAttribute("type", "electric_motor");
+                BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(domactuator));
+                extrawriter->AddChild("gear_ratio")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->gear_ratio));
+                extrawriter->AddChild("terminal_resistance")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->terminal_resistance));
+                extrawriter->AddChild("starting_current")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->starting_current));
+                extrawriter->AddChild("speed_constant")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->speed_constant));
+                extrawriter->AddChild("nominal_voltage")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->nominal_voltage));
+                extrawriter->AddChild("torque_constant")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->torque_constant));
+                extrawriter->AddChild("rotor_inertia")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->rotor_inertia));
+                extrawriter->AddChild("nominal_torque")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->nominal_torque));
+                extrawriter->AddChild("stall_torque")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->stall_torque));
+                extrawriter->AddChild("no_load_speed")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->no_load_speed));
+                extrawriter->AddChild("max_speed")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->max_speed));
+                extrawriter->AddChild("assigned_power_rating")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->assigned_power_rating));
+                std::stringstream ssspeed_torque_point; ssspeed_torque_point << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                FOREACHC(itpoint, infoElectricMotor->speed_torque_points) {
+                    ssspeed_torque_point << itpoint->first << " " << itpoint->second << " ";
+                }
+                extrawriter->AddChild("speed_torque_point")->SetCharData(ssspeed_torque_point.str());
+                
+            }
         }
 
         if( pbody->IsRobot() ) {

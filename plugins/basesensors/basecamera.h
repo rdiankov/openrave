@@ -98,7 +98,8 @@ public:
                 ss.clear(); // should clear the error since distortion_coeffs read to the end
             }
             else if( name == "image_dimensions" ) {
-                ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height >> _psensor->_numchannels;
+                // new image_dimensions do not have channels since the number of channels a camera can output is not part of its geometry
+                ss >> _psensor->_pgeom->width >> _psensor->_pgeom->height;// >> _psensor->_numchannels;
             }
             else if( name == "width" ) {
                 ss >> _psensor->_pgeom->width;
@@ -184,7 +185,7 @@ public:
         _bPower = false;
         _vColor = RaveVector<float>(0.5f,0.5f,1,1);
         framerate = 5;
-        _numchannels = 3;
+        //_numchannels = 3;
         _bRenderGeometry = true;
         _bRenderData = false;
         _Reset();
@@ -444,7 +445,7 @@ protected:
     Transform _trans;
     dReal _fTimeToImage;
     float framerate;
-    int _numchannels;
+    //int _numchannels;
     GraphHandlePtr _graphgeometry;
     ViewerBasePtr _dataviewer;
     string _channelformat;
