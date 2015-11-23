@@ -3490,17 +3490,24 @@ class IKFastSolver(AutoReloader):
                 ileftvar = 0
                 leftvar = dummys[ileftvar]
                 exportcoeffeqs=None
+                numrepeating = None
                 for ioffset in range(len(newreducedeqs)):
                     try:
-                        exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs[ioffset:],ileftvar)
-                        log.info('ioffset %d'%ioffset)
-                        break
+                        localexportcoeffeqs,localexportmonoms,localnumrepeating = self.solveDialytically(newreducedeqs[ioffset:],ileftvar)
+                        if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                            exportcoeffeqs = localexportcoeffeqs
+                            exportmonoms = localexportmonoms
+                            numrepeating = localnumrepeating
+                            if numrepeating == 0:
+                                break
+                        #log.info('ioffset %d'%ioffset)
+                        #break
                     except self.CannotSolveError, e:
                         log.debug('solveDialytically errors: %s',e)
-
+                    
                 if exportcoeffeqs is None:
                     raise self.CannotSolveError('failed to solveDialytically')
-
+                
                 coupledsolution = AST.SolverCoeffFunction(jointnames=[v.name for v in curvars],jointeval=[v[1] for v in dummysubs2],jointevalcos=[dummysubs[2*i][1] for i in range(len(curvars))],jointevalsin=[dummysubs[2*i+1][1] for i in range(len(curvars))],isHinges=[self.IsHinge(v.name) for v in curvars],exportvar=[v.name for v in dummys],exportcoeffeqs=exportcoeffeqs,exportfnname='solvedialyticpoly12qep',rootmaxdim=16)
                 self.usinglapack = True
                 tree = [firstsolution,coupledsolution]+ endbranchtree
@@ -4267,17 +4274,24 @@ class IKFastSolver(AutoReloader):
 
         # choose which leftvar can determine the singularity of the following equations!
         exportcoeffeqs = None
+        numrepeating = None
         getsubs = raghavansolutiontree[0].getsubs if len(raghavansolutiontree) > 0 else None
         for ileftvar in range(len(dummys)):
             leftvar = dummys[ileftvar]
             try:
-                exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
-                break
+                localexportcoeffeqs, localexportmonoms, localnumrepeating = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
+                if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                    exportcoeffeqs = localexportcoeffeqs
+                    exportmonoms = localexportmonoms
+                    numrepeating = localnumrepeating
+                    if numrepeating == 0:
+                        break
             except self.CannotSolveError,e:
                 log.warn('failed with leftvar %s: %s',leftvar,e)
 
         if exportcoeffeqs is None:
             raise self.CannotSolveError('failed to solve dialytically')
+        
         if ileftvar > 0:
             raise self.CannotSolveError('solving equations dialytically succeeded with var index %d, unfortunately code generation supports only index 0'%ileftvar)
     
@@ -5225,15 +5239,25 @@ class IKFastSolver(AutoReloader):
             # always take the equations 4 at a time....?
             if len(newreducedeqs) == 3:
                 try:
-                    exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
-                    break
+                    localexportcoeffeqs, localexportmonoms, localnumrepeating = self.solveDialytically(newreducedeqs,ileftvar,getsubs=getsubs)
+                    if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                        exportcoeffeqs = localexportcoeffeqs
+                        exportmonoms = localexportmonoms
+                        numrepeating = localnumrepeating
+                        if numrepeating == 0:
+                            break
                 except self.CannotSolveError,e:
                     log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
             else:
                 for dialyticeqs in combinations(newreducedeqs,4):
                     try:
-                        exportcoeffeqs,exportmonoms = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
-                        break
+                        localexportcoeffeqs,localexportmonoms,localnumrepeating = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
+                        if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                            exportcoeffeqs = localexportcoeffeqs
+                            exportmonoms = localexportmonoms
+                            numrepeating = localnumrepeating
+                            if numrepeating == 0:
+                                break
                     except self.CannotSolveError,e:
                         log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
 
@@ -5241,8 +5265,14 @@ class IKFastSolver(AutoReloader):
                     filteredeqs = [peq for peq in newreducedeqs if peq.degree() <= 2] # has never worked for higher degrees than 2
                     for dialyticeqs in combinations(filteredeqs,6):
                         try:
-                            exportcoeffeqs,exportmonoms = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
-                            break
+                            localexportcoeffeqs, localexportmonoms, localnumrepeating = self.solveDialytically(dialyticeqs,ileftvar,getsubs=getsubs)
+                            if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                                exportcoeffeqs = localexportcoeffeqs
+                                exportmonoms = localexportmonoms
+                                numrepeating = localnumrepeating
+                                if numrepeating == 0:
+                                    bestdialyticeqs = dialyticeqs
+                                    break
                         except self.CannotSolveError,e:
                             log.warn('failed with leftvar %s: %s',newreducedeqs[0].gens[ileftvar],e)
             if exportcoeffeqs is not None:
@@ -5491,10 +5521,14 @@ class IKFastSolver(AutoReloader):
                     for ileftvar in range(2):
                         # TODO, sometimes this works and sometimes this doesn't
                         try:
-                            Mall, allmonoms = self.solveDialytically(dialyticeqs,ileftvar,returnmatrix=True)
-                            if Mall is not None:
+                            localMall, localallmonoms, localnumrepeating = self.solveDialytically(dialyticeqs,ileftvar,returnmatrix=True)
+                            if localMall is not None and localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                                Mall = localMall
+                                allmonoms = localallmonoms
+                                numrepeating = localnumrepeating
                                 leftvar=processedequations[0].gens[ileftvar]
-                                break
+                                if numrepeating == 0:
+                                    break
                         except self.CannotSolveError, e:
                             log.debug(e)
                     if Mall is None:
@@ -5929,8 +5963,13 @@ class IKFastSolver(AutoReloader):
         for ileftvar in range(len(dummys)):
             leftvar = dummys[ileftvar]
             try:
-                exportcoeffeqs,exportmonoms = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
-                break
+                localexportcoeffeqs,localexportmonoms,localnumrepeating = self.solveDialytically(newreducedeqs,ileftvar,getsubs=None)
+                if localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
+                    exportcoeffeqs = localexportcoeffeqs
+                    exportmonoms = localexportmonoms
+                    numrepeating = localnumrepeating
+                    if numrepeating == 0:
+                        break
             except self.CannotSolveError,e:
                 log.warn('failed with leftvar %s: %s',leftvar,e)
 
@@ -5997,6 +6036,7 @@ class IKFastSolver(AutoReloader):
                 Mallindices[degree][ipeq,allmonoms.index(tuple(mlist))] = exportindex
         # have to check that the determinant is not zero for several values of ileftvar! It is very common that
         # some equations are linearly dependent and not solvable through this method.
+        numrepeating = None
         if self.testconsistentvalues is not None:
             linearlyindependent = False
             for itest,subs in enumerate(self.testconsistentvalues):
@@ -6062,7 +6102,7 @@ class IKFastSolver(AutoReloader):
                             roots.append(numpy.real(eigenvalue))
                     if numrepeating > 0:
                         log.info('found %d repeating roots in solveDialytically matrix: %s',numrepeating,roots)
-                        continue
+                        #continue
                     Atotal = None
                     for idegree in range(maxdegree+1):
                         Adegree = Mall[idegree].subs(subs)
@@ -6092,9 +6132,9 @@ class IKFastSolver(AutoReloader):
                 raise self.CannotSolveError('equations are not linearly independent')
 
         if returnmatrix:
-            return Mall,allmonoms
+            return Mall,allmonoms, numrepeating
 
-        return exportcoeffeqs,origmonoms
+        return exportcoeffeqs,origmonoms, numrepeating
 
     def SubstituteGinacEquations(self,dictequations, valuesubs, localsymbolmap):
         gvaluesubs = []
