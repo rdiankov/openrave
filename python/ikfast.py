@@ -183,7 +183,7 @@ sympy_smaller_073 = sympy_version < '0.7.3'
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '0x10000048' # hex of the version, has to be prefixed with 0x. also in ikfast.h
+__version__ = '0x10000049' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -6014,7 +6014,7 @@ class IKFastSolver(AutoReloader):
                 eps = 10**-(self.precision-3)
                 try:
                     Anumpy = numpy.array(numpy.array(A), numpy.float64)
-                except (TypeError, ValueError), e:
+                except ValueError, e:
                     log.warn(u'could not convert to numpy array: %s', e)
                     continue
                 
@@ -6574,7 +6574,7 @@ class IKFastSolver(AutoReloader):
                             eq = neweq.subs(self.freevarsubs+solsubs)
                             if self.CheckExpressionUnique(NewEquations,eq):
                                 NewEquations.append(eq)
-            if len(NewEquations) >= 2: # TODO need to check for hasExtraConstraints?
+            if len(NewEquations) >= 2 and not hasExtraConstraints: # TODO need to check for hasExtraConstraints?
                 dummysolutions = []
                 try:
                     rawsolutions=self.solveSingleVariable(NewEquations,dummyvar,othersolvedvars, unknownvars=curvars+unknownvars)
@@ -7599,14 +7599,10 @@ class IKFastSolver(AutoReloader):
                     for ileftvar in range(2):
                         # TODO, sometimes this works and sometimes this doesn't
                         try:
-                            localMall, localallmonoms,localnumrepeating = self.solveDialytically(newreducedeqs,ileftvar,returnmatrix=True)
-                            if localMall is not None and localnumrepeating is not None and (numrepeating is None or numrepeating > localnumrepeating):
-                                Mall = localMall
-                                allmonoms = localallmonoms
-                                numrepeating = localnumrepeating
+                            Mall, allmonoms = self.solveDialytically(newreducedeqs,ileftvar,returnmatrix=True)
+                            if Mall is not None:
                                 leftvar=polyeqs[0].gens[ileftvar]
-                                if numrepeating == 0:
-                                    break
+                                break
                         except self.CannotSolveError, e:
                             log.debug(e)
                         
