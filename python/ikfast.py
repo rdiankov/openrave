@@ -6574,7 +6574,7 @@ class IKFastSolver(AutoReloader):
                             eq = neweq.subs(self.freevarsubs+solsubs)
                             if self.CheckExpressionUnique(NewEquations,eq):
                                 NewEquations.append(eq)
-            if len(NewEquations) >= 2: # TODO need to check for hasExtraConstraints?
+            if len(NewEquations) >= 2 and not hasExtraConstraints: # TODO need to check for hasExtraConstraints?
                 dummysolutions = []
                 try:
                     rawsolutions=self.solveSingleVariable(NewEquations,dummyvar,othersolvedvars, unknownvars=curvars+unknownvars)
