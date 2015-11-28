@@ -1944,7 +1944,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _perturbation(0.1)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -1955,7 +1955,7 @@ DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerPar
     }
 }
 
-void DynamicsCollisionConstraint::SetPlannerParameters(PlannerBase::PlannerParametersPtr parameters)
+void DynamicsCollisionConstraint::SetPlannerParameters(PlannerBase::PlannerParametersConstPtr parameters)
 {
     _parameters = parameters;
     if( !!parameters ) {
@@ -1979,7 +1979,7 @@ void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
     _perturbation = perturbation;
 }
 
-int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
+int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
     if( params->SetStateValues(vdofvalues, 0) != 0 ) {
         return CFO_StateSettingError;
@@ -2101,7 +2101,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
 void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
 {
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
-        PlannerBase::PlannerParametersPtr params = _parameters.lock();
+        PlannerBase::PlannerParametersConstPtr params = _parameters.lock();
         std::vector<dReal> vcurrentvalues;
         params->_getstatefn(vcurrentvalues);
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
@@ -2126,7 +2126,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         filterreturn->Clear();
     }
     // set the bounds based on the interval type
-    PlannerBase::PlannerParametersPtr params = _parameters.lock();
+    PlannerBase::PlannerParametersConstPtr params = _parameters.lock();
     if( !params ) {
         RAVELOG_WARN("parameters have been destroyed!\n");
         if( !!filterreturn ) {
@@ -2168,7 +2168,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( IS_DEBUGLEVEL(Level_Verbose) || IS_DEBUGLEVEL(Level_VerifyPlans) ) {
                 dReal consistencyerror = RaveFabs(q0.at(i) + timeelapsed*0.5*(dq0.at(i)+dq1.at(i)) - q1.at(i));
                 if( RaveFabs(consistencyerror-2*PI) > g_fEpsilonQuadratic ) { // TODO, officially track circular joints
-                    OPENRAVE_ASSERT_OP(consistencyerror,<=,g_fEpsilonQuadratic*100);
+                    OPENRAVE_ASSERT_OP_FORMAT(consistencyerror,<=,g_fEpsilonQuadratic*100, "dof %d is not consistent with time elapsed", i, ORE_InvalidArguments);
                 }
             }
         }
@@ -2451,34 +2451,61 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return nstateret;
             }
-            if( timestep > timeelapsed+1e-7 ) {
-                if( istep+1 >= numSteps ) {
-                    // expected...
-                    break;
-                }
-                RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d", timestep%timeelapsed%istep%numSteps);
-                if( !!filterreturn ) {
-                    filterreturn->_returncode = CFO_StateSettingError;
-                }
-                return CFO_StateSettingError;
-            }
-            else if( timestep > timeelapsed ) {
-                timestep = timeelapsed; // get rid of small epsilons
-            }
+            
+            dReal dqscale = 1.0;
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
+                if( RaveFabs(dQ[i]) > params->_vConfigResolution[i]*1.02 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
+                    if( nLargestStepIndex == i ) {
+                        RAVELOG_WARN_FORMAT("got huge delta %f even though it is the largest index!", dQ[i]);
+                    }
+                    // the delta distance is greater than expected, so have to divide the time!
+                    dReal s = RaveFabs(params->_vConfigResolution[i]/dQ[i]);
+                    if( s < dqscale ) {
+                        dqscale = s;
+                    }                    
+                }
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
+
+            if( dqscale < 1 ) {
+                // scaled! so have to change dQ and make sure not to increment istep/fStep
+                for(size_t i = 0; i < dQ.size(); ++i) {
+                    dQ[i] *= dqscale;
+                }
+            }
+            else {
+                // only check time scale if at the current point
+                if( timestep > timeelapsed+1e-7 ) {
+                    if( istep+1 >= numSteps ) {
+                        // expected...
+                        break;
+                    }
+                    RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d", timestep%timeelapsed%istep%numSteps);
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_StateSettingError;
+                    }
+                    return CFO_StateSettingError;
+                }
+                else if( timestep > timeelapsed ) {
+                    timestep = timeelapsed; // get rid of small epsilons
+                }
+            }
+            
             if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
-            fStep = fBestNewStep;
-            ++istep;
-            //RAVELOG_VERBOSE_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
-            prevtimestep = timestep;
+
+            if( dqscale >= 1 ) {
+                // scaled! so have to change dQ and make sure not to increment istep/fStep
+                fStep = fBestNewStep;
+                ++istep;
+                //RAVELOG_VERBOSE_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
+                prevtimestep = timestep;
+            }
         }
         if( RaveFabs(fStep-fLargestStep) > RaveFabs(fLargestStepDelta) ) {
             RAVELOG_WARN_FORMAT("fStep (%.15e) did not reach fLargestStep (%.15e). %.15e > %.15e", fStep%fLargestStep%RaveFabs(fStep-fLargestStep)%fLargestStepDelta);

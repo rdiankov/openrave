@@ -400,12 +400,12 @@ public:
        \param parameters stored inside the structure as a weak pointer
        \param filtermask A mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
      */
-    DynamicsCollisionConstraint(PlannerBase::PlannerParametersPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask=0xffffffff);
+    DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask=0xffffffff);
     virtual ~DynamicsCollisionConstraint() {
     }
 
     /// \brief sets a new planner parmaeters structure for checking
-    virtual void SetPlannerParameters(PlannerBase::PlannerParametersPtr parameters);
+    virtual void SetPlannerParameters(PlannerBase::PlannerParametersConstPtr parameters);
 
     /// \brief Sets a new mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
     virtual void SetFilterMask(int filtermask);
@@ -438,10 +438,10 @@ protected:
     /// \brief sets and checks the state, also takes into account perturbations
     ///
     /// \param options should already be masked with _filtermask
-    virtual int _SetAndCheckState(PlannerBase::PlannerParametersPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn);
+    virtual int _SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn);
     virtual void _PrintOnFailure(const std::string& prefix);
 
-    PlannerBase::PlannerParametersWeakPtr _parameters;
+    PlannerBase::PlannerParametersWeakConstPtr _parameters;
     std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;

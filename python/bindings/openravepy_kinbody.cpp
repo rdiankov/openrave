@@ -2515,6 +2515,15 @@ KinBodyPtr GetKinBody(PyKinBodyPtr pykinbody)
     return !pykinbody ? KinBodyPtr() : pykinbody->GetBody();
 }
 
+PyEnvironmentBasePtr GetPyEnvFromPyKinBody(object o)
+{
+    extract<PyKinBodyPtr> pykinbody(o);
+    if( pykinbody.check() ) {
+        return ((PyKinBodyPtr)pykinbody)->GetEnv();
+    }
+    return PyEnvironmentBasePtr();
+}
+
 PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr pykinbody)
 {
     return pykinbody->GetEnv();

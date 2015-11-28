@@ -464,6 +464,7 @@ private:
     typedef boost::shared_ptr<PlannerBase::PlannerParameters> PlannerParametersPtr;
     typedef boost::shared_ptr<PlannerBase::PlannerParameters const> PlannerParametersConstPtr;
     typedef boost::weak_ptr<PlannerBase::PlannerParameters> PlannerParametersWeakPtr;
+    typedef boost::weak_ptr<PlannerBase::PlannerParameters const> PlannerParametersWeakConstPtr;
 
     /// \brief Planner progress information passed to each callback function
     class OPENRAVE_API PlannerProgress

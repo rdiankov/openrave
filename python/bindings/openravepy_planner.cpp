@@ -258,6 +258,15 @@ PyInterfaceBasePtr toPyPlanner(PlannerBasePtr pplanner, PyEnvironmentBasePtr pye
     return !pplanner ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPlannerBase(pplanner,pyenv));
 }
 
+//PlannerBase::PlannerParametersPtr GetPlannerParameters(object o)
+//{
+//    extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
+//    if( pyparams.check() ) {
+//        return ((PyPlannerBase::PyPlannerParametersPtr)pyparams)->GetParameters();
+//    }
+//    return PlannerBase::PlannerParametersPtr();
+//}
+
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
 {
     extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
