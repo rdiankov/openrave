@@ -701,6 +701,16 @@ public:
         pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
         return static_cast<numeric::array>(handle<>(pyvalues));
     }
+    object GetGlobalInertia() const {
+        TransformMatrix t = _plink->GetGlobalInertia();
+        npy_intp dims[] = { 3, 3};
+        PyObject *pyvalues = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+        dReal* pdata = (dReal*)PyArray_DATA(pyvalues);
+        pdata[0] = t.m[0]; pdata[1] = t.m[1]; pdata[2] = t.m[2];
+        pdata[3] = t.m[4]; pdata[4] = t.m[5]; pdata[5] = t.m[6];
+        pdata[6] = t.m[8]; pdata[7] = t.m[9]; pdata[8] = t.m[10];
+        return static_cast<numeric::array>(handle<>(pyvalues));
+    }
     dReal GetMass() const {
         return _plink->GetMass();
     }
@@ -3029,6 +3039,7 @@ void init_openravepy_kinbody()
                          .def("GetLocalCOM",&PyLink::GetLocalCOM, DOXY_FN(KinBody::Link,GetLocalCOM))
                          .def("GetGlobalCOM",&PyLink::GetGlobalCOM, DOXY_FN(KinBody::Link,GetGlobalCOM))
                          .def("GetLocalInertia",&PyLink::GetLocalInertia, DOXY_FN(KinBody::Link,GetLocalInertia))
+                         .def("GetGlobalInertia",&PyLink::GetGlobalInertia, DOXY_FN(KinBody::Link,GetGlobalInertia))
                          .def("GetPrincipalMomentsOfInertia",&PyLink::GetPrincipalMomentsOfInertia, DOXY_FN(KinBody::Link,GetPrincipalMomentsOfInertia))
                          .def("GetLocalMassFrame",&PyLink::GetLocalMassFrame, DOXY_FN(KinBody::Link,GetLocalMassFrame))
                          .def("GetGlobalMassFrame",&PyLink::GetGlobalMassFrame, DOXY_FN(KinBody::Link,GetGlobalMassFrame))
