@@ -2219,7 +2219,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( RaveFabs(_vtempaccelconfig.at(i)) <= g_fEpsilonLinear ) {
                 // not a quadratic
                 if( *itres != 0 ) {
-                    steps = (int)(RaveFabs(dQ[i]) / *itres);
+                    steps = (int)(RaveFabs(dQ[i]) / *itres) + 1;
                 }
                 else {
                     steps = (int)(RaveFabs(dQ[i]) * 100);
@@ -2233,7 +2233,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     dReal inflectionpoint = 0.5*dq0.at(i)*inflectiontime;
                     dReal dist = RaveFabs(inflectionpoint) + RaveFabs(dQ.at(i)-inflectionpoint);
                     if (*itres != 0) {
-                        steps = (int)(dist / *itres);
+                        steps = (int)(dist / *itres) + 1;
                     }
                     else {
                         steps = (int)(dist * 100);
@@ -2241,7 +2241,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 else {
                     if( *itres != 0 ) {
-                        steps = (int)(RaveFabs(dQ[i]) / *itres);
+                        steps = (int)(RaveFabs(dQ[i]) / *itres) + 1;
                     }
                     else {
                         steps = (int)(RaveFabs(dQ[i]) * 100);
@@ -2392,7 +2392,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             dReal fBestNewStep = bSurpassedInflection ? (fStep-fLargestStepDelta) : (fStep+fLargestStepDelta);
 
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
-                OPENRAVE_ASSERT_OP(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon);
+                OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon, "axis %d does not move? %.15e->%.15e, numSteps=%d", nLargestStepIndex%q0[nLargestStepIndex]%q1[nLargestStepIndex]%numSteps, ORE_Assert);
                 timestep = fStep/fLargestStepInitialVelocity;
             }
             else {
@@ -2455,9 +2455,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             dReal dqscale = 1.0;
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
-                if( RaveFabs(dQ[i]) > params->_vConfigResolution[i]*1.02 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
+                if( RaveFabs(dQ[i]) > params->_vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
                     if( nLargestStepIndex == i ) {
-                        RAVELOG_WARN_FORMAT("got huge delta %f even though it is the largest index!", dQ[i]);
+                        RAVELOG_DEBUG_FORMAT("got huge delta abs(%f) > %f for dof %d even though it is the largest index!", dQ[i]%params->_vConfigResolution[i]%i);
                     }
                     // the delta distance is greater than expected, so have to divide the time!
                     dReal s = RaveFabs(params->_vConfigResolution[i]/dQ[i]);
