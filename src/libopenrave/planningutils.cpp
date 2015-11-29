@@ -2219,7 +2219,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( RaveFabs(_vtempaccelconfig.at(i)) <= g_fEpsilonLinear ) {
                 // not a quadratic
                 if( *itres != 0 ) {
-                    steps = (int)(RaveFabs(dQ[i]) / *itres) + 1;
+                    steps = (int)(RaveFabs(dQ[i]) / *itres + 0.99);
                 }
                 else {
                     steps = (int)(RaveFabs(dQ[i]) * 100);
@@ -2233,7 +2233,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     dReal inflectionpoint = 0.5*dq0.at(i)*inflectiontime;
                     dReal dist = RaveFabs(inflectionpoint) + RaveFabs(dQ.at(i)-inflectionpoint);
                     if (*itres != 0) {
-                        steps = (int)(dist / *itres) + 1;
+                        steps = (int)(dist / *itres + 0.99);
                     }
                     else {
                         steps = (int)(dist * 100);
@@ -2241,7 +2241,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 else {
                     if( *itres != 0 ) {
-                        steps = (int)(RaveFabs(dQ[i]) / *itres) + 1;
+                        steps = (int)(RaveFabs(dQ[i]) / *itres + 0.99);
                     }
                     else {
                         steps = (int)(RaveFabs(dQ[i]) * 100);
@@ -2260,7 +2260,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         for (i = 0; i < params->GetDOF(); i++,itres++) {
             int steps;
             if( *itres != 0 ) {
-                steps = (int)(RaveFabs(dQ[i]) / *itres);
+                steps = (int)(RaveFabs(dQ[i]) / *itres + 0.99);
             }
             else {
                 steps = (int)(RaveFabs(dQ[i]) * 100);
