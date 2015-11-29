@@ -2470,9 +2470,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
             if( dqscale < 1 ) {
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
+                timestep = prevtimestep + (timestep-prevtimestep)*dqscale;
                 for(size_t i = 0; i < dQ.size(); ++i) {
                     dQ[i] *= dqscale;
-                }
+                    _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
+                }                
             }
             else {
                 // only check time scale if at the current point
