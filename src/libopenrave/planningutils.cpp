@@ -2369,6 +2369,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         int istep = 0;
         dReal prevtimestep = 0;
         bool bSurpassedInflection = false;
+        int numRepeating = 0;
         while(istep < numSteps && prevtimestep < timeelapsed) {
             //for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
             int nstateret = 0;
@@ -2451,7 +2452,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return nstateret;
             }
-            
+
             dReal dqscale = 1.0;
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
@@ -2463,20 +2464,30 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     dReal s = RaveFabs(params->_vConfigResolution[i]/dQ[i]);
                     if( s < dqscale ) {
                         dqscale = s;
-                    }                    
+                    }
                 }
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
 
             if( dqscale < 1 ) {
+                numRepeating++;
+                if( dqscale <= 0.01 ) {
+                    RAVELOG_WARN("got very small dqscale, so returning failure\n");
+                    return CFO_StateSettingError;
+                }
+                if( numRepeating > 10 ) {
+                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%d, so returning failure", numRepeating%dqscale);
+                    return CFO_StateSettingError;
+                }
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 timestep = prevtimestep + (timestep-prevtimestep)*dqscale;
                 for(size_t i = 0; i < dQ.size(); ++i) {
                     dQ[i] *= dqscale;
                     _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
-                }                
+                }
             }
             else {
+                numRepeating = 0;
                 // only check time scale if at the current point
                 if( timestep > timeelapsed+1e-7 ) {
                     if( istep+1 >= numSteps ) {
@@ -2493,7 +2504,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     timestep = timeelapsed; // get rid of small epsilons
                 }
             }
-            
+
             if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
