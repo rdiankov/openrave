@@ -31,7 +31,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     if( !s_listRegisteredReaders ) {
         s_listRegisteredReaders = new list< OpenRAVE::UserDataPtr >();
-        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"mobyproperties",MobyPhysicsEngine::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"mobyphysics",MobyPhysicsEngine::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_Controller,"mobycontroller",MobyController::CreateXMLReader));
     }
 
     switch( type ) {
@@ -42,8 +43,8 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         }
         break;
     case OpenRAVE::PT_Controller:
-        if( interfacename == "mobypidcontroller") {
-            return InterfaceBasePtr(new MobyPIDController(penv,sinput));
+        if( interfacename == "moby") {
+            return InterfaceBasePtr(new MobyController(penv,sinput));
         }
         break;
     default:
@@ -56,7 +57,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_PhysicsEngine].push_back("moby");
-    info.interfacenames[OpenRAVE::PT_Controller].push_back("mobypidcontroller");
+    info.interfacenames[OpenRAVE::PT_Controller].push_back("moby");
     
 }
 
