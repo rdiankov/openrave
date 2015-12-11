@@ -18,8 +18,7 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND SOQT_LIBRARY_FOUND AND C
   link_directories(${OPENRAVE_LINK_DIRS} ${SOQT_LINK_DIRS} ${COIN_LINK_DIRS})
 
   # generate rules for building source files from the resources
-  # BOOST_TT_HAS_OPERATOR_HPP_INCLUDED: https://bugreports.qt-project.org/browse/QTBUG-22829
-  set(QTCOIN_MOCS qtcoinviewer.h OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED)
+  set(QTCOIN_MOCS qtcoinviewer.h)
   include(${QT_USE_FILE})
   qt4_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
 

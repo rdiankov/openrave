@@ -64,6 +64,9 @@
 #include <fstream>
 #include <sstream>
 
+// QTBUG-22829 alternative workaround
+#ifndef Q_MOC_RUN
+
 #include <boost/version.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
@@ -79,6 +82,8 @@
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
 //#include <boost/cstdint.hpp>
+
+#endif
 
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))

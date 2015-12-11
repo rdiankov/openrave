@@ -783,8 +783,8 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
         else {
             GetDOFLimits(alllower,allupper);
             FOREACHC(it, _vActiveDOFIndices) {
-                *pLowerLimit++ = alllower[*it];
-                *pUpperLimit++ = allupper[*it];
+                *pLowerLimit++ = alllower.at(*it);
+                *pUpperLimit++ = allupper.at(*it);
             }
         }
     }
@@ -792,8 +792,8 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
         if( _vActiveDOFIndices.size() > 0 ) {
             GetDOFLimits(alllower,allupper);
             FOREACHC(it, _vActiveDOFIndices) {
-                *pLowerLimit++ = alllower[*it];
-                *pUpperLimit++ = allupper[*it];
+                *pLowerLimit++ = alllower.at(*it);
+                *pUpperLimit++ = allupper.at(*it);
             }
         }
 
