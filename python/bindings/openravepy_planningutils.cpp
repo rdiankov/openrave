@@ -155,6 +155,47 @@ public:
 
 typedef boost::shared_ptr<PyAffineTrajectoryRetimer> PyAffineTrajectoryRetimerPtr;
 
+class PyDynamicsCollisionConstraint
+{
+public:
+    PyDynamicsCollisionConstraint(object oparameters, object olistCheckBodies, int filtermask=0xffffffff)
+    {
+        PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(oparameters);
+        std::list<KinBodyPtr> listCheckBodies;
+        for(int i = 0; i < len(olistCheckBodies); ++i) {
+            KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[i]);
+            BOOST_ASSERT(!!pbody);
+            _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[i]);
+            listCheckBodies.push_back(pbody);
+        }
+        _pconstraints.reset(new OpenRAVE::planningutils::DynamicsCollisionConstraint(parameters, listCheckBodies, filtermask));
+    }
+    
+    virtual ~PyDynamicsCollisionConstraint() {
+    }
+
+    int Check(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval=IT_Closed, int options=0xffff)//, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr())
+    {
+        std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
+        std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
+        std::vector<dReal> dq0 = ExtractArray<dReal>(odq0);
+        std::vector<dReal> dq1 = ExtractArray<dReal>(odq1);
+        return _pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options);
+    }
+
+    object GetReport() const {
+        if( !_pconstraints->GetReport() ) {
+            return object();
+        }
+        return object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
+    }
+
+    PyEnvironmentBasePtr _pyenv;
+    OpenRAVE::planningutils::DynamicsCollisionConstraintPtr _pconstraints;
+};
+
+typedef boost::shared_ptr<PyDynamicsCollisionConstraint> PyDynamicsCollisionConstraintPtr;
+
 PlannerStatus pyRetimeAffineTrajectory(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="")
 {
     return OpenRAVE::planningutils::RetimeAffineTrajectory(openravepy::GetTrajectory(pytraj),ExtractArray<dReal>(omaxvelocities), ExtractArray<dReal>(omaxaccelerations),hastimestamps,plannername,plannerparameters);
@@ -344,6 +385,8 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeTrajectory_overloads, planningutils::pyRet
 BOOST_PYTHON_FUNCTION_OVERLOADS(ExtendActiveDOFWaypoint_overloads, planningutils::pyExtendActiveDOFWaypoint, 5, 8)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 8)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
+
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 7)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
@@ -429,6 +472,12 @@ void InitPlanningUtils()
         class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >("AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer), no_init)
         .def(init<const std::string&, const std::string&>(args("plannername", "plannerparameters")))
         .def("PlanPath",&planningutils::PyAffineTrajectoryRetimer::PlanPath,PlanPath_overloads2(args("traj","maxvelocities", "maxaccelerations", "hastimestamps", "releasegil"), DOXY_FN(planningutils::AffineTrajectoryRetimer,PlanPath)))
+        ;
+
+        class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
+        .def(init<object, object, int>(args("plannerparameters", "checkbodies", "filtermask")))
+        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport));
         ;
     }
 }

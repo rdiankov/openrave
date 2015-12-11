@@ -634,6 +634,7 @@ PyInterfaceBasePtr toPyIkSolver(IkSolverBasePtr, PyEnvironmentBasePtr);
 void init_openravepy_kinbody();
 KinBodyPtr GetKinBody(object);
 KinBodyPtr GetKinBody(PyKinBodyPtr);
+PyEnvironmentBasePtr GetPyEnvFromPyKinBody(object okinbody);
 PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
 object toPyKinBody(KinBodyPtr, object opyenv);
 object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
@@ -653,6 +654,7 @@ PyInterfaceBasePtr toPyPhysicsEngine(PhysicsEngineBasePtr, PyEnvironmentBasePtr)
 void init_openravepy_planner();
 PlannerBasePtr GetPlanner(PyPlannerBasePtr);
 PyInterfaceBasePtr toPyPlanner(PlannerBasePtr, PyEnvironmentBasePtr);
+//PlannerBase::PlannerParametersPtr GetPlannerParameters(object);
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object);
 
 object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params);
