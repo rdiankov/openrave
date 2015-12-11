@@ -481,7 +481,6 @@ private:
         if( it != _mapImpulses.end() ) 
         {
             it->second.push_back(force);
-            //RAVELOG_INFO(str(boost::format("adding a force\n")));
         }
     }
 
@@ -552,8 +551,6 @@ private:
 
 private:
 
-    // synchronize may need to work with a buffer tied to the controller callback
-    // function 
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
@@ -589,7 +586,6 @@ private:
     // Moby requires that controls be applied inside a callback
     // this function ensures openrave is able to update controls
     void _Controller( Moby::DynamicBodyPtr db, const double& t, void* ) {
-        //RAVELOG_INFO(str(boost::format("body %s asked for controls\n") % db->id));
 
         // input buffer for controls and state
         // output buffer for state?
@@ -605,12 +601,12 @@ private:
             for(vector<Moby::JointPtr>::iterator jit = joints.begin(); jit != joints.end(); jit++)
             {
 
-               map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator mit = _mapControls.find(*jit);
+                map<Moby::JointPtr, vector<Ravelin::VectorNd> >::iterator mit = _mapControls.find(*jit);
                 if( mit == _mapControls.end() ) 
                 {
                     continue;
                 }
-                //RAVELOG_INFO(str(boost::format("applying torques\n")));
+
                 for(vector<Ravelin::VectorNd>::iterator vit = mit->second.begin(); vit != mit->second.end(); vit++ )
                 {
                     (*jit)->add_force((*vit));
@@ -626,7 +622,6 @@ private:
                 {
                     continue;
                 }
-                //RAVELOG_INFO(str(boost::format("setting velocity\n")));
                 (*vit)->set_velocity((*mit).second);
             }
 
@@ -638,7 +633,7 @@ private:
                 {
                     continue;
                 }
-                //RAVELOG_INFO(str(boost::format("applying forces\n")));
+
                 for(vector<Ravelin::SForced>::iterator vit = mit->second.begin(); vit != mit->second.end(); vit++ )
                 {
                     (*lit)->add_force((*vit));
@@ -660,7 +655,6 @@ private:
                 map<Moby::RigidBodyPtr, Ravelin::SVelocityd>::iterator mit = _mapVelocity.find(rb);
                 if( mit != _mapVelocity.end() ) 
                 {
-                    //RAVELOG_INFO(str(boost::format("setting velocity\n")));
                     rb->set_velocity((*mit).second);
                 }
             }
@@ -670,7 +664,6 @@ private:
                 map<Moby::RigidBodyPtr, vector<Ravelin::SForced> >::iterator mit = _mapImpulses.find(rb);
                 if( mit != _mapImpulses.end() ) 
                 {
-                    //RAVELOG_INFO(str(boost::format("applying forces\n")));
                     for(vector<Ravelin::SForced>::iterator vit = mit->second.begin(); vit != mit->second.end(); vit++ )
                     {
                         rb->add_force((*vit));

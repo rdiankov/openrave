@@ -15,7 +15,6 @@
 
 
 #include <openrave/plugin.h>
-//#include <boost/bind.hpp>
 
 #include "mobyspace.h"
 
@@ -347,16 +346,6 @@ public:
     {
         _space->Synchronize(pjoint->GetParent());
 
-        ElectricMotorActuatorInfoPtr motor_info = pjoint->GetInfo()._infoElectricMotor;
-        if(!motor_info) 
-        {
-            //RAVELOG_INFO(str(boost::format("motor info was nothing\n")));
-        }
-        else
-        {
-            //RAVELOG_INFO(str(boost::format("motor parameters: gear_ratio[%f], assigned_power_rating[%f], max_speed[%f], no_load_speed[%f], stall_torque[%f], nominal_torque[%f], rotor_inertia[%f], torque_constant[%f], nominal_voltage[%f], speed_constant[%f], starting_current[%f], terminal_resistance[%f]\n") % motor_info->gear_ratio % motor_info->assigned_power_rating % motor_info->max_speed % motor_info->no_load_speed % motor_info->stall_torque % motor_info->nominal_torque % motor_info->rotor_inertia % motor_info->torque_constant % motor_info->nominal_voltage % motor_info->speed_constant % motor_info->starting_current % motor_info->terminal_resistance )); 
-        }
-
         Moby::JointPtr joint = _space->GetJoint(pjoint);
         _space->AddControl(joint, _space->GetRavelinVectorN(pTorques));
 
@@ -406,41 +395,20 @@ public:
 
     virtual void SimulateStep(dReal fTimeElapsed)
     {
-        //RAVELOG_INFO( "attempting to step\n" );
         _sim->step(fTimeElapsed);
-
-        // +dbg
-        vector<Moby::DynamicBodyPtr> dbs = _sim->get_dynamic_bodies();
-        //RAVELOG_INFO(str(boost::format("dbs.size[%u]\n") % dbs.size()));
-        for(vector<Moby::DynamicBodyPtr>::iterator it=dbs.begin(); it!=dbs.end();it++) 
-        {
-            // attempt to cast
-            Moby::RigidBodyPtr rb = boost::dynamic_pointer_cast<Moby::RigidBody>(*it);
-            if(rb) {
-                boost::shared_ptr<const Ravelin::Pose3d> pose = rb->get_mixed_pose();
-                //RAVELOG_INFO(str(boost::format("x[%f,%f,%f]\n") % pose->x.x() % pose->x.y() % pose->x.z())); 
-            }
-        } 
-        // -dbg
 
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
             MobySpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(*itbody);
-            //RAVELOG_INFO(str(boost::format("bodies.size[%u], links.size[%u]\n") % vbodies.size() % pinfo->vlinks.size())); 
+
             FOREACH(itlink, pinfo->vlinks) {
                 Transform t = MobySpace::GetTransform(*(*itlink)->get_pose().get());
                 (*itlink)->plink->SetTransform(t*(*itlink)->tlocal.inverse());
 
-                 // +dbg
-                 //double vt = _sim->current_time;
-                 boost::shared_ptr<const Ravelin::Pose3d> pose = (*itlink)->get_pose();
-                 //RAVELOG_INFO(str(boost::format("vt[%f], x[%f,%f,%f]\n") % vt % pose->x.x() % pose->x.y() % pose->x.z())); 
-                 // -dbg
             }
             pinfo->nLastStamp = (*itbody)->GetUpdateStamp();
         }
-        //RAVELOG_INFO( "completed step\n" );
     }
 
     dReal GetTime()
