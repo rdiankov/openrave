@@ -58,15 +58,16 @@ class MobyController : public ControllerBase
             }
             else if( name == "kp" || name == "kpi" || name == "kd" || name == "kdi" ) 
             {
-                // if plant_id == "" then the xml is malformed
+                // reads an arbitrary number of values out of the stream
+                std::vector<dReal> vals;
 
-                // NOTE: this assumes 6 dof.  needs to be more abstract
-                dReal k[6];
+                while( !_ss.eof() ) {
+                    dReal val;
+                    _ss >> val;
+                    vals.push_back(val);
+                }
 
-                _ss >> k[0] >> k[1] >> k[2] >> k[3] >> k[4] >> k[5];
-
-                // map the gain
-                _controller->_mapGains.insert(pair<string, vector<dReal> >(name, vector<dReal>(k, k+6)));
+                _controller->_mapGains.insert(pair<string, vector<dReal> >(name, vals));
             }
             else 
             {
@@ -113,17 +114,10 @@ public:
     	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyController>(ptr),atts));
     }
 
-    MobyController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false)
-    {
+    MobyController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _bEnableTuningLogging(false), _bSteadyState(false)    {
         _penv = penv;
 
-        __description = ":Interface Author: James Taylor and Rosen Diankov\n";
-//\nMoby PID controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
-If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
-1. ControllerBase::SetPath is called.\n\n\
-2. ControllerBase::SetDesired is called.\n\n\
-3. ControllerBase::Reset is called resetting everything\n\n\
-If SetDesired is called, only joint values will be set at every timestep leaving the transformation alone.\n";
+        __description = ":Interface Author: James Taylor and Rosen Diankov\n\nThe Moby controller is capable of supporting any combination of PID control depending on the gains specified in the controller xml configuration\n\n";
         RegisterCommand("Pause",boost::bind(&MobyController::_Pause,this,_1,_2),
                         "pauses the controller from reacting to commands ");
         RegisterCommand("SetCheckCollisions",boost::bind(&MobyController::_SetCheckCollisions,this,_1,_2),
@@ -132,17 +126,16 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
         RegisterCommand("SetEnableLogging",boost::bind(&MobyController::_SetEnableLogging,this,_1,_2),
                         "If set, will write trajectories to disk");
+        RegisterCommand("SetEnableTuningLogging",boost::bind(&MobyController::_SetEnableTuningLogging,this,_1,_2),
+                        "If set, will write state and control error to disk");
         _fCommandTime = 0;
         _fSpeed = 1;
         _nControlTransformation = 0;
 
-        _stateLog.open( "state", std::ofstream::out | std::ofstream::trunc );
-        _tuningLog.open( "gainerror", std::ofstream::out | std::ofstream::trunc );
     }
+
     virtual ~MobyController() {
 
-        _stateLog.close();
-        _tuningLog.close();
     }
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
@@ -150,6 +143,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _probot = robot;
         if( flog.is_open() ) {
             flog.close();
+        }
+        if( _stateLog.is_open() ) {
+            _stateLog.close();
+        }
+        if( _tuningLog.is_open() ) {
+            _tuningLog.close();
         }
         if( !!_probot ) {
             if( _bEnableLogging ) {
@@ -159,6 +158,20 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                     RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
                 }
                 //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
+            }
+            if( _bEnableTuningLogging ) {
+                string filename;
+                filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".state");
+                _stateLog.open( filename.c_str(), std::ofstream::out | std::ofstream::trunc );
+                if( !_stateLog ) {
+                    RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
+                }
+
+                filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".controlerror");
+                _tuningLog.open( filename.c_str(), std::ofstream::out | std::ofstream::trunc );
+                if( !_tuningLog ) {
+                    RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
+                }
             }
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
@@ -201,13 +214,11 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             // allocate the history buffers
             _aggregateErrorP.resize(_probot->GetDOF()); memset(&_aggregateErrorP[0], 0, _aggregateErrorP.size()*sizeof(dReal));
             _aggregateErrorD.resize(_probot->GetDOF()); memset(&_aggregateErrorD[0], 0, _aggregateErrorD.size()*sizeof(dReal));
-            _prevVelocities.resize(_probot->GetDOF()); memset(&_prevVelocities[0], 0, _prevVelocities.size()*sizeof(dReal));
             
         }
 
         // get a reference to the physics engine
-        _mobyPhysics = boost::dynamic_pointer_cast<MobyPhysicsEngine>(_penv->GetPhysicsEngine());
-        _firstStep = true;
+        _mobyPhysics = boost::dynamic_pointer_cast<MobyPhysics>(_penv->GetPhysicsEngine());
 
         RAVELOG_INFO(str(boost::format("Controller Initialized\n")));
         _bPause = false;
@@ -221,6 +232,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _vecdesired.resize(0);
         if( flog.is_open() ) {
             flog.close();
+        }
+        if( _stateLog.is_open() ) {
+            _stateLog.close();
+        }
+        if( _tuningLog.is_open() ) {
+            _tuningLog.close();
         }
         _bIsDone = true;
     }
@@ -396,6 +413,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         boost::mutex::scoped_lock lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
+            _bSteadyState = false;
+
             vector<dReal> sampledata;
             ptraj->Sample(sampledata,_fCommandTime,_samplespec);
 
@@ -460,15 +479,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             // sample the trajectory for the current time
             vector<dReal> sample;
             ptraj->Sample(sample, _fCommandTime, _samplespec);
-/*
-            std::cout << "sample: ";
-                string name = pjoint->GetName();
-            for(unsigned i = 0; i < sample.size(); i++) 
-            {
-                std::cout << sample[i] << ", ";
-            } 
-            std::cout << endl;
-*/
+
             // get the joint positions from the trajectory
             vector<ConfigurationSpecification::Group>::const_iterator pit;
             pit = _samplespec.FindCompatibleGroup("joint_values", false);
@@ -488,64 +499,79 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             } 
 
             // compute the controls
-            Transform t;
-            if( _bTrajHasTransform && _nControlTransformation ) {
-                _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
-                if( vdofvalues.size() > 0 ) {
-                    _SetControls(vdofvalues, desiredvelocity,t, _fCommandTime > 0 ? fTimeElapsed : 0);
-                }
-                else {
-                    _probot->SetTransform(t);
-                }
-            }
-            else if( vdofvalues.size() > 0 ) {
+            if( vdofvalues.size() > 0 )
+            {
                 _SetControls(vdofvalues, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
             }
 
             // always release after setting dof values
-            FOREACH(itbody,listrelease) {
+            FOREACH(itbody,listrelease)
+            {
                 _probot->Release(*itbody);
             }
-            FOREACH(itindex,listgrabindices) {
+            FOREACH(itindex,listgrabindices)
+            {
                 const GrabBody& grabinfo = _vgrabbodylinks.at(*itindex);
                 KinBody::LinkPtr plink = _probot->GetLinks().at(grabinfo.robotlinkindex);
-                if( !!grabinfo.trelativepose ) {
+                if( !!grabinfo.trelativepose )
+                {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
                 _probot->Grab(grabinfo.pbody, plink);
             }
-            FOREACH(it,listgrab) {
+            FOREACH(it,listgrab)
+            {
                 _probot->Grab(it->first,it->second);
             }
+
             // set _bIsDone after all computation is done!
             _bIsDone = bIsDone;
             if( bIsDone ) {
-                // trajectory is done, so reset it so that the controller doesn't continously set the dof values (which can get annoying)
+                // trajectory is done, so reset it so the controller doesn't
+                // continously set the dof values (which can get annoying)
                 _ptraj.reset();
             }
+
+            if( _vecdesired.size() > 0 )
+            {
+                if( _nControlTransformation )
+                {
+                    _SetDOFValues(_vecdesired,_tdesired, 0);
+                }
+                else
+                {
+                    _SetDOFValues(_vecdesired, 0);
+                }
+                _bIsDone = true;
+                // don't need to set it anymore
+                _vecdesired.resize(0);
+            }
         }
-/*
         else 
         {
-
-            // compute controls to maintain the robot in a steady state
-            // Note: this won't quite work as intended because the desired positions 
-            // are based on current position and not on the position of the arm when this
-            // branch was first entered.  Should use _vecdesired instead, but need to clarify
-            // when SetDesired might be called for a steady state robot
-
-            vector<KinBody::JointPtr> vbodyjoints;
-            vbodyjoints.reserve(_probot->GetJoints().size()+_probot->GetPassiveJoints().size());
-            vbodyjoints.insert(vbodyjoints.end(),_probot->GetJoints().begin(),_probot->GetJoints().end());
-            vbodyjoints.insert(vbodyjoints.end(),_probot->GetPassiveJoints().begin(),_probot->GetPassiveJoints().end());
-
-            // make a set of current positions for each joint
+            // compute controls to maintain the robot in a steady state otherwise
+            // the robot will collapse under its own weight absent a trajectory
+            // A real robot generally has brakes to prevent this as well as friction 
+            // in the motors and gearbox that resists or at least slows collapse
             int dof = _probot->GetDOF();
-            vector<dReal> vdofvalues(dof);
-            FOREACH(itjoint, vbodyjoints) 
-            {
-                int axis = 0;
-                vdofvalues[(*itjoint)->GetDOFIndex()] = (*itjoint)->GetValue(axis);
+
+            // if the robot is transitioning to steady state, record the current 
+            // joint values so that it can by used as the desired position in
+            // steady state control.
+            if(!_bSteadyState) {
+                _bSteadyState = true;
+
+                vector<KinBody::JointPtr> vbodyjoints;
+                vbodyjoints.reserve(_probot->GetJoints().size()+_probot->GetPassiveJoints().size());
+                vbodyjoints.insert(vbodyjoints.end(),_probot->GetJoints().begin(),_probot->GetJoints().end());
+                vbodyjoints.insert(vbodyjoints.end(),_probot->GetPassiveJoints().begin(),_probot->GetPassiveJoints().end());
+
+                _vecsteady.resize(dof);
+                FOREACH(itjoint, vbodyjoints) 
+                {
+                    int axis = 0;
+                    _vecsteady[(*itjoint)->GetDOFIndex()] = (*itjoint)->GetValue(axis);
+                }
             }
 
             // make a zero joint velocity for each joint
@@ -556,24 +582,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             } 
 
             // compute the controls
-            _SetControls(vdofvalues, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
+            _SetControls(_vecsteady, desiredvelocity, _fCommandTime > 0 ? fTimeElapsed : 0);
         }
-*/
-
-        if( _vecdesired.size() > 0 ) {
-            if( _nControlTransformation ) {
-                _SetDOFValues(_vecdesired,_tdesired, 0);
-            }
-            else {
-                _SetDOFValues(_vecdesired, 0);
-            }
-            _bIsDone = true;
-            // don't need to set it anymore
-            _vecdesired.resize(0);
-        }
-
-        _LogJointAccelerations(fTimeElapsed);
-        _firstStep = false;
     }
 
     virtual bool IsDone() 
@@ -594,24 +604,32 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 private:
     virtual void _SetControls(const std::vector<dReal>& desiredposition, const std::vector<dReal>& desiredvelocity, dReal timeelapsed)
     {
-        // for debugging and testing assume a single manipulator
-        RobotBase::ManipulatorPtr manip = _probot->GetManipulators()[0];
-
-        //vector<dReal> torques(_probot->GetDOF());
+        // get the current state of the robot
         vector<dReal> position, velocity;
         _probot->GetDOFValues(position);
         _probot->GetDOFVelocities(velocity);
 
-        _stateLog << _mobyPhysics->GetTime();
-        _tuningLog << _mobyPhysics->GetTime();
+        dReal time = _mobyPhysics->GetTime();
 
-        FOREACH(it,_dofindices) {
-            double gearRatio = 1;     // assume a 1-to-1 gear ratio
-            double torqueNominal = 0;
-            double torqueStall = 0;
+        // Note: may not want to log when _bSteadyState is true (or forward any commands
+        // from the simulated environment to any pipeline stage) as these commands are 
+        // purely for the simulator's needs and do not reflect real robot commands
 
-            double torqueAtMotorOut;
-            double torqueAtGearboxOut;
+        // open new tuning log records with the current timestamp
+        if( !!_stateLog && !!_tuningLog && _bEnableTuningLogging )
+        {
+            _stateLog << time;
+            _tuningLog << time;
+        }
+
+        FOREACH(it,_dofindices)
+        {
+            double gearRatio = 1;      // assume a 1-to-1 gear ratio
+            double torqueNominal = 0;  // zero nominal torque indicates no value specified
+            double torqueStall = 0;    // zero stall torque indicates no value specified
+            double torqueAtMotorOut;   // torque generated at the motor output shaft
+            double torqueAtGearboxOut; // torque generated at the gearbox output shaft
+            dReal kP, kIp, kD, kId;    // gain coefficients
 
             // get the joint
             KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
@@ -631,207 +649,68 @@ private:
                 torqueStall = motorInfo->stall_torque;
             }
 
-            dReal kP = 0;      // position gain
-            dReal kPI = 0;     // position integral gain
-            dReal kD = 0;      // derivative (velocity) gain
-            dReal kDI = 0;     // deriviative {velocity} integral gain
-
-            if( !_GetGain((*it), "kp", kP) ) 
-            {
-                kP = 0;
-            }
-            if( !_GetGain((*it), "kpi", kPI) ) 
-            {
-                kPI = 0;
-            }
-            if( !_GetGain((*it), "kd", kD) ) 
-            {
-                kD = 0;
-            }
-            if( !_GetGain((*it), "kdi", kDI) ) 
-            {
-                kDI = 0;
-            }
+            // a gain is set to zero if the gain is not found in the gain data
+            // which subsequently zeros that component's error in the control signal
+            _GetGain((*it), "kp", kP);
+            _GetGain((*it), "kpi", kIp);
+            _GetGain((*it), "kd", kD);
+            _GetGain((*it), "kdi", kId);
             
+            // compute component error
+            // Note: delta P may wrap the unit circle interval, 
+            //       so correct P_err if it exceeds interval.
+            dReal P_err = desiredposition.at(*it) - position.at(*it);
+            P_err = P_err > PI ? -(2 * PI - P_err) : P_err;
+            P_err = P_err < -PI ? -(-2 * PI + P_err) : P_err;
+            dReal Ip_err = _aggregateErrorP.at(*it);
+            dReal D_err = desiredvelocity.at(*it) - velocity.at(*it);
+            dReal Id_err = _aggregateErrorD.at(*it);
 
-            // ++ Debugging
-            RAVELOG_INFO(str(boost::format("vt[%f], kP[%f], kPI[%f], kD[%f], kDI{%f}.\n") % _mobyPhysics->GetTime() % kP % kPI % kD % kDI ));
-            // --
-/*
-            // current acceleration
-            dReal ddx = 0;
-            if(!_firstStep) {
-                ddx = _accelerations.at(*it);
-            }
-*/
-            // compute error
-            // Note: P delta may wrap the unit circle interval, so correct errP if it exceeds interval.
-            dReal errP = desiredposition.at(*it) - position.at(*it);
-            errP = errP > PI ? -(2 * PI - errP) : errP;
-            errP = errP < -PI ? -(-2 * PI + errP) : errP;
-            dReal errPI = _aggregateErrorP.at(*it);
-            dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
-            dReal errDI = _aggregateErrorD.at(*it);
+            // compute the amplified component
+            dReal P = kP * P_err;
+            dReal Ip = kIp * Ip_err;
+            dReal D = kD * D_err;
+            dReal Id = kId * Id_err;
 
-            dReal P = kP * errP;
-            dReal PI = kPI * errPI;
-            dReal D = kD * errD;
-            dReal DI = kDI * errDI;
+            // compute the motor command
+            torqueAtMotorOut = P + Ip + D + Id;
 
-
-            //RAVELOG_INFO(str(boost::format("vt[%f], kP[%f], tPI[%f], kVP[%f], tVI{%f}.\n") % _mobyPhysics->GetTime() % kP % tPI % kVP % tVI ));
-            //RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % _mobyPhysics->GetTime() % errP % errD % errI ));
-
-            torqueAtMotorOut = P + PI + D + DI;
-
-            // if the motor output torque is greater than the nominal torque is a ceiling (also nominal torque has to be set to trigger)
-            if( torqueNominal > 0 && fabs(torqueAtMotorOut) > torqueNominal ) 
+            // warn if the motor output torque is greater than stall or nominal torque
+            if( !_bSteadyState && torqueStall > 0 && fabs(torqueAtMotorOut) > torqueStall ) 
             {
-                RAVELOG_WARN(str(boost::format("Controller generated a torque greater than nominal torque for motor: joint[%s], torque[%f], nominal_torque[%f]\n") % pjoint->GetName().c_str() % torqueAtMotorOut % torqueNominal ));
+                RAVELOG_WARN(str(boost::format("Controller generated a motor torque with a magnitude greater than the motor's specified stall torque: sim_time[%f], robot[%s], joint[%s], torque[%f], stall_torque[%f]\nMotors are incapable of physically generating torques greater than stall torque.\n") % time % _probot->GetName().c_str() % pjoint->GetName().c_str() % torqueAtMotorOut % torqueStall ));
+            } else if( !_bSteadyState && torqueNominal > 0 && fabs(torqueAtMotorOut) > torqueNominal ) 
+            {
+                RAVELOG_WARN(str(boost::format("Controller generated a motor torque with a magnitude greater than the motor's specified nominal torque: sim_time[%f], robot[%s], joint[%s], torque[%f], nominal_torque[%f]\nContinuous application of torques greater than nominal torque may damage the real motor.\n") % time % _probot->GetName().c_str() % pjoint->GetName().c_str() % torqueAtMotorOut % torqueNominal ));
             }
   
+            // compute the torque to be applied at the joint
             torqueAtGearboxOut = torqueAtMotorOut * gearRatio;
 
-            // log data
-            _stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << torqueAtGearboxOut;
-                string name = pjoint->GetName();
-            //_stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << ddx;
-            _tuningLog << " " << errP << " " << errPI << " " << errD << " " << errDI;
+            // log tuning data
+            if( !!_stateLog && !!_tuningLog && _bEnableTuningLogging ) {
+                _stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << torqueAtGearboxOut;
 
-            // apply computed torque
-            vector<dReal> u(1);
-            u[0] = torqueAtGearboxOut;
-            _mobyPhysics->AddJointTorque( pjoint, u );
-
-            // update histories
-            _aggregateErrorP.at(*it) += errP;
-            _aggregateErrorD.at(*it) += errD;
-        }
-  
-        _stateLog << std::endl;
-        _tuningLog << std::endl;
-/*
-        vector<dReal> prevvalues, curvalues, curvel;
-        _probot->GetDOFValues(prevvalues);
-        curvalues = prevvalues;
-        _probot->GetDOFVelocities(curvel);
-        Vector linearvel, angularvel;
-        _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
-        int i = 0;
-        FOREACH(it,_dofindices) {
-            curvalues.at(*it) = values.at(i++);
-            curvel.at(*it) = 0;
-        }
-        _CheckLimits(prevvalues, curvalues, timeelapsed);
-        _probot->SetDOFValues(curvalues,true);
-        _probot->SetDOFVelocities(curvel,linearvel,angularvel);
-        _CheckConfiguration();
-*/
-    }
-    virtual void _SetControls(const std::vector<dReal>& desiredposition, const std::vector<dReal>& desiredvelocity, const Transform &t, dReal timeelapsed)
-    {
-        // for debugging and testing assume a single manipulator
-        RobotBase::ManipulatorPtr manip = _probot->GetManipulators()[0];
-
-        //vector<dReal> torques(_probot->GetDOF());
-        vector<dReal> position, velocity;
-        _probot->GetDOFValues(position);
-        _probot->GetDOFVelocities(velocity);
-
-        _stateLog << _mobyPhysics->GetTime();
-        _tuningLog << _mobyPhysics->GetTime();
-
-        FOREACH(it,_dofindices) {
-            double gearRatio = 1;     // assume a 1-to-1 gear ratio
-            double torqueNominal = 0;
-            double torqueStall = 0;
-
-            double torqueAtMotorOut;
-            double torqueAtGearboxOut;
-
-            // get the joint
-            KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-
-            // get the motor parameters
-            ElectricMotorActuatorInfoPtr motorInfo = pjoint->GetInfo()._infoElectricMotor;
-
-            // if the joint has motorInfo map in the local parameters
-            if( !!motorInfo ) 
-            {
-                // if the motorInfo gear_ratio is valid, override the local gearRatio
-                if(motorInfo->gear_ratio != 0) 
+                // if the component is expected to contribute (as indicated by 
+                // the presence of a gain coefficient), then record the error 
+                // in the tuning log
+                if( kP > 0 )
                 {
-                    gearRatio = motorInfo->gear_ratio;
+                    _tuningLog << " " << P_err;
                 }
-                torqueNominal = motorInfo->nominal_torque;
-                torqueStall = motorInfo->stall_torque;
+                if( kIp > 0 )
+                {
+                    _tuningLog << " " << Ip_err;
+                }
+                if( kD > 0 )
+                {
+                    _tuningLog << " " << D_err;
+                }
+                if( kId > 0 )
+                {
+                    _tuningLog << " " << Id_err;
+                }
             }
-
-            dReal kP = 0;      // position gain
-            dReal kPI = 0;     // position integral gain
-            dReal kD = 0;      // derivative (velocity) gain
-            dReal kDI = 0;     // deriviative {velocity} integral gain
-
-            if( !_GetGain((*it), "kp", kP) ) 
-            {
-                kP = 0;
-            }
-            if( !_GetGain((*it), "kpi", kPI) ) 
-            {
-                kPI = 0;
-            }
-            if( !_GetGain((*it), "kd", kD) ) 
-            {
-                kD = 0;
-            }
-            if( !_GetGain((*it), "kdi", kDI) ) 
-            {
-                kDI = 0;
-            }
-
-            // ++ Debugging
-            RAVELOG_INFO(str(boost::format("vt[%f], kP[%f], kPI[%f], kD[%f], kDI{%f}.\n") % _mobyPhysics->GetTime() % kP % kPI % kD % kDI ));
-            // --
-/*
-            // current acceleration
-            dReal ddx = 0;
-            if(!_firstStep) {
-                ddx = _accelerations.at(*it);
-            }
-*/
-            // compute error
-            // Note: P delta may wrap the unit circle interval, so correct errP if it exceeds interval.
-            dReal errP = desiredposition.at(*it) - position.at(*it);
-            errP = errP > PI ? -(2 * PI - errP) : errP;
-            errP = errP < -PI ? -(-2 * PI + errP) : errP;
-            dReal errPI = _aggregateErrorP.at(*it);
-            dReal errD = desiredvelocity.at(*it) - velocity.at(*it);
-            dReal errDI = _aggregateErrorD.at(*it);
-
-            dReal P = kP * errP;
-            dReal PI = kPI * errPI;
-            dReal D = kD * errD;
-            dReal DI = kDI * errDI;
-
-
-            //RAVELOG_INFO(str(boost::format("vt[%f], kP[%f], tPI[%f], kVP[%f], tVI{%f}.\n") % _mobyPhysics->GetTime() % kP % tPI % kVP % tVI ));
-            //RAVELOG_INFO(str(boost::format("vt[%f], errP[%f], errD[%f], errI[%f].\n") % _mobyPhysics->GetTime() % errP % errD % errI ));
-
-            torqueAtMotorOut = P + PI + D + DI;
-
-            // if the motor output torque is greater than the nominal torque is a ceiling (also nominal torque has to be set to trigger)
-            if( torqueNominal > 0 && fabs(torqueAtMotorOut) > torqueNominal ) 
-            {
-                RAVELOG_WARN(str(boost::format("Controller generated a torque greater than nominal torque for motor: joint[%s], torque[%f], nominal_torque[%f]\n") % pjoint->GetName().c_str() % torqueAtMotorOut % torqueNominal ));
-            }
-  
-            torqueAtGearboxOut = torqueAtMotorOut * gearRatio;
-
-            // log data
-            _stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << torqueAtGearboxOut;
-                string name = pjoint->GetName();
-            //_stateLog << " " << desiredposition.at(*it) << " " << position.at(*it) << " " << desiredvelocity.at(*it) << " " << velocity.at(*it) << " " << torqueAtMotorOut << " " << ddx;
-            _tuningLog << " " << errP << " " << errPI << " " << errD << " " << errDI;
 
             // apply computed torque
             vector<dReal> u(1);
@@ -839,29 +718,15 @@ private:
             _mobyPhysics->AddJointTorque( pjoint, u );
 
             // update histories
-            _aggregateErrorP.at(*it) += errP;
-            _aggregateErrorD.at(*it) += errD;
+            _aggregateErrorP.at(*it) += P_err;
+            _aggregateErrorD.at(*it) += D_err;
         }
-  
-        _stateLog << std::endl;
-        _tuningLog << std::endl;
-/*
-        BOOST_ASSERT(_nControlTransformation);
-        vector<dReal> prevvalues, curvalues, curvel;
-        _probot->GetDOFValues(prevvalues);
-        curvalues = prevvalues;
-        _probot->GetDOFVelocities(curvel);
-        int i = 0;
-        FOREACH(it,_dofindices) {
-                string name = pjoint->GetName();
-            curvalues.at(*it) = values.at(i++);
-            curvel.at(*it) = 0;
+ 
+        // close the current tuning data record
+        if( !!_stateLog && !!_tuningLog && _bEnableTuningLogging ) {
+            _stateLog << std::endl;
+            _tuningLog << std::endl;
         }
-        _CheckLimits(prevvalues, curvalues, timeelapsed);
-        _probot->SetDOFValues(curvalues,t, true);
-        _probot->SetDOFVelocities(curvel,Vector(),Vector());
-        _CheckConfiguration();
-*/
     }
 
     virtual bool _Pause(std::ostream& os, std::istream& is)
@@ -869,6 +734,7 @@ private:
         is >> _bPause;
         return !!is;
     }
+
     virtual bool _SetCheckCollisions(std::ostream& os, std::istream& is)
     {
         is >> _bCheckCollision;
@@ -877,24 +743,37 @@ private:
         }
         return !!is;
     }
+
     virtual bool _SetThrowExceptions(std::ostream& os, std::istream& is)
     {
         is >> _bThrowExceptions;
         return !!is;
     }
+
     virtual bool _SetEnableLogging(std::ostream& os, std::istream& is)
     {
         is >> _bEnableLogging;
         return !!is;
     }
 
-    inline boost::shared_ptr<MobyController> shared_controller() {
+    virtual bool _SetEnableTuningLogging(std::ostream& os, std::istream& is)
+    {
+        is >> _bEnableTuningLogging;
+        return !!is;
+    }
+
+    inline boost::shared_ptr<MobyController> shared_controller()
+    {
         return boost::dynamic_pointer_cast<MobyController>(shared_from_this());
     }
-    inline boost::shared_ptr<MobyController const> shared_controller_const() const {
+
+    inline boost::shared_ptr<MobyController const> shared_controller_const() const
+    {
         return boost::dynamic_pointer_cast<MobyController const>(shared_from_this());
     }
-    inline boost::weak_ptr<MobyController> weak_controller() {
+
+    inline boost::weak_ptr<MobyController> weak_controller()
+    {
         return shared_controller();
     }
 
@@ -998,66 +877,35 @@ private:
         }
     }
 
-    void _LogJointAccelerations(dReal dt)
-    {
-        bool echo = false;
+    /// locates a gain value within the set of gains
+    /// @param[in] dof the joint index of the desired gain
+    /// @param[in] id the identifier of the desired gain set
+    /// @param[out] value the gain value for the specified dof and id 
+    /// @return true if a gain value was located with the specified dof
+    ///         and id OR false if the gain value was not located
+    bool _GetGain(int dof, string id, dReal& value) {
+        // initialize the gain value
+        value = 0;
 
-        vector<dReal> velocities;
-        // allocate a vector for accelerations
-        _accelerations.resize(_probot->GetDOF()); memset(&_accelerations[0], 0, _accelerations.size()*sizeof(dReal));
-
-        // read velocities(i) for all joints
-        _probot->GetDOFVelocities(velocities);
-
-        // if there has been a preceding step, read velocity(i-1) and compute accelerations
-        if(!_firstStep)
-        {        
-            if(echo) 
-            {
-                std::cout << "accelerations{ ";
-            }
-
-            // compute accelerations and output if desired
-            FOREACH(it,_dofindices)
-            {
-                _accelerations[*it] = (velocities[*it] - _prevVelocities[*it]) / dt;
-
-                if(echo) 
-                {
-                    if(*it) 
-                        std::cout << ", ";
-                    std::cout << *it << ":" << _accelerations[*it];
-                }
-            }
-
-            if(echo) 
-            {
-                std::cout << "}" << std::endl;
-            }
-        }
-
-        // store velocities(i) for next step usage as velocities(i-1)
-        FOREACH(it,_dofindices)
-        {
-            _prevVelocities[*it] = velocities[*it];
-        }
-    }
-
-    bool _GetGain(int dofIndex, string gainid, dReal& gainval) {
+        // locate the gain set by id
         map<string, vector<dReal> >::iterator git;
-        git = _mapGains.find( gainid );
+        git = _mapGains.find( id );
         if( git == _mapGains.end() )
         {
+            // the requested gain set does not exist in the gain map
             return false;
         }
 
-        if( dofIndex < 0 || ((unsigned)dofIndex) >= git->second.size() )
+        if( dof < 0 || ((unsigned)dof) >= git->second.size() )
         {
+            // the requested dof does not have a value for this gain set
             return false;
         }
 
-        gainval = git->second[dofIndex];
+        // otherwise a gain was located so update the gain value
+        value = git->second[dof];
  
+        // and indicate success
         return true;
     }
 
@@ -1096,18 +944,19 @@ private:
     boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
     boost::mutex _mutex;
 
-    vector<dReal> _aggregateErrorP;
-    vector<dReal> _aggregateErrorD;
+    vector<dReal> _aggregateErrorP;     //< PI history
+    vector<dReal> _aggregateErrorD;     //< DI history
 
     EnvironmentBasePtr _penv;
 
-    bool _firstStep;
-    boost::shared_ptr<MobyPhysicsEngine> _mobyPhysics;
-    std::vector<dReal> _prevVelocities;
-    vector<dReal> _accelerations;
+    boost::shared_ptr<MobyPhysics> _mobyPhysics;
 
+    bool _bEnableTuningLogging;
     std::ofstream _tuningLog;
     std::ofstream _stateLog;
+
+    bool _bSteadyState;
+    std::vector<dReal> _vecsteady;
 
     // templated comparator for comparing the value of two shared pointers
     // used predominantly to ensure maps keyed on shared pointers are hashed properly

@@ -19,9 +19,9 @@
 using namespace OpenRAVE;
 
 // create moby physics shared pointer
-PhysicsEngineBasePtr CreateMobyPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
+PhysicsEngineBasePtr CreateMobyPhysics(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PhysicsEngineBasePtr(new MobyPhysicsEngine(penv,sinput));
+    return PhysicsEngineBasePtr(new MobyPhysics(penv,sinput));
 }
 
 static std::list< OpenRAVE::UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object
@@ -31,7 +31,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
     if( !s_listRegisteredReaders ) {
         s_listRegisteredReaders = new list< OpenRAVE::UserDataPtr >();
-        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"mobyphysics",MobyPhysicsEngine::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"mobyphysics",MobyPhysics::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_Controller,"mobycontroller",MobyController::CreateXMLReader));
     }
 
@@ -39,7 +39,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     case PT_PhysicsEngine:
         if( interfacename == "moby" ) 
         {
-            return CreateMobyPhysicsEngine(penv,sinput);
+            return CreateMobyPhysics(penv,sinput);
         }
         break;
     case OpenRAVE::PT_Controller:

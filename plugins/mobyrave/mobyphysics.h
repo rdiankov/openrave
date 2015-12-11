@@ -23,21 +23,21 @@
 #include <Moby/EulerIntegrator.h>
 #include <Moby/GravityForce.h>
 
-class MobyPhysicsEngine : public PhysicsEngineBase
+class MobyPhysics : public PhysicsEngineBase
 {
 
-    inline boost::shared_ptr<MobyPhysicsEngine> shared_physics() {
-        return boost::dynamic_pointer_cast<MobyPhysicsEngine>(shared_from_this());
+    inline boost::shared_ptr<MobyPhysics> shared_physics() {
+        return boost::dynamic_pointer_cast<MobyPhysics>(shared_from_this());
     }
 
-    inline boost::shared_ptr<MobyPhysicsEngine const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<MobyPhysicsEngine const>(shared_from_this());
+    inline boost::shared_ptr<MobyPhysics const> shared_physics_const() const {
+        return boost::dynamic_pointer_cast<MobyPhysics const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
     {
     public:
-        PhysicsPropertiesXMLReader(boost::shared_ptr<MobyPhysicsEngine> physics, const AttributesList& atts) : _physics(physics) {
+        PhysicsPropertiesXMLReader(boost::shared_ptr<MobyPhysics> physics, const AttributesList& atts) : _physics(physics) {
         }
 
         string robot_id;
@@ -109,7 +109,7 @@ class MobyPhysicsEngine : public PhysicsEngineBase
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        boost::shared_ptr<MobyPhysicsEngine> _physics;
+        boost::shared_ptr<MobyPhysics> _physics;
         stringstream _ss;
     };
 
@@ -117,10 +117,10 @@ public:
 
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<MobyPhysicsEngine>(ptr),atts));
+    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<MobyPhysics>(ptr),atts));
     }
 
-    MobyPhysicsEngine(EnvironmentBasePtr penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
+    MobyPhysics(EnvironmentBasePtr penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
     {
 	stringstream ss;
 	__description = ":Interface Authors: James Taylor and Rosen Diankov\n\nInterface to `Moby Physics Engine <https://github.com/PositronicsLab/Moby/>`_\n";
@@ -132,7 +132,7 @@ public:
         RAVELOG_INFO( "processed xml\n" );
     }
 
-    virtual ~MobyPhysicsEngine() 
+    virtual ~MobyPhysics() 
     {
 
     }
@@ -140,7 +140,7 @@ public:
     virtual bool InitEnvironment()
     {
         RAVELOG_INFO( "init Moby physics environment\n" );
-        _space->SetSynchronizationCallback(boost::bind(&MobyPhysicsEngine::_SyncCallback, shared_physics(),_1));
+        _space->SetSynchronizationCallback(boost::bind(&MobyPhysics::_SyncCallback, shared_physics(),_1));
 
         // +basic simulator
         //_sim.reset(new Moby::Simulator());
