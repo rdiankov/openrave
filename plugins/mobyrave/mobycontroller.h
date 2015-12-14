@@ -56,7 +56,7 @@ class MobyController : public ControllerBase
             {
                 return true;
             }
-            else if( name == "kp" || name == "kpi" || name == "kd" || name == "kdi" ) 
+            else if( name == "kp" || name == "kip" || name == "kd" || name == "kid" || name == "kp_factor" || name == "kip_factor" || name == "kd_factor" || name == "kid_factor" ) 
             {
                 // reads an arbitrary number of values out of the stream
                 std::vector<dReal> vals;
@@ -95,9 +95,9 @@ class MobyController : public ControllerBase
             }
         }
 
-        static const boost::array<string, 5>& GetTags() 
+        static const boost::array<string, 9>& GetTags() 
         {
-            static const boost::array<string, 5> tags = {{"gains","kp","kpi","kd","kdi"}};
+            static const boost::array<string, 9> tags = {{"gains","kp","kip","kd","kid","kp_factor","kip_factor","kd_factor","kid_factor"}};
                 return tags;
         }
 
@@ -630,6 +630,7 @@ private:
             double torqueAtMotorOut;   // torque generated at the motor output shaft
             double torqueAtGearboxOut; // torque generated at the gearbox output shaft
             dReal kP, kIp, kD, kId;    // gain coefficients
+            dReal kP_factor, kIp_factor, kD_factor, kId_factor;    // gain coefficients scaling factors
 
             // get the joint
             KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
@@ -652,10 +653,25 @@ private:
             // a gain is set to zero if the gain is not found in the gain data
             // which subsequently zeros that component's error in the control signal
             _GetGain((*it), "kp", kP);
-            _GetGain((*it), "kpi", kIp);
+            _GetGain((*it), "kip", kIp);
             _GetGain((*it), "kd", kD);
-            _GetGain((*it), "kdi", kId);
+            _GetGain((*it), "kid", kId);
             
+            // a gain factor is a scaling value for the gain itself.
+            // if no factor exists for the gain then assume a value of one
+            if( !_GetGain((*it), "kp_factor", kP_factor) ) {
+                kP_factor = 1;
+            }
+            if( !_GetGain((*it), "kip_factor", kIp_factor) ) {
+                kIp_factor = 1;
+            }
+            if( !_GetGain((*it), "kd_factor", kD_factor) ) {
+                kD_factor = 1;
+            }
+            if( !_GetGain((*it), "kid_factor", kId_factor) ) {
+                kId_factor = 1;
+            }
+
             // compute component error
             // Note: delta P may wrap the unit circle interval, 
             //       so correct P_err if it exceeds interval.
@@ -666,14 +682,27 @@ private:
             dReal D_err = desiredvelocity.at(*it) - velocity.at(*it);
             dReal Id_err = _aggregateErrorD.at(*it);
 
-            // compute the amplified component
-            dReal P = kP * P_err;
-            dReal Ip = kIp * Ip_err;
-            dReal D = kD * D_err;
-            dReal Id = kId * Id_err;
+            // The motor command torque is computed piecewise as there 
+            // may be filtering at different stages of the computation
+            dReal positional_component, derivative_component;
 
             // compute the motor command
-            torqueAtMotorOut = P + Ip + D + Id;
+
+            // compute the positional component
+            // Note: filtering may be applied to any of these operations
+            // Note: coefficients determine whether a component contributes
+            dReal P = kP * kP_factor * P_err;
+            dReal Ip = kIp * kIp_factor * Ip_err;
+            positional_component = P + Ip;
+            torqueAtMotorOut = positional_component;
+
+            // compute the derivative component
+            // Note: filtering may be applied to any of these operations
+            // Note: coefficients determine whether a component contributes
+            dReal D = kD * kD_factor * D_err;
+            dReal Id = kId * kId_factor * Id_err;
+            derivative_component = D + Id;
+            torqueAtMotorOut += derivative_component;
 
             // warn if the motor output torque is greater than stall or nominal torque
             if( !_bSteadyState && torqueStall > 0 && fabs(torqueAtMotorOut) > torqueStall ) 
