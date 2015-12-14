@@ -2177,7 +2177,8 @@ class IKFastSolver(AutoReloader):
             self.rxp.append([Symbol('rxp%d_%d'%(i,j)) for j in range(3)])
             c = self.Tee[0:3,i].cross(self.Tee[0:3,3])
             self.rxpsubs += [(self.rxp[-1][j],c[j]) for j in range(3)]
-        self.pvars = self.Tee[0:12]+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2]
+        # have to include new_rXX
+        self.pvars = self.Tee[0:12]+self.npxyz+[self.pp]+self.rxp[0]+self.rxp[1]+self.rxp[2] + [Symbol('new_r00'), Symbol('new_r01'), Symbol('new_r02'), Symbol('new_r10'), Symbol('new_r11'), Symbol('new_r12'), Symbol('new_r20'), Symbol('new_r21'), Symbol('new_r22')]
         self._rotsymbols = list(self.Tee[0:3,0:3])
         # add positions
         ip = 9
@@ -6459,7 +6460,7 @@ class IKFastSolver(AutoReloader):
                 otherSubstitutions.append((var,value))
         NewEquations = []
         for ieq, eq in enumerate(AllEquations):
-            if eq.has(*unknownvars):
+            if 1:#not eq.has(*unknownvars):
                 neweq = eq.subs(numberSubstitutions).expand()
                 if neweq != S.Zero:
                     # don't expand here since otherSubstitutions could make it very complicated
@@ -6515,9 +6516,6 @@ class IKFastSolver(AutoReloader):
                 except self.CannotSolveError:
                     pass
 
-#         if len(curvars) == 2:
-#             from IPython.terminal import embed;ipshell = embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
-        
         # only return here if a solution was found that perfectly determines the unknown
         # otherwise, the pairwise solver could come up with something..
         # There is still a problem with this: (bertold robot)
@@ -6549,9 +6547,13 @@ class IKFastSolver(AutoReloader):
             dummyvar = Symbol('dummy')
             dummyvalue = var0 + var1
             NewEquations = []
+            NewEquationsAll = []
             hasExtraConstraints = False
             for eq in raweqns:
                 neweq = self.trigsimp(eq.subs(var0,dummyvar-var1).expand(trig=True),curvars)
+                eq = neweq.subs(self.freevarsubs+solsubs)
+                if self.CheckExpressionUnique(NewEquationsAll,eq):
+                    NewEquationsAll.append(eq)
                 if neweq.has(dummyvar):
                     if neweq.has(*(othervars+curvars)):
                         hasExtraConstraints = True
@@ -6562,10 +6564,15 @@ class IKFastSolver(AutoReloader):
                             NewEquations.append(eq)
             if len(NewEquations) < 2 and hasExtraConstraints:
                 # try subtracting
+                NewEquations = []
+                NewEquationsAll = []
                 hasExtraConstraints = False
                 dummyvalue = var0 - var1
                 for eq in raweqns:
-                    neweq = self.trigsimp(eq.subs(var0,dummyvar-var1).expand(trig=True),curvars)
+                    neweq = self.trigsimp(eq.subs(var0,dummyvar+var1).expand(trig=True),curvars)
+                    eq = neweq.subs(self.freevarsubs+solsubs)
+                    if self.CheckExpressionUnique(NewEquationsAll,eq):
+                        NewEquationsAll.append(eq)
                     if neweq.has(dummyvar):
                         if neweq.has(*(othervars+curvars)):
                             hasExtraConstraints = True
@@ -6573,8 +6580,8 @@ class IKFastSolver(AutoReloader):
                         else:
                             eq = neweq.subs(self.freevarsubs+solsubs)
                             if self.CheckExpressionUnique(NewEquations,eq):
-                                NewEquations.append(eq)
-            if len(NewEquations) >= 2 and not hasExtraConstraints: # TODO need to check for hasExtraConstraints?
+                                NewEquations.append(eq)                
+            if len(NewEquations) >= 2:
                 dummysolutions = []
                 try:
                     rawsolutions=self.solveSingleVariable(NewEquations,dummyvar,othersolvedvars, unknownvars=curvars+unknownvars)
@@ -6588,17 +6595,37 @@ class IKFastSolver(AutoReloader):
                     log.info('found two aligning axes %s: %r',dummyvalue, NewEquations)
                     solutions = []
                     for dummysolution in dummysolutions:
+                        if dummysolution.numsolutions() != 1:
+                            continue
                         if dummysolution.jointevalsin is not None or dummysolution.jointevalcos is not None:
                             log.warn('dummy solution should not have sin/cos parts!')
-                        solution=AST.SolverSolution(curvars[0].name, isHinge=self.IsHinge(curvars[0].name))
-                        solution.jointeval = [dummysolution.jointeval[0] - dummyvalue + curvars[0]]
-                        self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
-                        solutions.append((solution,curvars[0]))
-                    tree = self.AddSolution(solutions,raweqns,curvars[0:1],othersolvedvars+curvars[1:2],solsubs+self.Variable(curvars[1]).subs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
-                    if tree is None:
-                        return None
-                    
-                    return [AST.SolverFreeParameter(curvars[1].name, tree)]
+
+                        sindummyvarsols = []
+                        cosdummyvarsols = []
+                        for eq in NewEquations:
+                            sols = solve(eq, sin(dummyvar))
+                            sindummyvarsols += sols
+                            sols = solve(eq, cos(dummyvar))
+                            cosdummyvarsols += sols
+                        
+                        # double check with NewEquationsAll that everything evluates to 0
+                        newsubs = [(value, sin(dummyvar)) for value in sindummyvarsols] + [(value, cos(dummyvar)) for value in cosdummyvarsols] + [(-value, -sin(dummyvar)) for value in sindummyvarsols] + [(-value, -cos(dummyvar)) for value in cosdummyvarsols]
+                        allzeros = True
+                        for eq in NewEquationsAll:
+                            if trigsimp(eq.subs(newsubs)) != S.Zero:
+                                allzeros = False
+                                break
+                        if allzeros:
+                            solution=AST.SolverSolution(curvars[0].name, isHinge=self.IsHinge(curvars[0].name))
+                            solution.jointeval = [dummysolution.jointeval[0] - dummyvalue + curvars[0]]
+                            self.ComputeSolutionComplexity(solution,othersolvedvars,curvars)
+                            solutions.append((solution,curvars[0]))
+                        else:
+                            log.warn('not all equations zero, so %s vars are not collinear', curvars)
+                    if len(solutions) > 0:
+                        tree = self.AddSolution(solutions,raweqns,curvars[0:1],othersolvedvars+curvars[1:2],solsubs+self.Variable(curvars[1]).subs,endbranchtree,currentcases=currentcases, currentcasesubs=currentcasesubs, unknownvars=unknownvars)
+                        if tree is not None:
+                            return [AST.SolverFreeParameter(curvars[1].name, tree)]
                 else:
                     log.warn('almost found two axes but num solutions was: %r', [s.numsolutions()==1 for s in dummysolutions])
                     
@@ -7266,11 +7293,13 @@ class IKFastSolver(AutoReloader):
                         extrazerochecks=None
                         break
                     if not expr.has(*allvars) and self.CheckExpressionUnique(extrazerochecks,expr):
-                        extrazerochecks.append(expr.subs(solsubs).evalf(n=30))
+                        if expr.is_Symbol:
+                            # can set that symbol to zero and create a new set of equations!
+                            extrazerochecks.append(expr.subs(solsubs).evalf(n=30))
                 if extrazerochecks is not None:
                     newcases = set(currentcases)
                     for singlecond in cond:
-                        newcases.add(singlecond)
+                        newcases.add(singlecond)                            
                     if not self.degeneratecases.CheckCases(newcases):
                         log.info('depth=%d, c=%d, iter=%d/%d, starting newcases: %r', len(currentcases), scopecounter, iflatzerosubstitutioneqs, len(flatzerosubstitutioneqs), newcases)
                         if len(NewEquationsClean) > 0:
