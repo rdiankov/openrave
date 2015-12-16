@@ -1520,6 +1520,8 @@ public:
             ostate["uri"] = ConvertStringToUnicode(itstate->uri);
             ostate["updatestamp"] = itstate->updatestamp;
             ostate["environmentid"] = itstate->environmentid;
+            ostate["activeManipulatorName"] = itstate->activeManipulatorName;
+            ostate["activeManipulatorTransform"] = ReturnTransform(itstate->activeManipulatorTransform);
             ostates.append(ostate);
         }
         return ostates;

@@ -1808,6 +1808,16 @@ public:
             state.uri = (*itbody)->GetURI();
             state.updatestamp = (*itbody)->GetUpdateStamp();
             state.environmentid = (*itbody)->GetEnvironmentId();
+            if( (*itbody)->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(*itbody);
+                if( !!probot ) {
+                    RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
+                    if( !!pmanip ) {
+                        state.activeManipulatorName = pmanip->GetName();
+                        state.activeManipulatorTransform = pmanip->GetTransform();
+                    }
+                }
+            }
             _vPublishedBodies.push_back(state);
         }
     }
