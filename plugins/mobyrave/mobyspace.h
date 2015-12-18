@@ -115,13 +115,20 @@ private:
         _world.reset();
     }
 
-    inline boost::shared_ptr<KinBodyInfo::LINK> DeriveLink(KinBodyInfoPtr pinfo, boost::shared_ptr<KinBody::Link> plink) {
+    inline boost::shared_ptr<KinBodyInfo::LINK> DeriveLink(boost::shared_ptr<KinBody::Link> plink) {
 
-        boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+        boost::shared_ptr<KinBodyInfo::LINK> link;
+        link = boost::shared_ptr<KinBodyInfo::LINK>(new KinBodyInfo::LINK());
+        std::cout << "processing link[" << plink->GetName() << "], mass[" << plink->GetMass() << "]"<< std::endl; 
+        if(plink->GetMass() < 1e-12)
+        {
+            std::cout << "link " << plink->GetName() << " has no effective mass. mass=" << plink->GetMass() << std::endl; 
+            //return link;
+            link->set_kinematic(true);
+        } 
 
         // add the link reference to all relevant containers               
         link->plink = plink;               // ref back to OpenRave link
-        pinfo->vlinks.push_back(link);     // ref for link indexing 
 
         // compute a box to approximate link inertial properties
         AABB bb = plink->ComputeLocalAABB();
@@ -209,6 +216,7 @@ private:
             }
             case KinBody::JointSlider: 
             {
+/*
                 // map a Moby prismatic joint
                 boost::shared_ptr<Moby::PrismaticJoint> sjoint(new Moby::PrismaticJoint);
                 sjoint->id = pjoint->GetName();
@@ -237,7 +245,7 @@ private:
  
                 // convert the prismatic reference to a generalized joint
                 joint = sjoint;
-
+*/
                 break;
             }
             case KinBody::JointSpherical: 
@@ -276,9 +284,9 @@ private:
         it.first->second.reserve(1);
 
         return joint;
-    } 
+    }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), double fmargin=0.0005) 
+    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), double fmargin=0.0005)
     {
 	vector<dReal> vzeros(pbody->GetDOF(), 0);
 	pbody->SetDOFValues(vzeros);
@@ -290,7 +298,8 @@ private:
         pinfo->Reset();
         pinfo->pbody = pbody;
         pinfo->_mobyspace = weak_space();
-        pinfo->vlinks.reserve(pbody->GetLinks().size());
+
+        // Note: need to deal with purely collision hull bodies
 
         if(pbody->GetLinks().size() == 1) 
         {
@@ -298,8 +307,18 @@ private:
             boost::shared_ptr<KinBody::Link> plink = pbody->GetLinks()[0];
 
             // initialize the Moby compatible link by deriving from the OpenRave link
-            boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(pinfo, plink);
+            boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(plink);
+
+            // if the link failed to be derived (most likely due to being just a collision hull) don't add it
+            if(!link)
+            {
+                std::cout << "failed to process link[" << plink->GetName() << "]"<< std::endl; 
+                return pinfo;
+            }
                             
+            pinfo->vlinks.reserve(pbody->GetLinks().size());
+            pinfo->vlinks.push_back(link);     // ref for link indexing 
+
             // register the controller callback; necessary for writing state and controls
             link->register_controller_callback( boost::bind( &MobySpace::_Controller,shared_from_this(),_1,_2,_3) );
 
@@ -326,6 +345,7 @@ private:
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetJoints().begin(),pbody->GetJoints().end());
             vbodyjoints.insert(vbodyjoints.end(),pbody->GetPassiveJoints().begin(),pbody->GetPassiveJoints().end());
             vector<Moby::JointPtr> mojoints;      // for adding the joints to the articulated body
+            vector<boost::shared_ptr<KinBodyInfo::LINK> > veclinks;
             mojoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
 
             // iterate over the set of links in the OpenRave environment
@@ -333,7 +353,14 @@ private:
             FOREACHC(itlink, pbody->GetLinks()) 
             {
                 // initialize the Moby compatible link by deriving from the OpenRave link
-                boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(pinfo, *itlink);
+                boost::shared_ptr<KinBodyInfo::LINK> link = DeriveLink(*itlink);
+
+                // if the link failed to be derived (most likely due to being just a collision hull) don't add it
+                if(!link)
+                {
+                    std::cout << "failed to process link[" << (*itlink)->GetName() << "]"<< std::endl; 
+                    continue;
+                }
 
                 // if a static link opt for a fixed based for the whole kinematic chain
                 if( (*itlink)->IsStatic() ) {
@@ -342,8 +369,16 @@ private:
 
                 // add the link to the set used to initialize the Moby articulated body
                 molinks.push_back(link);
+                veclinks.push_back(link);
             }
     
+            pinfo->vlinks.reserve(veclinks.size());
+
+            FOREACH(itlink, veclinks) 
+            { 
+                pinfo->vlinks.push_back(*itlink);     // ref for link indexing 
+            }
+
             // iterate over the set of joints in the OpenRave environment
             // create a joint for each and insert them into the Moby articulated body
             FOREACH(itjoint, vbodyjoints) 
@@ -354,6 +389,7 @@ private:
                 // if the initialization failed, move on to next joint 
                 if( !joint ) 
                 {
+                    std::cout << "failed to process joint[" << (*itjoint)->GetName() << "]"<< std::endl; 
                     continue;
                 } 
 

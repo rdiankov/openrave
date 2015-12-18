@@ -15,6 +15,7 @@
 
 #include "mobyphysics.h"
 #include "mobycontroller.h"
+#include "mobyreplaycontroller.h"
 
 using namespace OpenRAVE;
 
@@ -33,6 +34,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         s_listRegisteredReaders = new list< OpenRAVE::UserDataPtr >();
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"mobyphysics",MobyPhysics::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_Controller,"mobycontroller",MobyController::CreateXMLReader));
+        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_Controller,"mobyreplaycontroller",MobyReplayController::CreateXMLReader));
     }
 
     switch( type ) {
@@ -46,6 +48,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         if( interfacename == "moby") {
             return InterfaceBasePtr(new MobyController(penv,sinput));
         }
+        else if( interfacename == "mobyreplay") {
+            return InterfaceBasePtr(new MobyReplayController(penv,sinput));
+        }
         break;
     default:
         break;
@@ -58,7 +63,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 {
     info.interfacenames[PT_PhysicsEngine].push_back("moby");
     info.interfacenames[OpenRAVE::PT_Controller].push_back("moby");
-    
+    info.interfacenames[OpenRAVE::PT_Controller].push_back("mobyreplay"); 
 }
 
 // called before plugin is terminated
