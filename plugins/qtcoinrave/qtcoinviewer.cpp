@@ -204,6 +204,7 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     _bLockEnvironment = true;
     _pToggleDebug = NULL;
     _pSelectedCollisionChecker = NULL;
+    _pToggleSelfCollision = NULL;
     _pSelectedPhysicsEngine = NULL;
     _pToggleSimulation = NULL;
     _bInIdleThread = false;
