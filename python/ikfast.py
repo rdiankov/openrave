@@ -1432,13 +1432,15 @@ class IKFastSolver(AutoReloader):
         """
         if axisAngleFromRotationMatrix is not None:
             Teval = T.evalf()
-            axisangle = axisAngleFromRotationMatrix([[Teval[0,0], Teval[0,1], Teval[0,2]], [Teval[1,0], Teval[1,1], Teval[1,2]], [Teval[2,0], Teval[2,1], Teval[2,2]]])
-            angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
-            axisangle /= angle
+            axisangle = axisAngleFromRotationMatrix([[Teval[0,0], Teval[0,1], Teval[0,2]], 
+                                                     [Teval[1,0], Teval[1,1], Teval[1,2]], 
+                                                     [Teval[2,0], Teval[2,1], Teval[2,2]]])
+            angle = sqrt(axisangle[0]**2 + axisangle[1]**2 + axisangle[2]**2)
             if abs(angle) < 10**(-self.precision):
                 # rotation is identity
                 M = eye(4)
             else:
+                axisangle /= angle
                 log.debug('rotation angle: %f, axis=[%f,%f,%f]', (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
                 accurateaxisangle = Matrix(3,1,[self.convertRealToRational(x,self.precision-3) for x in axisangle])
                 accurateaxisangle = accurateaxisangle/accurateaxisangle.norm()

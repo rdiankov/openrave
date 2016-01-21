@@ -332,18 +332,31 @@ class InverseKinematicsModel(DatabaseGenerator):
         freeinc is a list of the delta increments of the freejoint values that can override the default values.
         """
         if freeinc is not None:
-            self.freeinc=freeinc
-        if self.freeinc is not None:
-            try:
-                iksuffix = ' ' + ' '.join(str(f) for f in self.freeinc)
-            except TypeError:
-                # possibly just a float
-                iksuffix = ' %f'%self.freeinc
-        else:
-            iksuffix = ' ' + ' '.join(str(f) for f in self.getDefaultFreeIncrements(0.1, 0.01))
-#         if self.manip.GetIkSolver() is not None:
-#             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
+            if not hasattr(freeinc, '__iter__'):
+                # user passed in a single value, use for all free axes
+                print "using value '%f' for all free joints" % freeinc
+                log.warn("using value '%f' for all free joints" % freeinc)
+                self.freeinc = [freeinc] * len(self.freeindices)
+            elif len(freeinc) != len(self.freeindices):
+                print "free joint increment length missmatch"
+                log.warn("free joint increment length missmatch")
+                self.freeinc = list(freeinc) * len(self.freeindices)
+            else:
+                self.freeinc=freeinc
+
         if self.iksolver is None:
+
+            if self.freeinc is not None:
+                try:
+                    iksuffix = ' ' + ' '.join(str(f) for f in self.freeinc)
+                except TypeError:
+                    # possibly just a float
+                    iksuffix = ' %f'%self.freeinc
+            else:
+                iksuffix = ' ' + ' '.join(str(f) for f in self.getDefaultFreeIncrements(0.1, 0.01))
+    #         if self.manip.GetIkSolver() is not None:
+    #             self.iksolver = RaveCreateIkSolver(self.env,self.manip.GetIKSolverName()+iksuffix)
+        
             with self.env:
                 ikname = self.getikname()
                 iktype = self.ikfastproblem.SendCommand('AddIkLibrary %s %s'%(ikname.split()[1],self.getfilename(True)))
@@ -360,13 +373,13 @@ class InverseKinematicsModel(DatabaseGenerator):
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             success = self.manip.SetIKSolver(self.iksolver)
             if success and self.manip.GetIkSolver() is not None and self.freeinc is not None:
-                freeincvalue = 0.01
-                try:
-                    if len(self.freeinc) > 0:
-                        freeincvalue = self.freeinc[0]
-                except TypeError:
-                    freeincvalue = float(self.freeinc)
-                self.manip.GetIkSolver().SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8))
+                cmd_string = 'SetDefaultIncrements'
+                for fi in range(len(self.freeindices)):
+                    try:
+                        cmd_string += ' %f 100 %f 10' % (self.freeinc[fi], pi/8)
+                    except:
+                        cmd_string += ' %f 100 %f 10' % (0.01, pi/8)
+                self.manip.GetIkSolver().SendCommand(cmd_string)
             return success
         return self.has()
     
@@ -1045,7 +1058,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         parser.add_option('--freeinc', action='append', type='float', dest='freeinc',default=None,
                           help='The discretization value of freejoints.')
         parser.add_option('--numiktests','--iktests',action='store',type='string',dest='iktests',default=None,
-                          help='Will test the ik solver and return the success rate. IKTESTS can be an integer to specify number of random tests, it can also be a filename to specify the joint values of the manipulator to test. The formst of the filename is #numiktests [dof values]*')
+                          help='Will test the ik solver and return the success rate. IKTESTS can be an integer to specify number of random tests, it can also be a filename to specify the joint values of the manipulator to test. The format of the filename is #numiktests [dof values]*')
         parser.add_option('--iktestjthresh',action='store',type='float',dest='iktestjthresh',default=None,
                           help='When testing configurations, the eigenvalues of the jacobian all have to be greater than this value')
         parser.add_option('--perftiming', action='store',type='int',dest='perftiming',default=None,
