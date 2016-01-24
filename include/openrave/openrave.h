@@ -91,6 +91,12 @@
 #define RAVE_DEPRECATED
 #endif
 
+#ifndef _WIN32
+#if OPENRAVE_LOG4CPP
+#include <log4cpp/Category.hh>
+#endif
+#endif
+
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
 
@@ -431,6 +437,157 @@ DefineRavePrintfA(_INFOLEVEL)
 
 #else
 
+#if OPENRAVE_LOG4CPP
+
+LOG4CPP_LOGGER("openrave")
+
+#define OPENRAVE_LOG4CPP_FATALLEVEL LOG4CPP_FATAL
+#define OPENRAVE_LOG4CPP_ERRORLEVEL LOG4CPP_ERROR
+#define OPENRAVE_LOG4CPP_WARNLEVEL LOG4CPP_WARN
+#define OPENRAVE_LOG4CPP_INFOLEVEL LOG4CPP_INFO
+#define OPENRAVE_LOG4CPP_DEBUGLEVEL LOG4CPP_DEBUG
+#define OPENRAVE_LOG4CPP_VERBOSELEVEL LOG4CPP_DEBUG
+
+#define DefineRavePrintfW(LEVEL) \
+    inline int RavePrintfW ## LEVEL(const wchar_t *wfmt, ...) \
+    { \
+        va_list list; \
+        wchar_t wbuf[512]; /* wide char buffer to hold vswprintf result */\
+        wchar_t* ws = &wbuf[0]; \
+        wchar_t* wsallocated = NULL; /* allocated wide char buffer */\
+        int wslen = 0; /* allocated wide char buffer length (character count) */ \
+        int wr = 0; \
+        char buf[512]; /* multi byte char buffer to hold wcstombs result */\
+        char *s = &buf[0]; \
+        char *sallocated = NULL; /* allocated multi byte char buffer */ \
+        size_t slen = 0; /* allocated multi byte char buffer length */ \
+        size_t r = 0; \
+        \
+        va_start(list, wfmt); \
+        wr = vswprintf(wbuf, sizeof(wbuf)/sizeof(wchar_t), wfmt, list); \
+        if (wr >= (int)(sizeof(wbuf)/sizeof(wchar_t))) { \
+            wslen = wr + 1; /* allocate enough buffer to hold the result */\
+            wsallocated = (wchar_t*)malloc(wslen*sizeof(wchar_t)); \
+            ws = wsallocated; \
+            wr = vswprintf(ws, wslen, wfmt, list); \
+            if (wr >= wslen) { \
+                /* if vswprintf fails again, we cannot continue */ \
+                wr = -1; \
+            } \
+        } \
+        if (wr >= 0) { \
+            r = wcstombs(buf, ws, sizeof(buf)/sizeof(char)); \
+            /* wcstombs returns (size_t)-1 when conversion is not possible */ \
+            /* otherwise, it returns the number of char excluding null-terminator */ \
+            if (r != (size_t)-1 && r >= sizeof(buf)) { \
+                slen = r+1; \
+                sallocated = (char*)malloc(slen*sizeof(char)); \
+                s = sallocated; \
+                r = wcstombs(s, ws, slen); \
+                if (r >= slen) { \
+                    /* if wcstombs fails again, we cannot continue */ \
+                    r = (size_t)-1; \
+                } \
+            } \
+            if (r != (size_t)-1) { \
+                /* get rid of the trailing \n if presnet */ \
+                if (r > 0 && s[r-1] == '\n') { \
+                    s[r-1] = '\0'; \
+                } \
+                OPENRAVE_LOG4CPP ## LEVEL(logger, s); \
+            } \
+        } \
+        va_end(list); \
+        if (wsallocated != NULL) { \
+            free(wsallocated); \
+            wsallocated = NULL; \
+        } \
+        if (sallocated != NULL) { \
+            free(sallocated); \
+            sallocated = NULL; \
+        } \
+        return wr; \
+    }
+
+#define DefineRavePrintfA(LEVEL) \
+    inline int RavePrintfA ## LEVEL(const std::string& s) \
+    { \
+        if (s.size() > 0 && s[s.size()-1] == '\n') { \
+            std::string s1(s, 0, s.size()-1); \
+            OPENRAVE_LOG4CPP ## LEVEL(logger, s1); \
+        } else { \
+            OPENRAVE_LOG4CPP ## LEVEL(logger, s); \
+        } \
+        return s.size(); \
+    } \
+    \
+    inline int RavePrintfA ## LEVEL(const char *fmt, ...) \
+    { \
+        va_list list; \
+        char buf[512]; \
+        char* s = &buf[0]; \
+        char* sallocated = NULL; \
+        int slen = 0; \
+        int r = 0; \
+        va_start(list,fmt); \
+        r = vsnprintf(buf, sizeof(buf)/sizeof(char), fmt, list); \
+        if (r >= (int)(sizeof(buf)/sizeof(char))) { \
+            slen = r+1; \
+            sallocated = (char*)malloc(slen*sizeof(char)); \
+            s = sallocated; \
+            r = vsnprintf(s, r+1, fmt, list); \
+            if (r >= slen) { \
+                r = -1; \
+            } \
+        } \
+        if (r >= 0) { \
+            /* get rid of the trailing \n if presnet */ \
+            if (r > 0 && s[r-1] == '\n') { \
+                s[r-1] = '\0'; \
+            } \
+            OPENRAVE_LOG4CPP ## LEVEL(logger, s); \
+        } \
+        va_end(list); \
+        if (sallocated != NULL) { \
+            free(sallocated); \
+            sallocated = NULL; \
+        } \
+        return r; \
+    } \
+
+DefineRavePrintfW(_INFOLEVEL)
+DefineRavePrintfA(_INFOLEVEL)
+
+inline int RavePrintfA(const std::string& s, uint32_t level)
+{
+    if( (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=level ) {
+        if (s.size() > 0 && s[s.size()-1] == '\n') {
+            std::string s1(s, 0, s.size()-1);
+            switch(level) {
+            case Level_Fatal: LOG4CPP_FATAL(logger, s1); break;
+            case Level_Error: LOG4CPP_ERROR(logger, s1); break;
+            case Level_Warn: LOG4CPP_WARN(logger, s1); break;
+            case Level_Info: LOG4CPP_INFO(logger, s1); break;
+            case Level_Debug: LOG4CPP_DEBUG(logger, s1); break;
+            case Level_Verbose: LOG4CPP_DEBUG(logger, s1); break;
+            }
+        } else {
+            switch(level) {
+            case Level_Fatal: LOG4CPP_FATAL(logger, s); break;
+            case Level_Error: LOG4CPP_ERROR(logger, s); break;
+            case Level_Warn: LOG4CPP_WARN(logger, s); break;
+            case Level_Info: LOG4CPP_INFO(logger, s); break;
+            case Level_Debug: LOG4CPP_DEBUG(logger, s); break;
+            case Level_Verbose: LOG4CPP_DEBUG(logger, s); break;
+            }
+        }
+        return s.size();
+    }
+    return 0;
+}
+
+#else
+
 #define DefineRavePrintfW(LEVEL) \
     inline int RavePrintfW ## LEVEL(const wchar_t *wfmt, ...) \
     { \
@@ -525,6 +682,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
     return 0;
 }
 
+#endif
 #endif
 
 DefineRavePrintfW(_FATALLEVEL)
