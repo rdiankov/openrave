@@ -452,42 +452,56 @@ LOG4CPP_LOGGER("openrave")
     inline int RavePrintfW ## LEVEL(const wchar_t *wfmt, ...) \
     { \
         va_list list; \
-        wchar_t wbuf[512]; /* wide char buffer to hold vswprintf result */\
+        wchar_t wbuf[512]; /* wide char buffer to hold vswprintf result */ \
         wchar_t* ws = &wbuf[0]; \
-        wchar_t* wsallocated = NULL; /* allocated wide char buffer */\
-        int wslen = 0; /* allocated wide char buffer length (character count) */ \
-        int wr = 0; \
+        wchar_t* wsallocated = NULL; /* allocated wide char buffer */ \
+        int wslen = sizeof(wbuf)/sizeof(wchar_t); /* wide char buffer length (character count) */ \
+        int wr = -1; \
         char buf[512]; /* multi byte char buffer to hold wcstombs result */\
         char *s = &buf[0]; \
         char *sallocated = NULL; /* allocated multi byte char buffer */ \
-        size_t slen = 0; /* allocated multi byte char buffer length */ \
-        size_t r = 0; \
+        size_t slen = sizeof(buf)/sizeof(char); /* multi byte char buffer length */ \
+        size_t r = (size_t)-1; \
         \
         va_start(list, wfmt); \
-        wr = vswprintf(wbuf, sizeof(wbuf)/sizeof(wchar_t), wfmt, list); \
-        if (wr >= (int)(sizeof(wbuf)/sizeof(wchar_t))) { \
-            wslen = wr + 1; /* allocate enough buffer to hold the result */\
-            wsallocated = (wchar_t*)malloc(wslen*sizeof(wchar_t)); \
-            ws = wsallocated; \
+        for (;;) { \
             wr = vswprintf(ws, wslen, wfmt, list); \
-            if (wr >= wslen) { \
-                /* if vswprintf fails again, we cannot continue */ \
-                wr = -1; \
+            if (wr >= 0) { \
+                break; \
             } \
+            if (wslen >= 16384) { \
+                wr = -1; \
+                break; \
+            } \
+            /* vswprintf does not tell us how much space is needed, so we need to grow until it is satisfied */ \
+            wslen *= 2; \
+            wsallocated = (wchar_t*)realloc(wsallocated, wslen*sizeof(wchar_t)); \
+            ws = wsallocated; \
         } \
         if (wr >= 0) { \
-            r = wcstombs(buf, ws, sizeof(buf)/sizeof(char)); \
-            /* wcstombs returns (size_t)-1 when conversion is not possible */ \
-            /* otherwise, it returns the number of char excluding null-terminator */ \
-            if (r != (size_t)-1 && r >= sizeof(buf)) { \
-                slen = r+1; \
-                sallocated = (char*)malloc(slen*sizeof(char)); \
-                s = sallocated; \
+            for (;;) { \
+                /* wcstombs returns (size_t)-1 when conversion is not possible */ \
+                /* otherwise, it returns the number of char excluding null-terminator written */ \
                 r = wcstombs(s, ws, slen); \
-                if (r >= slen) { \
-                    /* if wcstombs fails again, we cannot continue */ \
-                    r = (size_t)-1; \
+                if (r == (size_t)-1) { \
+                    break; \
                 } \
+                if (r < slen && s[r] == '\0') { \
+                    break; \
+                } \
+                if (slen >= 16384) { \
+                    r = (size_t)-1; \
+                    break; \
+                } \
+                /* wcstombs does not tell us how much space is needed, so we need to grow until it is satisfied */ \
+                if (slen < wslen) { \
+                    /* slen should be at least wslen */ \
+                    slen = wslen; \
+                } else { \
+                    slen *= 2; \
+                } \
+                sallocated = (char*)realloc(sallocated, slen*sizeof(char)); \
+                s = sallocated; \
             } \
             if (r != (size_t)-1) { \
                 /* get rid of the trailing \n if presnet */ \
@@ -506,7 +520,7 @@ LOG4CPP_LOGGER("openrave")
             free(sallocated); \
             sallocated = NULL; \
         } \
-        return wr; \
+        return r; \
     }
 
 #define DefineRavePrintfA(LEVEL) \
