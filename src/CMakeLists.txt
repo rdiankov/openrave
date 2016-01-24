@@ -66,6 +66,14 @@ else()
   endif()
 endif()
 
+set(OPENRAVE_COMPILE_FLAGS)
+if( LOG4CXX_FOUND )
+  include_directories(${LOG4CXX_INCLUDEDIR})
+  set(OPENRAVE_COMPILE_FLAGS "${OPENRAVE_COMPILE_FLAGS} -DOPENRAVE_LOG4CXX")
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_LOG4CXX")
+  set(openrave_libraries ${openrave_libraries} ${LOG4CXX_LIBRARIES})
+endif()
+
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
@@ -76,11 +84,14 @@ endif()
 if( ASSIMP_FOUND )
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${ASSIMP_LIBRARY_DIRS})
 endif()
+if( LOG4CXX_FOUND )
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${LOG4CXX_LIBDIR})
+endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
 add_executable(openrave ${openrave_SOURCES})
-set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
+set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL ${OPENRAVE_COMPILE_FLAGS}" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
 
 add_dependencies(openrave libopenrave libopenrave-core)
 
@@ -94,7 +105,7 @@ target_link_libraries (openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRAR
 
 install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 if( OPT_BUILD_PACKAGE_DEFAULT )
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
+  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
 endif()
 
 # always extract the models since we don't know when models.tgz has been changed

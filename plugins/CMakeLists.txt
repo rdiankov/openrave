@@ -24,6 +24,11 @@ else()
   message(STATUS "lapack dev library not found")
 endif()
 
+if( LOG4CXX_FOUND )
+  include_directories(${LOG4CXX_INCLUDEDIR})
+  set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DOPENRAVE_LOG4CXX")
+endif()
+
 set(PLUGINS_BASE ${COMPONENT_PREFIX}plugins-base)
 string(TOUPPER ${PLUGINS_BASE} PLUGINS_BASE_UPPER)
 set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_GROUP "Plugins" PARENT_SCOPE)

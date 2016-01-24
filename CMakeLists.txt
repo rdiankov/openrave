@@ -46,6 +46,7 @@ option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave packa
 option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
+option(OPT_LOG4CXX "Use log4cxx for logging" OFF)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -715,6 +716,14 @@ if( NOT FPARSER_FOUND )
     set(FPARSER_LINK_FLAGS "${FPARSER_LDFLAGS}")
     message(STATUS "using fparser from pkg-config, cflags: ${FPARSER_CFLAGS}, link flags: ${FPARSER_LINK_FLAGS}")
     set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+  endif()
+endif()
+
+# log4cxx logging lib
+if( OPT_LOG4CXX )
+  pkg_check_modules(LOG4CXX REQUIRED liblog4cxx)
+  if( LOG4CXX_FOUND )
+    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -DOPENRAVE_LOG4CXX")
   endif()
 endif()
 
