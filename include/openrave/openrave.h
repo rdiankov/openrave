@@ -383,6 +383,13 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
     return p+1;
 }
 
+#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d %s] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__)
+
+// different logging levels. The higher the suffix number, the less important the information is.
+// 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
+#define RAVELOG_LEVELW(LEVEL,level,...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL(__VA_ARGS__)
+#define RAVELOG_LEVELA(LEVEL,level,...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL(__VA_ARGS__)
+
 #ifdef _WIN32
 
 #define DefineRavePrintfW(LEVEL) \
@@ -441,15 +448,15 @@ DefineRavePrintfA(_INFOLEVEL)
 
 LOG4CPP_LOGGER("openrave")
 
-#define OPENRAVE_LOG4CPP_FATALLEVEL LOG4CPP_FATAL
-#define OPENRAVE_LOG4CPP_ERRORLEVEL LOG4CPP_ERROR
-#define OPENRAVE_LOG4CPP_WARNLEVEL LOG4CPP_WARN
-#define OPENRAVE_LOG4CPP_INFOLEVEL LOG4CPP_INFO
-#define OPENRAVE_LOG4CPP_DEBUGLEVEL LOG4CPP_DEBUG
-#define OPENRAVE_LOG4CPP_VERBOSELEVEL LOG4CPP_DEBUG
+#define OPENRAVE_LOG4CPP_FATALLEVEL LOG4CPP_FATAL_S
+#define OPENRAVE_LOG4CPP_ERRORLEVEL LOG4CPP_ERROR_S
+#define OPENRAVE_LOG4CPP_WARNLEVEL LOG4CPP_WARN_S
+#define OPENRAVE_LOG4CPP_INFOLEVEL LOG4CPP_INFO_S
+#define OPENRAVE_LOG4CPP_DEBUGLEVEL LOG4CPP_DEBUG_S
+#define OPENRAVE_LOG4CPP_VERBOSELEVEL LOG4CPP_DEBUG_S
 
 #define DefineRavePrintfW(LEVEL) \
-    inline int RavePrintfW ## LEVEL(const wchar_t *wfmt, ...) \
+    inline int RavePrintfW ## LEVEL(log4cpp::Category& logger, const char *filename, int lineno, const char *funcname, const wchar_t *wfmt, ...) \
     { \
         va_list list; \
         wchar_t wbuf[512]; /* wide char buffer to hold vswprintf result */ \
@@ -494,9 +501,9 @@ LOG4CPP_LOGGER("openrave")
                     break; \
                 } \
                 /* wcstombs does not tell us how much space is needed, so we need to grow until it is satisfied */ \
-                if (slen < wslen) { \
+                if (slen < (size_t)wslen) { \
                     /* slen should be at least wslen */ \
-                    slen = wslen; \
+                    slen = (size_t)wslen; \
                 } else { \
                     slen *= 2; \
                 } \
@@ -508,7 +515,7 @@ LOG4CPP_LOGGER("openrave")
                 if (r > 0 && s[r-1] == '\n') { \
                     s[r-1] = '\0'; \
                 } \
-                OPENRAVE_LOG4CPP ## LEVEL(logger, s); \
+                OPENRAVE_LOG4CPP ## LEVEL(logger) << "[" << filename << ":" << lineno << " " << funcname << "] " << s; \
             } \
         } \
         va_end(list); \
@@ -524,18 +531,18 @@ LOG4CPP_LOGGER("openrave")
     }
 
 #define DefineRavePrintfA(LEVEL) \
-    inline int RavePrintfA ## LEVEL(const std::string& s) \
+    inline int RavePrintfA ## LEVEL(log4cpp::Category& logger, const char *filename, int lineno, const char *funcname, const std::string& s) \
     { \
         if (s.size() > 0 && s[s.size()-1] == '\n') { \
             std::string s1(s, 0, s.size()-1); \
-            OPENRAVE_LOG4CPP ## LEVEL(logger, s1); \
+            OPENRAVE_LOG4CPP ## LEVEL(logger) << "[" << filename << ":" << lineno << " " << funcname << "] " << s1; \
         } else { \
-            OPENRAVE_LOG4CPP ## LEVEL(logger, s); \
+            OPENRAVE_LOG4CPP ## LEVEL(logger) << "[" << filename << ":" << lineno << " " << funcname << "] " << s; \
         } \
         return s.size(); \
     } \
     \
-    inline int RavePrintfA ## LEVEL(const char *fmt, ...) \
+    inline int RavePrintfA ## LEVEL(log4cpp::Category& logger, const char *filename, int lineno, const char *funcname, const char *fmt, ...) \
     { \
         va_list list; \
         char buf[512]; \
@@ -559,7 +566,7 @@ LOG4CPP_LOGGER("openrave")
             if (r > 0 && s[r-1] == '\n') { \
                 s[r-1] = '\0'; \
             } \
-            OPENRAVE_LOG4CPP ## LEVEL(logger, s); \
+            OPENRAVE_LOG4CPP ## LEVEL(logger) << "[" << filename << ":" << lineno << " " << funcname << "] " << s; \
         } \
         va_end(list); \
         if (sallocated != NULL) { \
@@ -599,6 +606,16 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
     }
     return 0;
 }
+
+#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfW ## LEVEL(logger, OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__, __VA_ARGS__)
+
+#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfA ## LEVEL(logger, OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__, __VA_ARGS__)
+
+#undef RAVELOG_LEVELW
+#define RAVELOG_LEVELW(LEVEL, level, ...) RAVELOG_LOGGER_LEVELW(OpenRAVE::logger, LEVEL, level, __VA_ARGS__)
+
+#undef RAVELOG_LEVELA
+#define RAVELOG_LEVELA(LEVEL, level, ...) RAVELOG_LOGGER_LEVELA(OpenRAVE::logger, LEVEL, level, __VA_ARGS__)
 
 #else
 
@@ -713,31 +730,24 @@ DefineRavePrintfA(_WARNLEVEL)
 DefineRavePrintfA(_DEBUGLEVEL)
 DefineRavePrintfA(_VERBOSELEVEL)
 
-#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d %s] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__)
-
-// different logging levels. The higher the suffix number, the less important the information is.
-// 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
-#define RAVELOG_LEVELA(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
-
 // define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
-#define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)
-#define RAVELOG_FATALA RAVELOG_LEVELA(_FATALLEVEL,OpenRAVE::Level_Fatal)
+#define RAVELOG_FATALW(...) RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal,__VA_ARGS__)
+#define RAVELOG_FATALA(...) RAVELOG_LEVELA(_FATALLEVEL,OpenRAVE::Level_Fatal,__VA_ARGS__)
 #define RAVELOG_FATAL RAVELOG_FATALA
-#define RAVELOG_ERRORW RAVELOG_LEVELW(_ERRORLEVEL,OpenRAVE::Level_Error)
-#define RAVELOG_ERRORA RAVELOG_LEVELA(_ERRORLEVEL,OpenRAVE::Level_Error)
+#define RAVELOG_ERRORW(...) RAVELOG_LEVELW(_ERRORLEVEL,OpenRAVE::Level_Error,__VA_ARGS__)
+#define RAVELOG_ERRORA(...) RAVELOG_LEVELA(_ERRORLEVEL,OpenRAVE::Level_Error,__VA_ARGS__)
 #define RAVELOG_ERROR RAVELOG_ERRORA
-#define RAVELOG_WARNW RAVELOG_LEVELW(_WARNLEVEL,OpenRAVE::Level_Warn)
-#define RAVELOG_WARNA RAVELOG_LEVELA(_WARNLEVEL,OpenRAVE::Level_Warn)
+#define RAVELOG_WARNW(...) RAVELOG_LEVELW(_WARNLEVEL,OpenRAVE::Level_Warn,__VA_ARGS__)
+#define RAVELOG_WARNA(...) RAVELOG_LEVELA(_WARNLEVEL,OpenRAVE::Level_Warn,__VA_ARGS__)
 #define RAVELOG_WARN RAVELOG_WARNA
-#define RAVELOG_INFOW RAVELOG_LEVELW(_INFOLEVEL,OpenRAVE::Level_Info)
-#define RAVELOG_INFOA RAVELOG_LEVELA(_INFOLEVEL,OpenRAVE::Level_Info)
+#define RAVELOG_INFOW(...) RAVELOG_LEVELW(_INFOLEVEL,OpenRAVE::Level_Info,__VA_ARGS__)
+#define RAVELOG_INFOA(...) RAVELOG_LEVELA(_INFOLEVEL,OpenRAVE::Level_Info,__VA_ARGS__)
 #define RAVELOG_INFO RAVELOG_INFOA
-#define RAVELOG_DEBUGW RAVELOG_LEVELW(_DEBUGLEVEL,OpenRAVE::Level_Debug)
-#define RAVELOG_DEBUGA RAVELOG_LEVELA(_DEBUGLEVEL,OpenRAVE::Level_Debug)
+#define RAVELOG_DEBUGW(...) RAVELOG_LEVELW(_DEBUGLEVEL,OpenRAVE::Level_Debug,__VA_ARGS__)
+#define RAVELOG_DEBUGA(...) RAVELOG_LEVELA(_DEBUGLEVEL,OpenRAVE::Level_Debug,__VA_ARGS__)
 #define RAVELOG_DEBUG RAVELOG_DEBUGA
-#define RAVELOG_VERBOSEW RAVELOG_LEVELW(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
-#define RAVELOG_VERBOSEA RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
+#define RAVELOG_VERBOSEW(...) RAVELOG_LEVELW(_VERBOSELEVEL,OpenRAVE::Level_Verbose,__VA_ARGS__)
+#define RAVELOG_VERBOSEA(...) RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose,__VA_ARGS__)
 #define RAVELOG_VERBOSE RAVELOG_VERBOSEA
 
 #define RAVELOG_FATAL_FORMAT(x, params) RAVELOG_FATAL(boost::str(boost::format(x)%params))
