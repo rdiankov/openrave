@@ -46,6 +46,7 @@ option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave packa
 option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
+option(OPT_LOG4CPP "Use log4cpp for logging" OFF)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -190,6 +191,9 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
 
+set(OPENRAVE_EXPORT_INCLUDE_DIRS)
+set(OPENRAVE_EXPORT_LIBRARY_DIRS)
+set(OPENRAVE_EXPORT_LIBRARIES)
 set(OPENRAVE_EXPORT_CXXFLAGS)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -715,6 +719,17 @@ if( NOT FPARSER_FOUND )
     set(FPARSER_LINK_FLAGS "${FPARSER_LDFLAGS}")
     message(STATUS "using fparser from pkg-config, cflags: ${FPARSER_CFLAGS}, link flags: ${FPARSER_LINK_FLAGS}")
     set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+  endif()
+endif()
+
+# log4cpp logging lib
+if( OPT_LOG4CPP AND NOT MSVC AND NOT WIN32 )
+  pkg_check_modules(LOG4CPP REQUIRED log4cpp)
+  if( LOG4CPP_FOUND )
+    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -DOPENRAVE_LOG4CPP")
+    set(OPENRAVE_EXPORT_LIBRARIES "${OPENRAVE_EXPORT_LIBRARIES} -llog4cpp")
+    set(OPENRAVE_EXPORT_INCLUDE_DIRS "${OPENRAVE_EXPORT_INCLUDE_DIRS} -I${LOG4CPP_INCLUDEDIR}")
+    set(OPENRAVE_EXPORT_LIBRARY_DIRS "${OPENRAVE_EXPORT_LIBRARY_DIRS} -I${LOG4CPP_LIBDIR}")
   endif()
 endif()
 

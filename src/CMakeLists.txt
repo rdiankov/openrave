@@ -66,6 +66,12 @@ else()
   endif()
 endif()
 
+if( LOG4CPP_FOUND )
+  include_directories(${LOG4CPP_INCLUDEDIR})
+  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_LOG4CPP")
+  set(openrave_libraries ${openrave_libraries} ${LOG4CPP_LIBRARIES})
+endif()
+
 add_subdirectory(libopenrave)
 add_subdirectory(libopenrave-core)
 
@@ -75,6 +81,9 @@ if( COLLADA_DOM_FOUND )
 endif()
 if( ASSIMP_FOUND )
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${ASSIMP_LIBRARY_DIRS})
+endif()
+if( LOG4CPP_FOUND )
+  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${LOG4CPP_LIBDIR})
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
@@ -94,7 +103,7 @@ target_link_libraries (openrave ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRAR
 
 install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 if( OPT_BUILD_PACKAGE_DEFAULT )
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
+  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
 endif()
 
 # always extract the models since we don't know when models.tgz has been changed
