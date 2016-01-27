@@ -941,7 +941,7 @@ protected:
 
         // if root appenders have not been configured, configure a default console appender
         if (root->getAllAppenders().size() == 0) {
-            log4cxx::LayoutPtr consolePatternLayout(new log4cxx::PatternLayout(LOG4CXX_STR("%d %c [%p] %m%n")));
+            log4cxx::LayoutPtr consolePatternLayout(new log4cxx::PatternLayout(LOG4CXX_STR("%d %c [%p] [%F:%L %M] %m%n")));
             log4cxx::LayoutPtr colorLayout(new log4cxx::ColorLayout(consolePatternLayout));
             log4cxx::AppenderPtr consoleAppender(new log4cxx::ConsoleAppender(colorLayout));
             root->setLevel(log4cxx::Level::getTrace());
