@@ -394,15 +394,20 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 /// \brief Get the global log4cxx logger.
 OPENRAVE_API log4cxx::LoggerPtr RaveGetLogger();
 
-#define OPENRAVE_LOG4CXX_FATALLEVEL LOG4CXX_FATAL
-#define OPENRAVE_LOG4CXX_ERRORLEVEL LOG4CXX_ERROR
-#define OPENRAVE_LOG4CXX_WARNLEVEL LOG4CXX_WARN
-#define OPENRAVE_LOG4CXX_INFOLEVEL LOG4CXX_INFO
-#define OPENRAVE_LOG4CXX_DEBUGLEVEL LOG4CXX_DEBUG
-#define OPENRAVE_LOG4CXX_VERBOSELEVEL LOG4CXX_TRACE
+#ifdef LOG4CXX_LOCATION
+#undef LOG4CXX_LOCATION
+#endif
+#define LOG4CXX_LOCATION ::log4cxx::spi::LocationInfo(OpenRAVE::RaveGetSourceFilename(__FILE__), __LOG4CXX_FUNC__, __LINE__)
+
+#define OPENRAVE_LOG4CXX_FATALLEVEL(logger, message, location) {if (logger->isFatalEnabled()) { logger->forcedLog(::log4cxx::Level::getFatal(), message, location); }}
+#define OPENRAVE_LOG4CXX_ERRORLEVEL(logger, message, location) {if (logger->isErrorEnabled()) { logger->forcedLog(::log4cxx::Level::getError(), message, location); }}
+#define OPENRAVE_LOG4CXX_WARNLEVEL(logger, message, location) {if (logger->isWarnEnabled()) { logger->forcedLog(::log4cxx::Level::getWarn(), message, location); }}
+#define OPENRAVE_LOG4CXX_INFOLEVEL(logger, message, location) {if (logger->isInfoEnabled()) { logger->forcedLog(::log4cxx::Level::getInfo(), message, location); }}
+#define OPENRAVE_LOG4CXX_DEBUGLEVEL(logger, message, location) {if (logger->isDebugEnabled()) { logger->forcedLog(::log4cxx::Level::getDebug(), message, location); }}
+#define OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, message, location) {if (logger->isTraceEnabled()) { logger->forcedLog(::log4cxx::Level::getTrace(), message, location); }}
 
 #define DefineRavePrintfW(LEVEL) \
-    inline int RavePrintfW ## LEVEL(const log4cxx::LoggerPtr& logger, const char *filename, int lineno, const char *funcname, const wchar_t *wfmt, ...) \
+    inline int RavePrintfW ## LEVEL(const log4cxx::LoggerPtr& logger, const log4cxx::spi::LocationInfo& location, const wchar_t *wfmt, ...) \
     { \
         va_list list; \
         wchar_t wbuf[512]; /* wide char buffer to hold vswprintf result */ \
@@ -432,9 +437,9 @@ OPENRAVE_API log4cxx::LoggerPtr RaveGetLogger();
                 ws[wr-1] = '\0'; \
             } \
             if (logger != NULL) { \
-                OPENRAVE_LOG4CXX ## LEVEL(logger, L"[" << filename << L":" << lineno << L" " << funcname << L"] " << ws); \
+                OPENRAVE_LOG4CXX ## LEVEL(logger, ws, location); \
             } else { \
-                wprintf(L"[%s:%d %s] %ls\n", filename, lineno, funcname, ws); \
+                wprintf(L"%ls\n", ws); \
             } \
         } \
         va_end(list); \
@@ -446,26 +451,26 @@ OPENRAVE_API log4cxx::LoggerPtr RaveGetLogger();
     }
 
 #define DefineRavePrintfA(LEVEL) \
-    inline int RavePrintfA ## LEVEL(const log4cxx::LoggerPtr& logger, const char *filename, int lineno, const char *funcname, const std::string& s) \
+    inline int RavePrintfA ## LEVEL(const log4cxx::LoggerPtr& logger, const log4cxx::spi::LocationInfo& location, const std::string& s) \
     { \
         if (logger != NULL) { \
             if (s.size() > 0 && s[s.size()-1] == '\n') { \
                 std::string s1(s, 0, s.size()-1); \
-                OPENRAVE_LOG4CXX ## LEVEL(logger, "[" << filename << ":" << lineno << " " << funcname << "] " << s1); \
+                OPENRAVE_LOG4CXX ## LEVEL(logger, s1, location); \
             } else { \
-                OPENRAVE_LOG4CXX ## LEVEL(logger, "[" << filename << ":" << lineno << " " << funcname << "] " << s); \
+                OPENRAVE_LOG4CXX ## LEVEL(logger, s, location); \
             } \
         } else { \
             if (s.size() > 0 && s[s.size()-1] == '\n') { \
-                printf("[%s:%d %s] %s", filename, lineno, funcname, s.c_str()); \
+                printf("%s", s.c_str()); \
             } else { \
-                printf("[%s:%d %s] %s\n", filename, lineno, funcname, s.c_str()); \
+                printf("%s\n", s.c_str()); \
             } \
         } \
         return s.size(); \
     } \
     \
-    inline int RavePrintfA ## LEVEL(const log4cxx::LoggerPtr& logger, const char *filename, int lineno, const char *funcname, const char *fmt, ...) \
+    inline int RavePrintfA ## LEVEL(const log4cxx::LoggerPtr& logger, const log4cxx::spi::LocationInfo& location, const char *fmt, ...) \
     { \
         va_list list; \
         char buf[512]; \
@@ -490,9 +495,9 @@ OPENRAVE_API log4cxx::LoggerPtr RaveGetLogger();
                 s[r-1] = '\0'; \
             } \
             if (logger != NULL) { \
-                OPENRAVE_LOG4CXX ## LEVEL(logger, "[" << filename << ":" << lineno << " " << funcname << "] " << s); \
+                OPENRAVE_LOG4CXX ## LEVEL(logger, s, location); \
             } else { \
-                printf("[%s:%d %s] %s\n", filename, lineno, funcname, s); \
+                printf("%s\n", s); \
             } \
         } \
         va_end(list); \
@@ -511,24 +516,21 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
     if( (RaveGetDebugLevel()&Level_OutputMask)>=level ) {
         const log4cxx::LoggerPtr& logger = RaveGetLogger();
         if (logger != NULL) {
-            if (s.size() > 0 && s[s.size()-1] == '\n') {
-                std::string s1(s, 0, s.size()-1);
-                switch(level) {
-                case Level_Fatal: OPENRAVE_LOG4CXX_FATALLEVEL(logger, s1); break;
-                case Level_Error: OPENRAVE_LOG4CXX_ERRORLEVEL(logger, s1); break;
-                case Level_Warn: OPENRAVE_LOG4CXX_WARNLEVEL(logger, s1); break;
-                case Level_Info: OPENRAVE_LOG4CXX_INFOLEVEL(logger, s1); break;
-                case Level_Debug: OPENRAVE_LOG4CXX_DEBUGLEVEL(logger, s1); break;
-                case Level_Verbose: OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, s1); break;
-                }
-            } else {
-                switch(level) {
-                case Level_Fatal: OPENRAVE_LOG4CXX_FATALLEVEL(logger, s); break;
-                case Level_Error: OPENRAVE_LOG4CXX_ERRORLEVEL(logger, s); break;
-                case Level_Warn: OPENRAVE_LOG4CXX_WARNLEVEL(logger, s); break;
-                case Level_Info: OPENRAVE_LOG4CXX_INFOLEVEL(logger, s); break;
-                case Level_Debug: OPENRAVE_LOG4CXX_DEBUGLEVEL(logger, s); break;
-                case Level_Verbose: OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, s); break;
+            log4cxx::LevelPtr levelptr = log4cxx::Level::getInfo();
+            switch(level) {
+            case Level_Fatal: levelptr = log4cxx::Level::getFatal(); break;
+            case Level_Error: levelptr = log4cxx::Level::getError(); break;
+            case Level_Warn: levelptr = log4cxx::Level::getWarn(); break;
+            case Level_Info: levelptr = log4cxx::Level::getInfo(); break;
+            case Level_Debug: levelptr = log4cxx::Level::getDebug(); break;
+            case Level_Verbose: levelptr = log4cxx::Level::getTrace(); break;
+            }
+            if (logger->isEnabledFor(levelptr)) {
+                if (s.size() > 0 && s[s.size()-1] == '\n') {
+                    std::string s1(s, 0, s.size()-1);
+                    logger->forcedLog(levelptr, s1);
+                } else {
+                    logger->forcedLog(levelptr, s);
                 }
             }
         } else {
@@ -543,9 +545,9 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
     return 0;
 }
 
-#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfW ## LEVEL(logger, OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__, __VA_ARGS__)
+#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfW ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__)
 
-#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfA ## LEVEL(logger, OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__, __VA_ARGS__)
+#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfA ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__)
 
 #undef RAVELOG_LEVELW
 #define RAVELOG_LEVELW(LEVEL, level, ...) RAVELOG_LOGGER_LEVELW(OpenRAVE::RaveGetLogger(), LEVEL, level, __VA_ARGS__)
