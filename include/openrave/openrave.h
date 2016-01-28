@@ -517,7 +517,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
         const log4cxx::LoggerPtr& logger = RaveGetLogger();
         if (logger != NULL) {
             log4cxx::LevelPtr levelptr = log4cxx::Level::getInfo();
-            switch(level) {
+            switch(level&Level_OutputMask) {
             case Level_Fatal: levelptr = log4cxx::Level::getFatal(); break;
             case Level_Error: levelptr = log4cxx::Level::getError(); break;
             case Level_Warn: levelptr = log4cxx::Level::getWarn(); break;
@@ -677,9 +677,9 @@ inline int RavePrintfA_INFOLEVEL(const char *fmt, ...)
 
 inline int RavePrintfA(const std::string& s, uint32_t level)
 {
-    if( (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=level ) {
+    if( (RaveGetDebugLevel()&Level_OutputMask)>=level ) {
         int color = 0;
-        switch(level) {
+        switch(level&Level_OutputMask) {
         case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
         case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
         case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;

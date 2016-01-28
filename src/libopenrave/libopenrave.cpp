@@ -418,7 +418,7 @@ public:
             return 0;     // already initialized
         }
 
-        _InitializeLogging();
+        _InitializeLogging(level);
 
 #ifdef USE_CRLIBM
         _crlibm_fpu_state = crlibm_init();
@@ -435,7 +435,6 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _nDebugLevel = level;
         _pdatabase.reset(new RaveDatabase());
         if( !_pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
@@ -560,8 +559,47 @@ public:
     {
         return _logger;
     }
-#endif
 
+    void SetDebugLevel(int level)
+    {
+        if (_logger != NULL) {
+            log4cxx::LevelPtr levelptr = log4cxx::Level::getInfo();
+            switch(level&Level_OutputMask) {
+            case Level_Fatal: levelptr = log4cxx::Level::getFatal(); break;
+            case Level_Error: levelptr = log4cxx::Level::getError(); break;
+            case Level_Warn: levelptr = log4cxx::Level::getWarn(); break;
+            case Level_Info: levelptr = log4cxx::Level::getInfo(); break;
+            case Level_Debug: levelptr = log4cxx::Level::getDebug(); break;
+            case Level_Verbose: levelptr = log4cxx::Level::getTrace(); break;
+            }
+            _logger->setLevel(levelptr);
+        }
+        _nDebugLevel = level;
+    }
+
+    int GetDebugLevel()
+    {
+        int level = _nDebugLevel;
+        if (_logger != NULL) {
+            const log4cxx::LevelPtr& levelptr = _logger->getLevel();
+            if (levelptr == log4cxx::Level::getFatal()) {
+                level = Level_Fatal;
+            } else if (levelptr == log4cxx::Level::getError()) {
+                level = Level_Error;
+            } else if (levelptr == log4cxx::Level::getWarn()) {
+                level = Level_Warn;
+            } else if (levelptr == log4cxx::Level::getInfo()) {
+                level = Level_Info;
+            } else if (levelptr == log4cxx::Level::getDebug()) {
+                level = Level_Debug;
+            } else if (levelptr == log4cxx::Level::getTrace()) {
+                level = Level_Verbose;
+            }
+        }
+        return level | (_nDebugLevel & ~Level_OutputMask);
+    }
+
+#else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
@@ -571,6 +609,7 @@ public:
     {
         return _nDebugLevel;
     }
+#endif
 
     class XMLReaderFunctionData : public UserData
     {
@@ -934,12 +973,12 @@ protected:
 
 #endif
 
-    void _InitializeLogging() {
+    void _InitializeLogging(int level) {
 #ifdef OPENRAVE_LOG4CXX
         _logger = log4cxx::Logger::getLogger("openrave");
-        log4cxx::LoggerPtr root(log4cxx::Logger::getRootLogger());
 
         // if root appenders have not been configured, configure a default console appender
+        log4cxx::LoggerPtr root(log4cxx::Logger::getRootLogger());
         if (root->getAllAppenders().size() == 0) {
             log4cxx::LayoutPtr consolePatternLayout(new log4cxx::PatternLayout(LOG4CXX_STR("%d %c [%p] [%F:%L %M] %m%n")));
             log4cxx::LayoutPtr colorLayout(new log4cxx::ColorLayout(consolePatternLayout));
@@ -948,6 +987,7 @@ protected:
             root->addAppender(consoleAppender);
         }
 #endif
+        SetDebugLevel(level);
     }
 
 private:
