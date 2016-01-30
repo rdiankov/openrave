@@ -2628,12 +2628,13 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
                 PARABOLIC_RAMP_PLOG("Failed solving min accel for joint %d\n",i);
                 ramps[i].SolveMinTime(amax[i],vmax[i]);
                 PARABOLIC_RAMP_PLOG("its min time is %.15e\n",ramps[i].ttotal);
-                if(ramps[i].tswitch1==ramps[i].tswitch2)
+                if(ramps[i].tswitch1==ramps[i].tswitch2) {
                     PARABOLIC_RAMP_PLOG("its type is PP\n");
-                else if(Abs(ramps[i].v)==vmax[i])
+                } else if(Abs(ramps[i].v)==vmax[i]) {
                     PARABOLIC_RAMP_PLOG("its type is PLP (vmax)\n");
-                else
+                } else {
                     PARABOLIC_RAMP_PLOG("its type is PLP (v=%.15e %%)\n",ramps[i].v/vmax[i]);
+                }
                 SaveRamp("ParabolicRampND_SolveMinAccel_failure.dat",ramps[i].x0,ramps[i].dx0,ramps[i].x1,ramps[i].dx1,-1,vmax[i],endTime);
                 PARABOLIC_RAMP_PLOG("Saving to failed_ramps.txt\n");
                 FILE* f=fopen("failed_ramps.txt","w+");

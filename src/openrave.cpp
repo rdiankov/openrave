@@ -90,7 +90,7 @@ int main(int argc, char ** argv)
     int i = 1;
     while(i < argc) {
         if((_stricmp(argv[i], "-h") == 0)||(_stricmp(argv[i], "-?") == 0)||(_stricmp(argv[i], "/?") == 0)||(_stricmp(argv[i], "--help") == 0)||(_stricmp(argv[i], "-help") == 0)) {
-            RAVELOG_INFO("OpenRAVE Usage\n"
+            printf("OpenRAVE Usage\n"
                          "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
                          "--listplugins       List all plugins and the interfaces they provide\n"
