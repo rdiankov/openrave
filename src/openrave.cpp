@@ -242,7 +242,8 @@ int main(int argc, char ** argv)
             }
         }
         printf("%s",ss.str().c_str());
-        s_penv->Destroy();
+        s_penv.reset();
+        RaveDestroy();
         return 0;
     }
 
