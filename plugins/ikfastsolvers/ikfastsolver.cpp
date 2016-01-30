@@ -213,6 +213,7 @@ public:
     {
         if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
             RAVELOG_ERROR(str(boost::format("inverse kinematics hashes do not match for manip %s:%s. IK will not work! %s!=%s\n")%pmanip->GetRobot()->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(_iktype)%_kinematicshash));
+            return false;
         }
         RobotBasePtr probot = pmanip->GetRobot();
         bool bfound = false;
@@ -277,6 +278,10 @@ public:
         }
 
         pmanip->GetChildLinks(_vchildlinks);
+        _vchildlinkindices.resize(_vchildlinks.size());
+        for(size_t i = 0; i < _vchildlinks.size(); ++i) {
+            _vchildlinkindices[i] = _vchildlinks[i]->GetIndex();
+        }
         pmanip->GetIndependentLinks(_vindependentlinks);
 
         // get the joint limits
@@ -381,6 +386,27 @@ public:
             }
         }
 
+        /// \brief check if end effector is colliding if there's a colliding transform within some angle (this is used for TranslationDirection5D IK where end effector differs by a rotation around an axis)
+        ///
+        /// \param coshalfdeltaangle cos(0.5*deltaangle) where deltaangle is the angle between the two poses
+        /// \return 1 if in collision, 0 if not, -1 if unknown (there's no enough data)
+        int IsCollidingEndEffector(const Transform& tendeffector, dReal coshalfdeltaangle=0.99968751627570263) {
+            //Transform tendeffectorinv = tendeffectorinv.inverse();
+            FOREACHC(it, _listCollidingTransforms) {
+                //Transform t = tendeffectorinv*it->first;
+                dReal quatcosangle = tendeffector.rot.dot(it->first.rot);
+                if( quatcosangle >= coshalfdeltaangle ) {
+                    return (int)it->second;
+                }
+            }
+            return -1; // don't know
+        }
+        
+        void RegisterCollidingEndEffector(const Transform& t, bool bcolliding)
+        {
+            _listCollidingTransforms.push_back(std::make_pair(t, bcolliding));
+        }
+        
 protected:
         void _InitSavers()
         {
@@ -465,6 +491,7 @@ protected:
         vector<uint8_t> _vlinkenabled;
         UserDataPtr _callbackhandle;
         const std::vector<KinBody::LinkPtr>& _vchildlinks, &_vindependentlinks;
+        std::list<std::pair<Transform, bool> > _listCollidingTransforms;
         bool _bCheckEndEffectorEnvCollision, _bCheckEndEffectorSelfCollision, _bCheckSelfCollision, _bDisabled;
     };
 
@@ -727,6 +754,9 @@ protected:
             vfree.at(freeindex) = curphi;
             IkReturnAction res = ComposeSolution(vfreeparams, vfree, freeindex+1,q0, fn, vFreeInc);
             if( !(res & IKRA_Reject) ) {
+                return res;
+            }
+            if( res & IKRA_Quit ) {
                 return res;
             }
             allres |= res;
@@ -1239,7 +1269,7 @@ protected:
 
         CollisionReport report;
         CollisionReportPtr ptempreport;
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        if( IS_DEBUGLEVEL(Level_Verbose) || paramnewglobal.GetType() == IKP_TranslationDirection5D ) { // 5D is necessary for tracking end effector collisions
             ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
@@ -1282,8 +1312,38 @@ protected:
                     }
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
+                else if( paramnewglobal.GetType() == IKP_TranslationDirection5D ) {
+                    int colliding = stateCheck.IsCollidingEndEffector(pmanip->GetTransform());
+                    if( colliding == 1 ) {
+                        // end effector could change depending on the solution
+                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectEnvCollision); // stop the search
+                    }
+                }
             }
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot), ptempreport) ) {
+                if( paramnewglobal.GetType() == IKP_TranslationDirection5D ) {
+                    // colliding and 5d,so check if colliding with end effector. If yes, then register as part of the stateCheck
+                    bool bIsEndEffectorCollision = false;
+                    FOREACHC(itcollidingpairs, ptempreport->vLinkColliding) {
+                        if( itcollidingpairs->first->GetParent() == probot ) {
+                            if( find(_vchildlinkindices.begin(), _vchildlinkindices.end(), itcollidingpairs->first->GetIndex()) != _vchildlinkindices.end() ) {
+                                bIsEndEffectorCollision = true;
+                                break;
+                            }
+                        }
+                        if( itcollidingpairs->second->GetParent() == probot ) {
+                            if( find(_vchildlinkindices.begin(), _vchildlinkindices.end(), itcollidingpairs->second->GetIndex()) != _vchildlinkindices.end() ) {
+                                bIsEndEffectorCollision = true;
+                                break;
+                            }
+                        }
+                    }
+                    if( bIsEndEffectorCollision ) {
+                        // only really matters if in collision
+                        stateCheck.RegisterCollidingEndEffector(pmanip->GetTransform(), bIsEndEffectorCollision);
+                    }
+                }
+                
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "ikfast collision " << report.__str__() << " colvalues=[";
@@ -1831,6 +1891,7 @@ protected:
     std::vector<dReal> _vfreeparamscales;
     UserDataPtr _cblimits;
     std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;
+    std::vector<int> _vchildlinkindices; ///< indices of the links at _vchildlinks
     boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > _ikfunctions;
     std::vector<dReal> _vFreeInc;
     dReal _fFreeIncRevolute; ///< default increment for revolute joints

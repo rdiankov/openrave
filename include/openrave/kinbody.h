@@ -1241,6 +1241,8 @@ public:
         std::string uri; ///< \see KinBody::GetURI
         int updatestamp; ///< \see KinBody::GetUpdateStamp
         int environmentid; ///< \see KinBody::GetEnvironmentId
+        std::string activeManipulatorName; ///< the currently active manpiulator set for the body
+        Transform activeManipulatorTransform; ///< the active manipulator's transform
     };
     typedef boost::shared_ptr<KinBody::BodyState> BodyStatePtr;
     typedef boost::shared_ptr<KinBody::BodyState const> BodyStateConstPtr;

@@ -64,6 +64,9 @@
 #include <fstream>
 #include <sstream>
 
+// QTBUG-22829 alternative workaround
+#ifndef Q_MOC_RUN
+
 #include <boost/version.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
@@ -80,6 +83,8 @@
 #include <boost/multi_array.hpp>
 //#include <boost/cstdint.hpp>
 
+#endif
+
 #if defined(__GNUC__)
 #define RAVE_DEPRECATED __attribute__((deprecated))
 #else
@@ -91,6 +96,12 @@ namespace OpenRAVE {
 
 #include <openrave/config.h>
 #include <openrave/interfacehashes.h>
+
+}
+
+#include <openrave/logging.h>
+
+namespace OpenRAVE {
 
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double dReal;
@@ -255,322 +266,6 @@ public:
 };
 typedef boost::shared_ptr<SerializableData> SerializableDataPtr;
 typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
-
-// terminal attributes
-//#define RESET           0
-//#define BRIGHT          1
-//#define DIM             2
-//#define UNDERLINE       3
-//#define BLINK           4
-//#define REVERSE         7
-//#define HIDDEN          8
-// terminal colors
-//#define BLACK           0
-//#define RED             1
-//#define GREEN           2
-//#define YELLOW          3
-//#define BLUE            4
-//#define MAGENTA         5
-//#define CYAN            6
-//#define WHITE           7
-
-/// Change the text color (on either stdout or stderr) with an attr:fg:bg (thanks to Radu Rusu for the code)
-inline std::string ChangeTextColor (int attribute, int fg, int bg)
-{
-    char command[13];
-    sprintf (command, "%c[%d;%d;%dm", 0x1B, attribute, fg + 30, bg + 40);
-    return command;
-}
-
-/// Change the text color (on either stdout or stderr) with an attr:fg (thanks to Radu Rusu for the code)
-inline std::string ChangeTextColor (int attribute, int fg)
-{
-    char command[13];
-    sprintf (command, "%c[%d;%dm", 0x1B, attribute, fg + 30);
-    return command;
-}
-
-/// Reset the text color (on either stdout or stderr) to its original state (thanks to Radu Rusu for the code)
-inline std::string ResetTextColor()
-{
-    char command[12];
-    sprintf (command, "%c[0;38;48m", 0x1B);
-    return command;
-}
-
-inline std::wstring ChangeTextColorW (int attribute, int fg)
-{
-    wchar_t command[13];
-    swprintf (command, 13, L"%c[%d;%dm", 0x1B, attribute, fg + 30);
-    return command;
-}
-
-inline std::wstring RavePrintTransformString(const wchar_t* fmt)
-{
-    std::vector<int> positions;
-    std::wstring str = fmt;
-    wchar_t* p = wcsstr(&str[0], L"%s");
-    while(p != NULL ) {
-        positions.push_back((int)(p-&str[0])+1);
-        p = wcsstr(p+2, L"%s");
-    }
-
-    p = wcsstr(&str[0], L"%S");
-    while(p != NULL ) {
-        p[1] = 's';
-        p = wcsstr(p+2, L"%S");
-    }
-
-    p = wcsstr(&str[0], L"%ls");
-    while(p != NULL ) {
-        p[1] = 's';
-        p[2] = ' ';
-        p = wcsstr(p+2, L"%ls");
-    }
-
-    for(int i = 0; i < (int)positions.size(); ++i)
-        str[positions[i]] = 'S';
-    return str;
-}
-
-enum DebugLevel {
-    Level_Fatal=0,
-    Level_Error=1,
-    Level_Warn=2,
-    Level_Info=3,
-    Level_Debug=4,
-    Level_Verbose=5,
-    Level_OutputMask=0xf,
-    Level_VerifyPlans=0x80000000, ///< if set, should verify every plan returned. the verification is left up to the planners or the modules calling the planners. See \ref planningutils::ValidateTrajectory
-};
-
-#define OPENRAVECOLOR_FATALLEVEL 5 // magenta
-#define OPENRAVECOLOR_ERRORLEVEL 1 // red
-#define OPENRAVECOLOR_WARNLEVEL 3 // yellow
-#define OPENRAVECOLOR_INFOLEVEL 0 // black
-#define OPENRAVECOLOR_DEBUGLEVEL 2 // green
-#define OPENRAVECOLOR_VERBOSELEVEL 4 // blue
-
-/// \brief Sets the global openrave debug level. A combination of \ref DebugLevel
-OPENRAVE_API void RaveSetDebugLevel(int level);
-
-/// Returns the openrave debug level
-OPENRAVE_API int RaveGetDebugLevel();
-
-/// extracts only the filename
-inline const char* RaveGetSourceFilename(const char* pfilename)
-{
-    if( pfilename == NULL ) {
-        return "";
-    }
-    const char* p0 = strrchr(pfilename,'/');
-    const char* p1 = strrchr(pfilename,'\\');
-    const char* p = p0 > p1 ? p0 : p1;
-    if( p == NULL ) {
-        return pfilename;
-    }
-    return p+1;
-}
-
-#ifdef _WIN32
-
-#define DefineRavePrintfW(LEVEL) \
-    inline int RavePrintfW ## LEVEL(const wchar_t *fmt, ...) \
-    { \
-        /*ChangeTextColor (stdout, 0, OPENRAVECOLOR##LEVEL);*/ \
-        va_list list; \
-        va_start(list,fmt); \
-        int r = vwprintf(OpenRAVE::RavePrintTransformString(fmt).c_str(), list); \
-        va_end(list); \
-        /*ResetTextColor (stdout);*/ \
-        return r; \
-    }
-
-#define DefineRavePrintfA(LEVEL) \
-    inline int RavePrintfA ## LEVEL(const std::string& s) \
-    { \
-        if((s.size() == 0)||(s[s.size()-1] != '\n')) {  \
-            printf("%s\n", s.c_str()); \
-        } \
-        else { \
-            printf ("%s", s.c_str()); \
-        } \
-        return s.size(); \
-    } \
-    \
-    inline int RavePrintfA ## LEVEL(const char *fmt, ...) \
-    { \
-        /*ChangeTextColor (stdout, 0, OPENRAVECOLOR##LEVEL);*/ \
-        va_list list; \
-        va_start(list,fmt); \
-        int r = vprintf(fmt, list); \
-        va_end(list); \
-        /*if( fmt[0] != '\n' ) { printf("\n"); }*/  \
-        /*ResetTextColor(stdout);*/ \
-        return r; \
-    }
-
-inline int RavePrintfA(const std::string& s, uint32_t level)
-{
-    if((s.size() == 0)||(s[s.size()-1] != '\n')) { // automatically add a new line
-        printf("%s\n", s.c_str());
-    }
-    else {
-        printf ("%s", s.c_str());
-    }
-    return s.size();
-}
-
-DefineRavePrintfW(_INFOLEVEL)
-DefineRavePrintfA(_INFOLEVEL)
-
-#else
-
-#define DefineRavePrintfW(LEVEL) \
-    inline int RavePrintfW ## LEVEL(const wchar_t *wfmt, ...) \
-    { \
-        va_list list; \
-        va_start(list,wfmt); \
-        /* Allocate memory on the stack to avoid heap fragmentation */ \
-        size_t allocsize = wcstombs(NULL, wfmt, 0)+32; \
-        char* fmt = (char*)alloca(allocsize); \
-        strcpy(fmt, ChangeTextColor(0, OPENRAVECOLOR ## LEVEL,8).c_str()); \
-        snprintf(fmt+strlen(fmt),allocsize-16,"%S",wfmt); \
-        strcat(fmt, ResetTextColor().c_str()); \
-        int r = vprintf(fmt, list);        \
-        va_end(list); \
-        return r; \
-    }
-
-// In linux, only wprintf will succeed, due to the fwide() call in main, so
-// for programmers who want to use regular format strings without
-// the L in front, we will take their regular string and widen it
-// for them.
-inline int RavePrintfA_INFOLEVEL(const std::string& s)
-{
-    if((s.size() == 0)||(s[s.size()-1] != '\n')) {     // automatically add a new line
-        printf("%s\n", s.c_str());
-    }
-    else {
-        printf ("%s", s.c_str());
-    }
-    return s.size();
-}
-
-inline int RavePrintfA_INFOLEVEL(const char *fmt, ...)
-{
-    va_list list;
-    va_start(list,fmt);
-    int r = vprintf(fmt, list);
-    va_end(list);
-    //if( fmt[0] != '\n' ) { printf("\n"); }
-    return r;
-}
-
-#define DefineRavePrintfA(LEVEL) \
-    inline int RavePrintfA ## LEVEL(const std::string& s) \
-    { \
-        if((s.size() == 0)||(s[s.size()-1] != '\n')) { \
-            printf ("%c[0;%d;%dm%s%c[m\n", 0x1B, OPENRAVECOLOR ## LEVEL + 30,8+40,s.c_str(),0x1B); \
-        } \
-        else { \
-            printf ("%c[0;%d;%dm%s%c[m", 0x1B, OPENRAVECOLOR ## LEVEL + 30,8+40,s.c_str(),0x1B); \
-        } \
-        return s.size(); \
-    } \
-    \
-    inline int RavePrintfA ## LEVEL(const char *fmt, ...) \
-    { \
-        va_list list; \
-        va_start(list,fmt); \
-        int r = vprintf((ChangeTextColor(0, OPENRAVECOLOR ## LEVEL,8) + std::string(fmt) + ResetTextColor()).c_str(), list); \
-        va_end(list); \
-        /*if( fmt[0] != '\n' ) { printf("\n"); } */ \
-        return r; \
-    } \
-
-
-inline int RavePrintfA(const std::string& s, uint32_t level)
-{
-    if( (OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=level ) {
-        int color = 0;
-        switch(level) {
-        case Level_Fatal: color = OPENRAVECOLOR_FATALLEVEL; break;
-        case Level_Error: color = OPENRAVECOLOR_ERRORLEVEL; break;
-        case Level_Warn: color = OPENRAVECOLOR_WARNLEVEL; break;
-        case Level_Info: // print regular
-            if((s.size() == 0)||(s[s.size()-1] != '\n')) { // automatically add a new line
-                printf ("%s\n",s.c_str());
-            }
-            else {
-                printf ("%s",s.c_str());
-            }
-            return s.size();
-        case Level_Debug: color = OPENRAVECOLOR_DEBUGLEVEL; break;
-        case Level_Verbose: color = OPENRAVECOLOR_VERBOSELEVEL; break;
-        }
-        if((s.size() == 0)||(s[s.size()-1] != '\n')) { // automatically add a new line
-            printf ("%c[0;%d;%dm%s%c[0;38;48m\n", 0x1B, color + 30,8+40,s.c_str(),0x1B);
-        }
-        else {
-            printf ("%c[0;%d;%dm%s%c[0;38;48m", 0x1B, color + 30,8+40,s.c_str(),0x1B);
-        }
-        return s.size();
-    }
-    return 0;
-}
-
-#endif
-
-DefineRavePrintfW(_FATALLEVEL)
-DefineRavePrintfW(_ERRORLEVEL)
-DefineRavePrintfW(_WARNLEVEL)
-//DefineRavePrintfW(_INFOLEVEL)
-DefineRavePrintfW(_DEBUGLEVEL)
-DefineRavePrintfW(_VERBOSELEVEL)
-
-DefineRavePrintfA(_FATALLEVEL)
-DefineRavePrintfA(_ERRORLEVEL)
-DefineRavePrintfA(_WARNLEVEL)
-//DefineRavePrintfA(_INFOLEVEL)
-DefineRavePrintfA(_DEBUGLEVEL)
-DefineRavePrintfA(_VERBOSELEVEL)
-
-#define RAVEPRINTHEADER(LEVEL) OpenRAVE::RavePrintfA ## LEVEL("[%s:%d %s] ", OpenRAVE::RaveGetSourceFilename(__FILE__), __LINE__,  __FUNCTION__)
-
-// different logging levels. The higher the suffix number, the less important the information is.
-// 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL
-#define RAVELOG_LEVELA(LEVEL,level) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL
-
-// define log4cxx equivalents (eventually OpenRAVE will move to log4cxx logging)
-#define RAVELOG_FATALW RAVELOG_LEVELW(_FATALLEVEL,OpenRAVE::Level_Fatal)
-#define RAVELOG_FATALA RAVELOG_LEVELA(_FATALLEVEL,OpenRAVE::Level_Fatal)
-#define RAVELOG_FATAL RAVELOG_FATALA
-#define RAVELOG_ERRORW RAVELOG_LEVELW(_ERRORLEVEL,OpenRAVE::Level_Error)
-#define RAVELOG_ERRORA RAVELOG_LEVELA(_ERRORLEVEL,OpenRAVE::Level_Error)
-#define RAVELOG_ERROR RAVELOG_ERRORA
-#define RAVELOG_WARNW RAVELOG_LEVELW(_WARNLEVEL,OpenRAVE::Level_Warn)
-#define RAVELOG_WARNA RAVELOG_LEVELA(_WARNLEVEL,OpenRAVE::Level_Warn)
-#define RAVELOG_WARN RAVELOG_WARNA
-#define RAVELOG_INFOW RAVELOG_LEVELW(_INFOLEVEL,OpenRAVE::Level_Info)
-#define RAVELOG_INFOA RAVELOG_LEVELA(_INFOLEVEL,OpenRAVE::Level_Info)
-#define RAVELOG_INFO RAVELOG_INFOA
-#define RAVELOG_DEBUGW RAVELOG_LEVELW(_DEBUGLEVEL,OpenRAVE::Level_Debug)
-#define RAVELOG_DEBUGA RAVELOG_LEVELA(_DEBUGLEVEL,OpenRAVE::Level_Debug)
-#define RAVELOG_DEBUG RAVELOG_DEBUGA
-#define RAVELOG_VERBOSEW RAVELOG_LEVELW(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
-#define RAVELOG_VERBOSEA RAVELOG_LEVELA(_VERBOSELEVEL,OpenRAVE::Level_Verbose)
-#define RAVELOG_VERBOSE RAVELOG_VERBOSEA
-
-#define RAVELOG_FATAL_FORMAT(x, params) RAVELOG_FATAL(boost::str(boost::format(x)%params))
-#define RAVELOG_ERROR_FORMAT(x, params) RAVELOG_ERROR(boost::str(boost::format(x)%params))
-#define RAVELOG_WARN_FORMAT(x, params) RAVELOG_WARN(boost::str(boost::format(x)%params))
-#define RAVELOG_INFO_FORMAT(x, params) RAVELOG_INFO(boost::str(boost::format(x)%params))
-#define RAVELOG_DEBUG_FORMAT(x, params) RAVELOG_DEBUG(boost::str(boost::format(x)%params))
-#define RAVELOG_VERBOSE_FORMAT(x, params) RAVELOG_VERBOSE(boost::str(boost::format(x)%params))
-
-#define IS_DEBUGLEVEL(level) ((OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=(level))
 
 #define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(s)),errorcode)
 

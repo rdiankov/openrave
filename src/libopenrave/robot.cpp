@@ -783,8 +783,8 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
         else {
             GetDOFLimits(alllower,allupper);
             FOREACHC(it, _vActiveDOFIndices) {
-                *pLowerLimit++ = alllower[*it];
-                *pUpperLimit++ = allupper[*it];
+                *pLowerLimit++ = alllower.at(*it);
+                *pUpperLimit++ = allupper.at(*it);
             }
         }
     }
@@ -792,8 +792,8 @@ void RobotBase::GetActiveDOFLimits(std::vector<dReal>& lower, std::vector<dReal>
         if( _vActiveDOFIndices.size() > 0 ) {
             GetDOFLimits(alllower,allupper);
             FOREACHC(it, _vActiveDOFIndices) {
-                *pLowerLimit++ = alllower[*it];
-                *pUpperLimit++ = allupper[*it];
+                *pLowerLimit++ = alllower.at(*it);
+                *pUpperLimit++ = allupper.at(*it);
             }
         }
 
@@ -1538,8 +1538,6 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
-    _AttachBody(pbody);
-    _AttachBody(pbody);
     try {
         // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
         _AttachBody(pbody);

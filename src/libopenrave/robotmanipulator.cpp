@@ -864,7 +864,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     // if IK can be solved, then there exists a solution for the end effector that is not in collision
     IkReturn ikreturn(IKRA_Success);
     IkReturnPtr pikreturn(&ikreturn,OpenRAVE::utils::null_deleter());
-    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), IKFO_CheckEnvCollisions, pikreturn) ) {
+    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), IKFO_CheckEnvCollisions|IKFO_IgnoreCustomFilters, pikreturn) ) {
         return false;
     }
     else {
