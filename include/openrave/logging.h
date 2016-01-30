@@ -306,9 +306,9 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
     return 0;
 }
 
-#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) do { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { OpenRAVE::RavePrintfW ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__); } } while(0)
+#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) do { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { OpenRAVE::RavePrintfW ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__); } } while (0)
 
-#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) do { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { OpenRAVE::RavePrintfA ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__); } } while(0)
+#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) do { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { OpenRAVE::RavePrintfA ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__); } } while (0)
 
 #undef RAVELOG_LEVELW
 #define RAVELOG_LEVELW(LEVEL, level, ...) RAVELOG_LOGGER_LEVELW(OpenRAVE::RaveGetLogger(), LEVEL, level, __VA_ARGS__)
