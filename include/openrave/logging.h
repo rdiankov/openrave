@@ -146,8 +146,8 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 
 // different logging levels. The higher the suffix number, the less important the information is.
 // 0 log level logs all the time. OpenRAVE starts up with a log level of 0.
-#define RAVELOG_LEVELW(LEVEL,level,...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfW ## LEVEL(__VA_ARGS__)
-#define RAVELOG_LEVELA(LEVEL,level,...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&(RAVEPRINTHEADER(LEVEL)>0)&&OpenRAVE::RavePrintfA ## LEVEL(__VA_ARGS__)
+#define RAVELOG_LEVELW(LEVEL,level,...) { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { RAVEPRINTHEADER(LEVEL); OpenRAVE::RavePrintfW ## LEVEL(__VA_ARGS__); } }
+#define RAVELOG_LEVELA(LEVEL,level,...) { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { RAVEPRINTHEADER(LEVEL); OpenRAVE::RavePrintfA ## LEVEL(__VA_ARGS__); } }
 
 
 #if OPENRAVE_LOG4CXX
@@ -306,9 +306,9 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
     return 0;
 }
 
-#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfW ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__)
+#define RAVELOG_LOGGER_LEVELW(logger, LEVEL, level, ...) { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { OpenRAVE::RavePrintfW ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__); } }
 
-#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)&&OpenRAVE::RavePrintfA ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__)
+#define RAVELOG_LOGGER_LEVELA(logger, LEVEL, level, ...) { if (int(OpenRAVE::RaveGetDebugLevel()&OpenRAVE::Level_OutputMask)>=int(level)) { OpenRAVE::RavePrintfA ## LEVEL(logger, LOG4CXX_LOCATION, __VA_ARGS__); } }
 
 #undef RAVELOG_LEVELW
 #define RAVELOG_LEVELW(LEVEL, level, ...) RAVELOG_LOGGER_LEVELW(OpenRAVE::RaveGetLogger(), LEVEL, level, __VA_ARGS__)
