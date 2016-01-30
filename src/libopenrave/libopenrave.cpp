@@ -46,7 +46,7 @@
 #include <libxml/debugXML.h>
 #include <libxml/xmlmemory.h>
 
-#ifdef OPENRAVE_LOG4CXX
+#if OPENRAVE_LOG4CXX
 
 #include <log4cxx/layout.h>
 #include <log4cxx/patternlayout.h>
@@ -516,7 +516,7 @@ public:
         crlibm_exit(_crlibm_fpu_state);
 #endif
 
-#ifdef OPENRAVE_LOG4CXX
+#if OPENRAVE_LOG4CXX
         _logger = 0;
 #endif
     }
@@ -554,7 +554,7 @@ public:
         return "";
     }
 
-#ifdef OPENRAVE_LOG4CXX
+#if OPENRAVE_LOG4CXX
     log4cxx::LoggerPtr GetLogger()
     {
         return _logger;
@@ -974,7 +974,7 @@ protected:
 #endif
 
     void _InitializeLogging(int level) {
-#ifdef OPENRAVE_LOG4CXX
+#if OPENRAVE_LOG4CXX
         _logger = log4cxx::Logger::getLogger("openrave");
 
         // if root appenders have not been configured, configure a default console appender
@@ -1017,7 +1017,7 @@ private:
     std::vector<boost::filesystem::path> _vBoostDataDirs; ///< \brief returns absolute filenames of the data
 #endif
 
-#ifdef OPENRAVE_LOG4CXX
+#if OPENRAVE_LOG4CXX
     log4cxx::LoggerPtr _logger;
 #endif
 
@@ -2499,7 +2499,7 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 
 } // end namespace OpenRAVE
 
-#ifdef OPENRAVE_LOG4CXX
+#if OPENRAVE_LOG4CXX
 
 using namespace log4cxx;
 
