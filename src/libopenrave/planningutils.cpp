@@ -2105,6 +2105,9 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         std::vector<dReal> vcurrentvalues;
         params->_getstatefn(vcurrentvalues);
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        if( _listCheckBodies.size() > 0 ) {
+            ss << "env=" << _listCheckBodies.front()->GetEnv()->GetId() << ", ";
+        }
         ss << prefix << ", ";
         for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
             if( i > 0 ) {
