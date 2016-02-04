@@ -654,7 +654,7 @@ PyInterfaceBasePtr toPyPhysicsEngine(PhysicsEngineBasePtr, PyEnvironmentBasePtr)
 void init_openravepy_planner();
 PlannerBasePtr GetPlanner(PyPlannerBasePtr);
 PyInterfaceBasePtr toPyPlanner(PlannerBasePtr, PyEnvironmentBasePtr);
-//PlannerBase::PlannerParametersPtr GetPlannerParameters(object);
+PlannerBase::PlannerParametersPtr GetPlannerParameters(object);
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object);
 
 object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params);

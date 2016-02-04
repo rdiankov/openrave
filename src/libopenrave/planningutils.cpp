@@ -2122,6 +2122,23 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
     }
 }
 
+inline std::ostream& RaveSerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
+    return O;
+}
+
+inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dReal>& values, char delim=',')
+{
+    for(size_t i = 0; i < values.size(); ++i) {
+        if( i > 0 ) {
+            O << delim;
+        }
+        O << values[i];
+    }
+    return O;
+}
+
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
 {
     int maskoptions = options&_filtermask;
@@ -2355,7 +2372,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 fLargestInflection = 0.5*fLargestStepInitialVelocity*fLargestInflectionTime;
                 fLargestTraveledDistance = RaveFabs(fLargestInflection) + RaveFabs(dQ.at(nLargestStepIndex) - fLargestInflection);
                 fLargestStepDelta = fLargestTraveledDistance/numSteps;
-                if( fLargestInflection < 0 || (RaveFabs(fLargestInflection)<=g_fEpsilonLinear && dQ.at(nLargestStepIndex)<0) ) {
+                if( fLargestInflection < 0 || (RaveFabs(fLargestInflection)<=g_fEpsilonLinear && dQ.at(nLargestStepIndex)>0) ) {
                     fLargestStepDelta = -fLargestStepDelta;
                 }
             }
@@ -2371,7 +2388,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal fStep = 0;
         int istep = 0;
         dReal prevtimestep = 0;
-        bool bSurpassedInflection = false;
         int numRepeating = 0;
         while(istep < numSteps && prevtimestep < timeelapsed) {
             //for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
@@ -2393,15 +2409,29 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
-            dReal fBestNewStep = bSurpassedInflection ? (fStep-fLargestStepDelta) : (fStep+fLargestStepDelta);
+            dReal fBestNewStep;
+            if( prevtimestep > fLargestInflectionTime ) {
+                fBestNewStep = fStep-fLargestStepDelta;
+            }
+            else {
+                // could be straddling the inflection so have to compensate. note that this will skip checking collision at the inflection
+                if( (fLargestStepDelta > 0 && fStep+fLargestStepDelta > fLargestInflection) || (fLargestStepDelta < 0 && fStep+fLargestStepDelta < fLargestInflection) ) {
+                    fBestNewStep = fLargestInflection - (fStep+fLargestStepDelta - fLargestInflection);
+                    prevtimestep = fLargestInflectionTime-1e-7; // in order to force to choose a time after the inflection
+                }
+                else {
+                    fBestNewStep = fStep+fLargestStepDelta;
+                }
+            }
 
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
                 OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon, "axis %d does not move? %.15e->%.15e, numSteps=%d", nLargestStepIndex%q0[nLargestStepIndex]%q1[nLargestStepIndex]%numSteps, ORE_Assert);
                 timestep = fStep/fLargestStepInitialVelocity;
+                RAVELOG_VERBOSE_FORMAT("largest accel is 0 so timestep=%fs", timestep);
             }
             else {
                 // check whether to go positive or negative direction
-                dReal fNewStep = bSurpassedInflection ? (fStep-fLargestStepDelta) : (fStep+fLargestStepDelta);
+                dReal fNewStep = fBestNewStep;
                 bool bfound = false;
 
                 int numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
@@ -2419,7 +2449,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         }
                     }
 
-                    if( !bfound && !bSurpassedInflection ) {
+                    if( !bfound && (prevtimestep < fLargestInflectionTime) ) {
+                        // most likely there are two solutions so solve for fStep and get the furthest solution
                         fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
                         for(int i = 0; i < numroots; ++i) {
@@ -2427,7 +2458,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                                 // going backwards!
                                 timestep = timesteproots[i];
                                 fBestNewStep = fNewStep;
-                                bSurpassedInflection = true;
                                 bfound = true;
                             }
                         }
@@ -2467,7 +2497,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     dReal s = RaveFabs(params->_vConfigResolution[i]/dQ[i]);
                     if( s < dqscale ) {
                         dqscale = s;
-                    }
+                    } 
                 }
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
@@ -2478,7 +2508,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     RAVELOG_WARN("got very small dqscale, so returning failure\n");
                     return CFO_StateSettingError;
                 }
-                if( numRepeating > 10 ) {
+                if( numRepeating > numSteps+1 ) {
                     RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%d, so returning failure", numRepeating%dqscale);
                     return CFO_StateSettingError;
                 }
@@ -2497,7 +2527,21 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         // expected...
                         break;
                     }
-                    RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d", timestep%timeelapsed%istep%numSteps);
+
+                    {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "x0=[";
+                        RaveSerializeValues(ss, q0);
+                        ss << "]; x1=[";
+                        RaveSerializeValues(ss, q1);
+                        ss << "]; dx0=[";
+                        RaveSerializeValues(ss, dq0);
+                        ss << "]; dx1=[";
+                        RaveSerializeValues(ss, dq1);
+                        ss << "]; deltatime=" << timeelapsed;
+                        RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d %s", timestep%timeelapsed%istep%numSteps%ss.str());
+                    }
+                    
                     if( !!filterreturn ) {
                         filterreturn->_returncode = CFO_StateSettingError;
                     }
@@ -2514,12 +2558,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 return CFO_StateSettingError;
             }
-
+            
+            //RAVELOG_VERBOSE_FORMAT("dqscale=%f fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", dqscale%fBestNewStep%fLargestStep%timestep);
             if( dqscale >= 1 ) {
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 fStep = fBestNewStep;
                 ++istep;
-                //RAVELOG_VERBOSE_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
                 prevtimestep = timestep;
             }
         }
