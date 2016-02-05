@@ -1745,6 +1745,10 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
                 endremoveindex -= 1;
             }
             traj->Remove(0, endremoveindex);
+            // have to reset the delta time of the first point
+            vdeltatime[0] = 0;
+            traj->Insert(0, vdeltatime, deltatimespec, true);
+
         }
     }
 }
