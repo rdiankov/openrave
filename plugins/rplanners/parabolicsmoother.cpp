@@ -822,8 +822,8 @@ protected:
             // only check time based constraints since most of the collision checks here will change due to a different path. however it's important to have the ramp start with reasonable velocities/accelerations.
             int options = CFO_CheckTimeBasedConstraints;
             if(!_parameters->verifyinitialpath) {
-                RAVELOG_VERBOSE("Initial path verification is disabled (in SetMilestones)\n");
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // no collision checking
+                RAVELOG_VERBOSE_FORMAT("env=%d, Initial path verification is disabled using options=0x%x", GetEnv()->GetId()%options);
             }
             ramps.resize(vpath.size()-1);
             std::vector<dReal> vzero(vpath.at(0).size(), 0.0);
@@ -864,7 +864,7 @@ protected:
                             ss << "]; dx1=[";
                             SerializeValues(ss, dx1);
                             ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
-                            RAVELOG_WARN_FORMAT("initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+                            RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
                             retseg.retcode = 0;
                         }
                         if( retseg.retcode != 0 ) {
@@ -879,6 +879,7 @@ protected:
                     }
                     else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                         // slow the ramp down and try again
+                        RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d since too fast", GetEnv()->GetId()%i%vpath.size());
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
                             accellimits.at(j) *= retseg.fTimeBasedSurpassMult;
@@ -1034,7 +1035,7 @@ protected:
                     }
 
                     if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
-                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp, fcurmult=%f", iters%fcurmult);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d, slow down ramp, fcurmult=%f", GetEnv()->GetId()%iters%fcurmult);
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             // have to watch out that velocities don't drop under dx0 & dx1!
                             dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
