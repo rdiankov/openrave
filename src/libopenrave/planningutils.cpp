@@ -2494,7 +2494,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
                 if( RaveFabs(dQ[i]) > params->_vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
-                    if( nLargestStepIndex == i ) {
+                    if( nLargestStepIndex == (int)i ) {
                         RAVELOG_DEBUG_FORMAT("got huge delta abs(%f) > %f for dof %d even though it is the largest index!", dQ[i]%params->_vConfigResolution[i]%i);
                     }
                     // the delta distance is greater than expected, so have to divide the time!
@@ -2509,11 +2509,31 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( dqscale < 1 ) {
                 numRepeating++;
                 if( dqscale <= 0.01 ) {
-                    RAVELOG_WARN("got very small dqscale, so returning failure\n");
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "x0=[";
+                    RaveSerializeValues(ss, q0);
+                    ss << "]; x1=[";
+                    RaveSerializeValues(ss, q1);
+                    ss << "]; dx0=[";
+                    RaveSerializeValues(ss, dq0);
+                    ss << "]; dx1=[";
+                    RaveSerializeValues(ss, dq1);
+                    ss << "]; deltatime=" << timeelapsed;                    
+                    RAVELOG_WARN_FORMAT("got very small dqscale %f, so returning failure %s", dqscale%ss.str());
                     return CFO_StateSettingError;
                 }
                 if( numRepeating > numSteps+1 ) {
-                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%d, so returning failure", numRepeating%dqscale);
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "x0=[";
+                    RaveSerializeValues(ss, q0);
+                    ss << "]; x1=[";
+                    RaveSerializeValues(ss, q1);
+                    ss << "]; dx0=[";
+                    RaveSerializeValues(ss, dq0);
+                    ss << "]; dx1=[";
+                    RaveSerializeValues(ss, dq1);
+                    ss << "]; deltatime=" << timeelapsed;
+                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%d, so returning failure %s", numRepeating%dqscale%ss.str());
                     return CFO_StateSettingError;
                 }
                 // scaled! so have to change dQ and make sure not to increment istep/fStep

@@ -196,6 +196,10 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nInterface to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
         _bmanipconstraints = false;
         _constraintreturn.reset(new ConstraintFilterReturn());
+        _logginguniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        if( !_logginguniformsampler ) {
+            _logginguniformsampler->SetSeed(utils::GetMicroTime());
+        }
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -865,7 +869,7 @@ protected:
                             SerializeValues(ss, dx1);
                             ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
                             RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
-                            retseg.retcode = 0;
+                            //retseg.retcode = 0;
                         }
                         if( retseg.retcode != 0 ) {
                             break;
@@ -1305,7 +1309,14 @@ protected:
     std::string _DumpTrajectory(TrajectoryBasePtr traj)
     {
         // store the trajectory
-        string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+        uint32_t randnum;
+        if( !!_logginguniformsampler ) {
+            randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            randnum = RaveRandomInt();
+        }
+        string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(randnum%1000));
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         traj->serialize(f);
@@ -1313,7 +1324,8 @@ protected:
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
-    SpaceSamplerBasePtr _uniformsampler;
+    SpaceSamplerBasePtr _uniformsampler; ///< used for planning, seed is controlled
+    SpaceSamplerBasePtr _logginguniformsampler; ///< used for logging, seed is random
     ConstraintFilterReturnPtr _constraintreturn;
     std::list< ManipConstraintInfo > _listCheckManips; ///< the manipulators and the points on their end efffectors to check for velocity and acceleration constraints
     TrajectoryBasePtr _dummytraj;
