@@ -367,6 +367,9 @@ private:
         /// \brief maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.
         int _nMaxIterations;
 
+        /// \brief max planning time in ms. If 0, then there is no time limit
+        uint32_t _nMaxPlanningTime;
+        
         /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
         ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)

@@ -806,7 +806,7 @@ public:
                             bestGoalNode = ptestnode;
                             fBestGoalNodeDist = fGoalNodeDist;
                             _goalindex = -1;
-                            RAVELOG_DEBUG_FORMAT("env=%d, found node at goal at dist=%f at %d iterations, computation time %fs", GetEnv()->GetId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+                            RAVELOG_DEBUG_FORMAT("env=%d, found node at goal at dist=%f at %d iterations, computation time=%fs", GetEnv()->GetId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
                         }
                     }
 
@@ -827,6 +827,14 @@ public:
             if( iter > _parameters->_nMaxIterations ) {
                 RAVELOG_WARN("iterations exceeded %d\n", _parameters->_nMaxIterations);
                 break;
+            }
+
+            if( !!bestGoalNode && _parameters->_nMaxPlanningTime > 0 ) {
+                uint32_t elapsedtime = utils::GetMilliTime()-basetime;
+                if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                    RAVELOG_VERBOSE_FORMAT("time exceeded (%d) so breaking with bestdist=%f", elapsedtime%fBestGoalNodeDist);
+                    break;
+                }
             }
 
             progress._iteration = iter;
@@ -867,7 +875,7 @@ public:
         ptraj->Insert(ptraj->GetNumWaypoints(), vinsertvalues, _parameters->_configurationspecification);
 
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
-        RAVELOG_DEBUG_FORMAT("env=%d, plan success, path=%d points in %fs", GetEnv()->GetId()%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime))));
+        RAVELOG_DEBUG_FORMAT("env=%d, plan success, path=%d points computation time=%fs, maxPlanningTime=%f", GetEnv()->GetId()%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))%(0.001*_parameters->_nMaxPlanningTime));
         return status;
     }
 

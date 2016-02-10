@@ -2394,7 +2394,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal prevtimestep = 0;
         int numRepeating = 0;
         while(istep < numSteps && prevtimestep < timeelapsed) {
-            //for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
             int nstateret = 0;
             if( istep >= start ) {
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
@@ -2542,6 +2541,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     dQ[i] *= dqscale;
                     _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
                 }
+                RAVELOG_VERBOSE_FORMAT("scaled by dqscale=%f", dqscale);
             }
             else {
                 numRepeating = 0;
