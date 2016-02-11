@@ -449,7 +449,7 @@ public:
             }
             if( !!_parameters->_neighstatefn ) {
                 newq = vdata;
-                if( !_parameters->_neighstatefn(newq,vdiff,0) ) {
+                if( !_parameters->_neighstatefn(newq,vdiff,NSO_OnlyHardConstraints) ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("neighstatefn is rejecting configuration %d, wrote trajectory %s"),ipoint%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                 }
                 dReal fdist = _parameters->_distmetricfn(newq,vdata);
@@ -515,7 +515,7 @@ public:
                             throw OPENRAVE_EXCEPTION_FORMAT0(_("time %fs-%fs, failed to set state values"), ORE_InconsistentConstraints);
                         }
                         vector<dReal> vtemp = vprevconfig;
-                        if( !_parameters->_neighstatefn(vtemp,deltaq,0) ) {
+                        if( !_parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) ) {
                             throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s"),*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                         }
                         else {
@@ -2233,8 +2233,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     int i, numSteps = 0, nLargestStepIndex = -1;
-    std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
+    const std::vector<dReal>& vConfigResolution = params->_vConfigResolution;
+    std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
+    BOOST_ASSERT((int)vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
         // quadratic equation, so total travelled distance for each joint is not as simple as taking the difference between the two endpoints.
@@ -2356,6 +2357,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
         // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = CFO_StateSettingError;
+            }
             return CFO_StateSettingError;
         }
 
@@ -2413,7 +2417,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             dReal fBestNewStep;
-            if( prevtimestep > fLargestInflectionTime ) {
+            if( prevtimestep >= fLargestInflectionTime ) {
                 fBestNewStep = fStep-fLargestStepDelta;
             }
             else {
@@ -2490,16 +2494,19 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             dReal dqscale = 1.0;
+            int iScaledIndex = -1; // index into dQ of the DOF that has changed the most and affected dqscale
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
-                if( RaveFabs(dQ[i]) > params->_vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
+                if( RaveFabs(dQ[i]) > vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
                     if( nLargestStepIndex == (int)i ) {
-                        RAVELOG_DEBUG_FORMAT("got huge delta abs(%f) > %f for dof %d even though it is the largest index!", dQ[i]%params->_vConfigResolution[i]%i);
+                        // common when having jacobian constraints
+                        RAVELOG_VERBOSE_FORMAT("got huge delta abs(%f) > %f for dof %d even though it is the largest index!", dQ[i]%vConfigResolution[i]%i);
                     }
                     // the delta distance is greater than expected, so have to divide the time!
-                    dReal s = RaveFabs(params->_vConfigResolution[i]/dQ[i]);
+                    dReal s = RaveFabs(vConfigResolution[i]/dQ[i]);
                     if( s < dqscale ) {
                         dqscale = s;
+                        iScaledIndex = i;
                     } 
                 }
                 _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
@@ -2519,9 +2526,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     RaveSerializeValues(ss, dq1);
                     ss << "]; deltatime=" << timeelapsed;                    
                     RAVELOG_WARN_FORMAT("got very small dqscale %f, so returning failure %s", dqscale%ss.str());
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_StateSettingError;
+                    }
                     return CFO_StateSettingError;
                 }
-                if( numRepeating > numSteps+1 ) {
+                if( numRepeating > numSteps+4 ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "x0=[";
                     RaveSerializeValues(ss, q0);
@@ -2532,7 +2542,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     ss << "]; dx1=[";
                     RaveSerializeValues(ss, dq1);
                     ss << "]; deltatime=" << timeelapsed;
-                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%d, so returning failure %s", numRepeating%dqscale%ss.str());
+                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%f, iScaledIndex=%d, so returning failure %s", numRepeating%dqscale%iScaledIndex%ss.str());
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_StateSettingError;
+                    }
                     return CFO_StateSettingError;
                 }
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
@@ -2541,7 +2554,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     dQ[i] *= dqscale;
                     _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
                 }
-                RAVELOG_VERBOSE_FORMAT("scaled by dqscale=%f", dqscale);
+                RAVELOG_VERBOSE_FORMAT("scaled by dqscale=%f, iScaledIndex=%d, timestep=%f, value=%f, dq=%f", dqscale%iScaledIndex%timestep%_vtempconfig.at(iScaledIndex)%dQ.at(iScaledIndex));
             }
             else {
                 numRepeating = 0;
@@ -2576,15 +2589,68 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
 
-            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            _vprevtempconfig = _vtempconfig;
+            if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
+
+            bool bHasMoved = false;
+            {
+                // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+                int numPostNeighSteps = 1;
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    dReal f = RaveFabs(_vtempconfig[i] - _vprevtempconfig[i]);
+                    if( f > vConfigResolution[i] ) {
+                        int poststeps = int(f/vConfigResolution[i] + 0.9999);
+                        if( poststeps > numPostNeighSteps ) {
+                            numPostNeighSteps = poststeps;
+                        }
+                    }
+                    if( f > 0.0001 ) {
+                        bHasMoved = true;
+                    }
+                }
+
+                if( numPostNeighSteps > 1 ) {
+                    RAVELOG_VERBOSE_FORMAT("have to divide the arc in %d steps post neigh", numPostNeighSteps);
+                    // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                    // note that circular constraints would break here
+                    std::vector<dReal> vpostdq(_vtempconfig.size());
+                    dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        vpostdq[i] = (_vtempconfig[i] - _vprevtempconfig[i]) * fiNumPostNeighSteps;
+                    }
+
+                    // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
+                    for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
+                        for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                            _vprevtempconfig[i] += vpostdq[i];
+                        }
+                        
+                        // not sure what to do with _vtempvelconfig...
+                        int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                        if( !!params->_getstatefn ) {
+                            params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+                        }
+                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                            filterreturn->_configurationtimes.push_back(timestep);
+                        }
+                        if( nstateret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = nstateret;
+                            }
+                            return nstateret;
+                        }
+                    }
+                }
+            }
             
             //RAVELOG_VERBOSE_FORMAT("dqscale=%f fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", dqscale%fBestNewStep%fLargestStep%timestep);
-            if( dqscale >= 1 ) {
+            if( !bHasMoved || (istep+1 < numSteps && numRepeating > 2) || dqscale >= 1 ) {//dqscale >= 1 ) {
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 fStep = fBestNewStep;
                 ++istep;
@@ -2613,7 +2679,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
 
         if( start > 0 ) {
-            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
                 return CFO_StateSettingError;
             }
             for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
@@ -2639,7 +2708,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
-            if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+            if( !params->_neighstatefn(_vtempconfig,dQ,NSO_OnlyHardConstraints) ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
                 return CFO_StateSettingError;
             }
             for(size_t i = 0; i < _vtempveldelta.size(); ++i) {

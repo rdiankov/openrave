@@ -856,21 +856,21 @@ protected:
                         ramp.Evaluate(vswitchtimes.at(iswitch), x1);
                         ramp.Derivative(vswitchtimes.at(iswitch), dx1);
                         retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
-                        if( retseg.retcode == CFO_StateSettingError ) {
-                            // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
-                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                            ss << "x0=[";
-                            SerializeValues(ss, x0);
-                            ss << "]; x1=[";
-                            SerializeValues(ss, x1);
-                            ss << "]; dx0=[";
-                            SerializeValues(ss, dx0);
-                            ss << "]; dx1=[";
-                            SerializeValues(ss, dx1);
-                            ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
-                            RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
-                            //retseg.retcode = 0;
-                        }
+//                        if( retseg.retcode == CFO_StateSettingError ) {
+//                            // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
+//                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//                            ss << "x0=[";
+//                            SerializeValues(ss, x0);
+//                            ss << "]; x1=[";
+//                            SerializeValues(ss, x1);
+//                            ss << "]; dx0=[";
+//                            SerializeValues(ss, dx0);
+//                            ss << "]; dx1=[";
+//                            SerializeValues(ss, dx1);
+//                            ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
+//                            RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+//                            //retseg.retcode = 0;
+//                        }
                         if( retseg.retcode != 0 ) {
                             break;
                         }
