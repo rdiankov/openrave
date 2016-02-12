@@ -2493,6 +2493,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
+            _vprevtempconfig = _vtempconfig;
+            _vprevtempvelconfig = _vtempvelconfig;
+            
             dReal dqscale = 1.0;
             int iScaledIndex = -1; // index into dQ of the DOF that has changed the most and affected dqscale
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
@@ -2588,8 +2591,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     timestep = timeelapsed; // get rid of small epsilons
                 }
             }
-
-            _vprevtempconfig = _vtempconfig;
+            
             if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -2600,6 +2602,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             bool bHasMoved = false;
             {
                 // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+                // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
                 int numPostNeighSteps = 1;
                 for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                     dReal f = RaveFabs(_vtempconfig[i] - _vprevtempconfig[i]);
@@ -2635,10 +2638,12 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         if( !!params->_getstatefn ) {
                             params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
                         }
-                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-                            filterreturn->_configurationtimes.push_back(timestep);
-                        }
+
+                        // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
+//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+//                            filterreturn->_configurationtimes.push_back(timestep);
+//                        }
                         if( nstateret != 0 ) {
                             if( !!filterreturn ) {
                                 filterreturn->_returncode = nstateret;

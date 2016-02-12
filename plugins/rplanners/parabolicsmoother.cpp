@@ -883,7 +883,7 @@ protected:
                     }
                     else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                         // slow the ramp down and try again
-                        RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d since too fast", GetEnv()->GetId()%i%vpath.size());
+                        RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d by %.15e since too fast", GetEnv()->GetId()%i%vpath.size()%retseg.fTimeBasedSurpassMult);
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
                             accellimits.at(j) *= retseg.fTimeBasedSurpassMult;
@@ -1039,7 +1039,7 @@ protected:
                     }
 
                     if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d, slow down ramp, fcurmult=%f", GetEnv()->GetId()%iters%fcurmult);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d, slow down ramp by fTimeBasedSurpassMult=%.15e, fcurmult=%.15e", GetEnv()->GetId()%iters%retcheck.fTimeBasedSurpassMult%fcurmult);
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             // have to watch out that velocities don't drop under dx0 & dx1!
                             dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
@@ -1047,10 +1047,13 @@ protected:
                             accellimits[j] *= retcheck.fTimeBasedSurpassMult;
                         }
                         fcurmult *= retcheck.fTimeBasedSurpassMult;
+                        if( fcurmult < 0.01 ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, fcurmult is too small (%.15e) so giving up on this ramp", GetEnv()->GetId()%fcurmult);
+                        }
                         //fcurmult *= fSearchVelAccelMult;
                     }
                     else {
-                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck.retcode);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d rejected due to constraints 0x%x", GetEnv()->GetId()%iters%retcheck.retcode);
                         break;
                     }
                     iIterProgress += 0x1000;
@@ -1240,6 +1243,9 @@ protected:
                     if(_parameters->maxmanipspeed>0) {
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        if( manipspeed > 1e5 ) {
+                            RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
+                        }
                         if( maxmanipspeed < manipspeed ) {
                             maxmanipspeed = manipspeed;
                         }
@@ -1250,6 +1256,10 @@ protected:
                     if(_parameters->maxmanipaccel>0) {
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal manipaccel = RaveSqrt(apoint.lengthsqr3());
+                        if( manipaccel > 1e5 ) {
+                            RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
+                        }
+
                         if( maxmanipaccel < manipaccel ) {
                             maxmanipaccel = manipaccel;
                         }
