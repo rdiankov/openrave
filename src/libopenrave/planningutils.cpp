@@ -2417,6 +2417,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             dReal fBestNewStep;
+            dReal fMinNextTimeStep = prevtimestep; // when computing the new timestep, have to make sure it is greater than this value
             if( prevtimestep >= fLargestInflectionTime ) {
                 fBestNewStep = fStep-fLargestStepDelta;
             }
@@ -2424,7 +2425,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 // could be straddling the inflection so have to compensate. note that this will skip checking collision at the inflection
                 if( (fLargestStepDelta > 0 && fStep+fLargestStepDelta > fLargestInflection) || (fLargestStepDelta < 0 && fStep+fLargestStepDelta < fLargestInflection) ) {
                     fBestNewStep = fLargestInflection - (fStep+fLargestStepDelta - fLargestInflection);
-                    prevtimestep = fLargestInflectionTime-1e-7; // in order to force to choose a time after the inflection
+                    fMinNextTimeStep = fLargestInflectionTime-1e-7; // in order to force to choose a time after the inflection
                 }
                 else {
                     fBestNewStep = fStep+fLargestStepDelta;
@@ -2450,18 +2451,18 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 if( !bfound ) {
                     for(int i = 0; i < numroots; ++i) {
-                        if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
+                        if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                             timestep = timesteproots[i];
                             bfound = true;
                         }
                     }
 
-                    if( !bfound && (prevtimestep < fLargestInflectionTime) ) {
+                    if( !bfound && (fMinNextTimeStep < fLargestInflectionTime) ) {
                         // most likely there are two solutions so solve for fStep and get the furthest solution
                         fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
                         for(int i = 0; i < numroots; ++i) {
-                            if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
+                            if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                                 // going backwards!
                                 timestep = timesteproots[i];
                                 fBestNewStep = fNewStep;
