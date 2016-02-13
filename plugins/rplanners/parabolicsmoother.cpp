@@ -744,37 +744,40 @@ public:
         // Test for collision and/or dynamics has succeeded, now test for manip constraint
         if( bExpectModifiedConfigurations ) {
             // the configurations are getting constrained, therefore the path checked is not equal to the simply interpolated path by (a,b, da, db).
-            if( _constraintreturn->_configurationtimes.size() > 1 ) {
+            if( _constraintreturn->_configurationtimes.size() > 0 ) {
                 OPENRAVE_ASSERT_OP(_constraintreturn->_configurations.size(),==,_constraintreturn->_configurationtimes.size()*a.size());
                 outramps.resize(0);
-                if( outramps.capacity() < _constraintreturn->_configurationtimes.size()-1 ) {
-                    outramps.reserve(_constraintreturn->_configurationtimes.size()-1);
+                if( outramps.capacity() < _constraintreturn->_configurationtimes.size() ) {
+                    outramps.reserve(_constraintreturn->_configurationtimes.size());
                 }
                 
-                std::vector<dReal> curvel = da, newvel;
-                std::vector<dReal> curpos = a, newpos;
-                std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin() + a.size();
+                std::vector<dReal> curvel = da, newvel(a.size());
+                std::vector<dReal> curpos = a, newpos(a.size());
+                // _constraintreturn->_configurationtimes[0] is actually the end of the first segment since interval is IT_OpenStart
+                std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin();
                 dReal curtime = 0;
-                for(size_t itime = 1; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += a.size()) {
-                    newpos.resize(0);
-                    newpos.insert(newpos.end(), it, it+a.size());
-                    newvel.resize(curpos.size());
+                for(size_t itime = 0; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += a.size()) {
+                    std::copy(it, it+a.size(), newpos.begin());
                     dReal deltatime = _constraintreturn->_configurationtimes[itime]-curtime;
-                    for(size_t idof = 0; idof < newvel.size(); ++idof) {
-                        newvel[idof] = 2*(newpos[idof] - curpos[idof])/deltatime - curvel[idof];
-                        if( RaveFabs(newvel[idof]) > _parameters->_vConfigVelocityLimit.at(idof)+g_fEpsilon ) {
-                            return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
-                        }
-                    }
                     if( deltatime > g_fEpsilon ) {
+                        dReal ideltatime = 1.0/deltatime;
+                        for(size_t idof = 0; idof < newvel.size(); ++idof) {
+                            newvel[idof] = 2*(newpos[idof] - curpos[idof])*ideltatime - curvel[idof];
+                            if( RaveFabs(newvel[idof]) > _parameters->_vConfigVelocityLimit.at(idof)+g_fEpsilon ) {
+                                if( 0.9*_parameters->_vConfigVelocityLimit.at(idof) < 0.1*RaveFabs(newvel[idof]) ) {
+                                    RAVELOG_WARN_FORMAT("new velocity for dof %d is too high %f > %f", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof));
+                                }
+                                return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
+                            }
+                        }
                         ParabolicRamp::ParabolicRampND outramp;
                         outramp.SetPosVelTime(curpos, curvel, newpos, newvel, deltatime);
                         outramp.constraintchecked = 1;
                         outramps.push_back(outramp);
+                        curtime = _constraintreturn->_configurationtimes[itime];
+                        curpos.swap(newpos);
+                        curvel.swap(newvel);
                     }
-                    curtime = _constraintreturn->_configurationtimes[itime];
-                    curpos.swap(newpos);
-                    curvel.swap(newvel);
                 }
             }
         }
@@ -1049,6 +1052,7 @@ protected:
                         fcurmult *= retcheck.fTimeBasedSurpassMult;
                         if( fcurmult < 0.01 ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, fcurmult is too small (%.15e) so giving up on this ramp", GetEnv()->GetId()%fcurmult);
+                            retcheck = check.Check2(intermediate.ramps.at(0), 0xffff, outramps);
                         }
                         //fcurmult *= fSearchVelAccelMult;
                     }
@@ -1249,21 +1253,23 @@ protected:
                         if( maxmanipspeed < manipspeed ) {
                             maxmanipspeed = manipspeed;
                         }
-                        if( manipspeed > _parameters->maxmanipspeed) {
+                        if( manipspeed > _parameters->maxmanipspeed || 0.9*_parameters->maxmanipspeed < 0.001*manipspeed ) {
+                            if( manipspeed > 1e5 || 0.9*_parameters->maxmanipspeed < 0.05*manipspeed ) {
+                                RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
+                            }
                             return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->maxmanipspeed/manipspeed);
                         }
                     }
                     if(_parameters->maxmanipaccel>0) {
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal manipaccel = RaveSqrt(apoint.lengthsqr3());
-                        if( manipaccel > 1e5 ) {
-                            RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
-                        }
-
                         if( maxmanipaccel < manipaccel ) {
                             maxmanipaccel = manipaccel;
                         }
                         if(manipaccel > _parameters->maxmanipaccel) {
+                            if( manipaccel > 1e5 || 0.9*_parameters->maxmanipaccel < 0.05*manipaccel ) {
+                                RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
+                            }
                             return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->maxmanipaccel/manipaccel);
                         }
                     }
