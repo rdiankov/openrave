@@ -2569,7 +2569,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     ss << "]; dx1=[";
                     RaveSerializeValues(ss, dq1);
                     ss << "]; deltatime=" << timeelapsed;
-                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%f, iScaledIndex=%d, so returning failure %s", numRepeating%dqscale%iScaledIndex%ss.str());
+                    RAVELOG_WARN_FORMAT("num repeating is %d/%d, dqscale=%f, iScaledIndex=%d, nLargestStepIndex=%d, timestep=%f, fBestNewStep=%f, fLargestStep=%f, so returning failure %s", numRepeating%(numSteps*2)%dqscale%iScaledIndex%nLargestStepIndex%timestep%fBestNewStep%fLargestStep%ss.str());
                     if( !!filterreturn ) {
                         filterreturn->_returncode = CFO_StateSettingError;
                     }
