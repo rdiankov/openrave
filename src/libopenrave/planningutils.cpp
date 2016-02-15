@@ -2397,6 +2397,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         int istep = 0;
         dReal prevtimestep = 0;
         int numRepeating = 0;
+        dReal fBestNewStep=0;
+        bool bComputeNewStep = true; // if true, then compute fBestNewStep from fStep. Otherwise use the previous computed one
         while(istep < numSteps && prevtimestep < timeelapsed) {
             int nstateret = 0;
             if( istep >= start ) {
@@ -2416,19 +2418,20 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
-            dReal fBestNewStep;
             dReal fMinNextTimeStep = prevtimestep; // when computing the new timestep, have to make sure it is greater than this value
-            if( prevtimestep >= fLargestInflectionTime ) {
-                fBestNewStep = fStep-fLargestStepDelta;
-            }
-            else {
-                // could be straddling the inflection so have to compensate. note that this will skip checking collision at the inflection
-                if( (fLargestStepDelta > 0 && fStep+fLargestStepDelta > fLargestInflection) || (fLargestStepDelta < 0 && fStep+fLargestStepDelta < fLargestInflection) ) {
-                    fBestNewStep = fLargestInflection - (fStep+fLargestStepDelta - fLargestInflection);
-                    fMinNextTimeStep = fLargestInflectionTime-1e-7; // in order to force to choose a time after the inflection
+            if( bComputeNewStep ) {
+                if( prevtimestep >= fLargestInflectionTime ) {
+                    fBestNewStep = fStep-fLargestStepDelta;
                 }
                 else {
-                    fBestNewStep = fStep+fLargestStepDelta;
+                    // could be straddling the inflection so have to compensate. note that this will skip checking collision at the inflection
+                    if( (fLargestStepDelta > 0 && fStep+fLargestStepDelta > fLargestInflection) || (fLargestStepDelta < 0 && fStep+fLargestStepDelta < fLargestInflection) ) {
+                        fBestNewStep = fLargestInflection - (fStep+fLargestStepDelta - fLargestInflection);
+                        fMinNextTimeStep = fLargestInflectionTime-1e-7; // in order to force to choose a time after the inflection
+                    }
+                    else {
+                        fBestNewStep = fStep+fLargestStepDelta;
+                    }
                 }
             }
 
@@ -2692,7 +2695,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( !bHasMoved || (istep+1 < numSteps && numRepeating > 2) || dqscale >= 1 ) {//dqscale >= 1 ) {
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 fStep = fBestNewStep;
+                bComputeNewStep = true;
                 ++istep;
+            }
+            else {
+                bComputeNewStep = false;
             }
             prevtimestep = timestep; // have to always update since it serves as the basis for the next timestep chosen
         }
@@ -2703,6 +2710,60 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             // this is a bug, just return false
             return CFO_StateSettingError;
+        }
+
+        {
+            // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+            // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
+            int numPostNeighSteps = 1;
+            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
+                if( f > vConfigResolution[i] ) {
+                    int poststeps = int(f/vConfigResolution[i] + 0.9999);
+                    if( poststeps > numPostNeighSteps ) {
+                        numPostNeighSteps = poststeps;
+                    }
+                }
+            }
+            
+            if( numPostNeighSteps > 1 ) {
+                // should never happen, but just in case _neighstatefn is some non-linear constraint projection
+                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, timestep=%f", numPostNeighSteps%timestep);
+                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                // note that circular constraints would break here
+                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
+                dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
+                    vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
+                }
+
+                _vprevtempconfig = _vtempconfig;
+                _vprevtempvelconfig = _vtempvelconfig;
+                // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
+                for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
+                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        _vprevtempconfig[i] += vpostdq[i];
+                        _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                    }
+
+                    int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+//                        if( !!params->_getstatefn ) {
+//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
+//                        }
+                    // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
+//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+//                            filterreturn->_configurationtimes.push_back(timestep);
+//                        }
+                    if( nstateret != 0 ) {
+                        if( !!filterreturn ) {
+                            filterreturn->_returncode = nstateret;
+                        }
+                        return nstateret;
+                    }
+                }
+            }
         }
     }
     else {
