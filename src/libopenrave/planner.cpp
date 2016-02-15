@@ -812,7 +812,7 @@ void PlannerBase::PlannerParameters::Validate() const
     if( !!_neighstatefn && vstate.size() > 0 ) {
         vector<dReal> vstate2 = vstate;
         vector<dReal> vzeros(vstate.size());
-        _neighstatefn(vstate2,vzeros,0);
+        _neighstatefn(vstate2,vzeros,NSO_OnlyHardConstraints);
         dReal dist = _distmetricfn(vstate,vstate2);
         if( IS_DEBUGLEVEL(Level_Debug) ) {
             if( dist > 1000*g_fEpsilon ) {
