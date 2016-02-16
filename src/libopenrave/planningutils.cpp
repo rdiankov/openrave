@@ -2643,7 +2643,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 int numPostNeighSteps = 1;
                 for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                     dReal f = RaveFabs(_vtempconfig[i] - _vprevtempconfig[i]);
-                    if( f > vConfigResolution[i] ) {
+                    if( f > vConfigResolution[i]*1.01 ) {
                         int poststeps = int(f/vConfigResolution[i] + 0.9999);
                         if( poststeps > numPostNeighSteps ) {
                             numPostNeighSteps = poststeps;
@@ -2718,7 +2718,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             int numPostNeighSteps = 1;
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
-                if( f > vConfigResolution[i] ) {
+                if( f > vConfigResolution[i]*1.01 ) {
                     int poststeps = int(f/vConfigResolution[i] + 0.9999);
                     if( poststeps > numPostNeighSteps ) {
                         numPostNeighSteps = poststeps;
@@ -2789,6 +2789,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 _vtempvelconfig.at(i) += _vtempveldelta[i];
             }
         }
+
+        _vprevtempconfig.resize(dQ.size());
         for (int f = start; f < numSteps; f++) {
             int nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
             if( !!params->_getstatefn ) {
@@ -2808,7 +2810,23 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
-            if( !params->_neighstatefn(_vtempconfig,dQ,NSO_OnlyHardConstraints) ) {
+            // have to recompute the delta based on f and dQ
+            dReal fnewscale = 1;
+            for(size_t idof = 0; idof < dQ.size(); ++idof) {
+                _vprevtempconfig[idof] = q0[idof] + f*dQ[idof] - _vtempconfig[idof];
+                // _vprevtempconfig[idof] cannot be too high
+                if( RaveFabs(_vprevtempconfig[idof]) > vConfigResolution[idof] ) {
+                    dReal fscale = RaveFabs(_vprevtempconfig[idof])/vConfigResolution[idof];
+                    if( fscale < fnewscale ) {
+                        fnewscale = fscale;
+                    }
+                }
+            }
+            for(size_t idof = 0; idof < dQ.size(); ++idof) {
+                _vprevtempconfig[idof] *= fnewscale;
+            }
+            
+            if( !params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
@@ -2816,6 +2834,68 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
                 _vtempvelconfig.at(i) += _vtempveldelta[i];
+            }
+        }
+
+        // check if _vtempconfig is close to q1!
+        {
+            // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+            // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
+            int numPostNeighSteps = 1;
+            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
+                if( f > vConfigResolution[i]*1.01 ) {
+                    RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
+                    int poststeps = int(f/vConfigResolution[i] + 0.9999);
+                    if( poststeps > numPostNeighSteps ) {
+                        numPostNeighSteps = poststeps;
+                    }
+                }
+            }
+            
+            if( numPostNeighSteps > 1 ) {
+                // should never happen, but just in case _neighstatefn is some non-linear constraint projection
+                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
+                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                // note that circular constraints would break here
+                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(dq1.size());
+                dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
+                    if( dq1.size() == _vtempconfig.size() && _vtempvelconfig.size() == _vtempconfig.size() ) {
+                        vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
+                    }
+                }
+
+                _vprevtempconfig = _vtempconfig;
+                _vprevtempvelconfig = _vtempvelconfig;
+                // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
+                for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
+                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        _vprevtempconfig[i] += vpostdq[i];
+                    }
+                    if( _vprevtempconfig.size() == _vtempconfig.size() && vpostddq.size() == _vtempconfig.size() ) {
+                        for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                            _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                        }
+                    }
+
+                    int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+//                        if( !!params->_getstatefn ) {
+//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
+//                        }
+                    // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
+//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+//                            filterreturn->_configurationtimes.push_back(timestep);
+//                        }
+                    if( nstateret != 0 ) {
+                        if( !!filterreturn ) {
+                            filterreturn->_returncode = nstateret;
+                        }
+                        return nstateret;
+                    }
+                }
             }
         }
     }
