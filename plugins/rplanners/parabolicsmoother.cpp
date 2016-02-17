@@ -882,14 +882,16 @@ protected:
                         vnewpath.insert(vnewpath.begin()+iwaypoint+1, xmid);
                         vforceinitialchecking[iwaypoint+1] = 1; // next point
                         vforceinitialchecking.insert(vforceinitialchecking.begin()+iwaypoint+1, 1); // just inserted point
-                        nConsecutiveExpansions++;
-                        if( nConsecutiveExpansions > 5 ) {
+                        nConsecutiveExpansions += 2;
+                        if( nConsecutiveExpansions > 10 ) {
                             RAVELOG_WARN_FORMAT("env=%d, too many consecutive expansions, %d/%d is bad", GetEnv()->GetId()%iwaypoint%vnewpath.size());
                             return false;
                         }
                         continue;
                     }
-                    nConsecutiveExpansions = 0;
+                    if( nConsecutiveExpansions > 0 ) {
+                        nConsecutiveExpansions--;
+                    }
                     iwaypoint += 1;
                 }
             }
