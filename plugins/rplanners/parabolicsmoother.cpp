@@ -196,6 +196,10 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nInterface to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
         _bmanipconstraints = false;
         _constraintreturn.reset(new ConstraintFilterReturn());
+        _logginguniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        if( !_logginguniformsampler ) {
+            _logginguniformsampler->SetSeed(utils::GetMicroTime());
+        }
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -310,7 +314,14 @@ public:
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
             // store the trajectory
-            string filename = str(boost::format("%s/parabolicsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+            uint32_t randnum;
+            if( !!_logginguniformsampler ) {
+                randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+            }
+            else {
+                randnum = RaveRandomInt();
+            }
+            string filename = str(boost::format("%s/parabolicsmoother%d.parameters.xml")%RaveGetHomeDirectory()%(randnum%1000));
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
             f << *_parameters;
@@ -492,6 +503,7 @@ public:
 
             // separate all the acceleration switches into individual points
             vtrajpoints.resize(newspec.GetDOF());
+            OPENRAVE_ASSERT_OP(dynamicpath.ramps.at(0).x0.size(), ==, _parameters->GetDOF());
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).x0.begin(), posspec,1,GetEnv(),true);
             ConfigurationSpecification::ConvertData(vtrajpoints.begin(),newspec,dynamicpath.ramps.at(0).dx0.begin(),velspec,1,GetEnv(),false);
             vtrajpoints.at(waypointoffset) = 1;
@@ -740,37 +752,40 @@ public:
         // Test for collision and/or dynamics has succeeded, now test for manip constraint
         if( bExpectModifiedConfigurations ) {
             // the configurations are getting constrained, therefore the path checked is not equal to the simply interpolated path by (a,b, da, db).
-            if( _constraintreturn->_configurationtimes.size() > 1 ) {
+            if( _constraintreturn->_configurationtimes.size() > 0 ) {
                 OPENRAVE_ASSERT_OP(_constraintreturn->_configurations.size(),==,_constraintreturn->_configurationtimes.size()*a.size());
                 outramps.resize(0);
-                if( outramps.capacity() < _constraintreturn->_configurationtimes.size()-1 ) {
-                    outramps.reserve(_constraintreturn->_configurationtimes.size()-1);
+                if( outramps.capacity() < _constraintreturn->_configurationtimes.size() ) {
+                    outramps.reserve(_constraintreturn->_configurationtimes.size());
                 }
                 
-                std::vector<dReal> curvel = da, newvel;
-                std::vector<dReal> curpos = a, newpos;
-                std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin() + a.size();
+                std::vector<dReal> curvel = da, newvel(a.size());
+                std::vector<dReal> curpos = a, newpos(a.size());
+                // _constraintreturn->_configurationtimes[0] is actually the end of the first segment since interval is IT_OpenStart
+                std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin();
                 dReal curtime = 0;
-                for(size_t itime = 1; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += a.size()) {
-                    newpos.resize(0);
-                    newpos.insert(newpos.end(), it, it+a.size());
-                    newvel.resize(curpos.size());
+                for(size_t itime = 0; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += a.size()) {
+                    std::copy(it, it+a.size(), newpos.begin());
                     dReal deltatime = _constraintreturn->_configurationtimes[itime]-curtime;
-                    for(size_t idof = 0; idof < newvel.size(); ++idof) {
-                        newvel[idof] = 2*(newpos[idof] - curpos[idof])/deltatime - curvel[idof];
-                        if( RaveFabs(newvel[idof]) > _parameters->_vConfigVelocityLimit.at(idof)+g_fEpsilon ) {
-                            return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
-                        }
-                    }
                     if( deltatime > g_fEpsilon ) {
+                        dReal ideltatime = 1.0/deltatime;
+                        for(size_t idof = 0; idof < newvel.size(); ++idof) {
+                            newvel[idof] = 2*(newpos[idof] - curpos[idof])*ideltatime - curvel[idof];
+                            if( RaveFabs(newvel[idof]) > _parameters->_vConfigVelocityLimit.at(idof)+g_fEpsilon ) {
+                                if( 0.9*_parameters->_vConfigVelocityLimit.at(idof) < 0.1*RaveFabs(newvel[idof]) ) {
+                                    RAVELOG_WARN_FORMAT("new velocity for dof %d is too high %f > %f", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof));
+                                }
+                                return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
+                            }
+                        }
                         ParabolicRamp::ParabolicRampND outramp;
                         outramp.SetPosVelTime(curpos, curvel, newpos, newvel, deltatime);
                         outramp.constraintchecked = 1;
                         outramps.push_back(outramp);
+                        curtime = _constraintreturn->_configurationtimes[itime];
+                        curpos.swap(newpos);
+                        curvel.swap(newvel);
                     }
-                    curtime = _constraintreturn->_configurationtimes[itime];
-                    curpos.swap(newpos);
-                    curvel.swap(newvel);
                 }
             }
         }
@@ -813,7 +828,8 @@ protected:
     /// \brief converts a path of linear points to a ramp that initially satisfies the constraints
     bool _SetMilestones(std::vector<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& vpath)
     {
-        ramps.clear();
+        size_t numdof = _parameters->GetDOF();
+        ramps.resize(0);
         if(vpath.size()==1) {
             ramps.push_back(ParabolicRamp::ParabolicRampND());
             ramps.front().SetConstant(vpath[0]);
@@ -822,19 +838,73 @@ protected:
             // only check time based constraints since most of the collision checks here will change due to a different path. however it's important to have the ramp start with reasonable velocities/accelerations.
             int options = CFO_CheckTimeBasedConstraints;
             if(!_parameters->verifyinitialpath) {
-                RAVELOG_VERBOSE("Initial path verification is disabled (in SetMilestones)\n");
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions); // no collision checking
+                RAVELOG_VERBOSE_FORMAT("env=%d, Initial path verification is disabled using options=0x%x", GetEnv()->GetId()%options);
             }
-            ramps.resize(vpath.size()-1);
-            std::vector<dReal> vzero(vpath.at(0).size(), 0.0);
+            std::vector<dReal> vzero(numdof, 0.0);
             std::vector<dReal> vellimits, accellimits;
             std::vector<dReal> vswitchtimes;
             std::vector<dReal> x0, x1, dx0, dx1;
             std::vector<ParabolicRamp::ParabolicRampND> outramps;
-            for(size_t i=0; i+1<vpath.size(); i++) {
+
+            // in several cases when there are manipulator constraints, 0.5*(x0+x1) will not follow the constraints, instead of failing the plan, try to recompute a better midpoint
+            std::vector<ParabolicRamp::Vector> vnewpath;
+            std::vector<uint8_t> vforceinitialchecking(vpath.size(), 0);
+
+            if( !!_parameters->_neighstatefn ) {
+                std::vector<dReal> xmid(numdof), xmiddelta(numdof);
+                vnewpath = vpath;
+                int nConsecutiveExpansions = 0;
+                size_t iwaypoint = 0;
+                while(iwaypoint+1 < vnewpath.size() ) {
+                    for(size_t idof = 0; idof < numdof; ++idof) {
+                        xmiddelta.at(idof) = 0.5*(vnewpath[iwaypoint+1].at(idof) - vnewpath[iwaypoint].at(idof));
+                    }
+                    xmid = vnewpath[iwaypoint];
+                    if( _parameters->SetStateValues(xmid) != 0 ) {
+                        RAVELOG_WARN_FORMAT("env=%d, could not set values of path %d/%d", GetEnv()->GetId()%iwaypoint%vnewpath.size());
+                        return false;
+                    }
+                    if( !_parameters->_neighstatefn(xmid, xmiddelta, NSO_OnlyHardConstraints) ) {
+                        RAVELOG_WARN_FORMAT("env=%d, failed to get the neighbor of the midpoint of path %d/%d", GetEnv()->GetId()%iwaypoint%vnewpath.size());
+                        return false;
+                    }
+                    // if the distance between xmid and the real midpoint is big, then have to add another point in vnewpath
+                    dReal dist = 0;
+                    for(size_t idof = 0; idof < numdof; ++idof) {
+                        dReal fexpected = 0.5*(vnewpath[iwaypoint+1].at(idof) + vnewpath[iwaypoint].at(idof));
+                        dReal ferror = fexpected - xmid[idof];
+                        dist += ferror*ferror;
+                    }
+                    if( dist > 0.00001 ) {
+                        RAVELOG_DEBUG_FORMAT("env=%d, adding extra midpoint at %d/%d since dist^2=%f", GetEnv()->GetId()%iwaypoint%vnewpath.size()%dist);
+                        OPENRAVE_ASSERT_OP(xmid.size(),==,numdof);
+                        vnewpath.insert(vnewpath.begin()+iwaypoint+1, xmid);
+                        vforceinitialchecking[iwaypoint+1] = 1; // next point
+                        vforceinitialchecking.insert(vforceinitialchecking.begin()+iwaypoint+1, 1); // just inserted point
+                        nConsecutiveExpansions += 2;
+                        if( nConsecutiveExpansions > 10 ) {
+                            RAVELOG_WARN_FORMAT("env=%d, too many consecutive expansions, %d/%d is bad", GetEnv()->GetId()%iwaypoint%vnewpath.size());
+                            return false;
+                        }
+                        continue;
+                    }
+                    if( nConsecutiveExpansions > 0 ) {
+                        nConsecutiveExpansions--;
+                    }
+                    iwaypoint += 1;
+                }
+            }
+            else {
+                vnewpath=vpath;
+            }
+
+            ramps.resize(vnewpath.size()-1);
+            for(size_t i=0; i+1<vnewpath.size(); i++) {
                 ParabolicRamp::ParabolicRampND& ramp = ramps[i];
-                ramp.x0 = vpath[i];
-                ramp.x1 = vpath[i+1];
+                OPENRAVE_ASSERT_OP(vnewpath[i].size(),==,numdof);
+                ramp.x0 = vnewpath[i];
+                ramp.x1 = vnewpath[i+1];
                 ramp.dx0 = vzero;
                 ramp.dx1 = vzero;
                 vellimits = _parameters->_vConfigVelocityLimit;
@@ -852,6 +922,21 @@ protected:
                         ramp.Evaluate(vswitchtimes.at(iswitch), x1);
                         ramp.Derivative(vswitchtimes.at(iswitch), dx1);
                         retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
+//                        if( retseg.retcode == CFO_StateSettingError ) {
+//                            // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
+//                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//                            ss << "x0=[";
+//                            SerializeValues(ss, x0);
+//                            ss << "]; x1=[";
+//                            SerializeValues(ss, x1);
+//                            ss << "]; dx0=[";
+//                            SerializeValues(ss, dx0);
+//                            ss << "]; dx1=[";
+//                            SerializeValues(ss, dx1);
+//                            ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
+//                            RAVELOG_WARN_FORMAT("env=%d, initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned a state error 0x%x; %s ignoring since we only care about time based constraints....", GetEnv()->GetId()%i%vnewpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+//                            //retseg.retcode = 0;
+//                        }
                         if( retseg.retcode != 0 ) {
                             break;
                         }
@@ -864,6 +949,7 @@ protected:
                     }
                     else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                         // slow the ramp down and try again
+                        RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d by %.15e since too fast", GetEnv()->GetId()%i%vnewpath.size()%retseg.fTimeBasedSurpassMult);
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
                             accellimits.at(j) *= retseg.fTimeBasedSurpassMult;
@@ -880,7 +966,7 @@ protected:
                         ss << "]; dx1=[";
                         SerializeValues(ss, dx1);
                         ss << "]; deltatime=" << (vswitchtimes.at(iswitch) - fprevtime);
-                        RAVELOG_WARN_FORMAT("initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned error 0x%x; %s giving up....", i%vpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
+                        RAVELOG_WARN_FORMAT("initial ramp starting at %d/%d, switchtime=%f (%d/%d), returned error 0x%x; %s giving up....", i%vnewpath.size()%vswitchtimes.at(iswitch)%iswitch%vswitchtimes.size()%retseg.retcode%ss.str());
                         return false;
                     }
                 }
@@ -888,7 +974,7 @@ protected:
                     // couldn't find anything...
                     return false;
                 }
-                if( !_parameters->verifyinitialpath ) {
+                if( !_parameters->verifyinitialpath && !vforceinitialchecking.at(i) ) {
                     // disable future verification
                     ramp.constraintchecked = 1;
                 }
@@ -934,10 +1020,10 @@ protected:
                 //same ramp
                 dReal u1 = t1-rampStartTime[i1];
                 dReal u2 = t2-rampStartTime[i2];
-                PARABOLIC_RAMP_ASSERT(u1 >= 0);
-                PARABOLIC_RAMP_ASSERT(u1 <= ramps[i1].endTime+ParabolicRamp::EpsilonT);
-                PARABOLIC_RAMP_ASSERT(u2 >= 0);
-                PARABOLIC_RAMP_ASSERT(u2 <= ramps[i2].endTime+ParabolicRamp::EpsilonT);
+                OPENRAVE_ASSERT_OP(u1, >=, 0);
+                OPENRAVE_ASSERT_OP(u1, <=, ramps[i1].endTime+ParabolicRamp::EpsilonT);
+                OPENRAVE_ASSERT_OP(u2, >=, 0);
+                OPENRAVE_ASSERT_OP(u2, <=, ramps[i2].endTime+ParabolicRamp::EpsilonT);
                 u1 = ParabolicRamp::Min(u1,ramps[i1].endTime);
                 u2 = ParabolicRamp::Min(u2,ramps[i2].endTime);
                 ramps[i1].Evaluate(u1,x0);
@@ -1019,7 +1105,7 @@ protected:
                     }
 
                     if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
-                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d, slow down ramp, fcurmult=%f", iters%fcurmult);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d, slow down ramp by fTimeBasedSurpassMult=%.15e, fcurmult=%.15e", GetEnv()->GetId()%iters%retcheck.fTimeBasedSurpassMult%fcurmult);
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             // have to watch out that velocities don't drop under dx0 & dx1!
                             dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
@@ -1027,10 +1113,14 @@ protected:
                             accellimits[j] *= retcheck.fTimeBasedSurpassMult;
                         }
                         fcurmult *= retcheck.fTimeBasedSurpassMult;
+                        if( fcurmult < 0.01 ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, fcurmult is too small (%.15e) so giving up on this ramp", GetEnv()->GetId()%fcurmult);
+                            retcheck = check.Check2(intermediate.ramps.at(0), 0xffff, outramps);
+                        }
                         //fcurmult *= fSearchVelAccelMult;
                     }
                     else {
-                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected due to constraints 0x%x", iters%retcheck.retcode);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d rejected due to constraints 0x%x", GetEnv()->GetId()%iters%retcheck.retcode);
                         break;
                     }
                     iIterProgress += 0x1000;
@@ -1220,10 +1310,16 @@ protected:
                     if(_parameters->maxmanipspeed>0) {
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        if( manipspeed > 1e5 ) {
+                            RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
+                        }
                         if( maxmanipspeed < manipspeed ) {
                             maxmanipspeed = manipspeed;
                         }
-                        if( manipspeed > _parameters->maxmanipspeed) {
+                        if( manipspeed > _parameters->maxmanipspeed || 0.9*_parameters->maxmanipspeed < 0.001*manipspeed ) {
+                            if( manipspeed > 1e5 || 0.9*_parameters->maxmanipspeed < 0.05*manipspeed ) {
+                                RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
+                            }
                             return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->maxmanipspeed/manipspeed);
                         }
                     }
@@ -1234,6 +1330,9 @@ protected:
                             maxmanipaccel = manipaccel;
                         }
                         if(manipaccel > _parameters->maxmanipaccel) {
+                            if( manipaccel > 1e5 || 0.9*_parameters->maxmanipaccel < 0.05*manipaccel ) {
+                                RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
+                            }
                             return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->maxmanipaccel/manipaccel);
                         }
                     }
@@ -1289,7 +1388,14 @@ protected:
     std::string _DumpTrajectory(TrajectoryBasePtr traj)
     {
         // store the trajectory
-        string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
+        uint32_t randnum;
+        if( !!_logginguniformsampler ) {
+            randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            randnum = RaveRandomInt();
+        }
+        string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(randnum%1000));
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         traj->serialize(f);
@@ -1297,7 +1403,8 @@ protected:
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
-    SpaceSamplerBasePtr _uniformsampler;
+    SpaceSamplerBasePtr _uniformsampler; ///< used for planning, seed is controlled
+    SpaceSamplerBasePtr _logginguniformsampler; ///< used for logging, seed is random
     ConstraintFilterReturnPtr _constraintreturn;
     std::list< ManipConstraintInfo > _listCheckManips; ///< the manipulators and the points on their end efffectors to check for velocity and acceleration constraints
     TrajectoryBasePtr _dummytraj;

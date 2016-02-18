@@ -1,5 +1,6 @@
-#ifndef PARABOLIC_RAMP_MATH_H
-#define PARABOLIC_RAMP_MATH_H
+// -*- coding: utf-8 -*-
+#ifndef PARABOLIC_RAMP_COMMON_H
+#define PARABOLIC_RAMP_COMMON_H
 
 #include <openrave/openrave.h>
 
@@ -10,7 +11,7 @@ typedef std::vector<Real> Vector;
 
 #define PARABOLIC_RAMP_PLOG RAVELOG_VERBOSE
 #define PARABOLIC_RAMP_PERROR RAVELOG_ERROR
-#define PARABOLICWARN RAVELOG_DEBUG
+#define PARABOLICWARN RAVELOG_WARN
 #define PARABOLIC_RAMP_ASSERT BOOST_ASSERT
 
 //tolerance for time
@@ -19,8 +20,8 @@ const static Real EpsilonT = 1e-8;
 const static Real EpsilonX = 1e-8;
 //tolerance for velocity
 const static Real EpsilonV = 1e-8;
-//tolerance for acceleration
-const static Real EpsilonA = 1e-8;
+//tolerance for acceleration, should be smaller since any checks involving it do not acrue much error...
+const static Real EpsilonA = 1e-9;
 
 //can replace this with your favorite representation/tests of infinity
 const static Real Inf = 1e300;
@@ -79,6 +80,21 @@ inline bool FuzzyInRange(Real x, Real xmin, Real xmax, Real tol) {
 inline void Swap(Real& x,Real& y) {
     Real temp=x; x=y; y=temp;
 }
+
+//solves the quadratic formula and returns the number of roots found
+inline int SolveQuadratic(Real a, Real b, Real c, Real& x1, Real& x2)
+{
+    return OpenRAVE::mathextra::solvequad(a, b, c, x1, x2);
+}
+
+//return a value x in [xmin,xmax] such that |a*x - b| <= epsilon*max(|a||b|)
+//for ill posed problems choose x=0
+bool SafeEqSolve(Real a,Real b,Real epsilon,Real xmin,Real xmax,Real& x);
+
+bool SaveRamp(const char* fn,Real x0,Real dx0,Real x1,Real dx1, Real a,Real v,Real t);
+
+bool LoadRamp(FILE* f,Real& x0,Real& dx0,Real& x1,Real& dx1, Real& a,Real& v,Real& t);
+bool LoadRamp(const char* fn,Real& x0,Real& dx0,Real& x1,Real& dx1, Real& a,Real& v,Real& t);
 
 }
 

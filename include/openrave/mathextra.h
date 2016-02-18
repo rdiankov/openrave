@@ -266,6 +266,11 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
         r1=r2=-c/b;
         return 1;
     }
+    if(c == 0) { // x*(ax+b) = 0
+        r1 = 0;
+        r2 = -b/a;
+        return 2;
+    }
     
     T d = b * b - (T)4 * c * a;
     if( d < 0 ) {
@@ -274,10 +279,6 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
         }
         // d is close to 0, so most likely floating precision error
         d = 0;
-    }
-    if( d < (T)1e-16 ) {
-        r1 = r2 = (T)-0.5 * b / a;
-        return 1;
     }
     // two roots. need to explicitly divide by a to preserve precision
     d = sqrt(d);

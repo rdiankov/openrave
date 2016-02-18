@@ -26,18 +26,19 @@ try:
 except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
-from openravepy_int import *
-from openravepy_int import _openrave_exception_, _std_runtime_error_, _boost_bad_function_call_
-from openravepy_int import __version__
-from openravepy_int import __author__
-from openravepy_int import __copyright__
+from .openravepy_int import *
+from .openravepy_int import _openrave_exception_, _std_runtime_error_, _boost_bad_function_call_
+from .openravepy_int import __version__
+from .openravepy_int import __author__
+from .openravepy_int import __copyright__
 __license__ = 'core: Lesser GPL, examples: Apache License, Version 2.0'
 __docformat__ = 'restructuredtext'
 
-from openravepy_ext import *
-import metaclass
-import interfaces
-import databases
+from .openravepy_ext import *
+
+from . import metaclass
+from . import interfaces
+from . import databases
 
 OpenRAVEModel = databases.DatabaseGenerator # for backwards compatibility
 _openrave_exception_.py_err_class = openrave_exception

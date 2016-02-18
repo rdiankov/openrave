@@ -449,7 +449,7 @@ public:
             }
             if( !!_parameters->_neighstatefn ) {
                 newq = vdata;
-                if( !_parameters->_neighstatefn(newq,vdiff,0) ) {
+                if( !_parameters->_neighstatefn(newq,vdiff,NSO_OnlyHardConstraints) ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("neighstatefn is rejecting configuration %d, wrote trajectory %s"),ipoint%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                 }
                 dReal fdist = _parameters->_distmetricfn(newq,vdata);
@@ -515,7 +515,7 @@ public:
                             throw OPENRAVE_EXCEPTION_FORMAT0(_("time %fs-%fs, failed to set state values"), ORE_InconsistentConstraints);
                         }
                         vector<dReal> vtemp = vprevconfig;
-                        if( !_parameters->_neighstatefn(vtemp,deltaq,0) ) {
+                        if( !_parameters->_neighstatefn(vtemp,deltaq,NSO_OnlyHardConstraints) ) {
                             throw OPENRAVE_EXCEPTION_FORMAT(_("time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s"),*itprevtime%*itsampletime%DumpTrajectory(trajectory),ORE_InconsistentConstraints);
                         }
                         else {
@@ -1745,6 +1745,10 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
                 endremoveindex -= 1;
             }
             traj->Remove(0, endremoveindex);
+            // have to reset the delta time of the first point
+            vdeltatime[0] = 0;
+            traj->Insert(0, vdeltatime, deltatimespec, true);
+
         }
     }
 }
@@ -2105,6 +2109,9 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         std::vector<dReal> vcurrentvalues;
         params->_getstatefn(vcurrentvalues);
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+        if( _listCheckBodies.size() > 0 ) {
+            ss << "env=" << _listCheckBodies.front()->GetEnv()->GetId() << ", ";
+        }
         ss << prefix << ", ";
         for(size_t i = 0; i < vcurrentvalues.size(); ++i ) {
             if( i > 0 ) {
@@ -2117,6 +2124,23 @@ void DynamicsCollisionConstraint::_PrintOnFailure(const std::string& prefix)
         ss << "]";
         RAVELOG_VERBOSE(ss.str());
     }
+}
+
+inline std::ostream& RaveSerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
+    return O;
+}
+
+inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dReal>& values, char delim=',')
+{
+    for(size_t i = 0; i < values.size(); ++i) {
+        if( i > 0 ) {
+            O << delim;
+        }
+        O << values[i];
+    }
+    return O;
 }
 
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
@@ -2209,8 +2233,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     }
 
     int i, numSteps = 0, nLargestStepIndex = -1;
-    std::vector<dReal>::const_iterator itres = params->_vConfigResolution.begin();
-    BOOST_ASSERT((int)params->_vConfigResolution.size()==params->GetDOF());
+    const std::vector<dReal>& vConfigResolution = params->_vConfigResolution;
+    std::vector<dReal>::const_iterator itres = vConfigResolution.begin();
+    BOOST_ASSERT((int)vConfigResolution.size()==params->GetDOF());
     int totalsteps = 0;
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
         // quadratic equation, so total travelled distance for each joint is not as simple as taking the difference between the two endpoints.
@@ -2332,6 +2357,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     if( timeelapsed > 0 && dq0.size() == _vtempconfig.size() && dq1.size() == _vtempconfig.size() ) {
         // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
         if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = CFO_StateSettingError;
+            }
             return CFO_StateSettingError;
         }
 
@@ -2352,7 +2380,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 fLargestInflection = 0.5*fLargestStepInitialVelocity*fLargestInflectionTime;
                 fLargestTraveledDistance = RaveFabs(fLargestInflection) + RaveFabs(dQ.at(nLargestStepIndex) - fLargestInflection);
                 fLargestStepDelta = fLargestTraveledDistance/numSteps;
-                if( fLargestInflection < 0 || (RaveFabs(fLargestInflection)<=g_fEpsilonLinear && dQ.at(nLargestStepIndex)<0) ) {
+                if( fLargestInflection < 0 || (RaveFabs(fLargestInflection)<=g_fEpsilonLinear && dQ.at(nLargestStepIndex)>0) ) {
                     fLargestStepDelta = -fLargestStepDelta;
                 }
             }
@@ -2368,10 +2396,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal fStep = 0;
         int istep = 0;
         dReal prevtimestep = 0;
-        bool bSurpassedInflection = false;
         int numRepeating = 0;
+        dReal fBestNewStep=0;
+        bool bComputeNewStep = true; // if true, then compute fBestNewStep from fStep. Otherwise use the previous computed one
         while(istep < numSteps && prevtimestep < timeelapsed) {
-            //for (int istep = 0; istep < numSteps; istep++, fStep += fLargestStepDelta) {
             int nstateret = 0;
             if( istep >= start ) {
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
@@ -2390,15 +2418,31 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
-            dReal fBestNewStep = bSurpassedInflection ? (fStep-fLargestStepDelta) : (fStep+fLargestStepDelta);
+            dReal fMinNextTimeStep = prevtimestep; // when computing the new timestep, have to make sure it is greater than this value
+            if( bComputeNewStep ) {
+                if( prevtimestep >= fLargestInflectionTime ) {
+                    fBestNewStep = fStep-fLargestStepDelta;
+                }
+                else {
+                    // could be straddling the inflection so have to compensate. note that this will skip checking collision at the inflection
+                    if( (fLargestStepDelta > 0 && fStep+fLargestStepDelta > fLargestInflection) || (fLargestStepDelta < 0 && fStep+fLargestStepDelta < fLargestInflection) ) {
+                        fBestNewStep = fLargestInflection - (fStep+fLargestStepDelta - fLargestInflection);
+                        fMinNextTimeStep = fLargestInflectionTime-1e-7; // in order to force to choose a time after the inflection
+                    }
+                    else {
+                        fBestNewStep = fStep+fLargestStepDelta;
+                    }
+                }
+            }
 
             if( RaveFabs(fLargestStepAccel) <= g_fEpsilonLinear ) {
                 OPENRAVE_ASSERT_OP_FORMAT(RaveFabs(fLargestStepInitialVelocity),>,g_fEpsilon, "axis %d does not move? %.15e->%.15e, numSteps=%d", nLargestStepIndex%q0[nLargestStepIndex]%q1[nLargestStepIndex]%numSteps, ORE_Assert);
-                timestep = fStep/fLargestStepInitialVelocity;
+                timestep = fBestNewStep/fLargestStepInitialVelocity;
+                RAVELOG_VERBOSE_FORMAT("largest accel is 0 so timestep=%fs", timestep);
             }
             else {
                 // check whether to go positive or negative direction
-                dReal fNewStep = bSurpassedInflection ? (fStep-fLargestStepDelta) : (fStep+fLargestStepDelta);
+                dReal fNewStep = fBestNewStep;
                 bool bfound = false;
 
                 int numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
@@ -2410,21 +2454,21 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
                 if( !bfound ) {
                     for(int i = 0; i < numroots; ++i) {
-                        if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
+                        if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                             timestep = timesteproots[i];
                             bfound = true;
                         }
                     }
 
-                    if( !bfound && !bSurpassedInflection ) {
+                    if( !bfound && (fMinNextTimeStep < fLargestInflectionTime) ) {
+                        // most likely there are two solutions so solve for fStep and get the furthest solution
                         fNewStep = fStep; //-fLargestStepDelta;
                         numroots = mathextra::solvequad(fLargestStepAccel*0.5, fLargestStepInitialVelocity, -fNewStep, timesteproots[0], timesteproots[1]);
                         for(int i = 0; i < numroots; ++i) {
-                            if( timesteproots[i] > prevtimestep && (!bfound || timestep > timesteproots[i]) ) {
+                            if( timesteproots[i] > fMinNextTimeStep && (!bfound || timestep > timesteproots[i]) ) {
                                 // going backwards!
                                 timestep = timesteproots[i];
                                 fBestNewStep = fNewStep;
-                                bSurpassedInflection = true;
                                 bfound = true;
                             }
                         }
@@ -2453,40 +2497,106 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
+            _vprevtempconfig = _vtempconfig;
+            _vprevtempvelconfig = _vtempvelconfig;
+
             dReal dqscale = 1.0;
+            int iScaledIndex = -1; // index into dQ of the DOF that has changed the most and affected dqscale
             for(size_t i = 0; i < _vtempconfig.size(); ++i) {
                 dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
-                if( RaveFabs(dQ[i]) > params->_vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
-                    if( nLargestStepIndex == i ) {
-                        RAVELOG_DEBUG_FORMAT("got huge delta abs(%f) > %f for dof %d even though it is the largest index!", dQ[i]%params->_vConfigResolution[i]%i);
+                if( RaveFabs(dQ[i]) > vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
+                    // have to solve for the earliest timestep such that q0.at(i) + t * (dq0.at(i) + t * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i) = vConfigResolution where t >= prevtimestep
+                    // 0.5*_vtempaccelconfig.at(i)*t*t + dq0.at(i) * t + q0.at(i) - _vtempconfig.at(i) - vConfigResolution[i] = 0
+                    int numroots = mathextra::solvequad(_vtempaccelconfig[i]*0.5, dq0[i],q0[i] - _vtempconfig[i] - vConfigResolution[i], timesteproots[0], timesteproots[1]);
+                    dReal scaledtimestep = 0;
+                    bool bfoundscaled = false;
+                    for(int iroot = 0; iroot < numroots; ++iroot) {
+                        if( timesteproots[iroot] >= fMinNextTimeStep && timesteproots[iroot] <= timestep ) {
+                            if( !bfoundscaled || timesteproots[iroot] < scaledtimestep ) {
+                                scaledtimestep = timesteproots[iroot];
+                            }
+                            bfoundscaled = true;
+                        }
                     }
-                    // the delta distance is greater than expected, so have to divide the time!
-                    dReal s = RaveFabs(params->_vConfigResolution[i]/dQ[i]);
-                    if( s < dqscale ) {
-                        dqscale = s;
+
+//                    if( nLargestStepIndex == (int)i ) {
+//                        // common when having jacobian constraints
+//                        RAVELOG_VERBOSE_FORMAT("got huge delta abs(%f) > %f for dof %d even though it is the largest index!", dQ[i]%vConfigResolution[i]%i);
+//                    }
+
+                    if( bfoundscaled && timestep > prevtimestep ) {
+                        dReal s = (scaledtimestep-prevtimestep)/(timestep-prevtimestep);
+                        if( s < dqscale ) {
+                            dqscale = s;
+                            iScaledIndex = i;
+                        }
+                    }
+                    else {
+                        // the delta distance is greater than expected, so have to divide the time!
+                        dReal s = RaveFabs(vConfigResolution[i]/dQ[i]);
+                        if( s < dqscale ) {
+                            dqscale = s;
+                            iScaledIndex = i;
+                        }
                     }
                 }
-                _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
             }
 
             if( dqscale < 1 ) {
                 numRepeating++;
                 if( dqscale <= 0.01 ) {
-                    RAVELOG_WARN("got very small dqscale, so returning failure\n");
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "x0=[";
+                    RaveSerializeValues(ss, q0);
+                    ss << "]; x1=[";
+                    RaveSerializeValues(ss, q1);
+                    ss << "]; dx0=[";
+                    RaveSerializeValues(ss, dq0);
+                    ss << "]; dx1=[";
+                    RaveSerializeValues(ss, dq1);
+                    ss << "]; deltatime=" << timeelapsed;
+                    RAVELOG_WARN_FORMAT("got very small dqscale %f, so returning failure %s", dqscale%ss.str());
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_StateSettingError;
+                    }
                     return CFO_StateSettingError;
                 }
-                if( numRepeating > 10 ) {
-                    RAVELOG_WARN_FORMAT("num repeating is %d, dqscale=%d, so returning failure", numRepeating%dqscale);
+                if( numRepeating > numSteps*2 ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "x0=[";
+                    RaveSerializeValues(ss, q0);
+                    ss << "]; x1=[";
+                    RaveSerializeValues(ss, q1);
+                    ss << "]; dx0=[";
+                    RaveSerializeValues(ss, dq0);
+                    ss << "]; dx1=[";
+                    RaveSerializeValues(ss, dq1);
+                    ss << "]; deltatime=" << timeelapsed;
+                    RAVELOG_WARN_FORMAT("num repeating is %d/%d, dqscale=%f, iScaledIndex=%d, nLargestStepIndex=%d, timestep=%f, fBestNewStep=%f, fLargestStep=%f, so returning failure %s", numRepeating%(numSteps*2)%dqscale%iScaledIndex%nLargestStepIndex%timestep%fBestNewStep%fLargestStep%ss.str());
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = CFO_StateSettingError;
+                    }
                     return CFO_StateSettingError;
                 }
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 timestep = prevtimestep + (timestep-prevtimestep)*dqscale;
                 for(size_t i = 0; i < dQ.size(); ++i) {
-                    dQ[i] *= dqscale;
+                    // have to recompute a new dQ based on the new timestep
+                    dQ[i] = q0.at(i) + timestep * (dq0.at(i) + timestep * 0.5 * _vtempaccelconfig.at(i)) - _vtempconfig.at(i);
+
+                    // shouldn't check here since it is before the _neighstatefn, which could also change dQ
+//                    if( RaveFabs(dQ[i]) > vConfigResolution[i]*1.01 ) { // have to multiply by small mult since quadratic sampling doesn't guarantee exactly...
+//                        RAVELOG_WARN_FORMAT("new dQ[%d]/%.15e = %.15e", i%vConfigResolution[i]%(dQ[i]/vConfigResolution[i]));
+//                    }
+                    //dQ[i] *= dqscale;
                     _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
                 }
+                RAVELOG_VERBOSE_FORMAT("scaled by dqscale=%f, iScaledIndex=%d, timestep=%f, value=%f, dq=%f", dqscale%iScaledIndex%timestep%_vtempconfig.at(iScaledIndex)%dQ.at(iScaledIndex));
             }
             else {
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    _vtempvelconfig.at(i) = dq0.at(i) + timestep*_vtempaccelconfig.at(i);
+                }
                 numRepeating = 0;
                 // only check time scale if at the current point
                 if( timestep > timeelapsed+1e-7 ) {
@@ -2494,7 +2604,21 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         // expected...
                         break;
                     }
-                    RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d", timestep%timeelapsed%istep%numSteps);
+
+                    {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "x0=[";
+                        RaveSerializeValues(ss, q0);
+                        ss << "]; x1=[";
+                        RaveSerializeValues(ss, q1);
+                        ss << "]; dx0=[";
+                        RaveSerializeValues(ss, dq0);
+                        ss << "]; dx1=[";
+                        RaveSerializeValues(ss, dq1);
+                        ss << "]; deltatime=" << timeelapsed;
+                        RAVELOG_WARN_FORMAT("timestep %.15e > total time of ramp %.15e, step %d/%d %s", timestep%timeelapsed%istep%numSteps%ss.str());
+                    }
+
                     if( !!filterreturn ) {
                         filterreturn->_returncode = CFO_StateSettingError;
                     }
@@ -2505,20 +2629,79 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
             }
 
-            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
                 }
                 return CFO_StateSettingError;
             }
 
-            if( dqscale >= 1 ) {
+            bool bHasMoved = false;
+            {
+                // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+                // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
+                int numPostNeighSteps = 1;
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    dReal f = RaveFabs(_vtempconfig[i] - _vprevtempconfig[i]);
+                    if( f > vConfigResolution[i]*1.01 ) {
+                        int poststeps = int(f/vConfigResolution[i] + 0.9999);
+                        if( poststeps > numPostNeighSteps ) {
+                            numPostNeighSteps = poststeps;
+                        }
+                    }
+                    if( f > 0.0001 ) {
+                        bHasMoved = true;
+                    }
+                }
+
+                if( numPostNeighSteps > 1 ) {
+                    RAVELOG_VERBOSE_FORMAT("have to divide the arc in %d steps post neigh, timestep=%f", numPostNeighSteps%timestep);
+                    // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                    // note that circular constraints would break here
+                    std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
+                    dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        vpostdq[i] = (_vtempconfig[i] - _vprevtempconfig[i]) * fiNumPostNeighSteps;
+                        vpostddq[i] = (_vtempvelconfig[i] - _vprevtempvelconfig[i]) * fiNumPostNeighSteps;
+                    }
+
+                    // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
+                    for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
+                        for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                            _vprevtempconfig[i] += vpostdq[i];
+                            _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                        }
+                        
+                        int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+//                        if( !!params->_getstatefn ) {
+//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
+//                        }
+                        // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
+//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+//                            filterreturn->_configurationtimes.push_back(timestep);
+//                        }
+                        if( nstateret != 0 ) {
+                            if( !!filterreturn ) {
+                                filterreturn->_returncode = nstateret;
+                            }
+                            return nstateret;
+                        }
+                    }
+                }
+            }
+
+            //RAVELOG_VERBOSE_FORMAT("dqscale=%f fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", dqscale%fBestNewStep%fLargestStep%timestep);
+            if( !bHasMoved || (istep+1 < numSteps && numRepeating > 2) || dqscale >= 1 ) {//dqscale >= 1 ) {
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 fStep = fBestNewStep;
+                bComputeNewStep = true;
                 ++istep;
-                //RAVELOG_VERBOSE_FORMAT("fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", fStep%fLargestStep%timestep);
-                prevtimestep = timestep;
             }
+            else {
+                bComputeNewStep = false;
+            }
+            prevtimestep = timestep; // have to always update since it serves as the basis for the next timestep chosen
         }
         if( RaveFabs(fStep-fLargestStep) > RaveFabs(fLargestStepDelta) ) {
             RAVELOG_WARN_FORMAT("fStep (%.15e) did not reach fLargestStep (%.15e). %.15e > %.15e", fStep%fLargestStep%RaveFabs(fStep-fLargestStep)%fLargestStepDelta);
@@ -2527,6 +2710,60 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             // this is a bug, just return false
             return CFO_StateSettingError;
+        }
+
+        {
+            // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+            // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
+            int numPostNeighSteps = 1;
+            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
+                if( f > vConfigResolution[i]*1.01 ) {
+                    int poststeps = int(f/vConfigResolution[i] + 0.9999);
+                    if( poststeps > numPostNeighSteps ) {
+                        numPostNeighSteps = poststeps;
+                    }
+                }
+            }
+            
+            if( numPostNeighSteps > 1 ) {
+                // should never happen, but just in case _neighstatefn is some non-linear constraint projection
+                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, timestep=%f", numPostNeighSteps%timestep);
+                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                // note that circular constraints would break here
+                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
+                dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
+                    vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
+                }
+
+                _vprevtempconfig = _vtempconfig;
+                _vprevtempvelconfig = _vtempvelconfig;
+                // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
+                for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
+                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        _vprevtempconfig[i] += vpostdq[i];
+                        _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                    }
+
+                    int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+//                        if( !!params->_getstatefn ) {
+//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
+//                        }
+                    // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
+//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+//                            filterreturn->_configurationtimes.push_back(timestep);
+//                        }
+                    if( nstateret != 0 ) {
+                        if( !!filterreturn ) {
+                            filterreturn->_returncode = nstateret;
+                        }
+                        return nstateret;
+                    }
+                }
+            }
         }
     }
     else {
@@ -2542,13 +2779,18 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         }
 
         if( start > 0 ) {
-            if( !params->_neighstatefn(_vtempconfig, dQ,0) ) {
+            if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
                 return CFO_StateSettingError;
             }
             for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
                 _vtempvelconfig.at(i) += _vtempveldelta[i];
             }
         }
+
+        _vprevtempconfig.resize(dQ.size());
         for (int f = start; f < numSteps; f++) {
             int nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
             if( !!params->_getstatefn ) {
@@ -2568,11 +2810,92 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 return nstateret;
             }
 
-            if( !params->_neighstatefn(_vtempconfig,dQ,0) ) {
+            // have to recompute the delta based on f and dQ
+            dReal fnewscale = 1;
+            for(size_t idof = 0; idof < dQ.size(); ++idof) {
+                _vprevtempconfig[idof] = q0[idof] + f*dQ[idof] - _vtempconfig[idof];
+                // _vprevtempconfig[idof] cannot be too high
+                if( RaveFabs(_vprevtempconfig[idof]) > vConfigResolution[idof] ) {
+                    dReal fscale = RaveFabs(_vprevtempconfig[idof])/vConfigResolution[idof];
+                    if( fscale < fnewscale ) {
+                        fnewscale = fscale;
+                    }
+                }
+            }
+            for(size_t idof = 0; idof < dQ.size(); ++idof) {
+                _vprevtempconfig[idof] *= fnewscale;
+            }
+            
+            if( !params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints) ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
                 return CFO_StateSettingError;
             }
             for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
                 _vtempvelconfig.at(i) += _vtempveldelta[i];
+            }
+        }
+
+        // check if _vtempconfig is close to q1!
+        {
+            // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
+            // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
+            int numPostNeighSteps = 1;
+            for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                dReal f = RaveFabs(q1[i] - _vtempconfig[i]);
+                if( f > vConfigResolution[i]*1.01 ) {
+                    RAVELOG_DEBUG_FORMAT("scale ratio=%f", (f/vConfigResolution[i]));
+                    int poststeps = int(f/vConfigResolution[i] + 0.9999);
+                    if( poststeps > numPostNeighSteps ) {
+                        numPostNeighSteps = poststeps;
+                    }
+                }
+            }
+            
+            if( numPostNeighSteps > 1 ) {
+                // should never happen, but just in case _neighstatefn is some non-linear constraint projection
+                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);
+                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
+                // note that circular constraints would break here
+                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(dq1.size());
+                dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
+                for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                    vpostdq[i] = (q1[i] - _vtempconfig[i]) * fiNumPostNeighSteps;
+                    if( dq1.size() == _vtempconfig.size() && _vtempvelconfig.size() == _vtempconfig.size() ) {
+                        vpostddq[i] = (dq1[i] - _vtempvelconfig[i]) * fiNumPostNeighSteps;
+                    }
+                }
+
+                _vprevtempconfig = _vtempconfig;
+                _vprevtempvelconfig = _vtempvelconfig;
+                // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
+                for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
+                    for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                        _vprevtempconfig[i] += vpostdq[i];
+                    }
+                    if( _vprevtempconfig.size() == _vtempconfig.size() && vpostddq.size() == _vtempconfig.size() ) {
+                        for(size_t i = 0; i < _vtempconfig.size(); ++i) {
+                            _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
+                        }
+                    }
+
+                    int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+//                        if( !!params->_getstatefn ) {
+//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
+//                        }
+                    // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
+//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+//                            filterreturn->_configurationtimes.push_back(timestep);
+//                        }
+                    if( nstateret != 0 ) {
+                        if( !!filterreturn ) {
+                            filterreturn->_returncode = nstateret;
+                        }
+                        return nstateret;
+                    }
+                }
             }
         }
     }

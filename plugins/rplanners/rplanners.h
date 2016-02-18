@@ -343,7 +343,7 @@ public:
                 }
                 return ET_Failed;
             }
-            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal) ) {
+            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal ? NSO_GoalToInitial : 0) ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
