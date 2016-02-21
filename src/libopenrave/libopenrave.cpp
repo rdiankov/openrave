@@ -581,19 +581,23 @@ public:
     {
         int level = _nDebugLevel;
         if (_logger != NULL) {
-            const log4cxx::LevelPtr& levelptr = _logger->getLevel();
-            if (levelptr == log4cxx::Level::getFatal()) {
-                level = Level_Fatal;
-            } else if (levelptr == log4cxx::Level::getError()) {
-                level = Level_Error;
-            } else if (levelptr == log4cxx::Level::getWarn()) {
-                level = Level_Warn;
-            } else if (levelptr == log4cxx::Level::getInfo()) {
-                level = Level_Info;
-            } else if (levelptr == log4cxx::Level::getDebug()) {
-                level = Level_Debug;
-            } else if (levelptr == log4cxx::Level::getTrace()) {
+            if (_logger->isEnabledFor(log4cxx::Level::getTrace())) {
                 level = Level_Verbose;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getDebug())) {
+                level = Level_Debug;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getInfo())) {
+                level = Level_Info;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getWarn())) {
+                level = Level_Warn;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getError())) {
+                level = Level_Error;
+            }
+            else {
+                level = Level_Fatal;
             }
         }
         return level | (_nDebugLevel & ~Level_OutputMask);
@@ -1026,6 +1030,12 @@ private:
 };
 
 #if OPENRAVE_LOG4CXX
+log4cxx::LevelPtr RaveGetVerboseLogLevel()
+{
+   static log4cxx::LevelPtr level(new log4cxx::Level(log4cxx::Level::TRACE_INT, LOG4CXX_STR("VERBOSE"), 7));
+   return level;
+}
+
 log4cxx::LoggerPtr RaveGetLogger()
 {
     return RaveGlobal::instance()->GetLogger();
@@ -2536,16 +2546,16 @@ LogString ColorLayout::_Colorize(const spi::LoggingEventPtr& event) const
 
     csi.reserve(32);
 
-    if (event->getLevel() == Level::getFatal()) {
+    if (event->getLevel()->isGreaterOrEqual(Level::getFatal())) {
         fg = OPENRAVECOLOR_FATALLEVEL;
-    } else if (event->getLevel() == Level::getError()) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getError())) {
         fg = OPENRAVECOLOR_ERRORLEVEL;
-    } else if (event->getLevel() == Level::getWarn()) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getWarn())) {
         fg = OPENRAVECOLOR_WARNLEVEL;
-    } else if (event->getLevel() == Level::getInfo()) {
-    } else if (event->getLevel() == Level::getDebug()) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getInfo())) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getDebug())) {
         fg = OPENRAVECOLOR_DEBUGLEVEL;
-    } else if (event->getLevel() == Level::getTrace()) {
+    } else {
         fg = OPENRAVECOLOR_VERBOSELEVEL;
     }
 
