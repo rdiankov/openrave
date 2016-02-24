@@ -1063,7 +1063,7 @@ protected:
                     dReal newramptime = intermediate.GetTotalTime();
                     if( newramptime+mintimestep > t2-t1 ) {
                         // reject since it didn't make significant improvement
-                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected time=%fs\n", iters%(endTime-(t2-t1)+newramptime));
+                        RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected times [%f, %f]. final trajtime=%fs", iters%t1%t2%(endTime-(t2-t1)+newramptime));
                         break;
                     }
 
