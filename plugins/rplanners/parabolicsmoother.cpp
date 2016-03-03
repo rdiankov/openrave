@@ -45,6 +45,7 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
         MyRampFeasibilityChecker(ParabolicRamp::FeasibilityCheckerBase* feas,const ParabolicRamp::Vector& tol) : ParabolicRamp::RampFeasibilityChecker(feas, tol) {
         }
 
+        /// \brief checks a ramp for collisions.
         ParabolicRamp::CheckReturn Check2(const ParabolicRamp::ParabolicRampND& rampnd, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps)
         {
             // only set constraintchecked if all necessary constraints are checked
@@ -65,9 +66,6 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
             _ExtractSwitchTimes(rampnd, vswitchtimes, true);
             dReal fprev = 0;
             std::vector<dReal> q0, q1, dq0, dq1;
-            //rampnd.Evaluate(0, q0);
-            //rampnd.Derivative(0, dq0);
-
             int ret0 = feas->ConfigFeasible(rampnd.x0, rampnd.dx0, options);
             if( ret0 != 0 ) {
                 return ParabolicRamp::CheckReturn(ret0);
@@ -79,26 +77,13 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
             
             list<pair<int,int> > segs;
             segs.push_back(pair<int,int>(0,vswitchtimes.size()-1));
-            std::vector< std::vector<ParabolicRamp::ParabolicRampND> > vOutputSegments(vswitchtimes.size()-1);
             //Vector q1,q2, dq1, dq2;
             while(!segs.empty()) {
                 int i=segs.front().first;
                 int j=segs.front().second;
                 segs.erase(segs.begin());
                 if(j == i+1) {
-                    //check path from t to tnext
-                    rampnd.Evaluate(vswitchtimes.at(i),q0);
-                    if( feas->NeedDerivativeForFeasibility() ) {
-                        rampnd.Derivative(vswitchtimes.at(i),dq0);
-                    }
-                    rampnd.Evaluate(vswitchtimes.at(j),q1);
-                    if( feas->NeedDerivativeForFeasibility() ) {
-                        rampnd.Derivative(vswitchtimes.at(j),dq1);
-                    }
-                    ParabolicRamp::CheckReturn retseg = feas->SegmentFeasible2(q0,q1, dq0, dq1, vswitchtimes.at(j)-vswitchtimes.at(i), options, vOutputSegments.at(i));
-                    if( retseg.retcode != 0 ) {
-                        return retseg;
-                    }
+                    
                 }
                 else {
                     int k=(i+j)/2;
@@ -115,13 +100,77 @@ class ParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityC
                 }
             }
 
-            // check to make sure all vOutputSegments have ramps
             outramps.resize(0);
-            for(size_t i = 0; i < vOutputSegments.size(); ++i) {
-                //OPENRAVE_ASSERT_OP(vOutputSegments[i].size(),>,0);
-                outramps.insert(outramps.end(), vOutputSegments[i].begin(), vOutputSegments[i].end());
+
+            std::vector<ParabolicRamp::ParabolicRampND> segmentoutramps;
+            q0 = rampnd.x0;
+            dq0 = rampnd.dx0;
+            q1.resize(q0.size());
+            dq1.resize(dq0.size());
+            for(size_t iswitch = 1; iswitch < vswitchtimes.size(); ++iswitch) {
+                rampnd.Evaluate(vswitchtimes.at(iswitch),q1);
+                dReal elapsedtime = vswitchtimes.at(iswitch)-vswitchtimes.at(iswitch-1);
+                
+                // unfortunately due to constraints, rampnd.Derivative(vswitchtimes.at(iswitch),dq1); might not be consistent with q0, q1, dq0, and elapsedtime, so recompute it here
+                if( feas->NeedDerivativeForFeasibility() ) {
+                    rampnd.Derivative(vswitchtimes.at(iswitch),dq1);
+                    dReal expectedelapsedtime = 0;
+                    int num = 0;
+                    for(size_t idof = 0; idof < dq0.size(); ++idof) {
+                        dReal avgvel = 0.5*(dq0[idof] + dq1[idof]);
+                        if( RaveFabs(avgvel) > g_fEpsilon ) {
+                            expectedelapsedtime += (q1[idof] - q0[idof])/avgvel;
+                            num += 1;
+                        }
+                    }
+                    if( num > 0 ) {
+                        // find a better elapsed time
+                        elapsedtime = expectedelapsedtime/dReal(num);
+                    }
+
+                    if( elapsedtime > g_fEpsilon ) {
+                        dReal ielapsedtime = 1/elapsedtime;
+                        for(size_t idof = 0; idof < dq0.size(); ++idof) {
+                            dq1[idof] = 2*ielapsedtime*(q1[idof] - q0[idof]) - dq0[idof];
+                        }
+                    }
+                    else {
+                        // elapsed time is non-existent, so have the same velocity?
+                        dq1 = dq0;
+                    }
+                }
+
+                // have to recompute a new 
+                ParabolicRamp::CheckReturn retseg = feas->SegmentFeasible2(q0,q1, dq0, dq1, elapsedtime, options, segmentoutramps);
+                if( retseg.retcode != 0 ) {
+                    return retseg;
+                }
+
+                if( segmentoutramps.size() > 0 ) {
+                    outramps.insert(outramps.end(), segmentoutramps.begin(), segmentoutramps.end());
+                    // the last ramp in segmentoutramps might not be exactly equal to q1/dq1!
+                    q0 = segmentoutramps.back().x1;
+                    dq0 = segmentoutramps.back().dx1;
+                }
             }
-            return ParabolicRamp::CheckReturn(0);
+
+            // have to make sure that the last ramp's ending velocity is equal to db
+            bool bDifferentPosition = false;
+            bool bDifferentVelocity = false;
+            for(size_t idof = 0; idof < q0.size(); ++idof) {
+                if( RaveFabs(q0[idof]-rampnd.x1[idof]) > ParabolicRamp::EpsilonX ) {
+                    RAVELOG_DEBUG_FORMAT("ramp end point does not finish at desired position values %f, so rejecting", (q0[idof]-rampnd.x1[idof]));
+                    return ParabolicRamp::CheckReturn(0x40000000);
+                }
+                if( RaveFabs(dq0[idof]-rampnd.dx1[idof]) > ParabolicRamp::EpsilonV ) {
+                    RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %f, so reforming ramp", (dq0[idof]-rampnd.dx1[idof]));
+                    bDifferentVelocity = true;
+                }
+            }
+
+            ParabolicRamp::CheckReturn finalret(0);
+            finalret.bDifferentVelocity = bDifferentVelocity;
+            return finalret;
         }
     };
     
@@ -551,7 +600,7 @@ public:
                     std::vector<ParabolicRamp::ParabolicRampND> outramps;
                     if( bCheck ) {
                         ParabolicRamp::CheckReturn checkret = checker.Check2(rampndtrimmed, 0xffff, outramps);
-                        if( checkret.retcode != 0 ) {
+                        if( checkret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
                             std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
                             // try to time scale, perhaps collision and dynamics will change
                             // go all the way up to 2.0 multiplier: 1.05*1.1*1.15*1.2*1.25 ~= 2
@@ -574,7 +623,7 @@ public:
     //                                }
                                     bool bHasBadRamp=false;
                                     FOREACH(itnewrampnd, temprampsnd) {
-                                        if( checker.Check2(*itnewrampnd, 0xffff, outramps).retcode != 0 ) {
+                                        if( checker.Check2(*itnewrampnd, 0xffff, outramps).retcode != 0 ) { // probably don't need to check bDifferentVelocity
                                             bHasBadRamp = true;
                                             break;
                                         }
@@ -719,6 +768,7 @@ public:
         return 0;
     }
 
+    /// \brief checks a parabolic ramp and outputs smaller set of ramps. Because of manipulator constraints, the outramps's ending values might not be equal to b/db!
     virtual ParabolicRamp::CheckReturn SegmentFeasible2(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps)
     {
         outramps.resize(0);
@@ -787,6 +837,26 @@ public:
                         curvel.swap(newvel);
                     }
                 }
+
+//                // have to make sure that the last ramp's ending velocity is equal to db
+//                bool bDifferentVelocity = false;
+//                for(size_t idof = 0; idof < curvel.size(); ++idof) {
+//                    if( RaveFabs(curvel[idof]-db[idof])+g_fEpsilon > ParabolicRamp::EpsilonV ) {
+//                        bDifferentVelocity = true;
+//                        break;
+//                    }
+//                }
+//                if( bDifferentVelocity ) {
+//                    // see if last ramp's time can be modified to accomodate the velocity
+//                    ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
+//                    outramp.SetPosVelTime(outramp.x0, outramp.dx0, b, db, deltatime);
+//                    outramp.constraintchecked = 1;
+//                    outramps.push_back(outramp);
+//                    curtime = _constraintreturn->_configurationtimes[itime];
+//                    curpos.swap(newpos);
+//                    curvel.swap(newvel);
+//                    
+//                }
             }
         }
 
@@ -994,7 +1064,7 @@ protected:
             endTime += ramps[i].endTime;
         }
         ParabolicRamp::Vector x0, x1, dx0, dx1;
-        ParabolicRamp::DynamicPath intermediate;
+        ParabolicRamp::DynamicPath intermediate, intermediate2;
         std::vector<dReal> vellimits(_parameters->_vConfigVelocityLimit.size()), accellimits(_parameters->_vConfigAccelerationLimit.size());
         std::vector<ParabolicRamp::ParabolicRampND> accumoutramps, outramps;
         
@@ -1011,15 +1081,15 @@ protected:
             }
             int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
             int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-            if(i1 == i2) {
+            if(i1 >= i2) {
                 continue;
             }
 
             uint32_t iIterProgress = 0; // used for debug purposes
             try {
                 //same ramp
-                dReal u1 = t1-rampStartTime[i1];
-                dReal u2 = t2-rampStartTime[i2];
+                dReal u1 = t1-rampStartTime.at(i1); // at the same time check for boundaries
+                dReal u2 = t2-rampStartTime.at(i2); // at the same time check for boundaries
                 OPENRAVE_ASSERT_OP(u1, >=, 0);
                 OPENRAVE_ASSERT_OP(u1, <=, ramps[i1].endTime+ParabolicRamp::EpsilonT);
                 OPENRAVE_ASSERT_OP(u2, >=, 0);
@@ -1074,27 +1144,52 @@ protected:
                     iIterProgress += 0x1000;
                     accumoutramps.resize(0);
                     ParabolicRamp::CheckReturn retcheck(0);
-                    for(size_t i=0; i<intermediate.ramps.size(); i++) {
+                    for(size_t iramp=0; iramp<intermediate.ramps.size(); iramp++) {
                         iIterProgress += 0x10;
-                        if( i > 0 ) {
-                            intermediate.ramps[i].x0 = intermediate.ramps[i-1].x1; // to remove noise?
-                            intermediate.ramps[i].dx0 = intermediate.ramps[i-1].dx1; // to remove noise?
+                        if( iramp > 0 ) {
+                            intermediate.ramps[iramp].x0 = intermediate.ramps[iramp-1].x1; // to remove noise?
+                            intermediate.ramps[iramp].dx0 = intermediate.ramps[iramp-1].dx1; // to remove noise?
                         }
-                        if( _parameters->SetStateValues(intermediate.ramps[i].x1) != 0 ) {
+                        if( _parameters->SetStateValues(intermediate.ramps[iramp].x1) != 0 ) {
                             retcheck.retcode = CFO_StateSettingError;
                             break;
                         }
-                        _parameters->_getstatefn(intermediate.ramps[i].x1);
+                        _parameters->_getstatefn(intermediate.ramps[iramp].x1);
                         // have to resolve for the ramp since the positions might have changed?
-        //                for(size_t j = 0; j < intermediate.rams[i].x1.size(); ++j) {
-        //                    intermediate.ramps[i].SolveFixedSwitchTime();
+        //                for(size_t j = 0; j < intermediate.rams[iramp].x1.size(); ++j) {
+        //                    intermediate.ramps[iramp].SolveFixedSwitchTime();
         //                }
 
                         iIterProgress += 0x10;
-                        retcheck = check.Check2(intermediate.ramps[i], 0xffff, outramps);
+                        retcheck = check.Check2(intermediate.ramps[iramp], 0xffff, outramps);
                         iIterProgress += 0x10;
                         if( retcheck.retcode != 0) {
                             break;
+                        }
+                        //check for consistency
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            for(size_t i=0; i+1<outramps.size(); i++) {
+                                for(size_t j = 0; j < outramps[i].x1.size(); ++j) {
+                                    OPENRAVE_ASSERT_OP(RaveFabs(outramps[i].x1[j]-outramps[i+1].x0[j]), <=, ParabolicRamp::EpsilonX);
+                                    OPENRAVE_ASSERT_OP(RaveFabs(outramps[i].dx1[j]-outramps[i+1].dx0[j]), <=, ParabolicRamp::EpsilonV);
+                                }
+                            }
+                        }
+
+                        if( retcheck.bDifferentVelocity && outramps.size() > 0 ) {
+                            ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
+                            
+                            bool res=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            if( !res ) {
+                                RAVELOG_WARN("failed to SolveMinTime for different vel ramp\n");
+                                break;
+                            }
+                            if( intermediate2.GetTotalTime() > 0.01 ) {
+                                RAVELOG_WARN_FORMAT("intermediate2 ramp duration is too long %fs", intermediate2.GetTotalTime());
+                            }
+                            // intermediate2 should be pretty close to outramp, so just insert directly
+                            outramps.pop_back();
+                            outramps.insert(outramps.end(), intermediate2.ramps.begin(), intermediate2.ramps.end());
                         }
                         accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
                     }
@@ -1115,7 +1210,8 @@ protected:
                         fcurmult *= retcheck.fTimeBasedSurpassMult;
                         if( fcurmult < 0.01 ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, fcurmult is too small (%.15e) so giving up on this ramp", GetEnv()->GetId()%fcurmult);
-                            retcheck = check.Check2(intermediate.ramps.at(0), 0xffff, outramps);
+                            //retcheck = check.Check2(intermediate.ramps.at(0), 0xffff, outramps);
+                            break;
                         }
                         //fcurmult *= fSearchVelAccelMult;
                     }
@@ -1138,16 +1234,17 @@ protected:
 
                 // perform shortcut. use accumoutramps rather than intermediate.ramps!
                 shortcuts++;
-                ramps[i1].TrimBack(ramps[i1].endTime-u1);
+                
+                ramps.at(i1).TrimBack(ramps[i1].endTime-u1); // use at for bounds checking
                 ramps[i1].x1 = accumoutramps.front().x0;
                 ramps[i1].dx1 = accumoutramps.front().dx0;
-                ramps[i2].TrimFront(u2);
+                ramps.at(i2).TrimFront(u2); // use at for bounds checking
                 ramps[i2].x0 = accumoutramps.back().x1;
                 ramps[i2].dx0 = accumoutramps.back().dx1;
-
+                //RAVELOG_VERBOSE_FORMAT("replacing [%d, %d] with %d ramps", i1%i2%accumoutramps.size());
                 // replace with accumoutramps
-                for(int i=0; i<i2-i1-1; i++) {
-                    ramps.erase(ramps.begin()+i1+1);
+                if( i1+1 < i2 ) {
+                    ramps.erase(ramps.begin()+i1+1, ramps.begin()+i2);
                 }
                 ramps.insert(ramps.begin()+i1+1,accumoutramps.begin(),accumoutramps.end());
                 iIterProgress += 0x10000000;
