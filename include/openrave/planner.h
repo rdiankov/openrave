@@ -37,6 +37,7 @@ enum ConstraintFilterOptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
     CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations and \ref ConstraintFilterReturn::_configurationtimes
     CFO_FillCollisionReport=0x00040000, ///< if set, will fill \ref ConstraintFilterReturn::_report if in environment or self-collision
+    CFO_FinalValuesNotReached=0x40000000, ///< if set, then the final values of the interpolation have not been reached, although a close interpolation has been computed. This happens when manipulator constraints are used.
     CFO_StateSettingError=0x80000000, ///< error when the state setting function (or neighbor function) breaks
     CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
 };

@@ -623,8 +623,8 @@ int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Ve
     return 0;
 }
 
-RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,const Vector& _tol)
-    : feas(_feas),tol(_tol),distance(NULL),maxiters(0), constraintsmask(0)
+RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas)
+    : feas(_feas),tol(0),distance(NULL),maxiters(0), constraintsmask(0)
 {
 }
 

@@ -52,7 +52,10 @@ public:
     virtual ~FeasibilityCheckerBase() {
     }
     virtual int ConfigFeasible(const Vector& q1, const Vector& dq1, int options=0xffff)=0;
-    virtual int SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options=0xffff)=0;
+    virtual int SegmentFeasible(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options=0xffff) {
+        BOOST_ASSERT(0);
+        return 0;
+    }
 
     /// \brief extra feasibility checks has different output ramps (in case there are constraints that have to be applied)
     virtual CheckReturn SegmentFeasible2(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options, std::vector<ParabolicRampND>& outramps) {
@@ -95,7 +98,7 @@ int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Ve
 class RampFeasibilityChecker
 {
 public:
-    RampFeasibilityChecker(FeasibilityCheckerBase* feas,const Vector& tol);
+    RampFeasibilityChecker(FeasibilityCheckerBase* feas);
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters);
 
     /// \brief checks constraints given options
