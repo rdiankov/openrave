@@ -24,14 +24,18 @@ namespace rplanners {
 
 struct ManipConstraintInfo
 {
+    ManipConstraintInfo() : fmaxdistfromcenter(0) {
+    }
+    
     RobotBase::ManipulatorPtr pmanip;
 
     // the end-effector link of the manipulator
     KinBody::LinkPtr plink;
-    // the points to check for in the end effector coordinate system
+    // the points to check for in the end effector link's coordinate system (plink)
     // for now the checked points are the vertices of the bounding box
     // but this can be more general, e.g. the vertices of the convex hull
     std::list<Vector> checkpoints;
+    dReal fmaxdistfromcenter; ///< max length of checkpoints
 
     std::vector<int> vuseddofindices; ///< a vector of unique DOF indices targetted for the body
     std::vector<int> vconfigindices; ///< for every index in vuseddofindices, returns the first configuration space index it came from
@@ -123,6 +127,8 @@ public:
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(manipname);
                 if( !!pmanip ) {
+                    OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),<=,spec.GetDOF()); // make sure the planning dof includes pmanip
+
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
                     // Insert all child links of endeffector
                     std::list<KinBody::LinkPtr> globallinklist;
@@ -144,19 +150,164 @@ public:
                     // Compute the enclosing AABB and add its vertices to the checkpoints
                     AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
                     _listCheckManips.push_back(ManipConstraintInfo());
-                    _listCheckManips.back().pmanip = pmanip;
-                    spec.ExtractUsedIndices(pmanip->GetRobot(), _listCheckManips.back().vuseddofindices, _listCheckManips.back().vconfigindices);
-                    _listCheckManips.back().plink = endeffector;
-                    ConvertAABBtoCheckPoints(enclosingaabb, _listCheckManips.back().checkpoints);
+                    ManipConstraintInfo& info = _listCheckManips.back();
+                    info.pmanip = pmanip;
+                    spec.ExtractUsedIndices(pmanip->GetRobot(), info.vuseddofindices, info.vconfigindices);
+                    info.plink = endeffector;
+                    ConvertAABBtoCheckPoints(enclosingaabb, info.checkpoints);
+                    info.fmaxdistfromcenter = 0;
+                    FOREACH(itpoint, info.checkpoints) {
+                        dReal f = itpoint->lengthsqr3();
+                        if( info.fmaxdistfromcenter < f ) {
+                            info.fmaxdistfromcenter = f;
+                        }
+                    }
+                    info.fmaxdistfromcenter = RaveSqrt(info.fmaxdistfromcenter);
                     setCheckedManips.insert(endeffector);
                 }
             }
         }
     }
 
-    /// checks at each ramp's edges
+    /// \brief given the current robot state
+    ///
+    /// \brief vellimits already initialized array with the current max velocities
+    /// \brief accellimits already initialized array with the current max accelerations
+    void GetMaxVelocitiesAccelerations(const std::vector<dReal>& curvels, std::vector<dReal>& vellimits, std::vector<dReal>& accellimits)
+    {
+        if( _maxmanipspeed<=0 && _maxmanipaccel <=0) {
+            return; // don't do anything
+        }
+
+        dReal maxmanipspeed2=_maxmanipspeed*_maxmanipspeed*0.5, maxmanipaccel2=_maxmanipaccel*_maxmanipaccel*0.5; // have to slow down maxes by a factor since cannot accurate predict how many joints will combine to form the real extents. 0.5 has been experimentally determined
+        vector<dReal> &vbestvels2 = _vbestvels2; vbestvels2.resize(vellimits.size());
+        for(size_t j = 0; j < vbestvels2.size(); ++j) {
+            vbestvels2[j] = vellimits[j]*vellimits[j];
+        }
+        vector<dReal> &vbestaccels2 = _vbestaccels2; vbestaccels2.resize(accellimits.size());
+        for(size_t j = 0; j < vbestaccels2.size(); ++j) {
+            vbestaccels2[j] = accellimits[j]*accellimits[j];
+        }
+
+        uint64_t changedvelsmask=0, changedaccelsmask=0;
+        OPENRAVE_ASSERT_OP(vellimits.size(),<,64);
+
+        FOREACHC(itmanipinfo,_listCheckManips) {
+            RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
+            Transform tlink = itmanipinfo->plink->GetTransform();
+
+            // compute jacobians, make sure to transform by the world frame
+            probot->CalculateAngularVelocityJacobian(itmanipinfo->plink->GetIndex(), _vangularjacobian);
+            probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
+
+            int armdof = itmanipinfo->pmanip->GetArmDOF();
+
+            // checking for each point is too slow, so use fmaxdistfromcenter instead
+            //FOREACH(itpoint,itmanipinfo->checkpoints)
+            {
+                //Vector vdeltapoint = tlink.rotate(*itpoint);
+                dReal fmaxdistfromcenter = itmanipinfo->fmaxdistfromcenter;
+                
+                Vector vpointtotalvel; // total work velocity from jacobian accounting all axes moving
+                for(int j = 0; j < armdof; ++j) {
+                    Vector vtransaxis(_vtransjacobian[j], _vtransjacobian[armdof+j], _vtransjacobian[2*armdof+j]);
+                    Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
+                    //vpointtotalvel += (vtransaxis + vangularaxis.cross(vdeltapoint))*curvels.at(j);
+                    vpointtotalvel += vtransaxis*curvels[j];
+                }
+                for(int j = 0; j < armdof; ++j) {
+                    Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
+                    Vector vd = Vector(RaveFabs(vangularaxis.y)+RaveFabs(vangularaxis.z), RaveFabs(vangularaxis.x)+RaveFabs(vangularaxis.z), RaveFabs(vangularaxis.x)+RaveFabs(vangularaxis.y))*fmaxdistfromcenter*RaveFabs(curvels.at(j));
+                    if( vpointtotalvel.x < 0 ) {
+                        vd.x = -vd.x;
+                    }
+                    if( vpointtotalvel.y < 0 ) {
+                        vd.y = -vd.y;
+                    }
+                    if( vpointtotalvel.z < 0 ) {
+                        vd.z = -vd.z;
+                    }
+                    vpointtotalvel += vd;
+                }
+                
+                for(int j = 0; j < armdof; ++j) {
+                    Vector vtransaxis(_vtransjacobian[j], _vtransjacobian[armdof+j], _vtransjacobian[2*armdof+j]);
+                    Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
+                    Vector vmoveaxis = vtransaxis;// + vangularaxis.cross(vdeltapoint);
+                    Vector vpointvelbase = vpointtotalvel-vmoveaxis*curvels.at(j); // remove contribution of this point
+
+                    // |vpointvelbase + vmoveaxis*jointvel| <= maxspeed
+                    // vmoveaxis^2 * jointvel^2 + vpointvelbase.dot(vmoveaxis)*jointvel + vpointvelbase^2 <= maxspeed^2
+                    // solve for jointvel and see if beyond vellimits
+                    
+                    if( maxmanipspeed2 > 0 ) {
+                        dReal roots[2];
+                        int numroots = mathextra::solvequad(vmoveaxis.lengthsqr3(), vpointvelbase.dot3(vmoveaxis), vpointvelbase.lengthsqr3() - maxmanipspeed2, roots[0], roots[1]);
+                        if( numroots == 0 ) {
+                            if( vpointvelbase.lengthsqr3() > maxmanipspeed2 ) {
+                                // going way too fast right now!
+                                if( curvels[j] > 0 ) {
+                                    vellimits[j] = curvels[j];
+                                }
+                                else if( curvels[j] < 0 ) {
+                                    vellimits[j] = -curvels[j];
+                                }
+                            }
+                        }
+                        else {
+                            for(int iroot = 0; iroot < numroots; ++iroot ) {
+                                dReal r = RaveFabs(roots[iroot]);
+                                if( r > 0 && r < vellimits[j] ) {
+                                    vellimits[j] = r;
+                                }
+                            }
+                        }
+                    }
+                    
+                    //Vector vabstotalmove(RaveFabs(vpointvelbase.x)
+//                    dReal fworkspeed2 = vmoveaxis.lengthsqr3(); ///< total speed in work space of *itpoint
+//
+//                    if( maxmanipspeed2 > 0 ) {
+//                        // sqrt(flen2) * vel <= maxspeed
+//                        if( fworkspeed2 * vbestvels2[j] >= maxmanipspeed2 ) {
+//                            vbestvels2[j] = maxmanipspeed2/fworkspeed2;
+//                            changedvelsmask |= (1<<j);
+//                        }
+//                    }
+//
+                    if( maxmanipaccel2 > 0 ) {
+                        // TODO should really be using the hessian here accel = Jacobian * dofaccelerations + dofvelocities^T * Hessian * dofvelocities, but it might be too slow, so just approximate with
+                        // accel = Jacobian * dofaccelerations
+                        Vector vaccelaxis = vmoveaxis;//(RaveFabs(vmoveaxis.x), RaveFabs(vmoveaxis.y), RaveFabs(vmoveaxis.z));
+                        dReal fworkaccel2 = vaccelaxis.lengthsqr3(); ///< total speed in work space of *itpoint
+
+                        if( fworkaccel2 * vbestaccels2[j] >= maxmanipaccel2 ) {
+                            vbestaccels2[j] = maxmanipaccel2/fworkaccel2;
+                            changedaccelsmask |= (1<<j);
+                        }
+                    }
+                }
+            }
+        }
+
+        // go through all the changes and update vellimits/accellimits
+        for(size_t j = 0; j < vellimits.size(); ++j) {
+            if( changedvelsmask & (1<<j) ) {
+                vellimits[j] = RaveSqrt(vbestvels2[j]);
+            }
+            if( changedaccelsmask & (1<<j) ) {
+                accellimits[j] = RaveSqrt(vbestaccels2[j]);
+            }
+        }
+    }
+
+    /// checks at each ramp's edges. This is called in the critical loop
     ParabolicRampInternal::CheckReturn CheckManipConstraints2(const std::vector<ParabolicRampInternal::ParabolicRampND>& outramps)
     {
+        if( _maxmanipspeed<=0 && _maxmanipaccel <=0) {
+            return ParabolicRampInternal::CheckReturn(0);
+        }
+
         dReal maxmanipspeed=0, maxmanipaccel=0;
         Vector endeffvellin,endeffvelang,endeffacclin,endeffaccang;
         FOREACHC(itramp, outramps) {
@@ -170,21 +321,21 @@ public:
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
                 itramp->Accel(0, ac);
                 qfillactive.resize(itmanipinfo->vuseddofindices.size());
-                vfillactive.resize(itmanipinfo->vuseddofindices.size());
-                afill.resize(probot->GetDOF());
+                _vfillactive.resize(itmanipinfo->vuseddofindices.size());
+                _afill.resize(probot->GetDOF());
                 for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
                     qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
-                    vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
-                    afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
+                    _vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
+                    _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
                 }
                 int endeffindex = itmanipinfo->plink->GetIndex();
                 KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
 
                 // Set robot to new state
                 probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->SetDOFVelocities(vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
                 probot->GetLinkVelocities(endeffvels);
-                probot->GetLinkAccelerations(afill,endeffaccs);
+                probot->GetLinkAccelerations(_afill,endeffaccs);
                 endeffvellin = endeffvels.at(endeffindex).first;
                 endeffvelang = endeffvels.at(endeffindex).second;
                 endeffacclin = endeffaccs.at(endeffindex).first;
@@ -235,14 +386,15 @@ private:
     std::set<KinBody::LinkPtr> setCheckedManips;
     dReal _maxmanipspeed, _maxmanipaccel;
 
-    //@{cache
+    //@{ cache
     std::list< ManipConstraintInfo > _listCheckManips; ///< the manipulators and the points on their end efffectors to check for velocity and acceleration constraints
-    std::vector<dReal> ac, qfillactive, vfillactive; // the active DOF
-    std::vector<dReal> afill; // full robot DOF
-    std::vector<std::pair<Vector,Vector> > endeffvels,endeffaccs;
+    std::vector<dReal> ac, qfillactive, _vfillactive; // the active DOF
+    std::vector<dReal> _afill; // full robot DOF
+    std::vector<std::pair<Vector,Vector> > endeffvels, endeffaccs;
+    std::vector<dReal> _vtransjacobian, _vangularjacobian, _vbestvels2, _vbestaccels2;
     //@}
 };
-    
+
 } // end namespace rplanners
 
 #endif

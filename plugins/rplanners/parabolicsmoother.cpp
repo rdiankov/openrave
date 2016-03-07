@@ -945,12 +945,40 @@ protected:
 
                 bool bsuccess = false;
 
+                vellimits = _parameters->_vConfigVelocityLimit;
+                accellimits = _parameters->_vConfigAccelerationLimit;
+                if( _bmanipconstraints && !!_manipconstraintchecker ) {
+                    if( _parameters->SetStateValues(x0) != 0 ) {
+                        RAVELOG_VERBOSE("state set error\n");
+                        continue;
+                    }
+                    _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
+                    if( _parameters->SetStateValues(x1) != 0 ) {
+                        RAVELOG_VERBOSE("state set error\n");
+                        continue;
+                    }
+                    _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx1, vellimits, accellimits);
+                }
                 for(size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
                     // have to watch out that velocities don't drop under dx0 & dx1!
                     dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
-                    vellimits[j] = max(_parameters->_vConfigVelocityLimit[j]*fstarttimemult, fminvel);
-                    accellimits[j] = _parameters->_vConfigAccelerationLimit[j]*fstarttimemult;
+                    if( vellimits[j] < fminvel ) {
+                        vellimits[j] = fminvel;
+                    }
+                    else {
+                        dReal f = max(fminvel, _parameters->_vConfigVelocityLimit[j]*fstarttimemult);
+                        if( vellimits[j] > f ) {
+                            vellimits[j] = f;
+                        }
+                    }
+                    {
+                        dReal f = _parameters->_vConfigAccelerationLimit[j]*fstarttimemult;
+                        if( accellimits[j] > f ) {
+                            accellimits[j] = f;
+                        }
+                    }
                 }
+                
                 dReal fcurmult = fstarttimemult;
                 for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
