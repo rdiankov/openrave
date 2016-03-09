@@ -155,6 +155,9 @@ inline const char* RaveGetSourceFilename(const char* pfilename)
 /// \brief Get the global log4cxx logger.
 OPENRAVE_API log4cxx::LoggerPtr RaveGetLogger();
 
+/// \brief Get the verbose log4cxx level. The only difference between this and log4cxx::Level::getTrace() is the text VERBOSE.
+OPENRAVE_API log4cxx::LevelPtr RaveGetVerboseLogLevel();
+
 #ifdef LOG4CXX_LOCATION
 #undef LOG4CXX_LOCATION
 #endif
@@ -165,7 +168,7 @@ OPENRAVE_API log4cxx::LoggerPtr RaveGetLogger();
 #define OPENRAVE_LOG4CXX_WARNLEVEL(logger, message, location) {if (logger->isWarnEnabled()) { logger->forcedLog(::log4cxx::Level::getWarn(), message, location); }}
 #define OPENRAVE_LOG4CXX_INFOLEVEL(logger, message, location) {if (logger->isInfoEnabled()) { logger->forcedLog(::log4cxx::Level::getInfo(), message, location); }}
 #define OPENRAVE_LOG4CXX_DEBUGLEVEL(logger, message, location) {if (logger->isDebugEnabled()) { logger->forcedLog(::log4cxx::Level::getDebug(), message, location); }}
-#define OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, message, location) {if (logger->isTraceEnabled()) { logger->forcedLog(::log4cxx::Level::getTrace(), message, location); }}
+#define OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, message, location) {if (logger->isTraceEnabled()) { logger->forcedLog(OpenRAVE::RaveGetVerboseLogLevel(), message, location); }}
 
 #define DefineRavePrintfW(LEVEL) \
     inline int RavePrintfW ## LEVEL(const log4cxx::LoggerPtr& logger, const log4cxx::spi::LocationInfo& location, const wchar_t *wfmt, ...) \
@@ -284,7 +287,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
             case Level_Warn: levelptr = log4cxx::Level::getWarn(); break;
             case Level_Info: levelptr = log4cxx::Level::getInfo(); break;
             case Level_Debug: levelptr = log4cxx::Level::getDebug(); break;
-            case Level_Verbose: levelptr = log4cxx::Level::getTrace(); break;
+            case Level_Verbose: levelptr = RaveGetVerboseLogLevel(); break;
             }
             if (logger->isEnabledFor(levelptr)) {
                 if (s.size() > 0 && s[s.size()-1] == '\n') {

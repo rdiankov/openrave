@@ -1850,21 +1850,22 @@ class IKFastSolver(AutoReloader):
         elif not processed and incos:
             return cos(neweq)
         return neweq
-    
-    def codeComplexity(self,expr):
+
+    @staticmethod
+    def codeComplexity(expr):
         complexity = 1
         if expr.is_Add:
             for term in expr.args:
-                complexity += self.codeComplexity(term)
+                complexity += IKFastSolver.codeComplexity(term)
         elif expr.is_Mul:
             for term in expr.args:
-                complexity += self.codeComplexity(term)
+                complexity += IKFastSolver.codeComplexity(term)
         elif expr.is_Pow:
-            complexity += self.codeComplexity(expr.base)+self.codeComplexity(expr.exp)
+            complexity += IKFastSolver.codeComplexity(expr.base)+IKFastSolver.codeComplexity(expr.exp)
         elif expr.is_Function:
             complexity += 1
             for term in expr.args:
-                complexity += self.codeComplexity(term)
+                complexity += IKFastSolver.codeComplexity(term)
         return complexity
     
     def ComputePolyComplexity(self, peq):
@@ -6233,7 +6234,7 @@ class IKFastSolver(AutoReloader):
         for group in groups:
             try:
                 # not sure about this thresh
-                if self.codeComplexity(eq) > 400:
+                if self.codeComplexity(eq) > 300:
                     log.warn(u'equation too complex to simplify for rot norm: %s', eq)
                     continue
                 
@@ -8684,19 +8685,23 @@ class IKFastSolver(AutoReloader):
                                     assert(m[1] == 1)
                                     ptotal_sin = ptotal_sin.sub(Poly.from_dict({(m[0],0):c},*ptotal_sin.gens))
                                     ptotal_cos = ptotal_cos.sub(Poly.from_dict({m:c},*ptotal_cos.gens))
-                            finaleq = (ptotal_cos.as_expr()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_expr()**2).expand()
-                            # sometimes denominators can accumulate
-                            pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
-                            pfinal = self.checkFinalEquation(pfinal)
-                            if pfinal is not None:
-                                jointsol = atan2(ptotal_cos.as_expr()/ptotal_sin.as_expr(), polysymbols[0])
-                                var = var1 if ivar == 0 else var0
-                                solution = AST.SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.IsHinge(var.name))
-                                solution.postcheckforzeros = [ptotal_sin.as_expr()]
-                                solution.postcheckfornonzeros = []
-                                solution.postcheckforrange = []
-                                return [solution]
-                    
+
+                            ptotalcomplexity = self.codeComplexity(ptotal_cos.as_expr()) + self.codeComplexity(ptotal_sin.as_expr())
+                            if ptotalcomplexity < 50000:
+                                #log.info('ptotal complexity is %d', ptotalcomplexity)
+                                finaleq = (ptotal_cos.as_expr()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_expr()**2).expand()
+                                # sometimes denominators can accumulate
+                                pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
+                                pfinal = self.checkFinalEquation(pfinal)
+                                if pfinal is not None:
+                                    jointsol = atan2(ptotal_cos.as_expr()/ptotal_sin.as_expr(), polysymbols[0])
+                                    var = var1 if ivar == 0 else var0
+                                    solution = AST.SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.IsHinge(var.name))
+                                    solution.postcheckforzeros = [ptotal_sin.as_expr()]
+                                    solution.postcheckfornonzeros = []
+                                    solution.postcheckforrange = []
+                                    return [solution]
+                                
                 # if maxnumeqs is any less, it will miss linearly independent equations
                 lineareqs = self.solveSingleVariableLinearly(raweqns,var0,[var1],maxnumeqs=len(raweqns))
                 if len(lineareqs) > 0:
