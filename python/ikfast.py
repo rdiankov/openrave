@@ -3255,7 +3255,7 @@ class IKFastSolver(AutoReloader):
             leftovervarstree += origendbranchtree
         return coupledsolutions
     
-    def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None):
+    def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None, rawbasenormaldir=None, Tgripperraw=None):
         """Solves 3D translation + Angle with respect to X-axis
         :param rawnormaldir: the axis in the base coordinate system that will be computing a rotation about
         :param rawglobaldir: the axis normal to rawnormaldir that represents the 0 angle.
@@ -3287,6 +3287,11 @@ class IKFastSolver(AutoReloader):
                 iktype = IkType.TranslationYAxisAngle4D
             elif globaldir[2] == S.One:
                 iktype = IkType.TranslationZAxisAngle4D
+
+        if rawbasenormaldir is None:
+            rawbasenormaldir = normaldir
+        else:
+            basenormaldir = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasenormaldir])
         
         if iktype is None:
             raise ValueError('currently globaldir can only by one of x,y,z axes')
@@ -3299,6 +3304,8 @@ class IKFastSolver(AutoReloader):
             basedir[i] = self.convertRealToRational(basedir[i],5)
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
         Links = LinksRaw[:]
+        if Tgripperraw is not None:
+            Links.append(self.RoundMatrix(self.GetMatrixFromNumpy(Tgripperraw)))
         
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
         
@@ -3358,12 +3365,12 @@ class IKFastSolver(AutoReloader):
                 eq = self.SimplifyTransform(self.trigsimp(binormaldir2.dot(basedir2),solvejointvars))-sin(self.Tee[0])
                 if self.CheckExpressionUnique(AllEquations,eq):
                     AllEquations.append(eq)
-                    
+        
         # check if planar with respect to normaldir
         extravar = None
         if normaldir is not None:
-            if Tallmult[0:3,0:3]*normaldir == normaldir:
-                Tnormaltest = self.rodrigues(normaldir,pi/2)
+            if Tallmult[0:3,0:3]*basenormaldir == normaldir:
+                Tnormaltest = self.rodrigues(basenormaldir,pi/2)
                 # planar, so know that the sum of all hinge joints is equal to the final angle
                 # can use this fact to substitute one angle with the other values
                 angles = []
