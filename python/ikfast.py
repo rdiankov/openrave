@@ -3289,7 +3289,7 @@ class IKFastSolver(AutoReloader):
                 iktype = IkType.TranslationZAxisAngle4D
 
         if rawbasenormaldir is None:
-            rawbasenormaldir = normaldir
+            basenormaldir = normaldir
         else:
             basenormaldir = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasenormaldir])
         
