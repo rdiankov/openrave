@@ -95,28 +95,33 @@ public:
                 if( feas->NeedDerivativeForFeasibility() ) {
                     rampnd.Derivative(vswitchtimes.at(iswitch),dq1);
                     dReal expectedelapsedtime = 0;
-                    int num = 0;
+                    dReal totalweight = 0;
                     for(size_t idof = 0; idof < dq0.size(); ++idof) {
                         dReal avgvel = 0.5*(dq0[idof] + dq1[idof]);
                         if( RaveFabs(avgvel) > g_fEpsilon ) {
-                            expectedelapsedtime += (q1[idof] - q0[idof])/avgvel;
-                            num += 1;
+                            // need to weigh appropriately or else small differences in q1-q0 can really affect the result.
+                            dReal fweight = RaveFabs(q1[idof] - q0[idof]);
+                            expectedelapsedtime += fweight*(q1[idof] - q0[idof])/avgvel;
+                            totalweight += fweight;
                         }
                     }
-                    if( num > 0 ) {
+                    if( totalweight > g_fEpsilon ) {
                         // find a better elapsed time
-                        elapsedtime = expectedelapsedtime/dReal(num);
-                    }
-
-                    if( elapsedtime > g_fEpsilon ) {
-                        dReal ielapsedtime = 1/elapsedtime;
-                        for(size_t idof = 0; idof < dq0.size(); ++idof) {
-                            dq1[idof] = 2*ielapsedtime*(q1[idof] - q0[idof]) - dq0[idof];
+                        dReal newelapsedtime = expectedelapsedtime/totalweight;
+                        if( RaveFabs(elapsedtime-newelapsedtime) > ParabolicRamp::EpsilonT ) {
+                            RAVELOG_VERBOSE_FORMAT("changing ramp elapsed time %.15e -> %.15e", elapsedtime%newelapsedtime);
+                            elapsedtime = newelapsedtime;
+                            if( elapsedtime > g_fEpsilon ) {
+                                dReal ielapsedtime = 1/elapsedtime;
+                                for(size_t idof = 0; idof < dq0.size(); ++idof) {
+                                    dq1[idof] = 2*ielapsedtime*(q1[idof] - q0[idof]) - dq0[idof];
+                                }
+                            }
+                            else {
+                                // elapsed time is non-existent, so have the same velocity?
+                                dq1 = dq0;
+                            }
                         }
-                    }
-                    else {
-                        // elapsed time is non-existent, so have the same velocity?
-                        dq1 = dq0;
                     }
                 }
 
@@ -127,6 +132,17 @@ public:
                 }
 
                 if( segmentoutramps.size() > 0 ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        for(size_t idof = 0; idof < q0.size(); ++idof) {
+                            if( RaveFabs(q1[idof]-segmentoutramps.back().x1[idof]) > ParabolicRamp::EpsilonX ) {
+                                RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired position values %f, so rejecting", (q0[idof]-rampnd.x1[idof]));
+                            }
+                            if( RaveFabs(dq1[idof]-segmentoutramps.back().dx1[idof]) > ParabolicRamp::EpsilonV ) {
+                                RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %e, so reforming ramp", (dq0[idof]-rampnd.dx1[idof]));
+                            }
+                        }
+                    }
+                    
                     outramps.insert(outramps.end(), segmentoutramps.begin(), segmentoutramps.end());
                     // the last ramp in segmentoutramps might not be exactly equal to q1/dq1!
                     q0 = segmentoutramps.back().x1;
@@ -143,7 +159,7 @@ public:
                     return ParabolicRamp::CheckReturn(CFO_FinalValuesNotReached);
                 }
                 if( RaveFabs(dq0[idof]-rampnd.dx1[idof]) > ParabolicRamp::EpsilonV ) {
-                    RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %f, so reforming ramp", (dq0[idof]-rampnd.dx1[idof]));
+                    RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %e, so reforming ramp", (dq0[idof]-rampnd.dx1[idof]));
                     bDifferentVelocity = true;
                 }
             }
