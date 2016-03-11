@@ -822,7 +822,7 @@ protected:
                 dReal fmult = 0.9;
                 ParabolicRamp::CheckReturn retseg(-1);
                 for(size_t itry = 0; itry < 30; ++itry) {
-                    bool res=ramp.SolveMinTimeLinear(vellimits, accellimits);
+                    bool res=ramp.SolveMinTimeLinear(accellimits, vellimits);
                     _ExtractSwitchTimes(ramp, vswitchtimes);
                     ramp.Evaluate(0, x0);
                     ramp.Derivative(0, dx0);
