@@ -3374,14 +3374,17 @@ class IKFastSolver(AutoReloader):
                 # planar, so know that the sum of all hinge joints is equal to the final angle
                 # can use this fact to substitute one angle with the other values
                 angles = []
+                isanglepositive = []
                 for solvejoint in solvejointvars:
                     if self.IsHinge(solvejoint.name):
                         Tall0 = Tallmult[0:3,0:3].subs(solvejoint,S.Zero)
                         Tall1 = Tallmult[0:3,0:3].subs(solvejoint,pi/2)
-                        if Tall0*Tnormaltest-Tall1:
+                        if all([f==S.Zero for f in Tall0*Tnormaltest-Tall1]):
                             angles.append(solvejoint)
+                            isanglepositive.append(True)
                         else:
-                            angles.append(-solvejoint)
+                            angles.append(solvejoint)
+                            isanglepositive.append(False)
                 Tzero = Tallmult.subs([(a,S.Zero) for a in angles])
                 for i in range(3):
                     if binormaldir[i].is_number:
@@ -3390,15 +3393,24 @@ class IKFastSolver(AutoReloader):
                         basedir[i] = self.convertRealToRational(basedir[i])
                 zeroangle = atan2(binormaldir.dot(Tzero[0:3,0:3]*basedir), globaldir.dot(Tzero[0:3,0:3]*basedir))
                 eqangles = self.Tee[0]-zeroangle
-                for a in angles[:-1]:
-                    eqangles -= a
+                for iangle, a in enumerate(angles[:-1]):
+                    if isanglepositive[iangle]:
+                        eqangles -= a
+                    else:
+                        eqangles += a
+                if not isanglepositive[-1]:
+                    eqangles = -eqangles
                 extravar = (angles[-1],eqangles)
                 coseq = cos(eqangles).expand(trig=True)
                 sineq = sin(eqangles).expand(trig=True)
                 AllEquationsOld = AllEquations
                 AllEquations = [self.trigsimp(eq.subs([(cos(angles[-1]),coseq),(sin(angles[-1]),sineq)]).expand(),solvejointvars) for eq in AllEquationsOld]
-                solvejointvars.remove(angles[-1])
-        
+                solvejointvarsold = list(solvejointvars)
+                for var in solvejointvars:
+                    if angles[-1].has(var):
+                        solvejointvars.remove(var)
+                        break
+
         self.sortComplexity(AllEquations)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
         if extravar is not None:
