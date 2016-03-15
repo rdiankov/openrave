@@ -67,6 +67,7 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     max_speed = 0;
     no_load_speed = 0;
     stall_torque = 0;
+    max_instantaneous_torque = 0;
     nominal_torque = 0;
     rotor_inertia = 0;
     torque_constant = 0;
@@ -74,6 +75,8 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     speed_constant = 0;
     starting_current = 0;
     terminal_resistance = 0;
+    coloumb_friction = 0;
+    viscous_friction = 0;
 }
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)

@@ -288,6 +288,8 @@ public:
 
         ParabolicRamp::DynamicPath &dynamicpath=_cachedynamicpath;
         dynamicpath.ramps.resize(0); // clear
+        OPENRAVE_ASSERT_OP(parameters->_vConfigVelocityLimit.size(),==,parameters->_vConfigAccelerationLimit.size());
+        OPENRAVE_ASSERT_OP(parameters->_vConfigVelocityLimit.size(),==,parameters->GetDOF());
         dynamicpath.Init(parameters->_vConfigVelocityLimit,parameters->_vConfigAccelerationLimit);
         dynamicpath._multidofinterp = _parameters->_multidofinterp;
         dynamicpath.SetJointLimits(parameters->_vConfigLowerLimit,parameters->_vConfigUpperLimit);
@@ -926,10 +928,8 @@ protected:
             }
             int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
             int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
-            if(i1 >= i2) {
-                continue;
-            }
-
+            // i1 can be equal to i2 and that is valid and should be rechecked again
+            
             uint32_t iIterProgress = 0; // used for debug purposes
             try {
                 //same ramp
@@ -1109,6 +1109,12 @@ protected:
 
                 // perform shortcut. use accumoutramps rather than intermediate.ramps!
                 shortcuts++;
+                
+                if( i1 == i2 ) {
+                    // the same ramp is being cut on both sides, so copy the ramp
+                    ramps.insert(ramps.begin()+i1, ramps.at(i1));
+                    i2 = i1+1;
+                }
 
                 ramps.at(i1).TrimBack(ramps[i1].endTime-u1); // use at for bounds checking
                 ramps[i1].x1 = accumoutramps.front().x0;
@@ -1116,6 +1122,7 @@ protected:
                 ramps.at(i2).TrimFront(u2); // use at for bounds checking
                 ramps[i2].x0 = accumoutramps.back().x1;
                 ramps[i2].dx0 = accumoutramps.back().dx1;
+                
                 //RAVELOG_VERBOSE_FORMAT("replacing [%d, %d] with %d ramps", i1%i2%accumoutramps.size());
                 // replace with accumoutramps
                 if( i1+1 < i2 ) {

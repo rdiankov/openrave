@@ -2039,6 +2039,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
             _vtorquevalues.resize(0);
             FOREACHC(itjoint, pbody->GetJoints()) {
                 for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                    // TODO use the ElectricMotorActuatorInfo if present to get the real max torque depending on the speed
                     dReal fmaxtorque = (*itjoint)->GetMaxTorque(idof);
                     if( fmaxtorque > 0 ) {
                         _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,fmaxtorque));
@@ -2061,9 +2062,12 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
                 FOREACH(it, _vtorquevalues) {
                     int index = it->first;
                     dReal fmaxtorque = it->second;
+                    // TODO use the ElectricMotorActuatorInfo if present to get the real torque with friction
                     if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque));
+                            std::vector<dReal> velocities;
+                            pbody->GetDOFVelocities(velocities);
+                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e. vel=%f")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque%velocities.at(index)));
                         }
                         return CFO_CheckTimeBasedConstraints;
                     }

@@ -114,6 +114,26 @@ public:
             _paramswrite->_vGoalConfigVelocities = ExtractArray<dReal>(o);
         }
 
+        void SetConfigVelocityLimit(object o)
+        {
+            _paramswrite->_vConfigVelocityLimit = ExtractArray<dReal>(o);
+        }
+
+        void SetConfigAccelerationLimit(object o)
+        {
+            _paramswrite->_vConfigAccelerationLimit = ExtractArray<dReal>(o);
+        }
+
+        void SetConfigResolution(object o)
+        {
+            _paramswrite->_vConfigResolution = ExtractArray<dReal>(o);
+        }
+
+        void SetMaxIterations(int nMaxIterations)
+        {
+            _paramswrite->_nMaxIterations = nMaxIterations;
+        }
+        
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -343,8 +363,12 @@ void init_openravepy_planner()
         .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
-        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::vInitialConfigVelocities")
-        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::vGoalConfigVelocities")
+        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::_vInitialConfigVelocities")
+        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::_vGoalConfigVelocities")
+        .def("SetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::SetConfigVelocityLimit,args("velocities"),"sets PlannerParameters::_vConfigVelocityLimit")
+        .def("SetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit,args("accelerations"),"sets PlannerParameters::_vConfigAccelerationLimit")
+        .def("SetConfigResolution",&PyPlannerBase::PyPlannerParameters::SetConfigResolution,args("resolutions"),"sets PlannerParameters::_vConfigResolution")
+        .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations,args("maxiterations"),"sets PlannerParameters::_nMaxIterations")
         .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
