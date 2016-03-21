@@ -45,20 +45,15 @@ public:
                 OPENRAVE_ASSERT_OP(tol[i], >, 0);
             }
 
-//            int ret1 = space->ConfigFeasible(rampnd.x1, rampnd.dx1, options);
-//            if( ret1 != 0 ) {
-//                return ret1;
-//            }
-
             _ExtractSwitchTimes(rampnd, vswitchtimes, true);
             dReal fprev = 0;
-            int ret0 = feas->ConfigFeasible(rampnd.x0, rampnd.dx0, options);
-            if( ret0 != 0 ) {
-                return ParabolicRamp::CheckReturn(ret0);
+            ParabolicRamp::CheckReturn ret0 = feas->ConfigFeasible2(rampnd.x0, rampnd.dx0, options);
+            if( ret0.retcode != 0 ) {
+                return ret0;
             }
-            int ret1 = feas->ConfigFeasible(rampnd.x1, rampnd.dx1, options);
-            if( ret1 != 0 ) {
-                return ParabolicRamp::CheckReturn(ret1);
+            ParabolicRamp::CheckReturn ret1 = feas->ConfigFeasible2(rampnd.x1, rampnd.dx1, options);
+            if( ret1.retcode != 0 ) {
+                return ret1;
             }
 
             // check if configurations are feasible for all the switch times.
@@ -74,7 +69,7 @@ public:
                 if( feas->NeedDerivativeForFeasibility() ) {
                     rampnd.Derivative(switchtime,dq0);
                 }
-                ParabolicRamp::CheckReturn retconf = feas->ConfigFeasible(q0, dq0, options);
+                ParabolicRamp::CheckReturn retconf = feas->ConfigFeasible2(q0, dq0, options);
                 if( retconf.retcode != 0 ) {
                     return retconf;
                 }
@@ -237,6 +232,11 @@ public:
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
+        }
+
+        // should always set the seed since smoother can be called with different trajectories even though InitPlan was only called once
+        if( !!_uniformsampler ) {
+            _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         }
 
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -445,6 +445,7 @@ public:
             std::vector<ParabolicRamp::ParabolicRampND>& temprampsnd=_cacheoutramps;
             ParabolicRamp::ParabolicRampND rampndtrimmed;
             dReal fTrimEdgesTime = parameters->_fStepLength*2; // 2 controller timesteps is enough?
+            dReal fExpectedDuration = 0;
             for(size_t irampindex = 0; irampindex < dynamicpath.ramps.size(); ++irampindex) {
                 const ParabolicRamp::ParabolicRampND& rampnd = dynamicpath.ramps[irampindex];
                 temprampsnd.resize(1);
@@ -482,6 +483,7 @@ public:
                     std::vector<ParabolicRamp::ParabolicRampND> outramps;
                     if( bCheck ) {
                         ParabolicRamp::CheckReturn checkret = _feasibilitychecker.Check2(rampndtrimmed, 0xffff, outramps);
+                        
                         if( checkret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
                             std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
                             // try to time scale, perhaps collision and dynamics will change
@@ -540,6 +542,7 @@ public:
                 }
 
                 FOREACH(itrampnd2, temprampsnd) {
+                    fExpectedDuration += itrampnd2->endTime;
                     vswitchtimes.resize(0);
                     vswitchtimes.push_back(itrampnd2->endTime);
                     if( _parameters->_outputaccelchanges ) {
@@ -580,10 +583,16 @@ public:
                     }
                     _dummytraj->Insert(_dummytraj->GetNumWaypoints(),vtrajpoints);
                 }
+
+                if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                    // if verbose, do tighter bound checking
+                    OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.001);
+                }
             }
 
-            OPENRAVE_ASSERT_OP(RaveFabs(dynamicpath.GetTotalTime()-_dummytraj->GetDuration()),<,0.001);
-            RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%dynamicpath.GetTotalTime());
+            // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
+            OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
+            RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -610,12 +619,32 @@ public:
         }
     }
 
+    virtual ParabolicRamp::CheckReturn ConfigFeasible2(const ParabolicRamp::Vector& a, const ParabolicRamp::Vector& da, int options)
+    {
+        if( _bUsePerturbation ) {
+            options |= CFO_CheckWithPerturbation;
+        }
+        try {
+            int ret = _parameters->CheckPathAllConstraints(a,a, da, da, 0, IT_OpenStart, options);
+            ParabolicRamp::CheckReturn checkret(ret);
+            if( ret == CFO_CheckTimeBasedConstraints ) {
+                checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
+            }
+            return checkret;
+        }
+        catch(const std::exception& ex) {
+            // some constraints assume initial conditions for a and b are followed, however at this point a and b are sa
+            RAVELOG_WARN_FORMAT("env=%d, rrtparams path constraints threw an exception: %s", GetEnv()->GetId()%ex.what());
+            return 0xffff; // could be anything...
+        }
+    }
+    
     /// \brief checks a parabolic ramp and outputs smaller set of ramps. Because of manipulator constraints, the outramps's ending values might not be equal to b/db!
     virtual ParabolicRamp::CheckReturn SegmentFeasible2(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b, const ParabolicRamp::Vector& da,const ParabolicRamp::Vector& db, dReal timeelapsed, int options, std::vector<ParabolicRamp::ParabolicRampND>& outramps)
     {
         outramps.resize(0);
         if( timeelapsed <= g_fEpsilon ) {
-            return ParabolicRamp::CheckReturn(ConfigFeasible(a, da, options));
+            return ConfigFeasible2(a, da, options);
         }
 
         if( _bUsePerturbation ) {
@@ -861,7 +890,7 @@ protected:
                     }
                     else if( retseg.retcode == CFO_CheckTimeBasedConstraints ) {
                         // slow the ramp down and try again
-                        RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d by %.15e since too fast", GetEnv()->GetId()%i%vnewpath.size()%retseg.fTimeBasedSurpassMult);
+                        RAVELOG_VERBOSE_FORMAT("env=%d, slowing down ramp %d/%d by %.15e since too fast, try %d", GetEnv()->GetId()%i%vnewpath.size()%retseg.fTimeBasedSurpassMult%itry);
                         for(size_t j = 0; j < vellimits.size(); ++j) {
                             vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
                             accellimits.at(j) *= retseg.fTimeBasedSurpassMult;

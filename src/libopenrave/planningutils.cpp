@@ -1991,7 +1991,7 @@ int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParameter
     if( (options & CFO_CheckTimeBasedConstraints) && !!_setvelstatefn && vdofvelocities.size() == vdofvalues.size() ) {
         (*_setvelstatefn)(vdofvelocities);
     }
-    int nstateret = _CheckState(vdofaccels, options, filterreturn);
+    int nstateret = _CheckState(vdofvelocities, vdofaccels, options, filterreturn);
     if( nstateret != 0 ) {
         return nstateret;
     }
@@ -2012,7 +2012,7 @@ int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParameter
             if( params->SetStateValues(_vperturbedvalues, 0) != 0 ) {
                 return CFO_StateSettingError|CFO_CheckWithPerturbation;
             }
-            int nstateret = _CheckState(vdofaccels, options, filterreturn);
+            int nstateret = _CheckState(vdofvelocities, vdofaccels, options, filterreturn);
             if( nstateret != 0 ) {
                 return nstateret;
             }
@@ -2021,7 +2021,7 @@ int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParameter
     return 0;
 }
 
-int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
+int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
     options &= _filtermask;
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[0] ) {
@@ -2040,9 +2040,9 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
             FOREACHC(itjoint, pbody->GetJoints()) {
                 for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                     // TODO use the ElectricMotorActuatorInfo if present to get the real max torque depending on the speed
-                    dReal fmaxtorque = (*itjoint)->GetMaxTorque(idof);
-                    if( fmaxtorque > 0 ) {
-                        _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,fmaxtorque));
+                    std::pair<dReal, dReal> torquelimits = (*itjoint)->GetNominalTorqueLimits(idof);
+                    if( torquelimits.first < torquelimits.second ) {
+                        _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,torquelimits));
                     }
                 }
             }
@@ -2061,13 +2061,16 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofaccel
                 pbody->ComputeInverseDynamics(_doftorques, _dofaccelerations);
                 FOREACH(it, _vtorquevalues) {
                     int index = it->first;
-                    dReal fmaxtorque = it->second;
+                    const std::pair<dReal, dReal>& torquelimits = it->second;
+                    dReal fcurtorque = _doftorques.at(index);
                     // TODO use the ElectricMotorActuatorInfo if present to get the real torque with friction
-                    if( RaveFabs(_doftorques.at(index)) > fmaxtorque ) {
+                    if( fcurtorque < torquelimits.first || fcurtorque > torquelimits.second ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            std::vector<dReal> velocities;
-                            pbody->GetDOFVelocities(velocities);
-                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e > %e. vel=%f")%pbody->GetJointFromDOFIndex(index)->GetName()%index%RaveFabs(_doftorques.at(index))%fmaxtorque%velocities.at(index)));
+                            stringstream ssvel; ssvel << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            FOREACHC(itvel, vdofvelocities) {
+                                ssvel << *itvel << ",";
+                            }
+                            _PrintOnFailure(str(boost::format("rejected torque due to joint %s (%d): %e !< %e !< %e. vel=[%s]")%pbody->GetJointFromDOFIndex(index)->GetName()%index%torquelimits.first%fcurtorque%torquelimits.second%ssvel.str()));
                         }
                         return CFO_CheckTimeBasedConstraints;
                     }

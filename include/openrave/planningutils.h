@@ -432,8 +432,10 @@ public:
 protected:
     /// \brief checks an already set state
     ///
+    /// \param vdofvelocities the current velocities set on the robot
+    /// \param vaccelconfig the current accelerations being applied on the robot
     /// \param options should already be masked with _filtermask
-    virtual int _CheckState(const std::vector<dReal>& vaccelconfig, int options, ConstraintFilterReturnPtr filterreturn);
+    virtual int _CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vaccelconfig, int options, ConstraintFilterReturnPtr filterreturn);
 
     /// \brief sets and checks the state, also takes into account perturbations
     ///
@@ -451,7 +453,7 @@ protected:
 
     // for dynamics
     ConfigurationSpecification _specvel;
-    std::vector< std::pair<int, dReal> > _vtorquevalues;
+    std::vector< std::pair<int, std::pair<dReal, dReal> > > _vtorquevalues; ///< cache for dof indices and the torque limits that the current torque should be in
     std::vector< int > _vdofindices;
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;

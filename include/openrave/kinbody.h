@@ -832,9 +832,24 @@ public:
         inline dReal GetMaxAccel(int iaxis=0) const {
             return _info._vmaxaccel[iaxis];
         }
-        inline dReal GetMaxTorque(int iaxis=0) const {
-            return _info._vmaxtorque[iaxis];
-        }
+
+        ///< \brief gets the max instantaneous torque of the joint
+        ///
+        /// If _infoElectricMotor is filled, the will compute the max instantaneous torque depending on the current speed of the joint.
+        dReal GetMaxTorque(int iaxis=0) const;
+
+        ///< \brief gets the max instantaneous torque limits of the joint
+        ///
+        /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
+        /// \return min and max of torque limits
+        std::pair<dReal, dReal> GetInstantaneousTorqueLimits(int iaxis=0) const;
+
+        ///< \brief gets the nominal torque limits of the joint
+        ///
+        /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
+        /// \return min and max of torque limits
+        std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
+        
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
         }

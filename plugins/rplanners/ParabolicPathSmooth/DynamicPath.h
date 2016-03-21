@@ -57,6 +57,11 @@ public:
         return 0;
     }
 
+    virtual CheckReturn ConfigFeasible2(const Vector& q1, const Vector& dq1, int options=0xffff) {
+        // default
+        return CheckReturn(ConfigFeasible(q1, dq1, options));
+    }
+    
     /// \brief extra feasibility checks has different output ramps (in case there are constraints that have to be applied)
     virtual CheckReturn SegmentFeasible2(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options, std::vector<ParabolicRampND>& outramps) {
         BOOST_ASSERT(0);
