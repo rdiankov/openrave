@@ -170,7 +170,7 @@ public:
         }
         _pconstraints.reset(new OpenRAVE::planningutils::DynamicsCollisionConstraint(parameters, listCheckBodies, filtermask));
     }
-    
+
     virtual ~PyDynamicsCollisionConstraint() {
     }
 
@@ -204,6 +204,24 @@ public:
         }
         return object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
     }
+
+    void SetPlannerParameters(object oparameters)
+    {
+        _pconstraints->SetPlannerParameters(openravepy::GetPlannerParameters(oparameters));
+    }
+
+    void SetFilterMask(int filtermask) {
+        _pconstraints->SetFilterMask(filtermask);
+    }
+
+    void SetPerturbation(dReal perturbation) {
+        _pconstraints->SetPerturbation(perturbation);
+    }
+
+    void SetTorqueLimitMode(int torquelimitmode) {
+        _pconstraints->SetTorqueLimitMode(torquelimitmode);
+    }
+
 
     PyEnvironmentBasePtr _pyenv;
     OpenRAVE::planningutils::DynamicsCollisionConstraintPtr _pconstraints;
@@ -492,7 +510,11 @@ void InitPlanningUtils()
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
         .def(init<object, object, uint32_t>(args("plannerparameters", "checkbodies", "filtermask")))
         .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
-        .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport));
+        .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport))
+        .def("SetPlannerParameters", &planningutils::PyDynamicsCollisionConstraint::SetPlannerParameters, args("parameters"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPlannerParameters))
+        .def("SetFilterMask", &planningutils::PyDynamicsCollisionConstraint::SetFilterMask, args("filtermask"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetFilterMask))
+        .def("SetPerturbation", &planningutils::PyDynamicsCollisionConstraint::SetPerturbation, args("parameters"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPerturbation))
+        .def("SetTorqueLimitMode", &planningutils::PyDynamicsCollisionConstraint::SetTorqueLimitMode, args("torquelimitmode"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetTorqueLimitMode))
         ;
     }
 }

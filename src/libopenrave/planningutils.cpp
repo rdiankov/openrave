@@ -1948,7 +1948,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _perturbation(0.1)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(0), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -1976,6 +1976,11 @@ void DynamicsCollisionConstraint::SetUserCheckFunction(const boost::function<boo
 void DynamicsCollisionConstraint::SetFilterMask(int filtermask)
 {
     _filtermask = filtermask;
+}
+
+void DynamicsCollisionConstraint::SetTorqueLimitMode(int torquelimitmode)
+{
+    _torquelimitmode = torquelimitmode;
 }
 
 void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
@@ -2040,7 +2045,14 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
             FOREACHC(itjoint, pbody->GetJoints()) {
                 for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                     // TODO use the ElectricMotorActuatorInfo if present to get the real max torque depending on the speed
-                    std::pair<dReal, dReal> torquelimits = (*itjoint)->GetNominalTorqueLimits(idof);
+                    std::pair<dReal, dReal> torquelimits;
+                    if( _torquelimitmode == 1 ) {
+                        torquelimits = (*itjoint)->GetInstantaneousTorqueLimits(idof);
+                    }
+                    else { // _torquelimitmode == 0
+                        torquelimits = (*itjoint)->GetNominalTorqueLimits(idof);
+                    }
+                    
                     if( torquelimits.first < torquelimits.second ) {
                         _vtorquevalues.push_back(make_pair((*itjoint)->GetDOFIndex()+idof,torquelimits));
                     }
@@ -2678,7 +2690,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                             _vprevtempconfig[i] += vpostdq[i];
                             _vprevtempvelconfig[i] += vpostddq[i]; // probably not right with the way interpolation works out, but it is a reasonable approximation
                         }
-                        
+
                         int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
 //                        if( !!params->_getstatefn ) {
 //                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
@@ -2732,7 +2744,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
                 }
             }
-            
+
             if( numPostNeighSteps > 1 ) {
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
                 RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, timestep=%f", numPostNeighSteps%timestep);
@@ -2832,7 +2844,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             for(size_t idof = 0; idof < dQ.size(); ++idof) {
                 _vprevtempconfig[idof] *= fnewscale;
             }
-            
+
             if( !params->_neighstatefn(_vtempconfig, _vprevtempconfig, NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
@@ -2859,7 +2871,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
                 }
             }
-            
+
             if( numPostNeighSteps > 1 ) {
                 // should never happen, but just in case _neighstatefn is some non-linear constraint projection
                 RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, interval=%d", numPostNeighSteps%interval);

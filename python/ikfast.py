@@ -2591,7 +2591,7 @@ class IKFastSolver(AutoReloader):
         # try to simplify basedir based on possible angles
         for i in range(3):
             value = None
-            for num in [3,4,5,6,7,8,12]:
+            for num in [3,4,5,6,7,8]:#,12]:
                 if abs((basedir[i]-cos(pi/num))).evalf() <= (10**-self.precision):
                     value = cos(pi/num)
                     break
