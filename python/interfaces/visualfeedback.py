@@ -14,7 +14,7 @@ __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Apache License, Version 2.0'
 # python 2.5 raises 'import *' not allowed with 'from .
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization
-from ..openravepy_ext import planning_error
+from .. import PlanningError
 
 import numpy
 from copy import copy as shallowcopy
@@ -77,7 +77,7 @@ class VisualFeedback:
                 cmd += str(f) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         return res
     def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
         """See :ref:`module-visualfeedback-processvisibilityextents`
@@ -104,7 +104,7 @@ class VisualFeedback:
                 cmd += 'conedirangle %.15e %.15e %.15e '%(conedirangle[0],conedirangle[1],conedirangle[2])
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         visibilitytransforms = numpy.array([numpy.float(s) for s in res.split()],numpy.float)
         return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
@@ -117,7 +117,7 @@ class VisualFeedback:
             cmd += 'mindist %.15e '%(mindist)
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         return res
     def ComputeVisibility(self):
         """See :ref:`module-visualfeedback-computevisibility`
@@ -125,7 +125,7 @@ class VisualFeedback:
         cmd = 'ComputeVisibility '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         return int(res)
     def ComputeVisibleConfiguration(self,pose):
         """See :ref:`module-visualfeedback-computevisibleconfiguration`
@@ -136,7 +136,7 @@ class VisualFeedback:
             cmd += str(pose[i]) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         return numpy.array([float(s) for s in res.split()])
     def SampleVisibilityGoal(self,numsamples=None):
         """See :ref:`module-visualfeedback-samplevisibilitygoal`
@@ -146,7 +146,7 @@ class VisualFeedback:
             cmd += 'numsamples %d '%numsamples
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         samples = [float(s) for s in res.split()]
         returnedsamples = int(samples[0])
         return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
@@ -170,7 +170,7 @@ class VisualFeedback:
             cmd += 'maxiter %d '%maxiter
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         return res
     def VisualFeedbackGrasping(self,graspset,usevisibility=None,planner=None,graspdistthresh=None,visgraspthresh=None,numgradientsamples=None,maxiter=None,execute=None,outputtraj=None):
         """See :ref:`module-visualfeedback-visualfeedbackgrasping`
@@ -198,7 +198,7 @@ class VisualFeedback:
             cmd += 'maxiter %d '%maxiter
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         return res
     def SetParameter(self,raydensity=None,raymindist=None,allowableocclusion=None):
         """See :ref:`module-visualfeedback-setparameter`

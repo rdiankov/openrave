@@ -3104,7 +3104,10 @@ public:
         ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
         for(size_t ic = 0; ic < domactuator->getChildren().getCount(); ++ic) {
             daeElementRef pchild = domactuator->getChildren()[ic];
-            if( pchild->getElementName() == string("gear_ratio") ) {
+            if( pchild->getElementName() == string("model_type") ) {
+                pinfo->model_type = pchild->getCharData();
+            }
+            else if( pchild->getElementName() == string("gear_ratio") ) {
                 pinfo->gear_ratio = boost::lexical_cast<dReal>(pchild->getCharData());
             }
             else if( pchild->getElementName() == string("assigned_power_rating") ) {
@@ -3118,6 +3121,9 @@ public:
             }
             else if( pchild->getElementName() == string("stall_torque") ) {
                 pinfo->stall_torque = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("max_instantaneous_torque") ) {
+                pinfo->max_instantaneous_torque = boost::lexical_cast<dReal>(pchild->getCharData());
             }
             else if( pchild->getElementName() == string("nominal_torque") ) {
                 pinfo->nominal_torque = boost::lexical_cast<dReal>(pchild->getCharData());
@@ -3140,12 +3146,26 @@ public:
             else if( pchild->getElementName() == string("terminal_resistance") ) {
                 pinfo->terminal_resistance = boost::lexical_cast<dReal>(pchild->getCharData());
             }
-            else if( pchild->getElementName() == string("speed_torque_point") ) {
+            else if( pchild->getElementName() == string("coloumb_friction") ) {
+                pinfo->coloumb_friction = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("viscous_friction") ) {
+                pinfo->viscous_friction = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("nominal_speed_torque_point") ) {
                 std::stringstream ss(pchild->getCharData());
                 std::vector<dReal> vpoints((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
-                pinfo->speed_torque_points.resize(vpoints.size()/2);
+                pinfo->nominal_speed_torque_points.resize(vpoints.size()/2);
                 for(size_t ipoint = 0; ipoint < vpoints.size(); ipoint += 2) {
-                    pinfo->speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
+                    pinfo->nominal_speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
+                }
+            }
+            else if( pchild->getElementName() == string("max_speed_torque_point") ) {
+                std::stringstream ss(pchild->getCharData());
+                std::vector<dReal> vpoints((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
+                pinfo->max_speed_torque_points.resize(vpoints.size()/2);
+                for(size_t ipoint = 0; ipoint < vpoints.size(); ipoint += 2) {
+                    pinfo->max_speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
                 }
             }
         }

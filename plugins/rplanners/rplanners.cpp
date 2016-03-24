@@ -26,10 +26,13 @@ PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::is
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateSubParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+
+namespace rplanners {    
+PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+}
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -73,7 +76,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return CreateLinearSmoother(penv,sinput);
         }
         else if( interfacename == "parabolicsmoother" ) {
-            return CreateParabolicSmoother(penv,sinput);
+            return rplanners::CreateParabolicSmoother(penv,sinput);
         }
         else if( interfacename == "subparabolicsmoother" ) {
             return CreateSubParabolicSmoother(penv,sinput);

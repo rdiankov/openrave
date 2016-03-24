@@ -359,6 +359,18 @@ protected:
             transoffset = 1;
             break;
         }
+        case IKP_TranslationYAxisAngleXNorm4D: {
+            dReal angledelta = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
+            if( !ParabolicRamp::SolveMinTimeBounded(0,*(itdataprev+info->gvel.offset+0),angledelta,*(itdata+info->gvel.offset+0), info->_vConfigAccelerationLimit.at(0), info->_vConfigVelocityLimit.at(0), -1000,angledelta+1000, ramp) ) {
+                RAVELOG_WARN("failed solving mintime for angles\n");
+                return false;
+            }
+            mintime = ramp.EndTime();
+            trans1 = ikparam.GetTranslationYAxisAngleXNorm4D().first;
+            trans0 = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
+            transoffset = 1;
+            break;
+        }
         default:
             throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
         }
@@ -450,7 +462,9 @@ protected:
             transoffset = 3;
             break;
         }
-        case IKP_TranslationXAxisAngleZNorm4D: {
+        case IKP_TranslationXAxisAngleZNorm4D:
+        case IKP_TranslationYAxisAngleXNorm4D:
+        {
             dReal fvelprev = *(itdataprev+info->gvel.offset+0);
             dReal fvel = *(itdata+info->gvel.offset+0);
             if( RaveFabs(fvel) > info->_vConfigVelocityLimit.at(0) + ParabolicRamp::EpsilonV ) {
@@ -584,6 +598,20 @@ protected:
                 vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
                 trans1 = ikparam.GetTranslationXAxisAngleZNorm4D().first;
                 trans0 = ikparamprev.GetTranslationXAxisAngleZNorm4D().first;
+                transoffset = 1;
+                transindex = 1;
+                break;
+            }
+            case IKP_TranslationYAxisAngleXNorm4D: {
+                _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
+                _v0pos[0] = 0;
+                _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
+                _v0vel[0] = *(itdataprev+info->gvel.offset+0);
+                _v1vel[0] = *(itdata+info->gvel.offset+0);
+                vmaxvel[0] = info->_vConfigVelocityLimit.at(0);
+                vmaxaccel[0] = info->_vConfigAccelerationLimit.at(0);
+                trans1 = ikparam.GetTranslationYAxisAngleXNorm4D().first;
+                trans0 = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
                 transoffset = 1;
                 transindex = 1;
                 break;
@@ -745,6 +773,12 @@ protected:
                     *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationXAxisAngleZNorm4D().second + vpos.at(0);
                     *(ittargetdata + info->velindex + 0) = vvel.at(0);
                     //translation = ikparamprev.GetTranslationXAxisAngleZNorm4D().first;
+                    break;
+                }
+                case IKP_TranslationYAxisAngleXNorm4D: {
+                    *(ittargetdata + info->posindex + 0) = ikparamprev.GetTranslationYAxisAngleXNorm4D().second + vpos.at(0);
+                    *(ittargetdata + info->velindex + 0) = vvel.at(0);
+                    //translation = ikparamprev.GetTranslationYAxisAngleXNorm4D().first;
                     break;
                 }
                 default:

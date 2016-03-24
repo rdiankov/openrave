@@ -66,6 +66,10 @@ public:
             return _paramsread;
         }
 
+        PlannerBase::PlannerParametersPtr GetParameters() {
+            return _paramswrite;
+        }
+
         void SetRobotActiveJoints(PyRobotBasePtr robot)
         {
             if( !_paramswrite ) {
@@ -110,21 +114,44 @@ public:
             _paramswrite->_vGoalConfigVelocities = ExtractArray<dReal>(o);
         }
 
-        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, int options=0xffff, bool returnconfigurations=false)
+        void SetConfigVelocityLimit(object o)
+        {
+            _paramswrite->_vConfigVelocityLimit = ExtractArray<dReal>(o);
+        }
+
+        void SetConfigAccelerationLimit(object o)
+        {
+            _paramswrite->_vConfigAccelerationLimit = ExtractArray<dReal>(o);
+        }
+
+        void SetConfigResolution(object o)
+        {
+            _paramswrite->_vConfigResolution = ExtractArray<dReal>(o);
+        }
+
+        void SetMaxIterations(int nMaxIterations)
+        {
+            _paramswrite->_nMaxIterations = nMaxIterations;
+        }
+        
+        object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
             ConstraintFilterReturnPtr pfilterreturn;
-            if( returnconfigurations ) {
+            if( filterreturn ) {
                 pfilterreturn.reset(new ConstraintFilterReturn());
             }
             int ret = _paramswrite->CheckPathAllConstraints(ExtractArray<dReal>(oq0), ExtractArray<dReal>(oq1), ExtractArray<dReal>(odq0), ExtractArray<dReal>(odq1), timeelapsed, interval, options, pfilterreturn);
-            if( returnconfigurations ) {
-                if( ret != 0 ) {
-                    return boost::python::make_tuple(ret, toPyArray(pfilterreturn->_invalidvalues), toPyArray(pfilterreturn->_invalidvelocities), pfilterreturn->_fTimeWhenInvalid);
-                }
-                else {
-                    return boost::python::make_tuple(ret, boost::python::object(), boost::python::object(), dReal(0));
-                }
+            if( filterreturn ) {
+                boost::python::dict ofilterreturn;
+                ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
+                ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
+                ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
+                ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
+                ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
+                ofilterreturn["returncode"] = pfilterreturn->_returncode;
+                ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
+                return ofilterreturn;
             }
             return object(ret);
         }
@@ -258,14 +285,14 @@ PyInterfaceBasePtr toPyPlanner(PlannerBasePtr pplanner, PyEnvironmentBasePtr pye
     return !pplanner ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPlannerBase(pplanner,pyenv));
 }
 
-//PlannerBase::PlannerParametersPtr GetPlannerParameters(object o)
-//{
-//    extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
-//    if( pyparams.check() ) {
-//        return ((PyPlannerBase::PyPlannerParametersPtr)pyparams)->GetParameters();
-//    }
-//    return PlannerBase::PlannerParametersPtr();
-//}
+PlannerBase::PlannerParametersPtr GetPlannerParameters(object o)
+{
+    extract<PyPlannerBase::PyPlannerParametersPtr> pyparams(o);
+    if( pyparams.check() ) {
+        return ((PyPlannerBase::PyPlannerParametersPtr)pyparams)->GetParameters();
+    }
+    return PlannerBase::PlannerParametersPtr();
+}
 
 PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(object o)
 {
@@ -336,9 +363,13 @@ void init_openravepy_planner()
         .def("SetRandomGeneratorSeed",&PyPlannerBase::PyPlannerParameters::SetRandomGeneratorSeed, args("seed"), DOXY_FN(PlannerBase::PlannerParameters, SetRandomGeneratorSeed))
         .def("SetGoalConfig",&PyPlannerBase::PyPlannerParameters::SetGoalConfig,args("values"),"sets PlannerParameters::vgoalconfig")
         .def("SetInitialConfig",&PyPlannerBase::PyPlannerParameters::SetInitialConfig,args("values"),"sets PlannerParameters::vinitialconfig")
-        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::vInitialConfigVelocities")
-        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::vGoalConfigVelocities")
-        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "returnconfigurations"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
+        .def("SetInitialConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetInitialConfigVelocities,args("velocities"),"sets PlannerParameters::_vInitialConfigVelocities")
+        .def("SetGoalConfigVelocities",&PyPlannerBase::PyPlannerParameters::SetGoalConfigVelocities,args("velocities"),"sets PlannerParameters::_vGoalConfigVelocities")
+        .def("SetConfigVelocityLimit",&PyPlannerBase::PyPlannerParameters::SetConfigVelocityLimit,args("velocities"),"sets PlannerParameters::_vConfigVelocityLimit")
+        .def("SetConfigAccelerationLimit",&PyPlannerBase::PyPlannerParameters::SetConfigAccelerationLimit,args("accelerations"),"sets PlannerParameters::_vConfigAccelerationLimit")
+        .def("SetConfigResolution",&PyPlannerBase::PyPlannerParameters::SetConfigResolution,args("resolutions"),"sets PlannerParameters::_vConfigResolution")
+        .def("SetMaxIterations",&PyPlannerBase::PyPlannerParameters::SetMaxIterations,args("maxiterations"),"sets PlannerParameters::_nMaxIterations")
+        .def("CheckPathAllConstraints",&PyPlannerBase::PyPlannerParameters::CheckPathAllConstraints,CheckPathAllConstraints_overloads(args("q0","q1","dq0","dq1","timeelapsed","interval","options", "filterreturn"),DOXY_FN(PlannerBase::PlannerParameters, CheckPathAllConstraints)))
         .def("SetPostProcessing", &PyPlannerBase::PyPlannerParameters::SetPostProcessing, args("plannername", "plannerparameters"), "sets the post processing parameters")
         .def("__str__",&PyPlannerBase::PyPlannerParameters::__str__)
         .def("__unicode__",&PyPlannerBase::PyPlannerParameters::__unicode__)

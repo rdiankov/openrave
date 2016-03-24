@@ -67,6 +67,7 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     max_speed = 0;
     no_load_speed = 0;
     stall_torque = 0;
+    max_instantaneous_torque = 0;
     nominal_torque = 0;
     rotor_inertia = 0;
     torque_constant = 0;
@@ -74,6 +75,8 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     speed_constant = 0;
     starting_current = 0;
     terminal_resistance = 0;
+    coloumb_friction = 0;
+    viscous_friction = 0;
 }
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
@@ -2685,6 +2688,22 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
             }
+
+            dReal fFriction = 0; // torque due to friction
+            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
+            if( !!pjoint->_info._infoElectricMotor ) {
+                if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
+                    if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
+                        fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
+                    }
+                    else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
+                        fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
+                    }
+                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
+                }
+
+                doftorques.at(pjoint->GetDOFIndex()) += fFriction;
+            }
         }
         else if( pjoint->IsMimic(0) ) {
             // passive joint, so have to transfer the torque to its dependent joints.
@@ -2700,6 +2719,10 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
             }
 
+            if( !!pjoint->_info._infoElectricMotor ) {
+                // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
+            }
+            
             pjoint->_ComputePartialVelocities(vpartials,0,mapcachedpartials);
             FOREACH(itpartial,vpartials) {
                 int dofindex = itpartial->first;

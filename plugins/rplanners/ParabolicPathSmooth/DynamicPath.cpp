@@ -110,9 +110,6 @@ void DynamicPath::Init(const Vector& _velMax,const Vector& _accMax)
     velMax = _velMax;
     accMax = _accMax;
     PARABOLIC_RAMP_ASSERT(velMax.size() == accMax.size());
-    if(!velMax.empty() && !xMin.empty()) {
-        PARABOLIC_RAMP_ASSERT(xMin.size() == velMax.size());
-    }
 }
 
 void DynamicPath::SetJointLimits(const Vector& _xMin,const Vector& _xMax)
@@ -120,9 +117,6 @@ void DynamicPath::SetJointLimits(const Vector& _xMin,const Vector& _xMax)
     xMin = _xMin;
     xMax = _xMax;
     PARABOLIC_RAMP_ASSERT(xMin.size() == xMax.size());
-    if(!velMax.empty() && !xMin.empty()) {
-        PARABOLIC_RAMP_ASSERT(xMin.size() == velMax.size());
-    }
 }
 
 Real DynamicPath::GetTotalTime() const
@@ -623,8 +617,8 @@ int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* space,const Ve
     return 0;
 }
 
-RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas,const Vector& _tol)
-    : feas(_feas),tol(_tol),distance(NULL),maxiters(0), constraintsmask(0)
+RampFeasibilityChecker::RampFeasibilityChecker(FeasibilityCheckerBase* _feas)
+    : feas(_feas),tol(0),distance(NULL),maxiters(0), constraintsmask(0)
 {
 }
 

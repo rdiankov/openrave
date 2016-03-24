@@ -14,8 +14,7 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-import openravepy_int
-import openravepy_ext
+from . import openravepy_int, openravepy_ext
 import os.path
 from sys import platform as sysplatformname
 from sys import stdout
@@ -363,6 +362,12 @@ def DrawIkparam2(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationXAxisAngleZNorm4D:
         pos,angle = ikparam.GetTranslationXAxisAngleZNorm4D()
         T = openravepy_int.matrixFromAxisAngle([0,0,angle])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
+        pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
+        T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
         T[0:3,3] = pos
         return [DrawAxes(env,T,dist,linewidth,coloradd)]
     

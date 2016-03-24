@@ -227,6 +227,7 @@ public:
         max_speed = 0;
         no_load_speed = 0;
         stall_torque = 0;
+        max_instantaneous_torque = 0;
         nominal_torque = 0;
         rotor_inertia = 0;
         torque_constant = 0;
@@ -234,15 +235,22 @@ public:
         speed_constant = 0;
         starting_current = 0;
         terminal_resistance = 0;
+        coloumb_friction = 0;
+        viscous_friction = 0;
     }
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info) {
+        model_type = info.model_type;
         gear_ratio = info.gear_ratio;
         assigned_power_rating = info.assigned_power_rating;
         max_speed = info.max_speed;
         no_load_speed = info.no_load_speed;
         stall_torque = info.stall_torque;
-        FOREACH(itpoint, info.speed_torque_points) {
-            speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        max_instantaneous_torque = info.max_instantaneous_torque;
+        FOREACH(itpoint, info.nominal_speed_torque_points) {
+            nominal_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        }
+        FOREACH(itpoint, info.max_speed_torque_points) {
+            max_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
         }
         nominal_torque = info.nominal_torque;
         rotor_inertia = info.rotor_inertia;
@@ -251,20 +259,30 @@ public:
         speed_constant = info.speed_constant;
         starting_current = info.starting_current;
         terminal_resistance = info.terminal_resistance;
+        coloumb_friction = info.coloumb_friction;
+        viscous_friction = info.viscous_friction;
     }
 
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
         ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
         ElectricMotorActuatorInfo& info = *pinfo;
+        info.model_type = model_type;
         info.gear_ratio = gear_ratio;
         info.assigned_power_rating = assigned_power_rating;
         info.max_speed = max_speed;
         info.no_load_speed = no_load_speed;
         info.stall_torque = stall_torque;
-        if( !IS_PYTHONOBJECT_NONE(speed_torque_points) ) {
-            size_t num = len(speed_torque_points);
+        info.max_instantaneous_torque = max_instantaneous_torque;
+        if( !IS_PYTHONOBJECT_NONE(nominal_speed_torque_points) ) {
+            size_t num = len(nominal_speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(speed_torque_points[i][1])));
+                info.nominal_speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][1])));
+            }
+        }
+        if( !IS_PYTHONOBJECT_NONE(max_speed_torque_points) ) {
+            size_t num = len(max_speed_torque_points);
+            for(size_t i = 0; i < num; ++i) {
+                info.max_speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(max_speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(max_speed_torque_points[i][1])));
             }
         }
         info.nominal_torque = nominal_torque;
@@ -274,15 +292,19 @@ public:
         info.speed_constant = speed_constant;
         info.starting_current = starting_current;
         info.terminal_resistance = terminal_resistance;
+        info.coloumb_friction = coloumb_friction;
+        info.viscous_friction = viscous_friction;
         return pinfo;
     }
 
+    std::string model_type;
     dReal gear_ratio;
     dReal assigned_power_rating;
     dReal max_speed;
     dReal no_load_speed;
     dReal stall_torque;
-    boost::python::list speed_torque_points;
+    dReal max_instantaneous_torque;
+    boost::python::list nominal_speed_torque_points, max_speed_torque_points;
     dReal nominal_torque;
     dReal rotor_inertia;
     dReal torque_constant;
@@ -290,6 +312,8 @@ public:
     dReal speed_constant;
     dReal starting_current;
     dReal terminal_resistance;
+    dReal coloumb_friction;
+    dReal viscous_friction;
 };
 typedef boost::shared_ptr<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
@@ -938,6 +962,15 @@ public:
     dReal GetMaxTorque(int iaxis=0) const {
         return _pjoint->GetMaxTorque(iaxis);
     }
+    object GetInstantaneousTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetInstantaneousTorqueLimits(iaxis);
+        return boost::python::make_tuple(values.first, values.second);
+    }
+    object GetNominalTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetNominalTorqueLimits(iaxis);
+        return boost::python::make_tuple(values.first, values.second);
+    }
+
     dReal GetMaxInertia(int iaxis=0) const {
         return _pjoint->GetMaxInertia(iaxis);
     }
@@ -2626,15 +2659,17 @@ class ElectricMotorActuatorInfo_pickle_suite : public pickle_suite
 public:
     static tuple getstate(const PyElectricMotorActuatorInfo& r)
     {
-        return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, r.stall_torque, r.speed_torque_points, r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance);
+        return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, boost::python::make_tuple(r.stall_torque, r.max_instantaneous_torque), boost::python::make_tuple(r.nominal_speed_torque_points, r.max_speed_torque_points), r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance, boost::python::make_tuple(r.coloumb_friction, r.viscous_friction));
     }
     static void setstate(PyElectricMotorActuatorInfo& r, boost::python::tuple state) {
         r.gear_ratio = boost::python::extract<dReal>(state[0]);
         r.assigned_power_rating = boost::python::extract<dReal>(state[1]);
         r.max_speed = boost::python::extract<dReal>(state[2]);
         r.no_load_speed = boost::python::extract<dReal>(state[3]);
-        r.stall_torque = boost::python::extract<dReal>(state[4]);
-        r.speed_torque_points = boost::python::list(state[5]);
+        r.stall_torque = boost::python::extract<dReal>(state[4][0]);
+        r.max_instantaneous_torque = boost::python::extract<dReal>(state[4][1]);
+        r.nominal_speed_torque_points = boost::python::list(state[5][0]);
+        r.max_speed_torque_points = boost::python::list(state[5][1]);
         r.nominal_torque = boost::python::extract<dReal>(state[6]);
         r.rotor_inertia = boost::python::extract<dReal>(state[7]);
         r.torque_constant = boost::python::extract<dReal>(state[8]);
@@ -2642,6 +2677,8 @@ public:
         r.speed_constant = boost::python::extract<dReal>(state[10]);
         r.starting_current = boost::python::extract<dReal>(state[11]);
         r.terminal_resistance = boost::python::extract<dReal>(state[12]);
+        r.coloumb_friction = boost::python::extract<dReal>(state[13][0]);
+        r.viscous_friction = boost::python::extract<dReal>(state[13][1]);
     }
 };
 
@@ -2700,6 +2737,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetInstantaneousTorqueLimits_overloads, GetInstantaneousTorqueLimits, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetNominalTorqueLimits_overloads, GetNominalTorqueLimits, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxInertia_overloads, GetMaxInertia, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
@@ -2745,12 +2784,14 @@ void init_openravepy_kinbody()
                           .value("Trimesh",GT_TriMesh)
     ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
-                                       .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
+                                       .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)
                                        .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)
                                        .def_readwrite("max_speed",&PyElectricMotorActuatorInfo::max_speed)
                                        .def_readwrite("no_load_speed",&PyElectricMotorActuatorInfo::no_load_speed)
                                        .def_readwrite("stall_torque",&PyElectricMotorActuatorInfo::stall_torque)
-                                       .def_readwrite("speed_torque_points",&PyElectricMotorActuatorInfo::speed_torque_points)
+                                       .def_readwrite("max_instantaneous_torque",&PyElectricMotorActuatorInfo::max_instantaneous_torque)
+                                       .def_readwrite("nominal_speed_torque_points",&PyElectricMotorActuatorInfo::nominal_speed_torque_points)
+                                       .def_readwrite("max_speed_torque_points",&PyElectricMotorActuatorInfo::max_speed_torque_points)
                                        .def_readwrite("nominal_torque",&PyElectricMotorActuatorInfo::nominal_torque)
                                        .def_readwrite("rotor_inertia",&PyElectricMotorActuatorInfo::rotor_inertia)
                                        .def_readwrite("torque_constant",&PyElectricMotorActuatorInfo::torque_constant)
@@ -2758,6 +2799,9 @@ void init_openravepy_kinbody()
                                        .def_readwrite("speed_constant",&PyElectricMotorActuatorInfo::speed_constant)
                                        .def_readwrite("starting_current",&PyElectricMotorActuatorInfo::starting_current)
                                        .def_readwrite("terminal_resistance",&PyElectricMotorActuatorInfo::terminal_resistance)
+                                       .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
+                                       .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
+                                       .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
     ;
 
@@ -3092,6 +3136,7 @@ void init_openravepy_kinbody()
                                  .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
                                  .def("SetAmbientColor",&PyLink::PyGeometry::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
                                  .def("SetRenderFilename",&PyLink::PyGeometry::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
+                                 .def("SetVisible",&PyLink::PyGeometry::SetVisible,args("visible"), DOXY_FN(KinBody::Link::Geometry,SetVisible))
                                  .def("IsDraw",&PyLink::PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                  .def("IsVisible",&PyLink::PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
                                  .def("IsModifiable",&PyLink::PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
@@ -3128,6 +3173,8 @@ void init_openravepy_kinbody()
                           .def("GetMaxVel", &PyJoint::GetMaxVel, GetMaxVel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxVel)))
                           .def("GetMaxAccel", &PyJoint::GetMaxAccel, GetMaxAccel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxAccel)))
                           .def("GetMaxTorque", &PyJoint::GetMaxTorque, GetMaxTorque_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxTorque)))
+                          .def("GetInstantaneousTorqueLimits", &PyJoint::GetInstantaneousTorqueLimits, GetInstantaneousTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetInstantaneousTorqueLimits)))
+                          .def("GetNominalTorqueLimits", &PyJoint::GetNominalTorqueLimits, GetNominalTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetNominalTorqueLimits)))
                           .def("GetMaxInertia", &PyJoint::GetMaxInertia, GetMaxInertia_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxInertia)))
                           .def("GetDOFIndex", &PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                           .def("GetJointIndex", &PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))

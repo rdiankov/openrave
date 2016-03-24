@@ -1434,11 +1434,11 @@ class IKFastSolver(AutoReloader):
             Teval = T.evalf()
             axisangle = axisAngleFromRotationMatrix([[Teval[0,0], Teval[0,1], Teval[0,2]], [Teval[1,0], Teval[1,1], Teval[1,2]], [Teval[2,0], Teval[2,1], Teval[2,2]]])
             angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
-            axisangle /= angle
             if abs(angle) < 10**(-self.precision):
                 # rotation is identity
                 M = eye(4)
             else:
+                axisangle = axisangle/angle
                 log.debug('rotation angle: %f, axis=[%f,%f,%f]', (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
                 accurateaxisangle = Matrix(3,1,[self.convertRealToRational(x,self.precision-3) for x in axisangle])
                 accurateaxisangle = accurateaxisangle/accurateaxisangle.norm()
@@ -1611,8 +1611,8 @@ class IKFastSolver(AutoReloader):
                     if axisAngleFromRotationMatrix is not None:
                         axisangle = axisAngleFromRotationMatrix(numpy.array(numpy.array(Tright * TLeftjoint),numpy.float64))
                         angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
-                        if angle > 0:
-                            axisangle /= angle
+                        if angle > 1e-8:
+                            axisangle = axisangle/angle
                         log.debug('rotation angle of Links[%d]: %f, axis=[%f,%f,%f]', len(Links), (angle*180/pi).evalf(),axisangle[0],axisangle[1],axisangle[2])
                     Links.append(self.RoundMatrix(Tright * TLeftjoint))
                     for Tj in Tjoints:
@@ -1850,21 +1850,22 @@ class IKFastSolver(AutoReloader):
         elif not processed and incos:
             return cos(neweq)
         return neweq
-    
-    def codeComplexity(self,expr):
+
+    @staticmethod
+    def codeComplexity(expr):
         complexity = 1
         if expr.is_Add:
             for term in expr.args:
-                complexity += self.codeComplexity(term)
+                complexity += IKFastSolver.codeComplexity(term)
         elif expr.is_Mul:
             for term in expr.args:
-                complexity += self.codeComplexity(term)
+                complexity += IKFastSolver.codeComplexity(term)
         elif expr.is_Pow:
-            complexity += self.codeComplexity(expr.base)+self.codeComplexity(expr.exp)
+            complexity += IKFastSolver.codeComplexity(expr.base)+IKFastSolver.codeComplexity(expr.exp)
         elif expr.is_Function:
             complexity += 1
             for term in expr.args:
-                complexity += self.codeComplexity(term)
+                complexity += IKFastSolver.codeComplexity(term)
         return complexity
     
     def ComputePolyComplexity(self, peq):
@@ -3254,7 +3255,7 @@ class IKFastSolver(AutoReloader):
             leftovervarstree += origendbranchtree
         return coupledsolutions
     
-    def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None):
+    def solveFullIK_TranslationAxisAngle4D(self, LinksRaw, jointvars, isolvejointvars, rawbasedir=Matrix(3,1,[S.One,S.Zero,S.Zero]),rawbasepos=Matrix(3,1,[S.Zero,S.Zero,S.Zero]),rawglobaldir=Matrix(3,1,[S.Zero,S.Zero,S.One]), rawnormaldir=None, ignoreaxis=None, rawbasenormaldir=None, Tgripperraw=None):
         """Solves 3D translation + Angle with respect to X-axis
         :param rawnormaldir: the axis in the base coordinate system that will be computing a rotation about
         :param rawglobaldir: the axis normal to rawnormaldir that represents the 0 angle.
@@ -3286,6 +3287,11 @@ class IKFastSolver(AutoReloader):
                 iktype = IkType.TranslationYAxisAngle4D
             elif globaldir[2] == S.One:
                 iktype = IkType.TranslationZAxisAngle4D
+
+        if rawbasenormaldir is None:
+            basenormaldir = normaldir
+        else:
+            basenormaldir = Matrix(3,1,[self.convertRealToRational(x) for x in rawbasenormaldir])
         
         if iktype is None:
             raise ValueError('currently globaldir can only by one of x,y,z axes')
@@ -3298,6 +3304,8 @@ class IKFastSolver(AutoReloader):
             basedir[i] = self.convertRealToRational(basedir[i],5)
         basedir /= sqrt(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
         Links = LinksRaw[:]
+        if Tgripperraw is not None:
+            Links.append(self.RoundMatrix(self.GetMatrixFromNumpy(Tgripperraw)))
         
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
         
@@ -3357,23 +3365,26 @@ class IKFastSolver(AutoReloader):
                 eq = self.SimplifyTransform(self.trigsimp(binormaldir2.dot(basedir2),solvejointvars))-sin(self.Tee[0])
                 if self.CheckExpressionUnique(AllEquations,eq):
                     AllEquations.append(eq)
-                    
+        
         # check if planar with respect to normaldir
         extravar = None
         if normaldir is not None:
-            if Tallmult[0:3,0:3]*normaldir == normaldir:
-                Tnormaltest = self.rodrigues(normaldir,pi/2)
+            if Tallmult[0:3,0:3]*basenormaldir == normaldir:
+                Tnormaltest = self.rodrigues(basenormaldir,pi/2)
                 # planar, so know that the sum of all hinge joints is equal to the final angle
                 # can use this fact to substitute one angle with the other values
                 angles = []
+                isanglepositive = []
                 for solvejoint in solvejointvars:
                     if self.IsHinge(solvejoint.name):
                         Tall0 = Tallmult[0:3,0:3].subs(solvejoint,S.Zero)
                         Tall1 = Tallmult[0:3,0:3].subs(solvejoint,pi/2)
-                        if Tall0*Tnormaltest-Tall1:
+                        if all([f==S.Zero for f in Tall0*Tnormaltest-Tall1]):
                             angles.append(solvejoint)
+                            isanglepositive.append(True)
                         else:
-                            angles.append(-solvejoint)
+                            angles.append(solvejoint)
+                            isanglepositive.append(False)
                 Tzero = Tallmult.subs([(a,S.Zero) for a in angles])
                 for i in range(3):
                     if binormaldir[i].is_number:
@@ -3382,15 +3393,24 @@ class IKFastSolver(AutoReloader):
                         basedir[i] = self.convertRealToRational(basedir[i])
                 zeroangle = atan2(binormaldir.dot(Tzero[0:3,0:3]*basedir), globaldir.dot(Tzero[0:3,0:3]*basedir))
                 eqangles = self.Tee[0]-zeroangle
-                for a in angles[:-1]:
-                    eqangles -= a
+                for iangle, a in enumerate(angles[:-1]):
+                    if isanglepositive[iangle]:
+                        eqangles -= a
+                    else:
+                        eqangles += a
+                if not isanglepositive[-1]:
+                    eqangles = -eqangles
                 extravar = (angles[-1],eqangles)
                 coseq = cos(eqangles).expand(trig=True)
                 sineq = sin(eqangles).expand(trig=True)
                 AllEquationsOld = AllEquations
                 AllEquations = [self.trigsimp(eq.subs([(cos(angles[-1]),coseq),(sin(angles[-1]),sineq)]).expand(),solvejointvars) for eq in AllEquationsOld]
-                solvejointvars.remove(angles[-1])
-        
+                solvejointvarsold = list(solvejointvars)
+                for var in solvejointvars:
+                    if angles[-1].has(var):
+                        solvejointvars.remove(var)
+                        break
+
         self.sortComplexity(AllEquations)
         endbranchtree = [AST.SolverStoreSolution (jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
         if extravar is not None:
@@ -6233,7 +6253,7 @@ class IKFastSolver(AutoReloader):
         for group in groups:
             try:
                 # not sure about this thresh
-                if self.codeComplexity(eq) > 400:
+                if self.codeComplexity(eq) > 300:
                     log.warn(u'equation too complex to simplify for rot norm: %s', eq)
                     continue
                 
@@ -8684,19 +8704,23 @@ class IKFastSolver(AutoReloader):
                                     assert(m[1] == 1)
                                     ptotal_sin = ptotal_sin.sub(Poly.from_dict({(m[0],0):c},*ptotal_sin.gens))
                                     ptotal_cos = ptotal_cos.sub(Poly.from_dict({m:c},*ptotal_cos.gens))
-                            finaleq = (ptotal_cos.as_expr()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_expr()**2).expand()
-                            # sometimes denominators can accumulate
-                            pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
-                            pfinal = self.checkFinalEquation(pfinal)
-                            if pfinal is not None:
-                                jointsol = atan2(ptotal_cos.as_expr()/ptotal_sin.as_expr(), polysymbols[0])
-                                var = var1 if ivar == 0 else var0
-                                solution = AST.SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.IsHinge(var.name))
-                                solution.postcheckforzeros = [ptotal_sin.as_expr()]
-                                solution.postcheckfornonzeros = []
-                                solution.postcheckforrange = []
-                                return [solution]
-                    
+
+                            ptotalcomplexity = self.codeComplexity(ptotal_cos.as_expr()) + self.codeComplexity(ptotal_sin.as_expr())
+                            if ptotalcomplexity < 50000:
+                                #log.info('ptotal complexity is %d', ptotalcomplexity)
+                                finaleq = (ptotal_cos.as_expr()**2 - (1-polysymbols[0]**2)*ptotal_sin.as_expr()**2).expand()
+                                # sometimes denominators can accumulate
+                                pfinal = Poly(self.removecommonexprs(finaleq,onlygcd=False,onlynumbers=True),polysymbols[0])
+                                pfinal = self.checkFinalEquation(pfinal)
+                                if pfinal is not None:
+                                    jointsol = atan2(ptotal_cos.as_expr()/ptotal_sin.as_expr(), polysymbols[0])
+                                    var = var1 if ivar == 0 else var0
+                                    solution = AST.SolverPolynomialRoots(jointname=var.name,poly=pfinal,jointeval=[jointsol],isHinge=self.IsHinge(var.name))
+                                    solution.postcheckforzeros = [ptotal_sin.as_expr()]
+                                    solution.postcheckfornonzeros = []
+                                    solution.postcheckforrange = []
+                                    return [solution]
+                                
                 # if maxnumeqs is any less, it will miss linearly independent equations
                 lineareqs = self.solveSingleVariableLinearly(raweqns,var0,[var1],maxnumeqs=len(raweqns))
                 if len(lineareqs) > 0:

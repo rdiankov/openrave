@@ -247,10 +247,10 @@ protected:
                     FOREACHC(it, dq2) {
                         *it *= mult;
                     }
-                    bsuccess = parameters->_neighstatefn(qcur,dq2,0);
+                    bsuccess = parameters->_neighstatefn(qcur,dq2,NSO_OnlyHardConstraints);
                 }
                 else {
-                    bsuccess = parameters->_neighstatefn(qcur,dq,0);
+                    bsuccess = parameters->_neighstatefn(qcur,dq,NSO_OnlyHardConstraints);
                 }
                 if( !bsuccess ) {
                     RAVELOG_DEBUG_FORMAT("env=%d, neighstatefn failed mult=%d, perhaps non-linear constraints are used?", GetEnv()->GetId()%mult);

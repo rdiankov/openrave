@@ -311,8 +311,12 @@ RobotBase::~RobotBase()
 void RobotBase::Destroy()
 {
     ReleaseAllGrabbed();
+    _pManipActive.reset();
     _vecManipulators.clear();
     _vecSensors.clear();
+    _nActiveDOF = 0;
+    _vActiveDOFIndices.resize(0);
+    _vAllDOFIndices.resize(0);
     SetController(ControllerBasePtr(),std::vector<int>(),0);
 
     KinBody::Destroy();

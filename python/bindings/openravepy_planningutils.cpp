@@ -158,7 +158,7 @@ typedef boost::shared_ptr<PyAffineTrajectoryRetimer> PyAffineTrajectoryRetimerPt
 class PyDynamicsCollisionConstraint
 {
 public:
-    PyDynamicsCollisionConstraint(object oparameters, object olistCheckBodies, int filtermask=0xffffffff)
+    PyDynamicsCollisionConstraint(object oparameters, object olistCheckBodies, uint32_t filtermask=0xffffffff)
     {
         PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(oparameters);
         std::list<KinBodyPtr> listCheckBodies;
@@ -174,13 +174,28 @@ public:
     virtual ~PyDynamicsCollisionConstraint() {
     }
 
-    int Check(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval=IT_Closed, int options=0xffff)//, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr())
+    object Check(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval=IT_Closed, uint32_t options=0xffff, bool filterreturn=false)//, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr())
     {
         std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
         std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
         std::vector<dReal> dq0 = ExtractArray<dReal>(odq0);
         std::vector<dReal> dq1 = ExtractArray<dReal>(odq1);
-        return _pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options);
+        if( filterreturn ) {
+            ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
+            _pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options, pfilterreturn);
+            boost::python::dict ofilterreturn;
+            ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
+            ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
+            ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
+            ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
+            ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
+            ofilterreturn["returncode"] = pfilterreturn->_returncode;
+            ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
+            return ofilterreturn;
+        }
+        else {
+            return object(_pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options));
+        }
     }
 
     object GetReport() const {
@@ -306,7 +321,7 @@ boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
 class PyManipulatorIKGoalSampler
 {
 public:
-    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, int ikfilteroptions = IKFO_CheckEnvCollisions) {
+    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, uint32_t ikfilteroptions = IKFO_CheckEnvCollisions) {
         std::list<IkParameterization> listparameterizationsPtr;
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
@@ -386,7 +401,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(ExtendActiveDOFWaypoint_overloads, planningutils
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 8)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
@@ -475,8 +490,8 @@ void InitPlanningUtils()
         ;
 
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
-        .def(init<object, object, int>(args("plannerparameters", "checkbodies", "filtermask")))
-        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def(init<object, object, uint32_t>(args("plannerparameters", "checkbodies", "filtermask")))
+        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
         .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport));
         ;
     }
