@@ -290,12 +290,9 @@ void MainOpenRAVEThread()
             pviewer = RaveCreateViewer(penv, *s_viewerName);
         }
         if( !pviewer ) {
-            boost::array<string,1> viewer_prefs = { { "qtcoin"}};
-            for(size_t i = 0; i < viewer_prefs.size(); ++i) {
-                pviewer = RaveCreateViewer(penv, viewer_prefs[i]);
-                if( !!pviewer ) {
-                    break;
-                }
+            std::string viewername = RaveGetDefaultViewerType();
+            if( viewername.size() > 0 ) {
+                pviewer = RaveCreateViewer(penv, viewername);
             }
         }
 

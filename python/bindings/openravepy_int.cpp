@@ -1322,6 +1322,18 @@ public:
         return pviewer;
     }
 
+    /// \brief sets the default viewer
+    bool SetDefaultViewer(bool showviewer=true)
+    {
+        std::string viewername = RaveGetDefaultViewerType();
+        if( viewername.size() > 0 ) {
+            ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+            return !!pviewer;
+        }
+
+        return false;
+    }
+
     object GetViewer()
     {
         return object(openravepy::toPyViewer(_penv->GetViewer(),shared_from_this()));
@@ -1770,6 +1782,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetDefaultViewer_overloads, SetDefaultViewer, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinestrip_overloads, drawlinestrip, 2, 4)
@@ -2035,6 +2048,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
                     .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
                     .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))
+                    .def("SetDefaultViewer",&PyEnvironmentBase::SetDefaultViewer,SetDefaultViewer_overloads(args("showviewer"), "Attaches the default viewer (controlled by environment variables and internal settings) and starts its thread"))
                     .def("GetViewer",&PyEnvironmentBase::GetViewer, DOXY_FN(EnvironmentBase,GetViewer))
                     .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle"), DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")))
                     .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(args("points","linewidth","colors","drawstyle"), DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")))

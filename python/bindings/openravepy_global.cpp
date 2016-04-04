@@ -1215,7 +1215,8 @@ void init_openravepy_global()
     def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
     def("RaveSetDataAccess",openravepy::pyRaveSetDataAccess,args("accessoptions"), DOXY_FN1(RaveSetDataAccess));
-    def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess,DOXY_FN1(RaveGetDataAccess));
+    def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess, DOXY_FN1(RaveGetDataAccess));
+    def("RaveGetDefaultViewerType", OpenRAVE::RaveGetDefaultViewerType, DOXY_FN1(RaveGetDefaultViewerType));
     def("RaveFindLocalFile",OpenRAVE::RaveFindLocalFile,RaveFindLocalFile_overloads(args("filename","curdir"), DOXY_FN1(RaveFindLocalFile)));
     def("RaveInvertFileLookup",openravepy::pyRaveInvertFileLookup,args("filename"), DOXY_FN1(RaveInvertFileLookup));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));

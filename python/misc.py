@@ -125,6 +125,7 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def addOptions(parser,testmode=True):
         from optparse import OptionGroup
+        from os import environ
         ogroup = OptionGroup(parser,"OpenRAVE Environment Options")
         ogroup.add_option('--loadplugin', action="append",type='string',dest='_loadplugins',default=[],
                           help='List all plugins and the interfaces they provide.')
@@ -133,7 +134,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--physics', action="store",type='string',dest='_physics',default=None,
                           help='physics engine to use (default=%default)')
         ogroup.add_option('--viewer', action="store",type='string',dest='_viewer',default=None,
-                          help='viewer to use (default=qtcoin)' )
+                          help='viewer to use (default=%s)'%environ.get('OPENRAVE_DEFAULT_VIEWER', 'qtcoin') )
         ogroup.add_option('--server', action="store",type='string',dest='_server',default=None,
                           help='server to use (default=None).')
         ogroup.add_option('--serverport', action="store",type='int',dest='_serverport',default=4765,
@@ -194,7 +195,8 @@ class OpenRAVEGlobalArguments:
                 if len(options._viewer) > 0:
                     viewername=options._viewer
             elif defaultviewer:
-                viewername='qtcoin'
+                from os import environ
+                viewername=environ.get('OPENRAVE_DEFAULT_VIEWER', 'qtcoin')
             if returnviewer:
                 return viewername
             elif viewername is not None:
