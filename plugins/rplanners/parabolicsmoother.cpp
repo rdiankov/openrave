@@ -1113,7 +1113,7 @@ protected:
                         }
                         fcurmult *= retcheck.fTimeBasedSurpassMult;
                         if( fcurmult < 0.01 ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, fcurmult is too small (%.15e) so giving up on this ramp", GetEnv()->GetId()%fcurmult);
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d, fcurmult is too small (%.15e) so giving up on this ramp", GetEnv()->GetId()%iters%fcurmult);
                             //retcheck = check.Check2(intermediate.ramps.at(0), 0xffff, outramps);
                             break;
                         }

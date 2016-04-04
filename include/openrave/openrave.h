@@ -2478,6 +2478,9 @@ OPENRAVE_API void RaveSetDataAccess(int accessoptions);
 /// \see RaveSetDataAccess
 OPENRAVE_API int RaveGetDataAccess();
 
+/// \brief Gets the default viewer type name
+OPENRAVE_API std::string RaveGetDefaultViewerType();
+    
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name

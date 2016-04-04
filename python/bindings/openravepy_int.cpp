@@ -116,9 +116,9 @@ class ViewerManager
     {
         EnvironmentBasePtr _penv;
         std::string _viewername;
-        bool _bShowViewer;
         ViewerBasePtr _pviewer; /// the created viewer
         boost::condition _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        bool _bShowViewer; ///< true if should show the viewer when initially created
     };
     typedef boost::shared_ptr<ViewerInfo> ViewerInfoPtr;
 public:
@@ -132,11 +132,39 @@ public:
         Destroy();
     }
 
-    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer)
+    /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
+    ///
+    /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
+    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists=true)
     {
         ViewerBasePtr pviewer;
         if( strviewer.size() > 0 ) {
 
+            if( bDoNotAddIfExists ) {
+                // check all existing viewers
+                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::list<ViewerInfoPtr>::iterator itviewer = _listviewerinfos.begin();
+                while(itviewer != _listviewerinfos.end() ) {
+                    if( (*itviewer)->_penv == penv ) {
+                        if( (*itviewer)->_viewername == strviewer ) {
+                            if( !!(*itviewer)->_pviewer ) {
+                                (*itviewer)->_pviewer->Show(bShowViewer);
+                            }
+                            return (*itviewer)->_pviewer;
+                        }
+
+                        // should remove the viewer so can re-add a new one
+                        if( !!(*itviewer)->_pviewer ) {
+                            (*itviewer)->_penv->Remove((*itviewer)->_pviewer);
+                        }
+                        itviewer = _listviewerinfos.erase(itviewer);
+                    }
+                    else {
+                        ++itviewer;
+                    }
+                }
+            }
+                
             ViewerInfoPtr pinfo(new ViewerInfo());
             pinfo->_penv = penv;
             pinfo->_viewername = strviewer;
@@ -190,6 +218,29 @@ public:
         return false;
     }
 
+    /// \brief if anything removed, returns true
+    bool RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
+    {
+        if( !penv ) {
+            return false;
+        }
+        bool bremoved = false;
+        {
+            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
+            while(itinfo != _listviewerinfos.end() ) {
+                if( (*itinfo)->_penv == penv ) {
+                    itinfo = _listviewerinfos.erase(itinfo);
+                    bremoved = true;
+                }
+                else {
+                    ++itinfo;
+                }
+            }
+        }
+        return bremoved;
+    }
+
     void Destroy() {
         _bShutdown = true;
         {
@@ -223,16 +274,26 @@ protected:
                 }
 
                 listviewers.clear();
-                FOREACH(itinfo, _listviewerinfos) {
+                std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
+                while(itinfo != _listviewerinfos.end() ) {
                     ViewerInfoPtr pinfo = *itinfo;
                     if( !pinfo->_pviewer ) {
                         pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
                         if( !!pinfo->_pviewer ) {
                             pinfo->_penv->AddViewer(pinfo->_pviewer);
+                            ++itinfo;
+                        }
+                        else {
+                            // erase from _listviewerinfos
+                            itinfo = _listviewerinfos.erase(itinfo);
                         }
                         // notify other thread that viewer failed
                         pinfo->_cond.notify_all();
                     }
+                    else {
+                        ++itinfo;
+                    }
+                    
                     if( !!pinfo->_pviewer ) {
                         if( listviewers.size() == 0 ) {
                             bShowViewer = pinfo->_bShowViewer;
@@ -373,7 +434,6 @@ class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBas
     boost::mutex _envmutex;
     std::list<boost::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
-    ViewerBasePtr _pviewer;
 protected:
     EnvironmentBasePtr _penv;
 
@@ -461,15 +521,14 @@ public:
 
     virtual ~PyEnvironmentBase()
     {
-        _pviewer.reset();
     }
 
     void Reset() {
         _penv->Reset();
     }
     void Destroy() {
+        GetViewerManager()->RemoveViewersOfEnvironment(_penv);        
         _penv->Destroy();
-        GetViewerManager()->RemoveViewer(_pviewer);
     }
 
     PyEnvironmentBasePtr CloneSelf(int options)
@@ -1259,8 +1318,20 @@ public:
 
     bool SetViewer(const string &viewername, bool showviewer=true)
     {
-        _pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer);
-        return !!_pviewer;
+        ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+        return pviewer;
+    }
+
+    /// \brief sets the default viewer
+    bool SetDefaultViewer(bool showviewer=true)
+    {
+        std::string viewername = RaveGetDefaultViewerType();
+        if( viewername.size() > 0 ) {
+            ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+            return !!pviewer;
+        }
+
+        return false;
     }
 
     object GetViewer()
@@ -1711,6 +1782,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetDefaultViewer_overloads, SetDefaultViewer, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinestrip_overloads, drawlinestrip, 2, 4)
@@ -1976,6 +2048,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
                     .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
                     .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))
+                    .def("SetDefaultViewer",&PyEnvironmentBase::SetDefaultViewer,SetDefaultViewer_overloads(args("showviewer"), "Attaches the default viewer (controlled by environment variables and internal settings) and starts its thread"))
                     .def("GetViewer",&PyEnvironmentBase::GetViewer, DOXY_FN(EnvironmentBase,GetViewer))
                     .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle"), DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")))
                     .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(args("points","linewidth","colors","drawstyle"), DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")))

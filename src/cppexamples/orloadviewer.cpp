@@ -46,7 +46,7 @@ int main(int argc, char ** argv)
 {
     //int num = 1;
     string scenefilename = "data/lab1.env.xml";
-    string viewername = "qtcoin";
+    string viewername = RaveGetDefaultViewerType(); // qtcoin
 
     // parse the command line options
     int i = 1;

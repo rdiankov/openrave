@@ -416,6 +416,11 @@ public:
     /// \param perturbation It is multiplied by each DOF's resolution (_vConfigResolution) before added to the state.
     virtual void SetPerturbation(dReal perturbation);
 
+    /// \brief if using dynamics limiting, choose whether to use the nominal torque or max instantaneous torque.
+    ///
+    /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
+    virtual void SetTorqueLimitMode(int torquelimitmode);
+    
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.
@@ -448,6 +453,7 @@ protected:
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
+    int _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
     dReal _perturbation;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
 
