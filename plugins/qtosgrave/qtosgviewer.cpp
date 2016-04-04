@@ -372,9 +372,9 @@ void QtOSGViewer::_CreateActions()
 
     puntAct = new QAction(QIcon(":/images/no_edit.png"),tr("Pointer"), this);
 
-    AxesAct = new QAction(QIcon(":/images/axes.png"),tr("Axes"), this);
-    AxesAct->setCheckable(true);
-    connect(AxesAct, SIGNAL(triggered()), this, SLOT(axes()));
+//    AxesAct = new QAction(QIcon(":/images/axes.png"),tr("Axes"), this);
+//    AxesAct->setCheckable(true);
+//    connect(AxesAct, SIGNAL(triggered()), this, SLOT(axes()));
 
     houseAct = new QAction(QIcon(":/images/house.png"),tr("Home"), this);
     connect(houseAct, SIGNAL(triggered()),this,SLOT(ResetViewToHome()));
@@ -562,6 +562,18 @@ void QtOSGViewer::_ProcessFacesModeChange()
     _posgWidget->SetFacesMode(!facesAct->isChecked());
 }
 
+void QtOSGViewer::keyPressEvent(QKeyEvent* event)
+{
+    RAVELOG_INFO("key pressed event\n");
+    QMainWindow::keyPressEvent(event);
+}
+
+void QtOSGViewer::keyReleaseEvent(QKeyEvent* event)
+{
+    RAVELOG_INFO("key released event\n");
+    QMainWindow::keyReleaseEvent(event);
+}
+
 void QtOSGViewer::polygonMode()
 {
     if (smoothAct->isChecked())
@@ -585,27 +597,24 @@ void QtOSGViewer::_ProcessBoundingBox()
 
 void QtOSGViewer::axes()
 {
-    _posgWidget->DrawAxes(AxesAct->isChecked());
+    //?
+    //_posgWidget->DrawAxes(AxesAct->isChecked());
 }
 
 void QtOSGViewer::_ProcessPointerGroupClicked(int button)
 {
     switch (button) {
     case -2:
-        _posgWidget->DrawTrackball(false);
+        _posgWidget->SetDraggerMode("RotateCylinderDragger");
         _posgWidget->SelectActive(true);
         break;
     case -3:
-        _posgWidget->DrawTrackball(true);
-        _posgWidget->SelectActive(false);
+        _posgWidget->SetDraggerMode("TrackballDragger");
+        _posgWidget->SelectActive(true);
         break;
     case -4:
-        _posgWidget->DrawBoundingBox(true);
-        _posgWidget->SelectActive(false);
-        break;
-    case -5:
-        _posgWidget->DrawAxes(true);
-        _posgWidget->SelectActive(false);
+        _posgWidget->SetDraggerMode("TranslateAxisDragger");
+        _posgWidget->SelectActive(true);
         break;
     default:
         RAVELOG_ERROR_FORMAT("pointerGroupClicked failure. Button %d pushed", button);
@@ -651,17 +660,13 @@ void QtOSGViewer::_CreateToolsBar()
     toolsBar = addToolBar(tr("Tools Bar"));
     QToolButton *pointerButton = new QToolButton;
     pointerButton->setCheckable(true);
-    pointerButton->setChecked(true);
+    pointerButton->setChecked(false);
     pointerButton->setIcon(QIcon(":/images/pointer.png"));
 
     QToolButton *handButton = new QToolButton;
     handButton->setCheckable(true);
     handButton->setIcon(QIcon(":/images/hand.png"));
-
-    QToolButton *boundButton = new QToolButton;
-    boundButton->setCheckable(true);
-    boundButton->setIcon(QIcon(":/images/bbox.png"));
-
+    
     QToolButton *axesButton = new QToolButton;
     axesButton->setCheckable(true);
     axesButton->setIcon(QIcon(":/images/axes.png"));
@@ -669,11 +674,10 @@ void QtOSGViewer::_CreateToolsBar()
     pointerTypeGroup = new QButtonGroup;
     pointerTypeGroup->addButton(pointerButton);
     pointerTypeGroup->addButton(handButton);
-    pointerTypeGroup->addButton(boundButton);
     pointerTypeGroup->addButton(axesButton);
 
     connect(pointerTypeGroup, SIGNAL(buttonClicked(int)), this, SLOT(_ProcessPointerGroupClicked(int)));
-
+    
     shapeGroup = new QActionGroup(this);
     smoothAct->setCheckable(true);
     flatAct->setCheckable(true);
@@ -686,7 +690,6 @@ void QtOSGViewer::_CreateToolsBar()
 
     toolsBar->addWidget(pointerButton);
     toolsBar->addWidget(handButton);
-    toolsBar->addWidget(boundButton);
     toolsBar->addWidget(axesButton);
     toolsBar->addAction(houseAct);
     toolsBar->addAction(lightAct);
@@ -886,11 +889,6 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
 
     treeWidget->insertTopLevelItems(0, items);
     RAVELOG_VERBOSE("End _FillObjectTree....\n");
-}
-
-void QtOSGViewer::mouseDoubleClickEvent(QMouseEvent *e)
-{
-    RAVELOG_INFO("Press mouse: doubleClick: 0x%x", e->button());
 }
 
 void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)

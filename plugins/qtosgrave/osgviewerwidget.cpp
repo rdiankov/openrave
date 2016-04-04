@@ -15,6 +15,21 @@
 
 namespace qtosgrave {
 
+/// \brief rigid transformation dragger (does not allow scale)
+//class RigidDraggerTransformCallback : public osgManipulator::DraggerTransformCallback
+//{
+//public:
+//    RigidDraggerTransformCallback(osg::MatrixTransform* transform) : osgManipulator::DraggerTransformCallback(transform) {
+//    }
+//
+//    virtual bool receive(const osgManipulator::MotionCommand& command) {
+//        command.getMotionMatrix()
+//    }
+//    virtual bool receive(const osgManipulator::Scale1DCommand& command)          { return false; }
+//    virtual bool receive(const osgManipulator::Scale2DCommand& command)          { return false; }
+//    virtual bool receive(const osgManipulator::ScaleUniformCommand& command)     { return false; }
+//};
+
 ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
 {
     _penv = penv;
@@ -34,29 +49,11 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
     setLayout(grid);
 
     //  Sets pickhandler
-    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::SelectLink, this, _1));
+    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::SelectLink, this, _1, _2));
     _osgview->addEventHandler(_picker);
 
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
-}
-
-void ViewerWidget::DrawBoundingBox(bool pressed)
-{
-    //  Gets camera transform
-//      _StoreMatrixTransform();
-
-    //  If boundingbox button is pressed
-    if (pressed) {
-        _draggerName = "Box";
-        SelectRobot(_actualKinbody);
-
-        //_osgview->setSceneData(addDraggerToObject(_osgLightsGroup.get(), "Box"));
-//        _osgview->setSceneData(addDraggerToObject(_osgview->getSceneData()->asGroup()->getChild(0), "Box"));
-    }
-
-    //  Set camera transform
-//      _LoadMatrixTransform();
 }
 
 void ViewerWidget::SelectActive(bool active)
@@ -64,41 +61,44 @@ void ViewerWidget::SelectActive(bool active)
     _picker->activeSelect(active);
 }
 
-void ViewerWidget::DrawTrackball(bool pressed)
+void ViewerWidget::SetDraggerMode(const std::string& draggerName)
 {
-    //  Gets camera transform
-//      _StoreMatrixTransform();
-
-    //  If boundingbox button is pressed
-    if (pressed) {
-        _draggerName = "TrackballDragger";
+    if( draggerName.size() > 0 ) {
+        _draggerName = draggerName;
         SelectRobot(_actualKinbody);
-
-//        _osgview->setSceneData(addDraggerToObject(_osgview->getSceneData()->asGroup()->getChild(0), "TrackballDragger"));
     }
-
-    //  Set camera transform
-//      _LoadMatrixTransform();
+    else {
+        _ClearDragger();
+        _draggerName.clear();
+    }
 }
 
-void ViewerWidget::DrawAxes(bool pressed)
-{
-//      osg::Node* node;
-
-    //  Gets camera transform
-//      _StoreMatrixTransform();
-
-    if (pressed) {
-        _draggerName = "TranslateAxisDragger";
-        SelectRobot(_actualKinbody);
-
-//        node = _osgview->getSceneData()->asGroup()->getChild(0);
-//        _osgview->setSceneData(addDraggerToObject(node,"TranslateAxisDragger"));
-    }
-
-    //  Set camera transform
-//      _LoadMatrixTransform();
-}
+//void ViewerWidget::DrawTrackball(bool pressed)
+//{
+//    //  If boundingbox button is pressed
+//    if (pressed) {
+//        _draggerName = "TrackballDragger";
+//        SelectRobot(_actualKinbody);
+//    }
+//    else {
+//        // remove any old dragger
+//        _ClearDragger();
+//        _draggerName.clear();
+//    }
+//}
+//
+//void ViewerWidget::DrawAxes(bool pressed)
+//{
+//    if (pressed) {
+//        _draggerName = "TranslateAxisDragger";
+//        SelectRobot(_actualKinbody);
+//    }
+//    else {
+//        // remove any old dragger
+//        _ClearDragger();
+//        _draggerName.clear();
+//    }
+//}
 
 void ViewerWidget::SelectRobot(std::string name)
 {
@@ -116,8 +116,6 @@ void ViewerWidget::SelectRobot(std::string name)
 
         _AddDraggerToObject(node,_draggerName);
     }
-    //  Set camera transform
-//      _LoadMatrixTransform();
 }
 
 void ViewerWidget::SetSceneData(osg::ref_ptr<osg::Node> osgscene)
@@ -225,7 +223,7 @@ osg::MatrixTransform* ViewerWidget::getLinkTransform(std::string& robotName, Kin
     osg::MatrixTransform* transform;
 
     robot = _FindNamedNode(robotName,_osgview->getSceneData());
-    node = _FindNamedNode("tg-"+link->GetName(),robot);
+    node = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+link->GetName(),robot);
 
     if (!!node)
     {
@@ -235,9 +233,13 @@ osg::MatrixTransform* ViewerWidget::getLinkTransform(std::string& robotName, Kin
     return transform;
 }
 
-void ViewerWidget::SelectLink(osg::Node* node)
+void ViewerWidget::SelectLink(osg::Node* node, int modkeymask)
 {
     if (!node) {
+        if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
+            // user clicked on empty region, so remove selection
+            _ClearDragger();
+        }
         return;
     }
 
@@ -253,7 +255,7 @@ void ViewerWidget::SelectLink(osg::Node* node)
     osg::ref_ptr<osg::Node> robot = _FindRobot(node);
     if (!!robot) {
         robotName = robot->getName();
-
+        RAVELOG_VERBOSE_FORMAT("found %s", robotName);
         //  Gets camera transform
         _StoreMatrixTransform();
 
@@ -262,16 +264,37 @@ void ViewerWidget::SelectLink(osg::Node* node)
 
         // Find joint of a link name given
         joint = _FindJoint(robotName,linkName);
+        
+        node_found = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+linkName,robot);
+        if( !!node_found ) {
+            node_found = node_found->getParent(0);
+            if (!!node_found ) {
+                if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
+//                    if( _draggerName == "RotateCylinderDragger" ) {
+//                        if( !!joint) {
+//                            selected = _AddDraggerToObject(robotName, node_found, "RotateCylinderDragger", joint);
+//                        }
+//                    }
+                }
+                else {
+                    if( _draggerName == "RotateCylinderDragger" ) {
+                        if( !!joint) {
+                            selected = _AddDraggerToObject(robotName, node_found, "RotateCylinderDragger", joint);
+                        }
+                    }
+                    else {
+                        // select new body
+                        SelectRobot(robotName);
+                    }
+                }
+            }
+        }
+    }
 
-        node_found = _FindNamedNode("tg-"+linkName,robot);
-        node_found = node_found->getParent(0);
-
-        if (!!node_found && !!joint) {
-            selected = _AddDraggerToObject(robotName,node_found, "RotateCylinderDragger",joint);
-            _osgview->setSceneData(scene);
-
-            //  Set camera transform
-            _LoadMatrixTransform();
+    if( !robot || !node_found ) {
+        if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
+            // user clicked on empty region, so remove selection
+            _ClearDragger();
         }
     }
 }
@@ -300,7 +323,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
 
     view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new osgGA::TrackballManipulator;
+    _osgCameraManipulator = new osgGA::TrackballManipulator();
     view->setCameraManipulator( _osgCameraManipulator );
 
     _osgCameraHUD = new osg::MatrixTransform;
@@ -334,7 +357,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
 
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setGraphicsContext(new GraphicsWindowQt(traits.get()));
-    
+
     camera->setClearColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
     camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
@@ -344,7 +367,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
 
 osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, int h)
 {
-    osg::ref_ptr<osg::Camera> camera(new osg::Camera());    
+    osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setProjectionMatrix(osg::Matrix::ortho(-1,1,-1,1,1,10));
 
     // draw subgraph after main camera view.
@@ -427,7 +450,7 @@ void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,osg::Node* currN
 void ViewerWidget::_GetLinkChildren( std::string & robotName, KinBody::LinkPtr link, std::vector<KinBody::LinkPtr> vlinks)
 {
     osg::Node* robot = _FindNamedNode(robotName,_osgview->getSceneData());
-    osg::Node* transform = _FindNamedNode("tg-"+link->GetName(),robot);
+    osg::Node* transform = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+link->GetName(),robot);
     _linkChildren.push_back(transform->asTransform()->asMatrixTransform());
     FOREACH(itlink,vlinks) {
         if ((*itlink)->IsParentLink(link)) {
@@ -702,57 +725,57 @@ void ViewerWidget::_LoadMatrixTransform()
     _osgview->getCamera()->setViewMatrix(_matrix1);
 }
 
-osg::ref_ptr<osgManipulator::Dragger> ViewerWidget::_CreateDragger(const std::string& name)
+osg::ref_ptr<osgManipulator::Dragger> ViewerWidget::_CreateDragger(const std::string& draggerName)
 {
     osg::ref_ptr<osgManipulator::Dragger> dragger;
-    if ("TabPlaneDragger" == name)
+    if ("TabPlaneDragger" == draggerName)
     {
         osgManipulator::TabPlaneDragger* d = new osgManipulator::TabPlaneDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else if ("TabPlaneTrackballDragger" == name)
+    else if ("TabPlaneTrackballDragger" == draggerName)
     {
         osgManipulator::TabPlaneTrackballDragger* d = new osgManipulator::TabPlaneTrackballDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else if ("TrackballDragger" == name)
+    else if ("TrackballDragger" == draggerName)
     {
         osgManipulator::TrackballDragger* d = new osgManipulator::TrackballDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else if ("Translate1DDragger" == name)
+    else if ("Translate1DDragger" == draggerName)
     {
         osgManipulator::Translate1DDragger* d = new osgManipulator::Translate1DDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else if ("Translate2DDragger" == name)
+    else if ("Translate2DDragger" == draggerName)
     {
         osgManipulator::Translate2DDragger* d = new osgManipulator::Translate2DDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else if ("TranslateAxisDragger" == name)
+    else if ("TranslateAxisDragger" == draggerName)
     {
         osgManipulator::TranslateAxisDragger* d = new osgManipulator::TranslateAxisDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else if ("RotateCylinderDragger" == name)
+    else if ("RotateCylinderDragger" == draggerName)
     {
         osgManipulator::RotateCylinderDragger* d = new osgManipulator::RotateCylinderDragger();
         d->setupDefaultGeometry();
         dragger = d;
     }
-    else
-    {
-        osgManipulator::TabBoxDragger* d = new osgManipulator::TabBoxDragger();
-        d->setupDefaultGeometry();
-        dragger = d;
-    }
+//    else
+//    {
+//        osgManipulator::TabBoxDragger* d = new osgManipulator::TabBoxDragger();
+//        d->setupDefaultGeometry();
+//        dragger = d;
+//    }
     return dragger;
 }
 
@@ -763,7 +786,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(osg::Node* object, const std::strin
     return _AddDraggerToObject(robotName,object,name,j);
 }
 
-osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* object, const std::string& name, KinBody::JointPtr joint)
+osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* object, const std::string& draggerName, KinBody::JointPtr joint)
 {
 //      object->getOrCreateStateSet()->setMode(GL_NORMALIZE, osg::StateAttribute::ON);
 
@@ -774,7 +797,10 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
     _selection = new osg::MatrixTransform;
 
     //  Create a new dragger
-    _dragger = _CreateDragger(name);
+    _dragger = _CreateDragger(draggerName);
+    if( !_dragger ) {
+        return NULL;
+    }
 
     _root = new osg::Group;
     _root->addChild(_dragger.get());
@@ -783,7 +809,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
     //  Store object selected in global variable _selected
     _selected = object;
 
-    if (name == "RotateCylinderDragger" && !!joint) {
+    if (draggerName == "RotateCylinderDragger" && !!joint) {
         //  Change view of dragger
         setWire(_dragger);
 
@@ -795,7 +821,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
             parent->addChild(_root);
         }
     }
-    else if (name != "RotateCylinderDragger") {
+    else if (draggerName != "RotateCylinderDragger") {
         for (size_t i = 0; i < object->getParents().size(); i++)
         {
             osg::ref_ptr<osg::Group>  parent;
@@ -809,20 +835,14 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
 
     float scale = object->getBound().radius() * 1.3;
 
-    if (name == "RotateCylinderDragger" && !!joint) {
+    if (draggerName == "RotateCylinderDragger" && !!joint) {
         Vector axis;
         Vector anchor;
         Vector dragger_direction;
         Vector dragger_rotation;
         osg::Matrix matrix;
-
-
-        axis    = joint->GetAxis();
-        anchor  = joint->GetAnchor();
-
-        //  Debug
-        qWarning("Anchor: %f %f %f",anchor.x,anchor.y,anchor.z);
-
+        axis = joint->GetAxis();
+        anchor = joint->GetAnchor();
         dragger_direction = Vector(0,0,1);
         dragger_rotation = quatRotateDirection(dragger_direction,axis);
 
@@ -835,7 +855,8 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
         _dragger->setMatrix(osg::Matrix::scale(scale, scale, scale) * osg::Matrix::translate(object->getBound().center()));
     }
 
-    _dragger->addTransformUpdating(_selection);
+    _dragger->addTransformUpdating(_selection); // in version 3.2 can specify what to transform
+    //_dragger->addDraggerCallback(new RigidDraggerTransformCallback(_selection));
 
     // we want the dragger to handle it's own events automatically
     _dragger->setHandleEvents(true);

@@ -89,7 +89,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             //CoreApplication::postEvent ( QObject * receiver, QEvent * event )
             QCoreApplication *qapp = QApplication::instance();
             if( !qapp ) {
-                RAVELOG_INFO("qt is not initialized yet, so initializing...\n");
+                RAVELOG_VERBOSE("qt is not initialized yet, so initializing...\n");
                 static int s_QtArgc = 0; // has to be static!
                 qapp = new QApplication(s_QtArgc,NULL);
                 return qtosgrave::CreateQtOSGViewer(penv, sinput);

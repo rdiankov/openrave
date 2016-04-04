@@ -56,12 +56,9 @@ public:
     /// \brief Active selection
     void SelectActive(bool active);
 
-    ///  \brief Draws trackball sphere
-    void DrawTrackball(bool pressed);
-
-    /// \brief Draws translate axis
-    void DrawAxes(bool pressed);
-
+    /// \brief possible names include TrackballDragger, TranslateAxisDragger
+    void SetDraggerMode(const std::string& draggerName);
+    
     /// \brief Select robot or kinbody from screen
     void SelectRobot(std::string name);
 
@@ -89,7 +86,7 @@ public:
     osg::MatrixTransform* getLinkTransform(std::string& robotName, KinBody::LinkPtr link);
 
     /// \brief Select the link picked
-    void SelectLink(osg::Node* node);
+    void SelectLink(osg::Node* node, int modkeymask=0);
 
     void SetViewport(int width, int height);
     osg::Camera *GetCamera();
@@ -97,6 +94,17 @@ public:
     osg::MatrixTransform *GetCameraHUD();
 
 protected:
+//    void keyPressEvent(QKeyEvent* event)
+//    {
+//        RAVELOG_INFO("key pressed event\n");
+//        QWidget::keyPressEvent(event);
+//    }
+//    
+//    void keyReleaseEvent(QKeyEvent* event)
+//    {
+//        RAVELOG_INFO("key released event\n");
+//        QWidget::keyReleaseEvent(event);
+//    }
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();

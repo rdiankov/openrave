@@ -90,7 +90,7 @@ void OSGPickHandler::_Pick(osgViewer::View* view, const osgGA::GUIEventAdapter& 
 
     //  If selection is activated
     if (_select) {
-        _selectLinkFn(node);
+        _selectLinkFn(node, ea.getModKeyMask());
     }
 }
 

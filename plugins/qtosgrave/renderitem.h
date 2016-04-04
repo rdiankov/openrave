@@ -19,6 +19,9 @@
 #ifndef OPENRAVE_OSG_ITEM_H
 #define OPENRAVE_OSG_ITEM_H
 
+#define QTOSG_LOCALTRANSFORM_PREFIX "tl-"
+#define QTOSG_GLOBALTRANSFORM_PREFIX "tg-"
+
 namespace qtosgrave {
 
 enum ViewGeometry {

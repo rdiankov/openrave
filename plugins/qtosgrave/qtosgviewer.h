@@ -161,7 +161,7 @@ public:
     typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
 
 public slots:
-
+    
     void LoadEnvironment();
 
     /// \brief Adds models to current scene
@@ -201,6 +201,8 @@ public slots:
     void _OnObjectTreeClick(QTreeWidgetItem* item,int num);
 
 protected:
+    virtual void keyPressEvent(QKeyEvent*);
+    virtual void keyReleaseEvent(QKeyEvent*);
 
     class PrivateGraphHandle : public GraphHandle
     {
@@ -290,7 +292,6 @@ protected:
 
     /// \brief Create StatusBar and Set a Message
     void _CreateStatusBar();
-    void mouseDoubleClickEvent(QMouseEvent *e);
 
     /// \brief Create info panels
     void _CreateDockWidgets();

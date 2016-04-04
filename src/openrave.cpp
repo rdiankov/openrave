@@ -242,6 +242,7 @@ int main(int argc, char ** argv)
             }
         }
         printf("%s",ss.str().c_str());
+        s_penv->Destroy(); // have to Destroy since there might be circular references that might keep the environment alive after this
         s_penv.reset();
         RaveDestroy();
         return 0;
@@ -275,6 +276,7 @@ int main(int argc, char ** argv)
     //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     //s_mainThread->join();
     MainOpenRAVEThread();
+    s_penv->Destroy();
     s_penv.reset();
     RaveDestroy();
     return 0;

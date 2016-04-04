@@ -72,7 +72,7 @@ void Item::SetGeomVisibility(bool bFlag)
 /// KinBodyItem class
 KinBodyItem::KinBodyItem(QtOSGViewerPtr viewer, KinBodyPtr pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
 {
-    assert( pchain != NULL );
+    BOOST_ASSERT( !!pchain );
     _pchain = pchain;
     bGrabbed = false;
     _userdata = 0;
@@ -370,10 +370,10 @@ void KinBodyItem::Load()
                 setNamedNode(name,lnk.first);
 
                 //  Global transform
-                lnk.second->setName("tg-"+name);
+                lnk.second->setName(std::string(QTOSG_GLOBALTRANSFORM_PREFIX)+name);
 
                 //  Local transform
-                ptrans->setName("tl-"+name);
+                ptrans->setName(std::string(QTOSG_LOCALTRANSFORM_PREFIX)+name);
             }
         }
     }

@@ -50,7 +50,8 @@ namespace qtosgrave {
 class OSGPickHandler : public osgGA::GUIEventHandler
 {
 public:
-    typedef boost::function<void (osg::Node*)> SelectLinkFn;
+    /// select(node, modkeymask) where node is the ray-picked node, and modkeymask is the modifier key mask currently pressed
+    typedef boost::function<void (osg::Node*, int)> SelectLinkFn;
 
     OSGPickHandler(const SelectLinkFn& selectLinkFn);
     virtual ~OSGPickHandler();

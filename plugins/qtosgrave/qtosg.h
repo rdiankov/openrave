@@ -21,7 +21,6 @@
 #include <openrave/utils.h>
 
 /// functions that allow plugins to program for the RAVE simulator
-#include <assert.h>
 #include <cstdio>
 #include <cmath>
 
@@ -100,8 +99,7 @@ inline RaveTransform<float> GetRaveTransformFromMatrix(const osg::Matrix &m)
 
     // Review Quaternion assign
     RaveTransform<float> t;
-    assert( ptrans != NULL );
-
+    
     q = m.getRotate();
 
     // Normalize quat prevents Core crash
