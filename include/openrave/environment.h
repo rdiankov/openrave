@@ -341,12 +341,20 @@ public:
     /** \brief reads in the rigid geometry of a resource file into a TriMesh structure
 
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
-        \param options Options to control the parsing process.
+        \param atts Options to control the parsing process.
      */
     virtual boost::shared_ptr<TriMesh> ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
     virtual boost::shared_ptr<TriMesh> ReadTrimeshFile(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
+
+    /** \brief reads in the rigid geometry from in-memory data from an opened cad file into a TriMesh structure
+
+        \param data the contents of a file that stores the cad data
+        \param formathint is the hint to the underlying cad importer for the format of data
+        \param atts Options to control the parsing process.
+     */
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts = AttributesList()) = 0;
 
     //@}
 

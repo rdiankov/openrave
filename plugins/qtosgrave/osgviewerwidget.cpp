@@ -30,6 +30,31 @@ namespace qtosgrave {
 //    virtual bool receive(const osgManipulator::ScaleUniformCommand& command)     { return false; }
 //};
 
+class OpenRAVEKeyboardEventHandler : public osgGA::GUIEventHandler
+{
+public:
+    OpenRAVEKeyboardEventHandler(const boost::function<bool(int)>& onKeyDown) : _onKeyDown(onKeyDown) {
+    }
+    
+    virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
+    {
+        switch(ea.getEventType())
+        {
+        case (osgGA::GUIEventAdapter::KEYDOWN): {
+            return _onKeyDown(ea.getKey());
+        }
+        }
+        return false;
+    }
+
+    virtual void accept(osgGA::GUIEventHandlerVisitor& v)   {
+        v.visit(*this);
+    }
+
+private:
+    boost::function<bool(int)> _onKeyDown; ///< called when key is pressed
+};
+
 ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
 {
     _penv = penv;
@@ -52,8 +77,21 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
     _picker = new OSGPickHandler(boost::bind(&ViewerWidget::SelectLink, this, _1, _2));
     _osgview->addEventHandler(_picker);
 
+    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1));
+    _osgview->addEventHandler(_keyhandler);
+
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
+}
+
+bool ViewerWidget::HandleOSGKeyDown(int key)
+{
+//    RAVELOG_INFO_FORMAT("key pressed %d", ea.getKey());
+//    switch(key) {
+//    case osgGA::GUIEventAdapter::KEY_Escape:
+//        return true;
+//    }
+    return false;
 }
 
 void ViewerWidget::SelectActive(bool active)
@@ -264,7 +302,7 @@ void ViewerWidget::SelectLink(osg::Node* node, int modkeymask)
 
         // Find joint of a link name given
         joint = _FindJoint(robotName,linkName);
-        
+
         node_found = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+linkName,robot);
         if( !!node_found ) {
             node_found = node_found->getParent(0);

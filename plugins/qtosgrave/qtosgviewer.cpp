@@ -562,18 +562,6 @@ void QtOSGViewer::_ProcessFacesModeChange()
     _posgWidget->SetFacesMode(!facesAct->isChecked());
 }
 
-void QtOSGViewer::keyPressEvent(QKeyEvent* event)
-{
-    RAVELOG_INFO("key pressed event\n");
-    QMainWindow::keyPressEvent(event);
-}
-
-void QtOSGViewer::keyReleaseEvent(QKeyEvent* event)
-{
-    RAVELOG_INFO("key released event\n");
-    QMainWindow::keyReleaseEvent(event);
-}
-
 void QtOSGViewer::polygonMode()
 {
     if (smoothAct->isChecked())

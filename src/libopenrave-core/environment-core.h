@@ -1510,12 +1510,44 @@ public:
         if( !ptrimesh ) {
             ptrimesh.reset(new TriMesh());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshFromFile(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
     }
 
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts)
+    {
+        RaveVector<float> diffuseColor, ambientColor;
+        return _ReadTrimeshData(ptrimesh, data, formathint, diffuseColor, ambientColor, atts);
+    }
+
+    virtual boost::shared_ptr<TriMesh> _ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
+    {
+        if( data.size() == 0 ) {
+            return boost::shared_ptr<TriMesh>();
+        }
+        
+        Vector vScaleGeometry(1,1,1);
+        float ftransparency;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> vScaleGeometry.x >> vScaleGeometry.y >> vScaleGeometry.z;
+                if( !ss ) {
+                    vScaleGeometry.z = vScaleGeometry.y = vScaleGeometry.x;
+                }
+            }
+        }
+        if( !ptrimesh ) {
+            ptrimesh.reset(new TriMesh());
+        }
+        if( !OpenRAVEXMLParser::CreateTriMeshFromData(data, formathint, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+            ptrimesh.reset();
+        }
+        return ptrimesh;
+    }
+    
     /// \brief parses the file into GeometryInfo and returns the full path of the file opened
     ///
     /// \param[in] listGeometries geometry list to be filled

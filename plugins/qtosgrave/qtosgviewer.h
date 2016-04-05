@@ -201,9 +201,6 @@ public slots:
     void _OnObjectTreeClick(QTreeWidgetItem* item,int num);
 
 protected:
-    virtual void keyPressEvent(QKeyEvent*);
-    virtual void keyReleaseEvent(QKeyEvent*);
-
     class PrivateGraphHandle : public GraphHandle
     {
     public:

@@ -94,6 +94,8 @@ public:
     osg::MatrixTransform *GetCameraHUD();
 
 protected:
+    bool HandleOSGKeyDown(int);
+    
 //    void keyPressEvent(QKeyEvent* event)
 //    {
 //        RAVELOG_INFO("key pressed event\n");
@@ -208,6 +210,7 @@ protected:
     std::string _draggerName; ///< Actual dragger selected
     
     osg::ref_ptr<OSGPickHandler> _picker; ///<  Pick handler for joint selection
+    osg::ref_ptr<osgGA::GUIEventHandler> _keyhandler; ///<  Pick handler for joint selection
     osg::Matrixf _matrix1; ///< stored matrix transform
 
     std::vector<osg::ref_ptr<osg::PositionAttitudeTransform> > _vLightTransform;
