@@ -276,7 +276,12 @@ int main(int argc, char ** argv)
     //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     //s_mainThread->join();
     MainOpenRAVEThread();
-    s_penv->Destroy();
+    {
+        EnvironmentBasePtr penv = s_penv;
+        if( !!penv ) {
+            penv->Destroy();
+        }
+    }
     s_penv.reset();
     RaveDestroy();
     return 0;
