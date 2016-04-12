@@ -128,6 +128,38 @@ void GenerateSphereTriangulation(TriMesh& tri, int levels)
     tri = *pcur;
 }
 
+/// \param ex half extents
+void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
+{
+    // trivial
+    Vector v[8] = { Vector(ex.x, ex.y, ex.z)+pos,
+                    Vector(ex.x, ex.y, -ex.z)+pos,
+                    Vector(ex.x, -ex.y, ex.z)+pos,
+                    Vector(ex.x, -ex.y, -ex.z)+pos,
+                    Vector(-ex.x, ex.y, ex.z)+pos,
+                    Vector(-ex.x, ex.y, -ex.z)+pos,
+                    Vector(-ex.x, -ex.y, ex.z)+pos,
+                    Vector(-ex.x, -ex.y, -ex.z)+pos};
+    int vertexoffset = (int)tri.vertices.size();
+    const int nindices = 36;
+    int indices[nindices] = {
+        0+vertexoffset, 2+vertexoffset, 1+vertexoffset,
+        1+vertexoffset, 2+vertexoffset, 3+vertexoffset,
+        4+vertexoffset, 5+vertexoffset, 6+vertexoffset,
+        5+vertexoffset, 7+vertexoffset, 6+vertexoffset,
+        0+vertexoffset, 1+vertexoffset, 4+vertexoffset,
+        1+vertexoffset, 5+vertexoffset, 4+vertexoffset,
+        2+vertexoffset, 6+vertexoffset, 3+vertexoffset,
+        3+vertexoffset, 6+vertexoffset, 7+vertexoffset,
+        0+vertexoffset, 4+vertexoffset, 2+vertexoffset,
+        2+vertexoffset, 4+vertexoffset, 6+vertexoffset,
+        1+vertexoffset, 3+vertexoffset, 5+vertexoffset,
+        3+vertexoffset, 7+vertexoffset, 5+vertexoffset
+    };
+    tri.vertices.insert(tri.vertices.end(), &v[0], &v[8]);
+    tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
+}
+
 KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
 {
     _vDiffuseColor = Vector(1,1,1);
@@ -143,8 +175,10 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     if( _type == GT_TriMesh || _type == GT_None ) {
         return true;
     }
-    _meshcollision.indices.clear();
-    _meshcollision.vertices.clear();
+
+    // is clear() better since it releases the memory?
+    _meshcollision.indices.resize(0);
+    _meshcollision.vertices.resize(0);
 
     if( fTessellation < 0.01f ) {
         fTessellation = 0.01f;
@@ -215,6 +249,33 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         }
         break;
     }
+    case GT_Container: {
+        const Vector& outerextents = _vGeomData;
+        const Vector& innerextents = _vGeomData2;
+        const Vector& bottomcross = _vGeomData3;
+        // +x wall
+        AppendBoxTriangulation(Vector((outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
+        // -x wall
+        AppendBoxTriangulation(Vector(-(outerextents[0]+innerextents[0])/4.,0,outerextents[2]/2.), Vector((outerextents[0]-innerextents[0])/4., outerextents[1]/2., outerextents[2]/2.), _meshcollision);
+        // +y wall
+        AppendBoxTriangulation(Vector(0,(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
+        // -y wall
+        AppendBoxTriangulation(Vector(0,-(outerextents[1]+innerextents[1])/4.,outerextents[2]/2.), Vector(outerextents[0]/2., (outerextents[1]-innerextents[1])/4., outerextents[2]/2.), _meshcollision);
+        // bottom
+        if( outerextents[2] - innerextents[2] > 0 ) {
+            AppendBoxTriangulation(Vector(0,0,(outerextents[2]-innerextents[2])/2.), Vector(outerextents[0]/2., outerextents[1]/2., (outerextents[2]-innerextents[2])/2), _meshcollision);
+        }
+        // cross
+        if( bottomcross[2] > 0 ) {
+            if( bottomcross[0] > 0 ) {
+                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]), Vector(bottomcross[0]/2, innerextents[1]/2, bottomcross[2]/2), _meshcollision);
+            }
+            if( bottomcross[1] > 0 ) {
+                AppendBoxTriangulation(Vector(0, 0, bottomcross[2]/2+outerextents[2]-innerextents[2]), Vector(innerextents[0]/2, bottomcross[1]/2, bottomcross[2]/2), _meshcollision);
+            }
+        }
+        break;
+    }
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized geom type %d!"), _type, ORE_InvalidArguments);
     }
@@ -246,6 +307,12 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.extents.x = RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z;
         ab.extents.y = RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z;
         ab.extents.z = RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z;
+        ab.pos = tglobal.trans;
+        break;
+    case GT_Container:
+        ab.extents.x = 0.5*RaveFabs(tglobal.m[0])*_info._vGeomData.x + RaveFabs(tglobal.m[1])*_info._vGeomData.y + RaveFabs(tglobal.m[2])*_info._vGeomData.z;
+        ab.extents.y = 0.5*RaveFabs(tglobal.m[4])*_info._vGeomData.x + RaveFabs(tglobal.m[5])*_info._vGeomData.y + RaveFabs(tglobal.m[6])*_info._vGeomData.z;
+        ab.extents.z = 0.5*RaveFabs(tglobal.m[8])*_info._vGeomData.x + RaveFabs(tglobal.m[9])*_info._vGeomData.y + RaveFabs(tglobal.m[10])*_info._vGeomData.z;
         ab.pos = tglobal.trans;
         break;
     case GT_Sphere:

@@ -2125,6 +2125,11 @@ public:
             case GT_Box:
                 itgeominfo->_vGeomData *= vscale;
                 break;
+            case GT_Container:
+                itgeominfo->_vGeomData *= vscale;
+                itgeominfo->_vGeomData2 *= vscale;
+                itgeominfo->_vGeomData3 *= vscale;
+                break;
             case GT_Sphere:
                 itgeominfo->_vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
                 break;
@@ -2656,6 +2661,44 @@ public:
                                     tlocalgeom = tlocalgeom * trot;
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
+                        else if( name == "container" ) {
+                            daeElementRef pouter_extents = children[i]->getChild("outer_extents");
+                            if( !!pouter_extents ) {
+                                stringstream ss(pouter_extents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pinner_extents = children[i]->getChild("inner_extents");
+                            if( !!pinner_extents ) {
+                                stringstream ss(pinner_extents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData2 = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pbottom_cross = children[i]->getChild("bottom_cross");
+                            if( !!pbottom_cross ) {
+                                stringstream ss(pbottom_cross->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData3 = vextents;
                                     geominfo._t = tlocalgeom;
                                     bfoundgeom = true;
                                 }

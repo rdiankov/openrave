@@ -303,6 +303,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Extract geometry from collision Mesh
+                case GT_Container:
                 case GT_TriMesh: {
                     // make triangleMesh
                     osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;

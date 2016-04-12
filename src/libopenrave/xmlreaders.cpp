@@ -219,6 +219,9 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     else if( _stricmp(type.c_str(), "trimesh") == 0 ) {
         _pgeom->_type = GT_TriMesh;
     }
+    else if( _stricmp(type.c_str(), "container") == 0 ) {
+        _pgeom->_type = GT_Container;
+    }
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
     }
@@ -362,6 +365,18 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             else if( xmlname == "fullextents" ) {
                 _ss >> _pgeom->_vGeomData.x >> _pgeom->_vGeomData.y >> _pgeom->_vGeomData.z;
                 _pgeom->_vGeomData *= 0.5;
+            }
+
+            break;
+        case GT_Container:
+            if( xmlname == "outer_extents" ) {
+                _ss >> _pgeom->_vGeomData.x >> _pgeom->_vGeomData.y >> _pgeom->_vGeomData.z;
+            }
+            if( xmlname == "inner_extents" ) {
+                _ss >> _pgeom->_vGeomData2.x >> _pgeom->_vGeomData2.y >> _pgeom->_vGeomData2.z;
+            }
+            if( xmlname == "bottom_cross" ) {
+                _ss >> _pgeom->_vGeomData3.x >> _pgeom->_vGeomData3.y >> _pgeom->_vGeomData3.z;
             }
 
             break;

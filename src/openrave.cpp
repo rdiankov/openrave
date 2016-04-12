@@ -50,6 +50,8 @@ void MainOpenRAVEThread();
 static bool bDisplayGUI = true, bShowGUI = true;
 
 static EnvironmentBasePtr s_penv;
+static ViewerBasePtr s_pviewer; ///< static viewer created by the main thread. need to quit from its main loop
+
 //static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
@@ -384,10 +386,16 @@ void MainOpenRAVEThread()
 void sigint_handler(int sig)
 {
     // if signal comes from viewer thread, then this could freeze openrave since this function
-    // will call the viewer to exit, but it will be blocked waiting for this function to finish
+    // will call the viewer to exit, but it will be blocked waiting for this function to finish. So do not reset any static variables are call RaveDestroy() here
     s_bThreadDestroyed = true;
-    RaveDestroy();
-    s_penv.reset();
+    ViewerBasePtr pviewer = s_pviewer;
+    if( !!pviewer ) {
+        pviewer->quitmainloop();
+        pviewer.reset();
+    }
+    //RaveDestroy();
+    //s_penv.reset();
+    
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
     signal(SIGINT, SIG_DFL);
