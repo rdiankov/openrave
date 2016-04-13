@@ -324,6 +324,7 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
+        _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
     }
     _Update();
 }
@@ -334,6 +335,7 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     size_t i = 0;
     FOREACH(itinfo,geometries) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*itinfo));
+        _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         ++i;
     }
     _Update();
