@@ -700,7 +700,7 @@ private:
     {
       FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>(collObj.getUserData());
       if( link_raw != NULL ) {
-        return link_raw->GetLink(GetEnv());
+        return link_raw->GetLink();
       }
       RAVELOG_WARN("fcl collision object does not have a link attached");
       return LinkConstPtr();
