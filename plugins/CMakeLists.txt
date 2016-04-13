@@ -31,7 +31,7 @@ set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DISPLAY_NAME "Essential plugins for mo
 set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DEPENDS ${COMPONENT_PREFIX}base PARENT_SCOPE)
 set(PLUGIN_COMPONENTS ${PLUGINS_BASE})
 
-set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave configurationcache dualmanipulation grasper ikfastsolvers logging oderave pqprave qtcoinrave qtosgrave rmanipulation rplanners textserver)
+set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave configurationcache dualmanipulation grasper ikfastsolvers logging oderave pqprave qtcoinrave qtosgrave rmanipulation rplanners textserver fclrave)
 
 foreach(PLUGIN ${PLUGINS})
   string(TOUPPER ${PLUGIN} PLUGIN_UPPER)
