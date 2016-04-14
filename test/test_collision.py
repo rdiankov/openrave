@@ -248,6 +248,10 @@ class test_ode(RunCollision):
     def __init__(self):
         RunCollision.__init__(self, 'ode')
 
+class test_fcl(RunCollision):
+    def __init__(self):
+        RunCollision.__init__(self, 'fcl')
+
 # class test_bullet(RunCollision):
 #     def __init__(self):
 #         RunCollision.__init__(self, 'bullet')

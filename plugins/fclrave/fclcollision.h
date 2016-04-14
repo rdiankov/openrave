@@ -16,7 +16,7 @@ public:
 
 
     struct CollisionCallbackData {
-      CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), _bCollision(false)
+    CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), _bCollision(false)
         {
         }
 
@@ -27,9 +27,10 @@ public:
         CollisionReportPtr _report;
       std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
+      bool bselfCollision;
       // TODO : not used/filled anywhere...
-        boost::unordered_set<LinkPair> disabledPairs;
-        boost::unordered_set<LinkPair> selfEnabledPairs;
+      //  boost::unordered_set<LinkPair> disabledPairs;
+      //  boost::unordered_set<LinkPair> selfEnabledPairs;
 
         bool _bCollision;
     };
@@ -351,22 +352,18 @@ public:
         return false; // TODO
       } else {
         boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+        pquery->bselfCollision = true;
+
         FOREACH(itset, nonadjacent) {
           size_t index1 = *itset&0xffff, index2 = *itset>>16;
           LinkConstPtr plink1(pbody->GetLinks().at(index1)), plink2(pbody->GetLinks().at(index2));
           BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
           if( !mlinkManagers.at(index1) ) {
-            mlinkManagers[index1] = _fclspace->CreateManager();
-            CollisionGroup link1Group;
-            Collect(plink1, link1Group);
-            mlinkManagers[index1]->registerObjects(link1Group);
+            mlinkManagers[index1] = _fclspace->GetLinkManager(pbody, index1);
             mlinkManagers[index1]->setup();
           }
           if( !mlinkManagers.at(index2) ) {
-            mlinkManagers[index2] = _fclspace->CreateManager();
-            CollisionGroup link2Group;
-            Collect(plink2, link2Group);
-            mlinkManagers[index2]->registerObjects(link2Group);
+            mlinkManagers[index2] = _fclspace->GetLinkManager(pbody, index2);
             mlinkManagers[index2]->setup();
           }
           mlinkManagers[index1]->collide(mlinkManagers[index2].get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
@@ -438,6 +435,7 @@ public:
         return false; //TODO
       } else {
         boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+        pquery->bselfCollision = true;
         linkManager->collide(bodyManager.get(), pquery.get(), &NarrowPhaseCheckCollision);
         return pquery->_bCollision;
       }
@@ -582,16 +580,17 @@ private:
         LinkPair linkPair = MakeLinkPair(plink1, plink2);
 
         // Proceed to the next if the pair is disable
-        if(pcb->disabledPairs.count(linkPair)) {
-            return false;
-        }
+        //if(pcb->disabledPairs.count(linkPair)) {
+        //    return false;
+        //}
 
         // Proceed to the next if the links are attached and not enabled
-        if( plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent()))
-            && !pcb->selfEnabledPairs.count(linkPair) ) {
+        if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
+            //    && !pcb->selfEnabledPairs.count(linkPair) ) {
             return false;
         }
 
+        pcb->_result.clear();
         size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
 
         if( numContacts > 0 ) {
@@ -608,6 +607,7 @@ private:
                   tmpReport.contacts[i] = CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
                 }
               }
+
 
               if( bHasCallbacks ) {
 
@@ -636,11 +636,11 @@ private:
               // pcb->_report->contacts.swap(_report.contacts); // would be faster but seems just wrong...
 
               // Yes, that's superfluous in the link-link collision... but do we really want to duplicate all the code to optimize that ?
-              if( (_options & OpenRAVE::CO_AllLinkCollisions) && std::find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), linkPair) != pcb->_report->vLinkColliding.end()) {
+              if( (_options & OpenRAVE::CO_AllLinkCollisions) && std::find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), linkPair) == pcb->_report->vLinkColliding.end()) {
                 pcb->_report->vLinkColliding.push_back(linkPair);
               }
               pcb->_bCollision = true;
-              return !(_options & OpenRAVE::CO_AllGeometryContacts); // stop checking collision
+              return !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts)); // stop checking collision
           }
 
           pcb->_bCollision = true;
