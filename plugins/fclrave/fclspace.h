@@ -98,12 +98,14 @@ public:
           }
 
             virtual ~LINK() {
-                BOOST_ASSERT( vgeoms.empty() );
+              Reset(BroadPhaseCollisionManagerPtr());
             }
 
           void Reset(BroadPhaseCollisionManagerPtr pmanager) {
             FOREACH(itgeompair, vgeoms) {
-              pmanager->unregisterObject((*itgeompair).second.get());
+              if( pmanager ) {
+                pmanager->unregisterObject((*itgeompair).second.get());
+              }
               (*itgeompair).second.reset();
             }
             vgeoms.resize(0);
@@ -214,8 +216,6 @@ public:
 
             BOOST_ASSERT( link->GetLink() );
 
-            // TODO : what about IsStatic ?
-
             if(_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(_geometrygroup) >= 0) {
                 const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(_geometrygroup);
                 FOREACHC(itgeominfo, vgeometryinfos) {
@@ -305,10 +305,10 @@ public:
     }
 
   // Warning : the managers need to be set up before usage
-  void GetManagers(CollisionGroupPtr pgroup1, CollisionGroupPtr pgroup2, BroadPhaseCollisionManagerPtr& manager1, BroadPhaseCollisionManagerPtr& manager2, BroadPhaseCollisionManagerPtr& envManager) {
-    manager1 = _CreateTemporaryManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm, pgroup1);
-    manager2 = _CreateTemporaryManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm, pgroup2);
-    envManager = _manager;
+  void GetManagers(CollisionGroupPtr pgroup1, CollisionGroupPtr pgroup2, BroadPhaseCollisionManagerPtr& manager1, BroadPhaseCollisionManagerPtr& manager2, BroadPhaseCollisionManagerPtr& envManager, bool bagainstEnv) {
+    _CreateTemporaryManagerFromBroadphaseAlgorithm(manager1, pgroup1, true);
+    _CreateTemporaryManagerFromBroadphaseAlgorithm(manager2, pgroup2, !bagainstEnv);
+    envManager.reset(_manager, _manager.get());
   }
 
     BroadPhaseCollisionManagerPtr GetEnvManager() const {
@@ -514,28 +514,31 @@ private:
         }
     }
 
-  BroadPhaseCollisionManagerPtr _CreateTemporaryManagerFromBroadphaseAlgorithm(std::string const &algorithm, CollisionGroupPtr pgroup)
+  void _CreateTemporaryManagerFromBroadphaseAlgorithm(BroadPhaseCollisionManagerPtr& pmanager, CollisionGroupPtr pgroup, bool binitializeManager)
     {
-      BroadPhaseCollisionManagerPtr pmanager;
       RestoreObjects deleter(pgroup, _manager);
-      if(algorithm == "Naive") {
-        pmanager = boost::shared_ptr<fcl::NaiveCollisionManager>(new fcl::NaiveCollisionManager(), deleter);
-      } else if(algorithm == "SaP") {
-        pmanager = boost::shared_ptr<fcl::SaPCollisionManager>(new fcl::SaPCollisionManager(), deleter);
-      } else if(algorithm == "SSaP") {
-        pmanager = boost::shared_ptr<fcl::SSaPCollisionManager>(new fcl::SSaPCollisionManager(), deleter);
-      } else if(algorithm == "IntervalTree") {
-        pmanager = boost::shared_ptr<fcl::IntervalTreeCollisionManager>(new fcl::IntervalTreeCollisionManager(), deleter);
-      } else if(algorithm == "DynamicAABBTree") {
-        pmanager = boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager>(new fcl::DynamicAABBTreeCollisionManager(), deleter);
-      } else if(algorithm == "DynamicAABBTree_Array") {
-        pmanager = boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array>(new fcl::DynamicAABBTreeCollisionManager_Array(), deleter);
-      } else {
-        throw OpenRAVE::openrave_exception(str(boost::format("Unknown broad-phase algorithm '%s'.") % algorithm), OpenRAVE::ORE_InvalidArguments);
+      if( binitializeManager ) {
+        if(_broadPhaseCollisionManagerAlgorithm == "Naive") {
+          pmanager.reset(new fcl::NaiveCollisionManager(), deleter);
+        } else if(_broadPhaseCollisionManagerAlgorithm == "SaP") {
+          pmanager.reset(new fcl::SaPCollisionManager(), deleter);
+        } else if(_broadPhaseCollisionManagerAlgorithm == "SSaP") {
+          pmanager.reset(new fcl::SSaPCollisionManager(), deleter);
+        } else if(_broadPhaseCollisionManagerAlgorithm == "IntervalTree") {
+          pmanager.reset(new fcl::IntervalTreeCollisionManager(), deleter);
+        } else if(_broadPhaseCollisionManagerAlgorithm == "DynamicAABBTree") {
+          pmanager.reset(new fcl::DynamicAABBTreeCollisionManager(), deleter);
+        } else if(_broadPhaseCollisionManagerAlgorithm == "DynamicAABBTree_Array") {
+          pmanager.reset(new fcl::DynamicAABBTreeCollisionManager_Array(), deleter);
+        } else {
+          throw OpenRAVE::openrave_exception(str(boost::format("Unknown broadphase algorithm '%s'.") % _broadPhaseCollisionManagerAlgorithm), OpenRAVE::ORE_InvalidArguments);
+        }
+        pmanager->registerObjects(*pgroup);
+        UnregisterObjects(_manager, *pgroup);
+      } else if ( pgroup->size() > 0 ) {
+        pmanager = boost::shared_ptr<fcl::BroadPhaseCollisionManager>(static_cast<fcl::BroadPhaseCollisionManager*>(NULL), deleter);
+        UnregisterObjects(_manager, *pgroup);
       }
-      UnregisterObjects(_manager, *pgroup);
-      pmanager->registerObjects(*pgroup);
-      return pmanager;
     }
 
 

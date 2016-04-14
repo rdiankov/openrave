@@ -146,13 +146,12 @@ public:
       _fclspace->Synchronize();
 
 
-      CollisionGroup body1group, body2group;
-      Collect(pbody1, body1group, _options & OpenRAVE::CO_ActiveDOFs); // This is asymetric : we consider everything attached to an active link of the first body and anything attached to the second
-      Collect(pbody2, body2group, false);
+      CollisionGroupPtr pbody1group = boost::make_shared<CollisionGroup>(), pbody2group = boost::make_shared<CollisionGroup>();
+      Collect(pbody1, *pbody1group, _options & OpenRAVE::CO_ActiveDOFs); // This is asymetric : we consider everything attached to an active link of the first body and anything attached to the second
+      Collect(pbody2, *pbody2group, false);
 
-      BroadPhaseCollisionManagerPtr body1manager = _fclspace->CreateManager(), body2manager = _fclspace->CreateManager();
-      body1manager->registerObjects(body1group);
-      body2manager->registerObjects(body2group);
+      BroadPhaseCollisionManagerPtr body1manager, body2manager, envManager;
+      _fclspace->GetManagers(pbody1group, pbody2group, body1manager, body2manager, envManager, false);
 
       body1manager->setup();
       body2manager->setup();
@@ -181,13 +180,12 @@ public:
       // why do we synchronize everything ?
       _fclspace->Synchronize();
 
-      CollisionGroup link1Group, link2Group;
-      Collect(plink1, link1Group);
-      Collect(plink2, link2Group);
+      CollisionGroupPtr plink1Group = boost::make_shared<CollisionGroup>(), plink2Group = boost::make_shared<CollisionGroup>();
+      Collect(plink1, *plink1Group);
+      Collect(plink2, *plink2Group);
 
-      BroadPhaseCollisionManagerPtr link1Manager = _fclspace->CreateManager(), link2Manager = _fclspace->CreateManager();
-      link1Manager->registerObjects(link1Group);
-      link2Manager->registerObjects(link2Group);
+      BroadPhaseCollisionManagerPtr link1Manager, link2Manager, envManager;
+      _fclspace->GetManagers(plink1Group, plink2Group, link1Manager, link2Manager, envManager, false);
 
       link1Manager->setup();
       link2Manager->setup();
@@ -221,13 +219,12 @@ public:
       // Do we really need to synchronize everything ?
       _fclspace->Synchronize();
 
-      CollisionGroup linkGroup, bodyGroup;
-      Collect(plink, linkGroup);
-      Collect(pbody, bodyGroup, false); // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+      CollisionGroupPtr plinkGroup = boost::make_shared<CollisionGroup>(), pbodyGroup = boost::make_shared<CollisionGroup>();
+      Collect(plink, *plinkGroup);
+      Collect(pbody, *pbodyGroup, false); // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
 
-      BroadPhaseCollisionManagerPtr linkManager = _fclspace->CreateManager(), bodyManager = _fclspace->CreateManager();
-      linkManager->registerObjects(linkGroup);
-      bodyManager->registerObjects(bodyGroup);
+      BroadPhaseCollisionManagerPtr linkManager, bodyManager, envManager;
+      _fclspace->GetManagers(plinkGroup, pbodyGroup, linkManager, bodyManager, envManager, false);
 
       linkManager->setup();
       bodyManager->setup();
@@ -251,40 +248,29 @@ public:
 
         _fclspace->Synchronize();
 
-        CollisionGroup linkCollisionGroup, exclusionGroup;
-        Collect(plink, linkCollisionGroup, vlinkexcluded);
+        CollisionGroupPtr plinkCollisionGroup = boost::make_shared<CollisionGroup>(), pexclusionGroup = boost::make_shared<CollisionGroup>();
+        Collect(plink, *plinkCollisionGroup, vlinkexcluded);
 
         FOREACH(itbody, vbodyexcluded) {
-          Collect(*itbody, exclusionGroup, false);
+          Collect(*itbody, *pexclusionGroup, false);
         }
         FOREACH(itlink, vlinkexcluded) {
-          Collect(*itlink, exclusionGroup);
+          Collect(*itlink, *pexclusionGroup);
         }
 
-        BroadPhaseCollisionManagerPtr linkManager = _fclspace->CreateManager();
-        linkManager->registerObjects(linkCollisionGroup);
-        // TODO : check that there is no other link to take into consideration
-
-        BroadPhaseCollisionManagerPtr envManager = _fclspace->GetEnvManager();
-        UnregisterObjects(envManager, linkCollisionGroup);
-        UnregisterObjects(envManager, exclusionGroup);
+        BroadPhaseCollisionManagerPtr linkManager, exclusionManager, envManager;
+        _fclspace->GetManagers(plinkCollisionGroup, pexclusionGroup, linkManager, exclusionManager, envManager, true);
 
         linkManager->setup();
         envManager->setup();
 
-        bool result;
-
         if( _options & OpenRAVE::CO_Distance ) {
-          result = false;
+          return false;
         } else {
           boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
           linkManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
-          result = pquery->_bCollision;
+          return pquery->_bCollision;
         }
-
-        envManager->registerObjects(linkCollisionGroup);
-        envManager->registerObjects(exclusionGroup);
-        return result;
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
@@ -296,31 +282,25 @@ public:
       _fclspace->Synchronize();
 
       // totally a bad idea... should really not do this kind of stuff
-      boost::shared_ptr<CollisionGroup> pexclusionGroup = boost::make_shared<CollisionGroup>();
-      CollisionGroup bodyGroup, &exclusionGroup = *pexclusionGroup;
-      Collect(pbody, bodyGroup, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcluded, vlinkexcluded, pexclusionGroup);
+      boost::shared_ptr<CollisionGroup> pbodyGroup = boost::make_shared<CollisionGroup>(), pexclusionGroup = boost::make_shared<CollisionGroup>();
+      //CollisionGroup bodyGroup, &exclusionGroup = *pexclusionGroup;
+      Collect(pbody, *pbodyGroup, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcluded, vlinkexcluded, pexclusionGroup);
 
       FOREACH(itbody, vbodyexcluded) {
-        Collect(*itbody, exclusionGroup, false);
+        Collect(*itbody, *pexclusionGroup, false);
       }
       FOREACH(itlink, vlinkexcluded) {
-        Collect(*itlink, exclusionGroup);
+        Collect(*itlink, *pexclusionGroup);
       }
 
-      BroadPhaseCollisionManagerPtr bodyManager = _fclspace->CreateManager();
-      bodyManager->registerObjects(bodyGroup);
-
-      BroadPhaseCollisionManagerPtr envManager = _fclspace->GetEnvManager();
-      UnregisterObjects(envManager, bodyGroup);
-      UnregisterObjects(envManager, exclusionGroup);
-
+      BroadPhaseCollisionManagerPtr bodyManager, exclusionManager, envManager;
+      _fclspace->GetManagers(pbodyGroup, pexclusionGroup, bodyManager, exclusionManager, envManager, true);
       bodyManager->setup();
       envManager->setup();
 
-      bool result;
       if( _options & OpenRAVE::CO_Distance ) {
         RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
-        result = false; // TODO
+        return false; // TODO
       } else {
         boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
         //BOOST_ASSERT(testValidity(bodyManager));
@@ -328,13 +308,8 @@ public:
 
         //TODO : test the validity of the two managers
         bodyManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
-        result = pquery->_bCollision;
+        return pquery->_bCollision;
       }
-
-      envManager->registerObjects(bodyGroup);
-      envManager->registerObjects(exclusionGroup);
-
-      return result;
     }
 
     virtual bool CheckCollision(RAY const &ray, LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr())
@@ -485,12 +460,6 @@ private:
     return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
   }
 
-    void UnregisterObjects(BroadPhaseCollisionManagerPtr manager, CollisionGroup& group)
-    {
-        FOREACH(itcollobj, group) {
-            manager->unregisterObject(*itcollobj);
-        }
-    }
 
     boost::shared_ptr<CollisionCallbackData> SetupCollisionQuery(CollisionReportPtr report)
     {
