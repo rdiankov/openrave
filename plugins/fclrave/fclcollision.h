@@ -181,12 +181,7 @@ public:
         // why do we synchronize everything ?
         _fclspace->Synchronize();
 
-        CollisionGroupPtr plink1Group = boost::make_shared<CollisionGroup>(), plink2Group = boost::make_shared<CollisionGroup>();
-        Collect(plink1, *plink1Group);
-        Collect(plink2, *plink2Group);
-
-        BroadPhaseCollisionManagerPtr link1Manager, link2Manager, envManager;
-        _fclspace->GetManagers(plink1Group, plink2Group, link1Manager, link2Manager, envManager, false);
+        BroadPhaseCollisionManagerPtr link1Manager = _fclspace->GetLinkManager(plink1), link2Manager = _fclspace->GetLinkManager(plink2);
 
         link1Manager->setup();
         link2Manager->setup();

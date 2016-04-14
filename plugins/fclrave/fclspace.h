@@ -50,7 +50,7 @@ void UnregisterObjects(BroadPhaseCollisionManagerPtr manager, CollisionGroup& gr
 }
 
 struct RestoreObjects {
-    RestoreObjects(CollisionGroupPtr pgroup, BroadPhaseCollisionManagerPtr envManager) : _pgroup(pgroup), _penvManager(envManager) {
+  RestoreObjects(CollisionGroupPtr pgroup, BroadPhaseCollisionManagerPtr envManager) : _pgroup(pgroup), _penvManager(envManager) {
     }
 
     void operator()(fcl::BroadPhaseCollisionManager* pmanager) {
@@ -73,6 +73,39 @@ struct RestoreObjects {
 class FCLSpace : public boost::enable_shared_from_this<FCLSpace>
 {
 
+        class TemporaryManager {
+          TemporaryManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
+            {
+            }
+
+          ~TemporaryManager() {
+            CollisionGroup borrowedObjects;
+            _manager->getObjects(borrowedObjects);
+            _pfclspace->GetEnvManager()->registerObjects(borrowedObjects);
+          }
+
+            void Borrow(KinBodyConstPtr pbody) {
+                KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
+                BOOST_ASSERT( pinfo->GetBody() == pbody );
+                FOREACHC(itlink, pinfo->vlinks) {
+                  CollisionGroup tmpGroup;
+                  (*itlink)->_linkManager->getObjects(tmpGroup);
+                  _manager->registerObjects(tmpGroup);
+                  UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
+                }
+            }
+
+            void Borrow(LinkConstPtr plink) {
+                CollisionGroup tmpGroup;
+                _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
+                _manager->registerObjects(tmpGroup);
+                UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
+            }
+
+
+            BroadPhaseCollisionManagerPtr _manager;
+          boost::shared_ptr<FCLSpace> _pfclspace;
+        };
 
 public:
     typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
@@ -92,6 +125,8 @@ public:
     class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
 public:
+
+
         struct LINK
         {
             LINK(KinBody::LinkPtr plink) : _plink(plink) {
@@ -299,10 +334,13 @@ public:
     void GetCollisionObjects(LinkConstPtr plink, CollisionGroup &group)
     {
         // TODO : This is just so stupid, I should be able to reuse _linkManager efficiently !
-        KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        BOOST_ASSERT( pinfo->GetBody() == plink->GetParent() );
-        BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
-        return _GetCollisionObjects(pinfo->vlinks[plink->GetIndex()], group);
+        CollisionGroup tmpGroup;
+        GetLinkManager(plink)->getObjects(tmpGroup);
+        copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(group));
+        /*  KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
+           BOOST_ASSERT( pinfo->GetBody() == plink->GetParent() );
+           BOOST_ASSERT( plink->GetIndex() >= 0 && plink->GetIndex() < (int)pinfo->vlinks.size());
+           return _GetCollisionObjects(pinfo->vlinks[plink->GetIndex()], group); */
     }
 
     // Warning : the managers need to be set up before usage
@@ -350,8 +388,14 @@ public:
             _meshFactory = &ConvertMeshToFCL<fcl::RSS>;
         } else if (type == "OBBRSS") {
             _meshFactory = &ConvertMeshToFCL<fcl::OBBRSS>;
-        } else if (type == "kIDS") {
-            _meshFactory = &ConvertMeshToFCL<fcl::AABB>;
+        } else if (type == "kDOP16") {
+            _meshFactory = &ConvertMeshToFCL< fcl::KDOP<16> >;
+        } else if (type == "kDOP18") {
+            _meshFactory = &ConvertMeshToFCL< fcl::KDOP<18> >;
+        } else if (type == "kDOP24") {
+            _meshFactory = &ConvertMeshToFCL< fcl::KDOP<24> >;
+        } else if (type == "kIOS") {
+            _meshFactory = &ConvertMeshToFCL<fcl::kIOS>;
         } else {
             RAVELOG_WARN(str(boost::format("Unknown BVH representation '%s'.") % type));
         }
@@ -541,6 +585,9 @@ private:
             return boost::make_shared<fcl::SaPCollisionManager>();
         } else if(algorithm == "SSaP") {
             return boost::make_shared<fcl::SSaPCollisionManager>();
+            // It seems that some informations on the scene are necessaries
+            //} else if(algorithm == "SpatialHash") {
+            //return boost::make_shared<fcl::SpatialHashingCollisionManager>();
         } else if(algorithm == "IntervalTree") {
             return boost::make_shared<fcl::IntervalTreeCollisionManager>();
         } else if(algorithm == "DynamicAABBTree") {
