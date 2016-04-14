@@ -102,7 +102,10 @@ public:
             }
 
             void Reset(BroadPhaseCollisionManagerPtr pmanager) {
-                _linkManager->clear();
+                if( !!_linkManager ) {
+                    _linkManager->clear();
+                    _linkManager.reset();
+                }
                 FOREACH(itgeompair, vgeoms) {
                     if( pmanager ) {
                         pmanager->unregisterObject((*itgeompair).second.get());
@@ -183,7 +186,14 @@ public:
         RAVELOG_VERBOSE("destroying ode collision environment\n");
         _manager->clear();
         FOREACH(itbody, _setInitializedBodies) {
-            RemoveUserData(*itbody);
+            KinBodyInfoPtr pinfo = GetInfo(*itbody);
+            if( !!pinfo ) {
+                pinfo->Reset(_manager);
+            }
+            bool is_consistent = (*itbody)->RemoveUserData(_userdatakey);
+            if( !is_consistent ) {
+                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
+            }
         }
         _setInitializedBodies.clear();
     }
@@ -191,6 +201,7 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
+        testValidity(_manager);
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
         }
@@ -200,6 +211,7 @@ public:
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
+            testValidity(_manager);
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK(*itlink));
 
             pinfo->vlinks.push_back(link);
@@ -240,6 +252,7 @@ public:
                     _manager->registerObject(pfclcoll.get());
                 }
             }
+            testValidity(link->_linkManager);
         }
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
@@ -251,6 +264,7 @@ public:
         pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
         _Synchronize(pinfo);
 
+        testValidity(_manager);
         return pinfo;
     }
 
@@ -296,6 +310,10 @@ public:
         _CreateTemporaryManagerFromBroadphaseAlgorithm(manager1, pgroup1, true);
         _CreateTemporaryManagerFromBroadphaseAlgorithm(manager2, pgroup2, !bagainstEnv);
         envManager.reset(_manager, _manager.get());
+
+        testValidity(manager1);
+        if( !bagainstEnv ) testValidity(manager2);
+        testValidity(envManager);
     }
 
     BroadPhaseCollisionManagerPtr GetEnvManager() const {
@@ -356,7 +374,7 @@ public:
         }
     }
 
-    void ResetBroadPhaseCollisionManager(BroadPhaseCollisionManagerPtr manager) {
+    void ResetBroadPhaseCollisionManager(BroadPhaseCollisionManagerPtr& manager) {
         CollisionGroup vcollObjects;
         manager->getObjects(vcollObjects);
         manager = _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
@@ -492,6 +510,9 @@ private:
 
                     pinfo->vlinks[i]->_linkManager->update(collObj.get());
                     _manager->update(collObj.get());
+
+                    testValidity(pinfo->vlinks[i]->_linkManager);
+                    testValidity(_manager);
                 }
             }
 
@@ -584,23 +605,24 @@ private:
 
     std::set<KinBodyConstPtr> _setInitializedBodies;
 
-    // TODO : erase me
-    bool testValidity(BroadPhaseCollisionManagerPtr m) {
-        CollisionGroup group;
-        m->getObjects(group);
-        FOREACH(ito, group) {
-            BOOST_ASSERT(*ito != NULL);
-
-            FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>((*ito)->getUserData());
-            BOOST_ASSERT( link_raw != NULL );
-            return !!link_raw->GetLink();
-        }
-        return true;
-    }
 };
 
 
 
+// TODO : erase me
+bool testValidity(BroadPhaseCollisionManagerPtr m) {
+    CollisionGroup group;
+    m->getObjects(group);
+    FOREACH(ito, group) {
+        BOOST_ASSERT(*ito != NULL);
+        (*ito)->getAABB();
+
+        FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>((*ito)->getUserData());
+        BOOST_ASSERT( link_raw != NULL );
+        return !!link_raw->GetLink();
+    }
+    return true;
+}
 
 
 #ifdef RAVE_REGISTER_BOOST

@@ -265,6 +265,9 @@ public:
         linkManager->setup();
         envManager->setup();
 
+        testValidity(linkManager);
+        testValidity(envManager);
+
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
         } else {
