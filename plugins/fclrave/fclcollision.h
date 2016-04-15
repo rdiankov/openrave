@@ -149,13 +149,10 @@ public:
         _fclspace->Synchronize();
 
 
-        CollisionGroup body1group, body2group;
-        Collect(pbody1, body1group, _options & OpenRAVE::CO_ActiveDOFs); // This is asymetric : we consider everything attached to an active link of the first body and anything attached to the second
-        Collect(pbody2, body2group, false);
+        TemporaryManagerPtr pbody1Manager = _fclspace->CreateTemporaryManager();
+        Collect(pbody1, pbody1Manager, _options & OpenRAVE::CO_ActiveDOFs); // This is asymetric : we consider everything attached to an active link of the first body and anything attached to the second
 
-        BroadPhaseCollisionManagerPtr body1manager = _fclspace->CreateManager(), body2manager = _fclspace->CreateManager();
-        body1manager->registerObjects(body1group);
-        body2manager->registerObjects(body2group);
+        BroadPhaseCollisionManagerPtr body1manager = pbody1Manager->GetManager(), body2manager = _fclspace->GetKinBodyManager(pbody2);
 
         body1manager->setup();
         body2manager->setup();
@@ -223,13 +220,10 @@ public:
         // Do we really need to synchronize everything ?
         _fclspace->Synchronize();
 
-        CollisionGroup bodyGroup;
-        Collect(pbody, bodyGroup, false); // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-
-        BroadPhaseCollisionManagerPtr linkManager = _fclspace->GetLinkManager(plink), bodyManager = _fclspace->CreateManager();
+        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+        BroadPhaseCollisionManagerPtr linkManager = _fclspace->GetLinkManager(plink), bodyManager = _fclspace->GetKinBodyManager(pbody);
 
         linkManager->setup();
-        bodyManager->registerObjects(bodyGroup);
         bodyManager->setup();
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -251,14 +245,14 @@ public:
 
         _fclspace->Synchronize();
 
-        TemporaryManagerPtr plinkManager = _fclspace->CreateTemporaryManager(), pexclusionManager = _fclspace->CreateTemporaryManager();
-        plinkManager->Borrow(plink);
+        TemporaryManagerPtr plinkManager = _fclspace->CreateBorrowManager(), pexclusionManager = _fclspace->CreateExclusionManager();
+        plinkManager->Register(plink);
 
         FOREACH(itbody, vbodyexcluded) {
-            pexclusionManager->Borrow(*itbody);
+            pexclusionManager->Register(*itbody);
         }
         FOREACH(itlink, vlinkexcluded) {
-            pexclusionManager->Borrow(*itlink);
+            pexclusionManager->Register(*itlink);
         }
 
         // No need to retrieve pexclusionManager
@@ -287,14 +281,14 @@ public:
 
         _fclspace->Synchronize();
 
-        TemporaryManagerPtr pbodyManager = _fclspace->CreateTemporaryManager(), pexclusionManager = _fclspace->CreateTemporaryManager();
+        TemporaryManagerPtr pbodyManager = _fclspace->CreateBorrowManager(), pexclusionManager = _fclspace->CreateExclusionManager();
         Collect(pbody, pbodyManager, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcluded, vlinkexcluded, pexclusionManager);
 
         FOREACH(itbody, vbodyexcluded) {
-            pexclusionManager->Borrow(*itbody);
+            pexclusionManager->Register(*itbody);
         }
         FOREACH(itlink, vlinkexcluded) {
-            pexclusionManager->Borrow(*itlink);
+            pexclusionManager->Register(*itlink);
         }
 
         BroadPhaseCollisionManagerPtr bodyManager = pbodyManager->GetManager(), envManager = _fclspace->GetEnvManager();
@@ -486,7 +480,7 @@ private:
         return boost::make_shared<CollisionCallbackData>(shared_checker());
     }
 
-    void Collect(KinBodyConstPtr pbody, TemporaryManagerPtr pbodyManager, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded = std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr> const &vlinkexcluded = std::vector<LinkConstPtr>(), TemporaryManagerPtr pexclusionManager = TemporaryManagerPtr())
+    void Collect(KinBodyConstPtr pbody, TemporaryManagerPtr pbodyManager, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, TemporaryManagerPtr pexclusionManager)
     {
 
         bool bActiveLinksOnly = false;
@@ -504,11 +498,11 @@ private:
                         isLinkActive = isLinkActive || probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i);
                     }
                     if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end()) {
-                        pbodyManager->Borrow(plink);
+                        pbodyManager->Register(plink);
                     } else if ( !!pexclusionManager ) {
-                        pexclusionManager->Borrow(plink);
+                        pexclusionManager->Register(plink);
                     }
-                    vactiveLinks[i] = true;
+                    vactiveLinks[i] = isLinkActive;
                 }
 
                 std::set<KinBodyPtr> attachedBodies;
@@ -523,11 +517,11 @@ private:
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
                             if( vlinkexcluded.size() == 0 ) {
-                                pbodyManager->Borrow(*itbody);
+                                pbodyManager->Register(*itbody);
                             } else {
                                 FOREACH(itlink, (*itbody)->GetLinks()) {
                                     if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
-                                        pbodyManager->Borrow(*itlink);
+                                        pbodyManager->Register(*itlink);
                                     }
                                 }
                             }
@@ -541,14 +535,18 @@ private:
             std::set<KinBodyPtr> attachedBodies;
             pbody->GetAttached(attachedBodies);
 
-            FOREACH(itbody, attachedBodies) {
-                if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
-                    if( vlinkexcluded.size() == 0 ) {
-                        pbodyManager->Borrow(*itbody);
-                    } else {
+            if( vlinkexcluded.size() == 0 ) {
+                FOREACH(itbody, attachedBodies) {
+                    if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
+                        pbodyManager->Register(*itbody);
+                    }
+                }
+            } else {
+                FOREACH(itbody, attachedBodies) {
+                    if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
                         FOREACH(itlink, (*itbody)->GetLinks()) {
                             if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
-                                pbodyManager->Borrow(*itlink);
+                                pbodyManager->Register(*itlink);
                             }
                         }
                     }
@@ -557,7 +555,7 @@ private:
         }
     }
 
-    void Collect(KinBodyConstPtr pbody, CollisionGroup &group, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded = std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr> const &vlinkexcluded = std::vector<LinkConstPtr>(), boost::shared_ptr<CollisionGroup> pexclusionGroup = boost::shared_ptr<CollisionGroup>())
+    void Collect(KinBodyConstPtr pbody, TemporaryManagerPtr pbodyManager, bool bactiveDOFs)
     {
 
         bool bActiveLinksOnly = false;
@@ -574,28 +572,20 @@ private:
                     FOREACH(itindex, probot->GetActiveDOFIndices()) {
                         isLinkActive = isLinkActive || probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i);
                     }
-                    if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end()) {
-                        _fclspace->GetCollisionObjects(plink, group);
-                    } else if ( !!pexclusionGroup ) {
-                        _fclspace->GetCollisionObjects(plink, *pexclusionGroup);
+                    if( isLinkActive ) {
+                        pbodyManager->Register(plink);
                     }
-                    vactiveLinks[i] = true;
+                    vactiveLinks[i] = isLinkActive;
                 }
 
                 std::set<KinBodyPtr> attachedBodies;
                 pbody->GetAttached(attachedBodies);
+                attachedBodies.erase(GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId()));
 
                 FOREACH(itbody, attachedBodies) {
-                    // TODO : should have a better solution
-                    if(*itbody != pbody || std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
-                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
-                        if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
-                            FOREACH(itlink, (*itbody)->GetLinks()) {
-                                if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
-                                    _fclspace->GetCollisionObjects(*itlink, group);
-                                }
-                            }
-                        }
+                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
+                    if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
+                        pbodyManager->Register(*itbody);
                     }
                 }
             }
@@ -604,15 +594,8 @@ private:
         if( !bActiveLinksOnly ) {
             std::set<KinBodyPtr> attachedBodies;
             pbody->GetAttached(attachedBodies);
-
             FOREACH(itbody, attachedBodies) {
-                if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
-                    FOREACH(itlink, (*itbody)->GetLinks()) {
-                        if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
-                            _fclspace->GetCollisionObjects(*itlink, group);
-                        }
-                    }
-                }
+                pbodyManager->Register(*itbody);
             }
         }
     }
@@ -627,7 +610,6 @@ private:
     bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
         static CollisionReport tmpReport;
-        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
         if( !plink1 ) {
@@ -640,7 +622,6 @@ private:
             return false; //TODO
         }
 
-        LinkPair linkPair = MakeLinkPair(plink1, plink2);
 
         // Proceed to the next if the pair is disable
         //if(pcb->disabledPairs.count(linkPair)) {
@@ -672,7 +653,7 @@ private:
                 }
 
 
-                if( bHasCallbacks ) {
+                if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
 
                     if(pcb->listcallbacks.size() == 0) {
                         GetEnv()->GetRegisteredCollisionCallbacks(pcb->listcallbacks);
@@ -693,12 +674,11 @@ private:
                 if(pcb->_report->contacts.size() + numContacts < pcb->_report->contacts.capacity()) {
                     pcb->_report->contacts.reserve(pcb->_report->contacts.capacity() + numContacts); // why capacity instead of size ?
                 }
-                FOREACH(itcontact, tmpReport.contacts) {
-                    pcb->_report->contacts.push_back(*itcontact);
-                }
+                copy(tmpReport.contacts.begin(), tmpReport.contacts.end(), back_inserter(pcb->_report->contacts));
                 // pcb->_report->contacts.swap(_report.contacts); // would be faster but seems just wrong...
 
-                // Yes, that's superfluous in the link-link collision... but do we really want to duplicate all the code to optimize that ?
+                LinkPair linkPair = MakeLinkPair(plink1, plink2);
+                // that's superfluous in the link-link collision... we could check the report's options instead and unset CO_AllLinkCollisions in the link-link case
                 if( (_options & OpenRAVE::CO_AllLinkCollisions) && std::find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), linkPair) == pcb->_report->vLinkColliding.end()) {
                     pcb->_report->vLinkColliding.push_back(linkPair);
                 }
