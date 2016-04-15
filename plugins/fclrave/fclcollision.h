@@ -9,6 +9,7 @@
 
 typedef FCLSpace::KinBodyInfoConstPtr KinBodyInfoConstPtr;
 typedef FCLSpace::KinBodyInfoPtr KinBodyInfoPtr;
+typedef FCLSpace::TemporaryManagerPtr TemporaryManagerPtr;
 
 class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
@@ -126,6 +127,7 @@ public:
         static std::vector<KinBodyConstPtr> const vbodyexcluded;
         static std::vector<LinkConstPtr> const vlinkexcluded;
 
+        // TODO : tailor this case when stuff become stable enough
         return CheckCollision(pbody1, vbodyexcluded, vlinkexcluded, report);
     }
 
@@ -147,12 +149,13 @@ public:
         _fclspace->Synchronize();
 
 
-        CollisionGroupPtr pbody1group = boost::make_shared<CollisionGroup>(), pbody2group = boost::make_shared<CollisionGroup>();
-        Collect(pbody1, *pbody1group, _options & OpenRAVE::CO_ActiveDOFs); // This is asymetric : we consider everything attached to an active link of the first body and anything attached to the second
-        Collect(pbody2, *pbody2group, false);
+        CollisionGroup body1group, body2group;
+        Collect(pbody1, body1group, _options & OpenRAVE::CO_ActiveDOFs); // This is asymetric : we consider everything attached to an active link of the first body and anything attached to the second
+        Collect(pbody2, body2group, false);
 
-        BroadPhaseCollisionManagerPtr body1manager, body2manager, envManager;
-        _fclspace->GetManagers(pbody1group, pbody2group, body1manager, body2manager, envManager, false);
+        BroadPhaseCollisionManagerPtr body1manager = _fclspace->CreateManager(), body2manager = _fclspace->CreateManager();
+        body1manager->registerObjects(body1group);
+        body2manager->registerObjects(body2group);
 
         body1manager->setup();
         body2manager->setup();
@@ -173,11 +176,16 @@ public:
         static std::vector<KinBodyConstPtr> const vbodyexcluded;
         static std::vector<LinkConstPtr> const vlinkexcluded;
 
+        // TODO : tailor this case when stuff become stable enough
         return CheckCollision(plink, vbodyexcluded, vlinkexcluded, report);
     }
 
     virtual bool CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
     {
+        if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
+            return false;
+        }
+
         // why do we synchronize everything ?
         _fclspace->Synchronize();
 
@@ -215,14 +223,13 @@ public:
         // Do we really need to synchronize everything ?
         _fclspace->Synchronize();
 
-        CollisionGroupPtr plinkGroup = boost::make_shared<CollisionGroup>(), pbodyGroup = boost::make_shared<CollisionGroup>();
-        Collect(plink, *plinkGroup);
-        Collect(pbody, *pbodyGroup, false); // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+        CollisionGroup bodyGroup;
+        Collect(pbody, bodyGroup, false); // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
 
-        BroadPhaseCollisionManagerPtr linkManager, bodyManager, envManager;
-        _fclspace->GetManagers(plinkGroup, pbodyGroup, linkManager, bodyManager, envManager, false);
+        BroadPhaseCollisionManagerPtr linkManager = _fclspace->GetLinkManager(plink), bodyManager = _fclspace->CreateManager();
 
         linkManager->setup();
+        bodyManager->registerObjects(bodyGroup);
         bodyManager->setup();
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -238,24 +245,24 @@ public:
     virtual bool CheckCollision(LinkConstPtr plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())
     {
 
-        if( !plink->IsEnabled() ) {
+        if( !plink->IsEnabled() || find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) != vlinkexcluded.end() ) {
             return false;
         }
 
         _fclspace->Synchronize();
 
-        CollisionGroupPtr plinkCollisionGroup = boost::make_shared<CollisionGroup>(), pexclusionGroup = boost::make_shared<CollisionGroup>();
-        Collect(plink, *plinkCollisionGroup, vlinkexcluded);
+        TemporaryManagerPtr plinkManager = _fclspace->CreateTemporaryManager(), pexclusionManager = _fclspace->CreateTemporaryManager();
+        plinkManager->Borrow(plink);
 
         FOREACH(itbody, vbodyexcluded) {
-            Collect(*itbody, *pexclusionGroup, false);
+            pexclusionManager->Borrow(*itbody);
         }
         FOREACH(itlink, vlinkexcluded) {
-            Collect(*itlink, *pexclusionGroup);
+            pexclusionManager->Borrow(*itlink);
         }
 
-        BroadPhaseCollisionManagerPtr linkManager, exclusionManager, envManager;
-        _fclspace->GetManagers(plinkCollisionGroup, pexclusionGroup, linkManager, exclusionManager, envManager, true);
+        // No need to retrieve pexclusionManager
+        BroadPhaseCollisionManagerPtr linkManager = plinkManager->GetManager(), envManager = _fclspace->GetEnvManager();
 
         linkManager->setup();
         envManager->setup();
@@ -280,20 +287,17 @@ public:
 
         _fclspace->Synchronize();
 
-        // totally a bad idea... should really not do this kind of stuff
-        boost::shared_ptr<CollisionGroup> pbodyGroup = boost::make_shared<CollisionGroup>(), pexclusionGroup = boost::make_shared<CollisionGroup>();
-        //CollisionGroup bodyGroup, &exclusionGroup = *pexclusionGroup;
-        Collect(pbody, *pbodyGroup, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcluded, vlinkexcluded, pexclusionGroup);
+        TemporaryManagerPtr pbodyManager = _fclspace->CreateTemporaryManager(), pexclusionManager = _fclspace->CreateTemporaryManager();
+        Collect(pbody, pbodyManager, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcluded, vlinkexcluded, pexclusionManager);
 
         FOREACH(itbody, vbodyexcluded) {
-            Collect(*itbody, *pexclusionGroup, false);
+            pexclusionManager->Borrow(*itbody);
         }
         FOREACH(itlink, vlinkexcluded) {
-            Collect(*itlink, *pexclusionGroup);
+            pexclusionManager->Borrow(*itlink);
         }
 
-        BroadPhaseCollisionManagerPtr bodyManager, exclusionManager, envManager;
-        _fclspace->GetManagers(pbodyGroup, pexclusionGroup, bodyManager, exclusionManager, envManager, true);
+        BroadPhaseCollisionManagerPtr bodyManager = pbodyManager->GetManager(), envManager = _fclspace->GetEnvManager();
         bodyManager->setup();
         envManager->setup();
 
@@ -408,21 +412,18 @@ public:
 
         _fclspace->Synchronize();
 
-        CollisionGroup linkGroup, bodyGroup;
-
-        Collect(plink, linkGroup);
+        CollisionGroup bodyGroup;
 
         FOREACH(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
             if( plink == plink1 ) {
-                Collect(plink2, bodyGroup);
+                _fclspace->GetCollisionObjects(plink2, bodyGroup);
             } else if( plink == plink2 ) {
-                Collect(plink1, bodyGroup);
+                _fclspace->GetCollisionObjects(plink1, bodyGroup);
             }
         }
 
-        BroadPhaseCollisionManagerPtr linkManager = _fclspace->CreateManager(), bodyManager = _fclspace->CreateManager();
-        linkManager->registerObjects(linkGroup);
+        BroadPhaseCollisionManagerPtr linkManager = _fclspace->GetLinkManager(plink), bodyManager = _fclspace->CreateManager();
         bodyManager->registerObjects(bodyGroup);
 
         linkManager->setup();
@@ -485,6 +486,77 @@ private:
         return boost::make_shared<CollisionCallbackData>(shared_checker());
     }
 
+    void Collect(KinBodyConstPtr pbody, TemporaryManagerPtr pbodyManager, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded = std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr> const &vlinkexcluded = std::vector<LinkConstPtr>(), TemporaryManagerPtr pexclusionManager = TemporaryManagerPtr())
+    {
+
+        bool bActiveLinksOnly = false;
+        if( bactiveDOFs && pbody->IsRobot() ) {
+
+            RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
+            bActiveLinksOnly = !probot->GetAffineDOF();
+
+            if( bActiveLinksOnly ) {
+                std::vector<bool> vactiveLinks = std::vector<bool>(probot->GetLinks().size(), false);
+                for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
+                    bool isLinkActive = false;
+                    LinkConstPtr plink = pbody->GetLinks()[i];
+                    FOREACH(itindex, probot->GetActiveDOFIndices()) {
+                        isLinkActive = isLinkActive || probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i);
+                    }
+                    if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end()) {
+                        pbodyManager->Borrow(plink);
+                    } else if ( !!pexclusionManager ) {
+                        pexclusionManager->Borrow(plink);
+                    }
+                    vactiveLinks[i] = true;
+                }
+
+                std::set<KinBodyPtr> attachedBodies;
+                pbody->GetAttached(attachedBodies);
+
+                FOREACH(itbody, attachedBodies) {
+                    // TODO : should have a better solution
+                    if(*itbody == pbody) {
+                        continue;
+                    }
+                    if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
+                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
+                        if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
+                            if( vlinkexcluded.size() == 0 ) {
+                                pbodyManager->Borrow(*itbody);
+                            } else {
+                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                                    if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
+                                        pbodyManager->Borrow(*itlink);
+                                    }
+                                }
+                            }
+                        } // TODO : Check if a body grabbed by a non-active link should be excluded or not
+                    }
+                }
+            }
+        }
+
+        if( !bActiveLinksOnly ) {
+            std::set<KinBodyPtr> attachedBodies;
+            pbody->GetAttached(attachedBodies);
+
+            FOREACH(itbody, attachedBodies) {
+                if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
+                    if( vlinkexcluded.size() == 0 ) {
+                        pbodyManager->Borrow(*itbody);
+                    } else {
+                        FOREACH(itlink, (*itbody)->GetLinks()) {
+                            if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
+                                pbodyManager->Borrow(*itlink);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void Collect(KinBodyConstPtr pbody, CollisionGroup &group, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded = std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr> const &vlinkexcluded = std::vector<LinkConstPtr>(), boost::shared_ptr<CollisionGroup> pexclusionGroup = boost::shared_ptr<CollisionGroup>())
     {
 
@@ -498,13 +570,14 @@ private:
                 std::vector<bool> vactiveLinks = std::vector<bool>(probot->GetLinks().size(), false);
                 for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
                     bool isLinkActive = false;
+                    LinkConstPtr plink = pbody->GetLinks()[i];
                     FOREACH(itindex, probot->GetActiveDOFIndices()) {
                         isLinkActive = isLinkActive || probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i);
                     }
-                    if( isLinkActive ) {
-                        Collect(pbody->GetLinks()[i], group, vlinkexcluded);
+                    if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end()) {
+                        _fclspace->GetCollisionObjects(plink, group);
                     } else if ( !!pexclusionGroup ) {
-                        Collect(pbody->GetLinks()[i], *pexclusionGroup, vlinkexcluded);
+                        _fclspace->GetCollisionObjects(plink, *pexclusionGroup);
                     }
                     vactiveLinks[i] = true;
                 }
@@ -518,7 +591,9 @@ private:
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
                             FOREACH(itlink, (*itbody)->GetLinks()) {
-                                Collect(*itlink, group, vlinkexcluded);
+                                if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
+                                    _fclspace->GetCollisionObjects(*itlink, group);
+                                }
                             }
                         }
                     }
@@ -533,24 +608,14 @@ private:
             FOREACH(itbody, attachedBodies) {
                 if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
                     FOREACH(itlink, (*itbody)->GetLinks()) {
-                        Collect(*itlink, group, vlinkexcluded);
+                        if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
+                            _fclspace->GetCollisionObjects(*itlink, group);
+                        }
                     }
                 }
             }
         }
     }
-
-    // Consider changing vlinkexcluded to something more suited to membership requests
-    void Collect(LinkConstPtr plink, CollisionGroup &group, std::vector<LinkConstPtr> const &vlinkexcluded = std::vector<LinkConstPtr>())
-    {
-        // TODO : should not take into account the non-active links when CO_ActiveDOFs is set...
-        if( !plink->IsEnabled() || std::find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) != vlinkexcluded.end()) {
-            return;
-        }
-
-        _fclspace->GetCollisionObjects(plink, group);
-    }
-
 
 
     // Should-I follow the example of oderave and make this a method ?

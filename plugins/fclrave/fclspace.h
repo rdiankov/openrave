@@ -49,65 +49,53 @@ void UnregisterObjects(BroadPhaseCollisionManagerPtr manager, CollisionGroup& gr
     }
 }
 
-struct RestoreObjects {
-  RestoreObjects(CollisionGroupPtr pgroup, BroadPhaseCollisionManagerPtr envManager) : _pgroup(pgroup), _penvManager(envManager) {
-    }
-
-    void operator()(fcl::BroadPhaseCollisionManager* pmanager) {
-        BroadPhaseCollisionManagerPtr envManager = _penvManager.lock();
-        if( !envManager ) {
-            return;
-        }
-        if( pmanager ) {
-            envManager->registerObjects(*_pgroup);
-        } else {
-            RAVELOG_WARN(str(boost::format("broadphase manager invalid : %d objects seems to have been lost") % _pgroup->size()));
-        }
-    }
-
-    CollisionGroupPtr _pgroup;
-    boost::weak_ptr<fcl::BroadPhaseCollisionManager> _penvManager;
-};
-
 
 class FCLSpace : public boost::enable_shared_from_this<FCLSpace>
 {
 
-        class TemporaryManager {
-          TemporaryManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
-            {
-            }
+public:
 
-          ~TemporaryManager() {
+    class TemporaryManager {
+public:
+        TemporaryManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
+        {
+            _manager = _pfclspace->CreateManager();
+        }
+
+        ~TemporaryManager() {
             CollisionGroup borrowedObjects;
             _manager->getObjects(borrowedObjects);
             _pfclspace->GetEnvManager()->registerObjects(borrowedObjects);
-          }
+        }
 
-            void Borrow(KinBodyConstPtr pbody) {
-                KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
-                BOOST_ASSERT( pinfo->GetBody() == pbody );
-                FOREACHC(itlink, pinfo->vlinks) {
-                  CollisionGroup tmpGroup;
-                  (*itlink)->_linkManager->getObjects(tmpGroup);
-                  _manager->registerObjects(tmpGroup);
-                  UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
-                }
-            }
-
-            void Borrow(LinkConstPtr plink) {
+        void Borrow(KinBodyConstPtr pbody) {
+            KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
+            BOOST_ASSERT( pinfo->GetBody() == pbody );
+            FOREACHC(itlink, pinfo->vlinks) {
                 CollisionGroup tmpGroup;
-                _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
+                (*itlink)->_linkManager->getObjects(tmpGroup);
                 _manager->registerObjects(tmpGroup);
                 UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
             }
+        }
 
+        void Borrow(LinkConstPtr plink) {
+            CollisionGroup tmpGroup;
+            _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
+            _manager->registerObjects(tmpGroup);
+            UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
+        }
 
-            BroadPhaseCollisionManagerPtr _manager;
-          boost::shared_ptr<FCLSpace> _pfclspace;
-        };
+        BroadPhaseCollisionManagerPtr GetManager() {
+            return _manager;
+        }
 
-public:
+private:
+        BroadPhaseCollisionManagerPtr _manager;
+        boost::shared_ptr<FCLSpace> _pfclspace;
+    };
+
+    typedef boost::shared_ptr<TemporaryManager> TemporaryManagerPtr;
     typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
     typedef boost::shared_ptr<Transform> TransformPtr;
     // TODO : is it okay to leave a plain transform there instead of a pointer
@@ -343,17 +331,6 @@ public:
            return _GetCollisionObjects(pinfo->vlinks[plink->GetIndex()], group); */
     }
 
-    // Warning : the managers need to be set up before usage
-    void GetManagers(CollisionGroupPtr pgroup1, CollisionGroupPtr pgroup2, BroadPhaseCollisionManagerPtr& manager1, BroadPhaseCollisionManagerPtr& manager2, BroadPhaseCollisionManagerPtr& envManager, bool bagainstEnv) {
-        _CreateTemporaryManagerFromBroadphaseAlgorithm(manager1, pgroup1, true);
-        _CreateTemporaryManagerFromBroadphaseAlgorithm(manager2, pgroup2, !bagainstEnv);
-        envManager.reset(_manager, _manager.get());
-
-        testValidity(manager1);
-        if( !bagainstEnv ) testValidity(manager2);
-        testValidity(envManager);
-    }
-
     BroadPhaseCollisionManagerPtr GetEnvManager() const {
         return _manager;
     }
@@ -369,6 +346,10 @@ public:
         } else {
             return BroadPhaseCollisionManagerPtr();
         }
+    }
+
+    TemporaryManagerPtr CreateTemporaryManager() {
+        return boost::make_shared<TemporaryManager>(shared_from_this());
     }
 
     BroadPhaseCollisionManagerPtr CreateManager() {
@@ -444,9 +425,9 @@ public:
     void Synchronize()
     {
         // TODO : shouldn't we synchronize only the initialized bodies ?
-        std::vector<KinBodyPtr> vbodies;
-        _penv->GetBodies(vbodies);
-        FOREACH(itbody, vbodies) {
+        //std::vector<KinBodyPtr> vbodies;
+        //_penv->GetBodies(vbodies);
+        FOREACH(itbody, _setInitializedBodies) {
             Synchronize(*itbody);
         }
     }
@@ -599,35 +580,6 @@ private:
         }
     }
 
-    void _CreateTemporaryManagerFromBroadphaseAlgorithm(BroadPhaseCollisionManagerPtr& pmanager, CollisionGroupPtr pgroup, bool binitializeManager)
-    {
-        RestoreObjects deleter(pgroup, _manager);
-        if( binitializeManager ) {
-            if(_broadPhaseCollisionManagerAlgorithm == "Naive") {
-                pmanager.reset(new fcl::NaiveCollisionManager(), deleter);
-            } else if(_broadPhaseCollisionManagerAlgorithm == "SaP") {
-                pmanager.reset(new fcl::SaPCollisionManager(), deleter);
-            } else if(_broadPhaseCollisionManagerAlgorithm == "SSaP") {
-                pmanager.reset(new fcl::SSaPCollisionManager(), deleter);
-            } else if(_broadPhaseCollisionManagerAlgorithm == "IntervalTree") {
-                pmanager.reset(new fcl::IntervalTreeCollisionManager(), deleter);
-            } else if(_broadPhaseCollisionManagerAlgorithm == "DynamicAABBTree") {
-                pmanager.reset(new fcl::DynamicAABBTreeCollisionManager(), deleter);
-            } else if(_broadPhaseCollisionManagerAlgorithm == "DynamicAABBTree_Array") {
-                pmanager.reset(new fcl::DynamicAABBTreeCollisionManager_Array(), deleter);
-            } else {
-                throw OpenRAVE::openrave_exception(str(boost::format("Unknown broadphase algorithm '%s'.") % _broadPhaseCollisionManagerAlgorithm), OpenRAVE::ORE_InvalidArguments);
-            }
-            pmanager->registerObjects(*pgroup);
-            UnregisterObjects(_manager, *pgroup);
-        } else if ( pgroup->size() > 0 ) {
-            pmanager = boost::shared_ptr<fcl::BroadPhaseCollisionManager>(static_cast<fcl::BroadPhaseCollisionManager*>(NULL), deleter);
-            UnregisterObjects(_manager, *pgroup);
-        }
-    }
-
-
-
     // TODO : consider changing vgeoms so that we can just add them in one go
     void _GetCollisionObjects(boost::shared_ptr<KinBodyInfo::LINK> pLink, CollisionGroup &group)
     {
@@ -658,16 +610,16 @@ private:
 
 // TODO : erase me
 bool testValidity(BroadPhaseCollisionManagerPtr m) {
-    CollisionGroup group;
-    m->getObjects(group);
-    FOREACH(ito, group) {
-        BOOST_ASSERT(*ito != NULL);
-        (*ito)->getAABB();
+    /*   CollisionGroup group;
+       m->getObjects(group);
+       FOREACH(ito, group) {
+          BOOST_ASSERT(*ito != NULL);
+          (*ito)->getAABB();
 
-        FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>((*ito)->getUserData());
-        BOOST_ASSERT( link_raw != NULL );
-        return !!link_raw->GetLink();
-    }
+          FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>((*ito)->getUserData());
+          BOOST_ASSERT( link_raw != NULL );
+          return !!link_raw->GetLink();
+          }*/
     return true;
 }
 

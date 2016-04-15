@@ -50,6 +50,23 @@ class RunCollision(EnvironmentSetup):
                 assert(check==robot.CheckSelfCollision())
                 env.Remove(robot)
 
+    def test_collisioncaching2(self):
+        filenames = ['robots/barrettwam.robot.xml']
+        env=self.env
+        for filename in filenames:
+            env.Reset()
+            robot=env.ReadRobotURI(filename)
+            for i in range(4):
+                env.Add(robot)
+                lower,upper = robot.GetDOFLimits()
+                for i in range(4):
+                    v = random.rand()*(upper-lower)+lower
+                    robot.SetDOFValues(v)
+                    check=robot.CheckSelfCollision()
+                    robot.SetDOFValues(v)
+                    assert(check==robot.CheckSelfCollision())
+                env.Remove(robot)
+
     def test_selfcollision(self):
         with self.env:
             self.LoadEnv('data/lab1.env.xml')
