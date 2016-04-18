@@ -29,9 +29,6 @@ public:
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         bool bselfCollision;
-        // TODO : not used/filled anywhere...
-        //  boost::unordered_set<LinkPair> disabledPairs;
-        //  boost::unordered_set<LinkPair> selfEnabledPairs;
 
         bool _bCollision;
     };
@@ -261,8 +258,8 @@ public:
         linkManager->setup();
         envManager->setup();
 
-        testValidity(linkManager);
-        testValidity(envManager);
+
+
 
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
@@ -300,10 +297,7 @@ public:
             return false; // TODO
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
-            //BOOST_ASSERT(testValidity(bodyManager));
-            //BOOST_ASSERT(testValidity(envManager));
 
-            //TODO : test the validity of the two managers
             bodyManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
@@ -507,12 +501,9 @@ private:
 
                 std::set<KinBodyPtr> attachedBodies;
                 pbody->GetAttached(attachedBodies);
+                attachedBodies.erase(GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId()));
 
                 FOREACH(itbody, attachedBodies) {
-                    // TODO : should have a better solution
-                    if(*itbody == pbody) {
-                        continue;
-                    }
                     if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
@@ -612,16 +603,8 @@ private:
         static CollisionReport tmpReport;
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
-        if( !plink1 ) {
-            RAVELOG_WARN("link1 still present in fcl space but no more in openrave");
-            return false; //TODO
-        }
-
-        if( !plink2 ) {
-            RAVELOG_WARN("link2 still present in fcl space but no more in openrave");
-            return false; //TODO
-        }
-
+        BOOST_ASSERT( !!plink1 );
+        BOOST_ASSERT( !!plink2 );
 
         // Proceed to the next if the pair is disable
         //if(pcb->disabledPairs.count(linkPair)) {
