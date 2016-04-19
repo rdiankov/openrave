@@ -60,15 +60,17 @@ public:
     bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
 
     /// \brief Active joint selection
-    void activeSelect(bool active);
+    void ActivateSelection(bool active);
 
     //  Double click
     void doubleClick();
 
+    bool IsSelectionActive() const { return _select; }
+    
 protected:
     virtual void _Pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
     SelectLinkFn _selectLinkFn;
-    bool _select;
+    bool _select; ///< if true, then will call the _selectLinkFn with the raypicked node
 };
 
 }

@@ -246,9 +246,15 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( _options & Save_ActiveManipulatorToolTransform ) {
         if( !!_pManipActive ) {
             if( probot == _probot ) {
-                _pManipActive->SetLocalToolTransform(_tActiveManipLocalTool);
-                _pManipActive->SetLocalToolDirection(_vActiveManipLocalDirection);
-                _pManipActive->SetIkSolver(_pActiveManipIkSolver);
+                RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(_pManipActive->GetName()); // manipulator pointers might have changed, it is always safer to re-request the current manip
+                if( !!pmanip ) {
+                    pmanip->SetLocalToolTransform(_tActiveManipLocalTool);
+                    pmanip->SetLocalToolDirection(_vActiveManipLocalDirection);
+                    pmanip->SetIkSolver(_pActiveManipIkSolver);
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("failed to restore active manipulator %s coordinate system", _pManipActive->GetName());
+                }
             }
             else {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(_pManipActive->GetName());
@@ -1725,7 +1731,16 @@ void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
                 return;
             }
         }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find manipulator with name: %s"), pmanip->GetName(), ORE_InvalidArguments);
+        // manipulator might have been recoreded, search for the same name
+        FOREACH(itmanip,_vecManipulators) {
+            if( (*itmanip)->GetName() == pmanip->GetName() ) {
+                _pManipActive = *itmanip;
+                return;
+            }
+        }
+
+        _pManipActive.reset();
+        RAVELOG_WARN_FORMAT("failed to find manipulator with name %s, most likely removed", pmanip->GetName());
     }
 }
 

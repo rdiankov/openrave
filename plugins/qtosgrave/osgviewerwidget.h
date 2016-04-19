@@ -14,6 +14,10 @@
 #ifndef OPENRAVE_QTOSG_VIEWERCONTEXT_H
 #define OPENRAVE_QTOSG_VIEWERCONTEXT_H
 
+#include "qtosg.h"
+
+#include "osgpick.h"
+
 #include <QtCore/QTimer>
 #include <QtGui/QApplication>
 #include <osgViewer/CompositeViewer>
@@ -23,7 +27,9 @@
 #include <osg/FrontFace>
 #include <osg/CullFace>
 #include <iostream>
-//#include "GraphicsWindowQt.h"
+
+#include <osgGA/NodeTrackerManipulator>
+
 #include <osgQt/GraphicsWindowQt>
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
@@ -36,9 +42,6 @@
 
 #include <osg/PositionAttitudeTransform>
 
-#include "osgpick.h"
-#include "qtosg.h"
-
 namespace qtosgrave {
 
 using namespace OpenRAVE;
@@ -48,7 +51,7 @@ using namespace osgQt;
 class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
 {
 public:
-    ViewerWidget(EnvironmentBasePtr penv);
+    ViewerWidget(EnvironmentBasePtr penv, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>());
 
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
@@ -90,23 +93,11 @@ public:
 
     void SetViewport(int width, int height);
     osg::Camera *GetCamera();
-    osgGA::TrackballManipulator *GetCameraManipulator();
+    osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     osg::MatrixTransform *GetCameraHUD();
 
 protected:
     bool HandleOSGKeyDown(int);
-    
-//    void keyPressEvent(QKeyEvent* event)
-//    {
-//        RAVELOG_INFO("key pressed event\n");
-//        QWidget::keyPressEvent(event);
-//    }
-//    
-//    void keyReleaseEvent(QKeyEvent* event)
-//    {
-//        RAVELOG_INFO("key released event\n");
-//        QWidget::keyReleaseEvent(event);
-//    }
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();
@@ -158,7 +149,7 @@ protected:
     void _LoadMatrixTransform();
 
     /// \brief Create a dragger with a name given
-    osg::ref_ptr<osgManipulator::Dragger> _CreateDragger(const std::string& name);
+    std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string& name);
     
     /// \brief Create a manipulator over an object pased
     osg::Node* _AddDraggerToObject(osg::Node* object, const std::string& name);
@@ -201,7 +192,7 @@ protected:
     osg::ref_ptr<osg::Group> _osgLightsGroup; ///< Scene Node with lights
     osg::ref_ptr<osg::Group> _osgLightsGroupData; ///< Scene Data to romove after each repaint
     osg::ref_ptr<osg::Group> _root; ///< Parent of dragger and selection
-    osg::ref_ptr<osgManipulator::Dragger> _dragger; ///< There is only one dragger at the same time
+    std::vector<osg::ref_ptr<osgManipulator::Dragger> > _draggers; ///< There is only one dragger at the same time
     osg::ref_ptr<osg::MatrixTransform> _selection; ///< Transform applied by dragger
     osg::ref_ptr<osg::Node> _selected; ///< Object selected by dragger
     osg::ref_ptr<osg::MatrixTransform> _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
@@ -217,12 +208,14 @@ protected:
     osg::ref_ptr<osg::StateSet> _lightStateSet;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
-    osg::ref_ptr<osgGA::TrackballManipulator> _osgCameraManipulator;
+    osg::ref_ptr<osgGA::CameraManipulator> _osgCameraManipulator;
     
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
     std::vector<osg::ref_ptr<osg::MatrixTransform> > _linkChildren; ///< List of link children
 
+    boost::function<bool(int)> _onKeyDown;
+    
     bool _bLightOn; ///< whether lights are on or not
 };
 

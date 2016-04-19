@@ -1688,6 +1688,18 @@ private:
                 ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
                 ptec->add("box")->add("half_extents")->setCharData(ss.str());
                 break;
+            case GT_Container: {
+                daeElementRef pcontainer = ptec->add("container");
+                ss << geom->GetContainerOuterExtents().x << " " << geom->GetContainerOuterExtents().y << " " << geom->GetContainerOuterExtents().z;
+                pcontainer->add("outer_extents")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+                ss << geom->GetContainerInnerExtents().x << " " << geom->GetContainerInnerExtents().y << " " << geom->GetContainerInnerExtents().z;
+                pcontainer->add("inner_extents")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+                ss << geom->GetContainerBottomCross().x << " " << geom->GetContainerBottomCross().y << " " << geom->GetContainerBottomCross().z;
+                pcontainer->add("bottom_cross")->setCharData(ss.str());
+                break;
+            }
             case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;

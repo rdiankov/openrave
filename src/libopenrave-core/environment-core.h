@@ -126,7 +126,7 @@ public:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
         _unit = std::make_pair("meter",1.0); //default unit settings
-            
+
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -1227,6 +1227,16 @@ public:
             }
             robot->__struri = preader->_filename;
         }
+
+        if( !!robot ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    robot->__struri = itatt->second;
+                }
+            }
+        }
+
         return robot;
     }
 
@@ -1357,6 +1367,15 @@ public:
                 return KinBodyPtr();
             }
             body->__struri = preader->_filename;
+        }
+
+        if( !!body ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    body->__struri = itatt->second;
+                }
+            }
         }
         return body;
     }
@@ -1527,7 +1546,7 @@ public:
         if( data.size() == 0 ) {
             return boost::shared_ptr<TriMesh>();
         }
-        
+
         Vector vScaleGeometry(1,1,1);
         float ftransparency;
         FOREACHC(itatt,atts) {
@@ -1547,7 +1566,7 @@ public:
         }
         return ptrimesh;
     }
-    
+
     /// \brief parses the file into GeometryInfo and returns the full path of the file opened
     ///
     /// \param[in] listGeometries geometry list to be filled
@@ -1858,7 +1877,7 @@ public:
     {
         return _unit;
     }
-    
+
     virtual void SetUnit(std::pair<std::string, dReal> unit)
     {
         _unit = unit;
@@ -2325,7 +2344,7 @@ protected:
     void _SimulationThread()
     {
         int environmentid = RaveGetEnvironmentId(shared_from_this());
-        
+
         uint64_t nLastUpdateTime = utils::GetMicroTime();
         uint64_t nLastSleptTime = utils::GetMicroTime();
         RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
@@ -2555,7 +2574,7 @@ protected:
 
     vector<KinBody::BodyState> _vPublishedBodies;
     string _homedirectory;
-    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters 
+    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
 
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 

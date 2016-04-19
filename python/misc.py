@@ -278,13 +278,14 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
         triindices = newindices
     return radius*numpy.array(vertices),triindices
 
-def DrawAxes(env,target,dist=1.0,linewidth=1,coloradd=None):
+def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     """draws xyz coordinate system around target.
 
     :param env: Environment
     :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
     :param dist: how far the lines extend from the origin
     :param linewidth: how thick the line is rendered in pixels
+    :param colormode: optionally override default color mode of rgb to cmy
     :param coloradd: an optional 3-element vector for 
     """
     if isinstance(target,basestring):
@@ -293,7 +294,10 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,coloradd=None):
         T = openravepy_int.matrixFromPose(target)
     else:
         T = numpy.array(target)
-    colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]])
+    if colormode == 'cmy':
+        colors = numpy.array([[0,1,1],[0,1,1],[1,0,1],[1,0,1],[1,1,0],[1,1,0]])
+    else:
+        colors = numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]])
     if coloradd is not None:
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)

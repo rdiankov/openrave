@@ -193,8 +193,19 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
         PARABOLIC_RAMP_ASSERT(!ramps[i].empty());
         indices[i] = ramps[i].begin();
     }
+    Real tmax = Inf; // the max possible time to create the new set of ramps. This is equivalent to the min of the max times of all the input ramps. If any of the input ramps have different timestamps, then throw an exception
+    for(size_t idof = 0; idof < ramps.size(); ++idof) {
+        Real tdofmax = 0;
+        for(size_t iramp = 0; iramp < ramps[idof].size(); ++iramp) {
+            tdofmax += ramps[idof][iramp].ttotal;
+        }
+        if( tmax > tdofmax ) {
+            tmax = tdofmax;
+        }
+    }
+    
     std::vector<Real> timeOffsets(ramps.size(),0);  //start time of current index
-    Real t=0;
+    Real t=0; // current time
     while(true) {
         //pick next ramp
         Real tnext=Inf;
@@ -207,6 +218,16 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
             // done
             break;
         }
+        // have to clamp to the max
+        if( tnext > tmax ) {
+            PARABOLIC_RAMP_PLOG("tnext is greater than the max, so truncating. diff = %.15f", (tnext-tmax));
+            tnext = tmax;
+            if( tnext <= t ) {
+                // just finish, there's nothing more to do...
+                break;
+            }
+        }
+        
         if(!(tnext > t || t == 0)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: error finding next time step?\n");
             PARABOLIC_RAMP_PLOG("tnext = %g, t = %g, step = %d\n",tnext,t,ndramps.size());

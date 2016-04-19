@@ -380,8 +380,6 @@ private:
             dBodySetPosition(link->body,t.trans.x, t.trans.y, t.trans.z);
             BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
             dBodySetQuaternion(link->body,&t.rot[0]);
-            BOOST_ASSERT( RaveFabs(t.rot.lengthsqr4()-1) < 0.0001f );
-            dBodySetQuaternion(link->body,&t.rot[0]);
             dBodySetData(link->body, link.get());     // so that the link can be retreived from the body
         }
 
@@ -642,6 +640,7 @@ private:
         case OpenRAVE::GT_Cylinder:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
+        case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
             if( info._meshcollision.indices.size() > 0 ) {
                 dTriIndex* pindices = new dTriIndex[info._meshcollision.indices.size()];

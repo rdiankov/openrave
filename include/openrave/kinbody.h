@@ -34,6 +34,7 @@ enum GeometryType {
     GT_Sphere = 2,
     GT_Cylinder = 3, ///< oriented towards z-axis
     GT_TriMesh = 4,
+    GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z.
 };
 
 /// \brief holds parameters for an electric motor
@@ -148,7 +149,10 @@ public:
         }
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-        Vector _vGeomData; ///< for boxes, first 3 values are extents
+        Vector _vGeomData; ///< for boxes, first 3 values are extents. For containers, the first 3 values are the outer extents.
+        Vector _vGeomData2; ///< For containers, the first 3 values are the inner extents.
+        Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
+        
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -296,6 +300,15 @@ public:
             }
             inline const Vector& GetBoxExtents() const {
                 return _info._vGeomData;
+            }
+            inline const Vector& GetContainerOuterExtents() const {
+                return _info._vGeomData;
+            }
+            inline const Vector& GetContainerInnerExtents() const {
+                return _info._vGeomData2;
+            }
+            inline const Vector& GetContainerBottomCross() const {
+                return _info._vGeomData3;
             }
             inline const RaveVector<float>& GetDiffuseColor() const {
                 return _info._vDiffuseColor;

@@ -324,7 +324,17 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
+        _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
     }
+    _info._mapExtraGeometries.clear();
+    // have to reset the self group! cannot use geometries directly since we require exclusive access to the GeometryInfo objects
+    std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
+    vgeometryinfos.resize(_vGeometries.size());
+    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        *vgeometryinfos[i] = _vGeometries[i]->_info;
+    }
+    SetGroupGeometries("self", vgeometryinfos);
     _Update();
 }
 
@@ -334,8 +344,18 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     size_t i = 0;
     FOREACH(itinfo,geometries) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*itinfo));
+        _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         ++i;
     }
+    _info._mapExtraGeometries.clear();
+    // have to reset the self group!
+    std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
+    vgeometryinfos.resize(_vGeometries.size());
+    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        *vgeometryinfos[i] = _vGeometries[i]->_info;
+    }
+    SetGroupGeometries("self", vgeometryinfos);
     _Update();
 }
 
