@@ -22,7 +22,7 @@
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
 
-  if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl" ) {
+  if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
     return InterfaceBasePtr(new FCLCollisionChecker(penv));
   }
 
@@ -31,7 +31,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 
 void GetPluginAttributesValidated(PLUGININFO& info)
 {
-    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("fcl");
+    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("fcl_");
 }
 
 OPENRAVE_PLUGIN_API void DestroyPlugin()

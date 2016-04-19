@@ -64,7 +64,7 @@ def main(env,options):
 
     h2=env.plot3(array(positions),20,[1,0,0])
     raw_input('press any key to exit')
-
+ 
 from openravepy.misc import OpenRAVEGlobalArguments
 
 @openravepy.with_destroy

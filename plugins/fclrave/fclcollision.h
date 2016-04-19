@@ -276,10 +276,15 @@ public:
             return false;
         }
 
+        vector<KinBodyConstPtr> vbodyexcludedcopy(vbodyexcluded);
+        vector<LinkConstPtr> vlinkexcludedcopy(vlinkexcluded);
+        sort(vbodyexcludedcopy.begin(), vbodyexcludedcopy.end());
+        sort(vlinkexcludedcopy.begin(), vlinkexcludedcopy.end());
+
         _fclspace->Synchronize();
 
         TemporaryManagerPtr pbodyManager = _fclspace->CreateBorrowManager(), pexclusionManager = _fclspace->CreateExclusionManager();
-        Collect(pbody, pbodyManager, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcluded, vlinkexcluded, pexclusionManager);
+        Collect(pbody, pbodyManager, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcludedcopy, vlinkexcludedcopy, pexclusionManager);
 
         FOREACH(itbody, vbodyexcluded) {
             pexclusionManager->Register(*itbody);
@@ -455,6 +460,7 @@ private:
             pcb->_report.reset(new CollisionReport());
         }
 
+        // TODO : What happens if we have CO_AllGeometryContacts set and not CO_Contacts ?
         if( !!report && !!(report->options & OpenRAVE::CO_Contacts)) {
             pcb->_request.num_max_contacts = _numMaxContacts;
             pcb->_request.enable_contact = true;
@@ -491,7 +497,7 @@ private:
                     FOREACH(itindex, probot->GetActiveDOFIndices()) {
                         isLinkActive = isLinkActive || probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i);
                     }
-                    if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end()) {
+                    if( isLinkActive && !binary_search(vlinkexcluded.begin(), vlinkexcluded.end(), plink) ) {
                         pbodyManager->Register(plink);
                     } else if ( !!pexclusionManager ) {
                         pexclusionManager->Register(plink);
@@ -504,14 +510,14 @@ private:
                 attachedBodies.erase(GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId()));
 
                 FOREACH(itbody, attachedBodies) {
-                    if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
+                    if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
                             if( vlinkexcluded.size() == 0 ) {
                                 pbodyManager->Register(*itbody);
                             } else {
                                 FOREACH(itlink, (*itbody)->GetLinks()) {
-                                    if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
+                                    if( !binary_search(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) ) {
                                         pbodyManager->Register(*itlink);
                                     }
                                 }
@@ -528,15 +534,15 @@ private:
 
             if( vlinkexcluded.size() == 0 ) {
                 FOREACH(itbody, attachedBodies) {
-                    if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
+                    if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
                         pbodyManager->Register(*itbody);
                     }
                 }
             } else {
                 FOREACH(itbody, attachedBodies) {
-                    if(std::find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end()) {
+                  if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
                         FOREACH(itlink, (*itbody)->GetLinks()) {
-                            if(find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end()) {
+                            if( !binary_search(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) ) {
                                 pbodyManager->Register(*itlink);
                             }
                         }
@@ -627,6 +633,8 @@ private:
                 tmpReport.plink1 = plink1;
                 tmpReport.plink2 = plink2;
 
+                // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
+                // TODO : Collision points are really different from their ode variant
                 if( _options & OpenRAVE::CO_Contacts ) {
                     tmpReport.contacts.resize(numContacts);
                     for(size_t i = 0; i < numContacts; ++i) {
