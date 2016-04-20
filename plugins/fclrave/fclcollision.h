@@ -107,10 +107,6 @@ public:
 
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
-      if( !pbody ) {
-        return false;
-      }
-
         FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);

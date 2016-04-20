@@ -194,6 +194,7 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
+      EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
@@ -234,8 +235,8 @@ public:
                 }
             } else {
                 FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                    KinBody::GeometryInfo geominfo = (*itgeom)->GetInfo();
-                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
+                  if((*itgeom)->GetType() < 0) RAVELOG_WARN(str(boost::format("culprit : %s") % (*itlink)->GetName()));
+                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, (*itgeom)->GetInfo());
                     if( !pfclgeom ) {
                         continue;
                     }
@@ -244,7 +245,7 @@ public:
                     CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
                     pfclcoll->setUserData(link.get());
 
-                    link->vgeoms.push_back(TransformCollisionPair(geominfo._t, pfclcoll));
+                    link->vgeoms.push_back(TransformCollisionPair((*itgeom)->GetInfo()._t, pfclcoll));
                     link->_linkManager->registerObject(pfclcoll.get());
                     pinfo->_bodyManager->registerObject(pfclcoll.get());
                     _manager->registerObject(pfclcoll.get());
@@ -580,6 +581,8 @@ private:
 	  // TODO double check this
             return make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
+            // TODO : Is that ok ?
+        case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
         {
             const OpenRAVE::TriMesh& mesh = info._meshcollision;
@@ -605,8 +608,6 @@ private:
 
             return mesh_factory(fcl_points, fcl_triangles);
         }
-
-        // TODO : GT_Containers
 
         default:
             RAVELOG_WARN(str(boost::format("FCL doesn't support geom type %d")%info._type));
