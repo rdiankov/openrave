@@ -109,6 +109,7 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
+          // TODO : What about a dynamic collection of managers containing this link ?
 	  BroadPhaseCollisionManagerPtr _envManager, _bodyManager, _linkManager;
             std::vector<TransformCollisionPair> vgeoms; // fcl variant of ODE dBodyID
             std::string bodylinkname; // for debugging purposes
@@ -233,7 +234,7 @@ public:
                 }
             } else {
                 FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                    const KinBody::GeometryInfo& geominfo = (*itgeom)->GetInfo();
+                    KinBody::GeometryInfo geominfo = (*itgeom)->GetInfo();
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, geominfo);
                     if( !pfclgeom ) {
                         continue;
@@ -604,6 +605,8 @@ private:
 
             return mesh_factory(fcl_points, fcl_triangles);
         }
+
+        // TODO : GT_Containers
 
         default:
             RAVELOG_WARN(str(boost::format("FCL doesn't support geom type %d")%info._type));

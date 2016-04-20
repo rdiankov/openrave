@@ -107,6 +107,10 @@ public:
 
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
+      if( !pbody ) {
+        return false;
+      }
+
         FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
@@ -361,25 +365,33 @@ public:
                     mlinkManagers[index2] = _fclspace->GetLinkManager(pbody, index2);
                     mlinkManagers[index2]->setup();
                 }
+
+
+                std::vector<fcl::CollisionObject*> objs1, objs2;
+                mlinkManagers[index1]->getObjects(objs1);
+                mlinkManagers[index2]->getObjects(objs2);
+
+                RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
+
                 mlinkManagers[index1]->collide(mlinkManagers[index2].get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
 
                 if( pquery->_bCollision ) {
-                    if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                        RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
-                        std::vector<OpenRAVE::dReal> v;
-                        pbody->GetDOFValues(v);
-                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        for(size_t i = 0; i < v.size(); ++i ) {
-                            if( i > 0 ) {
-                                ss << "," << v[i];
-                            }
-                            else {
-                                ss << "colvalues=[" << v[i];
-                            }
-                        }
-                        ss << "]";
-                        RAVELOG_VERBOSE(ss.str());
-                    }
+//                    if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+//                        RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
+//                        std::vector<OpenRAVE::dReal> v;
+//                        pbody->GetDOFValues(v);
+//                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//                        for(size_t i = 0; i < v.size(); ++i ) {
+//                            if( i > 0 ) {
+//                                ss << "," << v[i];
+//                            }
+//                            else {
+//                                ss << "colvalues=[" << v[i];
+//                            }
+//                        }
+//                        ss << "]";
+//                        RAVELOG_VERBOSE(ss.str());
+//                    }
                     if( !(_options & OpenRAVE::CO_AllLinkCollisions) ) {
                         return true;
                     }
