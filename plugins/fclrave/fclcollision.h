@@ -45,6 +45,8 @@ public:
         RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::_SetBroadphaseAlgorithm, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
 
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
+        // TODO : check that the coordinate are in the right order
+        RegisterCommand("SetSpatialHashingBroadPhaseAlgorithm", boost::bind(&FCLCollisionChecker::SetSpatialHashingBroadPhaseAlgorithm, this, _1, _2), "sets the broadphase algorithm to spatial hashing with (cell size) (scene min x) (scene min y) (scene min z) (scene max x) (scene max y) (scene max z)");
     }
 
     virtual ~FCLCollisionChecker() {
@@ -86,6 +88,15 @@ public:
         std::string type;
         sinput >> type;
         _fclspace->SetBVHRepresentation(type);
+        return !!sinput;
+    }
+
+    bool SetSpatialHashingBroadPhaseAlgorithm(ostream& sout, istream& sinput)
+    {
+        fcl::FCL_REAL cell_size;
+        fcl::Vec3f scene_min, scene_max;
+        sinput >> cell_size >> scene_min[0] >> scene_min[1] >> scene_min[2] >> scene_max[0] >> scene_max[1] >> scene_max[2];
+        _fclspace->SetSpatialHashingBroadPhaseAlgorithm(cell_size, scene_min, scene_max);
         return !!sinput;
     }
 
@@ -159,6 +170,11 @@ public:
             return false; //TODO
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            std::vector<fcl::CollisionObject*> objs1, objs2;
+            body1manager->getObjects(objs1);
+            body2manager->getObjects(objs2);
+
+            RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
             body1manager->collide(body2manager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
@@ -193,6 +209,11 @@ public:
             return false; // TODO
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            std::vector<fcl::CollisionObject*> objs1, objs2;
+            link1Manager->getObjects(objs1);
+            link2Manager->getObjects(objs2);
+
+            RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
             link1Manager->collide(link2Manager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
@@ -228,6 +249,11 @@ public:
             return false; // TODO
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            std::vector<fcl::CollisionObject*> objs1, objs2;
+            linkManager->getObjects(objs1);
+            bodyManager->getObjects(objs2);
+
+            RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
             linkManager->collide(bodyManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
@@ -265,6 +291,11 @@ public:
             return false;
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            std::vector<fcl::CollisionObject*> objs1, objs2;
+            linkManager->getObjects(objs1);
+            envManager->getObjects(objs2);
+
+            RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
             linkManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
@@ -303,6 +334,11 @@ public:
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
 
+            std::vector<fcl::CollisionObject*> objs1, objs2;
+            bodyManager->getObjects(objs1);
+            envManager->getObjects(objs2);
+
+            RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
             bodyManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
@@ -548,7 +584,7 @@ private:
                 }
             } else {
                 FOREACH(itbody, attachedBodies) {
-                  if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
+                    if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
                         FOREACH(itlink, (*itbody)->GetLinks()) {
                             if( !binary_search(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) ) {
                                 pbodyManager->Register(*itlink);

@@ -55,8 +55,8 @@ inline void UnregisterObjects(BroadPhaseCollisionManagerPtr manager, CollisionGr
 
 class FCLSpace : public boost::enable_shared_from_this<FCLSpace>
 {
-  
-  
+
+
 public:
     typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
     typedef boost::shared_ptr<Transform> TransformPtr;
@@ -95,7 +95,7 @@ public:
                     if( !!_bodyManager ) {
                         _bodyManager->unregisterObject((*itgeompair).second.get());
                     }
-		    if( !!_envManager ) {
+                    if( !!_envManager ) {
                         _envManager->unregisterObject((*itgeompair).second.get());
                     }
                     (*itgeompair).second.reset();
@@ -109,8 +109,8 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
-          // TODO : What about a dynamic collection of managers containing this link ?
-	  BroadPhaseCollisionManagerPtr _envManager, _bodyManager, _linkManager;
+            // TODO : What about a dynamic collection of managers containing this link ?
+            BroadPhaseCollisionManagerPtr _envManager, _bodyManager, _linkManager;
             std::vector<TransformCollisionPair> vgeoms; // fcl variant of ODE dBodyID
             std::string bodylinkname; // for debugging purposes
         };
@@ -125,14 +125,14 @@ public:
 
         void Reset()
         {
-            if( !!_bodyManager ) {
-                _bodyManager->clear();
-                _bodyManager.reset();
-            }
             FOREACH(itlink, vlinks) {
                 (*itlink)->Reset();
             }
             vlinks.resize(0);
+            if( !!_bodyManager ) {
+                _bodyManager->clear();
+                _bodyManager.reset();
+            }
             _geometrycallback.reset();
             // should-I reinitialize nLastStamp ?
         }
@@ -194,7 +194,7 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
-      EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
+        EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
@@ -211,8 +211,8 @@ public:
 
             pinfo->vlinks.push_back(link);
             link->_linkManager = CreateManager();
-	    link->_bodyManager = pinfo->_bodyManager;
-	    link->_envManager = _manager;
+            link->_bodyManager = pinfo->_bodyManager;
+            link->_envManager = _manager;
             link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
 
 
@@ -235,7 +235,7 @@ public:
                 }
             } else {
                 FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                  if((*itgeom)->GetType() < 0) RAVELOG_WARN(str(boost::format("culprit : %s") % (*itlink)->GetName()));
+                    if((*itgeom)->GetType() < 0) RAVELOG_WARN(str(boost::format("culprit : %s") % (*itlink)->GetName()));
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, (*itgeom)->GetInfo());
                     if( !pfclgeom ) {
                         continue;
@@ -324,9 +324,21 @@ public:
             BOOST_ASSERT( !!pinfo );
             pinfo->_bodyManager = _CreateNewBroadPhaseCollisionManager(pinfo->_bodyManager);
             FOREACH(itlink, pinfo->vlinks) {
-	      (*itlink)->_linkManager = _CreateNewBroadPhaseCollisionManager((*itlink)->_linkManager);
+                (*itlink)->_linkManager = _CreateNewBroadPhaseCollisionManager((*itlink)->_linkManager);
             }
         }
+    }
+
+    struct SpatialHashData {
+        SpatialHashData(fcl::FCL_REAL cellSize, const fcl::Vec3f& sceneMin, const fcl::Vec3f& sceneMax) : _cellSize(cellSize), _sceneMin(sceneMin), _sceneMax(sceneMax) {
+        }
+        fcl::FCL_REAL _cellSize;
+        fcl::Vec3f _sceneMin, _sceneMax;
+    };
+
+    void SetSpatialHashingBroadPhaseAlgorithm(fcl::FCL_REAL cellSize, const fcl::Vec3f& sceneMin, const fcl::Vec3f& sceneMax) {
+        _spatialHashData = boost::make_shared<SpatialHashData>(cellSize, sceneMin, sceneMax);
+        SetBroadphaseAlgorithm("SpatialHashing");
     }
 
     BroadPhaseCollisionManagerPtr _CreateNewBroadPhaseCollisionManager(BroadPhaseCollisionManagerPtr oldmanager) {
@@ -334,7 +346,7 @@ public:
         oldmanager->getObjects(vcollObjects);
         BroadPhaseCollisionManagerPtr manager = _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
         manager->registerObjects(vcollObjects);
-	return manager;
+        return manager;
     }
 
     void RemoveUserData(KinBodyConstPtr pbody)
@@ -578,10 +590,10 @@ private:
             return make_shared<fcl::Sphere>(info._vGeomData.x);
 
         case OpenRAVE::GT_Cylinder:
-	  // TODO double check this
+            // TODO double check this
             return make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
-            // TODO : Is that ok ?
+        // TODO : Is that ok ?
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
         {
@@ -658,7 +670,7 @@ private:
         }
     }
 
-    static BroadPhaseCollisionManagerPtr _CreateManagerFromBroadphaseAlgorithm(std::string const &algorithm)
+    BroadPhaseCollisionManagerPtr _CreateManagerFromBroadphaseAlgorithm(std::string const &algorithm)
     {
         if(algorithm == "Naive") {
             return boost::make_shared<fcl::NaiveCollisionManager>();
@@ -666,9 +678,14 @@ private:
             return boost::make_shared<fcl::SaPCollisionManager>();
         } else if(algorithm == "SSaP") {
             return boost::make_shared<fcl::SSaPCollisionManager>();
-            // It seems that some informations on the scene are necessaries
-            //} else if(algorithm == "SpatialHash") {
-            //return boost::make_shared<fcl::SpatialHashingCollisionManager>();
+        } else if(algorithm == "SpatialHashing") {
+            if( _spatialHashData ) {
+                // TODO : add other HashTables (GoogleDenseHashTable ?)
+                // TODO : change back to make_shared
+                return boost::make_shared< fcl::SpatialHashingCollisionManager< fcl::SparseHashTable<fcl::AABB, fcl::CollisionObject*, fcl::SpatialHash> > >(_spatialHashData->_cellSize, _spatialHashData->_sceneMin, _spatialHashData->_sceneMax);
+            } else {
+                throw OPENRAVE_EXCEPTION_FORMAT0("No spatial data provided, spatial hashing needs to be set up  with SetSpatialHashingBroadPhaseAlgorithm", OpenRAVE::ORE_InvalidArguments);
+            }
         } else if(algorithm == "IntervalTree") {
             return boost::make_shared<fcl::IntervalTreeCollisionManager>();
         } else if(algorithm == "DynamicAABBTree") {
@@ -676,7 +693,7 @@ private:
         } else if(algorithm == "DynamicAABBTree_Array") {
             return boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
         } else {
-	  throw OPENRAVE_EXCEPTION_FORMAT("Unknown broad-phase algorithm '%s'.", algorithm, OpenRAVE::ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("Unknown broad-phase algorithm '%s'.", algorithm, OpenRAVE::ORE_InvalidArguments);
         }
     }
 
@@ -687,6 +704,7 @@ private:
     SynchronizeCallbackFn _synccallback;
 
     std::string _broadPhaseCollisionManagerAlgorithm;
+    boost::shared_ptr<SpatialHashData> _spatialHashData;
     BroadPhaseCollisionManagerPtr _manager;
     MeshFactory _meshFactory;
 
