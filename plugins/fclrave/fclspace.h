@@ -13,6 +13,7 @@ typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
 // Warning : this is the only place where we use std::shared_ptr (compatibility with fcl)
 typedef shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
+typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
 typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
@@ -32,6 +33,10 @@ fcl::Vec3f ConvertVectorToFCL(Vector const &v)
 fcl::Quaternion3f ConvertQuaternionToFCL(Vector const &v)
 {
     return fcl::Quaternion3f(v[0], v[1], v[2], v[3]);
+}
+
+Vector ConvertQuaternionFromFCL(fcl::Quaternion3f const &v) {
+    return Vector(v.getW(), v.getX(), v.getY(), v.getZ());
 }
 
 template <class T>
@@ -574,6 +579,68 @@ private:
 
 
 private:
+
+    static void _bvAddSubmodelFromGeomInfo(fcl::BVHModel<fcl::OBB>& model, KinBody::GeometryInfo const &info) {
+
+        OpenRAVE::TriMesh mesh = info._meshcollision;
+        mesh.ApplyTransform(info._t);
+        if (mesh.vertices.empty() || mesh.indices.empty()) {
+            return;
+        }
+
+        OPENRAVE_ASSERT_OP(mesh.indices.size() % 3, ==, 0);
+        size_t const num_points = mesh.vertices.size();
+        size_t const num_triangles = mesh.indices.size() / 3;
+
+        std::vector<fcl::Vec3f> fcl_points(num_points);
+        for (size_t ipoint = 0; ipoint < num_points; ++ipoint) {
+            Vector v = mesh.vertices[ipoint];
+            fcl_points[ipoint] = fcl::Vec3f(v.x, v.y, v.z);
+        }
+
+        std::vector<fcl::Triangle> fcl_triangles(num_triangles);
+        for (size_t itri = 0; itri < num_triangles; ++itri) {
+            int const *const tri_indices = &mesh.indices[3 * itri];
+            fcl_triangles[itri] = fcl::Triangle(tri_indices[0], tri_indices[1], tri_indices[2]);
+        }
+        model.addSubModel(fcl_points, fcl_triangles);
+    }
+
+    static TransformCollisionPair _CreateTransformCollisionPairFromOBB(fcl::OBB const &bv) {
+        CollisionGeometryPtr pbvGeom = make_shared<fcl::Box>(bv.extent[0]*2.0f, bv.extent[1]*2.0f, bv.extent[2]*2.0f);
+        CollisionObjectPtr pbvColl = boost::make_shared<fcl::CollisionObject>(pbvGeom);
+        fcl::Quaternion3f fclBvRot;
+        fclBvRot.fromAxes(bv.axis);
+        Vector bvRotation = ConvertQuaternionFromFCL(fclBvRot);
+        Vector bvTranslation = ConvertVectorFromFCL(bv.center());
+
+        return TransformCollisionPair(Transform(bvRotation, bvTranslation), pbvColl);
+    }
+
+    static TransformCollisionPair _CreateBV(const LinkConstPtr& plink) {
+        fcl::BVHModel<fcl::OBB> model;
+        model.beginModel();
+        FOREACH(itgeom, plink->GetGeometries()) {
+            (*itgeom)->InitCollisionMesh(0.1f);
+            _bvAddSubmodelFromGeomInfo(model, (*itgeom)->GetInfo());
+        }
+        model.endModel();
+        OPENRAVE_ASSERT_OP( model.getNumBVs(), ==, 0);
+        return _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
+    }
+
+    static TransformCollisionPair _CreateBV(const std::vector<KinBody::GeometryInfoPtr>& geoms) {
+        fcl::BVHModel<fcl::OBB> model;
+        model.beginModel();
+        FOREACH(itgeom, geoms) {
+            (*itgeom)->InitCollisionMesh(0.1f);
+            _bvAddSubmodelFromGeomInfo(model, **itgeom);
+        }
+        model.endModel();
+        OPENRAVE_ASSERT_OP( model.getNumBVs(), ==, 0);
+        return _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
+    }
+
 
     // couldn't we make this static / what about the tests on non-zero size (eg. box extents) ?
     static CollisionGeometryPtr _CreateFCLGeomFromGeometryInfo(const MeshFactory &mesh_factory, const KinBody::GeometryInfo &info)

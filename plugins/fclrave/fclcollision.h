@@ -17,7 +17,7 @@ public:
 
 
     struct CollisionCallbackData {
-      // TODO : merge SetupCollisionQuery with this constructor
+        // TODO : merge SetupCollisionQuery with this constructor
         CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), _bCollision(false)
         {
         }
@@ -274,17 +274,17 @@ public:
         std::set<KinBodyPtr> excludedBodies;
         plink->GetParent()->GetAttached(excludedBodies);
         FOREACH(itbody, vbodyexcluded) {
-          excludedBodies.insert(GetEnv()->GetBodyFromEnvironmentId((*itbody)->GetEnvironmentId()));
+            excludedBodies.insert(GetEnv()->GetBodyFromEnvironmentId((*itbody)->GetEnvironmentId()));
         }
 
         FOREACH(itbody, excludedBodies) {
-          pexclusionManager->Register(*itbody);
+            pexclusionManager->Register(*itbody);
         }
 
         FOREACH(itlink, vlinkexcluded) {
-          if( !excludedBodies.count((*itlink)->GetParent()) ) {
-            pexclusionManager->Register(*itlink);
-          }
+            if( !excludedBodies.count((*itlink)->GetParent()) ) {
+                pexclusionManager->Register(*itlink);
+            }
         }
 
         // No need to retrieve pexclusionManager
@@ -389,32 +389,32 @@ public:
         std::vector< CollisionGroup > vlinkCollisionGroups(pbody->GetLinks().size());
 
         if( _options & OpenRAVE::CO_Distance ) {
-          RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
-          return false; // TODO
+            RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
+            return false; // TODO
         } else {
-          boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
-          pquery->bselfCollision = true;
+            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            pquery->bselfCollision = true;
 
-          FOREACH(itset, nonadjacent) {
-            size_t index1 = *itset&0xffff, index2 = *itset>>16;
-            LinkConstPtr plink1(pbody->GetLinks().at(index1)), plink2(pbody->GetLinks().at(index2));
-            BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
-            if( vlinkCollisionGroups.at(index1).empty() ) {
-              _fclspace->GetLinkManager(pbody, index1)->getObjects(vlinkCollisionGroups[index1]);
-            }
-            if( vlinkCollisionGroups.at(index2).empty() ) {
-              _fclspace->GetLinkManager(pbody, index2)->getObjects(vlinkCollisionGroups[index2]);
-            }
-
-            FOREACH(ito1, vlinkCollisionGroups[index1]) {
-              FOREACH(ito2, vlinkCollisionGroups[index2]) {
-                if( NarrowPhaseCheckCollision(*ito1, *ito2, pquery.get()) ) {
-                  return pquery->_bCollision;
+            FOREACH(itset, nonadjacent) {
+                size_t index1 = *itset&0xffff, index2 = *itset>>16;
+                LinkConstPtr plink1(pbody->GetLinks().at(index1)), plink2(pbody->GetLinks().at(index2));
+                BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
+                if( vlinkCollisionGroups.at(index1).empty() ) {
+                    _fclspace->GetLinkManager(pbody, index1)->getObjects(vlinkCollisionGroups[index1]);
                 }
-              }
+                if( vlinkCollisionGroups.at(index2).empty() ) {
+                    _fclspace->GetLinkManager(pbody, index2)->getObjects(vlinkCollisionGroups[index2]);
+                }
+
+                FOREACH(ito1, vlinkCollisionGroups[index1]) {
+                    FOREACH(ito2, vlinkCollisionGroups[index2]) {
+                        if( NarrowPhaseCheckCollision(*ito1, *ito2, pquery.get()) ) {
+                            return pquery->_bCollision;
+                        }
+                    }
+                }
             }
-          }
-          return false;
+            return false;
         }
 
 //        std::vector<BroadPhaseCollisionManagerPtr> mlinkManagers(pbody->GetLinks().size());
@@ -756,12 +756,12 @@ private:
                 LinkPair linkPair = MakeLinkPair(plink1, plink2);
                 // that's superfluous in the link-link collision... we could check the report's options instead and unset CO_AllLinkCollisions in the link-link case
                 if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                  // We maintain vLinkColliding ordered 
-                  typedef std::vector< std::pair< LinkConstPtr, LinkConstPtr > >::iterator PairIterator;
-                  PairIterator end = pcb->_report->vLinkColliding.end(), first = std::lower_bound(pcb->_report->vLinkColliding.begin(), end, linkPair);
-                  if( first == end || *first != linkPair ) {
-                    pcb->_report->vLinkColliding.insert(first, linkPair);
-                  }
+                    // We maintain vLinkColliding ordered
+                    typedef std::vector< std::pair< LinkConstPtr, LinkConstPtr > >::iterator PairIterator;
+                    PairIterator end = pcb->_report->vLinkColliding.end(), first = std::lower_bound(pcb->_report->vLinkColliding.begin(), end, linkPair);
+                    if( first == end || *first != linkPair ) {
+                        pcb->_report->vLinkColliding.insert(first, linkPair);
+                    }
                 }
 
                 pcb->_bCollision = true;
