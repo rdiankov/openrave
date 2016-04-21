@@ -169,11 +169,11 @@ public:
         {
             vMax.x = fabsf(obb.right.x) * obb.extents.x + fabsf(obb.up.x) * obb.extents.y + fabsf(obb.dir.x) * obb.extents.z;
             vMax.y = fabsf(obb.right.y) * obb.extents.x + fabsf(obb.up.y) * obb.extents.y + fabsf(obb.dir.y) * obb.extents.z;
-            vMax.z = fabsf(obb.right.z) * obb.extents.x + fabsf(obb.up.z) * obb.extents.y + fabsf(obb.dir.z) * obb.extents.z;            
+            vMax.z = fabsf(obb.right.z) * obb.extents.x + fabsf(obb.up.z) * obb.extents.y + fabsf(obb.dir.z) * obb.extents.z;
             vMin = obb.pos - vMax;
             vMax += obb.pos;
         }
-        
+
         VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
             _report.reset(new CollisionReport());
 
@@ -223,11 +223,11 @@ public:
                     _abTarget.extents.z += 0.0001;
                     vboxes.push_back(_abTarget);
                 }
-                
+
                 // compute the AABB of _vTargetOBBs (could be different from _vf->_target->ComputeAABB())
                 //_abTarget = _vf->_target->ComputeAABB();
                 // have to increase its dimensions a little!
-                
+
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
                 _ptargetbox->InitFromBoxes(vboxes,true);
                 _ptargetbox->SetName("__visualfeedbacktest__");
@@ -245,7 +245,7 @@ public:
             _ptargetbox->GetEnv()->Remove(_ptargetbox);
         }
 
-        virtual bool IsVisible()
+        virtual bool IsVisible(bool bcheckocclusion=true)
         {
             Transform ttarget = _vf->_target->GetTransform();
             TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
@@ -253,7 +253,7 @@ public:
                 RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
-            if( IsOccluded(tcamera) ) {
+            if( bcheckocclusion && IsOccluded(tcamera) ) {
                 return false;
             }
             return true;
@@ -550,6 +550,15 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     void Destroy()
     {
+        _robot.reset();
+        _sensorrobot.reset();
+        _target.reset();
+        _psensor.reset();
+        _pmanip.reset();
+        _pcamerageom.reset();
+        _visibilitytransforms.clear();
+        _pconstraintfn.reset();
+        _preport.reset();
         ModuleBase::Destroy();
     }
 
@@ -558,6 +567,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         stringstream ss(args);
         string robotname;
         _fMaxVelMult=1;
+        _pconstraintfn.reset();
         ss >> robotname;
         _bIgnoreSensorCollision = false;
         string cmd;
@@ -1012,12 +1022,17 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     bool ComputeVisibility(ostream& sout, istream& sinput)
     {
+        bool bcheckocclusion = true;
+        sinput >> bcheckocclusion;
+
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        sout << pconstraintfn->IsVisible();
+        if( !_pconstraintfn ) {
+            _pconstraintfn.reset(new VisibilityConstraintFunction(shared_problem()));
+        }
+        sout << _pconstraintfn->IsVisible(bcheckocclusion);
         return true;
     }
 
@@ -1405,6 +1420,8 @@ protected:
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
     CollisionReportPtr _preport;
+
+    boost::shared_ptr<VisibilityConstraintFunction> _pconstraintfn;
 
     vector<Vector> _vconvexplanes;     ///< the planes defining the bounding visibility region (posive is inside)
     Vector _vcenterconvex;     ///< center point on the z=1 plane of the convex region
