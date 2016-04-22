@@ -171,7 +171,7 @@ public:
         // IntervalTree : not working received SIGSEV at line 427 of interval_tree.cpp
         // DynamicAABBTree : initialization working
         // DynamicAABBTree_Array : initialization working
-        SetBroadphaseAlgorithm("DynamicAABBTree");
+        SetBroadphaseAlgorithm("Naive");
     }
 
     virtual ~FCLSpace()
@@ -262,6 +262,7 @@ public:
 
         pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
+        RAVELOG_WARN(str(boost::format("FCL User data added in env %d : %s") % _penv->GetId() % pbody->GetName()));
 
         // make sure that synchronization do occur !
         pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
@@ -357,6 +358,7 @@ public:
     void RemoveUserData(KinBodyConstPtr pbody)
     {
         if( !!pbody ) {
+          RAVELOG_WARN(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
@@ -451,14 +453,18 @@ public:
 
             CollisionGroup tmpGroup;
             pinfo->_bodyManager->getObjects(tmpGroup);
-            _manager->registerObjects(tmpGroup);
+            if( pbody->IsEnabled() ) {
+              _manager->registerObjects(tmpGroup);
+            }
             UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
         }
 
         void Register(LinkConstPtr plink) {
             CollisionGroup tmpGroup;
             _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
-            _manager->registerObjects(tmpGroup);
+            if( plink->IsEnabled() ) {
+              _manager->registerObjects(tmpGroup);
+            }
             UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
         }
 
@@ -478,6 +484,9 @@ public:
         }
 
         void Register(KinBodyConstPtr pbody) {
+          if( !pbody->IsEnabled()) {
+            return;
+          }
             KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
             BOOST_ASSERT( pinfo->GetBody() == pbody );
 
@@ -487,6 +496,9 @@ public:
         }
 
         void Register(LinkConstPtr plink) {
+          if( !plink->IsEnabled() ) {
+            return;
+          }
             CollisionGroup tmpGroup;
             _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
             _manager->registerObjects(tmpGroup);
@@ -542,6 +554,7 @@ private:
     }
 
     BroadPhaseCollisionManagerPtr GetKinBodyManager(KinBodyConstPtr pbody) {
+      BOOST_ASSERT( _setInitializedBodies.count(pbody) );
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         return pinfo->_bodyManager;
     }

@@ -55,6 +55,26 @@ public:
     }
 
     // TODO : What about Clone ?
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        CollisionCheckerBase::Clone(preference, cloningoptions);
+        boost::shared_ptr<FCLCollisionChecker const> r = boost::dynamic_pointer_cast<FCLCollisionChecker const>(preference);
+        _fclspace->SetGeometryGroup(r->GetGeometryGroup());
+        _options = r->_options;
+        _numMaxContacts = r->_numMaxContacts;
+        RAVELOG_WARN(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
+    }
+
+    void SetGeometryGroup(const std::string& groupname)
+    {
+        _fclspace->SetGeometryGroup(groupname);
+    }
+
+    const std::string& GetGeometryGroup() const
+    {
+        return _fclspace->GetGeometryGroup();
+    }
+
 
     virtual bool SetCollisionOptions(int collision_options)
     {
@@ -104,6 +124,7 @@ public:
 
     virtual bool InitEnvironment()
     {
+        RAVELOG_WARN(str(boost::format("FCL User data initializing env %d") % GetEnv()->GetId()));
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
@@ -222,6 +243,7 @@ public:
 
     virtual bool CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report = CollisionReportPtr())
     {
+        OPENRAVE_ASSERT_OP(pbody->GetEnvironmentId(),!=,0);
         if( !plink->IsEnabled() ) {
             return false;
         }
@@ -518,18 +540,6 @@ public:
         }
     }
 
-    void SetGeometryGroup(const std::string& groupname)
-    {
-        _fclspace->SetGeometryGroup(groupname);
-    }
-
-    const std::string& GetGeometryGroup() const
-    {
-        return _fclspace->GetGeometryGroup();
-    }
-
-
-
 private:
     inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
         return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
@@ -701,8 +711,11 @@ private:
         //if(pcb->disabledPairs.count(linkPair)) {
         //    return false;
         //}
+        if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
+          return false;
+        }
 
-        // Proceed to the next if the links are attached and not enabled
+        // Proceed to the next if the links are attached and we are not self colliding
         if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
             //    && !pcb->selfEnabledPairs.count(linkPair) ) {
             return false;
