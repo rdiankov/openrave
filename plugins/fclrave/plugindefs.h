@@ -55,6 +55,9 @@
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/iterator/transform_iterator.hpp>
+#include <boost/range/concepts.hpp>
+#include <boost/range/detail/any_iterator.hpp>
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_oderave", msgid)
 

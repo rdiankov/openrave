@@ -224,87 +224,71 @@ public:
             link->_envManager = _manager;
             link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
 
+            typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
+            GeometryInfoIterator begingeom, endgeom;
 
+
+            // Glue code for a unified access to geometries
             if(_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(_geometrygroup) >= 0) {
                 const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(_geometrygroup);
-
-                if( vgeometryinfos.size() == 1 ) {
-                    KinBody::GeometryInfo info = *vgeometryinfos[0];
-                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, info);
-                    if( !pfclgeom ) {
-                        continue;
-                    }
-
-                    // We do not set the transformation here and leave it to _Synchronize
-                    CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
-                    pfclcoll->setUserData(link.get());
-
-                    link->plinkBV = boost::make_shared<TransformCollisionPair>(info->_t, pfclcoll);
-                    // Do I really want to register that ?
-                    link->_linkManager->registerObject(pfclcoll.get());
-                    pinfo->_bodyManager->registerObject(pfclcoll.get());
-                    _manager->Register(pfclcoll.get());
-
-                } else {
-                    FOREACHC(itgeominfo, vgeometryinfos) {
-                        const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, **itgeominfo);
-                        if( !pfclgeom ) {
-                            continue;
-                        }
-
-                        // We do not set the transformation here and leave it to _Synchronize
-                        CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
-                        pfclcoll->setUserData(link.get());
-
-                        link->vgeoms.push_back(TransformCollisionPair((*itgeominfo)->_t, pfclcoll));
-                        link->_linkManager->registerObject(pfclcoll.get());
-                        pinfo->_bodyManager->registerObject(pfclcoll.get());
-                    }
-
-                    link->plinkBV = _CreateBV(vgeometryinfos);
-                    _manager->registerObject(link->plinkBV.get());
-                }
-            } else {
-                std::vector<Geometry> const &geoms = (*itlink)->GetGeometries();
-
-
-                if( geoms.size() == 1 ) {
-                    KinBody::GeometryInfo info = geoms[0]->GetInfo();
-                    const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, info);
-                    if( !pfclgeom ) {
-                        continue;
-                    }
-
-                    // We do not set the transformation here and leave it to _Synchronize
-                    CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
-                    pfclcoll->setUserData(link.get());
-
-                    link->plinkBV = boost::make_shared<TransformCollisionPair>(info->_t, pfclcoll);
-                    // Do I really want to register that ?
-                    link->_linkManager->registerObject(pfclcoll.get());
-                    pinfo->_bodyManager->registerObject(pfclcoll.get());
-                    _manager->Register(pfclcoll.get());
-
-                } else {
-                    FOREACHC(itgeom, geoms) {
-                        const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, (*itgeom)->GetInfo());
-                        if( !pfclgeom ) {
-                            continue;
-                        }
-
-                        // We do not set the transformation here and leave it to _Synchronize
-                        CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
-                        pfclcoll->setUserData(link.get());
-
-                        link->vgeoms.push_back(TransformCollisionPair((*itgeom)->GetInfo()->_t, pfclcoll));
-                        link->_linkManager->registerObject(pfclcoll.get());
-                        pinfo->_bodyManager->registerObject(pfclcoll.get());
-                    }
-
-                    link->plinkBV = _CreateBV(geoms);
-                    _manager->registerObject(link->plinkBV.get());
-                }
+                typedef boost::function<KinBody::GeometryInfo const& (KinBody::GeometryInfoPtr const&)> Func;
+                typedef boost::transform_iterator<Func, std::vector<KinBody::GeometryInfoPtr>::const_iterator> PtrGeomInfoIterator;
+                Func deref = boost::mem_fn(&KinBody::GeometryInfoPtr::operator*);
+                begingeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.begin(), deref));
+                endgeom = GeometryInfoIterator(PtrGeomInfoIterator(vgeometryinfos.end(), deref));
             }
+            else {
+                std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
+                typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
+                typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& { return itgeom->GetInfo(); };
+                begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
+                endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
+            }
+
+            for(GeometryInfoIterator itgeominfo = begingeom; itgeominfo != endgeom; ++itgeominfo) {
+                const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, *itgeominfo);
+
+                if( !pfclgeom ) {
+                    continue;
+                }
+
+                // We do not set the transformation here and leave it to _Synchronize
+                CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
+                pfclcoll->setUserData(link.get());
+
+                link->vgeoms.push_back(TransformCollisionPair(itgeominfo->_t, pfclcoll));
+                link->_linkManager->registerObject(pfclcoll.get());
+            }
+
+            if( link->vgeoms.size() == 0 ) {
+                continue;
+            }
+
+            if( link->vgeoms.size() == 1) {
+                // set the unique geometry as its own bounding volume
+                link->plinkBV = boost::make_shared<TransformCollisionPair>(link->vgeoms[0]);
+                link->vgeoms.resize(0);
+            } else {
+                // create the bounding volume for the link
+                fcl::BVHModel<fcl::OBB> model;
+                model.beginModel();
+                // This could be costly
+                FOREACH(itgeom, (*itlink)->GetGeometries()) {
+                  (*itgeom)->InitCollisionMesh(0.1f);
+                }
+                for(GeometryInfoIterator it = begingeom; it != endgeom; ++it) {
+                    _bvAddSubmodelFromGeomInfo(model, *it);
+                }
+                model.endModel();
+                OPENRAVE_ASSERT_OP( model.getNumBVs(), !=, 0);
+                link->plinkBV = _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
+            }
+
+            // set the bounding volume as the collision geometry for the body and the environment
+            pinfo->_bodyManager->registerObject(link->plinkBV->second.get());
+            _manager->registerObject(link->plinkBV->second.get());
+
         }
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
@@ -665,31 +649,6 @@ private:
 
         return boost::make_shared<TransformCollisionPair>(Transform(bvRotation, bvTranslation), pbvColl);
     }
-
-    static boost::shared_ptr<TransformCollisionPair> _CreateBV(const LinkConstPtr& plink) {
-        fcl::BVHModel<fcl::OBB> model;
-        model.beginModel();
-        FOREACH(itgeom, plink->GetGeometries()) {
-            (*itgeom)->InitCollisionMesh(0.1f);
-            _bvAddSubmodelFromGeomInfo(model, (*itgeom)->GetInfo());
-        }
-        model.endModel();
-        OPENRAVE_ASSERT_OP( model.getNumBVs(), ==, 0);
-        return _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
-    }
-
-    static boost::shared_ptr<TransformCollisionPair> _CreateBV(const std::vector<KinBody::GeometryInfoPtr>& geoms) {
-        fcl::BVHModel<fcl::OBB> model;
-        model.beginModel();
-        FOREACH(itgeom, geoms) {
-            (*itgeom)->InitCollisionMesh(0.1f);
-            _bvAddSubmodelFromGeomInfo(model, **itgeom);
-        }
-        model.endModel();
-        OPENRAVE_ASSERT_OP( model.getNumBVs(), ==, 0);
-        return _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
-    }
-
 
     // couldn't we make this static / what about the tests on non-zero size (eg. box extents) ?
     static CollisionGeometryPtr _CreateFCLGeomFromGeometryInfo(const MeshFactory &mesh_factory, const KinBody::GeometryInfo &info)
