@@ -62,7 +62,7 @@ public:
         _fclspace->SetGeometryGroup(r->GetGeometryGroup());
         _options = r->_options;
         _numMaxContacts = r->_numMaxContacts;
-        RAVELOG_WARN(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
+        RAVELOG_VERBOSE(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
     }
 
     void SetGeometryGroup(const std::string& groupname)
@@ -124,7 +124,7 @@ public:
 
     virtual bool InitEnvironment()
     {
-        RAVELOG_WARN(str(boost::format("FCL User data initializing env %d") % GetEnv()->GetId()));
+        RAVELOG_VERBOSE(str(boost::format("FCL User data initializing env %d") % GetEnv()->GetId()));
         bisSelfCollisionChecker = false;
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -702,11 +702,12 @@ private:
 
     bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
-        static CollisionReport tmpReport;
+        CollisionReport tmpReport;
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
-        BOOST_ASSERT( !!plink1 );
-        BOOST_ASSERT( !!plink2 );
+        if( !plink1 || !plink2 ) {
+          return false;
+        }
 
         // Proceed to the next if the pair is disable
         //if(pcb->disabledPairs.count(linkPair)) {
@@ -752,6 +753,8 @@ private:
                     OpenRAVE::CollisionAction action = OpenRAVE::CA_DefaultAction;
                     CollisionReportPtr preport(&tmpReport, OpenRAVE::utils::null_deleter());
                     FOREACH(callback, pcb->listcallbacks) {
+                      BOOST_ASSERT( !!plink1 );
+                      BOOST_ASSERT( !!plink2 );
                         action = (*callback)(preport, false);
                         if( action == OpenRAVE::CA_Ignore ) {
                             return false;
@@ -808,7 +811,11 @@ private:
     {
         FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>(collObj.getUserData());
         if( link_raw != NULL ) {
-            return link_raw->GetLink();
+          LinkConstPtr plink = link_raw->GetLink();
+          if( !plink ) {
+            RAVELOG_WARN(str(boost::format("The link %s was lost from fclspace")%link_raw->bodylinkname));
+          }
+            return plink;
         }
         RAVELOG_WARN("fcl collision object does not have a link attached");
         return LinkConstPtr();

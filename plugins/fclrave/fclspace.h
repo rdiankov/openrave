@@ -240,7 +240,6 @@ public:
                 }
             } else {
                 FOREACHC(itgeom, (*itlink)->GetGeometries()) {
-                    if((*itgeom)->GetType() < 0) RAVELOG_WARN(str(boost::format("culprit : %s") % (*itlink)->GetName()));
                     const CollisionGeometryPtr pfclgeom = _CreateFCLGeomFromGeometryInfo(_meshFactory, (*itgeom)->GetInfo());
                     if( !pfclgeom ) {
                         continue;
@@ -262,7 +261,7 @@ public:
 
         pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
-        RAVELOG_WARN(str(boost::format("FCL User data added in env %d : %s") % _penv->GetId() % pbody->GetName()));
+        RAVELOG_VERBOSE(str(boost::format("FCL User data added in env %d : %s") % _penv->GetId() % pbody->GetName()));
 
         // make sure that synchronization do occur !
         pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
@@ -358,7 +357,7 @@ public:
     void RemoveUserData(KinBodyConstPtr pbody)
     {
         if( !!pbody ) {
-          RAVELOG_WARN(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
+          RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
@@ -556,7 +555,12 @@ private:
     BroadPhaseCollisionManagerPtr GetKinBodyManager(KinBodyConstPtr pbody) {
       BOOST_ASSERT( _setInitializedBodies.count(pbody) );
         KinBodyInfoPtr pinfo = GetInfo(pbody);
-        return pinfo->_bodyManager;
+        if( !!pinfo ) {
+          return pinfo->_bodyManager;
+        } else {
+          //RAVELOG_WARN(str(boost::format("Link %d of KinBody %s not initialized in collision checker %s, env %d")%index%pbody->GetName()%_userdatakey%_penv->GetId()));
+          return BroadPhaseCollisionManagerPtr();
+        }
     }
 
     BroadPhaseCollisionManagerPtr GetLinkManager(LinkConstPtr plink) {
@@ -568,6 +572,7 @@ private:
         if( !!pinfo ) {
             return pinfo->vlinks[index]->_linkManager;
         } else {
+          //RAVELOG_WARN(str(boost::format("Link %d of KinBody %s not initialized in collision checker %s, env %d")%index%pbody->GetName()%_userdatakey%_penv->GetId()));
             return BroadPhaseCollisionManagerPtr();
         }
     }
