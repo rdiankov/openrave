@@ -1468,6 +1468,11 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         }
     }
 
+    // double check since collision checkers might not support this case
+    if( pbody->HasAttached() ) {
+        RAVELOG_WARN_FORMAT("robot %s trying to grab body %s with %d attached bodies", GetName()%pbody->GetName()%pbody->HasAttached());
+    }
+
     Transform t = plink->GetTransform();
     Transform tbody = pbody->GetTransform();
     // new body velocity is measured from robot link

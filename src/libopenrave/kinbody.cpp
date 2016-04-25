@@ -3208,6 +3208,10 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         _selfcollisionchecker = collisionchecker;
         // reset the internal cache
         _ResetInternalCollisionCache();
+        if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+            // collision checking will not be automatically updated with environment calls, so need to do this manually
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
     }
 }
 
@@ -4142,6 +4146,11 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
     }
 }
 
+bool KinBody::HasAttached() const
+{
+    return _listAttachedBodies.size() > 0;
+}
+
 bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>&setChecked) const
 {
     if( !setChecked.insert(shared_kinbody_const()).second ) {
@@ -4160,6 +4169,10 @@ void KinBody::_AttachBody(KinBodyPtr pbody)
 {
     _listAttachedBodies.push_back(pbody);
     pbody->_listAttachedBodies.push_back(shared_kinbody());
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+        // collision checking will not be automatically updated with environment calls, so need to do this manually
+        _selfcollisionchecker->InitKinBody(pbody);
+    }
 }
 
 bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
@@ -4181,6 +4194,8 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
             break;
         }
     }
+
+    // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
 
     return numremoved==2;
 }

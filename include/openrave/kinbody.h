@@ -1937,6 +1937,9 @@ private:
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
 
+    /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
+    virtual bool HasAttached() const;
+
     /// \brief Return true if this body is derived from RobotBase.
     virtual bool IsRobot() const {
         return false;
