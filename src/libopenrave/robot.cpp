@@ -1505,6 +1505,10 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     FOREACHC(itlink, vattachedlinks) {
         setRobotLinksToIgnore.insert((*itlink)->GetIndex());
     }
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+      // collision checking will not be automatically updated with environment calls, so need to do this manually
+      _selfcollisionchecker->InitKinBody(pbody);
+    }
     pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
     pbody->SetVelocity(velocity.first, velocity.second);
     _vGrabbedBodies.push_back(pgrabbed);
@@ -1515,6 +1519,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     }
     catch(...) {
         BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
         _vGrabbedBodies.pop_back();
         throw;
     }
@@ -1547,7 +1552,13 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     Transform t = pRobotLinkToGrabWith->GetTransform();
     Transform tbody = pbody->GetTransform();
     pgrabbed->_troot = t.inverse() * tbody;
+
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+      // collision checking will not be automatically updated with environment calls, so need to do this manually
+      _selfcollisionchecker->InitKinBody(pbody);
+    }
     pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
+
     // set velocity
     std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
@@ -1559,6 +1570,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     }
     catch(...) {
         BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
         _vGrabbedBodies.pop_back();
         throw;
     }
@@ -1686,6 +1698,10 @@ void RobotBase::ResetGrabbed(const std::vector<RobotBase::GrabbedInfoConstPtr>& 
 
             GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
             pgrabbed->_troot = pgrabbedinfo->_trelative;
+            if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+              // collision checking will not be automatically updated with environment calls, so need to do this manually
+              _selfcollisionchecker->InitKinBody(pbody);
+            }
             pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
             Transform tlink = pRobotLinkToGrabWith->GetTransform();
             Transform tbody = tlink * pgrabbed->_troot;

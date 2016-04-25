@@ -35,7 +35,7 @@ public:
     };
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv)
-        : OpenRAVE::CollisionCheckerBase(penv)
+      : OpenRAVE::CollisionCheckerBase(penv), bisSelfCollisionChecker(true)
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
         _fclspace.reset(new FCLSpace(penv, _userdatakey));
@@ -125,6 +125,7 @@ public:
     virtual bool InitEnvironment()
     {
         RAVELOG_WARN(str(boost::format("FCL User data initializing env %d") % GetEnv()->GetId()));
+        bisSelfCollisionChecker = false;
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
@@ -819,6 +820,7 @@ private:
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
     std::string _userdatakey;
+    bool bisSelfCollisionChecker;
 };
 
 

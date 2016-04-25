@@ -4169,10 +4169,6 @@ void KinBody::_AttachBody(KinBodyPtr pbody)
 {
     _listAttachedBodies.push_back(pbody);
     pbody->_listAttachedBodies.push_back(shared_kinbody());
-    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
-        // collision checking will not be automatically updated with environment calls, so need to do this manually
-        _selfcollisionchecker->InitKinBody(pbody);
-    }
 }
 
 bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
@@ -4194,8 +4190,6 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
             break;
         }
     }
-
-    // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
 
     return numremoved==2;
 }
