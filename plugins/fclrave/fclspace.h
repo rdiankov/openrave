@@ -92,22 +92,20 @@ public:
             }
 
             void Reset() {
-                if( !!plinkBV ) {
-                    plinkBV.reset();
-                }
-                if( !!_linkManager ) {
-                    _linkManager->clear();
-                    _linkManager.reset();
-                }
-                FOREACH(itgeompair, vgeoms) {
-                    if( !!_bodyManager ) {
-                        _bodyManager->unregisterObject((*itgeompair).second.get());
-                    }
-                    if( !!_envManager ) {
-                        _envManager->unregisterObject((*itgeompair).second.get());
-                    }
-                    (*itgeompair).second.reset();
-                }
+              if( !!_linkManager ) {
+                _linkManager->clear();
+                _linkManager.reset();
+              }
+
+              if( !!plinkBV ) {
+                _bodyManager->unregisterObject(plinkBV->second.get());
+                _envManager->unregisterObject(plinkBV->second.get());
+                plinkBV.reset();
+              }
+
+              FOREACH(itgeompair, vgeoms) {
+                (*itgeompair).second.reset();
+              }
                 vgeoms.resize(0);
             }
 
@@ -134,6 +132,7 @@ public:
 
         void Reset()
         {
+          // The LINKs must be reset before so that we don't unregister a CollisionObject which has already been erased in the _bodyManager by the clear method
             FOREACH(itlink, vlinks) {
                 (*itlink)->Reset();
             }
@@ -185,8 +184,7 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE("destroying ode collision environment\n");
-        _manager->clear();
+        RAVELOG_VERBOSE("destroying fcl collision environment\n");
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {
@@ -197,6 +195,7 @@ public:
                 RAVELOG_WARN("inconsistency detected with fclspace user data\n");
             }
         }
+        _manager->clear();
         _setInitializedBodies.clear();
     }
 
@@ -283,6 +282,7 @@ public:
                 model.endModel();
                 OPENRAVE_ASSERT_OP( model.getNumBVs(), !=, 0);
                 link->plinkBV = _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
+                link->plinkBV->second->setUserData(link.get());
             }
 
             // set the bounding volume as the collision geometry for the body and the environment
@@ -489,10 +489,9 @@ public:
         }
 
         void Register(LinkConstPtr plink) {
-            CollisionGroup tmpGroup;
-            _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
-            _manager->registerObjects(tmpGroup);
-            UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
+          CollisionObjectPtr pcoll = _pfclspace->GetLinkBV(plink);
+          _manager->registerObject(pcoll.get());
+          _pfclspace->GetEnvManager()->registerObject(pcoll.get());
         }
 
         BroadPhaseCollisionManagerPtr GetManager() {
@@ -520,9 +519,7 @@ public:
         }
 
         void Register(LinkConstPtr plink) {
-            CollisionGroup tmpGroup;
-            _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
-            _manager->registerObjects(tmpGroup);
+          _manager->registerObject(_pfclspace->GetLinkBV(plink).get());
         }
 
         BroadPhaseCollisionManagerPtr GetManager() {
@@ -554,10 +551,7 @@ private:
         }
 
         void Register(LinkConstPtr plink) {
-            CollisionGroup tmpGroup;
-            _pfclspace->GetLinkManager(plink)->getObjects(tmpGroup);
-            copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(vexcluded));
-            UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
+          _pfclspace->GetEnvManager()->unregisterObject(_pfclspace->GetLinkBV(plink).get());
         }
 
         BroadPhaseCollisionManagerPtr GetManager() {
@@ -570,6 +564,12 @@ private:
 
     typedef boost::shared_ptr<TemporaryManager> TemporaryManagerPtr;
 
+
+    bool HasMultipleGeometries(LinkConstPtr plink) {
+      KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
+      return !pinfo->vlinks[plink->GetIndex()]->vgeoms.empty();
+    }
+
     BroadPhaseCollisionManagerPtr GetEnvManager() const {
         return _manager;
     }
@@ -577,6 +577,20 @@ private:
     BroadPhaseCollisionManagerPtr GetKinBodyManager(KinBodyConstPtr pbody) {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         return pinfo->_bodyManager;
+    }
+
+    CollisionObjectPtr GetLinkBV(LinkConstPtr plink) {
+      return GetLinkBV(plink->GetParent(), plink->GetIndex());
+    }
+
+    CollisionObjectPtr GetLinkBV(KinBodyConstPtr pbody, int index) {
+      KinBodyInfoPtr pinfo = GetInfo(pbody);
+      if( !!pinfo ) {
+        return pinfo->vlinks.at(index)->plinkBV->second;
+      } else {
+        RAVELOG_WARN(str(boost::format("KinBody %s is not initialized in fclspace %s, env %d")%pbody->GetName()%_userdatakey%_penv->GetId()));
+        return CollisionObjectPtr();
+      }
     }
 
     BroadPhaseCollisionManagerPtr GetLinkManager(LinkConstPtr plink) {
@@ -713,18 +727,32 @@ private:
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
                 FOREACHC(itgeomcoll, pinfo->vlinks[i]->vgeoms) {
-                    CollisionObjectPtr collObj = (*itgeomcoll).second;
+                    CollisionObjectPtr pcoll = (*itgeomcoll).second;
                     Transform pose = vtrans[i] * (*itgeomcoll).first;
                     fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                     fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-                    collObj->setTranslation(newPosition);
-                    collObj->setQuatRotation(newOrientation);
-                    collObj->computeAABB();
+                    pcoll->setTranslation(newPosition);
+                    pcoll->setQuatRotation(newOrientation);
+                    // Why do we compute the AABB ?
+                    pcoll->computeAABB();
 
-                    pinfo->vlinks[i]->_linkManager->update(collObj.get());
-                    pinfo->_bodyManager->update(collObj.get());
-                    _manager->update(collObj.get());
+                    pinfo->vlinks[i]->_linkManager->update(pcoll.get());
+                }
+
+                if( !!pinfo->vlinks[i]->plinkBV ) {
+                  CollisionObjectPtr pcoll = pinfo->vlinks[i]->plinkBV->second;
+                  Transform pose = vtrans[i] * pinfo->vlinks[i]->plinkBV->first;
+                  fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+                  fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+
+                  pcoll->setTranslation(newPosition);
+                  pcoll->setQuatRotation(newOrientation);
+                  // Why do we compute the AABB ?
+                  pcoll->computeAABB();
+
+                  pinfo->_bodyManager->update(pcoll.get());
+                  _manager->update(pcoll.get());
                 }
             }
 

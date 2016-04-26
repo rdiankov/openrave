@@ -18,7 +18,7 @@ public:
 
     struct CollisionCallbackData {
         // TODO : merge SetupCollisionQuery with this constructor
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), _bCollision(false)
+    CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), bstop(false), _bCollision(false)
         {
         }
 
@@ -30,7 +30,7 @@ public:
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         bool bselfCollision;
-
+      bool bstop;
         bool _bCollision;
     };
 
@@ -198,12 +198,10 @@ public:
         }
 
         // why do we synchronize everything ?
-        _fclspace->Synchronize();
+        _fclspace->Synchronize(plink1->GetParent());
+        _fclspace->Synchronize(plink2->GetParent());
 
-        BroadPhaseCollisionManagerPtr link1Manager = _fclspace->GetLinkManager(plink1), link2Manager = _fclspace->GetLinkManager(plink2);
-
-        link1Manager->setup();
-        link2Manager->setup();
+        CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -215,7 +213,7 @@ public:
             //          link2Manager->getObjects(objs2);
 
             //          RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
-            link1Manager->collide(link2Manager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
+            NarrowPhaseCheckCollision(pcollLink1.get(), pcollLink2.get(), pquery.get());
             return pquery->_bCollision;
         }
     }
@@ -236,12 +234,12 @@ public:
 
 
         // Do we really need to synchronize everything ?
-        _fclspace->Synchronize();
+        _fclspace->Synchronize(plink->GetParent());
+        _fclspace->Synchronize(pbody);
 
         // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-        BroadPhaseCollisionManagerPtr linkManager = _fclspace->GetLinkManager(plink), bodyManager = _fclspace->GetKinBodyManager(pbody);
-
-        linkManager->setup();
+        CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
+        BroadPhaseCollisionManagerPtr bodyManager = _fclspace->GetKinBodyManager(pbody);
         bodyManager->setup();
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -254,7 +252,7 @@ public:
             //          bodyManager->getObjects(objs2);
 
             //          RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
-            linkManager->collide(bodyManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
+            bodyManager->collide(pcollLink.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
     }
@@ -268,8 +266,7 @@ public:
 
         _fclspace->Synchronize();
 
-        TemporaryManagerPtr plinkManager = _fclspace->CreateTemporaryManager(), pexclusionManager = _fclspace->CreateExclusionManager();
-        plinkManager->Register(plink);
+        TemporaryManagerPtr pexclusionManager = _fclspace->CreateExclusionManager();
 
         std::set<KinBodyPtr> excludedBodies;
         plink->GetParent()->GetAttached(excludedBodies);
@@ -288,13 +285,10 @@ public:
         }
 
         // No need to retrieve pexclusionManager
-        BroadPhaseCollisionManagerPtr linkManager = plinkManager->GetManager(), envManager = _fclspace->GetEnvManager();
+        CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
+        BroadPhaseCollisionManagerPtr envManager = _fclspace->GetEnvManager();
 
-        linkManager->setup();
         envManager->setup();
-
-
-
 
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
@@ -305,7 +299,7 @@ public:
             //          envManager->getObjects(objs2);
 
             //          RAVELOG_VERBOSE(str(boost::format("Manager1 : %d, Manager2 : %d") % objs1.size()% objs2.size()));
-            linkManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
+            envManager->collide(pcollLink.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
         }
     }
@@ -408,7 +402,8 @@ public:
 
                 FOREACH(ito1, vlinkCollisionGroups[index1]) {
                     FOREACH(ito2, vlinkCollisionGroups[index2]) {
-                        if( NarrowPhaseCheckCollision(*ito1, *ito2, pquery.get()) ) {
+                      // TODO : consider using the link BV
+                        if( NarrowPhaseCheckGeomCollision(*ito1, *ito2, pquery.get()) ) {
                             return pquery->_bCollision;
                         }
                     }
@@ -513,7 +508,8 @@ public:
         } else {
             boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
             pquery->bselfCollision = true;
-            linkManager->collide(bodyManager.get(), pquery.get(), &NarrowPhaseCheckCollision);
+            // TODO : consider using the link BV
+            linkManager->collide(bodyManager.get(), pquery.get(), &NarrowPhaseCheckGeomCollision);
             return pquery->_bCollision;
         }
     }
@@ -682,14 +678,53 @@ private:
         }
     }
 
-
-    // Should-I follow the example of oderave and make this a method ?
     static bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
-        CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
-        return pcb->_pchecker->NarrowPhaseCheckCollision(o1, o2, pcb);
+      CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
+      return pcb->_pchecker->NarrowPhaseCheckCollision(o1, o2, pcb);
     }
 
-    bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
+    bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb) {
+      LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
+
+      if( !plink1 || !plink2 ) {
+        return false;
+      }
+
+      // Proceed to the next if the links are attached and not enabled
+      if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
+        return false;
+      }
+
+      if( _fclspace->HasMultipleGeometries(plink1) ) {
+        if( _fclspace->HasMultipleGeometries(plink2) ) {
+          BroadPhaseCollisionManagerPtr plink1Manager = _fclspace->GetLinkManager(plink1), plink2Manager = _fclspace->GetLinkManager(plink2);
+          plink1Manager->setup();
+          plink2Manager->setup();
+          plink1Manager->collide(plink2Manager.get(), pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+        } else {
+          BroadPhaseCollisionManagerPtr plink1Manager = _fclspace->GetLinkManager(plink1);
+          plink1Manager->setup();
+          plink1Manager->collide(o2, pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+        }
+      } else {
+        if( _fclspace->HasMultipleGeometries(plink2) ) {
+          BroadPhaseCollisionManagerPtr plink2Manager = _fclspace->GetLinkManager(plink2);
+          plink2Manager->setup();
+          plink2Manager->collide(o1, pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+        } else {
+          NarrowPhaseCheckGeomCollision(o1, o2, pcb);
+        }
+      }
+
+      return pcb->bstop;
+    }
+
+    static bool NarrowPhaseCheckGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
+        CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
+        return pcb->_pchecker->NarrowPhaseCheckGeomCollision(o1, o2, pcb);
+    }
+
+    bool NarrowPhaseCheckGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
         static CollisionReport tmpReport;
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
@@ -697,14 +732,9 @@ private:
         BOOST_ASSERT( !!plink1 );
         BOOST_ASSERT( !!plink2 );
 
-        // Proceed to the next if the pair is disable
-        //if(pcb->disabledPairs.count(linkPair)) {
-        //    return false;
-        //}
 
         // Proceed to the next if the links are attached and not enabled
         if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
-            //    && !pcb->selfEnabledPairs.count(linkPair) ) {
             return false;
         }
 
@@ -754,7 +784,6 @@ private:
                 // pcb->_report->contacts.swap(_report.contacts); // would be faster but seems just wrong...
 
                 LinkPair linkPair = MakeLinkPair(plink1, plink2);
-                // that's superfluous in the link-link collision... we could check the report's options instead and unset CO_AllLinkCollisions in the link-link case
                 if( _options & OpenRAVE::CO_AllLinkCollisions ) {
                     // We maintain vLinkColliding ordered
                     typedef std::vector< std::pair< LinkConstPtr, LinkConstPtr > >::iterator PairIterator;
@@ -765,11 +794,13 @@ private:
                 }
 
                 pcb->_bCollision = true;
-                return !((bool)(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))); // stop checking collision
+                pcb->bstop = !((bool)(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))); // stop checking collision
+                return pcb->bstop;
             }
 
             pcb->_bCollision = true;
-            return true; // since the report is NULL, there is no reason to continue
+            pcb->bstop = true; // since the report is NULL, there is no reason to continue
+            return pcb->bstop;
         }
 
         return false; // keep checking collision
