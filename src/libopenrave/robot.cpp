@@ -1290,7 +1290,7 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
         std::vector<dReal> vjacobianjoints;
         ComputeJacobianAxisAngle(index, vjacobianjoints, _vActiveDOFIndices);
         for(size_t i = 0; i < 3; ++i) {
-            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobianjoints.begin()+i*dofstride);
+            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobian.begin()+i*dofstride);
         }
     }
 
