@@ -381,6 +381,8 @@ public:
             pinfo->_bodyManager = _CreateNewBroadPhaseCollisionManager(pinfo->_bodyManager);
             FOREACH(itlink, pinfo->vlinks) {
                 (*itlink)->_linkManager = _CreateNewBroadPhaseCollisionManager((*itlink)->_linkManager);
+                (*itlink)->_bodyManager = pinfo->_bodyManager;
+                (*itlink)->_envManager = _manager;
             }
         }
     }

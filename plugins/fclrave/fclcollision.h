@@ -48,9 +48,11 @@ public:
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
         // TODO : check that the coordinate are in the right order
         RegisterCommand("SetSpatialHashingBroadPhaseAlgorithm", boost::bind(&FCLCollisionChecker::SetSpatialHashingBroadPhaseAlgorithm, this, _1, _2), "sets the broadphase algorithm to spatial hashing with (cell size) (scene min x) (scene min y) (scene min z) (scene max x) (scene max y) (scene max z)");
+        RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
     }
 
     virtual ~FCLCollisionChecker() {
+        RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s destroyed in env %d", _userdatakey%GetEnv()->GetId());
         DestroyEnvironment();
     }
 
@@ -143,7 +145,7 @@ public:
 
     virtual bool InitEnvironment()
     {
-        RAVELOG_VERBOSE(str(boost::format("FCL User data initializing env %d") % GetEnv()->GetId()));
+        RAVELOG_VERBOSE(str(boost::format("FCL User data initializing %s in env %d") % _userdatakey % GetEnv()->GetId()));
         bisSelfCollisionChecker = false;
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -155,6 +157,7 @@ public:
 
     virtual void DestroyEnvironment()
     {
+        RAVELOG_VERBOSE(str(boost::format("FCL User data destroying %s in env %d") % _userdatakey % GetEnv()->GetId()));
         _fclspace->DestroyEnvironment();
     }
 
