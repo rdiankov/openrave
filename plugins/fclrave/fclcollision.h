@@ -18,7 +18,7 @@ public:
 
     struct CollisionCallbackData {
         // TODO : merge SetupCollisionQuery with this constructor
-    CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), bstop(false), _bCollision(false)
+        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), bstop(false), _bCollision(false)
         {
         }
 
@@ -30,12 +30,12 @@ public:
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         bool bselfCollision;
-      bool bstop;
+        bool bstop;
         bool _bCollision;
     };
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv)
-        : OpenRAVE::CollisionCheckerBase(penv)
+        : OpenRAVE::CollisionCheckerBase(penv), bisSelfCollisionChecker(true)
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
         _fclspace.reset(new FCLSpace(penv, _userdatakey));
@@ -55,6 +55,26 @@ public:
     }
 
     // TODO : What about Clone ?
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    {
+        CollisionCheckerBase::Clone(preference, cloningoptions);
+        boost::shared_ptr<FCLCollisionChecker const> r = boost::dynamic_pointer_cast<FCLCollisionChecker const>(preference);
+        _fclspace->SetGeometryGroup(r->GetGeometryGroup());
+        _options = r->_options;
+        _numMaxContacts = r->_numMaxContacts;
+        RAVELOG_VERBOSE(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
+    }
+
+    void SetGeometryGroup(const std::string& groupname)
+    {
+        _fclspace->SetGeometryGroup(groupname);
+    }
+
+    const std::string& GetGeometryGroup() const
+    {
+        return _fclspace->GetGeometryGroup();
+    }
+
 
     virtual bool SetCollisionOptions(int collision_options)
     {
@@ -104,6 +124,8 @@ public:
 
     virtual bool InitEnvironment()
     {
+        RAVELOG_VERBOSE(str(boost::format("FCL User data initializing env %d") % GetEnv()->GetId()));
+        bisSelfCollisionChecker = false;
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
@@ -220,6 +242,7 @@ public:
 
     virtual bool CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report = CollisionReportPtr())
     {
+        OPENRAVE_ASSERT_OP(pbody->GetEnvironmentId(),!=,0);
         if( !plink->IsEnabled() ) {
             return false;
         }
@@ -402,7 +425,7 @@ public:
 
                 FOREACH(ito1, vlinkCollisionGroups[index1]) {
                     FOREACH(ito2, vlinkCollisionGroups[index2]) {
-                      // TODO : consider using the link BV
+                        // TODO : consider using the link BV
                         if( NarrowPhaseCheckGeomCollision(*ito1, *ito2, pquery.get()) ) {
                             return pquery->_bCollision;
                         }
@@ -513,18 +536,6 @@ public:
             return pquery->_bCollision;
         }
     }
-
-    void SetGeometryGroup(const std::string& groupname)
-    {
-        _fclspace->SetGeometryGroup(groupname);
-    }
-
-    const std::string& GetGeometryGroup() const
-    {
-        return _fclspace->GetGeometryGroup();
-    }
-
-
 
 private:
     inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
@@ -679,44 +690,44 @@ private:
     }
 
     static bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
-      CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
-      return pcb->_pchecker->NarrowPhaseCheckCollision(o1, o2, pcb);
+        CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
+        return pcb->_pchecker->NarrowPhaseCheckCollision(o1, o2, pcb);
     }
 
     bool NarrowPhaseCheckCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb) {
-      LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
+        LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
-      if( !plink1 || !plink2 ) {
-        return false;
-      }
-
-      // Proceed to the next if the links are attached and not enabled
-      if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
-        return false;
-      }
-
-      if( _fclspace->HasMultipleGeometries(plink1) ) {
-        if( _fclspace->HasMultipleGeometries(plink2) ) {
-          BroadPhaseCollisionManagerPtr plink1Manager = _fclspace->GetLinkManager(plink1), plink2Manager = _fclspace->GetLinkManager(plink2);
-          plink1Manager->setup();
-          plink2Manager->setup();
-          plink1Manager->collide(plink2Manager.get(), pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
-        } else {
-          BroadPhaseCollisionManagerPtr plink1Manager = _fclspace->GetLinkManager(plink1);
-          plink1Manager->setup();
-          plink1Manager->collide(o2, pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+        if( !plink1 || !plink2 ) {
+            return false;
         }
-      } else {
-        if( _fclspace->HasMultipleGeometries(plink2) ) {
-          BroadPhaseCollisionManagerPtr plink2Manager = _fclspace->GetLinkManager(plink2);
-          plink2Manager->setup();
-          plink2Manager->collide(o1, pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
-        } else {
-          NarrowPhaseCheckGeomCollision(o1, o2, pcb);
-        }
-      }
 
-      return pcb->bstop;
+        // Proceed to the next if the links are attached and not enabled
+        if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
+            return false;
+        }
+
+        if( _fclspace->HasMultipleGeometries(plink1) ) {
+            if( _fclspace->HasMultipleGeometries(plink2) ) {
+                BroadPhaseCollisionManagerPtr plink1Manager = _fclspace->GetLinkManager(plink1), plink2Manager = _fclspace->GetLinkManager(plink2);
+                plink1Manager->setup();
+                plink2Manager->setup();
+                plink1Manager->collide(plink2Manager.get(), pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+            } else {
+                BroadPhaseCollisionManagerPtr plink1Manager = _fclspace->GetLinkManager(plink1);
+                plink1Manager->setup();
+                plink1Manager->collide(o2, pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+            }
+        } else {
+            if( _fclspace->HasMultipleGeometries(plink2) ) {
+                BroadPhaseCollisionManagerPtr plink2Manager = _fclspace->GetLinkManager(plink2);
+                plink2Manager->setup();
+                plink2Manager->collide(o1, pcb, &FCLCollisionChecker::NarrowPhaseCheckGeomCollision);
+            } else {
+                NarrowPhaseCheckGeomCollision(o1, o2, pcb);
+            }
+        }
+
+        return pcb->bstop;
     }
 
     static bool NarrowPhaseCheckGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
@@ -726,14 +737,15 @@ private:
 
     bool NarrowPhaseCheckGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
-        static CollisionReport tmpReport;
+        CollisionReport tmpReport;
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
-        BOOST_ASSERT( !!plink1 );
-        BOOST_ASSERT( !!plink2 );
+        if( !plink1 || !plink2 ) {
+            return false;
+        }
 
 
-        // Proceed to the next if the links are attached and not enabled
+        // Proceed to the next if the links are attached and we are not self colliding
         if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
             return false;
         }
@@ -825,7 +837,11 @@ private:
     {
         FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>(collObj.getUserData());
         if( link_raw != NULL ) {
-            return link_raw->GetLink();
+            LinkConstPtr plink = link_raw->GetLink();
+            if( !plink ) {
+                RAVELOG_WARN(str(boost::format("The link %s was lost from fclspace")%link_raw->bodylinkname));
+            }
+            return plink;
         }
         RAVELOG_WARN("fcl collision object does not have a link attached");
         return LinkConstPtr();
@@ -837,6 +853,7 @@ private:
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
     std::string _userdatakey;
+    bool bisSelfCollisionChecker;
 };
 
 
