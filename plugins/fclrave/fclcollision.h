@@ -54,15 +54,26 @@ public:
         DestroyEnvironment();
     }
 
-    // TODO : What about Clone ?
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
         boost::shared_ptr<FCLCollisionChecker const> r = boost::dynamic_pointer_cast<FCLCollisionChecker const>(preference);
         _fclspace->SetGeometryGroup(r->GetGeometryGroup());
+        _fclspace->SetBVHRepresentation(r->GetBVHRepresentation());
+
+        std::string const &broadphaseAlgorithm = r->GetBroadphaseAlgorithm();
+        if( broadphaseAlgorithm == "SpatialHashing" ) {
+          _fclspace->SetSpatialHashingBroadPhaseAlgorithm(*r->GetSpatialHashData());
+        } else {
+          _fclspace->SetBroadphaseAlgorithm(broadphaseAlgorithm);
+        }
         _options = r->_options;
         _numMaxContacts = r->_numMaxContacts;
         RAVELOG_VERBOSE(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
+    }
+
+    boost::shared_ptr<const SpatialHashData> GetSpatialHashData() const {
+      return _fclspace->GetSpatialHashData();
     }
 
     void SetGeometryGroup(const std::string& groupname)
@@ -96,12 +107,20 @@ public:
     {
     }
 
+    std::string const& GetBroadphaseAlgorithm() const {
+      return _fclspace->GetBroadphaseAlgorithm();
+    }
+
     bool _SetBroadphaseAlgorithm(ostream& sout, istream& sinput)
     {
         std::string algorithm;
         sinput >> algorithm;
         _fclspace->SetBroadphaseAlgorithm(algorithm);
         return !!sinput;
+    }
+
+    std::string const& GetBVHRepresentation() const {
+      return _fclspace->GetBVHRepresentation();
     }
 
     bool _SetBVHRepresentation(ostream& sout, istream& sinput)
@@ -117,7 +136,7 @@ public:
         fcl::FCL_REAL cell_size;
         fcl::Vec3f scene_min, scene_max;
         sinput >> cell_size >> scene_min[0] >> scene_min[1] >> scene_min[2] >> scene_max[0] >> scene_max[1] >> scene_max[2];
-        _fclspace->SetSpatialHashingBroadPhaseAlgorithm(cell_size, scene_min, scene_max);
+        _fclspace->SetSpatialHashingBroadPhaseAlgorithm(SpatialHashData(cell_size, scene_min, scene_max));
         return !!sinput;
     }
 
@@ -599,9 +618,11 @@ private:
 
                 std::set<KinBodyPtr> attachedBodies;
                 pbody->GetAttached(attachedBodies);
-                attachedBodies.erase(GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId()));
 
                 FOREACH(itbody, attachedBodies) {
+                  if(*itbody == pbody) {
+                    continue;
+                  }
                     if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
@@ -669,9 +690,11 @@ private:
 
                 std::set<KinBodyPtr> attachedBodies;
                 pbody->GetAttached(attachedBodies);
-                attachedBodies.erase(GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId()));
 
                 FOREACH(itbody, attachedBodies) {
+                  if(*itbody == pbody) {
+                    continue;
+                  }
                     KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
                         pbodyManager->Register(*itbody);
@@ -699,6 +722,10 @@ private:
 
         if( !plink1 || !plink2 ) {
             return false;
+        }
+
+        if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
+          return false;
         }
 
         // Proceed to the next if the links are attached and not enabled
@@ -744,6 +771,9 @@ private:
             return false;
         }
 
+        if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
+          return false;
+        }
 
         // Proceed to the next if the links are attached and we are not self colliding
         if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
