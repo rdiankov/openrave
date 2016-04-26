@@ -50,10 +50,10 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
 }
 
 struct SpatialHashData {
-SpatialHashData(fcl::FCL_REAL cellSize, const fcl::Vec3f& sceneMin, const fcl::Vec3f& sceneMax) : _cellSize(cellSize), _sceneMin(sceneMin), _sceneMax(sceneMax) {
-}
-  fcl::FCL_REAL _cellSize;
-  fcl::Vec3f _sceneMin, _sceneMax;
+    SpatialHashData(fcl::FCL_REAL cellSize, const fcl::Vec3f& sceneMin, const fcl::Vec3f& sceneMax) : _cellSize(cellSize), _sceneMin(sceneMin), _sceneMax(sceneMax) {
+    }
+    fcl::FCL_REAL _cellSize;
+    fcl::Vec3f _sceneMin, _sceneMax;
 };
 
 inline void UnregisterObjects(BroadPhaseCollisionManagerPtr manager, CollisionGroup& group)
@@ -335,28 +335,28 @@ public:
     void SetBVHRepresentation(std::string const &type)
     {
         if (type == "AABB") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::AABB>;
         } else if (type == "OBB") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::OBB>;
         } else if (type == "RSS") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::RSS>;
         } else if (type == "OBBRSS") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::OBBRSS>;
         } else if (type == "kDOP16") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL< fcl::KDOP<16> >;
         } else if (type == "kDOP18") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL< fcl::KDOP<18> >;
         } else if (type == "kDOP24") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL< fcl::KDOP<24> >;
         } else if (type == "kIOS") {
-          _bvhRepresentation = type;
+            _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::kIOS>;
         } else {
             RAVELOG_WARN(str(boost::format("Unknown BVH representation '%s'.") % type));
@@ -364,7 +364,7 @@ public:
     }
 
     std::string const& GetBVHRepresentation() const {
-      return _bvhRepresentation;
+        return _bvhRepresentation;
     }
 
     void SetBroadphaseAlgorithm(std::string const &algorithm)
@@ -386,16 +386,16 @@ public:
     }
 
     std::string const& GetBroadphaseAlgorithm() const {
-      return _broadPhaseCollisionManagerAlgorithm;
+        return _broadPhaseCollisionManagerAlgorithm;
     }
 
 
     boost::shared_ptr<const SpatialHashData> GetSpatialHashData() const {
-      return boost::const_pointer_cast<SpatialHashData>(_spatialHashData);
+        return boost::const_pointer_cast<SpatialHashData>(_spatialHashData);
     }
 
     void SetSpatialHashingBroadPhaseAlgorithm(SpatialHashData const& data) {
-      _spatialHashData = boost::make_shared<SpatialHashData>(data);
+        _spatialHashData = boost::make_shared<SpatialHashData>(data);
         SetBroadphaseAlgorithm("SpatialHashing");
     }
 
@@ -509,7 +509,7 @@ public:
             if( pbody->IsEnabled() ) {
                 _manager->registerObjects(tmpGroup);
             } else {
-              copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(vexcluded));
+                copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(vexcluded));
             }
             UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
         }
@@ -581,8 +581,8 @@ private:
         }
 
         void Register(LinkConstPtr plink) {
-          fcl::CollisionObject* pcoll = _pfclspace->GetLinkBV(plink).get();
-          vexcluded.push_back(pcoll);
+            fcl::CollisionObject* pcoll = _pfclspace->GetLinkBV(plink).get();
+            vexcluded.push_back(pcoll);
             _pfclspace->GetEnvManager()->unregisterObject(pcoll);
         }
 

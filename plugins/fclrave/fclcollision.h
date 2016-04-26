@@ -63,9 +63,9 @@ public:
 
         std::string const &broadphaseAlgorithm = r->GetBroadphaseAlgorithm();
         if( broadphaseAlgorithm == "SpatialHashing" ) {
-          _fclspace->SetSpatialHashingBroadPhaseAlgorithm(*r->GetSpatialHashData());
+            _fclspace->SetSpatialHashingBroadPhaseAlgorithm(*r->GetSpatialHashData());
         } else {
-          _fclspace->SetBroadphaseAlgorithm(broadphaseAlgorithm);
+            _fclspace->SetBroadphaseAlgorithm(broadphaseAlgorithm);
         }
         _options = r->_options;
         _numMaxContacts = r->_numMaxContacts;
@@ -73,7 +73,7 @@ public:
     }
 
     boost::shared_ptr<const SpatialHashData> GetSpatialHashData() const {
-      return _fclspace->GetSpatialHashData();
+        return _fclspace->GetSpatialHashData();
     }
 
     void SetGeometryGroup(const std::string& groupname)
@@ -108,7 +108,7 @@ public:
     }
 
     std::string const& GetBroadphaseAlgorithm() const {
-      return _fclspace->GetBroadphaseAlgorithm();
+        return _fclspace->GetBroadphaseAlgorithm();
     }
 
     bool _SetBroadphaseAlgorithm(ostream& sout, istream& sinput)
@@ -120,7 +120,7 @@ public:
     }
 
     std::string const& GetBVHRepresentation() const {
-      return _fclspace->GetBVHRepresentation();
+        return _fclspace->GetBVHRepresentation();
     }
 
     bool _SetBVHRepresentation(ostream& sout, istream& sinput)
@@ -620,9 +620,9 @@ private:
                 pbody->GetAttached(attachedBodies);
 
                 FOREACH(itbody, attachedBodies) {
-                  if(*itbody == pbody) {
-                    continue;
-                  }
+                    if(*itbody == pbody) {
+                        continue;
+                    }
                     if( !binary_search(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) ) {
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
@@ -692,9 +692,9 @@ private:
                 pbody->GetAttached(attachedBodies);
 
                 FOREACH(itbody, attachedBodies) {
-                  if(*itbody == pbody) {
-                    continue;
-                  }
+                    if(*itbody == pbody) {
+                        continue;
+                    }
                     KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
                         pbodyManager->Register(*itbody);
@@ -725,7 +725,7 @@ private:
         }
 
         if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
-          return false;
+            return false;
         }
 
         // Proceed to the next if the links are attached and not enabled
@@ -772,7 +772,7 @@ private:
         }
 
         if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
-          return false;
+            return false;
         }
 
         // Proceed to the next if the links are attached and we are not self colliding
