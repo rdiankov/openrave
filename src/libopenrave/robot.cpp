@@ -92,12 +92,12 @@ void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
     GetRobot()->_PostprocessChangedParameters(Prop_SensorPlacement);
 }
 
-void RobotBase::AttachedSensor::UpdateInfo()
+void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
 {
     if( !!psensor ) {
         _info._sensorname = psensor->GetXMLId();
         // TODO try to get the sensor geometry...?
-        //GetSensorGeometry(ST_
+        _info._sensorgeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(psensor->GetSensorGeometry(type));
         //_info._sensorgeometry
     }
     LinkPtr prealattachedlink = pattachedlink.lock();
