@@ -1,10 +1,6 @@
 #ifndef OPENRAVE_FCL_SPACE
 #define OPENRAVE_FCL_SPACE
 
-/* TODO : - try using sets instead of vectors
-          - exclude the attached objects in the link against env case
- */
-
 
 // TODO : I should put these in some namespace...
 
@@ -151,13 +147,13 @@ public:
             // should-I reinitialize nLastStamp ?
         }
 
-        // TODO : Is this used
+        // TODO : Is this used ?
         KinBodyPtr GetBody()
         {
             return _pbody.lock();
         }
 
-        KinBodyWeakPtr _pbody;  // could we make this const ?
+        KinBodyWeakPtr _pbody;
         int nLastStamp;  // used during synchronization ("is transform up to date")
         vector< boost::shared_ptr<LINK> > vlinks;
         BroadPhaseCollisionManagerPtr _bodyManager;
@@ -179,7 +175,7 @@ public:
         // SSaP : initialization working
         // IntervalTree : not working received SIGSEV at line 427 of interval_tree.cpp
         // DynamicAABBTree : initialization working
-        // DynamicAABBTree_Array : initialization working
+        // DynamicAABBTree_Array : initialization working, problems with unregister
         SetBroadphaseAlgorithm("DynamicAABBTree");
     }
 
@@ -310,6 +306,12 @@ public:
         return pinfo;
     }
 
+
+
+
+
+
+
     void SetGeometryGroup(const std::string& groupname)
     {
         if(groupname != _geometrygroup) {
@@ -391,7 +393,6 @@ public:
         return _broadPhaseCollisionManagerAlgorithm;
     }
 
-
     boost::shared_ptr<const SpatialHashData> GetSpatialHashData() const {
         return boost::const_pointer_cast<SpatialHashData>(_spatialHashData);
     }
@@ -401,29 +402,9 @@ public:
         SetBroadphaseAlgorithm("SpatialHashing");
     }
 
-    BroadPhaseCollisionManagerPtr _CreateNewBroadPhaseCollisionManager(BroadPhaseCollisionManagerPtr oldmanager) {
-        CollisionGroup vcollObjects;
-        oldmanager->getObjects(vcollObjects);
-        BroadPhaseCollisionManagerPtr manager = _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
-        manager->registerObjects(vcollObjects);
-        return manager;
-    }
 
-    void RemoveUserData(KinBodyConstPtr pbody)
-    {
-        if( !!pbody ) {
-            RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
-            _setInitializedBodies.erase(pbody);
-            KinBodyInfoPtr pinfo = GetInfo(pbody);
-            if( !!pinfo ) {
-                pinfo->Reset();
-            }
-            bool is_consistent = pbody->RemoveUserData(_userdatakey);
-            if( !is_consistent ) {
-                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
-            }
-        }
-    }
+
+
 
 
     void Synchronize()
@@ -445,6 +426,9 @@ public:
         _synccallback = synccallback;
     }
 
+
+
+
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody)
     {
         return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
@@ -462,16 +446,23 @@ public:
         return std::make_pair(pinfo, bcreated);
     }
 
-
-    void GetCollisionObjects(KinBodyConstPtr pbody, CollisionGroup& group)
-    {
-        KinBodyInfoPtr pinfo = GetInfo(pbody);
-        BOOST_ASSERT( pinfo->GetBody() == pbody );
-        CollisionGroup tmpGroup;
-        pinfo->_bodyManager->getObjects(tmpGroup);
-        copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(group));
+    void RemoveUserData(KinBodyConstPtr pbody) {
+        if( !!pbody ) {
+            RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
+            _setInitializedBodies.erase(pbody);
+            KinBodyInfoPtr pinfo = GetInfo(pbody);
+            if( !!pinfo ) {
+                pinfo->Reset();
+            }
+            bool is_consistent = pbody->RemoveUserData(_userdatakey);
+            if( !is_consistent ) {
+                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
+            }
+        }
     }
 
+
+    // Used in link standalone self collision
     void GetCollisionObjects(LinkConstPtr plink, CollisionGroup &group)
     {
         // TODO : This is just so stupid, I should be able to reuse _linkManager efficiently !
@@ -816,6 +807,14 @@ private:
         } else {
             throw OPENRAVE_EXCEPTION_FORMAT("Unknown broad-phase algorithm '%s'.", algorithm, OpenRAVE::ORE_InvalidArguments);
         }
+    }
+
+    BroadPhaseCollisionManagerPtr _CreateNewBroadPhaseCollisionManager(BroadPhaseCollisionManagerPtr oldmanager) {
+        CollisionGroup vcollObjects;
+        oldmanager->getObjects(vcollObjects);
+        BroadPhaseCollisionManagerPtr manager = _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
+        manager->registerObjects(vcollObjects);
+        return manager;
     }
 
 

@@ -20,8 +20,21 @@ public:
 
     struct CollisionCallbackData {
         // TODO : merge SetupCollisionQuery with this constructor
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker) : _pchecker(pchecker), bselfCollision(false), bstop(false), _bCollision(false)
+        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report) : _pchecker(pchecker), _report(report), bselfCollision(false), bstop(false), _bCollision(false)
         {
+            if( _pchecker->GetEnv()->HasRegisteredCollisionCallbacks() && !_report ) {
+                _report.reset(new CollisionReport());
+            }
+
+            // TODO : What happens if we have CO_AllGeometryContacts set and not CO_Contacts ?
+            if( !!report && !!(_pchecker->GetCollisionOptions() & OpenRAVE::CO_Contacts) ) {
+                _request.num_max_contacts = _pchecker->GetNumMaxContacts();
+                _request.enable_contact = true;
+            }
+
+            if( !!_report ) {
+                _report->Reset(_pchecker->GetCollisionOptions());
+            }
         }
 
         // Do I still need this penv ?
@@ -35,6 +48,8 @@ public:
         bool bstop;
         bool _bCollision;
     };
+
+    typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv)
         : OpenRAVE::CollisionCheckerBase(penv), bisSelfCollisionChecker(true)
@@ -80,6 +95,14 @@ public:
         return _fclspace->GetSpatialHashData();
     }
 
+    int GetNumMaxContacts() const {
+        return _numMaxContacts;
+    }
+
+    void SetNumMaxContacts(int numMaxContacts) {
+        _numMaxContacts = numMaxContacts;
+    }
+
     void SetGeometryGroup(const std::string& groupname)
     {
         _fclspace->SetGeometryGroup(groupname);
@@ -99,6 +122,11 @@ public:
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
         }
+
+        if( _options & OpenRAVE::CO_RayAnyHit ) {
+            return false;
+        }
+
         return true;
     }
 
@@ -217,7 +245,7 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
             //          std::vector<fcl::CollisionObject*> objs1, objs2;
             //          body1manager->getObjects(objs1);
             //          body2manager->getObjects(objs2);
@@ -254,7 +282,7 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
             //          std::vector<fcl::CollisionObject*> objs1, objs2;
             //          link1Manager->getObjects(objs1);
             //          link2Manager->getObjects(objs2);
@@ -303,7 +331,7 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
             //          std::vector<fcl::CollisionObject*> objs1, objs2;
             //          linkManager->getObjects(objs1);
             //          bodyManager->getObjects(objs2);
@@ -350,7 +378,7 @@ public:
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
             //          std::vector<fcl::CollisionObject*> objs1, objs2;
             //          linkManager->getObjects(objs1);
             //          envManager->getObjects(objs2);
@@ -386,7 +414,7 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
 
             bodyManager->collide(envManager.get(), pquery.get(), &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return pquery->_bCollision;
@@ -432,7 +460,7 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
             pquery->bselfCollision = true;
 
             FOREACH(itset, nonadjacent) {
@@ -496,7 +524,7 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
-            boost::shared_ptr<CollisionCallbackData> pquery = SetupCollisionQuery(report);
+            CollisionCallbackDataPtr pquery = boost::make_shared<CollisionCallbackData>(shared_checker(), report);
             pquery->bselfCollision = true;
             // TODO : consider using the link BV
             linkManager->collide(bodyManager.get(), pquery.get(), &NarrowPhaseCheckGeomCollision);
@@ -510,33 +538,10 @@ private:
     }
 
 
-    boost::shared_ptr<CollisionCallbackData> SetupCollisionQuery(CollisionReportPtr report)
-    {
-        boost::shared_ptr<CollisionCallbackData> pcb = boost::make_shared<CollisionCallbackData>(shared_checker());
-        pcb->_report = report;
-
-        if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
-            pcb->_report.reset(new CollisionReport());
-        }
-
-        // TODO : What happens if we have CO_AllGeometryContacts set and not CO_Contacts ?
-        if( !!report && !!(report->options & OpenRAVE::CO_Contacts)) {
-            pcb->_request.num_max_contacts = _numMaxContacts;
-            pcb->_request.enable_contact = true;
-        }
-
-        if( !!pcb->_report ) {
-            pcb->_report->Reset(_options);
-        }
-
-        return pcb;
-    }
-
-
     boost::shared_ptr<CollisionCallbackData> SetupDistanceQuery(CollisionReportPtr report)
     {
         // TODO
-        return boost::make_shared<CollisionCallbackData>(shared_checker());
+        return boost::make_shared<CollisionCallbackData>(shared_checker(), report);
     }
 
     void Collect(KinBodyConstPtr pbody, TemporaryManagerAgainstEnvPtr manager, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded)
