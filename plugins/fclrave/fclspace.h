@@ -167,9 +167,11 @@ public:
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey)
     {
-        _manager = _CreateManagerFromBroadphaseAlgorithm("Naive");
         // TODO : test best default choice
         SetBVHRepresentation("OBB");
+
+        // Setting to a dummy value in order to be able to call SetBroadphaseAlgorithm
+        _manager = _CreateManagerFromBroadphaseAlgorithm("Naive");
         // Naive : initialization working
         // SaP : not working infinite loop at line 352 of Broadphase_SaP.cpp
         // SSaP : initialization working
@@ -371,6 +373,7 @@ public:
 
     void SetBroadphaseAlgorithm(std::string const &algorithm)
     {
+        BOOST_ASSERT( !!_manager );
         if(_broadPhaseCollisionManagerAlgorithm == algorithm) {
             return;
         }
@@ -691,7 +694,7 @@ private:
             // TODO double check this
             return make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
-        // TODO : Is that ok ?
+        // TODO : Is that ok ? (consider testing the transformatiom with boxes)
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
         {
