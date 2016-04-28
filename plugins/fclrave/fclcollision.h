@@ -37,7 +37,7 @@ public:
             }
         }
 
-        // Do I still need this penv ?
+        
         boost::shared_ptr<FCLCollisionChecker> _pchecker;
         fcl::CollisionRequest _request;
         fcl::CollisionResult _result;
@@ -143,6 +143,7 @@ public:
         return _fclspace->GetBroadphaseAlgorithm();
     }
 
+    // TODO : add some example
     bool _SetBroadphaseAlgorithm(ostream& sout, istream& sinput)
     {
         std::string algorithm;
@@ -155,6 +156,7 @@ public:
         return _fclspace->GetBVHRepresentation();
     }
 
+    // TODO : add some example
     bool _SetBVHRepresentation(ostream& sout, istream& sinput)
     {
         std::string type;
@@ -163,6 +165,7 @@ public:
         return !!sinput;
     }
 
+    // TODO : add some example
     bool SetSpatialHashingBroadPhaseAlgorithm(ostream& sout, istream& sinput)
     {
         fcl::FCL_REAL cell_size;
@@ -351,9 +354,13 @@ public:
 
         _fclspace->Synchronize();
 
+
+        // TODO : Document/comment
+        // TODO : refer to StateSaver/OptionsSaver 
         TemporaryManagerAgainstEnvPtr manager = _fclspace->CreateTemporaryManagerAgainstEnv();
 
         std::set<KinBodyPtr> excludedBodies;
+        // We exclude the attached bodies here since it would be excluded anyway in NarrowPhaseCheckCollision's step to reduce the number of objects in broad phase collision checking
         plink->GetParent()->GetAttached(excludedBodies);
         FOREACH(itbody, vbodyexcluded) {
             excludedBodies.insert(GetEnv()->GetBodyFromEnvironmentId((*itbody)->GetEnvironmentId()));
@@ -403,10 +410,13 @@ public:
         _fclspace->Synchronize();
 
         TemporaryManagerAgainstEnvPtr manager = _fclspace->CreateTemporaryManagerAgainstEnv();
+        // Rename the method or put the code directly here
         Collect(pbody, manager, !!(_options & OpenRAVE::CO_ActiveDOFs), vbodyexcludedcopy, vlinkexcludedcopy);
 
 
         BroadPhaseCollisionManagerPtr bodyManager = manager->GetManager(), envManager = _fclspace->GetEnvManager();
+
+        // setup must be called before collision checking
         bodyManager->setup();
         envManager->setup();
 
@@ -477,13 +487,14 @@ public:
                 FOREACH(ito1, vlinkCollisionGroups[index1]) {
                     FOREACH(ito2, vlinkCollisionGroups[index2]) {
                         // TODO : consider using the link BV
-                        if( NarrowPhaseCheckGeomCollision(*ito1, *ito2, pquery.get()) ) {
+                        NarrowPhaseCheckGeomCollision(*ito1, *ito2, pquery.get());
+                        if( pquery->bstop ) {
                             return pquery->_bCollision;
                         }
                     }
                 }
             }
-            return false;
+            return pquery->_bCollision;
         }
     }
 
