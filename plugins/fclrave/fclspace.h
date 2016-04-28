@@ -481,25 +481,19 @@ public:
     }
 
 
-    class TemporaryManager {
+    class TemporaryManagerAgainstEnv {
 public:
-        virtual void Register(KinBodyConstPtr pbody) = 0;
-        virtual void Register(LinkConstPtr plink) = 0;
-        virtual BroadPhaseCollisionManagerPtr GetManager() = 0;
-    };
-
-    class BorrowManager : public TemporaryManager {
-public:
-        BorrowManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
+        TemporaryManagerAgainstEnv(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
         {
             _manager = _pfclspace->CreateManager();
         }
 
-        ~BorrowManager() {
-            CollisionGroup borrowedObjects;
-            _manager->getObjects(borrowedObjects);
-            copy(vexcluded.begin(), vexcluded.end(), back_inserter(borrowedObjects));
-            _pfclspace->GetEnvManager()->registerObjects(borrowedObjects);
+        ~TemporaryManagerAgainstEnv() {
+            CollisionGroup tmpGroup;
+            _manager->getObjects(tmpGroup);
+            _manager->clear();
+            _pfclspace->GetEnvManager()->registerObjects(tmpGroup);
+            _pfclspace->GetEnvManager()->registerObjects(vexcluded);
         }
 
         void Register(KinBodyConstPtr pbody) {
@@ -522,57 +516,7 @@ public:
             _pfclspace->GetEnvManager()->unregisterObject(pcoll.get());
         }
 
-        BroadPhaseCollisionManagerPtr GetManager() {
-            return _manager;
-        }
-
-private:
-        BroadPhaseCollisionManagerPtr _manager;
-        CollisionGroup vexcluded;
-        boost::shared_ptr<FCLSpace> _pfclspace;
-    };
-
-    class WrapperManager : public TemporaryManager {
-public:
-        WrapperManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace) {
-            _manager = _pfclspace->CreateManager();
-        }
-
-        void Register(KinBodyConstPtr pbody) {
-            if( !pbody->IsEnabled()) {
-                return;
-            }
-            KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
-            BOOST_ASSERT( pinfo->GetBody() == pbody );
-
-            CollisionGroup tmpGroup;
-            pinfo->_bodyManager->getObjects(tmpGroup);
-            _manager->registerObjects(tmpGroup);
-        }
-
-        void Register(LinkConstPtr plink) {
-            _manager->registerObject(_pfclspace->GetLinkBV(plink).get());
-        }
-
-        BroadPhaseCollisionManagerPtr GetManager() {
-            return _manager;
-        }
-
-private:
-        BroadPhaseCollisionManagerPtr _manager;
-        boost::shared_ptr<FCLSpace> _pfclspace;
-    };
-
-    class ExclusionManager : public TemporaryManager {
-
-        ExclusionManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace) {
-        }
-
-        ~ExclusionManager() {
-            _pfclspace->GetEnvManager()->registerObjects(vexcluded);
-        }
-
-        void Register(KinBodyConstPtr pbody) {
+        void Exclude(KinBodyConstPtr pbody) {
             KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
             BOOST_ASSERT( pinfo->GetBody() == pbody );
 
@@ -582,21 +526,58 @@ private:
             UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
         }
 
-        void Register(LinkConstPtr plink) {
-            fcl::CollisionObject* pcoll = _pfclspace->GetLinkBV(plink).get();
-            vexcluded.push_back(pcoll);
-            _pfclspace->GetEnvManager()->unregisterObject(pcoll);
+        void Exclude(LinkConstPtr plink) {
+            CollisionObjectPtr pcoll = _pfclspace->GetLinkBV(plink);
+            vexcluded.push_back(pcoll.get());
+            _pfclspace->GetEnvManager()->unregisterObject(pcoll.get());
         }
 
         BroadPhaseCollisionManagerPtr GetManager() {
-            return BroadPhaseCollisionManagerPtr();
+            return _manager;
         }
+
 private:
-        CollisionGroup vexcluded;
         boost::shared_ptr<FCLSpace> _pfclspace;
+        BroadPhaseCollisionManagerPtr _manager;
+        CollisionGroup vexcluded;
+    };
+
+
+    class TemporaryManager {
+public:
+        TemporaryManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
+        {
+            _manager1 = _pfclspace->CreateManager();
+            _manager2 = _pfclspace->CreateManager();
+        }
+
+        void Register(KinBodyConstPtr pbody, bool firstManager) {
+            KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
+            BOOST_ASSERT( pinfo->GetBody() == pbody );
+
+            CollisionGroup tmpGroup;
+            pinfo->_bodyManager->getObjects(tmpGroup);
+            if( pbody->IsEnabled() ) {
+                (firstManager ? _manager1 : _manager2)->registerObjects(tmpGroup);
+            }
+        }
+
+        void Register(LinkConstPtr plink, bool firstManager) {
+            CollisionObjectPtr pcoll = _pfclspace->GetLinkBV(plink);
+            (firstManager ? _manager1 : _manager2)->registerObject(pcoll.get());
+        }
+
+        BroadPhaseCollisionManagerPtr GetManager(bool firstManager) {
+            return (firstManager ? _manager1 : _manager2);
+        }
+
+private:
+        boost::shared_ptr<FCLSpace> _pfclspace;
+        BroadPhaseCollisionManagerPtr _manager1, _manager2;
     };
 
     typedef boost::shared_ptr<TemporaryManager> TemporaryManagerPtr;
+    typedef boost::shared_ptr<TemporaryManagerAgainstEnv> TemporaryManagerAgainstEnvPtr;
 
 
     bool HasMultipleGeometries(LinkConstPtr plink) {
@@ -647,16 +628,12 @@ private:
         }
     }
 
-    TemporaryManagerPtr CreateBorrowManager() {
-        return boost::make_shared<BorrowManager>(shared_from_this());
-    }
-
     TemporaryManagerPtr CreateTemporaryManager() {
-        return boost::make_shared<WrapperManager>(shared_from_this());
+        return boost::make_shared<TemporaryManager>(shared_from_this());
     }
 
-    TemporaryManagerPtr CreateExclusionManager() {
-        return boost::make_shared<BorrowManager>(shared_from_this());
+    TemporaryManagerAgainstEnvPtr CreateTemporaryManagerAgainstEnv() {
+        return boost::make_shared<TemporaryManagerAgainstEnv>(shared_from_this());
     }
 
     BroadPhaseCollisionManagerPtr CreateManager() {
