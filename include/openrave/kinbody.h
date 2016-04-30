@@ -149,8 +149,8 @@ public:
         }
 
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-        Vector _vGeomData; ///< for boxes, first 3 values are extents. For containers, the first 3 values are the outer extents.
-        Vector _vGeomData2; ///< For containers, the first 3 values are the inner extents.
+        Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
+        Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
         
         ///< for sphere it is radius
