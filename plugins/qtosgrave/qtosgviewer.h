@@ -172,8 +172,8 @@ public slots:
     void multiWidget();
     void simpleWidget();
 
-    /// \brief Refresh the screen with a new frame. Reads the scene from OpenRAVE Core. on timer?
-    void _Refresh();
+    /// \brief updates the screen with a new frame and runs viewer update logic. Also tries to update with the openrave environment
+    void _UpdateViewerCallback();
     
     /// Set model home position in viewer
     void ResetViewToHome();
@@ -201,8 +201,19 @@ public slots:
     void _OnObjectTreeClick(QTreeWidgetItem* item,int num);
 
 protected:
-    virtual void keyPressEvent(QKeyEvent*);
-    virtual void keyReleaseEvent(QKeyEvent*);
+//    void keyPressEvent(QKeyEvent* event)
+//    {
+//        RAVELOG_INFO("key pressed event\n");
+//        QWidget::keyPressEvent(event);
+//    }
+//    
+//    void keyReleaseEvent(QKeyEvent* event)
+//    {
+//        RAVELOG_INFO("key released event\n");
+//        QWidget::keyReleaseEvent(event);
+//    }
+
+    bool _HandleOSGKeyDown(int);
 
     class PrivateGraphHandle : public GraphHandle
     {
@@ -262,7 +273,7 @@ protected:
     /// \brief reset the camera depending on its mode
     virtual void _UpdateCameraTransform(float fTimeElapsed);
     virtual void _SetCameraTransform();
-
+        
     virtual osg::Switch* _CreateGraphHandle();
     virtual void _CloseGraphHandle(osg::Switch* handle);
     virtual void _SetGraphTransform(osg::Switch* handle, const RaveTransform<float> t);
@@ -310,7 +321,8 @@ protected:
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
-
+    bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
+    
     // Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions;
     list<Item*> _listRemoveItems; ///< raw points of items to be deleted, triggered from _DeleteItemCallback
@@ -414,7 +426,7 @@ protected:
     QTreeView* _qtree;
 
     QActionGroup* shapeGroup;
-    QButtonGroup* pointerTypeGroup;
+    QButtonGroup* _pointerTypeGroup;
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;
     
@@ -461,6 +473,7 @@ protected:
     bool _bUpdateEnvironment;    
     bool _bLockEnvironment; ///< if true, should lock the environment.
 
+    int _nQuitMainLoop; ///< controls if the main loop's state. If 0, then nothing is initialized. If -1, then currently initializing/running. If 1, then currently quitting from the main loop. If 2, then successfully quit from the main loop.
     /// tracking parameters
     //@{
     KinBody::LinkPtr _ptrackinglink; ///< current link tracking

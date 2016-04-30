@@ -141,14 +141,14 @@ int& GetXMLErrorCount()
 class aiSceneManaged
 {
 public:
-    aiSceneManaged(const std::string& dataorfilename, bool bIsFilename=true, unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
+    aiSceneManaged(const std::string& dataorfilename, bool bIsFilename=true, const std::string& formathint=std::string(), unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
         boost::call_once(__SetAssimpLog,__onceSetAssimpLog);
         _importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT|aiPrimitiveType_LINE);
         if( bIsFilename ) {
             _scene = _importer.ReadFile(dataorfilename.c_str(),flags);
         }
         else {
-            _scene = _importer.ReadFileFromMemory(dataorfilename.c_str(),dataorfilename.size(), flags);
+            _scene = _importer.ReadFileFromMemory(dataorfilename.c_str(),dataorfilename.size(), flags, formathint.c_str());
         }
         if( _scene == NULL ) {
             RAVELOG_VERBOSE("assimp error: %s\n",_importer.GetErrorString());
@@ -229,7 +229,7 @@ static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vecto
 
 #endif
 
-bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
 {
     string extension;
     if( filename.find_last_of('.') != string::npos ) {
@@ -272,7 +272,7 @@ bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, con
                     f.get(buf, 0);
 
                     string newdata = buf.str();
-                    aiSceneManaged scene(newdata, false);
+                    aiSceneManaged scene(newdata, false, extension);
                     if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
                         if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
                             return true;
@@ -319,6 +319,19 @@ bool CreateTriMeshData(EnvironmentBasePtr penv, const std::string& filename, con
     return false;
 }
 
+bool CreateTriMeshFromData(const std::string& data, const std::string& formathint, const Vector& vscale, TriMesh& trimesh, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, float& ftransparency)
+{
+#ifdef OPENRAVE_ASSIMP
+    aiSceneManaged scene(data, false, formathint);
+    if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
+        if( _AssimpCreateTriMesh(scene._scene,scene._scene->mRootNode, vscale, trimesh, diffuseColor, ambientColor, ftransparency) ) {
+            return true;
+        }
+    }
+#endif
+
+    return false;
+}
 
 struct XMLREADERDATA
 {
@@ -775,7 +788,7 @@ public:
         g._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         g._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
         g._vRenderScale = vscale;
-        if( !CreateTriMeshData(penv,filename,vscale,g._meshcollision,g._vDiffuseColor,g._vAmbientColor,g._fTransparency) ) {
+        if( !CreateTriMeshFromFile(penv,filename,vscale,g._meshcollision,g._vDiffuseColor,g._vAmbientColor,g._fTransparency) ) {
             return false;
         }
         return true;
@@ -1122,6 +1135,9 @@ public:
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), _fMassDensity);
                         break;
+                    case GT_Container:
+                        mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), _fMassDensity);
+                        break;
                     case GT_Cylinder:
                         mass = MASS::GetCylinderMassD((*itgeom)->GetCylinderRadius(), (*itgeom)->GetCylinderHeight(), Vector(), _fMassDensity);
                         break;
@@ -1143,6 +1159,9 @@ public:
                         break;
                     case GT_Box:
                         mass = MASS::GetBoxMassD((*itgeom)->GetBoxExtents(), Vector(), 1000);
+                        break;
+                    case GT_Container:
+                        mass = MASS::GetBoxMassD(0.5*(*itgeom)->GetContainerOuterExtents(), Vector(), 1000);
                         break;
                     case GT_Cylinder:
                         mass = MASS::GetCylinderMassD((*itgeom)->GetCylinderRadius(), (*itgeom)->GetCylinderHeight(), Vector(), 1000);

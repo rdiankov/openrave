@@ -98,7 +98,7 @@ void OSGPickHandler::doubleClick()
 {
 }
 
-void OSGPickHandler::activeSelect(bool active)
+void OSGPickHandler::ActivateSelection(bool active)
 {
     _select = active;
 }

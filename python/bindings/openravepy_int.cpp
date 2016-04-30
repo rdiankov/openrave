@@ -1057,6 +1057,23 @@ public:
         return toPyTriMesh(*ptrimesh);
     }
 
+    object ReadTrimeshData(const std::string& data, const std::string& formathint)
+    {
+        boost::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(boost::shared_ptr<TriMesh>(),data,formathint);
+        if( !ptrimesh ) {
+            return object();
+        }
+        return toPyTriMesh(*ptrimesh);
+    }
+    object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts)
+    {
+        boost::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(boost::shared_ptr<TriMesh>(),data,formathint,toAttributesList(odictatts));
+        if( !ptrimesh ) {
+            return object();
+        }
+        return toPyTriMesh(*ptrimesh);
+    }
+
     void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") {
         _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
     }
@@ -1952,6 +1969,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string &,object) = &PyEnvironmentBase::ReadInterfaceURI;
         object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshURI;
         object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,object) = &PyEnvironmentBase::ReadTrimeshURI;
+        object (PyEnvironmentBase::*readtrimeshdata1)(const std::string&,const std::string&) = &PyEnvironmentBase::ReadTrimeshData;
+        object (PyEnvironmentBase::*readtrimeshdata2)(const std::string&,const std::string&,object) = &PyEnvironmentBase::ReadTrimeshData;
         scope env = classenv
                     .def(init<optional<int> >(args("options")))
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -2012,6 +2031,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("ReadTrimeshURI",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshFile",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshFile",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
+                    .def("ReadTrimeshData",readtrimeshdata1,args("data", "formathint"), DOXY_FN(EnvironmentBase,ReadTrimeshData))
+                    .def("ReadTrimeshData",readtrimeshdata2,args("data","formathint","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshData))
                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(args("interface","anonymous","cmdargs"), DOXY_FN(EnvironmentBase,Add)))
                     .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))

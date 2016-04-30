@@ -695,12 +695,12 @@ public:
             return _pattached->GetStructureHash();
         }
 
-        void UpdateInfo() {
-            _pattached->UpdateInfo();
+        void UpdateInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
+            _pattached->UpdateInfo(type);
         }
 
-        object UpdateAndGetInfo() {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo())));
+        object UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
+            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo(type))));
         }
 
         object GetInfo() {
@@ -1460,6 +1460,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(AddAttachedSensor_overloads, AddAttachedS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetActiveConfigurationSpecification_overloads, GetActiveConfigurationSpecification, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateInfo_overloads, UpdateInfo, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateAndGetInfo_overloads, UpdateAndGetInfo, 0,1)
 
 void init_openravepy_robot()
 {
@@ -1703,9 +1705,9 @@ void init_openravepy_robot()
         .def("GetData",&PyRobotBase::PyAttachedSensor::GetData, DOXY_FN(RobotBase::AttachedSensor,GetData))
         .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform,args("transform"), DOXY_FN(RobotBase::AttachedSensor,SetRelativeTransform))
         .def("GetStructureHash",&PyRobotBase::PyAttachedSensor::GetStructureHash, DOXY_FN(RobotBase::AttachedSensor,GetStructureHash))
-        .def("UpdateInfo",&PyRobotBase::PyAttachedSensor::UpdateInfo, DOXY_FN(RobotBase::AttachedSensor,UpdateInfo))
+        .def("UpdateInfo",&PyRobotBase::PyAttachedSensor::UpdateInfo, UpdateInfo_overloads(args("type"), DOXY_FN(RobotBase::AttachedSensor,UpdateInfo)))
         .def("GetInfo",&PyRobotBase::PyAttachedSensor::GetInfo, DOXY_FN(RobotBase::AttachedSensor,GetInfo))
-        .def("UpdateAndGetInfo",&PyRobotBase::PyAttachedSensor::UpdateAndGetInfo, DOXY_FN(RobotBase::AttachedSensor,UpdateAndGetInfo))
+        .def("UpdateAndGetInfo",&PyRobotBase::PyAttachedSensor::UpdateAndGetInfo, UpdateAndGetInfo_overloads(DOXY_FN(RobotBase::AttachedSensor,UpdateAndGetInfo)))
         .def("__str__",&PyRobotBase::PyAttachedSensor::__str__)
         .def("__repr__",&PyRobotBase::PyAttachedSensor::__repr__)
         .def("__unicode__",&PyRobotBase::PyAttachedSensor::__unicode__)

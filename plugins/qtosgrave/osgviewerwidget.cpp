@@ -15,22 +15,52 @@
 
 namespace qtosgrave {
 
-/// \brief rigid transformation dragger (does not allow scale)
-//class RigidDraggerTransformCallback : public osgManipulator::DraggerTransformCallback
-//{
-//public:
-//    RigidDraggerTransformCallback(osg::MatrixTransform* transform) : osgManipulator::DraggerTransformCallback(transform) {
-//    }
-//
-//    virtual bool receive(const osgManipulator::MotionCommand& command) {
-//        command.getMotionMatrix()
-//    }
-//    virtual bool receive(const osgManipulator::Scale1DCommand& command)          { return false; }
-//    virtual bool receive(const osgManipulator::Scale2DCommand& command)          { return false; }
-//    virtual bool receive(const osgManipulator::ScaleUniformCommand& command)     { return false; }
-//};
+// \ brief rigid transformation dragger (does not allow scale)
+class DualDraggerTransformCallback : public osgManipulator::DraggerCallback
+{
+public:
+    DualDraggerTransformCallback(osg::MatrixTransform* sourcetransform, osg::MatrixTransform* updatetransform) : osgManipulator::DraggerCallback(), _sourcetransform(sourcetransform), _updatetransform(updatetransform) {
+    }
 
-ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
+    virtual bool receive(const osgManipulator::MotionCommand& command) {
+        if( !!_sourcetransform && !!_updatetransform ) {
+            if( command.getStage() == osgManipulator::MotionCommand::FINISH || command.getStage() == osgManipulator::MotionCommand::MOVE) {
+                _updatetransform->setMatrix(_sourcetransform->getMatrix());
+            }
+        }
+    }
+
+protected:
+    osg::observer_ptr<osg::MatrixTransform> _sourcetransform, _updatetransform;
+
+};
+
+class OpenRAVEKeyboardEventHandler : public osgGA::GUIEventHandler
+{
+public:
+    OpenRAVEKeyboardEventHandler(const boost::function<bool(int)>& onKeyDown) : _onKeyDown(onKeyDown) {
+    }
+
+    virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
+    {
+        switch(ea.getEventType())
+        {
+        case (osgGA::GUIEventAdapter::KEYDOWN): {
+            return _onKeyDown(ea.getKey());
+        }
+        }
+        return false;
+    }
+
+    virtual void accept(osgGA::GUIEventHandlerVisitor& v)   {
+        v.visit(*this);
+    }
+
+private:
+    boost::function<bool(int)> _onKeyDown; ///< called when key is pressed
+};
+
+ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const boost::function<bool(int)>& onKeyDown) : QWidget(), _onKeyDown(onKeyDown)
 {
     _penv = penv;
     _bLightOn = true;
@@ -52,13 +82,37 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv) : QWidget()
     _picker = new OSGPickHandler(boost::bind(&ViewerWidget::SelectLink, this, _1, _2));
     _osgview->addEventHandler(_picker);
 
+    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1));
+    _osgview->addEventHandler(_keyhandler);
+
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
 }
 
+bool ViewerWidget::HandleOSGKeyDown(int key)
+{
+    if( !!_onKeyDown ) {
+        if( _onKeyDown(key) ) {
+            return true;
+        }
+    }
+//    switch(key) {
+//    case osgGA::GUIEventAdapter::KEY_Escape:
+//
+//        _picker->ActivateSelection(!_picker->IsSelectionActive());
+//        if( !_picker->IsSelectionActive() ) {
+//            // have to clear any draggers if selection is not active
+//            _ClearDragger();
+//            _draggerName.clear();
+//        }
+//        return true;
+//    }
+    return false;
+}
+
 void ViewerWidget::SelectActive(bool active)
 {
-    _picker->activeSelect(active);
+    _picker->ActivateSelection(active);
 }
 
 void ViewerWidget::SetDraggerMode(const std::string& draggerName)
@@ -113,7 +167,6 @@ void ViewerWidget::SelectRobot(std::string name)
         _actualKinbody = name;
 
         RAVELOG_DEBUG_FORMAT("Node name %s", node->getName());
-
         _AddDraggerToObject(node,_draggerName);
     }
 }
@@ -256,20 +309,29 @@ void ViewerWidget::SelectLink(osg::Node* node, int modkeymask)
     if (!!robot) {
         robotName = robot->getName();
         RAVELOG_VERBOSE_FORMAT("found %s", robotName);
+
+        if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_ALT) ) {
+            //RAVELOG_INFO("setting camera manipulator tracking node\n");
+            //_osgCameraManipulator->setTrackNode(robot);
+            _osgCameraManipulator->setNode(robot);
+            _osgCameraManipulator->computeHomePosition();
+            _osgCameraManipulator->home(2);
+        }
+
         //  Gets camera transform
-        _StoreMatrixTransform();
+        _StoreMatrixTransform(); // TODO store matrix for later canceling of the move
 
         //  Copy scene node for modify it
         scene = _osgview->getSceneData();
 
         // Find joint of a link name given
         joint = _FindJoint(robotName,linkName);
-        
+
         node_found = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+linkName,robot);
         if( !!node_found ) {
-            node_found = node_found->getParent(0);
+            node_found = node_found->getParents().at(0);
             if (!!node_found ) {
-                if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
+                if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
 //                    if( _draggerName == "RotateCylinderDragger" ) {
 //                        if( !!joint) {
 //                            selected = _AddDraggerToObject(robotName, node_found, "RotateCylinderDragger", joint);
@@ -301,10 +363,13 @@ void ViewerWidget::SelectLink(osg::Node* node, int modkeymask)
 
 void ViewerWidget::_ClearDragger()
 {
-    if (!!_dragger) {
-        _dragger->getParent(0)->removeChild(_dragger);
-        _dragger.release();
+    FOREACH(itdragger, _draggers) {
+        if (!!*itdragger) {
+            (*itdragger)->getParents().at(0)->removeChild(*itdragger);
+            (*itdragger).release();
+        }
     }
+    _draggers.clear();
 }
 
 void ViewerWidget::SetViewport(int width, int height)
@@ -321,9 +386,9 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     addView( view );
     addView( hudview );
 
-    view->addEventHandler( new osgViewer::StatsHandler );
+    //view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new osgGA::TrackballManipulator();
+    _osgCameraManipulator = new osgGA::TrackballManipulator();//NodeTrackerManipulator();//TrackballManipulator();
     view->setCameraManipulator( _osgCameraManipulator );
 
     _osgCameraHUD = new osg::MatrixTransform;
@@ -434,9 +499,8 @@ void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,osg::Node* currN
 
     // check to see if we have a valid (non-NULL) node.
     // if we do have a null node, return NULL.
-    if ( !!currNode)
-    {
-        qWarning("|%sNode class:%s (%s)",currLevel.c_str(),currNode->className(),currNode->getName().c_str());
+    if ( !!currNode) {
+        RAVELOG_WARN_FORMAT("|%sNode class:%s (%s)",currLevel%currNode->className()%currNode->getName());
         level = level + "-";
         currGroup = currNode->asGroup(); // returns NULL if not a group.
         if ( currGroup ) {
@@ -473,11 +537,11 @@ osg::Node* ViewerWidget::_FindRobot(osg::Node* node)
     else {
         if (string(node->className()) == "Geode") {
             //  Search robot in parent node
-            return node = _FindRobot(node->asGeode()->getParent(0));
+            return node = _FindRobot(node->asGeode()->getParents().at(0));
         }
         else {
             //  Search robot in parent node
-            return node = _FindRobot(node->asGroup()->getParent(0));
+            return node = _FindRobot(node->asGroup()->getParents().at(0));
         }
     }
 }
@@ -489,13 +553,13 @@ osg::Node* ViewerWidget::_FindLinkParent(osg::Node* node)
         return NULL;
     }
 
-    if (string(node->className()) == string(node->getParent(0)->className()) &&  string(node->className()) == string("Group")) {
+    if (string(node->className()) == string(node->getParents().at(0)->className()) &&  string(node->className()) == string("Group")) {
         //  Node found
         return node;
     }
     else {
         //  Continue searching for parent
-        return _FindLinkParent(node->getParent(0));
+        return _FindLinkParent(node->getParents().at(0));
     }
 }
 
@@ -517,7 +581,7 @@ void ViewerWidget::_PropagateTransforms()
     osg::ref_ptr<osg::Node> robot = _FindRobot(_selected);
 
     //  Gets parent of _root
-    osg::ref_ptr<osg::Group> parent = _root->getParent(0);
+    osg::ref_ptr<osg::Group> parent = _root->getParents().at(0);
 
     //  Restore parent of selected link
     parent->addChild(_selected);
@@ -532,8 +596,7 @@ void ViewerWidget::_PropagateTransforms()
     _root.release();
 
     //  For each children of dragger recalculate his global transform
-    for (size_t i = 0; i < _linkChildren.size(); i++)
-    {
+    for (size_t i = 0; i < _linkChildren.size(); i++) {
         tglobal = _linkChildren[i];
 
         //  Debug
@@ -705,7 +768,7 @@ osg::Camera *ViewerWidget::GetCamera()
     return _osgview->getCamera();
 }
 
-osgGA::TrackballManipulator *ViewerWidget::GetCameraManipulator()
+osg::ref_ptr<osgGA::CameraManipulator> ViewerWidget::GetCameraManipulator()
 {
     return _osgCameraManipulator;
 }
@@ -725,58 +788,61 @@ void ViewerWidget::_LoadMatrixTransform()
     _osgview->getCamera()->setViewMatrix(_matrix1);
 }
 
-osg::ref_ptr<osgManipulator::Dragger> ViewerWidget::_CreateDragger(const std::string& draggerName)
+std::vector<osg::ref_ptr<osgManipulator::Dragger> > ViewerWidget::_CreateDragger(const std::string& draggerName)
 {
-    osg::ref_ptr<osgManipulator::Dragger> dragger;
+    std::vector<osg::ref_ptr<osgManipulator::Dragger> > draggers;
     if ("TabPlaneDragger" == draggerName)
     {
         osgManipulator::TabPlaneDragger* d = new osgManipulator::TabPlaneDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
     }
     else if ("TabPlaneTrackballDragger" == draggerName)
     {
         osgManipulator::TabPlaneTrackballDragger* d = new osgManipulator::TabPlaneTrackballDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
     }
     else if ("TrackballDragger" == draggerName)
     {
         osgManipulator::TrackballDragger* d = new osgManipulator::TrackballDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
+    }
+    else if ("TranslateTrackballDragger" == draggerName)
+    {
+        osgManipulator::TrackballDragger* d = new osgManipulator::TrackballDragger();
+        d->setupDefaultGeometry();
+        draggers.push_back(d);
+        osgManipulator::TranslateAxisDragger* d2 = new osgManipulator::TranslateAxisDragger();
+        d2->setupDefaultGeometry();
+        draggers.push_back(d2);
     }
     else if ("Translate1DDragger" == draggerName)
     {
         osgManipulator::Translate1DDragger* d = new osgManipulator::Translate1DDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
     }
     else if ("Translate2DDragger" == draggerName)
     {
         osgManipulator::Translate2DDragger* d = new osgManipulator::Translate2DDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
     }
     else if ("TranslateAxisDragger" == draggerName)
     {
         osgManipulator::TranslateAxisDragger* d = new osgManipulator::TranslateAxisDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
     }
     else if ("RotateCylinderDragger" == draggerName)
     {
         osgManipulator::RotateCylinderDragger* d = new osgManipulator::RotateCylinderDragger();
         d->setupDefaultGeometry();
-        dragger = d;
+        draggers.push_back(d);
     }
-//    else
-//    {
-//        osgManipulator::TabBoxDragger* d = new osgManipulator::TabBoxDragger();
-//        d->setupDefaultGeometry();
-//        dragger = d;
-//    }
-    return dragger;
+    return draggers;
 }
 
 osg::Node* ViewerWidget::_AddDraggerToObject(osg::Node* object, const std::string& name)
@@ -788,6 +854,11 @@ osg::Node* ViewerWidget::_AddDraggerToObject(osg::Node* object, const std::strin
 
 osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* object, const std::string& draggerName, KinBody::JointPtr joint)
 {
+    osg::MatrixList matrices = object->getWorldMatrices();
+    if( matrices.size() > 0 ) {
+        RAVELOG_INFO_FORMAT("%s %d: %f %f %f", object->getName()%matrices.size()%matrices[0].getTrans()[0]%matrices[0].getTrans()[1]%matrices[0].getTrans()[2]);
+    }
+    
 //      object->getOrCreateStateSet()->setMode(GL_NORMALIZE, osg::StateAttribute::ON);
 
     // Clears dragger
@@ -797,35 +868,37 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
     _selection = new osg::MatrixTransform;
 
     //  Create a new dragger
-    _dragger = _CreateDragger(draggerName);
-    if( !_dragger ) {
-        return NULL;
-    }
-
+    _draggers = _CreateDragger(draggerName);
     _root = new osg::Group;
-    _root->addChild(_dragger.get());
+    for(size_t idragger = 0; idragger < _draggers.size(); ++idragger) {
+        //if( idragger > 0 ) {
+        // add a progressively bigger scale
+        osg::ref_ptr<osg::MatrixTransform> pscaleparent(new osg::MatrixTransform);
+        pscaleparent->setMatrix(osg::Matrix::scale(1+0.0*idragger, 1+0.0*idragger, 1+0.0*idragger));
+        pscaleparent->addChild(_draggers[idragger].get());
+        _root->addChild(pscaleparent.get());
+    }
     _root->addChild(_selection);
+
 
     //  Store object selected in global variable _selected
     _selected = object;
 
     if (draggerName == "RotateCylinderDragger" && !!joint) {
-        //  Change view of dragger
-        setWire(_dragger);
+        //  Change view of dragger since a joint is selected
+        setWire(_draggers.at(0));
 
-        for (size_t i = 0; i < object->getParents().size(); i++)
-        {
+        for (size_t i = 0; i < object->getParents().size(); i++) {
             osg::ref_ptr<osg::Group>  parent;
-            parent = object->getParent(i);
+            parent = object->getParents().at(i);
             parent->removeChild(object);
             parent->addChild(_root);
         }
     }
     else if (draggerName != "RotateCylinderDragger") {
-        for (size_t i = 0; i < object->getParents().size(); i++)
-        {
+        for (size_t i = 0; i < object->getParents().size(); i++) {
             osg::ref_ptr<osg::Group>  parent;
-            parent = object->getParent(i);
+            parent = object->getParents().at(i);
             parent->replaceChild(object,_root);
         }
     }
@@ -833,7 +906,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
     //  Adds object to selection
     _selection->addChild(object);
 
-    float scale = object->getBound().radius() * 1.3;
+    float scale = object->getBound().radius() * 1.2;
 
     if (draggerName == "RotateCylinderDragger" && !!joint) {
         Vector axis;
@@ -848,26 +921,37 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
 
         matrix.makeRotate(osg::Quat(dragger_rotation.y,dragger_rotation.z,dragger_rotation.w,dragger_rotation.x));
 
-        _dragger->setMatrix(matrix * osg::Matrix::scale(scale, scale, scale) * osg::Matrix::translate(anchor.x,anchor.y,anchor.z));
+        _draggers.at(0)->setMatrix(matrix * osg::Matrix::translate(anchor.x,anchor.y,anchor.z)*osg::Matrix::scale(scale, scale, scale));
     }
     else
     {
-        _dragger->setMatrix(osg::Matrix::scale(scale, scale, scale) * osg::Matrix::translate(object->getBound().center()));
+        FOREACH(itdragger, _draggers) {
+            (*itdragger)->setMatrix(osg::Matrix::translate(object->getBound().center())*osg::Matrix::scale(scale, scale, scale));
+        }
     }
 
-    _dragger->addTransformUpdating(_selection); // in version 3.2 can specify what to transform
-    //_dragger->addDraggerCallback(new RigidDraggerTransformCallback(_selection));
+    FOREACH(itdragger, _draggers) {
+        (*itdragger)->addTransformUpdating(_selection); // in version 3.2 can specify what to transform
+        // we want the dragger to handle it's own events automatically
+        (*itdragger)->setHandleEvents(true);
 
-    // we want the dragger to handle it's own events automatically
-    _dragger->setHandleEvents(true);
+        // if we don't set an activation key or mod mask then any mouse click on
+        // the dragger will activate it, however if do define either of ActivationModKeyMask or
+        // and ActivationKeyEvent then you'll have to press either than mod key or the specified key to
+        // be able to activate the dragger when you mouse click on it.  Please note the follow allows
+        // activation if either the ctrl key or the 'a' key is pressed and held down.
+        (*itdragger)->setActivationModKeyMask(osgGA::GUIEventAdapter::MODKEY_CTRL);
+        //(*itdragger)->setActivationKeyEvent('a');
+    }
 
-    // if we don't set an activation key or mod mask then any mouse click on
-    // the dragger will activate it, however if do define either of ActivationModKeyMask or
-    // and ActivationKeyEvent then you'll have to press either than mod key or the specified key to
-    // be able to activate the dragger when you mouse click on it.  Please note the follow allows
-    // activation if either the ctrl key or the 'a' key is pressed and held down.
-    _dragger->setActivationModKeyMask(osgGA::GUIEventAdapter::MODKEY_CTRL);
-    _dragger->setActivationKeyEvent('a');
+    for(size_t idragger0 = 0; idragger0 < _draggers.size(); ++idragger0) {
+        for(size_t idragger1 = 0; idragger1 < _draggers.size(); ++idragger1) {
+            if( idragger0 != idragger1 ) {
+                _draggers[idragger0]->addDraggerCallback(new DualDraggerTransformCallback(_draggers[idragger0], _draggers[idragger1]));
+            }
+        }
+    }
+
     return _root;
 }
 
