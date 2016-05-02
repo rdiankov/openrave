@@ -13,8 +13,8 @@
 // limitations under the License.
 #include <QtGui>
 
-#include "treeitem.h"
-#include "treemodel.h"
+#include "qtreeitem.h"
+#include "qtreemodel.h"
 
 namespace qtosgrave {
 

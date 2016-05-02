@@ -340,13 +340,20 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr traj);
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
 OPENRAVE_API TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr traj);
 
-/// \brief segment the trajectory given the start and end points.
+/// \brief segment the trajectory given the start and end points in-memory
 ///
 /// this is an in-memory operation
 /// \param traj the trajectory to segment
 /// \param starttime the start time of the segment
 /// \param endtime the end time of the segment
 OPENRAVE_API void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime);
+
+/// \brief extract a segment of the trajectory given the start and end points and return a new trajectory
+///
+/// \param traj the trajectory to segment
+/// \param starttime the start time of the segment. If < 0, returns the first waypoint of the trajectory
+/// \param endtime the end time of the segment. If > duration, returns the last waypoint of the trajectory
+OPENRAVE_API TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime);
 
 /// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
 ///

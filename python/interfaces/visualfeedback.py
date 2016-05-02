@@ -119,14 +119,16 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         return res
-    def ComputeVisibility(self):
+    def ComputeVisibility(self, checkocclusion=True):
         """See :ref:`module-visualfeedback-computevisibility`
         """
-        cmd = 'ComputeVisibility '
+        cmd = 'ComputeVisibility %d '%(checkocclusion)
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError()
+        
         return int(res)
+    
     def ComputeVisibleConfiguration(self,pose):
         """See :ref:`module-visualfeedback-computevisibleconfiguration`
         """

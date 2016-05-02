@@ -27,4 +27,8 @@ Environment Variables
 
 .. envvar:: OPENRAVE_DEFAULT_VIEWER
 
-  At program startup, OpenRAVE will try to load this viewer if it exists.
+  At program startup, OpenRAVE will try to load this viewer if it exists, otherwise will default to the next best valid viewer.
+
+.. envvar:: OPENRAVE_DEFAULT_COLLISIONCHECKER
+
+  At program startup, OpenRAVE will try to load this collision checker if it exists, otherwise will default to the next best valid viewer.
