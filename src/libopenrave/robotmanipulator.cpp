@@ -864,16 +864,26 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     // if IK can be solved, then there exists a solution for the end effector that is not in collision
     IkReturn ikreturn(IKRA_Success);
     IkReturnPtr pikreturn(&ikreturn,OpenRAVE::utils::null_deleter());
-    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), IKFO_CheckEnvCollisions|IKFO_IgnoreCustomFilters, pikreturn) ) {
+
+    // need to use free params here since sometimes IK can have 3+ free DOF and it would freeze searching for all of them
+    std::vector<dReal> vFreeParameters;
+    pIkSolver->GetFreeParameters(vFreeParameters);
+    if( pIkSolver->Solve(localgoal, std::vector<dReal>(), vFreeParameters, IKFO_CheckEnvCollisions|IKFO_IgnoreCustomFilters, pikreturn) ) {
         return false;
     }
     else {
         if( (ikreturn._action&IKRA_RejectSelfCollision) != IKRA_RejectSelfCollision && (ikreturn._action&IKRA_RejectEnvCollision) != IKRA_RejectEnvCollision ) {
             RAVELOG_VERBOSE_FORMAT("ik solution not found due to non-collision reasons (0x%x), returning true anway...", ikreturn._action);
+            // is this a good idea?
         }
         if( !!report ) {
             // solver failed, should have some way of initializing the report...
-            
+            if( numredundantsamples > 0 ) {
+                if( ikparam.GetType() == IKP_TranslationDirection5D ) {
+                    // if here, then already determined that there is a roll that is collision free, so return False
+                    return false;
+                }
+            }
         }
         return true;
     }

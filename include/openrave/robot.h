@@ -480,11 +480,15 @@ public:
         virtual const std::string& GetStructureHash() const;
 
         /// \brief Updates several fields in \ref _info depending on the current state of the attached sensor
-        virtual void UpdateInfo();
+        ///
+        /// \param type the type of sensor geometry that should be updated in _info
+        virtual void UpdateInfo(SensorBase::SensorType type=SensorBase::ST_Invalid);
 
-        /// \brief returns the attached sensor info 
-        inline const AttachedSensorInfo& UpdateAndGetInfo() {
-            UpdateInfo();
+        /// \brief returns the attached sensor info
+        ///
+        /// \param type the type of sensor geometry that should be updated in _info
+        inline const AttachedSensorInfo& UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
+            UpdateInfo(type);
             return _info;
         }
         
