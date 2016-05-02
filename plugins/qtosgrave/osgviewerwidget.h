@@ -66,7 +66,7 @@ public:
     void SelectRobot(std::string name);
 
     /// \brief  Sets scene data node in all viewers
-    void SetSceneData(OSGNodePtr osgscene);
+    void SetSceneData();
 
     /// \brief  Reset viewer to original position
     void ResetViewToHome();
@@ -85,6 +85,14 @@ public:
     /// \brief Set wire view to a node
     void SetWire(OSGNodePtr node);
 
+    OSGGroupPtr GetSceneRoot() const {
+        return _osgSceneRoot;
+    }
+
+    OSGGroupPtr GetFigureRoot() const {
+        return _osgFigureRoot;
+    }
+
     /// \brief Gets transform matrix of a given link
     OSGMatrixTransformPtr GetLinkTransform(std::string& robotName, KinBody::LinkPtr link);
 
@@ -95,7 +103,7 @@ public:
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
-
+    
 protected:
     bool HandleOSGKeyDown(int);
 
@@ -184,6 +192,9 @@ protected:
 //    //  Flags to apply anchor (if true) to the dragger position
 //    std::map<std::string,bool> _needAnchor;
 
+    OSGGroupPtr _osgSceneRoot; ///< root scene node
+    OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
+    OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
     
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     OSGGroupPtr _osgLightsGroup; ///< Scene Node with lights

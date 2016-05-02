@@ -300,7 +300,7 @@ protected:
     void _CreateToolsBar();
 
     /// \brief Repaint widgets
-    void _RepaintWidgets(OSGGroupPtr);
+    void _RepaintWidgets();
 
     /// \brief Create StatusBar and Set a Message
     void _CreateStatusBar();
@@ -333,9 +333,6 @@ protected:
     //@}
     
     //@{ osg rendering primitives
-    OSGGroupPtr _osgViewerRoot; ///< root scene node
-    OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
-    OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
     OSGNodePtr _selectedNode;
     //@}
     

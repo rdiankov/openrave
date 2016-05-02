@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "osgviewerwidget.h"
-#include "osgrenderitem.h"
 
 namespace qtosgrave {
 
@@ -69,11 +68,10 @@ private:
 ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown) : QWidget(), _onKeyDown(onKeyDown)
 {
     setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
-    
+
     _userdatakey = userdatakey;
     _penv = penv;
     _bLightOn = true;
-    _InitializeLights(5);
     _actualKinbody = "";
     _osgview = new osgViewer::View();
     _osghudview = new osgViewer::View();
@@ -94,6 +92,103 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1));
     _osgview->addEventHandler(_keyhandler);
 
+    // initialize the environment
+    _osgSceneRoot = new osg::Group();    
+    _osgFigureRoot = new osg::Group();
+  
+    // create world axis
+    _osgWorldAxis = new osg::MatrixTransform();
+    //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
+    
+    {
+        osg::Vec4f colors[] = {
+            osg::Vec4f(0,0,1,1),
+            osg::Vec4f(0,1,0,1),
+            osg::Vec4f(1,0,0,1)
+        };
+        osg::Quat rotations[] = {
+            osg::Quat(0, osg::Vec3f(0,0,1)),
+            osg::Quat(-M_PI/2.0, osg::Vec3f(1,0,0)),
+            osg::Quat(M_PI/2.0, osg::Vec3f(0,1,0))
+        };
+
+        // add 3 cylinder+cone axes
+        for(int i = 0; i < 3; ++i) {
+            osg::MatrixTransform* psep = new osg::MatrixTransform();
+            psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
+
+            // set a diffuse color
+            osg::StateSet* state = psep->getOrCreateStateSet();
+            osg::Material* mat = new osg::Material;
+            mat->setDiffuse(osg::Material::FRONT, colors[i]);
+            mat->setAmbient(osg::Material::FRONT, colors[i]);
+            state->setAttribute( mat );
+
+            osg::Matrix matrix;
+            osg::MatrixTransform* protation = new osg::MatrixTransform();
+            matrix.makeRotate(rotations[i]);
+            protation->setMatrix(matrix);
+
+            matrix.makeIdentity();
+            osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
+            matrix.setTrans(osg::Vec3f(0,0,16.0f));
+            pcyltrans->setMatrix(matrix);
+
+            // make SoCylinder point towards z, not y
+            osg::Cylinder* cy = new osg::Cylinder();
+            cy->setRadius(2.0f);
+            cy->setHeight(32.0f);
+            osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
+            osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
+            gcyl->addDrawable(sdcyl.get());
+
+            osg::Cone* cone = new osg::Cone();
+            cone->setRadius(4.0f);
+            cone->setHeight(16.0f);
+
+            osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
+            osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
+            gcone->addDrawable(sdcone.get());
+
+            matrix.makeIdentity();
+            osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
+            matrix.setTrans(osg::Vec3f(0,0,32.0f));
+            pconetrans->setMatrix(matrix);
+
+            psep->addChild(protation);
+            protation->addChild(pcyltrans);
+            pcyltrans->addChild(gcyl.get());
+            protation->addChild(pconetrans);
+            pconetrans->addChild(gcone.get());
+            _osgWorldAxis->addChild(psep);
+        }
+    }
+
+    if( !!_osgCameraHUD ) {
+        // in order to get the axes to render without lighting:
+        
+        osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();        
+        osg::ref_ptr<osg::Light> light(new osg::Light());
+        // each light must have a unique number
+        light->setLightNum(0);
+        // we set the light's position via a PositionAttitudeTransform object
+        light->setPosition(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+        light->setDiffuse(osg::Vec4(0, 0, 0, 1.0));
+        light->setSpecular(osg::Vec4(0, 0, 0, 1.0));
+        light->setAmbient( osg::Vec4(1, 1, 1, 1.0));
+        lightSource->setLight(light.get());
+        
+        _osgCameraHUD->addChild(lightSource.get());
+        lightSource->addChild(_osgWorldAxis.get());
+    }
+
+    _InitializeLights(2);
+
+    _osgLightsGroup->addChild(_osgSceneRoot);
+    //osg::ref_ptr<osgFX::Cartoon> toon = new osgFX::Cartoon();
+    //_osgLightsGroup->addChild(toon);
+    //toon->addChild(_osgSceneRoot);
+        
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
 }
@@ -179,20 +274,21 @@ void ViewerWidget::SelectRobot(std::string name)
     }
 }
 
-void ViewerWidget::SetSceneData(OSGNodePtr osgscene)
+void ViewerWidget::SetSceneData()
 {
+    OSGGroupPtr rootscene(new osg::Group());
     //  Normalize object normals
-    osgscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
-    _osgLightsGroup->removeChild(_osgLightsGroupData.get());
-    _osgLightsGroupData = osgscene->asGroup();
-    _osgLightsGroup->addChild(osgscene);
-
+    rootscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
+    rootscene->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::ON);
+ 
     if (_bLightOn) {
-        _osgview->setSceneData(_osgLightsGroup);
+        rootscene->addChild(_osgLightsGroup);
     }
     else {
-        _osgview->setSceneData(_osgLightsGroupData);
+        rootscene->addChild(_osgSceneRoot);
     }
+    rootscene->addChild(_osgFigureRoot);
+    _osgview->setSceneData(rootscene.get());
 }
 
 void ViewerWidget::ResetViewToHome()
@@ -212,11 +308,15 @@ void ViewerWidget::SetHome()
 void ViewerWidget::SetLight(bool enabled)
 {
     _bLightOn = enabled;
+    SetSceneData();
 }
 
 void ViewerWidget::SetFacesMode(bool enabled)
 {
-    osg::StateSet* stateset = _osgview->getSceneData()->getOrCreateStateSet();
+    if( !_osgview->getSceneData() ) {
+        return;
+    }
+    osg::ref_ptr<osg::StateSet> stateset = _osgview->getSceneData()->getOrCreateStateSet();
     if (enabled)
     {
         stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT));
@@ -375,6 +475,10 @@ void ViewerWidget::SetViewport(int width, int height)
     _osgview->getCamera()->setViewport(0,0,width,height);
     _osghudview->getCamera()->setViewport(0,0,width,height);
     _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0, 1000));
+
+    osg::Matrix m = GetCameraManipulator()->getMatrix();
+    m.setTrans(width/2 - 40, -height/2 + 40, -50);
+    _osgWorldAxis->setMatrix(m);
 }
 
 QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
@@ -403,8 +507,6 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
 {
     osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
 
-    //ds->setNumMultiSamples(4); //  Anti aliasing, necessary?
-
     osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
     traits->windowName = "";
     traits->windowDecoration = false;
@@ -421,7 +523,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setGraphicsContext(new GraphicsWindowQt(traits.get()));
 
-    camera->setClearColor(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+    camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
     camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
 
@@ -560,7 +662,7 @@ OSGNodePtr ViewerWidget::_FindLinkParent(OSGNodePtr node)
     if( node->getParents().size() == 0 ) {
         return OSGNodePtr();
     }
-    
+
     if (string(node->className()) == string(node->getParents().at(0)->className()) &&  string(node->className()) == string("Group")) {
         //  Node found
         return node;
@@ -684,9 +786,9 @@ osg::ref_ptr<osg::Light> ViewerWidget::_CreateLight(osg::Vec4 color, int lightid
     light->setDiffuse(color);
     light->setSpecular(osg::Vec4(0.8, 0.8, 0.8, 1.0));
     light->setAmbient( osg::Vec4(0.2, 0.2, 0.2, 1.0));
-    light->setConstantAttenuation(1);
-    light->setQuadraticAttenuation(0.1);
-    light->setSpotCutoff(70.0);
+    //light->setConstantAttenuation(1);
+    //light->setQuadraticAttenuation(0.1);
+    //light->setSpotCutoff(70.0);
     return light;
 }
 
@@ -721,7 +823,7 @@ void ViewerWidget::_InitializeLights(int nlights)
                                 osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0) };
 
     osg::Vec3 lightPosition[] = { osg::Vec3(0, 0, 3.5),
-                                  osg::Vec3(2, -2.5, 2.5), osg::Vec3(-2, -2.5, 2.5),
+                                  osg::Vec3(0, 0, 2.5), osg::Vec3(-2, -2.5, 2.5),
                                   osg::Vec3(2, 2.5, 2.5), osg::Vec3(-2, 2.5, 2.5) };
 
     osg::Vec3 lightDirection[] = {osg::Vec3(0.0, 0.0, -1.0),
@@ -882,7 +984,7 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& robotName, OSGNo
         //if( idragger > 0 ) {
         // add a progressively bigger scale
         osg::ref_ptr<osg::MatrixTransform> pscaleparent(new osg::MatrixTransform);
-        pscaleparent->setMatrix(osg::Matrix::scale(1+0.0*idragger, 1+0.0*idragger, 1+0.0*idragger));
+        pscaleparent->setMatrix(osg::Matrix::scale(1+0.1*idragger, 1+0.1*idragger, 1+0.1*idragger));
         pscaleparent->addChild(_draggers[idragger].get());
         _osgDraggerRoot->addChild(pscaleparent.get());
     }

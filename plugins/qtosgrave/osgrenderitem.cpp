@@ -18,6 +18,9 @@
 #include "qtosg.h"
 #include "osgrenderitem.h"
 
+#include <osgUtil/SmoothingVisitor>
+#include <osg/BlendFunc>
+
 namespace qtosgrave {
 
 Item::Item(OSGGroupPtr osgViewerRoot) : _osgViewerRoot(osgViewerRoot)
@@ -190,11 +193,11 @@ void KinBodyItem::Load()
 
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
-                if( _viewmode == VG_RenderCollision && bSucceeded ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-                    transparency = 0.5f;
-                }
+//                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+//                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+//                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+//                    transparency = 0.5f;
+//                }
 
                 // create custom
                 if( !psep ) {
@@ -207,9 +210,9 @@ void KinBodyItem::Load()
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
                 z = orgeom->GetDiffuseColor().z;
-                w = 1.0f;
+                w = 1;
 
-                mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
 
                 RAVELOG_VERBOSE_FORMAT("Diffuse color= %f %f %f\n",x%y%z);
 
@@ -220,19 +223,22 @@ void KinBodyItem::Load()
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
 
-                mat->setShininess( osg::Material::FRONT_AND_BACK, 25.0);
+                //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
 
-                    state->setRenderBinDetails(0, "transparent");
+                    //state->setRenderBinDetails(0, "transparent");
                     state->setMode(GL_BLEND, osg::StateAttribute::ON);
                     state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+                    state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA )); 
+ 
                 }
-                state->setAttributeAndModes(mat);
-
+                state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                //psep->setStateSet(state);
+                
                 switch(orgeom->GetType()) {
                 //  Geometry is defined like a Sphere
                 case GT_Sphere: {
@@ -254,7 +260,7 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
                     geode->addDrawable(sd.get());
-
+                    
                     psep->addChild(geode.get());
                     break;
                 }
@@ -279,26 +285,22 @@ void KinBodyItem::Load()
                     //geom->setColorBinding(osg::Geometry::BIND_OVERALL); // need to call geom->setColorArray first
 
                     const TriMesh& mesh = orgeom->GetCollisionMesh();
-                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+                    vertices->reserveArray(mesh.vertices.size());
+                    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                        RaveVector<float> v = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+                    }
                     geom->setVertexArray(vertices.get());
+
                     
-                    FOREACHC(itind, mesh.indices) {
-                        RaveVector<float> v = mesh.vertices[*itind];
-                        vertices->push_back(osg::Vec3(v.x,v.y,v.z));
+                    osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+                    for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                        (*geom_prim)[i] = mesh.indices[i];
                     }
+                    geom->addPrimitiveSet(geom_prim);
 
-                    osg::ref_ptr<osg::DrawElementsUInt> geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
-                    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
-                        geom_prim->push_back(i);
-                    }
-
-                    geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,vertices->size()));
-
-                    //  Calculate normals and set binding
-                    osg::ref_ptr<osg::Vec3Array> normals = _GenerateNormals(vertices);
-                    geom->setNormalArray(normals.get());
-                    geom->setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
-
+                    osgUtil::SmoothingVisitor::smooth(*geom); // compute vertex normals                    
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);
                     psep->addChild(geode);
@@ -409,7 +411,7 @@ void KinBodyItem::_PrintMatrix(osg::Matrix& m)
     }
 }
 
-void KinBodyItem::_PrintSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
+void KinBodyItem::_PrintSceneGraph(const std::string& currLevel, OSGNodePtr currNode)
 {
     std::string level;
     level = currLevel;
@@ -474,44 +476,26 @@ void KinBodyItem::_PrintNodeFeatures(OSGNodePtr node)
 }
 
 /// Generate normals
-osg::ref_ptr<osg::Vec3Array> KinBodyItem::_GenerateNormals(osg::ref_ptr<osg::Vec3Array> vertices)
+osg::ref_ptr<osg::Vec3Array> KinBodyItem::_GenerateNormals(const TriMesh& trimesh)
 {
     osg::ref_ptr<osg::Vec3Array> normals(new osg::Vec3Array());
-
-    dReal f;
-    /*
-     * Calculate per-face normals from face vertices.
-     */
+    normals->reserveArray(trimesh.indices.size()/3);
     unsigned int fi = 0;
-    while (fi < vertices->size()) {
+    while (fi+2 < trimesh.indices.size() ) {
         // Edge vectors
-        Vector e0;
-        e0.x = (*vertices)[fi+1].x() - (*vertices)[fi].x();
-        e0.y = (*vertices)[fi+1].y() - (*vertices)[fi].y();
-        e0.z = (*vertices)[fi+1].z() - (*vertices)[fi].z();
-
-        Vector e1;
-        e1.x = (*vertices)[fi+2].x() - (*vertices)[fi].x();
-        e1.y = (*vertices)[fi+2].y() - (*vertices)[fi].y();
-        e1.z = (*vertices)[fi+2].z() - (*vertices)[fi].z();
+        Vector v0 = trimesh.vertices.at(trimesh.indices[fi]);
+        Vector v1 = trimesh.vertices.at(trimesh.indices[fi+1]);
+        Vector v2 = trimesh.vertices.at(trimesh.indices[fi+2]);
+                                
+        Vector e0 = v1 - v0;
+        Vector e1 = v2 - v0;
 
         // Cross-product of e0,e1
-        Vector normal;
-        normal.x = e0.y * e1.z - e0.z * e1.y;
-        normal.y = e0.z * e1.x - e0.x * e1.z;
-        normal.z = e0.x * e1.y - e0.y * e1.x;
-
-        f = normal.x*normal.x+normal.y*normal.y+normal.z*normal.z;
-        f = RaveSqrt(f);
-
-        normal.x /= f;
-        normal.y /= f;
-        normal.z /= f;
-
+        Vector vn = e0.cross(e1);
+        vn.normalize3();
         // Add to per-face normals
-        normals->push_back(osg::Vec3(normal.x,normal.y,normal.z));
-
-        fi = fi + 3;
+        normals->push_back(osg::Vec3(vn.x,vn.y,vn.z));
+        fi+=3;
     }
 
     return normals;

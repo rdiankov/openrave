@@ -160,7 +160,8 @@ public:
     virtual void Load();
 
 protected:
-    osg::ref_ptr<osg::Vec3Array> _GenerateNormals(osg::ref_ptr<osg::Vec3Array> vertices);
+    /// \brief Calculate per-face normals from face vertices.
+    osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
     
     /// \brief Gets osg node with name 'name'
     OSGGroupPtr _FindNodeName(const string& name);

@@ -181,80 +181,9 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1));
     setCentralWidget(_posgWidget);
 
-    // initialize the environment
-    _osgViewerRoot = new osg::Group();
-    _osgFigureRoot = new osg::Group();
-    _osgViewerRoot->addChild(_osgFigureRoot);
-
-    // create world axis
-
-    _osgWorldAxis = new osg::MatrixTransform();
-    _posgWidget->GetCameraHUD()->addChild(_osgWorldAxis);
-
-    {
-        osg::Vec4f colors[] = {
-            osg::Vec4f(0,0,1,1),
-            osg::Vec4f(0,1,0,1),
-            osg::Vec4f(1,0,0,1)
-        };
-        osg::Quat rotations[] = {
-            osg::Quat(0, osg::Vec3f(0,0,1)),
-            osg::Quat(-M_PI/2.0, osg::Vec3f(1,0,0)),
-            osg::Quat(M_PI/2.0, osg::Vec3f(0,1,0))
-        };
-
-        // add 3 cylinder+cone axes
-        for(int i = 0; i < 3; ++i) {
-            osg::MatrixTransform* psep = new osg::MatrixTransform();
-            psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
-
-            // set a diffuse color
-            osg::StateSet* state = psep->getOrCreateStateSet();
-            osg::Material* mat = new osg::Material;
-            mat->setDiffuse(osg::Material::FRONT, colors[i]);
-            mat->setAmbient(osg::Material::FRONT, colors[i]);
-            state->setAttribute( mat );
-
-            osg::Matrix matrix;
-            osg::MatrixTransform* protation = new osg::MatrixTransform();
-            matrix.makeRotate(rotations[i]);
-            protation->setMatrix(matrix);
-
-            matrix.makeIdentity();
-            osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
-            matrix.setTrans(osg::Vec3f(0,0,16.0f));
-            pcyltrans->setMatrix(matrix);
-
-            // make SoCylinder point towards z, not y
-            osg::Cylinder* cy = new osg::Cylinder();
-            cy->setRadius(2.0f);
-            cy->setHeight(32.0f);
-            osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
-            osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
-            gcyl->addDrawable(sdcyl.get());
-
-            osg::Cone* cone = new osg::Cone();
-            cone->setRadius(4.0f);
-            cone->setHeight(16.0f);
-
-            osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
-            osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
-            gcone->addDrawable(sdcone.get());
-
-            matrix.makeIdentity();
-            osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
-            matrix.setTrans(osg::Vec3f(0,0,32.0f));
-            pconetrans->setMatrix(matrix);
-
-            psep->addChild(protation);
-            protation->addChild(pcyltrans);
-            pcyltrans->addChild(gcyl.get());
-            protation->addChild(pconetrans);
-            pconetrans->addChild(gcone.get());
-            _osgWorldAxis->addChild(psep);
-        }
-    }
-
+    _RepaintWidgets();
+    _posgWidget->SetFacesMode(false);
+    
     _qtree = new QTreeView;
 
     _CreateActions();
@@ -425,9 +354,10 @@ void QtOSGViewer::_CreateActions()
 
     facesAct = new QAction(QIcon(":/images/faces.png"),tr("Cull face"), this);
     facesAct->setCheckable(true);
+    facesAct->setChecked(true);
     connect(facesAct, SIGNAL(triggered()), this, SLOT(_ProcessFacesModeChange()));
 
-    bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Poligon"), this);
+    bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Polygon"), this);
     bboxAct->setCheckable(true);
     connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
@@ -567,12 +497,10 @@ void QtOSGViewer::ImportEnvironment()
 
 void QtOSGViewer::SaveEnvironment()
 {
-    QString s = QFileDialog::getSaveFileName( this, "Save Environment", NULL,
-                                              "Env Files (*.xml);;COLLADA Files (*.dae)");
-
-    if( s.length() == 0 )
+    QString s = QFileDialog::getSaveFileName( this, "Save Environment", NULL, "Env Files (*.xml);;COLLADA Files (*.dae)");
+    if( s.length() == 0 ) {
         return;
-
+    }
     GetEnv()->Save(s.toAscii().data());
 }
 
@@ -654,9 +582,9 @@ void QtOSGViewer::_ProcessDraggerGroupClicked(int button)
     RAVELOG_INFO_FORMAT("Dragger button clicked %d", button);
 }
 
-void QtOSGViewer::_RepaintWidgets(OSGGroupPtr group)
+void QtOSGViewer::_RepaintWidgets()
 {
-    _posgWidget->SetSceneData(group);
+    _posgWidget->SetSceneData();
 }
 
 void QtOSGViewer::_CreateToolsBar()
@@ -931,7 +859,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
     _posgWidget->SetViewport(width, height);
-
+    
     // read the current camera transform
 //    osg::Vec3d eye, center, up;
 //    _posgWidget->GetCameraManipulator()->getTransformation(eye, center, up);
@@ -940,9 +868,6 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 //    // setup the world axis correctly
 //    osg::Matrix m = osg::Matrix::lookAt(eye, center, up);
 //    m.setTrans(width/2 - 40, -height/2 + 40, -50);
-    osg::Matrix m = _posgWidget->GetCameraManipulator()->getMatrix();
-    m.setTrans(width/2 - 40, -height/2 + 40, -50);
-    _osgWorldAxis->setMatrix(m);
 
     _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getInverseMatrix());//osg::Matrix::inverse(m));//osg::Matrix::lookAt(eye, center, up)));
 
@@ -1319,7 +1244,7 @@ void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertic
     trans->addChild(child);
     parent->addChild(trans);
     handle->addChild(parent);
-    _osgFigureRoot->addChild(handle);
+    _posgWidget->GetFigureRoot()->addChild(handle);
 }
 
 GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
@@ -1495,7 +1420,7 @@ bool QtOSGViewer::LoadModel(const string& filename)
     }
     OSGNodePtr loadedModel = osgDB::readNodeFile(filename);
     if (!!loadedModel) {
-        _osgViewerRoot->addChild(loadedModel.get());
+        _posgWidget->GetSceneRoot()->addChild(loadedModel.get());
         return true;
     }
 
@@ -1582,10 +1507,10 @@ void QtOSGViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_osgViewerRoot, boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_posgWidget->GetSceneRoot(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
                     }
                     else {
-                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_osgViewerRoot, pbody, _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_posgWidget->GetSceneRoot(), pbody, _viewGeometryMode), ITEM_DELETER);
                     }
                     newdata = true;
 
@@ -1655,7 +1580,7 @@ void QtOSGViewer::UpdateFromModel()
 //    }
 
     //  Repaint the scene created
-    _RepaintWidgets(_osgViewerRoot);
+    //_RepaintWidgets();
 
     if (newdata) {
         if (!!_qobjectTree) {
@@ -1788,7 +1713,7 @@ OSGSwitchPtr QtOSGViewer::_CreateGraphHandle()
 
 void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
 {
-    _osgFigureRoot->removeChild(handle);
+    _posgWidget->GetFigureRoot()->removeChild(handle);
 }
 
 void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
