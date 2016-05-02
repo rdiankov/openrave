@@ -221,14 +221,13 @@ protected:
     class PrivateGraphHandle : public GraphHandle
     {
     public:
-        PrivateGraphHandle(QtOSGViewerWeakPtr wviewer, osg::Switch* handle) : _handle(handle), _wviewer(wviewer) {
+        PrivateGraphHandle(QtOSGViewerWeakPtr wviewer, OSGSwitchPtr handle) : _handle(handle), _wviewer(wviewer) {
             BOOST_ASSERT(_handle != NULL);
         }
         virtual ~PrivateGraphHandle() {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                _handle->ref();
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle));
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_CloseGraphHandle, viewer, _handle)); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -236,8 +235,7 @@ protected:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                _handle->ref();
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t));
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphTransform, viewer, _handle, t)); // _handle is copied, so it will maintain the reference
             }
         }
 
@@ -245,12 +243,11 @@ protected:
         {
             boost::shared_ptr<QtOSGViewer> viewer = _wviewer.lock();
             if(!!viewer) {
-                _handle->ref();
-                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow));
+                viewer->_PostToGUIThread(boost::bind(&QtOSGViewer::_SetGraphShow, viewer, _handle, bShow)); // _handle is copied, so it will maintain the reference
             }
         }
 
-        osg::ref_ptr<osg::Switch> _handle;
+        OSGSwitchPtr _handle;
         QtOSGViewerWeakPtr _wviewer;
     };
 
@@ -278,12 +275,12 @@ protected:
     virtual void _UpdateCameraTransform(float fTimeElapsed);
     virtual void _SetCameraTransform();
         
-    virtual osg::Switch* _CreateGraphHandle();
-    virtual void _CloseGraphHandle(osg::Switch* handle);
-    virtual void _SetGraphTransform(osg::Switch* handle, const RaveTransform<float> t);
-    virtual void _SetGraphShow(osg::Switch* handle, bool bShow);
+    virtual OSGSwitchPtr _CreateGraphHandle();
+    virtual void _CloseGraphHandle(OSGSwitchPtr handle);
+    virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
+    virtual void _SetGraphShow(OSGSwitchPtr handle, bool bShow);
 
-    virtual void _Draw(osg::Switch *handle, osg::Vec3Array *vertices, osg::Vec4Array *colors, osg::PrimitiveSet::Mode mode, osg::StateAttribute *attribute);
+    virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute);
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
@@ -303,7 +300,7 @@ protected:
     void _CreateToolsBar();
 
     /// \brief Repaint widgets
-    void _RepaintWidgets(osg::ref_ptr<osg::Group>);
+    void _RepaintWidgets(OSGGroupPtr);
 
     /// \brief Create StatusBar and Set a Message
     void _CreateStatusBar();
@@ -336,10 +333,10 @@ protected:
     //@}
     
     //@{ osg rendering primitives
-    osg::ref_ptr<osg::Group> _osgViewerRoot; ///< root scene node
-    osg::ref_ptr<osg::Group> _ivFigureRoot;        ///< 
-    osg::ref_ptr<osg::MatrixTransform> _ivWorldAxis;
-    osg::ref_ptr<osg::Node> _selectedNode;
+    OSGGroupPtr _osgViewerRoot; ///< root scene node
+    OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
+    OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
+    OSGNodePtr _selectedNode;
     //@}
     
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
