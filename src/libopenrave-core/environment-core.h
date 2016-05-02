@@ -169,14 +169,22 @@ public:
 
         // set a collision checker, don't call EnvironmentBase::CreateCollisionChecker
         CollisionCheckerBasePtr localchecker;
-        boost::array<string,3> checker_prefs = { { "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
-        FOREACH(itchecker,checker_prefs) {
-            localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
-            if( !!localchecker ) {
-                break;
-            }
+
+        const char* pOPENRAVE_DEFAULT_COLLISIONCHECKER = std::getenv("OPENRAVE_DEFAULT_COLLISIONCHECKER");
+        if( !!pOPENRAVE_DEFAULT_COLLISIONCHECKER && strlen(pOPENRAVE_DEFAULT_COLLISIONCHECKER) > 0 ) {
+            localchecker = RaveCreateCollisionChecker(shared_from_this(), std::string(pOPENRAVE_DEFAULT_COLLISIONCHECKER));
         }
 
+        if( !localchecker ) {
+            boost::array<string,3> checker_prefs = { { "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
+            FOREACH(itchecker,checker_prefs) {
+                localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
+                if( !!localchecker ) {
+                    break;
+                }
+            }
+        }
+        
         if( !localchecker ) {     // take any collision checker
             std::map<InterfaceType, std::vector<std::string> > interfacenames;
             RaveGetLoadedInterfaces(interfacenames);

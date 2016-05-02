@@ -17,7 +17,7 @@
 #include "qtosg.h"
 #include <QMainWindow>
 
-#include "treemodel.h"
+#include "qtreemodel.h"
 
 namespace qtosgrave {
 
@@ -73,9 +73,6 @@ public:
 
     //	TODO : Specific QtOsgRave functions
     //virtual osg::Camera* GetCamera() { return _ivCamera; }
-    virtual osg::ref_ptr<osg::Group> GetRoot() {
-        return _ivRoot;
-    }
 
     /// \brief override base class
     virtual void customEvent(QEvent * e);
@@ -123,42 +120,6 @@ public:
 
     /// \brief Locks environment
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
-
-    /// \brief contains a function to be called inside the GUI thread.
-    class GUIThreadFunction
-    {
-    public:
-        GUIThreadFunction(const boost::function<void()>& fn) : _fn(fn), _bcalled(false), _bfinished(false) {
-        }
-
-        void Call() {
-            // have to set finished at the end
-            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
-            BOOST_ASSERT(!_bcalled);
-            _bcalled = true;
-            _fn();
-        }
-
-        /// \brief true if function has already been called
-        bool IsCalled() const {
-            return _bcalled;
-        }
-
-        bool IsFinished() const {
-            return _bfinished;
-        }
-        
-        void SetFinished() {
-            _bfinished = true;
-        }
-        
-    private:
-
-        boost::function<void()> _fn;
-        bool _bcalled; ///< true if function already called
-        bool _bfinished; ///< true if function processing is finished
-    };
-    typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
 
 public slots:
     
@@ -215,6 +176,48 @@ protected:
 
     bool _HandleOSGKeyDown(int);
 
+    /// \brief contains a function to be called inside the GUI thread.
+    class GUIThreadFunction
+    {
+    public:
+        GUIThreadFunction(const boost::function<void()>& fn, bool isblocking=false) : _fn(fn), _bcalled(false), _bfinished(false), _bisblocking(isblocking) {
+        }
+
+        inline void Call() {
+            // have to set finished at the end
+            boost::shared_ptr<void> finishfn((void*)0, boost::bind(&GUIThreadFunction::SetFinished, this));
+            BOOST_ASSERT(!_bcalled);
+            _bcalled = true;
+            _fn();
+        }
+
+        /// \brief true if function has already been called
+        inline bool IsCalled() const {
+            return _bcalled;
+        }
+
+        inline bool IsFinished() const {
+            return _bfinished;
+        }
+
+        inline bool IsBlocking() const {
+            return _bisblocking;
+        }
+
+        void SetFinished() {
+            _bfinished = true;
+        }
+        
+    private:
+
+        boost::function<void()> _fn;
+        bool _bcalled; ///< true if function already called
+        bool _bfinished; ///< true if function processing is finished
+        bool _bisblocking; ///< if true, then the caller is blocking until the function completes
+    };
+    typedef boost::shared_ptr<GUIThreadFunction> GUIThreadFunctionPtr;
+
+    /// \brief implementation of graph handles for qtosg
     class PrivateGraphHandle : public GraphHandle
     {
     public:
@@ -261,6 +264,7 @@ protected:
         return boost::static_pointer_cast<QtOSGViewer const>(shared_from_this());
     }
 
+    /// \brief initializes osg view and the qt menus/dialog boxes
     virtual void _InitGUI(bool bCreateStatusBar, bool bCreateMenu);
     
     /// \brief Update model and camera transform
@@ -323,61 +327,50 @@ protected:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     
-    // Message Queue
-    list<GUIThreadFunctionPtr> _listGUIFunctions;
-    list<Item*> _listRemoveItems; ///< raw points of items to be deleted, triggered from _DeleteItemCallback
-    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove; ///< mutex protected messages
+    //@{ Message Queue
+    list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
+    mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
+    boost::mutex _mutexItems; ///< protects _listRemoveItems
     mutable boost::mutex _mutexGUIFunctions;
-    mutable boost::condition _notifyGUIFunctionComplete;
+    mutable boost::condition _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
+    //@}
     
-    // Rendering
-    osg::ref_ptr<osg::Group> _ivRoot;        ///< root node
+    //@{ osg rendering primitives
+    osg::ref_ptr<osg::Group> _osgViewerRoot; ///< root scene node
     osg::ref_ptr<osg::Group> _ivFigureRoot;        ///< 
     osg::ref_ptr<osg::MatrixTransform> _ivWorldAxis;
     osg::ref_ptr<osg::Node> _selectedNode;
-    osg::ref_ptr<osgManipulator::Dragger>    _pdragger;
+    //@}
     
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
-    std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< all the bodies created
+    std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< mapping of all the bodies created
     ItemPtr _pSelectedItem;     ///< the currently selected item
-    
-    RaveTransform<float>     _initSelectionTrans;       ///< initial tarnsformation of selected item
-    RaveTransform<float> _Tcamera;
+
+    //@{ camera
+    RaveTransform<float> _Tcamera; ///< current position of the camera representing the current view, updated periodically, read only.
     float _focalDistance;  ///< current focal distance of the camera, read-only
-    geometry::RaveCameraIntrinsics<float> _camintrinsics;
+    geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
+    //@}
 
-    std::string _name;
-
-    unsigned int _fb;
-    unsigned int _rb;
-    unsigned int _outTex;
-    unsigned int _queryBodyAlone;
-    unsigned int _queryWithEnv;
-    unsigned int _sampleCountAlone;
-    unsigned int _sampleCountWithEnv;
-    int _available;
-    
-
-    boost::mutex _mutexUpdateModels, _mutexCallbacks;
+    boost::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
+    boost::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
     boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
-    boost::mutex _mutexGUI;
-    bool _bInIdleThread;
-    timeval timestruct;
+    
+    ViewGeometry _viewGeometryMode; ///< the visualization mode of the geometries
 
-    PhysicsEngineBasePtr pphysics;
-
-
-    ViewGeometry _viewGeometryMode;
-
+    //@{ callbacks
+    boost::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
+    //@}
 
-    //QSize getSize();
+    //@{ qt menus and dialog boxes
+    QTimer _updateViewerTimer;
+    
     QGridLayout* _qCentralLayout;
     QWidget* _qCentralWidget;
     ViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
-    //boost::shared_ptr<TreeModel> treeModel;
-
+    
     QMenu* fileMenu;
     QMenu* viewMenu;
     QMenu* helpMenu;
@@ -422,7 +415,6 @@ protected:
 
     QComboBox* physicsComboBox;
     
-    QString fileName;
     QTreeView* _qtree;
 
     QActionGroup* shapeGroup;
@@ -430,10 +422,19 @@ protected:
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;
     
-    QTreeWidget* objectTree; ///< Tree of robots, joints and links
-    QTreeWidget* detailsTree; ///< Details panel object
+    QTreeWidget* _qobjectTree; ///< Tree of robots, joints and links
+    QTreeWidget* _qdetailsTree; ///< Details panel object
+    //@}
+
+    /// tracking parameters
+    //@{
+    KinBody::LinkPtr _ptrackinglink; ///< current link tracking
+    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
+    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
+    Transform _tTrackingCameraVelocity; ///< camera velocity
+    float _fTrackAngleToUp; ///< tilt a little when looking at the point
+    //@}
     
-    QTimer _timer;
     // toggle switches
     bool _bModelsUpdated;
     bool _bDisplayGrid;
@@ -453,36 +454,13 @@ protected:
     bool _bShareBitmap;
     bool _bManipTracking;
     bool _bAntialiasing;
-
-    // data relating to playback
-    bool _bStopped;
-    bool _bTimeInitialized;
-    int _fileFrame;
-    int _recordInterval;
-    time_t _prevSec;
-    long _prevMicSec;
-
-    bool _bTimeElapsed;
-    //bool _bRecordMotion;
-    bool _bSaveVideo;
-    bool _bRealtimeVideo;
-    bool _bAutoSetCamera;
-
-    // ode thread related
-    bool _bQuitMainLoop;
-    bool _bUpdateEnvironment;    
-    bool _bLockEnvironment; ///< if true, should lock the environment.
+    
+    // control related
+    bool _bUpdateEnvironment; ///< if true, should update the viewer to the openrave environment periodically
+    bool _bLockEnvironment; ///< if true, should lock the environment when updating from it. Otherwise, the environment can assumed to be already locked in another thread that the viewer controls
 
     int _nQuitMainLoop; ///< controls if the main loop's state. If 0, then nothing is initialized. If -1, then currently initializing/running. If 1, then currently quitting from the main loop. If 2, then successfully quit from the main loop.
-    /// tracking parameters
-    //@{
-    KinBody::LinkPtr _ptrackinglink; ///< current link tracking
-    Transform _tTrackingLinkRelative; ///< relative transform in the _ptrackinglink coord system  that should be tracking.
-    RobotBase::ManipulatorPtr _ptrackingmanip; ///< current manipulator tracking
-    Transform _tTrackingCameraVelocity; ///< camera velocity
-    float _fTrackAngleToUp; ///< tilt a little when looking at the point
-    //@}
-
+    
     bool _bRenderFiguresInCamera;
 
     friend class ItemSelectionCallbackData;

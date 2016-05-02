@@ -360,15 +360,19 @@ class InverseKinematicsModel(DatabaseGenerator):
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             success = self.manip.SetIKSolver(self.iksolver)
-            if success and self.manip.GetIkSolver() is not None and self.freeinc is not None:
+            if success and self.freeinc is not None:
                 freeincvalue = 0.01
                 try:
                     if len(self.freeinc) > 0:
                         freeincvalue = self.freeinc[0]
                 except TypeError:
                     freeincvalue = float(self.freeinc)
-                self.manip.GetIkSolver().SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8))
+                self.iksolver.SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8)) # the default values are for all joints
+                if len(self.freeindices) > 0 and self.freeinc is not None and len(self.freeinc) == len(self.freeindices):
+                    # specify the free increments for the free indices
+                    self.iksolver.SendCommand('SetFreeIncrements %s'%(' '.join([str(f) for f in self.freeinc])))
             return success
+        
         return self.has()
     
     def getDefaultFreeIncrements(self,freeincrot, freeinctrans):
@@ -516,7 +520,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     intersecting3axes[j] &= ~mask
         solveindices = [i for i in self.manip.GetArmIndices() if not i in freeindices]
         return solveindices,freeindices
-
+    
     def getfilename(self,read=False):
         if self.iktype is None:
             raise InverseKinematicsError(u'ik type is not set')

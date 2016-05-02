@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 /*! --------------------------------------------------------------------
-   \file   renderitem.h
+   \file   osgrenderitem.h
    \brief  Abstract base class for a render item
    -------------------------------------------------------------------- */
 
@@ -34,7 +34,7 @@ enum ViewGeometry {
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
-    Item(QtOSGViewerPtr viewer);
+    Item(osg::ref_ptr<osg::Group> osgViewerRoot);
     virtual ~Item();
 
     /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
@@ -64,7 +64,7 @@ public:
     }
 
     inline RaveTransform<float> GetTransform() {
-        return GetRaveTransform(_ivXform);
+        return GetRaveTransform(_osgWorldTransform);
     }
 
     // if false, then item isn't rendered through the sensors
@@ -79,7 +79,7 @@ public:
         return _ivRoot;
     }
     osg::MatrixTransform* GetIvTransform()    {
-        return _ivXform;
+        return _osgWorldTransform;
     }
     osg::Switch*    GetIvGeom() const {
         return _ivGeom;
@@ -97,21 +97,21 @@ public:
 protected:
 
     // Instance Data
-    QtOSGViewerPtr _viewer;
-    string _name;           //!< item name
-    osg::Group*                _ivRoot;           //!< root of OSG data hierarchy
-    osg::MatrixTransform*  _ivXform;          //!< Kinbody position
-    osg::Switch*             _ivGeom;           //!< item geometry hierarchy
-    osg::BlendColor*           _ivTransparency;
+    osg::ref_ptr<osg::Group> _osgViewerRoot; ///< used for adding and removing itself from the viewer node
+    string _name; ///< item name
+    osg::Group* _ivRoot; ///< root of this object's OSG data hierarchy
+    osg::MatrixTransform* _osgWorldTransform; ///< Kinbody position
+    osg::Switch* _ivGeom; ///< item geometry hierarchy
+    osg::BlendColor* _ivTransparency;
 };
 typedef boost::shared_ptr<Item> ItemPtr;
 typedef boost::shared_ptr<Item const> ItemConstPtr;
 
-// handles KinBodys
+/// \brief render item that  handles KinBodys
 class KinBodyItem : public Item
 {
 public:
-    KinBodyItem(QtOSGViewerPtr viewer, KinBodyPtr, ViewGeometry viewmode);
+    KinBodyItem(osg::ref_ptr<osg::Group> osgViewerRoot, KinBodyPtr, ViewGeometry viewmode);
     virtual ~KinBodyItem();
 
     virtual void PrepForDeletion() {
@@ -215,7 +215,7 @@ public:
         osg::Switch* _pswitch;
     };
 
-    RobotItem(QtOSGViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewmode);
+    RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot, ViewGeometry viewmode);
 
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);

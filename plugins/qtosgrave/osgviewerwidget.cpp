@@ -26,8 +26,11 @@ public:
         if( !!_sourcetransform && !!_updatetransform ) {
             if( command.getStage() == osgManipulator::MotionCommand::FINISH || command.getStage() == osgManipulator::MotionCommand::MOVE) {
                 _updatetransform->setMatrix(_sourcetransform->getMatrix());
+                return true;
             }
         }
+
+        return false;
     }
 
 protected:
@@ -587,7 +590,7 @@ void ViewerWidget::_PropagateTransforms()
     parent->addChild(_selected);
 
     //  Clears object selection
-    _selection->removeChild(_selected);
+    _draggerMatrix->removeChild(_selected);
 
     //  Remove _root from scene graph
     parent->removeChild(_root);
@@ -613,10 +616,10 @@ void ViewerWidget::_PropagateTransforms()
 //          }
 //        }
 
-        mL = _selection->getMatrix();
+        mL = _draggerMatrix->getMatrix();
 
         //  Modify transform
-        tglobal->setMatrix(tglobal->getMatrix() * _selection->getMatrix());
+        tglobal->setMatrix(tglobal->getMatrix() * _draggerMatrix->getMatrix());
     }
 
     // Clears list of link children
@@ -780,12 +783,12 @@ osg::MatrixTransform *ViewerWidget::GetCameraHUD()
 
 void ViewerWidget::_StoreMatrixTransform()
 {
-    _matrix1 = _osgview->getCamera()->getViewMatrix();
+    _viewCameraMatrix = _osgview->getCamera()->getViewMatrix();
 }
 
 void ViewerWidget::_LoadMatrixTransform()
 {
-    _osgview->getCamera()->setViewMatrix(_matrix1);
+    _osgview->getCamera()->setViewMatrix(_viewCameraMatrix);
 }
 
 std::vector<osg::ref_ptr<osgManipulator::Dragger> > ViewerWidget::_CreateDragger(const std::string& draggerName)
@@ -865,7 +868,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
     _ClearDragger();
 
     //  New selection
-    _selection = new osg::MatrixTransform;
+    _draggerMatrix = new osg::MatrixTransform;
 
     //  Create a new dragger
     _draggers = _CreateDragger(draggerName);
@@ -878,7 +881,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
         pscaleparent->addChild(_draggers[idragger].get());
         _root->addChild(pscaleparent.get());
     }
-    _root->addChild(_selection);
+    _root->addChild(_draggerMatrix);
 
 
     //  Store object selected in global variable _selected
@@ -904,7 +907,7 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
     }
 
     //  Adds object to selection
-    _selection->addChild(object);
+    _draggerMatrix->addChild(object);
 
     float scale = object->getBound().radius() * 1.2;
 
@@ -923,15 +926,14 @@ osg::Node* ViewerWidget::_AddDraggerToObject(std::string& robotName,osg::Node* o
 
         _draggers.at(0)->setMatrix(matrix * osg::Matrix::translate(anchor.x,anchor.y,anchor.z)*osg::Matrix::scale(scale, scale, scale));
     }
-    else
-    {
+    else {
         FOREACH(itdragger, _draggers) {
             (*itdragger)->setMatrix(osg::Matrix::translate(object->getBound().center())*osg::Matrix::scale(scale, scale, scale));
         }
     }
 
     FOREACH(itdragger, _draggers) {
-        (*itdragger)->addTransformUpdating(_selection); // in version 3.2 can specify what to transform
+        (*itdragger)->addTransformUpdating(_draggerMatrix); // in version 3.2 can specify what to transform
         // we want the dragger to handle it's own events automatically
         (*itdragger)->setHandleEvents(true);
 

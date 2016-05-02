@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Gustavo Puche, Rosen Diankov, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,32 +17,31 @@
    -------------------------------------------------------------------- */
 #include "qtosg.h"
 #include "qtosgviewer.h"
-#include "renderitem.h"
+#include "osgrenderitem.h"
 
 namespace qtosgrave {
 
-Item::Item(QtOSGViewerPtr viewer) : _viewer(viewer)
+Item::Item(osg::ref_ptr<osg::Group> osgViewerRoot) : _osgViewerRoot(osgViewerRoot)
 {
     // set up the Inventor nodes
-    _ivXform = new osg::MatrixTransform;
+    _osgWorldTransform = new osg::MatrixTransform;
     _ivRoot = new osg::Group;
     _ivGeom = new osg::Switch; // TODO : Put 2 childrens...
     _ivGeom->setAllChildrenOn();
 
     _ivRoot->ref();
-    _ivRoot->addChild(_ivXform);
-    _ivXform->addChild(_ivGeom);
+    _ivRoot->addChild(_osgWorldTransform);
+    _osgWorldTransform->addChild(_ivGeom);
 
-    _viewer->GetRoot()->addChild(_ivRoot);
+    _osgViewerRoot->addChild(_ivRoot);
 }
 
 Item::~Item()
 {
     if( _ivRoot != NULL ) {
-        _viewer->GetRoot()->removeChild(_ivRoot);
+        _osgViewerRoot->removeChild(_ivRoot);
         _ivRoot->unref();
     }
-
 }
 
 bool Item::ContainsOSGNode(osg::Node *pNode)
@@ -70,7 +69,7 @@ void Item::SetGeomVisibility(bool bFlag)
 }
 
 /// KinBodyItem class
-KinBodyItem::KinBodyItem(QtOSGViewerPtr viewer, KinBodyPtr pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
+KinBodyItem::KinBodyItem(osg::ref_ptr<osg::Group> osgViewerRoot, KinBodyPtr pchain, ViewGeometry viewmode) : Item(osgViewerRoot), _viewmode(viewmode)
 {
     BOOST_ASSERT( !!pchain );
     _pchain = pchain;
@@ -590,7 +589,7 @@ bool KinBodyItem::UpdateFromIv()
         return false;
     }
     vector<Transform> vtrans(_veclinks.size());
-    Transform tglob = GetRaveTransform(_ivXform);
+    Transform tglob = GetRaveTransform(_osgWorldTransform);
 
     vector<Transform>::iterator ittrans = vtrans.begin();
     FOREACH(it, _veclinks) {
@@ -600,7 +599,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pchain->GetEnv(), 50000);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
@@ -632,7 +631,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer->LockEnvironment(50000,false);
+        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pchain->GetEnv(), 50000);
         if( !lockenv ) {
             return false;
         }
@@ -755,7 +754,7 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(osg::Node* plinknode) const
     return KinBody::LinkPtr();
 }
 
-RobotItem::RobotItem(QtOSGViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom)
+RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgViewerRoot, robot, viewgeom)
 {
     int index = 0;
     FOREACHC(itmanip, robot->GetManipulators()) {
@@ -929,7 +928,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     }
     if( bGrabbed ) {
         // only updated when grabbing!
-        RaveTransform<float> transInvRoot = GetRaveTransform(_ivXform).inverse();
+        RaveTransform<float> transInvRoot = GetRaveTransform(_osgWorldTransform).inverse();
 
         FOREACH(itee, _vEndEffectors) {
             if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {

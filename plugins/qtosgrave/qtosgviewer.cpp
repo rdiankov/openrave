@@ -78,8 +78,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     // initialize member variables
     //
 
-    objectTree = NULL;
-    detailsTree = NULL;
+    _qobjectTree = NULL;
+    _qdetailsTree = NULL;
     _focalDistance = 0.0;
     _fTrackAngleToUp = 0.3;
     _pointerTypeGroup = NULL;
@@ -113,14 +113,14 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     // figure out window title
     //
 
-    _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
+    std::string name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
-        _name += " (Development Version)";
+        name += " (Development Version)";
     }
     else {
-        _name += " (Stable Release)";
+        name += " (Stable Release)";
     }
-    setWindowTitle(_name.c_str());
+    setWindowTitle(name.c_str());
 
     if(bCreateStatusBar) {
         statusBar()->showMessage(tr("Status Bar"));
@@ -181,11 +181,11 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     setCentralWidget(_posgWidget);
 
     // initialize the environment
-    _ivRoot = new osg::Group();
-    _ivRoot->ref();
+    _osgViewerRoot = new osg::Group();
+    _osgViewerRoot->ref();
 
     _ivFigureRoot = new osg::Group();
-    _ivRoot->addChild(_ivFigureRoot);
+    _osgViewerRoot->addChild(_ivFigureRoot);
 
     // create world axis
 
@@ -282,7 +282,6 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
     _bDynSim = false;
     _bControl = true;
     _bGravity = true;
-    _bTimeElapsed = false;
     _bSensing = false;
     _bMemory = true;
     _bHardwarePlan = false;
@@ -433,8 +432,8 @@ void QtOSGViewer::_CreateActions()
     bboxAct->setCheckable(true);
     connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(_UpdateViewerCallback()));
-    _timer.start(1000/60); // ms
+    connect(&_updateViewerTimer, SIGNAL(timeout()), this, SLOT(_UpdateViewerCallback()));
+    _updateViewerTimer.start(1000/60); // ms
 }
 
 void QtOSGViewer::_UpdateViewerCallback()
@@ -480,8 +479,8 @@ void QtOSGViewer::_Reset()
     }
     _mapbodies.clear();
 
-    if (objectTree != NULL) {
-        objectTree->clear();
+    if (!!_qobjectTree) {
+        _qobjectTree->clear();
     }
 
 
@@ -743,10 +742,10 @@ void QtOSGViewer::_CreateDockWidgets()
     QDockWidget *dock = new QDockWidget(tr("Objects Tree"), this);
     dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
 
-    objectTree = _CreateObjectTree();
-
-    dock->setWidget(objectTree);
-
+    _qobjectTree = _CreateObjectTree();
+    dock->setWidget(_qobjectTree);
+    dock->hide();
+    
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 
@@ -755,10 +754,10 @@ void QtOSGViewer::_CreateDockWidgets()
 
     //  QListWidget *sensorList = new QListWidget(dock);
 
-    detailsTree = new QTreeWidget();
-    detailsTree->setHeaderLabel(QString("Properties"));
-    dock->setWidget(detailsTree);
-
+    _qdetailsTree = new QTreeWidget();
+    _qdetailsTree->setHeaderLabel(QString("Properties"));
+    dock->setWidget(_qdetailsTree);
+    dock->hide();
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 }
@@ -775,8 +774,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     _posgWidget->SelectRobot(item->text(0).toAscii().data());
 
     //  Clears details
-    if (detailsTree != NULL) {
-        detailsTree->clear();
+    if (!!_qdetailsTree) {
+        _qdetailsTree->clear();
     }
 
     QList<QTreeWidgetItem*> items;
@@ -786,8 +785,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
             std::ostringstream strs;
 
             //  Set Title
-            if (detailsTree != NULL) {
-                detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            if (!!_qdetailsTree) {
+                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
             }
 
             robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toAscii().data());
@@ -804,15 +803,15 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         }
         else {
             //  Set Title
-            if (detailsTree != NULL) {
-                detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            if (!!_qdetailsTree) {
+                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
             }
         }
     }
     else {
         //  Set Title
-        if (detailsTree != NULL) {
-            detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+        if (!!_qdetailsTree) {
+            _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
         }
         kinbody = GetEnv()->GetKinBody(item->text(0).toAscii().data());
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
@@ -825,8 +824,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     }
 
     //  Add Items to details panel
-    if (detailsTree != NULL) {
-        detailsTree->insertTopLevelItems(0, items);
+    if (!!_qdetailsTree) {
+        _qdetailsTree->insertTopLevelItems(0, items);
     }
 }
 
@@ -1528,7 +1527,7 @@ bool QtOSGViewer::LoadModel(const string& filename)
     osg::Node *node = loadedModel.get();
 
     if (node != NULL) {
-        GetRoot()->addChild(node);
+        _osgViewerRoot->addChild(node);
         return true;
     }
 
@@ -1615,10 +1614,10 @@ void QtOSGViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_osgViewerRoot, boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
                     }
                     else {
-                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_osgViewerRoot, pbody, _viewGeometryMode), ITEM_DELETER);
                     }
                     newdata = true;
 
@@ -1668,7 +1667,7 @@ void QtOSGViewer::UpdateFromModel()
                 // TODO
                 //_pdragger.reset();
                 _pSelectedItem.reset();
-                //_ivRoot->deselectAll();
+                //_osgViewerRoot->deselectAll();
             }
 
             _mapbodies.erase(it++);
@@ -1688,12 +1687,12 @@ void QtOSGViewer::UpdateFromModel()
 //    }
 
     //  Repaint the scene created
-    _RepaintWidgets(GetRoot());
+    _RepaintWidgets(_osgViewerRoot);
 
     if (newdata) {
-        if (objectTree != NULL) {
+        if (!!_qobjectTree) {
             //  Fill tree widget with robot and joints
-            _FillObjectTree(objectTree);
+            _FillObjectTree(_qobjectTree);
         }
     }
 }
@@ -1751,7 +1750,7 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
 void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
 {
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn));
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
     _listGUIFunctions.push_back(pfn);
     if( block ) {
@@ -1771,8 +1770,17 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
     if( !bUpdate ) {
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-        FOREACH(it,_listGUIFunctions) {
-            (*it)->SetFinished();
+        if( _listGUIFunctions.size() > 0 ) {
+            bool bnotify = false;
+            FOREACH(it,_listGUIFunctions) {
+                (*it)->SetFinished();
+                if( (*it)->IsBlocking() ) {
+                    bnotify = true;
+                }
+            }
+            if( bnotify ) {
+                _notifyGUIFunctionComplete.notify_all();
+            }
         }
         _listGUIFunctions.clear();
     }
