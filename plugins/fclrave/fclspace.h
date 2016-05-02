@@ -475,103 +475,6 @@ public:
     }
 
 
-    class TemporaryManagerAgainstEnv {
-public:
-        TemporaryManagerAgainstEnv(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
-        {
-            _manager = _pfclspace->CreateManager();
-        }
-
-        ~TemporaryManagerAgainstEnv() {
-            CollisionGroup tmpGroup;
-            _manager->getObjects(tmpGroup);
-            _manager->clear();
-            _pfclspace->GetEnvManager()->registerObjects(tmpGroup);
-            _pfclspace->GetEnvManager()->registerObjects(vexcluded);
-        }
-
-        void Register(KinBodyConstPtr pbody) {
-            KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
-            BOOST_ASSERT( pinfo->GetBody() == pbody );
-
-            CollisionGroup tmpGroup;
-            pinfo->_bodyManager->getObjects(tmpGroup);
-            if( pbody->IsEnabled() ) {
-                _manager->registerObjects(tmpGroup);
-            } else {
-                copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(vexcluded));
-            }
-            UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
-        }
-
-        void Register(LinkConstPtr plink) {
-            CollisionObjectPtr pcoll = _pfclspace->GetLinkBV(plink);
-            _manager->registerObject(pcoll.get());
-            _pfclspace->GetEnvManager()->unregisterObject(pcoll.get());
-        }
-
-        void Exclude(KinBodyConstPtr pbody) {
-            KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
-            BOOST_ASSERT( pinfo->GetBody() == pbody );
-
-            CollisionGroup tmpGroup;
-            pinfo->_bodyManager->getObjects(tmpGroup);
-            copy(tmpGroup.begin(), tmpGroup.end(), back_inserter(vexcluded));
-            UnregisterObjects(_pfclspace->GetEnvManager(), tmpGroup);
-        }
-
-        void Exclude(LinkConstPtr plink) {
-            CollisionObjectPtr pcoll = _pfclspace->GetLinkBV(plink);
-            vexcluded.push_back(pcoll.get());
-            _pfclspace->GetEnvManager()->unregisterObject(pcoll.get());
-        }
-
-        BroadPhaseCollisionManagerPtr GetManager() {
-            return _manager;
-        }
-
-private:
-        boost::shared_ptr<FCLSpace> _pfclspace;
-        BroadPhaseCollisionManagerPtr _manager;
-        CollisionGroup vexcluded;
-    };
-
-
-    class TemporaryManager {
-public:
-        TemporaryManager(boost::shared_ptr<FCLSpace> pfclspace) : _pfclspace(pfclspace)
-        {
-            _manager1 = _pfclspace->CreateManager();
-            _manager2 = _pfclspace->CreateManager();
-        }
-
-        void Register(KinBodyConstPtr pbody, bool firstManager) {
-            KinBodyInfoPtr pinfo = _pfclspace->GetInfo(pbody);
-            BOOST_ASSERT( pinfo->GetBody() == pbody );
-
-            CollisionGroup tmpGroup;
-            pinfo->_bodyManager->getObjects(tmpGroup);
-            if( pbody->IsEnabled() ) {
-                (firstManager ? _manager1 : _manager2)->registerObjects(tmpGroup);
-            }
-        }
-
-        void Register(LinkConstPtr plink, bool firstManager) {
-            CollisionObjectPtr pcoll = _pfclspace->GetLinkBV(plink);
-            (firstManager ? _manager1 : _manager2)->registerObject(pcoll.get());
-        }
-
-        BroadPhaseCollisionManagerPtr GetManager(bool firstManager) {
-            return (firstManager ? _manager1 : _manager2);
-        }
-
-private:
-        boost::shared_ptr<FCLSpace> _pfclspace;
-        BroadPhaseCollisionManagerPtr _manager1, _manager2;
-    };
-
-    typedef boost::shared_ptr<TemporaryManager> TemporaryManagerPtr;
-    typedef boost::shared_ptr<TemporaryManagerAgainstEnv> TemporaryManagerAgainstEnvPtr;
 
 
     bool HasMultipleGeometries(LinkConstPtr plink) {
@@ -620,14 +523,6 @@ private:
             //RAVELOG_WARN(str(boost::format("Link %d of KinBody %s not initialized in collision checker %s, env %d")%index%pbody->GetName()%_userdatakey%_penv->GetId()));
             return BroadPhaseCollisionManagerPtr();
         }
-    }
-
-    TemporaryManagerPtr CreateTemporaryManager() {
-        return boost::make_shared<TemporaryManager>(shared_from_this());
-    }
-
-    TemporaryManagerAgainstEnvPtr CreateTemporaryManagerAgainstEnv() {
-        return boost::make_shared<TemporaryManagerAgainstEnv>(shared_from_this());
     }
 
     BroadPhaseCollisionManagerPtr CreateManager() {
