@@ -185,7 +185,7 @@ private:
 
 
 
-    FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv)
+    FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
         : OpenRAVE::CollisionCheckerBase(penv), bisSelfCollisionChecker(true)
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
@@ -200,6 +200,20 @@ private:
         // TODO : check that the coordinate are in the right order
         RegisterCommand("SetSpatialHashingBroadPhaseAlgorithm", boost::bind(&FCLCollisionChecker::SetSpatialHashingBroadPhaseAlgorithm, this, _1, _2), "sets the broadphase algorithm to spatial hashing with (cell size) (scene min x) (scene min y) (scene min z) (scene max x) (scene max y) (scene max z)");
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
+
+        std::string broadphasealg, bvhrepresentation;
+        sinput >> broadphasealg >> bvhrepresentation;
+        if( broadphasealg != "" ) {
+            if( broadphasealg == "SpatialHashing" ) {
+                std::ostream nullout(nullptr);
+                SetSpatialHashingBroadPhaseAlgorithm(nullout, sinput);
+            } else {
+                _fclspace->SetBroadphaseAlgorithm(broadphasealg);
+            }
+        }
+        if( bvhrepresentation != "" ) {
+            _fclspace->SetBVHRepresentation(bvhrepresentation);
+        }
     }
 
     virtual ~FCLCollisionChecker() {
