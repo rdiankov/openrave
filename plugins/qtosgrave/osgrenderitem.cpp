@@ -16,60 +16,50 @@
    \brief  Abstract base class for an Item
    -------------------------------------------------------------------- */
 #include "qtosg.h"
-#include "qtosgviewer.h"
 #include "osgrenderitem.h"
+
+#include <osgUtil/SmoothingVisitor>
+#include <osg/BlendFunc>
 
 namespace qtosgrave {
 
-Item::Item(osg::ref_ptr<osg::Group> osgViewerRoot) : _osgViewerRoot(osgViewerRoot)
+Item::Item(OSGGroupPtr osgViewerRoot) : _osgViewerRoot(osgViewerRoot)
 {
     // set up the Inventor nodes
     _osgWorldTransform = new osg::MatrixTransform;
-    _ivRoot = new osg::Group;
-    _ivGeom = new osg::Switch; // TODO : Put 2 childrens...
-    _ivGeom->setAllChildrenOn();
+    //_osgitemroot = new osg::Group;
+    _osgdata = new osg::Switch; // TODO : Put 2 childrens...
+    _osgdata->setAllChildrenOn();
+    //_osgitemroot->addChild(_osgWorldTransform);
+    _osgWorldTransform->addChild(_osgdata);
 
-    _ivRoot->ref();
-    _ivRoot->addChild(_osgWorldTransform);
-    _osgWorldTransform->addChild(_ivGeom);
-
-    _osgViewerRoot->addChild(_ivRoot);
+    _osgViewerRoot->addChild(_osgWorldTransform);
 }
 
 Item::~Item()
 {
-    if( _ivRoot != NULL ) {
-        _osgViewerRoot->removeChild(_ivRoot);
-        _ivRoot->unref();
-    }
+    _osgViewerRoot->removeChild(_osgWorldTransform); // should remove all references
 }
 
-bool Item::ContainsOSGNode(osg::Node *pNode)
+bool Item::ContainsOSGNode(OSGNodePtr pNode)
 {
-    FindNode *search = new FindNode(pNode);
-    search->apply(_ivGeom);
-
-    if (search->getNode()) {
-        delete search;
-        return true;
-    }
-
-    delete search;
-    return false;
+    FindNode search(pNode);
+    search.apply(_osgdata);
+    return search.getNode();
 }
 
 void Item::SetGeomVisibility(bool bFlag)
 {
     if (bFlag) {
-        _ivGeom->setAllChildrenOn();
+        _osgdata->setAllChildrenOn();
     }
     else {
-        _ivGeom->setAllChildrenOff();
+        _osgdata->setAllChildrenOff();
     }
 }
 
 /// KinBodyItem class
-KinBodyItem::KinBodyItem(osg::ref_ptr<osg::Group> osgViewerRoot, KinBodyPtr pchain, ViewGeometry viewmode) : Item(osgViewerRoot), _viewmode(viewmode)
+KinBodyItem::KinBodyItem(OSGGroupPtr osgViewerRoot, KinBodyPtr pchain, ViewGeometry viewmode) : Item(osgViewerRoot), _viewmode(viewmode)
 {
     BOOST_ASSERT( !!pchain );
     _pchain = pchain;
@@ -77,21 +67,19 @@ KinBodyItem::KinBodyItem(osg::ref_ptr<osg::Group> osgViewerRoot, KinBodyPtr pcha
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    networkid = pchain->GetEnvironmentId();
-    _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::GeometryChangedCallback,this));
-    _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
+    _environmentid = pchain->GetEnvironmentId();
+    _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
+    _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
 }
-
 
 KinBodyItem::~KinBodyItem()
 {
-    //delete _pchain; // pointer doesn't belong to gui
     _veclinks.clear();
 }
 
-void KinBodyItem::setNamedNode(const std::string&  name, osg::Node* currNode)
+void KinBodyItem::_SetNamedNode(const std::string&  name, OSGNodePtr currNode)
 {
-    osg::Group* currGroup;
+    OSGGroupPtr currGroup;
 
     // check to see if we have a valid (non-NULL) node.
     // if we do have a null node, return NULL.
@@ -109,7 +97,7 @@ void KinBodyItem::setNamedNode(const std::string&  name, osg::Node* currNode)
         currGroup = currNode->asGroup(); // returns NULL if not a group.
         if ( currGroup ) {
             for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
-                setNamedNode(name, currGroup->getChild(i));
+                _SetNamedNode(name, currGroup->getChild(i));
             }
         }
     }
@@ -122,19 +110,16 @@ void KinBodyItem::Load()
     osg::Matrix mS;
     osg::Matrix mIdentity;
 
-    osg::Group* parent;
-    osg::Group* child;
+    OSGGroupPtr parent;
+    OSGGroupPtr child;
 
     vector<KinBody::LinkPtr>::const_iterator it;
 
     mIdentity.makeIdentity();
 
     //  Sets name of Robot or Kinbody
-    _ivGeom->setName(_pchain->GetName());
-
-//  RAVELOG_DEBUG("Kinbody name=%s\n",_ivGeom->getName().c_str());
-//  RAVELOG_VERBOSE("Number of links = %d\n",_pchain->GetLinks().size());
-
+    _osgdata->setName(_pchain->GetName());
+    
     //  Extract geometry
     FORIT(it, _pchain->GetLinks()) {
         LINK lnk;
@@ -143,16 +128,9 @@ void KinBodyItem::Load()
 
         RaveTransform<float> tbody = (*it)->GetTransform();
 
-        RAVELOG_DEBUG_FORMAT("Link name = %s",(*it)->GetName());
-
-//    RAVELOG_INFO("Rt  Ext: %f,%f,%f,%f\n",tbody.rot.y, tbody.rot.z,tbody.rot.w,tbody.rot.x);
-
         mR.makeRotate(osg::Quat(tbody.rot.y, tbody.rot.z,tbody.rot.w,tbody.rot.x));
         mT.makeTranslate(tbody.trans.x, tbody.trans.y, tbody.trans.z);
-
-//    mR.makeRotate(osg::Quat(0.0, 0.0,0.0,1.0));
-//    mT.makeTranslate(0.0, 0.0, 0.0);
-
+        
         lnk.second->preMult(mT);
         lnk.second->preMult(mR);
 
@@ -165,13 +143,10 @@ void KinBodyItem::Load()
                 continue;
             }
 
-            osg::Group*           psep = NULL;
-            osg::MatrixTransform* ptrans = new osg::MatrixTransform();
+            OSGGroupPtr psep;
+            OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
             Transform tgeom = orgeom->GetTransform();
-
-//      RAVELOG_VERBOSE("Trn Int: %f,%f,%f\n",tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
-//      RAVELOG_INFO("Rt  Int: %f,%f,%f,%f\n",tgeom.rot.y, tgeom.rot.z,tgeom.rot.w,tgeom.rot.x);
-
+            
             mR.makeRotate(osg::Quat(tgeom.rot.y, tgeom.rot.z,tgeom.rot.w,tgeom.rot.x));
             mT.makeTranslate(tgeom.trans.x, tgeom.trans.y, tgeom.trans.z);
 
@@ -181,8 +156,6 @@ void KinBodyItem::Load()
             // open
             bool bSucceeded = false;
             if( _viewmode == VG_RenderOnly || _viewmode == VG_RenderCollision ) {
-
-                //  OpenRAVE 0.5 version
                 string extension;
                 if( orgeom->GetRenderFilename().find("__norenderif__:") == 0 ) {
                     string ignoreextension = orgeom->GetRenderFilename().substr(15);
@@ -195,7 +168,7 @@ void KinBodyItem::Load()
                     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
                 }
                 if( extension == "wrl" || extension == "iv" || extension == "vrml" ) {
-                    osg::Node* loadedModel;
+                    OSGNodePtr loadedModel;
                     osg::Matrix mRotate;
 
                     mRotate.makeRotate(-osg::PI/2,osg::Vec3f(1.0f,0.0f,0.0f));
@@ -205,14 +178,13 @@ void KinBodyItem::Load()
                     ptrans->preMult(mS);
                     ptrans->preMult(mRotate);
 
-                    loadedModel   = osgDB::readNodeFile(orgeom->GetRenderFilename());
+                    loadedModel = osgDB::readNodeFile(orgeom->GetRenderFilename());
 
-                    psep          = loadedModel->asGroup();
+                    psep = loadedModel->asGroup();
                     osg::StateSet* state = psep->getOrCreateStateSet();
                     state->setMode(GL_RESCALE_NORMAL,osg::StateAttribute::ON);
 
-                    bSucceeded    = true;
-                    //RaveVector<float> color = orgeom->GetDiffuseColor();
+                    bSucceeded = true;
                 }
             }
 
@@ -221,26 +193,26 @@ void KinBodyItem::Load()
 
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
-                if( _viewmode == VG_RenderCollision && bSucceeded ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-                    transparency = 0.5f;
-                }
+//                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+//                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+//                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+//                    transparency = 0.5f;
+//                }
 
                 // create custom
-                if( psep == NULL ) {
+                if( !psep ) {
                     psep = new osg::Group();
                 }
 
                 // set a diffuse color
-                osg::StateSet* state = psep->getOrCreateStateSet();
-                
+                osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
+
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
                 z = orgeom->GetDiffuseColor().z;
-                w = 1.0f;
+                w = 1;
 
-                mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
 
                 RAVELOG_VERBOSE_FORMAT("Diffuse color= %f %f %f\n",x%y%z);
 
@@ -251,19 +223,22 @@ void KinBodyItem::Load()
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
 
-                mat->setShininess( osg::Material::FRONT_AND_BACK, 25.0);
+                //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
 
-                    state->setRenderBinDetails(0, "transparent"); 
-                    state->setMode(GL_BLEND, osg::StateAttribute::ON); 
-                    state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN); 
+                    //state->setRenderBinDetails(0, "transparent");
+                    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+                    state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+                    state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA )); 
+ 
                 }
-                state->setAttributeAndModes(mat);
-
+                state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                //psep->setStateSet(state);
+                
                 switch(orgeom->GetType()) {
                 //  Geometry is defined like a Sphere
                 case GT_Sphere: {
@@ -279,13 +254,13 @@ void KinBodyItem::Load()
                 //  Geometry is defined like a Box
                 case GT_Box: {
                     Vector v;
-                    osg::Box* box = new osg::Box();
-                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-
+                    osg::ref_ptr<osg::Box> box = new osg::Box();
                     box->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
-                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box);
+                    
+                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
                     geode->addDrawable(sd.get());
-
+                    
                     psep->addChild(geode.get());
                     break;
                 }
@@ -307,40 +282,25 @@ void KinBodyItem::Load()
                     // make triangleMesh
                     osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
 
-                    geom->setColorBinding(osg::Geometry::BIND_OVERALL);
+                    //geom->setColorBinding(osg::Geometry::BIND_OVERALL); // need to call geom->setColorArray first
 
                     const TriMesh& mesh = orgeom->GetCollisionMesh();
-                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+                    vertices->reserveArray(mesh.vertices.size());
+                    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                        RaveVector<float> v = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+                    }
                     geom->setVertexArray(vertices.get());
 
-
-                    //RAVELOG_VERBOSE_FORMAT("Indices=%d", mesh.indices.size());
-
-                    FOREACHC(itind, mesh.indices) {
-                        RaveVector<float> v = mesh.vertices[*itind];
-                        vertices->push_back(osg::Vec3(v.x,v.y,v.z));
-                    }
-
-                    //RAVELOG_VERBOSE_FORMAT("Vertices=%d",mesh.indices.size());
-
-                    osg::ref_ptr<osg::DrawElementsUInt> geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES,0);
-                    for(size_t i = 0; i < mesh.indices.size()/3; ++i) {
-                        geom_prim->push_back(i);
-                    }
-
-                    geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES,0,vertices->size()));
-
-                    //RAVELOG_VERBOSE("Calculate Normals\n");
-
-                    //  Calculate normals and set binding
-                    osg::Vec3Array  *normals;
-                    normals = generateNormals((osg::Vec3Array*)geom->getVertexArray());
                     
-                    //RAVELOG_VERBOSE("Normals Calculated!!!\n");
+                    osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+                    for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                        (*geom_prim)[i] = mesh.indices[i];
+                    }
+                    geom->addPrimitiveSet(geom_prim);
 
-                    geom->setNormalArray(normals);
-                    geom->setNormalBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
-
+                    osgUtil::SmoothingVisitor::smooth(*geom); // compute vertex normals                    
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);
                     psep->addChild(geode);
@@ -351,7 +311,7 @@ void KinBodyItem::Load()
                 }
             }
 
-            if( psep != NULL ) {
+            if( !!psep ) {
                 ptrans->addChild(psep);
 
                 //  Apply external transform to local transform
@@ -367,7 +327,7 @@ void KinBodyItem::Load()
                 }
 
                 //  Sets name of Link Group
-                setNamedNode(name,lnk.first);
+                _SetNamedNode(name,lnk.first);
 
                 //  Global transform
                 lnk.second->setName(std::string(QTOSG_GLOBALTRANSFORM_PREFIX)+name);
@@ -382,7 +342,7 @@ void KinBodyItem::Load()
 
     //  Is an object without joints
     if (_pchain->GetJoints().size() < 1) {
-        _ivGeom->addChild(_veclinks[0].first);
+        _osgdata->addChild(_veclinks[0].first);
     }
     //  Object with joints
     else {
@@ -421,30 +381,27 @@ void KinBodyItem::Load()
             parent = parent->getParent(0);
         }
 
-        _ivGeom->addChild(parent);
+        _osgdata->addChild(parent);
     }
 
     RAVELOG_DEBUG("Model added successfully!!!!!!\n");
     //  Print Scene Graph after creation
-    //  _PrintSceneGraph("",_ivGeom);
+    //  _PrintSceneGraph("",_osgdata);
 
     _bReload = false;
     _bDrawStateChanged = false;
 }
 
-osg::Group* KinBodyItem::_FindNodeName(const string& name)
+OSGGroupPtr KinBodyItem::_FindNodeName(const string& name)
 {
-    osg::Group* node;
     for (size_t i = 0; i < _veclinks.size(); i++) {
-        node = _veclinks[i].first->asGroup();
-
+        OSGGroupPtr node = _veclinks[i].first->asGroup();
         if (node->getName() == name) {
-//      RAVELOG_DEBUG("Node '%s' found\n",name.c_str());
             return node;
         }
     }
 
-    return NULL;
+    return OSGGroupPtr();
 }
 
 void KinBodyItem::_PrintMatrix(osg::Matrix& m)
@@ -452,12 +409,9 @@ void KinBodyItem::_PrintMatrix(osg::Matrix& m)
     for (size_t i = 0; i < 4; i++) {
         RAVELOG_WARN("Line '%d'= %f %f %f %f\n",i,m(i,0),m(i,1),m(i,2),m(i,3));
     }
-
-    //  Void line
-    RAVELOG_DEBUG("\n");
 }
 
-void KinBodyItem::_PrintSceneGraph(const std::string& currLevel,osg::Node* currNode)
+void KinBodyItem::_PrintSceneGraph(const std::string& currLevel, OSGNodePtr currNode)
 {
     std::string level;
     level = currLevel;
@@ -467,7 +421,7 @@ void KinBodyItem::_PrintSceneGraph(const std::string& currLevel,osg::Node* currN
     if ( !!currNode) {
         level = level + "-";
         RAVELOG_VERBOSE_FORMAT("|%sNode class:%s (%s)\n",currLevel%currNode->className()%currNode->getName());
-        osg::ref_ptr<osg::Group> currGroup = currNode->asGroup(); // returns NULL if not a group.
+        OSGGroupPtr currGroup = currNode->asGroup(); // returns NULL if not a group.
         if ( !!currGroup ) {
             for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
                 _PrintSceneGraph(level,currGroup->getChild(i));
@@ -476,7 +430,7 @@ void KinBodyItem::_PrintSceneGraph(const std::string& currLevel,osg::Node* currN
     }
 }
 
-void KinBodyItem::_PrintNodeFeatures(osg::Node *node)
+void KinBodyItem::_PrintNodeFeatures(OSGNodePtr node)
 {
 //  RAVELOG_VERBOSE("----->>>> printNodeFeatures(node)\n");
 //  osg::StateSet* state;
@@ -521,79 +475,53 @@ void KinBodyItem::_PrintNodeFeatures(osg::Node *node)
 //  }
 }
 
-////////////////////////////////////////////////////////////////////////////////
 /// Generate normals
-////////////////////////////////////////////////////////////////////////////////
-osg::Vec3Array* KinBodyItem::generateNormals(osg::Vec3Array *vertices)
+osg::ref_ptr<osg::Vec3Array> KinBodyItem::_GenerateNormals(const TriMesh& trimesh)
 {
-    osg::Vec3Array *normals = new osg::Vec3Array;
-
-    if (!vertices) {
-        return NULL;
-    }
-    dReal f;
-    /*
-     * Calculate per-face normals from face vertices.
-     */
+    osg::ref_ptr<osg::Vec3Array> normals(new osg::Vec3Array());
+    normals->reserveArray(trimesh.indices.size()/3);
     unsigned int fi = 0;
-    while (fi < vertices->size()) {
+    while (fi+2 < trimesh.indices.size() ) {
         // Edge vectors
-        Vector e0;
-        e0.x = (*vertices)[fi+1].x() - (*vertices)[fi].x();
-        e0.y = (*vertices)[fi+1].y() - (*vertices)[fi].y();
-        e0.z = (*vertices)[fi+1].z() - (*vertices)[fi].z();
-
-        Vector e1;
-        e1.x = (*vertices)[fi+2].x() - (*vertices)[fi].x();
-        e1.y = (*vertices)[fi+2].y() - (*vertices)[fi].y();
-        e1.z = (*vertices)[fi+2].z() - (*vertices)[fi].z();
+        Vector v0 = trimesh.vertices.at(trimesh.indices[fi]);
+        Vector v1 = trimesh.vertices.at(trimesh.indices[fi+1]);
+        Vector v2 = trimesh.vertices.at(trimesh.indices[fi+2]);
+                                
+        Vector e0 = v1 - v0;
+        Vector e1 = v2 - v0;
 
         // Cross-product of e0,e1
-        Vector normal;
-        normal.x = e0.y * e1.z - e0.z * e1.y;
-        normal.y = e0.z * e1.x - e0.x * e1.z;
-        normal.z = e0.x * e1.y - e0.y * e1.x;
-
-        f = normal.x*normal.x+normal.y*normal.y+normal.z*normal.z;
-        f = RaveSqrt(f);
-
-        normal.x /= f;
-        normal.y /= f;
-        normal.z /= f;
-
-//    normal.normalize3();
-
+        Vector vn = e0.cross(e1);
+        vn.normalize3();
         // Add to per-face normals
-        normals->push_back(osg::Vec3(normal.x,normal.y,normal.z));
-
-        fi = fi + 3;
+        normals->push_back(osg::Vec3(vn.x,vn.y,vn.z));
+        fi+=3;
     }
 
     return normals;
 }
 
-void KinBodyItem::GeometryChangedCallback()
+void KinBodyItem::_HandleGeometryChangedCallback()
 {
     _bReload = true;
 }
 
-void KinBodyItem::DrawChangedCallback()
+void KinBodyItem::_HandleDrawChangedCallback()
 {
     _bDrawStateChanged = true;
 }
 
-bool KinBodyItem::UpdateFromIv()
+bool KinBodyItem::UpdateFromOSG()
 {
-    //osg::Matrix m;
-    if( _pchain == NULL ) {
+    if( !_pchain ) {
         return false;
     }
     vector<Transform> vtrans(_veclinks.size());
-    Transform tglob = GetRaveTransform(_osgWorldTransform);
+    //Transform tglob = GetRaveTransform(*_osgWorldTransform);
 
     vector<Transform>::iterator ittrans = vtrans.begin();
     FOREACH(it, _veclinks) {
-        *ittrans = GetRaveTransform(it->second);
+        *ittrans = GetRaveTransform(*it->second);
         //*ittrans = tglob * *ittrans;
         //m = it->second->getMatrix();
         ++ittrans;
@@ -601,7 +529,7 @@ bool KinBodyItem::UpdateFromIv()
 
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pchain->GetEnv(), 50000);
     if( !!lockenv ) {
-        _pchain->SetLinkTransformations(vtrans,_vdofbranches);
+        _pchain->SetLinkTransformations(vtrans,_vjointvalues);
     }
     else {
         RAVELOG_WARN("failed to acquire environment lock for updating body (viewer updates might be choppy, otherwise this does not affect internal openrave state)\n");
@@ -615,11 +543,11 @@ void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
     vjoints = _vjointvalues;
 }
 
-void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const
+void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofvalues) const
 {
     boost::mutex::scoped_lock lock(_mutexjoints);
     vtrans = _vtrans;
-    vdofbranches = _vdofbranches;
+    vdofvalues = _vjointvalues;
 }
 
 bool KinBodyItem::UpdateFromModel()
@@ -639,8 +567,8 @@ bool KinBodyItem::UpdateFromModel()
             Load();
         }
         // make sure the body is still present!
-        if( _pchain->GetEnv()->GetBodyFromEnvironmentId(networkid) == _pchain ) {
-            _pchain->GetLinkTransformations(_vtrans, _vdofbranches);
+        if( _pchain->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pchain ) {
+            _pchain->GetLinkTransformations(_vtrans, _vjointvalues);
             _pchain->GetDOFValues(vjointvalues);
         }
         else {
@@ -653,9 +581,8 @@ bool KinBodyItem::UpdateFromModel()
 
 bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans)
 {
-    osg::MatrixTransform* mtransform;
-
-    if(_pchain == NULL ) {
+    OSGMatrixTransformPtr mtransform;
+    if(!_pchain ) {
         // don't update, physics is disabled anyway
         return false;
     }
@@ -668,7 +595,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         return false;
 
     //  Global transform
-    Transform tglob = _vtrans.at(0); //_pchain->GetCenterOfMass();
+    //Transform tglob = _vtrans.at(0); //_pchain->GetCenterOfMass();
 
     //  Matrices for intermediate calculations
     osg::Matrix m;
@@ -679,16 +606,15 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
     //  Vector of transformations
     FOREACHC(ittrans, _vtrans) {
-
-        osg::ref_ptr<osg::MatrixTransform> aux = new osg::MatrixTransform();
-        SetMatrixTransform(aux,*ittrans);
+        OSGMatrixTransformPtr aux(new osg::MatrixTransform());
+        SetMatrixTransform(*aux,*ittrans);
 
         //  Local transform
         Transform tlocal = *ittrans;
 
         //  New matrix transform for intermediate calculations
-        osg::ref_ptr<osg::MatrixTransform> ptrans = new osg::MatrixTransform();
-        SetMatrixTransform(ptrans,tlocal);
+        OSGMatrixTransformPtr ptrans(new osg::MatrixTransform());
+        SetMatrixTransform(*ptrans,tlocal);
 
         //  Error control
         if (it->second->getNumChildren() == 0) {
@@ -714,12 +640,7 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
     if(!_pchain ) {
         return;
     }
-    
-//    // need to preserve enabled state
-//    if( bGrab && !bGrabbed ) {
-//        bEnabled = _pchain->IsEnabled();
-//    }
-    
+
     bGrabbed = bGrab;
 
     if( bUpdate ) {
@@ -727,17 +648,12 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
             UpdateFromModel();
         }
         else {
-            UpdateFromIv();
+            UpdateFromOSG();
         }
     }
-
-//    // need to preserve enabled state
-//    if( bEnabled ) {
-//        _pchain->Enable(!bGrab);
-//    }
 }
 
-KinBody::LinkPtr KinBodyItem::GetLinkFromIv(osg::Node* plinknode) const
+KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
 {
     vector<LINK>::const_iterator it;
     vector<KinBody::LinkPtr>::const_iterator itlink = _pchain->GetLinks().begin();
@@ -750,22 +666,22 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(osg::Node* plinknode) const
 
         itlink++;
     }
-    
+
     return KinBody::LinkPtr();
 }
 
-RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgViewerRoot, robot, viewgeom)
+RobotItem::RobotItem(OSGGroupPtr osgViewerRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgViewerRoot, robot, viewgeom)
 {
     int index = 0;
     FOREACHC(itmanip, robot->GetManipulators()) {
 
         if((*itmanip)->GetEndEffector()) {
-            osg::Switch* peeswitch = new osg::Switch();
-            osg::Group* peesep = new osg::Group();
-            osg::MatrixTransform* ptrans = new osg::MatrixTransform();
+            OSGSwitchPtr peeswitch = new osg::Switch();
+            OSGGroupPtr peesep = new osg::Group();
+            OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
             _vEndEffectors.push_back(EE(index, ptrans, peeswitch));
 
-            _ivGeom->addChild(peeswitch);
+            _osgdata->addChild(peeswitch);
             peeswitch->addChild(ptrans);
             peeswitch->setAllChildrenOff();
             ptrans->addChild(peesep);
@@ -789,7 +705,7 @@ RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot,
             }
 
             // add some axes
-            osg::Group* paxes = new osg::Group();
+            OSGGroupPtr paxes = new osg::Group();
 
             Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
             Vector rotations[] = {Vector(1,0,0,M_PI/2), Vector(1,0,0,0), Vector(0,0,1,-M_PI/2)};
@@ -797,25 +713,23 @@ RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot,
             // add 3 cylinder+cone axes
             for(int i = 0; i < 3; ++i) {
                 // set a diffuse color
-                osg::Group* psep = new osg::Group();
+                OSGGroupPtr psep = new osg::Group();
 
                 // set a diffuse color
-                osg::StateSet* state = psep->getOrCreateStateSet();
-                osg::Material* mat = new osg::Material;
-                mat->setDiffuse(osg::Material::FRONT,
-                                osg::Vec4f(colors[i].x, colors[i].y, colors[i].z,1.0));
-                mat->setAmbient(osg::Material::FRONT,
-                                osg::Vec4f(colors[i].x, colors[i].y, colors[i].z,1.0));
+                osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
+                osg::ref_ptr<osg::Material> mat = new osg::Material;
+                mat->setDiffuse(osg::Material::FRONT, osg::Vec4f(colors[i].x, colors[i].y, colors[i].z,1.0));
+                mat->setAmbient(osg::Material::FRONT, osg::Vec4f(colors[i].x, colors[i].y, colors[i].z,1.0));
 
                 state->setAttribute( mat );
 
                 osg::Matrix matrix;
-                osg::MatrixTransform* protation = new osg::MatrixTransform();
+                OSGMatrixTransformPtr protation = new osg::MatrixTransform();
                 matrix.makeRotate(osg::Quat(rotations[i].x,rotations[i].y,rotations[i].z,rotations[i].w));
                 protation->setMatrix(matrix);
 
                 matrix.makeIdentity();
-                osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
+                OSGMatrixTransformPtr pcyltrans = new osg::MatrixTransform();
                 matrix.makeTranslate(0.0f,0.02f,0.0f);
                 pcyltrans->setMatrix(matrix);
 
@@ -835,7 +749,7 @@ RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot,
                 osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
 
                 matrix.makeIdentity();
-                osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
+                OSGMatrixTransformPtr pconetrans = new osg::MatrixTransform();
                 matrix.setTrans(osg::Vec3f(0,0.02f,0));
                 pconetrans->setMatrix(matrix);
 
@@ -851,17 +765,17 @@ RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot,
 
             // add text
             {
-                osg::Group* ptextsep = new osg::Group();
+                OSGGroupPtr ptextsep = new osg::Group();
                 osg::Geode* textGeode = new osg::Geode;
                 peesep->addChild(ptextsep);
 
                 osg::Matrix matrix;
-                osg::MatrixTransform* ptrans = new osg::MatrixTransform();
+                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
                 ptrans->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
                 matrix.setTrans(osg::Vec3f(0.02f,0.02f,0.02f));
                 ptextsep->addChild(ptrans);
 
-                osgText::Text* text = new osgText::Text();
+                osg::ref_ptr<osgText::Text> text = new osgText::Text();
 
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
@@ -869,9 +783,7 @@ RobotItem::RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot,
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setFontResolution(18,18);
 
-                char str[256];
-                sprintf(str,"EE%d", index);
-                text->setText(str);
+                text->setText(str(boost::format("EE%d")%index));
                 textGeode->addDrawable(text);
                 ptextsep->addChild(textGeode);
             }
@@ -913,9 +825,9 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
     KinBodyItem::SetGrab(bGrab, bUpdate);
 }
 
-bool RobotItem::UpdateFromIv()
+bool RobotItem::UpdateFromOSG()
 {
-    if( !KinBodyItem::UpdateFromIv() ) {
+    if( !KinBodyItem::UpdateFromOSG() ) {
         return false;
     }
     return true;
@@ -928,14 +840,14 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     }
     if( bGrabbed ) {
         // only updated when grabbing!
-        RaveTransform<float> transInvRoot = GetRaveTransform(_osgWorldTransform).inverse();
+        RaveTransform<float> transInvRoot = GetRaveTransform(*_osgWorldTransform).inverse();
 
         FOREACH(itee, _vEndEffectors) {
             if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {
                 RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);
                 if( !!manip->GetEndEffector() ) {
                     RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetLocalToolTransform();
-                    SetMatrixTransform(itee->_ptrans, transInvRoot * tgrasp);
+                    SetMatrixTransform(*itee->_ptrans, transInvRoot * tgrasp);
                 }
             }
         }
@@ -945,7 +857,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
                 RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itee->_index);
                 if( !!sensor->GetAttachingLink() ) {
                     RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
-                    SetMatrixTransform(itee->_ptrans, transInvRoot * tgrasp);
+                    SetMatrixTransform(*itee->_ptrans, transInvRoot * tgrasp);
                 }
             }
         }

@@ -14,33 +14,7 @@
 #ifndef OPENRAVE_QTOSG_PICK_H_
 #define OPENRAVE_QTOSG_PICK_H_
 
-#include <boost/function.hpp>
-
-#include <osgUtil/Optimizer>
-#include <osgDB/ReadFile>
-#include <osgViewer/Viewer>
-#include <osgViewer/CompositeViewer>
-
-#include <osgGA/TerrainManipulator>
-#include <osgGA/StateSetManipulator>
-#include <osgGA/AnimationPathManipulator>
-#include <osgGA/TrackballManipulator>
-#include <osgGA/FlightManipulator>
-#include <osgGA/DriveManipulator>
-#include <osgGA/KeySwitchMatrixManipulator>
-#include <osgGA/StateSetManipulator>
-#include <osgGA/AnimationPathManipulator>
-#include <osgGA/TerrainManipulator>
-
-#include <osg/Material>
-#include <osg/Geode>
-#include <osg/BlendFunc>
-#include <osg/Depth>
-#include <osg/Projection>
-#include <osg/MatrixTransform>
-#include <osg/Camera>
-#include <osg/io_utils>
-#include <osg/ShapeDrawable>
+#include "qtosg.h"
 
 #include <sstream>
 
@@ -51,7 +25,7 @@ class OSGPickHandler : public osgGA::GUIEventHandler
 {
 public:
     /// select(node, modkeymask) where node is the ray-picked node, and modkeymask is the modifier key mask currently pressed
-    typedef boost::function<void (osg::Node*, int)> SelectLinkFn;
+    typedef boost::function<void (OSGNodePtr, int)> SelectLinkFn;
 
     OSGPickHandler(const SelectLinkFn& selectLinkFn);
     virtual ~OSGPickHandler();
@@ -68,7 +42,7 @@ public:
     bool IsSelectionActive() const { return _select; }
     
 protected:
-    virtual void _Pick(osgViewer::View* view, const osgGA::GUIEventAdapter& ea);
+    virtual void _Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea);
     SelectLinkFn _selectLinkFn;
     bool _select; ///< if true, then will call the _selectLinkFn with the raypicked node
 };

@@ -51,7 +51,7 @@ using namespace osgQt;
 class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
 {
 public:
-    ViewerWidget(EnvironmentBasePtr penv, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>());
+    ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>());
 
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
@@ -66,7 +66,7 @@ public:
     void SelectRobot(std::string name);
 
     /// \brief  Sets scene data node in all viewers
-    void SetSceneData(osg::ref_ptr<osg::Node> osgscene);
+    void SetSceneData();
 
     /// \brief  Reset viewer to original position
     void ResetViewToHome();
@@ -80,22 +80,30 @@ public:
     void SetFacesMode(bool enabled);
 
     /// \brief Sets poligon mode (SMOOTH, FLAT or WIRED)
-    void setPolygonMode(int mode);
+    void SetPolygonMode(int mode);
 
     /// \brief Set wire view to a node
-    void setWire(osg::Node* node);
+    void SetWire(OSGNodePtr node);
+
+    OSGGroupPtr GetSceneRoot() const {
+        return _osgSceneRoot;
+    }
+
+    OSGGroupPtr GetFigureRoot() const {
+        return _osgFigureRoot;
+    }
 
     /// \brief Gets transform matrix of a given link
-    osg::MatrixTransform* getLinkTransform(std::string& robotName, KinBody::LinkPtr link);
+    OSGMatrixTransformPtr GetLinkTransform(std::string& robotName, KinBody::LinkPtr link);
 
     /// \brief Select the link picked
-    void SelectLink(osg::Node* node, int modkeymask=0);
+    void SelectLink(OSGNodePtr node, int modkeymask=0);
 
     void SetViewport(int width, int height);
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
-    osg::MatrixTransform *GetCameraHUD();
-
+    OSGMatrixTransformPtr GetCameraHUD();
+    
 protected:
     bool HandleOSGKeyDown(int);
 
@@ -110,19 +118,19 @@ protected:
     osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h );
 
     /// \brief Find an OSG Node with the name given
-    osg::Node* _FindNamedNode(const std::string& searchName, osg::Node* currNode);
+    OSGNodePtr _FindNamedNode(const std::string& searchName, OSGNodePtr currNode);
 
     /// \brief Print nodes of scenegraph
-    void _ShowSceneGraph(const std::string& currLevel,osg::Node* currNode);
+    //void _ShowSceneGraph(const std::string& currLevel,osg::Node* currNode);
 
     /// \brief Get link children and store list in global variable _linkChildren
     void _GetLinkChildren( std::string & robotName, KinBody::LinkPtr link, std::vector<KinBody::LinkPtr> vlinks);
     
     /// \brief Find node of Robot for the link picked
-    osg::Node* _FindRobot(osg::Node* node);
+    OSGNodePtr _FindRobot(OSGNodePtr node);
 
     /// \brief Find link initial node. Group node
-    osg::Node* _FindLinkParent(osg::Node* node);
+    OSGNodePtr _FindLinkParent(OSGNodePtr node);
 
     /// \brief Propagate transform to link children
     void _PropagateTransforms();
@@ -132,15 +140,15 @@ protected:
 
     //  Lighting Stuff //
 
-    osg::Material *createSimpleMaterial(osg::Vec4 color);
-    osg::Light* _CreateLight(osg::Vec4 color, int lightid);
-    osg::Light* _CreateAmbientLight(osg::Vec4 color, int lightid);
+    osg::ref_ptr<osg::Material> _CreateSimpleMaterial(osg::Vec4 color);
+    osg::ref_ptr<osg::Light> _CreateLight(osg::Vec4 color, int lightid);
+    osg::ref_ptr<osg::Light> _CreateAmbientLight(osg::Vec4 color, int lightid);
     
     /// \brief Initialize lighting
     void _InitializeLights(int nlights);
 
     /// \brief Updates joint values from viewer to OpenRAVE core. uses GetPublishedBodies, so doesn't need environment lock.
-    virtual void _UpdateCoreFromViewer();
+    virtual void _UpdateFromOSG();
 
     /// \brief Stores matrix transform
     void _StoreMatrixTransform();
@@ -152,14 +160,12 @@ protected:
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string& name);
     
     /// \brief Create a manipulator over an object pased
-    osg::Node* _AddDraggerToObject(osg::Node* object, const std::string& name);
+    OSGNodePtr _AddDraggerToObject(OSGNodePtr object, const std::string& name);
 
-    osg::Node* _AddDraggerToObject(std::string& robotName,osg::Node* object, const std::string& name, KinBody::JointPtr joint);
+    OSGNodePtr _AddDraggerToObject(const std::string& robotName, OSGNodePtr object, const std::string& name, KinBody::JointPtr joint);
     virtual void paintEvent( QPaintEvent* event );
 
-//    ////////////////////////////////////////////////////////////////////////////
 //    //  Mouse release event
-//    ////////////////////////////////////////////////////////////////////////////
 //    virtual void mouseReleaseEvent(QMouseEvent *e)
 //    {
 //      if (doubleClickPressed)
@@ -176,9 +182,7 @@ protected:
 //        }
 //      }
 //    }
-//    ////////////////////////////////////////////////////////////////////////////
 //    /// Mouse double click event handler
-//    ////////////////////////////////////////////////////////////////////////////
 //    virtual void mouseDoubleClickEvent(QMouseEvent *e)
 //    {
 //      doubleClickPressed = true;
@@ -188,14 +192,18 @@ protected:
 //    //  Flags to apply anchor (if true) to the dragger position
 //    std::map<std::string,bool> _needAnchor;
 
+    OSGGroupPtr _osgSceneRoot; ///< root scene node
+    OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
+    OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
     
-    osg::ref_ptr<osg::Group> _osgLightsGroup; ///< Scene Node with lights
-    osg::ref_ptr<osg::Group> _osgLightsGroupData; ///< Scene Data to romove after each repaint
-    osg::ref_ptr<osg::Group> _root; ///< Parent of dragger and selection
+    std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
+    OSGGroupPtr _osgLightsGroup; ///< Scene Node with lights
+    OSGGroupPtr _osgLightsGroupData; ///< Scene Data to romove after each repaint
+    OSGGroupPtr _osgDraggerRoot; ///< Parent of dragger and selection
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _draggers; ///< There is only one dragger at the same time
-    osg::ref_ptr<osg::MatrixTransform> _draggerMatrix; ///< Transform applied by dragger
-    osg::ref_ptr<osg::Node> _selected; ///< Object selected by dragger
-    osg::ref_ptr<osg::MatrixTransform> _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
+    OSGMatrixTransformPtr _draggerMatrix; ///< Transform applied by dragger
+    OSGNodePtr _selected; ///< Object selected by dragger
+    OSGMatrixTransformPtr _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
     
     std::string _actualKinbody; ///< Kinematic body selected or robot
     std::string _draggerName; ///< Actual dragger selected
@@ -212,7 +220,7 @@ protected:
     
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-    std::vector<osg::ref_ptr<osg::MatrixTransform> > _linkChildren; ///< List of link children
+    std::vector<OSGMatrixTransformPtr> _linkChildren; ///< List of link children
 
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     

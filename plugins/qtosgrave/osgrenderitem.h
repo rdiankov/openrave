@@ -34,7 +34,7 @@ enum ViewGeometry {
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
-    Item(osg::ref_ptr<osg::Group> osgViewerRoot);
+    Item(OSGGroupPtr osgViewerRoot);
     virtual ~Item();
 
     /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
@@ -51,7 +51,7 @@ public:
     }
 
     /// \brief update underlying model from OSG's transformation
-    virtual bool UpdateFromIv() {
+    virtual bool UpdateFromOSG() {
         return true;
     }
     virtual bool UpdateFromModel() {
@@ -64,7 +64,7 @@ public:
     }
 
     inline RaveTransform<float> GetTransform() {
-        return GetRaveTransform(_osgWorldTransform);
+        return GetRaveTransform(*_osgWorldTransform);
     }
 
     // if false, then item isn't rendered through the sensors
@@ -75,19 +75,19 @@ public:
     } ///< call when manipulating with the mouse, etc
 
     // Inventor related
-    osg::Group* GetIvRoot() const {
-        return _ivRoot;
-    }
-    osg::MatrixTransform* GetIvTransform()    {
+    OSGGroupPtr GetOSGRoot() const {
         return _osgWorldTransform;
     }
-    osg::Switch*    GetIvGeom() const {
-        return _ivGeom;
+    OSGMatrixTransformPtr GetIvTransform()    {
+        return _osgWorldTransform;
+    }
+    OSGSwitchPtr GetOSGGeom() const {
+        return _osgdata;
     }
 //    SoTransparencyType* GetIvTransparency() const { return _ivTransparency; }
 
     /// \brief returns true if the given node is in the inventor hierarchy
-    bool ContainsOSGNode(osg::Node *pNode);
+    bool ContainsOSGNode(OSGNodePtr pNode);
 //    bool ContainsOSGNode(osg::NodePath *pNodePath);
 
     /// \brief Set the visibility of the geometry (ON = true).
@@ -97,12 +97,12 @@ public:
 protected:
 
     // Instance Data
-    osg::ref_ptr<osg::Group> _osgViewerRoot; ///< used for adding and removing itself from the viewer node
+    OSGGroupPtr _osgViewerRoot; ///< used for adding and removing itself from the viewer node
     string _name; ///< item name
-    osg::Group* _ivRoot; ///< root of this object's OSG data hierarchy
-    osg::MatrixTransform* _osgWorldTransform; ///< Kinbody position
-    osg::Switch* _ivGeom; ///< item geometry hierarchy
-    osg::BlendColor* _ivTransparency;
+    //OSGGroupPtr _osgitemroot; ///< root of this object's OSG data hierarchy
+    OSGMatrixTransformPtr _osgWorldTransform; ///< Kinbody position
+    OSGSwitchPtr _osgdata; ///< item geometry hierarchy
+    //osg::ref_ptr<osg::BlendColor> _ivTransparency;
 };
 typedef boost::shared_ptr<Item> ItemPtr;
 typedef boost::shared_ptr<Item const> ItemConstPtr;
@@ -111,7 +111,7 @@ typedef boost::shared_ptr<Item const> ItemConstPtr;
 class KinBodyItem : public Item
 {
 public:
-    KinBodyItem(osg::ref_ptr<osg::Group> osgViewerRoot, KinBodyPtr, ViewGeometry viewmode);
+    KinBodyItem(OSGGroupPtr osgViewerRoot, KinBodyPtr, ViewGeometry viewmode);
     virtual ~KinBodyItem();
 
     virtual void PrepForDeletion() {
@@ -126,8 +126,12 @@ public:
         _pchain->SetName(pNewName);
     }
 
-    virtual bool UpdateFromIv();
+    virtual bool UpdateFromOSG();
+
+    /// \brief updates from openrave model
     virtual bool UpdateFromModel();
+
+    /// \brief updates from openrave model
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
@@ -136,11 +140,11 @@ public:
         return _pchain;
     }
 
-    // gets the link from IV
-    KinBody::LinkPtr GetLinkFromIv(osg::Node* plinknode) const;
+    /// \brief gets the link from osg node
+    KinBody::LinkPtr GetLinkFromOSG(OSGNodePtr plinknode) const;
 
-    // gets the link from the index
-    osg::Group* GetIvLink(int index) const {
+    /// \brief gets the link from the index
+    OSGGroupPtr GetOSGLink(int index) const {
         return _veclinks[index].first;
     }
 
@@ -151,36 +155,32 @@ public:
         return _userdata;
     }
 
-    int GetNetworkId() {
-        return networkid;
-    }
-
     virtual void GetDOFValues(vector<dReal>& vjoint) const;
     virtual void GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const;
     virtual void Load();
 
-    osg::Vec3Array* generateNormals(osg::Vec3Array *vertices);
-
 protected:
+    /// \brief Calculate per-face normals from face vertices.
+    osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
+    
     /// \brief Gets osg node with name 'name'
-    osg::Group* _FindNodeName(const string& name);
+    OSGGroupPtr _FindNodeName(const string& name);
 
-    virtual void GeometryChangedCallback();
-    virtual void DrawChangedCallback();
+    virtual void _HandleGeometryChangedCallback();
+    virtual void _HandleDrawChangedCallback();
 
-    typedef std::pair<osg::Group*, osg::MatrixTransform*> LINK;
+    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LINK;
 
     KinBodyPtr _pchain;
-    int networkid;        ///< _pchain->GetNetworkId()
+    int _environmentid;        ///< _pchain->GetEnvironmentId()
     std::vector< LINK > _veclinks; ///< render items for each link, indexed same as links
     bool bEnabled;
     bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
     int _userdata;
 
-    vector<dReal> _vjointvalues;
+    std::vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
-    std::vector<dReal> _vdofbranches;
     mutable boost::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 
@@ -189,11 +189,11 @@ private:
     void _PrintMatrix(osg::Matrix& m);
 
     /// \brief  Print nodes of scenegraph
-    void _PrintSceneGraph(const std::string& currLevel,osg::Node* currNode);
+    void _PrintSceneGraph(const std::string& currLevel, OSGNodePtr currNode);
 
     /// \brief  Print the features of the OSG Node
-    void _PrintNodeFeatures(osg::Node *node);
-    void setNamedNode(const std::string&  name, osg::Node*    currNode);
+    void _PrintNodeFeatures(OSGNodePtr node);
+    void _SetNamedNode(const std::string&  name, OSGNodePtr currNode);
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
@@ -208,16 +208,16 @@ public:
     {
         EE() {
         }
-        EE(int index, osg::MatrixTransform* ptrans, osg::Switch* pswitch) : _index(index), _ptrans(ptrans), _pswitch(pswitch) {
+        EE(int index, OSGMatrixTransformPtr ptrans, OSGSwitchPtr pswitch) : _index(index), _ptrans(ptrans), _pswitch(pswitch) {
         }
         int _index;
-        osg::MatrixTransform* _ptrans;
-        osg::Switch* _pswitch;
+        OSGMatrixTransformPtr _ptrans;
+        OSGSwitchPtr _pswitch;
     };
 
-    RobotItem(osg::ref_ptr<osg::Group> osgViewerRoot, RobotBasePtr robot, ViewGeometry viewmode);
+    RobotItem(OSGGroupPtr osgViewerRoot, RobotBasePtr robot, ViewGeometry viewmode);
 
-    virtual bool UpdateFromIv();
+    virtual bool UpdateFromOSG();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
     RobotBasePtr GetRobot() const {
