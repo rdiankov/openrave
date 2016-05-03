@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "osgviewerwidget.h"
+#include "osgcartoon.h"
+
+#include <osg/ShadeModel>
+#include <osgDB/ReadFile>
+#include <osg/FrontFace>
+#include <osg/CullFace>
+
+#include <osgManipulator/CommandManager>
+#include <osgManipulator/TabBoxDragger>
+#include <osgManipulator/TabPlaneDragger>
+#include <osgManipulator/TabPlaneTrackballDragger>
+#include <osgManipulator/TrackballDragger>
+#include <osgManipulator/Translate1DDragger>
+#include <osgManipulator/Translate2DDragger>
+#include <osgManipulator/TranslateAxisDragger>
+
+#include <osg/PositionAttitudeTransform>
+
 
 namespace qtosgrave {
 
@@ -72,6 +90,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _userdatakey = userdatakey;
     _penv = penv;
     _bLightOn = true;
+    _bIsSelectiveActive = false;
     _actualKinbody = "";
     _osgview = new osgViewer::View();
     _osghudview = new osgViewer::View();
@@ -86,20 +105,20 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     setLayout(grid);
 
     //  Sets pickhandler
-    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::SelectLink, this, _1, _2));
+    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3));
     _osgview->addEventHandler(_picker);
 
     _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1));
     _osgview->addEventHandler(_keyhandler);
 
     // initialize the environment
-    _osgSceneRoot = new osg::Group();    
+    _osgSceneRoot = new osg::Group();
     _osgFigureRoot = new osg::Group();
-  
+
     // create world axis
     _osgWorldAxis = new osg::MatrixTransform();
     //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
-    
+
     {
         osg::Vec4f colors[] = {
             osg::Vec4f(0,0,1,1),
@@ -166,8 +185,8 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
 
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
-        
-        osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();        
+
+        osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
         osg::ref_ptr<osg::Light> light(new osg::Light());
         // each light must have a unique number
         light->setLightNum(0);
@@ -177,18 +196,34 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
         light->setSpecular(osg::Vec4(0, 0, 0, 1.0));
         light->setAmbient( osg::Vec4(1, 1, 1, 1.0));
         lightSource->setLight(light.get());
-        
+
         _osgCameraHUD->addChild(lightSource.get());
         lightSource->addChild(_osgWorldAxis.get());
+
+        _osgHudText = new osgText::Text();
+
+        //Set the screen alignment - always face the screen
+        _osgHudText->setAxisAlignment(osgText::Text::SCREEN);
+        _osgHudText->setColor(osg::Vec4(0,0,0,1));
+        //text->setFontResolution(32,32);
+
+        _osgHudText->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
+
+        osg::ref_ptr<osg::Geode> geodetext = new osg::Geode;
+        geodetext->addDrawable(_osgHudText);
+        _osgCameraHUD->addChild(geodetext);
     }
 
     _InitializeLights(2);
 
-    _osgLightsGroup->addChild(_osgSceneRoot);
-    //osg::ref_ptr<osgFX::Cartoon> toon = new osgFX::Cartoon();
-    //_osgLightsGroup->addChild(toon);
-    //toon->addChild(_osgSceneRoot);
-        
+    {
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
+        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
+        _osgLightsGroup->addChild(toon);
+        toon->addChild(_osgSceneRoot);
+    }
+
+    //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
 }
@@ -216,7 +251,12 @@ bool ViewerWidget::HandleOSGKeyDown(int key)
 
 void ViewerWidget::SelectActive(bool active)
 {
-    _picker->ActivateSelection(active);
+    osgViewer::Viewer::Windows windows;
+    getWindows(windows);
+    for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+        (*itr)->setCursor(active ? osgViewer::GraphicsWindow::HandCursor : osgViewer::GraphicsWindow::LeftArrowCursor);
+    }
+    _bIsSelectiveActive = active;
 }
 
 void ViewerWidget::SetDraggerMode(const std::string& draggerName)
@@ -280,13 +320,17 @@ void ViewerWidget::SetSceneData()
     //  Normalize object normals
     rootscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
     rootscene->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::ON);
- 
+
     if (_bLightOn) {
         rootscene->addChild(_osgLightsGroup);
     }
     else {
-        rootscene->addChild(_osgSceneRoot);
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
+        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
+        rootscene->addChild(toon);
+        toon->addChild(_osgSceneRoot);
     }
+
     rootscene->addChild(_osgFigureRoot);
     _osgview->setSceneData(rootscene.get());
 }
@@ -299,8 +343,8 @@ void ViewerWidget::ResetViewToHome()
 void ViewerWidget::SetHome()
 {
     if (!!_osgLightsGroup) {
-        const osg::BoundingSphere& bs = _osgLightsGroup->getBound();
-        _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(-4.0*bs.radius(),4.0*bs.radius(),0.0),bs.center(),osg::Vec3d(0.0,0.0,1.0));
+        const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
+        _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
         _osgview->home();
     }
 }
@@ -317,8 +361,7 @@ void ViewerWidget::SetFacesMode(bool enabled)
         return;
     }
     osg::ref_ptr<osg::StateSet> stateset = _osgview->getSceneData()->getOrCreateStateSet();
-    if (enabled)
-    {
+    if (enabled) {
         stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT));
         stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
         stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
@@ -383,6 +426,42 @@ OSGMatrixTransformPtr ViewerWidget::GetLinkTransform(std::string& robotName, Kin
     }
 
     return transform;
+}
+
+void ViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask)
+{
+    if (intersection.nodePath.empty()) {
+        _strRayInfoText.clear();
+        _UpdateHUDText();
+        if( _bIsSelectiveActive ) {
+            SelectLink(OSGNodePtr(), modkeymask);
+        }
+    }
+    else {
+        if (!intersection.nodePath.empty() && !(intersection.nodePath.back()->getName().empty())) {
+            OSGNodePtr node = intersection.drawable->getParent(0);
+            
+            // something hit
+            if( buttonPressed ) {
+                if( _bIsSelectiveActive ) {
+                    if( !!node ) {
+                        SelectLink(node, modkeymask);
+                    }
+                }
+                else {
+                    // ignore...
+                }
+            }
+            else {
+                // draw the intersection point in the HUD
+                OSGNodePtr robotbase = _FindRobot(node);
+                osg::Vec3d pos = intersection.getWorldIntersectPoint();
+                osg::Vec3d normal = intersection.getWorldIntersectNormal();
+                _strRayInfoText = str(boost::format("mouse on %s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%robotbase->getName()%node->getName()%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                _UpdateHUDText();
+            }
+        }
+    }
 }
 
 void ViewerWidget::SelectLink(OSGNodePtr node, int modkeymask)
@@ -470,15 +549,61 @@ void ViewerWidget::_ClearDragger()
     _draggers.clear();
 }
 
-void ViewerWidget::SetViewport(int width, int height)
+void ViewerWidget::SetUserHUDText(const std::string& text)
+{
+    _strUserText = text;
+    _UpdateHUDText();
+}
+
+void ViewerWidget::_UpdateHUDText()
+{
+    std::string s;
+    if( _strRayInfoText.size() > 0 ) {
+        s += _strRayInfoText;
+    }
+    if( _strUserText.size() > 0 ) {
+        if( s.size() > 0 ) {
+            s += "\n";
+        }
+        s += _strRayInfoText;
+    }
+    _osgHudText->setText(s);
+}
+
+void ViewerWidget::SetViewType(int isorthogonal, double metersinunit)
+{
+    int width = _osgview->getCamera()->getViewport()->width();
+    int height = _osgview->getCamera()->getViewport()->height();
+    double aspect = static_cast<double>(width)/static_cast<double>(height);
+    if( isorthogonal ) {
+        double distance = 0.5*_osgCameraManipulator->getDistance();
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance/metersinunit, distance/metersinunit, -distance/(metersinunit*aspect), distance/(metersinunit*aspect), 0, 100.0/metersinunit);
+    }
+    else {
+        _osgview->getCamera()->setProjectionMatrixAsPerspective(30.0f, aspect, 1.0f, 100.0/metersinunit );
+    }
+}
+
+void ViewerWidget::SetViewport(int width, int height, double metersinunit)
 {
     _osgview->getCamera()->setViewport(0,0,width,height);
+    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+        // orthogonal
+        double aspect = static_cast<double>(width)/static_cast<double>(height);
+        double distance = 0.5*_osgCameraManipulator->getDistance();
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance/metersinunit, distance/metersinunit, -distance/(metersinunit*aspect), distance/(metersinunit*aspect), 0, 100.0/metersinunit);
+    }
+
     _osghudview->getCamera()->setViewport(0,0,width,height);
     _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0, 1000));
 
-    osg::Matrix m = GetCameraManipulator()->getMatrix();
+    osg::Matrix m = _osgCameraManipulator->getInverseMatrix();
     m.setTrans(width/2 - 40, -height/2 + 40, -50);
     _osgWorldAxis->setMatrix(m);
+
+    double textheight = (10.0/480.0)*height;
+    _osgHudText->setPosition(osg::Vec3(-width/2+10, height/2-textheight, -50));
+    _osgHudText->setCharacterSize(textheight);
 }
 
 QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
@@ -851,6 +976,7 @@ void ViewerWidget::_InitializeLights(int nlights)
         lightSource->getLight()->setDirection(lightDirection[i]);
         lightSource->setLocalStateSetModes(osg::StateAttribute::ON);
         lightSource->setStateSetModes(*_lightStateSet, osg::StateAttribute::ON);
+        //lightSource->setReferenceFrame(osg::LightSource::ABSOLUTE_RF);
 
         _vLightTransform[i] = new osg::PositionAttitudeTransform();
         _vLightTransform[i]->addChild(lightSource.get());

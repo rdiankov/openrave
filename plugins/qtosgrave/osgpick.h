@@ -25,26 +25,23 @@ class OSGPickHandler : public osgGA::GUIEventHandler
 {
 public:
     /// select(node, modkeymask) where node is the ray-picked node, and modkeymask is the modifier key mask currently pressed
-    typedef boost::function<void (OSGNodePtr, int)> SelectLinkFn;
+    typedef boost::function<void (const osgUtil::LineSegmentIntersector::Intersection& , int, int)> HandleRayPickFn;
 
-    OSGPickHandler(const SelectLinkFn& selectLinkFn);
+    OSGPickHandler(const HandleRayPickFn& handleRayPickFn);
     virtual ~OSGPickHandler();
 
     /// \brief override from base class
     bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
 
     /// \brief Active joint selection
-    void ActivateSelection(bool active);
-
-    //  Double click
-    void doubleClick();
-
-    bool IsSelectionActive() const { return _select; }
+    //void ActivateSelection(bool active);
+    //bool IsSelectionActive() const { return _select; }
     
 protected:
-    virtual void _Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea);
-    SelectLinkFn _selectLinkFn;
-    bool _select; ///< if true, then will call the _selectLinkFn with the raypicked node
+    virtual void _Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea, int buttonPressed);
+    HandleRayPickFn _handleRayPickFn;
+    //bool _select; ///< if true, then will call the _selectLinkFn with the raypicked node
+    bool _bDoPickCallOnButtonRelease; ///< if true, then on button release can call _Pick
 };
 
 }

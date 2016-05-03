@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -140,11 +140,27 @@ public slots:
     void ResetViewToHome();
 
     /// \brief executed when menu item light is clicked to change the lights in the scene.
-    void _ProcessLightChange();
+    //void _ProcessLightChange();
+
+    /// \brief changes the perspective view
+    void _ProcessPerspectiveViewChange();
+
+    /// \brief show an about dialog
+    void _ProcessAboutDialog();
+
+    /// \brief change camera to see xy plane
+    void _ChangeViewToXY();
+
+    /// \brief change camera to see xz plane
+    void _ChangeViewToXZ();
+
+    /// \brief change camera to see yz plane
+    void _ChangeViewToYZ();
+    
     void polygonMode();
 
     //  \brief Sets COUNTER CLOCKWISE and CLOCKWISE polygons
-    void _ProcessFacesModeChange();
+    //void _ProcessFacesModeChange();
 
     /// Sets or reset bounding box
     void _ProcessBoundingBox();
@@ -395,11 +411,13 @@ protected:
     QAction* puntAct;
     QAction* AxesAct;
     QAction* houseAct;
-    QAction* smoothAct;
-    QAction* flatAct;
-    QAction* lightAct;
+    QAction* _qactChangeViewtoXY, *_qactChangeViewtoYZ, *_qactChangeViewtoXZ;
+    //QAction* smoothAct;
+    //QAction* flatAct;
+    //QAction* lightAct;
+    QAction* _qactPerspectiveView;
     QAction* wireAct;
-    QAction* facesAct;
+    //QAction* facesAct;
     QAction* bboxAct;
 
     QToolBar* fileToolBar;
@@ -411,7 +429,7 @@ protected:
     
     QTreeView* _qtree;
 
-    QActionGroup* shapeGroup;
+    //QActionGroup* shapeGroup;
     QButtonGroup* _pointerTypeGroup;
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;

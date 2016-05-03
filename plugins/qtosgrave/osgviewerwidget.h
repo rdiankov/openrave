@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2014 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,25 +22,9 @@
 #include <QtGui/QApplication>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osg/ShadeModel>
-#include <osgDB/ReadFile>
-#include <osg/FrontFace>
-#include <osg/CullFace>
 #include <iostream>
 
-#include <osgGA/NodeTrackerManipulator>
-
 #include <osgQt/GraphicsWindowQt>
-#include <osgManipulator/CommandManager>
-#include <osgManipulator/TabBoxDragger>
-#include <osgManipulator/TabPlaneDragger>
-#include <osgManipulator/TabPlaneTrackballDragger>
-#include <osgManipulator/TrackballDragger>
-#include <osgManipulator/Translate1DDragger>
-#include <osgManipulator/Translate2DDragger>
-#include <osgManipulator/TranslateAxisDragger>
-
-#include <osg/PositionAttitudeTransform>
 
 namespace qtosgrave {
 
@@ -82,6 +66,11 @@ public:
     /// \brief Sets poligon mode (SMOOTH, FLAT or WIRED)
     void SetPolygonMode(int mode);
 
+    void SetViewType(int isorthogonal, double metersinunit=1);
+
+    /// \brief sets user-controlled hud text
+    void SetUserHUDText(const std::string& text);
+    
     /// \brief Set wire view to a node
     void SetWire(OSGNodePtr node);
 
@@ -96,10 +85,14 @@ public:
     /// \brief Gets transform matrix of a given link
     OSGMatrixTransformPtr GetLinkTransform(std::string& robotName, KinBody::LinkPtr link);
 
-    /// \brief Select the link picked
-    void SelectLink(OSGNodePtr node, int modkeymask=0);
+    /// \brief called when the mouse is over a specified point
+    ///
+    void HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask=0);
 
-    void SetViewport(int width, int height);
+    /// \brief handle case when link is selected
+    void SelectLink(OSGNodePtr node, int modkeymask);
+    
+    void SetViewport(int width, int height, double metersinunit);
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
@@ -110,6 +103,9 @@ protected:
     /// \brief Clear dragger from the viewer
     void _ClearDragger();
 
+    /// \brief gather all the necessary text and updates it on the HUD control
+    void _UpdateHUDText();
+    
     /// \brief Create a viewer widget
     QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
 
@@ -216,7 +212,10 @@ protected:
     osg::ref_ptr<osg::StateSet> _lightStateSet;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
-    osg::ref_ptr<osgGA::CameraManipulator> _osgCameraManipulator;
+    osg::ref_ptr<osgGA::TrackballManipulator> _osgCameraManipulator;
+
+    osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
+    std::string _strUserText, _strRayInfoText; ///< the user hud text
     
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
@@ -225,6 +224,7 @@ protected:
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     
     bool _bLightOn; ///< whether lights are on or not
+    bool _bIsSelectiveActive; ///< if true, then can select a new 
 };
 
 }

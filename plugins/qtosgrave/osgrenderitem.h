@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2016 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -161,7 +161,7 @@ public:
 
 protected:
     /// \brief Calculate per-face normals from face vertices.
-    osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
+    //osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
     
     /// \brief Gets osg node with name 'name'
     OSGGroupPtr _FindNodeName(const string& name);

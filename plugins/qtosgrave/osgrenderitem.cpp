@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2016 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 
 #include <osgUtil/SmoothingVisitor>
 #include <osg/BlendFunc>
+#include <osg/PolygonOffset>
 
 namespace qtosgrave {
 
@@ -33,6 +34,55 @@ Item::Item(OSGGroupPtr osgViewerRoot) : _osgViewerRoot(osgViewerRoot)
     //_osgitemroot->addChild(_osgWorldTransform);
     _osgWorldTransform->addChild(_osgdata);
 
+//    osg::ref_ptr<osg::Group> decorator = new osg::Group;
+//    _osgWorldTransform->addChild(decorator);
+//
+//    decorator->addChild(_osgdata);
+//    
+//    // set up the state so that the underlying color is not seen through
+//    // and that the drawing mode is changed to wireframe, and a polygon offset
+//    // is added to ensure that we see the wireframe itself, and turn off
+//    // so texturing too.
+//    osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
+//    osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+//    polyoffset->setFactor(-1.0f);
+//    polyoffset->setUnits(-1.0f);
+//    osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
+//    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
+//    stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+//    stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+//
+//    //#if 1
+//    osg::ref_ptr<osg::Material> material = new osg::Material;
+//    material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
+//    material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
+//
+//    stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+//    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
+////#else
+////    // version which sets the color of the wireframe.
+////    osg::Material* material = new osg::Material;
+////    material->setColorMode(osg::Material::OFF); // switch glColor usage off
+////    // turn all lighting off
+////    material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
+////    material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
+////    material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
+////    // except emission... in which we set the color we desire
+////    material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
+////    stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+////    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+////#endif
+//
+//    stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
+//
+////     osg::LineStipple* linestipple = new osg::LineStipple;
+////     linestipple->setFactor(1);
+////     linestipple->setPattern(0xf0f0);
+////     stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE_ON);
+//
+//    decorator->setStateSet(stateset);
+
+    
     _osgViewerRoot->addChild(_osgWorldTransform);
 }
 
@@ -476,30 +526,30 @@ void KinBodyItem::_PrintNodeFeatures(OSGNodePtr node)
 }
 
 /// Generate normals
-osg::ref_ptr<osg::Vec3Array> KinBodyItem::_GenerateNormals(const TriMesh& trimesh)
-{
-    osg::ref_ptr<osg::Vec3Array> normals(new osg::Vec3Array());
-    normals->reserveArray(trimesh.indices.size()/3);
-    unsigned int fi = 0;
-    while (fi+2 < trimesh.indices.size() ) {
-        // Edge vectors
-        Vector v0 = trimesh.vertices.at(trimesh.indices[fi]);
-        Vector v1 = trimesh.vertices.at(trimesh.indices[fi+1]);
-        Vector v2 = trimesh.vertices.at(trimesh.indices[fi+2]);
-                                
-        Vector e0 = v1 - v0;
-        Vector e1 = v2 - v0;
-
-        // Cross-product of e0,e1
-        Vector vn = e0.cross(e1);
-        vn.normalize3();
-        // Add to per-face normals
-        normals->push_back(osg::Vec3(vn.x,vn.y,vn.z));
-        fi+=3;
-    }
-
-    return normals;
-}
+//osg::ref_ptr<osg::Vec3Array> KinBodyItem::_GenerateNormals(const TriMesh& trimesh)
+//{
+//    osg::ref_ptr<osg::Vec3Array> normals(new osg::Vec3Array());
+//    normals->reserveArray(trimesh.indices.size()/3);
+//    unsigned int fi = 0;
+//    while (fi+2 < trimesh.indices.size() ) {
+//        // Edge vectors
+//        Vector v0 = trimesh.vertices.at(trimesh.indices[fi]);
+//        Vector v1 = trimesh.vertices.at(trimesh.indices[fi+1]);
+//        Vector v2 = trimesh.vertices.at(trimesh.indices[fi+2]);
+//                                
+//        Vector e0 = v1 - v0;
+//        Vector e1 = v2 - v0;
+//
+//        // Cross-product of e0,e1
+//        Vector vn = e0.cross(e1);
+//        vn.normalize3();
+//        // Add to per-face normals
+//        normals->push_back(osg::Vec3(vn.x,vn.y,vn.z));
+//        fi+=3;
+//    }
+//
+//    return normals;
+//}
 
 void KinBodyItem::_HandleGeometryChangedCallback()
 {

@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2016 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,7 +85,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _pointerTypeGroup = NULL;
     _posgWidget = NULL;
     _nQuitMainLoop = 0;
-
+    _qactPerspectiveView = NULL;
+    _qactChangeViewtoXY = _qactChangeViewtoYZ = _qactChangeViewtoXZ = NULL;
     //osg::setNotifyLevel(osg::DEBUG_FP);
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
 
@@ -127,7 +128,12 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
         statusBar()->showMessage(tr("Status Bar"));
     }
 
-    __description = ":Interface Author: Gustavo Puche, Rosen Diankov\n\nProvides a viewer based on Open Scene Graph.";
+    __description = ":Interface Author: Rosen Diankov, Gustavo Puche\n\nProvides a viewer based on OpenSceneGraph library. Currently tested with v3.4. Usage:\n\n\
+  - ESC to toggle between selection mode or not.\n\
+  - Left Click to rotate or select object.\n\
+  - Middle Click to pan.\n\
+  - Right Click to zoom.\n\
+";
 
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera, this, _1, _2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
@@ -183,7 +189,8 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 
     _RepaintWidgets();
     _posgWidget->SetFacesMode(false);
-    
+    _posgWidget->SetLight(false);
+
     _qtree = new QTreeView;
 
     _CreateActions();
@@ -228,7 +235,7 @@ bool QtOSGViewer::_HandleOSGKeyDown(int key)
         if( !!_pointerTypeGroup ) {
             // toggle
             int newcheckedid = _pointerTypeGroup->checkedId()-1;
-            int minchecked = -5, maxchecked = -2;
+            int minchecked = -3, maxchecked = -2;
             if( newcheckedid < minchecked || newcheckedid > maxchecked ) {
                 newcheckedid = maxchecked;
             }
@@ -327,6 +334,7 @@ void QtOSGViewer::_CreateActions()
     applyAct->setChecked(true);
 
     aboutAct = new QAction(tr("About"), this);
+    connect(aboutAct, SIGNAL(triggered()), this, SLOT(_ProcessAboutDialog()));
 
     pauseAct = new QAction(QIcon(":/images/pause.png"),tr("Pause"), this);
 
@@ -339,23 +347,38 @@ void QtOSGViewer::_CreateActions()
     houseAct = new QAction(QIcon(":/images/house.png"),tr("Home"), this);
     connect(houseAct, SIGNAL(triggered()),this,SLOT(ResetViewToHome()));
 
-    smoothAct = new QAction(QIcon(":/images/smooth.png"),tr("Smooth"), this);
-    connect(smoothAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+    _qactChangeViewtoXY = new QAction(QIcon(":/images/xyplane.png"),tr("Show XY"), this);
+    connect(_qactChangeViewtoXY, SIGNAL(triggered()),this,SLOT(_ChangeViewToXY()));
 
-    flatAct = new QAction(QIcon(":/images/flat.png"),tr("Flat"), this);
-    connect(flatAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+    _qactChangeViewtoXZ = new QAction(QIcon(":/images/xzplane.png"),tr("Show XZ"), this);
+    connect(_qactChangeViewtoXZ, SIGNAL(triggered()),this,SLOT(_ChangeViewToXZ()));
 
-    lightAct = new QAction(QIcon(":/images/lighton.png"),tr("Light"), this);
-    lightAct->setCheckable(true);
-    connect(lightAct, SIGNAL(triggered()), this, SLOT(_ProcessLightChange()));
+    _qactChangeViewtoYZ = new QAction(QIcon(":/images/yzplane.png"),tr("Show YZ"), this);
+    connect(_qactChangeViewtoYZ, SIGNAL(triggered()),this,SLOT(_ChangeViewToYZ()));
+
+//    smoothAct = new QAction(QIcon(":/images/smooth.png"),tr("Smooth"), this);
+//    connect(smoothAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+//
+//    flatAct = new QAction(QIcon(":/images/flat.png"),tr("Flat"), this);
+//    connect(flatAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+
+    _qactPerspectiveView = new QAction(QIcon(":/images/perspective.png"),tr("View Model"), this);
+    _qactPerspectiveView->setCheckable(true);
+    _qactPerspectiveView->setChecked(false);
+    connect(_qactPerspectiveView, SIGNAL(triggered()), this, SLOT(_ProcessPerspectiveViewChange()));
+
+//    lightAct = new QAction(QIcon(":/images/lightoff.png"),tr("Light"), this);
+//    lightAct->setCheckable(true);
+//    lightAct->setChecked(true);
+//    connect(lightAct, SIGNAL(triggered()), this, SLOT(_ProcessLightChange()));
 
     wireAct = new QAction(QIcon(":/images/wire.png"),tr("Wire"), this);
     connect(wireAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
 
-    facesAct = new QAction(QIcon(":/images/faces.png"),tr("Cull face"), this);
-    facesAct->setCheckable(true);
-    facesAct->setChecked(true);
-    connect(facesAct, SIGNAL(triggered()), this, SLOT(_ProcessFacesModeChange()));
+//    facesAct = new QAction(QIcon(":/images/faces.png"),tr("Cull face"), this);
+//    facesAct->setCheckable(true);
+//    facesAct->setChecked(true);
+//    connect(facesAct, SIGNAL(triggered()), this, SLOT(_ProcessFacesModeChange()));
 
     bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Polygon"), this);
     bboxAct->setCheckable(true);
@@ -509,36 +532,79 @@ void QtOSGViewer::ResetViewToHome()
     _posgWidget->ResetViewToHome();
 }
 
-void QtOSGViewer::_ProcessLightChange()
+void QtOSGViewer::_ProcessPerspectiveViewChange()
 {
-    if (lightAct->isChecked()) {
-        lightAct->setIcon(QIcon(":/images/lightoff.png"));
+    if( _qactPerspectiveView->isChecked() ) {
+        _qactPerspectiveView->setIcon(QIcon(":/images/bbox.png"));
     }
     else {
-        lightAct->setIcon(QIcon(":/images/lighton.png"));
+        _qactPerspectiveView->setIcon(QIcon(":/images/perspective.png"));
     }
-    _posgWidget->SetLight(!lightAct->isChecked());
+
+    _posgWidget->SetViewType(_qactPerspectiveView->isChecked(), GetEnv()->GetUnit().second);
 }
 
-void QtOSGViewer::_ProcessFacesModeChange()
+void QtOSGViewer::_ProcessAboutDialog()
 {
-    _posgWidget->SetFacesMode(!facesAct->isChecked());
+    QMessageBox msgBox;
+    msgBox.setText("OpenRAVE qtosg plugin");
+    msgBox.setInformativeText(__description.c_str());
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setDefaultButton(QMessageBox::Ok);
+    msgBox.exec();
 }
+
+void QtOSGViewer::_ChangeViewToXY()
+{
+    _UpdateCameraTransform(0);
+    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
+    _Tcamera.trans.x = 0;
+    _Tcamera.trans.y = 0;
+    _Tcamera.trans.z = -_focalDistance;
+    _SetCameraTransform();
+}
+
+void QtOSGViewer::_ChangeViewToXZ()
+{
+    _UpdateCameraTransform(0);
+    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(-M_PI/2));
+    _Tcamera.trans.x = 0;
+    _Tcamera.trans.y = 0;
+    _Tcamera.trans.z = -_focalDistance;
+    _SetCameraTransform();
+
+}
+
+void QtOSGViewer::_ChangeViewToYZ()
+{
+    _UpdateCameraTransform(0);
+    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(1,0,0), float(-M_PI/2)), quatFromAxisAngle(RaveVector<float>(0,0,1), float(-M_PI/2)));
+    _Tcamera.trans.x = 0;
+    _Tcamera.trans.y = 0;
+    _Tcamera.trans.z = -_focalDistance;
+    _SetCameraTransform();
+
+}
+
+//void QtOSGViewer::_ProcessLightChange()
+//{
+//    if (lightAct->isChecked()) {
+//        lightAct->setIcon(QIcon(":/images/lightoff.png"));
+//    }
+//    else {
+//        lightAct->setIcon(QIcon(":/images/lighton.png"));
+//    }
+//    _posgWidget->SetLight(!lightAct->isChecked());
+//}
+
+//void QtOSGViewer::_ProcessFacesModeChange()
+//{
+//    _posgWidget->SetFacesMode(!facesAct->isChecked());
+//}
 
 void QtOSGViewer::polygonMode()
 {
-    if (smoothAct->isChecked())
-    {
-        _posgWidget->SetPolygonMode(0);
-    }
-    else if (flatAct->isChecked())
-    {
-        _posgWidget->SetPolygonMode(1);
-    }
-    else
-    {
-        _posgWidget->SetPolygonMode(2);
-    }
+    _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
 }
 
 void QtOSGViewer::_ProcessBoundingBox()
@@ -556,20 +622,24 @@ void QtOSGViewer::_ProcessPointerGroupClicked(int button)
 {
     switch (button) {
     case -2:
+        //setCursor(Qt::ArrowCursor);
+        //_posgWidget->setCursor(Qt::ArrowCursor);
         _posgWidget->SelectActive(false);
         break;
     case -3:
+        //setCursor(Qt::PointingHandCursor);
+        //_posgWidget->setCursor(Qt::PointingHandCursor);
         _posgWidget->SetDraggerMode("TranslateTrackballDragger");
         _posgWidget->SelectActive(true);
         break;
-    case -4:
-        _posgWidget->SetDraggerMode("TrackballDragger");
-        _posgWidget->SelectActive(true);
-        break;
-    case -5:
-        _posgWidget->SetDraggerMode("RotateCylinderDragger");
-        _posgWidget->SelectActive(true);
-        break;
+//    case -4:
+//        _posgWidget->SetDraggerMode("TrackballDragger");
+//        _posgWidget->SelectActive(true);
+//        break;
+//    case -5:
+//        _posgWidget->SetDraggerMode("RotateCylinderDragger");
+//        _posgWidget->SelectActive(true);
+//        break;
     default:
         RAVELOG_ERROR_FORMAT("pointerGroupClicked failure. Button %d pushed", button);
         _posgWidget->SelectActive(false);
@@ -621,42 +691,46 @@ void QtOSGViewer::_CreateToolsBar()
     axesButton->setCheckable(true);
     axesButton->setIcon(QIcon(":/images/axes.png"));
 
-    QToolButton *rotationButton = new QToolButton;
-    rotationButton->setCheckable(true);
-    rotationButton->setIcon(QIcon(":/images/no_edit.png"));
-
-    QToolButton *handButton = new QToolButton;
-    handButton->setCheckable(true);
-    handButton->setIcon(QIcon(":/images/hand.png"));
+//    QToolButton *rotationButton = new QToolButton;
+//    rotationButton->setCheckable(true);
+//    rotationButton->setIcon(QIcon(":/images/no_edit.png"));
+//
+//    QToolButton *handButton = new QToolButton;
+//    handButton->setCheckable(true);
+//    handButton->setIcon(QIcon(":/images/hand.png"));
 
 
     _pointerTypeGroup = new QButtonGroup();
     _pointerTypeGroup->addButton(pointerButton);
     _pointerTypeGroup->addButton(axesButton);
-    _pointerTypeGroup->addButton(rotationButton);
-    _pointerTypeGroup->addButton(handButton);
+    //_pointerTypeGroup->addButton(rotationButton);
+    //_pointerTypeGroup->addButton(handButton);
 
     connect(_pointerTypeGroup, SIGNAL(buttonClicked(int)), this, SLOT(_ProcessPointerGroupClicked(int)));
 
-    shapeGroup = new QActionGroup(this);
-    smoothAct->setCheckable(true);
-    flatAct->setCheckable(true);
+    //shapeGroup = new QActionGroup(this);
+    //smoothAct->setCheckable(true);
+    //flatAct->setCheckable(true);
     wireAct->setCheckable(true);
-    shapeGroup->addAction(smoothAct);
-    shapeGroup->addAction(flatAct);
-    shapeGroup->addAction(wireAct);
-    smoothAct->setChecked(true);
+    //shapeGroup->addAction(smoothAct);
+    //shapeGroup->addAction(flatAct);
+    //shapeGroup->addAction(wireAct);
+    //smoothAct->setChecked(true);
 
     toolsBar->addWidget(pointerButton);
     toolsBar->addWidget(axesButton);
-    toolsBar->addWidget(rotationButton);
-    toolsBar->addWidget(handButton);
+    //toolsBar->addWidget(rotationButton);
+    //toolsBar->addWidget(handButton);
     toolsBar->addAction(houseAct);
-    toolsBar->addAction(lightAct);
-    toolsBar->addAction(smoothAct);
-    toolsBar->addAction(flatAct);
+    toolsBar->addAction(_qactChangeViewtoXY);
+    toolsBar->addAction(_qactChangeViewtoXZ);
+    toolsBar->addAction(_qactChangeViewtoYZ);
+    toolsBar->addAction(_qactPerspectiveView);
+    //toolsBar->addAction(lightAct);
+    //toolsBar->addAction(smoothAct);
+    //toolsBar->addAction(flatAct);
     toolsBar->addAction(wireAct);
-    toolsBar->addAction(facesAct);
+    //toolsBar->addAction(facesAct);
 }
 
 void QtOSGViewer::_CreateStatusBar()
@@ -672,7 +746,7 @@ void QtOSGViewer::_CreateDockWidgets()
     _qobjectTree = _CreateObjectTree();
     dock->setWidget(_qobjectTree);
     dock->hide();
-    
+
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 
@@ -858,8 +932,8 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     // set the viewport size correctly so we can draw stuff on the hud using window coordinates
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->SetViewport(width, height);
-    
+    _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
+
     // read the current camera transform
 //    osg::Vec3d eye, center, up;
 //    _posgWidget->GetCameraManipulator()->getTransformation(eye, center, up);
@@ -1229,7 +1303,7 @@ void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertic
     geometry->setVertexArray(vertices.get());
     geometry->setColorArray(colors.get());
     geometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-    
+
     geometry->addPrimitiveSet(new osg::DrawArrays(mode, 0, vertices->size()));
     geometry->getOrCreateStateSet()->setAttribute(attribute, osg::StateAttribute::ON);
 
@@ -1297,7 +1371,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
 
         vcolors->push_back(osg::Vec4f(color.x, color.y, color.z, color.w));
     }
-    
+
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)))); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
@@ -1345,7 +1419,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
 
         vcolors->push_back(osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f));
     }
-    
+
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)))); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
