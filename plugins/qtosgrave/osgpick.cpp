@@ -15,7 +15,7 @@
 
 namespace qtosgrave {
 
-OSGPickHandler::OSGPickHandler(const SelectLinkFn& selectLinkFn) : _selectLinkFn(selectLinkFn), _select(false)
+OSGPickHandler::OSGPickHandler(const HandleRayPickFn& handleRayPickFn) : _handleRayPickFn(handleRayPickFn), _bDoPickCallOnButtonRelease(false)
 {
 }
 
@@ -27,84 +27,82 @@ bool OSGPickHandler::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAda
 {
     switch(ea.getEventType())
     {
-    case (osgGA::GUIEventAdapter::DOUBLECLICK):
+    case osgGA::GUIEventAdapter::DOUBLECLICK:
     {
-        doubleClick();
+        //doubleClick();
         return false;
     }
-    case (osgGA::GUIEventAdapter::PUSH):
+    case osgGA::GUIEventAdapter::RELEASE:
     {
-        osg::ref_ptr<osgViewer::View> view(dynamic_cast<osgViewer::View*>(&aa));
-        if (!!view) {
-            _Pick(view,ea);
-        }
-        return false;
-    }
-    case (osgGA::GUIEventAdapter::KEYDOWN):
-    {
-        if (ea.getKey()=='c') {
+        if( (ea.getButton() & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && _bDoPickCallOnButtonRelease ) {
+            _bDoPickCallOnButtonRelease = false;
             osg::ref_ptr<osgViewer::View> view(dynamic_cast<osgViewer::View*>(&aa));
-            osg::ref_ptr<osgGA::GUIEventAdapter> event = new osgGA::GUIEventAdapter(ea);
-            event->setX((ea.getXmin()+ea.getXmax())*0.5);
-            event->setY((ea.getYmin()+ea.getYmax())*0.5);
             if (!!view) {
-                _Pick(view,*event);
+                _Pick(view, ea, 1);
             }
         }
         return false;
     }
+    case osgGA::GUIEventAdapter::PUSH:
+        if( ea.getButton() & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON ) {
+            _bDoPickCallOnButtonRelease = true;
+        }
+        else {
+            _bDoPickCallOnButtonRelease = false;
+        }
+        return false;
+    case osgGA::GUIEventAdapter::MOVE: {
+        osg::ref_ptr<osgViewer::View> view(dynamic_cast<osgViewer::View*>(&aa));
+        if (!!view) {
+            _Pick(view, ea, 0);
+        }
+        return false;
+    }
+    case osgGA::GUIEventAdapter::DRAG:
+        _bDoPickCallOnButtonRelease = false; // mouse moved, so cancel any pick calls
+        return false;
+        
     default:
         return false;
     }
 }
 
-void OSGPickHandler::_Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea)
+void OSGPickHandler::_Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea, int buttonPressed)
 {
     try {
-        osgUtil::LineSegmentIntersector::Intersections intersections;
-
-        osg::ref_ptr<osg::Node> node;
-        std::string gdlist="";
         float x = ea.getX();
         float y = ea.getY();
-    //#if 0
-    //    osg::ref_ptr< osgUtil::LineSegmentIntersector > picker = new osgUtil::LineSegmentIntersector(osgUtil::Intersector::WINDOW, x, y);
-    //    osgUtil::IntersectionVisitor iv(picker.get());
-    //    view->getCamera()->accept(iv);
-    //    if (picker->containsIntersections()) {
-    //        intersections = picker->getIntersections();
-    //#else
+        osgUtil::LineSegmentIntersector::Intersections intersections;
         if (view->computeIntersections(x,y,intersections)) {
             for(osgUtil::LineSegmentIntersector::Intersections::iterator hitr = intersections.begin(); hitr != intersections.end(); ++hitr) {
                 if (!hitr->nodePath.empty() && !(hitr->nodePath.back()->getName().empty())) {
-                    // the geodes are identified by name.
-                    gdlist  = hitr->nodePath.back()->getName();
-                    node = hitr->drawable->getParent(0);
-                    break;
+                    _handleRayPickFn(*hitr, buttonPressed, ea.getModKeyMask());
+                    return;
+//                    // the geodes are identified by name.
+//                    gdlist  = hitr->nodePath.back()->getName();
+//                    node = hitr->drawable->getParent(0);
+//
+//                    break;
+
                 }
                 else if (hitr->drawable.valid()) {
-                    gdlist  = hitr->drawable->className();
+                    //gdlist  = hitr->drawable->className();
                 }
+            }
+
+            if( intersections.size() > 0 ) {
+                // take the first intersection
+                _handleRayPickFn(*intersections.begin(), buttonPressed, ea.getModKeyMask());
+                return;
             }
         }
 
-        //  If selection is activated
-        if (_select) {
-            _selectLinkFn(node, ea.getModKeyMask());
-        }
+        // if still here, then no intersection
+        _handleRayPickFn(osgUtil::LineSegmentIntersector::Intersection(), buttonPressed, ea.getModKeyMask());
     }
     catch(const std::exception& ex) {
         RAVELOG_WARN_FORMAT("exception in osg picker: %s", ex.what());
     }
-}
-
-void OSGPickHandler::doubleClick()
-{
-}
-
-void OSGPickHandler::ActivateSelection(bool active)
-{
-    _select = active;
 }
 
 }
