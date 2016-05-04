@@ -838,9 +838,13 @@ protected:
             return _defaultviewertype;
         }
         
-        // get the first viewer that can be loadable, with preferenace to qtcoin
+        // get the first viewer that can be loadable, with preferenace to qtosg, qtcoin
         boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase;
         if( !!pdatabase ) {
+            if( pdatabase->HasInterface(PT_Viewer, "qtosg") ) {
+                return std::string("qtosg");
+            }
+
             if( pdatabase->HasInterface(PT_Viewer, "qtcoin") ) {
                 return std::string("qtcoin");
             }
