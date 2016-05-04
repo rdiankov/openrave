@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +13,21 @@
 // limitations under the License.
 #ifndef OPENRAVE_QTOSG_VIEWER_H
 #define OPENRAVE_QTOSG_VIEWER_H
-//
+
 #include "qtosg.h"
+#include "osgrenderitem.h"
+
 #include <QMainWindow>
 
 #include "qtreemodel.h"
 
 namespace qtosgrave {
+
+class ViewerWidget;
+class QtOSGViewer;
+typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
+typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
+typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
 
 /// \brief class of the entire viewer that periodically syncs with the openrave environment.
 class QtOSGViewer : public QMainWindow, public ViewerBase
@@ -122,7 +130,7 @@ public:
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
-    
+
     void LoadEnvironment();
 
     /// \brief Adds models to current scene
@@ -135,16 +143,32 @@ public slots:
 
     /// \brief updates the screen with a new frame and runs viewer update logic. Also tries to update with the openrave environment
     void _UpdateViewerCallback();
-    
+
     /// Set model home position in viewer
     void ResetViewToHome();
 
     /// \brief executed when menu item light is clicked to change the lights in the scene.
-    void _ProcessLightChange();
+    //void _ProcessLightChange();
+
+    /// \brief changes the perspective view
+    void _ProcessPerspectiveViewChange();
+
+    /// \brief show an about dialog
+    void _ProcessAboutDialog();
+
+    /// \brief change camera to see xy plane
+    void _ChangeViewToXY();
+
+    /// \brief change camera to see xz plane
+    void _ChangeViewToXZ();
+
+    /// \brief change camera to see yz plane
+    void _ChangeViewToYZ();
+
     void polygonMode();
 
     //  \brief Sets COUNTER CLOCKWISE and CLOCKWISE polygons
-    void _ProcessFacesModeChange();
+    //void _ProcessFacesModeChange();
 
     /// Sets or reset bounding box
     void _ProcessBoundingBox();
@@ -167,7 +191,7 @@ protected:
 //        RAVELOG_INFO("key pressed event\n");
 //        QWidget::keyPressEvent(event);
 //    }
-//    
+//
 //    void keyReleaseEvent(QKeyEvent* event)
 //    {
 //        RAVELOG_INFO("key released event\n");
@@ -179,7 +203,7 @@ protected:
     /// \brief contains a function to be called inside the GUI thread.
     class GUIThreadFunction
     {
-    public:
+public:
         GUIThreadFunction(const boost::function<void()>& fn, bool isblocking=false) : _fn(fn), _bcalled(false), _bfinished(false), _bisblocking(isblocking) {
         }
 
@@ -207,8 +231,8 @@ protected:
         void SetFinished() {
             _bfinished = true;
         }
-        
-    private:
+
+private:
 
         boost::function<void()> _fn;
         bool _bcalled; ///< true if function already called
@@ -220,7 +244,7 @@ protected:
     /// \brief implementation of graph handles for qtosg
     class PrivateGraphHandle : public GraphHandle
     {
-    public:
+public:
         PrivateGraphHandle(QtOSGViewerWeakPtr wviewer, OSGSwitchPtr handle) : _handle(handle), _wviewer(wviewer) {
             BOOST_ASSERT(_handle != NULL);
         }
@@ -263,7 +287,7 @@ protected:
 
     /// \brief initializes osg view and the qt menus/dialog boxes
     virtual void _InitGUI(bool bCreateStatusBar, bool bCreateMenu);
-    
+
     /// \brief Update model and camera transform
     virtual void _UpdateEnvironment(float fTimeElapsed);
     virtual bool _ForceUpdatePublishedBodies();
@@ -274,7 +298,7 @@ protected:
     /// \brief reset the camera depending on its mode
     virtual void _UpdateCameraTransform(float fTimeElapsed);
     virtual void _SetCameraTransform();
-        
+
     virtual OSGSwitchPtr _CreateGraphHandle();
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
     virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
@@ -289,7 +313,7 @@ protected:
     /// \param fn the function to execute
     /// \param block if true, will return once the function has been executed.
     void _PostToGUIThread(const boost::function<void()>& fn, bool block=false);
-    
+
     /// \brief Actions that achieve buttons and menus
     void _CreateActions();
 
@@ -313,7 +337,7 @@ protected:
 
     /// \brief Fills object tree with robot info
     void _FillObjectTree(QTreeWidget *tw);
-    
+
     void _DeleteItemCallback(Item* pItem);
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
@@ -323,7 +347,7 @@ protected:
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
-    
+
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
     mutable list<Item*> _listRemoveItems; ///< raw points of items to be deleted in the viewer update thread, triggered from _DeleteItemCallback. proteced by _mutexItems
@@ -331,11 +355,11 @@ protected:
     mutable boost::mutex _mutexGUIFunctions;
     mutable boost::condition _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
     //@}
-    
+
     //@{ osg rendering primitives
     OSGNodePtr _selectedNode;
     //@}
-    
+
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< mapping of all the bodies created
     ItemPtr _pSelectedItem;     ///< the currently selected item
@@ -349,7 +373,7 @@ protected:
     boost::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
     boost::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
     boost::condition _condUpdateModels; ///< signaled everytime environment models are updated
-    
+
     ViewGeometry _viewGeometryMode; ///< the visualization mode of the geometries
 
     //@{ callbacks
@@ -360,11 +384,11 @@ protected:
 
     //@{ qt menus and dialog boxes
     QTimer _updateViewerTimer;
-    
+
     QGridLayout* _qCentralLayout;
     QWidget* _qCentralWidget;
     ViewerWidget* _posgWidget; // cannot be shared_ptr since QMainWindow takes ownership of it internally
-    
+
     QMenu* fileMenu;
     QMenu* viewMenu;
     QMenu* helpMenu;
@@ -395,11 +419,13 @@ protected:
     QAction* puntAct;
     QAction* AxesAct;
     QAction* houseAct;
-    QAction* smoothAct;
-    QAction* flatAct;
-    QAction* lightAct;
+    QAction* _qactChangeViewtoXY, *_qactChangeViewtoYZ, *_qactChangeViewtoXZ;
+    //QAction* smoothAct;
+    //QAction* flatAct;
+    //QAction* lightAct;
+    QAction* _qactPerspectiveView;
     QAction* wireAct;
-    QAction* facesAct;
+    //QAction* facesAct;
     QAction* bboxAct;
 
     QToolBar* fileToolBar;
@@ -408,14 +434,14 @@ protected:
     QToolBar* toolsBar;
 
     QComboBox* physicsComboBox;
-    
+
     QTreeView* _qtree;
 
-    QActionGroup* shapeGroup;
+    //QActionGroup* shapeGroup;
     QButtonGroup* _pointerTypeGroup;
     QButtonGroup* buttonGroup;
     QButtonGroup* draggerTypeGroup;
-    
+
     QTreeWidget* _qobjectTree; ///< Tree of robots, joints and links
     QTreeWidget* _qdetailsTree; ///< Details panel object
     //@}
@@ -428,7 +454,7 @@ protected:
     Transform _tTrackingCameraVelocity; ///< camera velocity
     float _fTrackAngleToUp; ///< tilt a little when looking at the point
     //@}
-    
+
     // toggle switches
     bool _bModelsUpdated;
     bool _bDisplayGrid;
@@ -448,13 +474,13 @@ protected:
     bool _bShareBitmap;
     bool _bManipTracking;
     bool _bAntialiasing;
-    
+
     // control related
     bool _bUpdateEnvironment; ///< if true, should update the viewer to the openrave environment periodically
     bool _bLockEnvironment; ///< if true, should lock the environment when updating from it. Otherwise, the environment can assumed to be already locked in another thread that the viewer controls
 
     int _nQuitMainLoop; ///< controls if the main loop's state. If 0, then nothing is initialized. If -1, then currently initializing/running. If 1, then currently quitting from the main loop. If 2, then successfully quit from the main loop.
-    
+
     bool _bRenderFiguresInCamera;
 
     friend class ItemSelectionCallbackData;

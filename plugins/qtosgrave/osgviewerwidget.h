@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,32 +15,18 @@
 #define OPENRAVE_QTOSG_VIEWERCONTEXT_H
 
 #include "qtosg.h"
-
+#include "osgrenderitem.h"
 #include "osgpick.h"
 
 #include <QtCore/QTimer>
 #include <QtGui/QApplication>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
-#include <osg/ShadeModel>
-#include <osgDB/ReadFile>
-#include <osg/FrontFace>
-#include <osg/CullFace>
+#include <osg/PositionAttitudeTransform>
+#include <osgManipulator/Dragger>
 #include <iostream>
 
-#include <osgGA/NodeTrackerManipulator>
-
 #include <osgQt/GraphicsWindowQt>
-#include <osgManipulator/CommandManager>
-#include <osgManipulator/TabBoxDragger>
-#include <osgManipulator/TabPlaneDragger>
-#include <osgManipulator/TabPlaneTrackballDragger>
-#include <osgManipulator/TrackballDragger>
-#include <osgManipulator/Translate1DDragger>
-#include <osgManipulator/Translate2DDragger>
-#include <osgManipulator/TranslateAxisDragger>
-
-#include <osg/PositionAttitudeTransform>
 
 namespace qtosgrave {
 
@@ -57,13 +43,15 @@ public:
     void DrawBoundingBox(bool pressed);
 
     /// \brief Active selection
-    void SelectActive(bool active);
+    void ActivateSelection(bool active);
 
     /// \brief possible names include TrackballDragger, TranslateAxisDragger
     void SetDraggerMode(const std::string& draggerName);
-    
-    /// \brief Select robot or kinbody from screen
-    void SelectRobot(std::string name);
+
+    /// \brief sets up a dragger selection for a robot or kinbody item
+    void SelectItem(KinBodyItemPtr item);
+
+    void SelectItemFromName(const std::string& name);
 
     /// \brief  Sets scene data node in all viewers
     void SetSceneData();
@@ -76,11 +64,17 @@ public:
 
     /// \brief Light button
     void SetLight(bool enabled);
+
     //  Cull face
     void SetFacesMode(bool enabled);
 
     /// \brief Sets poligon mode (SMOOTH, FLAT or WIRED)
     void SetPolygonMode(int mode);
+
+    void SetViewType(int isorthogonal, double metersinunit=1);
+
+    /// \brief sets user-controlled hud text
+    void SetUserHUDText(const std::string& text);
 
     /// \brief Set wire view to a node
     void SetWire(OSGNodePtr node);
@@ -93,22 +87,32 @@ public:
         return _osgFigureRoot;
     }
 
-    /// \brief Gets transform matrix of a given link
-    OSGMatrixTransformPtr GetLinkTransform(std::string& robotName, KinBody::LinkPtr link);
+    /// \brief called when the mouse is over a specified point
+    ///
+    void HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask=0);
 
-    /// \brief Select the link picked
-    void SelectLink(OSGNodePtr node, int modkeymask=0);
+    /// \brief handle case when link is selected
+    void SelectOSGLink(OSGNodePtr node, int modkeymask);
 
-    void SetViewport(int width, int height);
+    void SetViewport(int width, int height, double metersinunit);
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
-    
+
+    /// \brief Updates any changes in OSG to to OpenRAVE core.
+    void UpdateFromOSG();
+
+    /// \brief Find node of Robot for the link picked
+    KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
+
 protected:
     bool HandleOSGKeyDown(int);
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();
+
+    /// \brief gather all the necessary text and updates it on the HUD control
+    void _UpdateHUDText();
 
     /// \brief Create a viewer widget
     QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
@@ -117,38 +121,18 @@ protected:
     osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h );
     osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h );
 
-    /// \brief Find an OSG Node with the name given
-    OSGNodePtr _FindNamedNode(const std::string& searchName, OSGNodePtr currNode);
-
-    /// \brief Print nodes of scenegraph
-    //void _ShowSceneGraph(const std::string& currLevel,osg::Node* currNode);
-
-    /// \brief Get link children and store list in global variable _linkChildren
-    void _GetLinkChildren( std::string & robotName, KinBody::LinkPtr link, std::vector<KinBody::LinkPtr> vlinks);
-    
-    /// \brief Find node of Robot for the link picked
-    OSGNodePtr _FindRobot(OSGNodePtr node);
-
-    /// \brief Find link initial node. Group node
-    OSGNodePtr _FindLinkParent(OSGNodePtr node);
-
-    /// \brief Propagate transform to link children
-    void _PropagateTransforms();
+    KinBodyItemPtr _GetItemFromName(const std::string& name);
 
     /// \brief Find joint into OpenRAVE core
-    KinBody::JointPtr _FindJoint(std::string & robotName,std::string &linkName);
+    KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link);
 
     //  Lighting Stuff //
-
     osg::ref_ptr<osg::Material> _CreateSimpleMaterial(osg::Vec4 color);
     osg::ref_ptr<osg::Light> _CreateLight(osg::Vec4 color, int lightid);
     osg::ref_ptr<osg::Light> _CreateAmbientLight(osg::Vec4 color, int lightid);
-    
+
     /// \brief Initialize lighting
     void _InitializeLights(int nlights);
-
-    /// \brief Updates joint values from viewer to OpenRAVE core. uses GetPublishedBodies, so doesn't need environment lock.
-    virtual void _UpdateFromOSG();
 
     /// \brief Stores matrix transform
     void _StoreMatrixTransform();
@@ -158,56 +142,30 @@ protected:
 
     /// \brief Create a dragger with a name given
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string& name);
-    
-    /// \brief Create a manipulator over an object pased
-    OSGNodePtr _AddDraggerToObject(OSGNodePtr object, const std::string& name);
 
-    OSGNodePtr _AddDraggerToObject(const std::string& robotName, OSGNodePtr object, const std::string& name, KinBody::JointPtr joint);
+    /// \brief Create a manipulator over a render item
+    ///
+    /// \param draggerName the type of dragger to create
+    /// \param joint if not empty, the joint to create the dragger over (ie for moving the joint value)
+    OSGNodePtr _AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
     virtual void paintEvent( QPaintEvent* event );
-
-//    //  Mouse release event
-//    virtual void mouseReleaseEvent(QMouseEvent *e)
-//    {
-//      if (doubleClickPressed)
-//      {
-//        doubleClickPressed = false;
-//
-//        if (isSimpleView)
-//        {
-//          setMultipleView();
-//        }
-//        else
-//        {
-//          setSimpleView();
-//        }
-//      }
-//    }
-//    /// Mouse double click event handler
-//    virtual void mouseDoubleClickEvent(QMouseEvent *e)
-//    {
-//      doubleClickPressed = true;
-//    }
-
-
-//    //  Flags to apply anchor (if true) to the dragger position
-//    std::map<std::string,bool> _needAnchor;
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
     OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
-    
+
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     OSGGroupPtr _osgLightsGroup; ///< Scene Node with lights
     OSGGroupPtr _osgLightsGroupData; ///< Scene Data to romove after each repaint
     OSGGroupPtr _osgDraggerRoot; ///< Parent of dragger and selection
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _draggers; ///< There is only one dragger at the same time
     OSGMatrixTransformPtr _draggerMatrix; ///< Transform applied by dragger
-    OSGNodePtr _selected; ///< Object selected by dragger
+    OSGGroupPtr _osgSelectedNodeByDragger; ///< Object selected by dragger
     OSGMatrixTransformPtr _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
-    
-    std::string _actualKinbody; ///< Kinematic body selected or robot
+
+    KinBodyItemPtr _selectedItem; ///< render item selected
     std::string _draggerName; ///< Actual dragger selected
-    
+
     osg::ref_ptr<OSGPickHandler> _picker; ///<  Pick handler for joint selection
     osg::ref_ptr<osgGA::GUIEventHandler> _keyhandler; ///<  Pick handler for joint selection
     osg::Matrixf _viewCameraMatrix; ///< stored matrix transform
@@ -216,15 +174,18 @@ protected:
     osg::ref_ptr<osg::StateSet> _lightStateSet;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
-    osg::ref_ptr<osgGA::CameraManipulator> _osgCameraManipulator;
-    
+    osg::ref_ptr<osgGA::TrackballManipulator> _osgCameraManipulator;
+
+    osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
+    std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
+
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-    std::vector<OSGMatrixTransformPtr> _linkChildren; ///< List of link children
 
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
-    
+
     bool _bLightOn; ///< whether lights are on or not
+    bool _bIsSelectiveActive; ///< if true, then can select a new
 };
 
 }

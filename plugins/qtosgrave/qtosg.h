@@ -162,13 +162,8 @@ inline RaveTransform<float> GetRaveTransformFromMatrix(const osg::Matrix &m)
 inline osg::Matrix GetMatrixFromRaveTransform(const RaveTransform<float> &t)
 {
     osg::Matrix m;
-    osg::Matrix mR, mT;
-
-    mR.makeRotate(osg::Quat(t.rot.y, t.rot.z, t.rot.w, t.rot.x));
-    mT.makeTranslate(t.trans.x, t.trans.y, t.trans.z);
-
-    m.preMult(mT);
-    m.preMult(mR);
+    m.makeRotate(osg::Quat(t.rot.y, t.rot.z, t.rot.w, t.rot.x));
+    m.setTrans(t.trans.x, t.trans.y, t.trans.z);
     return m;
 }
 
@@ -190,24 +185,27 @@ class FindNode : public osg::NodeVisitor
 public:
     // Traverse all children.
     FindNode( OSGNodePtr node ) : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN ), _nodeToFind( node ) {
+        _found = false;
     }
     // This method gets called for every node in the scene
     //   graph. Check each node to see if its name matches
     //   our target. If so, save the node's address.
-    virtual void apply( OSGNodePtr node )
+    virtual void apply( osg::Node& node )
     {
-        if (_nodeToFind == node) {
-            _node = node;
+        if (_nodeToFind.get() == &node) {
+            _found = true;
         }
-        // Keep traversing the rest of the scene graph.
-        traverse( *node );
+        else {
+            // Keep traversing the rest of the scene graph.
+            traverse( node );
+        }
     }
-    OSGNodePtr getNode() {
-        return _node;
+    bool IsFound() const {
+        return _found;
     }
 protected:
-    OSGNodePtr  _nodeToFind;
-    OSGNodePtr  _node;
+    OSGNodePtr _nodeToFind;
+    bool _found;
 };
 
 inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
@@ -231,15 +229,7 @@ inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithT
     return lockenv;
 }
 
-class ViewerWidget;
+} // end namespace qtosgrave
 
-class QtOSGViewer;
-typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
-typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
-typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
-
-}
-
-#include "osgrenderitem.h"
 
 #endif /* QTOSG_H_ */
