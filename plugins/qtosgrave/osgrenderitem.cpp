@@ -379,7 +379,7 @@ void KinBodyItem::Load()
         }
     }
 
-    RAVELOG_DEBUG_FORMAT("Number of links added = %d", _veclinks.size());
+    //RAVELOG_VERBOSE_FORMAT("Number of links added = %d", _veclinks.size());
 
     //  Is an object without joints
     if (_pbody->GetJoints().size() < 1) {
