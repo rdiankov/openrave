@@ -28,8 +28,6 @@
 #include <osgManipulator/Translate2DDragger>
 #include <osgManipulator/TranslateAxisDragger>
 
-#include <osg/PositionAttitudeTransform>
-
 
 namespace qtosgrave {
 
@@ -83,6 +81,27 @@ private:
     boost::function<bool(int)> _onKeyDown; ///< called when key is pressed
 };
 
+//void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
+//{
+//    std::string level;
+//    OSGGroupPtr currGroup;
+//
+//    level = currLevel;
+//
+//    // check to see if we have a valid (non-NULL) node.
+//    // if we do have a null node, return NULL.
+//    if ( !!currNode) {
+//        RAVELOG_WARN_FORMAT("|%sNode class:%s (%s)",currLevel%currNode->className()%currNode->getName());
+//        level = level + "-";
+//        currGroup = currNode->asGroup(); // returns NULL if not a group.
+//        if ( currGroup ) {
+//            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
+//                _ShowSceneGraph(level,currGroup->getChild(i));
+//            }
+//        }
+//    }
+//}
+
 ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown) : QWidget(), _onKeyDown(onKeyDown)
 {
     setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
@@ -91,7 +110,6 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _penv = penv;
     _bLightOn = true;
     _bIsSelectiveActive = false;
-    _actualKinbody = "";
     _osgview = new osgViewer::View();
     _osghudview = new osgViewer::View();
 
@@ -105,7 +123,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     setLayout(grid);
 
     //  Sets pickhandler
-    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3));
+    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&ViewerWidget::UpdateFromOSG,this));
     _osgview->addEventHandler(_picker);
 
     _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1));
@@ -249,7 +267,7 @@ bool ViewerWidget::HandleOSGKeyDown(int key)
     return false;
 }
 
-void ViewerWidget::SelectActive(bool active)
+void ViewerWidget::ActivateSelection(bool active)
 {
     osgViewer::Viewer::Windows windows;
     getWindows(windows);
@@ -263,7 +281,7 @@ void ViewerWidget::SetDraggerMode(const std::string& draggerName)
 {
     if( draggerName.size() > 0 ) {
         _draggerName = draggerName;
-        SelectRobot(_actualKinbody);
+        SelectItem(_selectedItem);
     }
     else {
         _ClearDragger();
@@ -271,47 +289,21 @@ void ViewerWidget::SetDraggerMode(const std::string& draggerName)
     }
 }
 
-//void ViewerWidget::DrawTrackball(bool pressed)
-//{
-//    //  If boundingbox button is pressed
-//    if (pressed) {
-//        _draggerName = "TrackballDragger";
-//        SelectRobot(_actualKinbody);
-//    }
-//    else {
-//        // remove any old dragger
-//        _ClearDragger();
-//        _draggerName.clear();
-//    }
-//}
-//
-//void ViewerWidget::DrawAxes(bool pressed)
-//{
-//    if (pressed) {
-//        _draggerName = "TranslateAxisDragger";
-//        SelectRobot(_actualKinbody);
-//    }
-//    else {
-//        // remove any old dragger
-//        _ClearDragger();
-//        _draggerName.clear();
-//    }
-//}
-
-void ViewerWidget::SelectRobot(std::string name)
+void ViewerWidget::SelectItem(KinBodyItemPtr item)
 {
-    //  Gets camera transform
-    OSGNodePtr node = _FindNamedNode(name,OSGNodePtr(_osgview->getSceneData()));
-
-    if (!!node) {
-        _PropagateTransforms();
-
-        //  Sets robot selected
-        _actualKinbody = name;
-
-        RAVELOG_DEBUG_FORMAT("Node name %s", node->getName());
-        _AddDraggerToObject(node,_draggerName);
+    _selectedItem = item;
+    if (!!_selectedItem) {
+        _AddDraggerToObject(_draggerName, _selectedItem, KinBody::JointPtr());
     }
+    else {
+        // no dragger so clear?
+        _ClearDragger();
+    }
+}
+
+void ViewerWidget::SelectItemFromName(const std::string& name)
+{
+    SelectItem(_GetItemFromName(name));
 }
 
 void ViewerWidget::SetSceneData()
@@ -415,37 +407,24 @@ void ViewerWidget::SetWire(OSGNodePtr node)
     node->getOrCreateStateSet()->setAttribute(sm.get());
 }
 
-OSGMatrixTransformPtr ViewerWidget::GetLinkTransform(std::string& robotName, KinBody::LinkPtr link)
-{
-    OSGNodePtr robot = _FindNamedNode(robotName,_osgview->getSceneData());
-    OSGNodePtr node = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+link->GetName(),robot);
-
-    OSGMatrixTransformPtr transform;
-    if (!!node) {
-        transform = OSGMatrixTransformPtr(node->asTransform()->asMatrixTransform());
-    }
-
-    return transform;
-}
-
 void ViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection& intersection, int buttonPressed, int modkeymask)
 {
     if (intersection.nodePath.empty()) {
         _strRayInfoText.clear();
         _UpdateHUDText();
-        if( _bIsSelectiveActive ) {
-            SelectLink(OSGNodePtr(), modkeymask);
-        }
+//        if( _bIsSelectiveActive ) {
+//            SelectOSGLink(OSGNodePtr(), modkeymask);
+//        }
     }
     else {
-        if (!intersection.nodePath.empty() && !(intersection.nodePath.back()->getName().empty())) {
-            OSGNodePtr node = intersection.drawable->getParent(0);
-            
+        if (!intersection.nodePath.empty() ) {
+            OSGNodePtr node = intersection.nodePath.back();//intersection.drawable->getParent(0);
+
             // something hit
             if( buttonPressed ) {
                 if( _bIsSelectiveActive ) {
                     if( !!node ) {
-                        SelectLink(node, modkeymask);
+                        SelectOSGLink(node, modkeymask);
                     }
                 }
                 else {
@@ -454,17 +433,30 @@ void ViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersec
             }
             else {
                 // draw the intersection point in the HUD
-                OSGNodePtr robotbase = _FindRobot(node);
-                osg::Vec3d pos = intersection.getWorldIntersectPoint();
-                osg::Vec3d normal = intersection.getWorldIntersectNormal();
-                _strRayInfoText = str(boost::format("mouse on %s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%robotbase->getName()%node->getName()%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                KinBodyItemPtr item = _FindKinBodyItemFromOSGNode(node);
+                if( !!item ) {
+                    osg::Vec3d pos = intersection.getWorldIntersectPoint();
+                    osg::Vec3d normal = intersection.getWorldIntersectNormal();
+                    _strRayInfoText = str(boost::format("mouse on %s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%item->GetName()%node->getName()%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                }
+                else {
+                    _strRayInfoText.clear();
+                }
                 _UpdateHUDText();
             }
         }
     }
 }
 
-void ViewerWidget::SelectLink(OSGNodePtr node, int modkeymask)
+void ViewerWidget::UpdateFromOSG()
+{
+    if( !!_selectedItem ) {
+        // have to update the underlying openrave model since dragger is most likely changing the positions
+        _selectedItem->UpdateFromOSG();
+    }
+}
+
+void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
 {
     if (!node) {
         if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
@@ -474,24 +466,16 @@ void ViewerWidget::SelectLink(OSGNodePtr node, int modkeymask)
         return;
     }
 
-    string linkName;
-    string robotName;
-    OSGNodePtr scene;
-    OSGNodePtr node_found;
-    OSGNodePtr selected;
+    string linkName = node->getName();
     KinBody::JointPtr joint;
-
-    linkName = node->getName();
-
-    OSGNodePtr robot = _FindRobot(node);
-    if (!!robot) {
-        robotName = robot->getName();
-        RAVELOG_VERBOSE_FORMAT("found %s", robotName);
+    KinBodyItemPtr item = _FindKinBodyItemFromOSGNode(node);
+    if (!!item) {
+        KinBody::LinkPtr link = item->GetBody()->GetLink(node->getName());
 
         if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_ALT) ) {
             //RAVELOG_INFO("setting camera manipulator tracking node\n");
             //_osgCameraManipulator->setTrackNode(robot);
-            _osgCameraManipulator->setNode(robot.get());
+            _osgCameraManipulator->setNode(node.get());//robot.get());
             _osgCameraManipulator->computeHomePosition();
             _osgCameraManipulator->home(2);
         }
@@ -499,39 +483,24 @@ void ViewerWidget::SelectLink(OSGNodePtr node, int modkeymask)
         //  Gets camera transform
         _StoreMatrixTransform(); // TODO store matrix for later canceling of the move
 
-        //  Copy scene node for modify it
-        scene = _osgview->getSceneData();
-
         // Find joint of a link name given
-        joint = _FindJoint(robotName,linkName);
-
-        node_found = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+linkName,robot);
-        if( !!node_found ) {
-            node_found = node_found->getParents().at(0);
-            if (!!node_found ) {
-                if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
-//                    if( _draggerName == "RotateCylinderDragger" ) {
-//                        if( !!joint) {
-//                            selected = _AddDraggerToObject(robotName, node_found, "RotateCylinderDragger", joint);
-//                        }
-//                    }
+        joint = _FindJoint(item, linkName);
+        if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
+        }
+        else {
+            if( _draggerName == "RotateCylinderDragger" ) {
+                if( !!joint) {
+                    _AddDraggerToObject("RotateCylinderDragger", item, joint);
                 }
-                else {
-                    if( _draggerName == "RotateCylinderDragger" ) {
-                        if( !!joint) {
-                            selected = _AddDraggerToObject(robotName, node_found, "RotateCylinderDragger", joint);
-                        }
-                    }
-                    else {
-                        // select new body
-                        SelectRobot(robotName);
-                    }
-                }
+            }
+            else {
+                // select new body
+                SelectItem(item);
             }
         }
     }
 
-    if( !robot || !node_found ) {
+    if( !item ) {
         if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
             // user clicked on empty region, so remove selection
             _ClearDragger();
@@ -541,12 +510,18 @@ void ViewerWidget::SelectLink(OSGNodePtr node, int modkeymask)
 
 void ViewerWidget::_ClearDragger()
 {
+    if( !!_osgSelectedNodeByDragger && !!_osgDraggerRoot ) {
+        _osgSceneRoot->replaceChild(_osgDraggerRoot, _osgSelectedNodeByDragger);
+    }
+            
     FOREACH(itdragger, _draggers) {
         if (!!*itdragger) {
             (*itdragger)->getParents().at(0)->removeChild(*itdragger);
         }
     }
-    _draggers.clear();
+    _draggers.resize(0);
+    _osgSelectedNodeByDragger.release();
+    _osgDraggerRoot.release();
 }
 
 void ViewerWidget::SetUserHUDText(const std::string& text)
@@ -615,7 +590,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
 
     //view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new osgGA::TrackballManipulator();//NodeTrackerManipulator();//TrackballManipulator();
+    _osgCameraManipulator = new osgGA::TrackballManipulator();//NodeTrackerManipulator();
     view->setCameraManipulator( _osgCameraManipulator.get() );
 
     _osgCameraHUD = new osg::MatrixTransform();
@@ -676,222 +651,58 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, i
     return camera;
 }
 
-OSGNodePtr ViewerWidget::_FindNamedNode(const std::string& searchName, OSGNodePtr currNode)
+KinBodyItemPtr ViewerWidget::_GetItemFromName(const std::string& name)
 {
-    OSGGroupPtr currGroup;
-    OSGNodePtr foundNode;
-
-    // check to see if we have a valid (non-NULL) node.
-    // if we do have a null node, return NULL.
-    if ( !currNode) {
-        return OSGNodePtr();
-    }
-
-    // We have a valid node, check to see if this is the node we
-    // are looking for. If so, return the current node.
-    if (currNode->getName() == searchName) {
-        return currNode;
-    }
-
-    // We have a valid node, but not the one we are looking for.
-    // Check to see if it has children (non-leaf node). If the node
-    // has children, check each of the child nodes by recursive call.
-    // If one of the recursive calls returns a non-null value we have
-    // found the correct node, so return this node.
-    // If we check all of the children and have not found the node,
-    // return NULL
-    currGroup = currNode->asGroup(); // returns NULL if not a group.
-    if ( currGroup ) {
-        for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
-            foundNode = _FindNamedNode(searchName, OSGNodePtr(currGroup->getChild(i)));
-            if (!!foundNode) {
-                return foundNode; // found a match!
-            }
-        }
-        // We have checked each child node - no match found.
-    }
-    else {
-        // leaf node, no match
-    }
-    return OSGNodePtr();
+    KinBodyPtr pbody = _penv->GetKinBody(name);
+    KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
+    return pitem;
 }
 
-//void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
-//{
-//    std::string level;
-//    OSGGroupPtr currGroup;
-//
-//    level = currLevel;
-//
-//    // check to see if we have a valid (non-NULL) node.
-//    // if we do have a null node, return NULL.
-//    if ( !!currNode) {
-//        RAVELOG_WARN_FORMAT("|%sNode class:%s (%s)",currLevel%currNode->className()%currNode->getName());
-//        level = level + "-";
-//        currGroup = currNode->asGroup(); // returns NULL if not a group.
-//        if ( currGroup ) {
-//            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
-//                _ShowSceneGraph(level,currGroup->getChild(i));
-//            }
-//        }
-//    }
-//}
-
-void ViewerWidget::_GetLinkChildren( std::string & robotName, KinBody::LinkPtr link, std::vector<KinBody::LinkPtr> vlinks)
-{
-    OSGNodePtr robot = _FindNamedNode(robotName,_osgview->getSceneData());
-    OSGNodePtr transform = _FindNamedNode(QTOSG_GLOBALTRANSFORM_PREFIX+link->GetName(),robot);
-    _linkChildren.push_back(transform->asTransform()->asMatrixTransform());
-    FOREACH(itlink,vlinks) {
-        if ((*itlink)->IsParentLink(link)) {
-            _GetLinkChildren(robotName,(*itlink),vlinks);
-        }
-    }
-}
-
-OSGNodePtr ViewerWidget::_FindRobot(OSGNodePtr node)
+KinBodyItemPtr ViewerWidget::_FindKinBodyItemFromOSGNode(OSGNodePtr node)
 {
     if (!node) {
-        //  Error robot not found
-        RAVELOG_WARN("robot not found!\n");
-        return OSGNodePtr();
+        return KinBodyItemPtr();
     }
 
-    if (string(node->className()) == "Switch" && node->getName().size() > 0) {
-        return node; // found
-    }
-    else {
-        if (string(node->className()) == "Geode") {
-            //  Search robot in parent node
-            if( node->asGeode()->getParents().size() > 0 ) {
-                return _FindRobot(OSGNodePtr(node->asGeode()->getParents().at(0)));
+    if( !!node->getUserData() ) {
+        OSGItemUserData* pdata = dynamic_cast<OSGItemUserData*>(node->getUserData());
+        if( !!pdata ) {
+            ItemPtr pitem = pdata->GetItem();
+            if( !pitem ) {
+                RAVELOG_WARN("trying to use a deleted item\n");
             }
-        }
-        else {
-            //  Search robot in parent node
-            if( node->asGroup()->getParents().size() > 0 ) {
-                return _FindRobot(OSGNodePtr(node->asGroup()->getParents().at(0)));
-            }
+            return boost::dynamic_pointer_cast<KinBodyItem>(pitem);
         }
     }
 
-    return OSGNodePtr();
+    // go up the parent chain until can find OSGItemUserData
+    for(size_t iparent = 0; iparent < node->getParents().size(); ++iparent) {
+        osg::Group* parent = node->getParents().at(iparent);
+        KinBodyItemPtr pitem = _FindKinBodyItemFromOSGNode(parent);
+        if( !!pitem ) {
+            return pitem;
+        };
+    }
+
+    return KinBodyItemPtr();
 }
 
-OSGNodePtr ViewerWidget::_FindLinkParent(OSGNodePtr node)
+
+KinBody::JointPtr ViewerWidget::_FindJoint(KinBodyItemPtr pitem, const std::string& linkName)
 {
-    //  There is an error?
-    if (!node) {
-        return OSGNodePtr();
-    }
-    if( node->getParents().size() == 0 ) {
-        return OSGNodePtr();
-    }
-
-    if (string(node->className()) == string(node->getParents().at(0)->className()) &&  string(node->className()) == string("Group")) {
-        //  Node found
-        return node;
-    }
-    else {
-        //  Continue searching for parent
-        return _FindLinkParent(OSGNodePtr(node->getParents().at(0)));
-    }
-}
-
-void ViewerWidget::_PropagateTransforms()
-{
-    OSGMatrixTransformPtr tglobal;
-    osg::Matrix mR,mL;
-
-    if (_linkChildren.size() == 0) {
-        return;
-    }
-    if (!_osgDraggerRoot) {
-        //  Clears childrens of link
-        _linkChildren.clear();
-        return;
-    }
-
-    // Get robot
-    OSGNodePtr robot = _FindRobot(_selected);
-
-    //  Gets parent of _osgDraggerRoot
-    OSGGroupPtr parent(_osgDraggerRoot->getParents().at(0));
-
-    //  Restore parent of selected link
-    parent->addChild(_selected.get());
-
-    //  Clears object selection
-    _draggerMatrix->removeChild(_selected.get());
-
-    //  Remove _osgDraggerRoot from scene graph
-    parent->removeChild(_osgDraggerRoot);
-
-    //  Clears memory of _osgDraggerRoot selection object
-    _osgDraggerRoot.release();
-
-    //  For each children of dragger recalculate his global transform
-    for (size_t i = 0; i < _linkChildren.size(); i++) {
-        tglobal = _linkChildren[i];
-
-        //  Debug
-//        qWarning("link: %s",tglobal->getName().c_str());
-
-//        //  If link  does Not need anchor to place correctly dragger
-//        if (_needAnchor.find(robot->getName() + tglobal->getName()) == _needAnchor.end())
-//        {
-//          //  If link transform demands anchor to place dragger
-//          if (tglobal->getMatrix().getTrans().x() == 0.0 && tglobal->getMatrix().getTrans().y() == 0.0
-//              && tglobal->getMatrix().getTrans().z() == 0.0)
-//          {
-//            _needAnchor[robot->getName() + tglobal->getName()] = true;
-//          }
-//        }
-
-        mL = _draggerMatrix->getMatrix();
-
-        //  Modify transform
-        tglobal->setMatrix(tglobal->getMatrix() * _draggerMatrix->getMatrix());
-    }
-
-    // Clears list of link children
-    _linkChildren.resize(0);
-    _UpdateFromOSG();
-}
-
-KinBody::JointPtr ViewerWidget::_FindJoint(std::string & robotName,std::string &linkName)
-{
-    KinBody::JointPtr joint;
-    KinBody::LinkPtr link;
-
-    std::vector<RobotBasePtr> robots;
-
-    //  Gets robots
-    _penv->GetRobots(robots);
-
-    for (size_t i = 0; i < robots.size(); i++) {
-        if (robots[i]->GetName() == robotName) {
-            link = robots[i]->GetLink(linkName);
-
-            if (!!link) {
-                //  Propagate transformations to child nodes
-                _PropagateTransforms();
-
-                //  Gets all childs of the link
-                _GetLinkChildren(robotName,link,robots[i]->GetLinks());
-                FOREACH(itjoint,robots[i]->GetJoints()) {
-                    if ((*itjoint)->GetSecondAttached()==link) {
-                        return *itjoint;
-                    }
+    if( !!pitem && !!pitem->GetBody() ) {
+        KinBody::LinkPtr link = pitem->GetBody()->GetLink(linkName);
+        if( !!link ) {
+            // search for the joint whose child link is this link
+            FOREACHC(itjoint, pitem->GetBody()->GetJoints() ) {
+                if( (*itjoint)->GetHierarchyChildLink() == link ) {
+                    return *itjoint;
                 }
             }
         }
     }
-
-    return joint;
+    return KinBody::JointPtr();
 }
-
-//  Lighting Stuff //
 
 osg::ref_ptr<osg::Material> ViewerWidget::_CreateSimpleMaterial(osg::Vec4 color)
 {
@@ -1083,20 +894,8 @@ std::vector<osg::ref_ptr<osgManipulator::Dragger> > ViewerWidget::_CreateDragger
     return draggers;
 }
 
-OSGNodePtr ViewerWidget::_AddDraggerToObject(OSGNodePtr object, const std::string& name)
+OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr pjoint)
 {
-    return _AddDraggerToObject(std::string(),object,name,KinBody::JointPtr());
-}
-
-OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& robotName, OSGNodePtr object, const std::string& draggerName, KinBody::JointPtr joint)
-{
-    osg::MatrixList matrices = object->getWorldMatrices();
-    if( matrices.size() > 0 ) {
-        RAVELOG_DEBUG_FORMAT("%s %d: %f %f %f", object->getName()%matrices.size()%matrices[0].getTrans()[0]%matrices[0].getTrans()[1]%matrices[0].getTrans()[2]);
-    }
-
-//      object->getOrCreateStateSet()->setMode(GL_NORMALIZE, osg::StateAttribute::ON);
-
     // Clears dragger
     _ClearDragger();
 
@@ -1116,42 +915,43 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& robotName, OSGNo
     }
     _osgDraggerRoot->addChild(_draggerMatrix);
 
+    //  Store object selected in global variable _osgSelectedNodeByDragger
+    if( !pjoint ) {
+        _osgSelectedNodeByDragger = item->GetOSGRoot();
+    }
+    else {
+        _osgSelectedNodeByDragger = item->GetOSGLink(pjoint->GetHierarchyChildLink()->GetIndex());
+    }
 
-    //  Store object selected in global variable _selected
-    _selected = object;
-
-    if (draggerName == "RotateCylinderDragger" && !!joint) {
+    if (draggerName == "RotateCylinderDragger" && !!pjoint) {
         //  Change view of dragger since a joint is selected
         SetWire(_draggers.at(0));
 
-        for (size_t i = 0; i < object->getParents().size(); i++) {
-            OSGGroupPtr parent;
-            parent = object->getParents().at(i);
-            parent->removeChild(object);
-            parent->addChild(_osgDraggerRoot);
-        }
+        // TODO
+//        for (size_t i = 0; i < object->getParents()size(); i++) {
+//            OSGGroupPtr parent;
+//            parent = object->getParents().at(i);
+//            parent->removeChild(object);
+//            parent->addChild(_osgDraggerRoot);
+//        }
     }
     else if (draggerName != "RotateCylinderDragger") {
-        for (size_t i = 0; i < object->getParents().size(); i++) {
-            OSGGroupPtr parent;
-            parent = object->getParents().at(i);
-            parent->replaceChild(object,_osgDraggerRoot);
-        }
+        _osgSceneRoot->replaceChild(_osgSelectedNodeByDragger, _osgDraggerRoot);
     }
 
     //  Adds object to selection
-    _draggerMatrix->addChild(object);
+    _draggerMatrix->addChild(_osgSelectedNodeByDragger);
 
-    float scale = object->getBound().radius() * 1.2;
+    float scale = _osgSelectedNodeByDragger->getBound().radius() * 1.2;
 
-    if (draggerName == "RotateCylinderDragger" && !!joint) {
+    if (draggerName == "RotateCylinderDragger" && !!pjoint) {
         Vector axis;
         Vector anchor;
         Vector dragger_direction;
         Vector dragger_rotation;
         osg::Matrix matrix;
-        axis = joint->GetAxis();
-        anchor = joint->GetAnchor();
+        axis = pjoint->GetAxis();
+        anchor = pjoint->GetAnchor();
         dragger_direction = Vector(0,0,1);
         dragger_rotation = quatRotateDirection(dragger_direction,axis);
 
@@ -1161,7 +961,7 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& robotName, OSGNo
     }
     else {
         FOREACH(itdragger, _draggers) {
-            (*itdragger)->setMatrix(osg::Matrix::translate(object->getBound().center())*osg::Matrix::scale(scale, scale, scale));
+            (*itdragger)->setMatrix(osg::Matrix::translate(_osgSelectedNodeByDragger->getBound().center())*osg::Matrix::scale(scale, scale, scale));
         }
     }
 
@@ -1199,29 +999,5 @@ void ViewerWidget::paintEvent( QPaintEvent* event )
         RAVELOG_WARN_FORMAT("got exception in paint event: %s", ex.what());
     }
 }
-
-//    void mouseReleaseEvent(QMouseEvent *e)
-//    {
-//      if (doubleClickPressed)
-//      {
-//        doubleClickPressed = false;
-//
-//        if (isSimpleView)
-//        {
-//          setMultipleView();
-//        }
-//        else
-//        {
-//          setSimpleView();
-//        }
-//      }
-//    }
-//    ////////////////////////////////////////////////////////////////////////////
-//    /// Mouse double click event handler
-//    ////////////////////////////////////////////////////////////////////////////
-//    void mouseDoubleClickEvent(QMouseEvent *e)
-//    {
-//      doubleClickPressed = true;
-//    }
 
 } // end namespace qtosgrave

@@ -473,10 +473,11 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
-    if((_vtrans.size() == 0)||(_veclinks.size() != _vtrans.size())) {
+    if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() ) {
         // something's wrong, so just return
         return false;
     }
+    
     Transform tglob = _vtrans.at(0); //_pchain->GetCenterOfMass();
     SbMatrix m; m.makeIdentity();
     _ivXform->setMatrix(m);

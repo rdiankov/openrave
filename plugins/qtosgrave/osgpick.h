@@ -26,8 +26,9 @@ class OSGPickHandler : public osgGA::GUIEventHandler
 public:
     /// select(node, modkeymask) where node is the ray-picked node, and modkeymask is the modifier key mask currently pressed
     typedef boost::function<void (const osgUtil::LineSegmentIntersector::Intersection& , int, int)> HandleRayPickFn;
+    typedef boost::function<void()> DragFn;
 
-    OSGPickHandler(const HandleRayPickFn& handleRayPickFn);
+    OSGPickHandler(const HandleRayPickFn& handleRayPickFn=HandleRayPickFn(), const DragFn& dragfn=DragFn());
     virtual ~OSGPickHandler();
 
     /// \brief override from base class
@@ -40,6 +41,7 @@ public:
 protected:
     virtual void _Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea, int buttonPressed);
     HandleRayPickFn _handleRayPickFn;
+    DragFn _dragfn;
     //bool _select; ///< if true, then will call the _selectLinkFn with the raypicked node
     bool _bDoPickCallOnButtonRelease; ///< if true, then on button release can call _Pick
 };

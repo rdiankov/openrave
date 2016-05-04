@@ -19,9 +19,6 @@
 #ifndef OPENRAVE_OSG_ITEM_H
 #define OPENRAVE_OSG_ITEM_H
 
-#define QTOSG_LOCALTRANSFORM_PREFIX "tl-"
-#define QTOSG_GLOBALTRANSFORM_PREFIX "tg-"
-
 namespace qtosgrave {
 
 enum ViewGeometry {
@@ -30,11 +27,11 @@ enum ViewGeometry {
     VG_RenderCollision = 2,
 };
 
-/// Encapsulate the Inventor rendering of an Item
+/// \brief Encapsulate the Inventor rendering of an Item
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
-{
+{    
 public:
-    Item(OSGGroupPtr osgViewerRoot);
+    Item(OSGGroupPtr osgSceneRoot);
     virtual ~Item();
 
     /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
@@ -97,7 +94,7 @@ public:
 protected:
 
     // Instance Data
-    OSGGroupPtr _osgViewerRoot; ///< used for adding and removing itself from the viewer node
+    OSGGroupPtr _osgSceneRoot; ///< used for adding and removing itself from the viewer node
     string _name; ///< item name
     //OSGGroupPtr _osgitemroot; ///< root of this object's OSG data hierarchy
     OSGMatrixTransformPtr _osgWorldTransform; ///< Kinbody position
@@ -105,13 +102,27 @@ protected:
     //osg::ref_ptr<osg::BlendColor> _ivTransparency;
 };
 typedef boost::shared_ptr<Item> ItemPtr;
+typedef boost::weak_ptr<Item> ItemWeakPtr;
 typedef boost::shared_ptr<Item const> ItemConstPtr;
+
+
+/// \brief user data set to the OSG nodes to keep track of this item
+class OSGItemUserData : public osg::Referenced
+{
+public:
+    OSGItemUserData(ItemWeakPtr item) : _item(item) {
+    }
+
+    ItemPtr GetItem() const { return _item.lock(); }
+private:
+    ItemWeakPtr _item;
+};
 
 /// \brief render item that  handles KinBodys
 class KinBodyItem : public Item
 {
 public:
-    KinBodyItem(OSGGroupPtr osgViewerRoot, KinBodyPtr, ViewGeometry viewmode);
+    KinBodyItem(OSGGroupPtr osgSceneRoot, KinBodyPtr, ViewGeometry viewmode);
     virtual ~KinBodyItem();
 
     virtual void PrepForDeletion() {
@@ -120,10 +131,10 @@ public:
     }
 
     const string& GetName() const {
-        return _pchain->GetName();
+        return _pbody->GetName();
     }
     void SetName(const string& pNewName) {
-        _pchain->SetName(pNewName);
+        _pbody->SetName(pNewName);
     }
 
     virtual bool UpdateFromOSG();
@@ -137,15 +148,15 @@ public:
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
     inline KinBodyPtr GetBody() const {
-        return _pchain;
+        return _pbody;
     }
 
     /// \brief gets the link from osg node
     KinBody::LinkPtr GetLinkFromOSG(OSGNodePtr plinknode) const;
 
     /// \brief gets the link from the index
-    OSGGroupPtr GetOSGLink(int index) const {
-        return _veclinks[index].first;
+    OSGMatrixTransformPtr GetOSGLink(int index) const {
+        return _veclinks.at(index).second;
     }
 
     void SetUserData(int userdata) {
@@ -157,23 +168,22 @@ public:
 
     virtual void GetDOFValues(vector<dReal>& vjoint) const;
     virtual void GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const;
+
+    /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
 protected:
     /// \brief Calculate per-face normals from face vertices.
     //osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
     
-    /// \brief Gets osg node with name 'name'
-    OSGGroupPtr _FindNodeName(const string& name);
-
     virtual void _HandleGeometryChangedCallback();
     virtual void _HandleDrawChangedCallback();
 
-    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LINK;
+    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
 
-    KinBodyPtr _pchain;
-    int _environmentid;        ///< _pchain->GetEnvironmentId()
-    std::vector< LINK > _veclinks; ///< render items for each link, indexed same as links
+    KinBodyPtr _pbody;
+    int _environmentid;        ///< _pbody->GetEnvironmentId()
+    std::vector<LinkNodes> _veclinks; ///< render items for each link, indexed same as links. The group's hierarchy mimics the kinematics hierarchy. For each pair, the first Group node is used for the hierarchy, the second node contains the transform with respect to the body's transform
     bool bEnabled;
     bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
@@ -193,7 +203,7 @@ private:
 
     /// \brief  Print the features of the OSG Node
     void _PrintNodeFeatures(OSGNodePtr node);
-    void _SetNamedNode(const std::string&  name, OSGNodePtr currNode);
+    //void _SetNamedNode(const std::string&  name, OSGNodePtr currNode);
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
@@ -215,7 +225,7 @@ public:
         OSGSwitchPtr _pswitch;
     };
 
-    RobotItem(OSGGroupPtr osgViewerRoot, RobotBasePtr robot, ViewGeometry viewmode);
+    RobotItem(OSGGroupPtr osgSceneRoot, RobotBasePtr robot, ViewGeometry viewmode);
 
     virtual bool UpdateFromOSG();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);

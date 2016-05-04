@@ -15,7 +15,7 @@
 
 namespace qtosgrave {
 
-OSGPickHandler::OSGPickHandler(const HandleRayPickFn& handleRayPickFn) : _handleRayPickFn(handleRayPickFn), _bDoPickCallOnButtonRelease(false)
+OSGPickHandler::OSGPickHandler(const HandleRayPickFn& handleRayPickFn, const DragFn& dragfn) : _handleRayPickFn(handleRayPickFn), _dragfn(dragfn), _bDoPickCallOnButtonRelease(false)
 {
 }
 
@@ -25,6 +25,7 @@ OSGPickHandler::~OSGPickHandler()
 
 bool OSGPickHandler::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
+    osg::ref_ptr<osgViewer::View> view(dynamic_cast<osgViewer::View*>(&aa));
     switch(ea.getEventType())
     {
     case osgGA::GUIEventAdapter::DOUBLECLICK:
@@ -36,7 +37,6 @@ bool OSGPickHandler::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAda
     {
         if( (ea.getButton() & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && _bDoPickCallOnButtonRelease ) {
             _bDoPickCallOnButtonRelease = false;
-            osg::ref_ptr<osgViewer::View> view(dynamic_cast<osgViewer::View*>(&aa));
             if (!!view) {
                 _Pick(view, ea, 1);
             }
@@ -52,14 +52,16 @@ bool OSGPickHandler::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAda
         }
         return false;
     case osgGA::GUIEventAdapter::MOVE: {
-        osg::ref_ptr<osgViewer::View> view(dynamic_cast<osgViewer::View*>(&aa));
         if (!!view) {
             _Pick(view, ea, 0);
         }
         return false;
     }
     case osgGA::GUIEventAdapter::DRAG:
-        _bDoPickCallOnButtonRelease = false; // mouse moved, so cancel any pick calls
+        _bDoPickCallOnButtonRelease = false; // mouse moved, so cancel any button presses
+        if( !!_dragfn) {
+            _dragfn();
+        }
         return false;
         
     default:

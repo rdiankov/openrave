@@ -393,7 +393,6 @@ void QtOSGViewer::_UpdateViewerCallback()
     try {
         _UpdateEnvironment(1.0/60.0);
         //UpdateFromModel();
-        //  _posgWidget->update();
 
         {
             std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
@@ -624,25 +623,25 @@ void QtOSGViewer::_ProcessPointerGroupClicked(int button)
     case -2:
         //setCursor(Qt::ArrowCursor);
         //_posgWidget->setCursor(Qt::ArrowCursor);
-        _posgWidget->SelectActive(false);
+        _posgWidget->ActivateSelection(false);
         break;
     case -3:
         //setCursor(Qt::PointingHandCursor);
         //_posgWidget->setCursor(Qt::PointingHandCursor);
         _posgWidget->SetDraggerMode("TranslateTrackballDragger");
-        _posgWidget->SelectActive(true);
+        _posgWidget->ActivateSelection(true);
         break;
 //    case -4:
 //        _posgWidget->SetDraggerMode("TrackballDragger");
-//        _posgWidget->SelectActive(true);
+//        _posgWidget->ActivateSelection(true);
 //        break;
 //    case -5:
 //        _posgWidget->SetDraggerMode("RotateCylinderDragger");
-//        _posgWidget->SelectActive(true);
+//        _posgWidget->ActivateSelection(true);
 //        break;
     default:
         RAVELOG_ERROR_FORMAT("pointerGroupClicked failure. Button %d pushed", button);
-        _posgWidget->SelectActive(false);
+        _posgWidget->ActivateSelection(false);
         break;
     }
 }
@@ -772,7 +771,7 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     std::string mass;
 
     //  Select robot in Viewers
-    _posgWidget->SelectRobot(item->text(0).toAscii().data());
+    _posgWidget->SelectItemFromName(item->text(0).toAscii().data());
 
     //  Clears details
     if (!!_qdetailsTree) {
@@ -1592,8 +1591,8 @@ void QtOSGViewer::UpdateFromModel()
 //                    if( !!_pdragger && _pdragger->GetSelectedItem() == pitem ) {
 //                        _Deselect();
 //                    }
-
                     pitem->Load();
+                    
                     pbody->SetUserData(_userdatakey, pitem);
                     _mapbodies[pbody] = pitem;
                     newdata = true;

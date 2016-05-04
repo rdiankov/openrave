@@ -162,13 +162,8 @@ inline RaveTransform<float> GetRaveTransformFromMatrix(const osg::Matrix &m)
 inline osg::Matrix GetMatrixFromRaveTransform(const RaveTransform<float> &t)
 {
     osg::Matrix m;
-    osg::Matrix mR, mT;
-
-    mR.makeRotate(osg::Quat(t.rot.y, t.rot.z, t.rot.w, t.rot.x));
-    mT.makeTranslate(t.trans.x, t.trans.y, t.trans.z);
-
-    m.preMult(mT);
-    m.preMult(mR);
+    m.makeRotate(osg::Quat(t.rot.y, t.rot.z, t.rot.w, t.rot.x));
+    m.setTrans(t.trans.x, t.trans.y, t.trans.z);
     return m;
 }
 
@@ -206,8 +201,8 @@ public:
         return _node;
     }
 protected:
-    OSGNodePtr  _nodeToFind;
-    OSGNodePtr  _node;
+    OSGNodePtr _nodeToFind;
+    OSGNodePtr _node;
 };
 
 inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
@@ -231,15 +226,7 @@ inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithT
     return lockenv;
 }
 
-class ViewerWidget;
+} // end namespace qtosgrave
 
-class QtOSGViewer;
-typedef boost::shared_ptr<QtOSGViewer> QtOSGViewerPtr;
-typedef boost::weak_ptr<QtOSGViewer> QtOSGViewerWeakPtr;
-typedef boost::shared_ptr<QtOSGViewer const> QtOSGViewerConstPtr;
-
-}
-
-#include "osgrenderitem.h"
 
 #endif /* QTOSG_H_ */
