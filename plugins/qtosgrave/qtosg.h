@@ -185,24 +185,27 @@ class FindNode : public osg::NodeVisitor
 public:
     // Traverse all children.
     FindNode( OSGNodePtr node ) : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN ), _nodeToFind( node ) {
+        _found = false;
     }
     // This method gets called for every node in the scene
     //   graph. Check each node to see if its name matches
     //   our target. If so, save the node's address.
-    virtual void apply( OSGNodePtr node )
+    virtual void apply( osg::Node& node )
     {
-        if (_nodeToFind == node) {
-            _node = node;
+        if (_nodeToFind.get() == &node) {
+            _found = true;
         }
-        // Keep traversing the rest of the scene graph.
-        traverse( *node );
+        else {
+            // Keep traversing the rest of the scene graph.
+            traverse( node );
+        }
     }
-    OSGNodePtr getNode() {
-        return _node;
+    bool IsFound() const {
+        return _found;
     }
 protected:
     OSGNodePtr _nodeToFind;
-    OSGNodePtr _node;
+    bool _found;
 };
 
 inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)

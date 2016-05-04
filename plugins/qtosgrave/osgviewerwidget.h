@@ -99,8 +99,12 @@ public:
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
 
+    /// \brief Updates any changes in OSG to to OpenRAVE core.
     void UpdateFromOSG();
-    
+
+    /// \brief Find node of Robot for the link picked
+    KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
+
 protected:
     bool HandleOSGKeyDown(int);
 
@@ -119,11 +123,8 @@ protected:
 
     KinBodyItemPtr _GetItemFromName(const std::string& name);
 
-    /// \brief Find node of Robot for the link picked
-    KinBodyItemPtr _FindKinBodyItemFromOSGNode(OSGNodePtr node);
-
     /// \brief Find joint into OpenRAVE core
-    KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, const std::string &linkName);
+    KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link);
 
     //  Lighting Stuff //
     osg::ref_ptr<osg::Material> _CreateSimpleMaterial(osg::Vec4 color);
@@ -132,9 +133,6 @@ protected:
 
     /// \brief Initialize lighting
     void _InitializeLights(int nlights);
-
-    /// \brief Updates joint values from viewer to OpenRAVE core. uses GetPublishedBodies, so doesn't need environment lock.
-    virtual void _UpdateFromOSG();
 
     /// \brief Stores matrix transform
     void _StoreMatrixTransform();
@@ -162,7 +160,7 @@ protected:
     OSGGroupPtr _osgDraggerRoot; ///< Parent of dragger and selection
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _draggers; ///< There is only one dragger at the same time
     OSGMatrixTransformPtr _draggerMatrix; ///< Transform applied by dragger
-    OSGNodePtr _osgSelectedNodeByDragger; ///< Object selected by dragger
+    OSGGroupPtr _osgSelectedNodeByDragger; ///< Object selected by dragger
     OSGMatrixTransformPtr _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
 
     KinBodyItemPtr _selectedItem; ///< render item selected
@@ -179,11 +177,10 @@ protected:
     osg::ref_ptr<osgGA::TrackballManipulator> _osgCameraManipulator;
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
-    std::string _strUserText, _strRayInfoText; ///< the user hud text
+    std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
 
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-    std::vector<OSGMatrixTransformPtr> _linkChildren; ///< List of link children
 
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
 

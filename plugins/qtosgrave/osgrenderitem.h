@@ -29,7 +29,7 @@ enum ViewGeometry {
 
 /// \brief Encapsulate the Inventor rendering of an Item
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
-{    
+{
 public:
     Item(OSGGroupPtr osgSceneRoot);
     virtual ~Item();
@@ -39,13 +39,13 @@ public:
     }
 
     // general methods
-    
+
     virtual const string& GetName() const {
-        return _name;
+        return _osgdata->getName();
     }
-    virtual void SetName(const string& name) {
-        _name = name;
-    }
+//    virtual void SetName(const string& name) {
+//        _name = name;
+//    }
 
     /// \brief update underlying model from OSG's transformation
     virtual bool UpdateFromOSG() {
@@ -72,16 +72,13 @@ public:
     } ///< call when manipulating with the mouse, etc
 
     // Inventor related
-    OSGGroupPtr GetOSGRoot() const {
+    OSGMatrixTransformPtr GetOSGRoot() const {
         return _osgWorldTransform;
     }
-    OSGMatrixTransformPtr GetIvTransform()    {
-        return _osgWorldTransform;
-    }
+
     OSGSwitchPtr GetOSGGeom() const {
         return _osgdata;
     }
-//    SoTransparencyType* GetIvTransparency() const { return _ivTransparency; }
 
     /// \brief returns true if the given node is in the inventor hierarchy
     bool ContainsOSGNode(OSGNodePtr pNode);
@@ -99,8 +96,8 @@ protected:
     //OSGGroupPtr _osgitemroot; ///< root of this object's OSG data hierarchy
     OSGMatrixTransformPtr _osgWorldTransform; ///< Kinbody position
     OSGSwitchPtr _osgdata; ///< item geometry hierarchy
-    //osg::ref_ptr<osg::BlendColor> _ivTransparency;
 };
+
 typedef boost::shared_ptr<Item> ItemPtr;
 typedef boost::weak_ptr<Item> ItemWeakPtr;
 typedef boost::shared_ptr<Item const> ItemConstPtr;
@@ -113,7 +110,9 @@ public:
     OSGItemUserData(ItemWeakPtr item) : _item(item) {
     }
 
-    ItemPtr GetItem() const { return _item.lock(); }
+    ItemPtr GetItem() const {
+        return _item.lock();
+    }
 private:
     ItemWeakPtr _item;
 };
@@ -130,12 +129,12 @@ public:
         _drawcallback.reset();
     }
 
-    const string& GetName() const {
-        return _pbody->GetName();
-    }
-    void SetName(const string& pNewName) {
-        _pbody->SetName(pNewName);
-    }
+//    const string& GetName() const {
+//        return _pbody->GetName();
+//    }
+//    void SetName(const string& pNewName) {
+//        _pbody->SetName(pNewName);
+//    }
 
     virtual bool UpdateFromOSG();
 
@@ -169,13 +168,22 @@ public:
     virtual void GetDOFValues(vector<dReal>& vjoint) const;
     virtual void GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofbranches) const;
 
+    virtual Transform GetTransform() const {
+        if( _vtrans.size() > 0 ) {
+            return _vtrans.at(0);
+        }
+        else {
+            return GetRaveTransform(*_osgWorldTransform);
+        }
+    }
+
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
 protected:
     /// \brief Calculate per-face normals from face vertices.
     //osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
-    
+
     virtual void _HandleGeometryChangedCallback();
     virtual void _HandleDrawChangedCallback();
 

@@ -48,6 +48,11 @@ public:
         }
     }
 
+    void Reset() {
+        done = false;
+        wcMatrix.makeIdentity();
+    }
+
     bool IsDone() {
         return done;
     }
@@ -126,8 +131,8 @@ Item::~Item()
 bool Item::ContainsOSGNode(OSGNodePtr pNode)
 {
     FindNode search(pNode);
-    search.apply(_osgdata);
-    return search.getNode();
+    search.apply(*_osgWorldTransform);
+    return search.IsFound();
 }
 
 void Item::SetGeomVisibility(bool bFlag)
@@ -544,14 +549,26 @@ bool KinBodyItem::UpdateFromOSG()
     }
 
     Transform tglob = GetRaveTransformFromMatrix(visitor.wcMatrix);
+    WorldCoordOfNodeVisitor linkvisitor(_osgdata);
+    
+    // need to use the WorldCoordOfNodeVisitor for getting the link transforms with respect to _osgWorldTransform since there could be draggers in between
     for(size_t ilink = 0; ilink < vtrans.size(); ++ilink) {
-        Transform tlinkrel = GetRaveTransform(*_veclinks.at(ilink).second);
-        vtrans[ilink] = tglob * tlinkrel;
+        linkvisitor.Reset();
+        _veclinks.at(ilink).second->accept(linkvisitor);
+        if( linkvisitor.IsDone() ) {
+            vtrans[ilink] = tglob * GetRaveTransformFromMatrix(linkvisitor.wcMatrix);
+        }
+        else {
+            RAVELOG_INFO("yoooo\n");
+            Transform tlinkrel = GetRaveTransform(*_veclinks.at(ilink).second);
+            vtrans[ilink] = tglob * tlinkrel;
+        }
     }
 
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
     if( !!lockenv ) {
         _pbody->SetLinkTransformations(vtrans,_vjointvalues);
+        _pbody->GetLinkTransformations(_vtrans,_vjointvalues);
     }
     else {
         RAVELOG_WARN("failed to acquire environment lock for updating body (viewer updates might be choppy, otherwise this does not affect internal openrave state)\n");
@@ -588,6 +605,10 @@ bool KinBodyItem::UpdateFromModel()
         if( _bReload || _bDrawStateChanged ) {
             Load();
         }
+        else {
+            _osgdata->setName(_pbody->GetName());
+        }
+        
         // make sure the body is still present!
         if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
@@ -634,8 +655,19 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     SetMatrixTransform(*_osgWorldTransform, tworldoffset.inverse() * tglob);
 
     //  Link iterator
+    WorldCoordOfNodeVisitor linkvisitor(_osgdata);
+    
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        Transform tlocal = tglob.inverse() * _vtrans.at(ilink);
+        linkvisitor.Reset();
+        _veclinks.at(ilink).first->accept(linkvisitor);
+        Transform tlocal;
+        if( linkvisitor.IsDone() ) {
+            // have to do this since there can be draggers affecting _veclinks.at(ilink).first
+            tlocal = GetRaveTransformFromMatrix(linkvisitor.wcMatrix).inverse() * tglob.inverse() * _vtrans.at(ilink);
+        }
+        else {
+            tlocal = tglob.inverse() * _vtrans.at(ilink);
+        }
         SetMatrixTransform(*_veclinks.at(ilink).second, tlocal);
     }
 
@@ -664,8 +696,8 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
 {
     FindNode search(plinknode);
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        search.apply(_veclinks[ilink].first);
-        if( !!search.getNode() ) {
+        search.apply(*_veclinks[ilink].second);
+        if( search.IsFound() ) {
             return _pbody->GetLinks().at(ilink);
         }
     }

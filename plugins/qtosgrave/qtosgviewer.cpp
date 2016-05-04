@@ -129,10 +129,11 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     }
 
     __description = ":Interface Author: Rosen Diankov, Gustavo Puche\n\nProvides a viewer based on OpenSceneGraph library. Currently tested with v3.4. Usage:\n\n\
-  - ESC to toggle between selection mode or not.\n\
+  - ESC to toggle between selection, movement, joint modes.\n\
   - Left Click to rotate or select object.\n\
   - Middle Click to pan.\n\
   - Right Click to zoom.\n\
+  - In selection mode, Ctrl+Left Click to move object.\n\
 ";
 
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera, this, _1, _2),
@@ -235,7 +236,7 @@ bool QtOSGViewer::_HandleOSGKeyDown(int key)
         if( !!_pointerTypeGroup ) {
             // toggle
             int newcheckedid = _pointerTypeGroup->checkedId()-1;
-            int minchecked = -3, maxchecked = -2;
+            int minchecked = -4, maxchecked = -2;
             if( newcheckedid < minchecked || newcheckedid > maxchecked ) {
                 newcheckedid = maxchecked;
             }
@@ -621,24 +622,16 @@ void QtOSGViewer::_ProcessPointerGroupClicked(int button)
 {
     switch (button) {
     case -2:
-        //setCursor(Qt::ArrowCursor);
-        //_posgWidget->setCursor(Qt::ArrowCursor);
         _posgWidget->ActivateSelection(false);
         break;
     case -3:
-        //setCursor(Qt::PointingHandCursor);
-        //_posgWidget->setCursor(Qt::PointingHandCursor);
         _posgWidget->SetDraggerMode("TranslateTrackballDragger");
         _posgWidget->ActivateSelection(true);
         break;
-//    case -4:
-//        _posgWidget->SetDraggerMode("TrackballDragger");
-//        _posgWidget->ActivateSelection(true);
-//        break;
-//    case -5:
-//        _posgWidget->SetDraggerMode("RotateCylinderDragger");
-//        _posgWidget->ActivateSelection(true);
-//        break;
+    case -4:
+        _posgWidget->SetDraggerMode("RotateCylinderDragger");
+        _posgWidget->ActivateSelection(true);
+        break;
     default:
         RAVELOG_ERROR_FORMAT("pointerGroupClicked failure. Button %d pushed", button);
         _posgWidget->ActivateSelection(false);
@@ -690,9 +683,9 @@ void QtOSGViewer::_CreateToolsBar()
     axesButton->setCheckable(true);
     axesButton->setIcon(QIcon(":/images/axes.png"));
 
-//    QToolButton *rotationButton = new QToolButton;
-//    rotationButton->setCheckable(true);
-//    rotationButton->setIcon(QIcon(":/images/no_edit.png"));
+    QToolButton *rotationButton = new QToolButton;
+    rotationButton->setCheckable(true);
+    rotationButton->setIcon(QIcon(":/images/no_edit.png"));
 //
 //    QToolButton *handButton = new QToolButton;
 //    handButton->setCheckable(true);
@@ -702,7 +695,7 @@ void QtOSGViewer::_CreateToolsBar()
     _pointerTypeGroup = new QButtonGroup();
     _pointerTypeGroup->addButton(pointerButton);
     _pointerTypeGroup->addButton(axesButton);
-    //_pointerTypeGroup->addButton(rotationButton);
+    _pointerTypeGroup->addButton(rotationButton);
     //_pointerTypeGroup->addButton(handButton);
 
     connect(_pointerTypeGroup, SIGNAL(buttonClicked(int)), this, SLOT(_ProcessPointerGroupClicked(int)));
@@ -718,7 +711,7 @@ void QtOSGViewer::_CreateToolsBar()
 
     toolsBar->addWidget(pointerButton);
     toolsBar->addWidget(axesButton);
-    //toolsBar->addWidget(rotationButton);
+    toolsBar->addWidget(rotationButton);
     //toolsBar->addWidget(handButton);
     toolsBar->addAction(houseAct);
     toolsBar->addAction(_qactChangeViewtoXY);

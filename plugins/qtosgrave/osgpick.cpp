@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "osgpick.h"
+#include "osgrenderitem.h"
 
 namespace qtosgrave {
 
@@ -71,34 +72,30 @@ bool OSGPickHandler::handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAda
 
 void OSGPickHandler::_Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea, int buttonPressed)
 {
+    if( !_handleRayPickFn ) {
+        return;
+    }
+    
     try {
         float x = ea.getX();
         float y = ea.getY();
         osgUtil::LineSegmentIntersector::Intersections intersections;
         if (view->computeIntersections(x,y,intersections)) {
             for(osgUtil::LineSegmentIntersector::Intersections::iterator hitr = intersections.begin(); hitr != intersections.end(); ++hitr) {
-                if (!hitr->nodePath.empty() && !(hitr->nodePath.back()->getName().empty())) {
-                    _handleRayPickFn(*hitr, buttonPressed, ea.getModKeyMask());
-                    return;
-//                    // the geodes are identified by name.
-//                    gdlist  = hitr->nodePath.back()->getName();
-//                    node = hitr->drawable->getParent(0);
-//
-//                    break;
-
+                if (!hitr->nodePath.empty() ) {
+                    // if any node in the path has userdata that casts to OSGItemUserData, then we have hit a real item and should call _handleRayPickFn
+                    FOREACHC(itnode, hitr->nodePath) {
+                        if( !!(*itnode)->getUserData() ) {
+                            OSGItemUserData* pdata = dynamic_cast<OSGItemUserData*>((*itnode)->getUserData());
+                            if( !!pdata ) {
+                                _handleRayPickFn(*hitr, buttonPressed, ea.getModKeyMask());
+                                return;
+                            }
+                        }
+                    }
                 }
-                else if (hitr->drawable.valid()) {
-                    //gdlist  = hitr->drawable->className();
-                }
-            }
-
-            if( intersections.size() > 0 ) {
-                // take the first intersection
-                _handleRayPickFn(*intersections.begin(), buttonPressed, ea.getModKeyMask());
-                return;
-            }
+            }            
         }
-
         // if still here, then no intersection
         _handleRayPickFn(osgUtil::LineSegmentIntersector::Intersection(), buttonPressed, ea.getModKeyMask());
     }
