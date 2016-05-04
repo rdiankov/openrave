@@ -559,7 +559,6 @@ bool KinBodyItem::UpdateFromOSG()
             vtrans[ilink] = tglob * GetRaveTransformFromMatrix(linkvisitor.wcMatrix);
         }
         else {
-            RAVELOG_INFO("yoooo\n");
             Transform tlinkrel = GetRaveTransform(*_veclinks.at(ilink).second);
             vtrans[ilink] = tglob * tlinkrel;
         }
