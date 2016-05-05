@@ -67,7 +67,7 @@ else:
 
 import numpy
 from ..openravepy_ext import transformPoints, openrave_exception
-from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle
+from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from .. import pyANN
 import convexdecomposition
@@ -491,7 +491,7 @@ class LinkStatisticsModel(DatabaseGenerator):
 
     def show(self,options=None):
         if self.env.GetViewer() is None:
-            self.env.SetViewer('qtcoin')
+            self.env.SetViewer(RaveGetDefaultViewerType())
             time.sleep(0.4) # give time for viewer to initialize
         for joint in self.robot.GetJoints():
             log.info('joint %d',joint.GetJointIndex())
