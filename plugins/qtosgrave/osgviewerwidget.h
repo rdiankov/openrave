@@ -33,6 +33,8 @@ namespace qtosgrave {
 using namespace OpenRAVE;
 using namespace osgQt;
 
+class OpenRAVETrackball;
+    
 /// \brief  Class of the openscene graph 3d viewer
 class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
 {
@@ -107,14 +109,14 @@ public:
 
 protected:
     /// \brief handles a key press and looks at the modifier keys
-    bool HandleOSGKeyDown(int key, int modkeymask);
+    bool HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();
 
     /// \brief gather all the necessary text and updates it on the HUD control
     void _UpdateHUDText();
-
+    
     /// \brief Create a viewer widget
     QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
 
@@ -175,7 +177,7 @@ protected:
     osg::ref_ptr<osg::StateSet> _lightStateSet;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
-    osg::ref_ptr<osgGA::TrackballManipulator> _osgCameraManipulator;
+    osg::ref_ptr<OpenRAVETrackball> _osgCameraManipulator;
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
     std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text

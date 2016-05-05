@@ -135,6 +135,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
   - Right Click to zoom.\n\
   - (Shift+)ArrowKey for moving via keyboard.\n\
   - In selection mode, Ctrl+Left Click to move object.\n\
+  - Press 's' and Left click on screen to center camera.\n\
 ";
 
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera, this, _1, _2),
