@@ -849,7 +849,7 @@ private:
     bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
-            return;     // don't test anymore
+            return true;     // don't test anymore
         }
 
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
@@ -902,7 +902,7 @@ private:
     bool CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
         if( pcb->_bStopChecking ) {
-            return;     // don't test anymore
+            return true;     // don't test anymore
         }
 
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
