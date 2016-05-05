@@ -22,7 +22,7 @@ namespace openravepy {
 class PyCameraIntrinsics
 {
 public:
-    PyCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics = SensorBase::CameraIntrinsics())
+    PyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>& intrinsics = geometry::RaveCameraIntrinsics<float>())
     {
         numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
         arr.resize(3,3);
@@ -31,6 +31,16 @@ public:
         distortion_coeffs = toPyArray(intrinsics.distortion_coeffs);
         focal_length = intrinsics.focal_length;
     }
+    PyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>& intrinsics)
+    {
+        numeric::array arr(boost::python::make_tuple(intrinsics.fx,0,intrinsics.cx,0,intrinsics.fy,intrinsics.cy,0,0,1));
+        arr.resize(3,3);
+        K = arr;
+        distortion_model = intrinsics.distortion_model;
+        distortion_coeffs = toPyArray(intrinsics.distortion_coeffs);
+        focal_length = intrinsics.focal_length;
+    }
+
     virtual ~PyCameraIntrinsics() {
     }
 
@@ -702,6 +712,16 @@ PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr pgeom)
         }
     }
     return PySensorGeometryPtr();
+}
+
+PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>& intrinsics)
+{
+    return PyCameraIntrinsicsPtr(new PyCameraIntrinsics(intrinsics));
+}
+
+PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>& intrinsics)
+{
+    return PyCameraIntrinsicsPtr(new PyCameraIntrinsics(intrinsics));
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
