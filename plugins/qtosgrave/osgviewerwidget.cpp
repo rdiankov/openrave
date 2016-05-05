@@ -31,6 +31,38 @@
 
 namespace qtosgrave {
 
+class OpenRAVETrackball : public osgGA::TrackballManipulator
+{
+    virtual bool performMovement() {
+        // return if less then two events have been added
+        if( _ga_t0.get() == NULL || _ga_t1.get() == NULL ) {
+            return false;
+        }
+        // get delta time
+        double eventTimeDelta = _ga_t0->getTime() - _ga_t1->getTime();
+        if( eventTimeDelta < 0. ) {
+            OSG_WARN << "Manipulator warning: eventTimeDelta = " << eventTimeDelta << std::endl;
+            eventTimeDelta = 0.;
+        }
+
+        // get deltaX and deltaY
+        float dx = _ga_t0->getXnormalized() - _ga_t1->getXnormalized();
+        float dy = _ga_t0->getYnormalized() - _ga_t1->getYnormalized();
+
+        // return if there is no movement.
+        if( dx == 0. && dy == 0. ) {
+            return false;
+        }
+
+        unsigned int buttonMask = _ga_t1->getButtonMask();
+        if( (buttonMask & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON) && (_ga_t1->getModKeyMask()&osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
+            return performMovementMiddleMouseButton( eventTimeDelta, dx, dy );
+        }
+
+        return osgGA::TrackballManipulator::performMovement();
+    }
+};
+
 // \ brief rigid transformation dragger (does not allow scale)
 class DualDraggerTransformCallback : public osgManipulator::DraggerCallback
 {
@@ -253,7 +285,7 @@ bool ViewerWidget::HandleOSGKeyDown(int key, int modkeymask)
     case osgGA::GUIEventAdapter::KEY_Left:
     case osgGA::GUIEventAdapter::KEY_Right:
     case osgGA::GUIEventAdapter::KEY_Up:
-    case osgGA::GUIEventAdapter::KEY_Down:{
+    case osgGA::GUIEventAdapter::KEY_Down: {
         osg::Matrixd m = _osgCameraManipulator->getMatrix();
         osg::Vec3d center = _osgCameraManipulator->getCenter();
         osg::Vec3d dir;
@@ -281,9 +313,9 @@ bool ViewerWidget::HandleOSGKeyDown(int key, int modkeymask)
             }
         }
         _osgCameraManipulator->setCenter(center + dir*_osgCameraManipulator->getDistance()*0.05);
-                    
+
         return true;
-    }        
+    }
 //        _picker->ActivateSelection(!_picker->IsSelectionActive());
 //        if( !_picker->IsSelectionActive() ) {
 //            // have to clear any draggers if selection is not active
@@ -650,7 +682,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
 
     //view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new osgGA::TrackballManipulator();//NodeTrackerManipulator();
+    _osgCameraManipulator = new OpenRAVETrackball();//osgGA::TrackballManipulator();//NodeTrackerManipulator();
     view->setCameraManipulator( _osgCameraManipulator.get() );
 
     _osgCameraHUD = new osg::MatrixTransform();
@@ -922,7 +954,7 @@ std::vector<osg::ref_ptr<osgManipulator::Dragger> > ViewerWidget::_CreateDragger
         draggers.push_back(d);
         osgManipulator::TranslateAxisDragger* d2 = new osgManipulator::TranslateAxisDragger();
         d2->setupDefaultGeometry();
-        
+
         // scale the axes so that they are bigger. since d and d2 need to share the same transform, have to add a scale node in between
         osg::ref_ptr<osg::MatrixTransform> pscaleparent(new osg::MatrixTransform);
         pscaleparent->setMatrix(osg::Matrix::scale(1.3, 1.3, 1.3));
@@ -978,7 +1010,7 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, Kin
 
     //  Store object selected in global variable _osgSelectedNodeByDragger
     osg::Matrixd selectedmatrix;
-    
+
     if( !pjoint ) {
         _osgSelectedNodeByDragger = item->GetOSGRoot();
         selectedmatrix = item->GetOSGRoot()->getMatrix();
@@ -1001,7 +1033,7 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, Kin
     //  Adds object to selection
     _draggerMatrix->addChild(_osgSelectedNodeByDragger);
     float scale = _osgSelectedNodeByDragger->getBound().radius() * 1.2;
-    
+
     if (draggerName == "RotateCylinderDragger" && !!pjoint) {
         Vector axis;
         Vector anchor;
