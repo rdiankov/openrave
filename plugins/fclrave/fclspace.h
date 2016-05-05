@@ -691,7 +691,6 @@ private:
         } else if(algorithm == "SpatialHashing") {
             if( _spatialHashData ) {
                 // TODO : add other HashTables (GoogleDenseHashTable ?)
-                // TODO : change back to make_shared
                 return boost::make_shared< fcl::SpatialHashingCollisionManager< fcl::SparseHashTable<fcl::AABB, fcl::CollisionObject*, fcl::SpatialHash> > >(_spatialHashData->_cellSize, _spatialHashData->_sceneMin, _spatialHashData->_sceneMax);
             } else {
                 throw OPENRAVE_EXCEPTION_FORMAT0("No spatial data provided, spatial hashing needs to be set up  with SetSpatialHashingBroadPhaseAlgorithm", OpenRAVE::ORE_InvalidArguments);
@@ -700,6 +699,19 @@ private:
             return boost::make_shared<fcl::IntervalTreeCollisionManager>();
         } else if(algorithm == "DynamicAABBTree") {
             return boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+        } else if(algorithm == "DynamicAABBTree1") {
+          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+          pmanager->tree_init_level = 1;
+          return pmanager;
+        } else if(algorithm == "DynamicAABBTree2") {
+          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+          pmanager->tree_init_level = 2;
+          return pmanager;
+          return boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+        } else if(algorithm == "DynamicAABBTree3") {
+          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+          pmanager->tree_init_level = 3;
+          return pmanager;
         } else if(algorithm == "DynamicAABBTree_Array") {
             return boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
         } else {
