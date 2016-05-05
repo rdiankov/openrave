@@ -929,18 +929,8 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
     _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
-
-    // read the current camera transform
-//    osg::Vec3d eye, center, up;
-//    _posgWidget->GetCameraManipulator()->getTransformation(eye, center, up);
-//    osg::Vec3d lv(center - eye);
-//
-//    // setup the world axis correctly
-//    osg::Matrix m = osg::Matrix::lookAt(eye, center, up);
-//    m.setTrans(width/2 - 40, -height/2 + 40, -50);
-
+    
     _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
-
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
         _focalDistance = ptrackball->getDistance();
@@ -1022,28 +1012,16 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     }
 
     double fovy, aspectRatio, zNear, zFar;
-    _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
-
-    _camintrinsics.fy = fovy;
-    _camintrinsics.fx = aspectRatio * fovy;
-    _camintrinsics.cx = _posgWidget->GetCamera()->getViewport()->width() / 2;
-    _camintrinsics.cy = _posgWidget->GetCamera()->getViewport()->height() / 2;
+    _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);    
+    int camwidth = _posgWidget->GetCamera()->getViewport()->width();
+    int camheight = _posgWidget->GetCamera()->getViewport()->height();
+    
+    _camintrinsics.fy = 0.5*camheight/RaveTan(0.5f*fovy*M_PI/180.0);
+    _camintrinsics.fx = _camintrinsics.fy*float(camwidth)/(float)camheight/aspectRatio;
+    _camintrinsics.cx = (float)camwidth/2;
+    _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
-
-    /*
-       int width = centralWidget()->size().width();
-       int height = centralWidget()->size().height();
-       _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
-
-       _focalDistance = GetCamera()->focalDistance.getValue();
-       _camintrinsics.fy = 0.5*height/RaveTan(0.5f*GetCamera()->heightAngle.getValue());
-       _camintrinsics.fx = (float)width*_camintrinsics.fy/((float)height*GetCamera()->aspectRatio.getValue());
-       _camintrinsics.cx = (float)width/2;
-       _camintrinsics.cy = (float)height/2;
-       _camintrinsics.focal_length = GetCamera()->nearDistance.getValue();
-       _camintrinsics.distortion_model = "";
-     */
 }
 
 bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
@@ -1109,6 +1087,7 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
     float focalDistance = 0.0;
     sinput >> robotname >> manipname >> focalDistance >> bresetvelocity;
     if( focalDistance > 0 ) {
+        // not sure if this is thread safe...
         _SetCameraDistanceToFocus(focalDistance);
     }
     _ptrackinglink.reset();

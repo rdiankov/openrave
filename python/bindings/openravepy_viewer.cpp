@@ -289,6 +289,10 @@ public:
         std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
         return toPyArray(memory,dims);
     }
+
+    object GetCameraIntrinsics() {
+        return object(toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics()));
+    }
 };
 
 ViewerBasePtr GetViewer(PyViewerBasePtr pyviewer)
@@ -335,6 +339,7 @@ void init_openravepy_viewer()
                        .def("SetCamera",setcamera2,args("transform","focalDistance"), DOXY_FN(ViewerBase,SetCamera))
                        .def("SetBkgndColor",&PyViewerBase::SetBkgndColor,DOXY_FN(ViewerBase,SetBkgndColor))
                        .def("GetCameraTransform",&PyViewerBase::GetCameraTransform, DOXY_FN(ViewerBase,GetCameraTransform))
+                       .def("GetCameraIntrinsics",&PyViewerBase::GetCameraIntrinsics, DOXY_FN(ViewerBase,GetCameraIntrinsics))
                        .def("GetCameraDistanceToFocus", &PyViewerBase::GetCameraDistanceToFocus, DOXY_FN(ViewerBase, GetCameraDistanceToFocus))
                        .def("GetCameraImage",&PyViewerBase::GetCameraImage,args("width","height","transform","K"), DOXY_FN(ViewerBase,GetCameraImage))
         ;

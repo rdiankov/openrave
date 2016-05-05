@@ -61,6 +61,49 @@ class OpenRAVETrackball : public osgGA::TrackballManipulator
 
         return osgGA::TrackballManipulator::performMovement();
     }
+
+    virtual bool handleKeyDown( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        int key = ea.getKey();
+        int modkeymask = ea.getModKeyMask();
+        switch(key) {
+        case osgGA::GUIEventAdapter::KEY_Left:
+        case osgGA::GUIEventAdapter::KEY_Right:
+        case osgGA::GUIEventAdapter::KEY_Up:
+        case osgGA::GUIEventAdapter::KEY_Down: {
+            osg::Matrixd m = getMatrix();
+            osg::Vec3d center = getCenter();
+            osg::Vec3d dir;
+            if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
+                if( key == osgGA::GUIEventAdapter::KEY_Up ) {
+                    dir = osg::Vec3d(-m(2,0), -m(2,1), -m(2,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
+                    dir = osg::Vec3d(m(2,0), m(2,1), m(2,2));
+                }
+
+            }
+            else {
+                if( key == osgGA::GUIEventAdapter::KEY_Left ) {
+                    dir = osg::Vec3d(-m(0,0), -m(0,1), -m(0,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Right ) {
+                    dir = osg::Vec3d(m(0,0), m(0,1), m(0,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
+                    dir = osg::Vec3d(-m(1,0), -m(1,1), -m(1,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Up ) {
+                    dir = osg::Vec3d(m(1,0), m(1,1), m(1,2));
+                }
+            }
+            setCenter(center + dir*getDistance()*0.05);
+            return true;
+        }
+        }
+
+        return osgGA::TrackballManipulator::handleKeyDown(ea, us);
+    }
 };
 
 // \ brief rigid transformation dragger (does not allow scale)
@@ -281,49 +324,6 @@ bool ViewerWidget::HandleOSGKeyDown(int key, int modkeymask)
         }
     }
 
-    switch(key) {
-    case osgGA::GUIEventAdapter::KEY_Left:
-    case osgGA::GUIEventAdapter::KEY_Right:
-    case osgGA::GUIEventAdapter::KEY_Up:
-    case osgGA::GUIEventAdapter::KEY_Down: {
-        osg::Matrixd m = _osgCameraManipulator->getMatrix();
-        osg::Vec3d center = _osgCameraManipulator->getCenter();
-        osg::Vec3d dir;
-        if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
-            if( key == osgGA::GUIEventAdapter::KEY_Up ) {
-                dir = osg::Vec3d(-m(2,0), -m(2,1), -m(2,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
-                dir = osg::Vec3d(m(2,0), m(2,1), m(2,2));
-            }
-
-        }
-        else {
-            if( key == osgGA::GUIEventAdapter::KEY_Left ) {
-                dir = osg::Vec3d(-m(0,0), -m(0,1), -m(0,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Right ) {
-                dir = osg::Vec3d(m(0,0), m(0,1), m(0,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
-                dir = osg::Vec3d(-m(1,0), -m(1,1), -m(1,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Up ) {
-                dir = osg::Vec3d(m(1,0), m(1,1), m(1,2));
-            }
-        }
-        _osgCameraManipulator->setCenter(center + dir*_osgCameraManipulator->getDistance()*0.05);
-
-        return true;
-    }
-//        _picker->ActivateSelection(!_picker->IsSelectionActive());
-//        if( !_picker->IsSelectionActive() ) {
-//            // have to clear any draggers if selection is not active
-//            _ClearDragger();
-//            _draggerName.clear();
-//        }
-//        return true;
-    }
     return false;
 }
 
