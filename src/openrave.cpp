@@ -80,7 +80,7 @@ int main(int argc, char ** argv)
 
     DebugLevel debuglevel = Level_Info;
     list<string> listLoadPlugins;
-    string collisionchecker, physicsengine, servername="textserver";
+    string collisionchecker, physicsengine, servername;//="textserver";
     bool bListPlugins = false;
 
     std::set<std::string> geometryextensions;
