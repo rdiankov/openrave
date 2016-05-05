@@ -106,7 +106,8 @@ public:
     KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
 
 protected:
-    bool HandleOSGKeyDown(int);
+    /// \brief handles a key press and looks at the modifier keys
+    bool HandleOSGKeyDown(int key, int modkeymask);
 
     /// \brief Clear dragger from the viewer
     void _ClearDragger();

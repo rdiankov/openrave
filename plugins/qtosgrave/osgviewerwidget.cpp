@@ -57,7 +57,7 @@ protected:
 class OpenRAVEKeyboardEventHandler : public osgGA::GUIEventHandler
 {
 public:
-    OpenRAVEKeyboardEventHandler(const boost::function<bool(int)>& onKeyDown) : _onKeyDown(onKeyDown) {
+    OpenRAVEKeyboardEventHandler(const boost::function<bool(int, int)>& onKeyDown) : _onKeyDown(onKeyDown) {
     }
 
     virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
@@ -65,20 +65,15 @@ public:
         switch(ea.getEventType())
         {
         case (osgGA::GUIEventAdapter::KEYDOWN): {
-            return _onKeyDown(ea.getKey());
+            return _onKeyDown(ea.getKey(), ea.getModKeyMask());
         }
         default:
             return false;
         }
     }
 
-    // only for osg3.0?
-//    virtual void accept(osgGA::GUIEventHandlerVisitor& v)   {
-//        v.visit(*this);
-//    }
-
 private:
-    boost::function<bool(int)> _onKeyDown; ///< called when key is pressed
+    boost::function<bool(int, int)> _onKeyDown; ///< called when key is pressed
 };
 
 //void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
@@ -126,7 +121,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _picker = new OSGPickHandler(boost::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&ViewerWidget::UpdateFromOSG,this));
     _osgview->addEventHandler(_picker);
 
-    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1));
+    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1, _2));
     _osgview->addEventHandler(_keyhandler);
 
     // initialize the environment
@@ -246,16 +241,49 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _timer.start( 10 );
 }
 
-bool ViewerWidget::HandleOSGKeyDown(int key)
+bool ViewerWidget::HandleOSGKeyDown(int key, int modkeymask)
 {
     if( !!_onKeyDown ) {
         if( _onKeyDown(key) ) {
             return true;
         }
     }
-//    switch(key) {
-//    case osgGA::GUIEventAdapter::KEY_Escape:
-//
+
+    switch(key) {
+    case osgGA::GUIEventAdapter::KEY_Left:
+    case osgGA::GUIEventAdapter::KEY_Right:
+    case osgGA::GUIEventAdapter::KEY_Up:
+    case osgGA::GUIEventAdapter::KEY_Down:{
+        osg::Matrixd m = _osgCameraManipulator->getMatrix();
+        osg::Vec3d center = _osgCameraManipulator->getCenter();
+        osg::Vec3d dir;
+        if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
+            if( key == osgGA::GUIEventAdapter::KEY_Up ) {
+                dir = osg::Vec3d(-m(2,0), -m(2,1), -m(2,2));
+            }
+            else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
+                dir = osg::Vec3d(m(2,0), m(2,1), m(2,2));
+            }
+
+        }
+        else {
+            if( key == osgGA::GUIEventAdapter::KEY_Left ) {
+                dir = osg::Vec3d(-m(0,0), -m(0,1), -m(0,2));
+            }
+            else if( key == osgGA::GUIEventAdapter::KEY_Right ) {
+                dir = osg::Vec3d(m(0,0), m(0,1), m(0,2));
+            }
+            else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
+                dir = osg::Vec3d(-m(1,0), -m(1,1), -m(1,2));
+            }
+            else if( key == osgGA::GUIEventAdapter::KEY_Up ) {
+                dir = osg::Vec3d(m(1,0), m(1,1), m(1,2));
+            }
+        }
+        _osgCameraManipulator->setCenter(center + dir*_osgCameraManipulator->getDistance()*0.05);
+                    
+        return true;
+    }        
 //        _picker->ActivateSelection(!_picker->IsSelectionActive());
 //        if( !_picker->IsSelectionActive() ) {
 //            // have to clear any draggers if selection is not active
@@ -263,7 +291,7 @@ bool ViewerWidget::HandleOSGKeyDown(int key)
 //            _draggerName.clear();
 //        }
 //        return true;
-//    }
+    }
     return false;
 }
 
@@ -470,7 +498,7 @@ void ViewerWidget::UpdateFromOSG()
 void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
 {
     if (!node) {
-        if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
+        if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
             // user clicked on empty region, so remove selection
             _ClearDragger();
         }
@@ -512,7 +540,7 @@ void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     }
 
     if( !item ) {
-        if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_LEFT_CTRL) ) {
+        if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
             // user clicked on empty region, so remove selection
             _ClearDragger();
         }
