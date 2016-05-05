@@ -3208,6 +3208,10 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         _selfcollisionchecker = collisionchecker;
         // reset the internal cache
         _ResetInternalCollisionCache();
+        if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+            // collision checking will not be automatically updated with environment calls, so need to do this manually
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
     }
 }
 
@@ -4140,6 +4144,11 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
             pattached->GetAttached(setAttached);
         }
     }
+}
+
+bool KinBody::HasAttached() const
+{
+    return _listAttachedBodies.size() > 0;
 }
 
 bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>&setChecked) const

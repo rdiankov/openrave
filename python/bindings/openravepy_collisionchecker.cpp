@@ -656,6 +656,7 @@ void init_openravepy_collisionchecker()
     .value("RayAnyHit",CO_RayAnyHit)
     .value("ActiveDOFs",CO_ActiveDOFs)
     .value("AllLinkCollisions", CO_AllLinkCollisions)
+    .value("AllGeometryContacts", CO_AllGeometryContacts)
     ;
     enum_<CollisionAction>("CollisionAction" DOXY_ENUM(CollisionAction))
     .value("DefaultAction",CA_DefaultAction)
