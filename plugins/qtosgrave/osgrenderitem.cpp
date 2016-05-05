@@ -170,6 +170,8 @@ void KinBodyItem::Load()
 
     // Sets name of Robot or Kinbody
     _osgdata->setName(_pbody->GetName());
+    _osgdata->removeChildren(0, _osgdata->getNumChildren()); // have to remove all the children before creating a new mesh
+    
     _veclinks.resize(0);
 
     Transform tbody = _pbody->GetTransform();
@@ -629,6 +631,16 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         return false;
     }
 
+    if( _bReload || _bDrawStateChanged ) {
+        EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
+        if( !!lockenv ) {
+            if( _bReload || _bDrawStateChanged ) {
+                Load();
+            }
+        }
+    }
+
+    boost::mutex::scoped_lock lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
