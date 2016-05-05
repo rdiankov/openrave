@@ -18,6 +18,7 @@
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
 #include <osg/CullFace>
+#include <osg/CoordinateSystemNode>
 
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
@@ -28,11 +29,43 @@
 #include <osgManipulator/Translate2DDragger>
 #include <osgManipulator/TranslateAxisDragger>
 
-
 namespace qtosgrave {
 
 class OpenRAVETrackball : public osgGA::TrackballManipulator
 {
+public:
+    OpenRAVETrackball() {
+        _bInSeekMode = false;
+    }
+
+    void SetSeekMode(bool bInSeekMode) {
+        _bInSeekMode = bInSeekMode;
+        osgViewer::GraphicsWindow::MouseCursor cursortype = _bInSeekMode ? osgViewer::GraphicsWindow::CrosshairCursor : osgViewer::GraphicsWindow::LeftArrowCursor;
+        for(osgViewer::Viewer::Windows::iterator itr = _windows.begin(); itr != _windows.end(); ++itr) {
+            (*itr)->setCursor(cursortype);
+        }
+
+    }
+    
+    void SetSeekMode(bool bInSeekMode, osgViewer::Viewer::Windows& windows) {
+        _windows = windows;
+        SetSeekMode(bInSeekMode);
+    }
+
+    bool InSeekMode() const {
+        return _bInSeekMode;
+    }
+
+protected:
+    class OpenRAVEAnimationData : public OrbitAnimationData {
+    public:
+        osg::Vec3d _eyemovement;
+    };
+
+    virtual void allocAnimationData() {
+        _animationData = new OpenRAVEAnimationData();
+    }
+    
     virtual bool performMovement() {
         // return if less then two events have been added
         if( _ga_t0.get() == NULL || _ga_t1.get() == NULL ) {
@@ -61,6 +94,106 @@ class OpenRAVETrackball : public osgGA::TrackballManipulator
 
         return osgGA::TrackballManipulator::performMovement();
     }
+
+    void applyAnimationStep( const double currentProgress, const double prevProgress )
+    {
+        OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
+        assert( ad );
+
+        // compute new center
+        osg::Vec3d prevCenter, prevEye, prevUp;
+        getTransformation( prevEye, prevCenter, prevUp );
+        osg::Vec3d newCenter = osg::Vec3d(prevCenter) + (ad->_movement * (currentProgress - prevProgress));
+        osg::Vec3d newEye = osg::Vec3d(prevEye) + (ad->_eyemovement * (currentProgress - prevProgress));
+
+        // fix vertical axis
+        if( getVerticalAxisFixed() )
+        {
+            osg::CoordinateFrame coordinateFrame = getCoordinateFrame( newCenter );
+            osg::Vec3d localUp = getUpVector( coordinateFrame );
+
+            fixVerticalAxis( newCenter - newEye, prevUp, prevUp, localUp, false );
+       }
+
+       // apply new transformation
+       setTransformation( newEye, newCenter, prevUp );
+    }
+
+    virtual bool handleMousePush( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        if( _bInSeekMode ) {
+            SetSeekMode(false);
+            if( !isAnimating() ) {
+                setAnimationTime(0.25);
+
+                // get current transformation
+                osg::Vec3d prevCenter, prevEye, prevUp;
+                getTransformation( prevEye, prevCenter, prevUp );
+
+                // center by mouse intersection
+                if( !setCenterByMousePointerIntersection( ea, us ) ) {
+                    return false;
+                }
+
+                OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
+                BOOST_ASSERT( !!ad );
+
+                // setup animation data and restore original transformation
+                ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
+                ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
+                setTransformation( prevEye, prevCenter, prevUp );
+                return true;
+            }
+        }
+        return osgGA::TrackballManipulator::handleMousePush(ea, us);
+    }
+
+    virtual bool handleKeyDown( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        int key = ea.getKey();
+        int modkeymask = ea.getModKeyMask();
+        switch(key) {
+        case osgGA::GUIEventAdapter::KEY_Left:
+        case osgGA::GUIEventAdapter::KEY_Right:
+        case osgGA::GUIEventAdapter::KEY_Up:
+        case osgGA::GUIEventAdapter::KEY_Down: {
+            osg::Matrixd m = getMatrix();
+            osg::Vec3d center = getCenter();
+            osg::Vec3d dir;
+            if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
+                if( key == osgGA::GUIEventAdapter::KEY_Up ) {
+                    dir = osg::Vec3d(-m(2,0), -m(2,1), -m(2,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
+                    dir = osg::Vec3d(m(2,0), m(2,1), m(2,2));
+                }
+
+            }
+            else {
+                if( key == osgGA::GUIEventAdapter::KEY_Left ) {
+                    dir = osg::Vec3d(-m(0,0), -m(0,1), -m(0,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Right ) {
+                    dir = osg::Vec3d(m(0,0), m(0,1), m(0,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
+                    dir = osg::Vec3d(-m(1,0), -m(1,1), -m(1,2));
+                }
+                else if( key == osgGA::GUIEventAdapter::KEY_Up ) {
+                    dir = osg::Vec3d(m(1,0), m(1,1), m(1,2));
+                }
+            }
+            setCenter(center + dir*getDistance()*0.05);
+            return true;
+        }
+        }
+
+        return osgGA::TrackballManipulator::handleKeyDown(ea, us);
+    }
+
+private:
+    osgViewer::Viewer::Windows _windows;
+    bool _bInSeekMode; ///< if true, in seek mode
 };
 
 // \ brief rigid transformation dragger (does not allow scale)
@@ -89,7 +222,7 @@ protected:
 class OpenRAVEKeyboardEventHandler : public osgGA::GUIEventHandler
 {
 public:
-    OpenRAVEKeyboardEventHandler(const boost::function<bool(int, int)>& onKeyDown) : _onKeyDown(onKeyDown) {
+    OpenRAVEKeyboardEventHandler(const boost::function<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)>& onKeyDown) : _onKeyDown(onKeyDown) {
     }
 
     virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
@@ -97,7 +230,7 @@ public:
         switch(ea.getEventType())
         {
         case (osgGA::GUIEventAdapter::KEYDOWN): {
-            return _onKeyDown(ea.getKey(), ea.getModKeyMask());
+            return _onKeyDown(ea, aa);
         }
         default:
             return false;
@@ -105,7 +238,7 @@ public:
     }
 
 private:
-    boost::function<bool(int, int)> _onKeyDown; ///< called when key is pressed
+    boost::function<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)> _onKeyDown; ///< called when key is pressed
 };
 
 //void ViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
@@ -273,56 +406,21 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _timer.start( 10 );
 }
 
-bool ViewerWidget::HandleOSGKeyDown(int key, int modkeymask)
+bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
+    int key = ea.getKey();
     if( !!_onKeyDown ) {
         if( _onKeyDown(key) ) {
             return true;
         }
     }
 
-    switch(key) {
-    case osgGA::GUIEventAdapter::KEY_Left:
-    case osgGA::GUIEventAdapter::KEY_Right:
-    case osgGA::GUIEventAdapter::KEY_Up:
-    case osgGA::GUIEventAdapter::KEY_Down: {
-        osg::Matrixd m = _osgCameraManipulator->getMatrix();
-        osg::Vec3d center = _osgCameraManipulator->getCenter();
-        osg::Vec3d dir;
-        if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_SHIFT) ) {
-            if( key == osgGA::GUIEventAdapter::KEY_Up ) {
-                dir = osg::Vec3d(-m(2,0), -m(2,1), -m(2,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
-                dir = osg::Vec3d(m(2,0), m(2,1), m(2,2));
-            }
-
-        }
-        else {
-            if( key == osgGA::GUIEventAdapter::KEY_Left ) {
-                dir = osg::Vec3d(-m(0,0), -m(0,1), -m(0,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Right ) {
-                dir = osg::Vec3d(m(0,0), m(0,1), m(0,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Down ) {
-                dir = osg::Vec3d(-m(1,0), -m(1,1), -m(1,2));
-            }
-            else if( key == osgGA::GUIEventAdapter::KEY_Up ) {
-                dir = osg::Vec3d(m(1,0), m(1,1), m(1,2));
-            }
-        }
-        _osgCameraManipulator->setCenter(center + dir*_osgCameraManipulator->getDistance()*0.05);
-
-        return true;
-    }
-//        _picker->ActivateSelection(!_picker->IsSelectionActive());
-//        if( !_picker->IsSelectionActive() ) {
-//            // have to clear any draggers if selection is not active
-//            _ClearDragger();
-//            _draggerName.clear();
-//        }
-//        return true;
+    if( key == 's' ) {
+        ActivateSelection(false);
+        _ClearDragger();
+        osgViewer::Viewer::Windows windows;
+        getWindows(windows);
+        _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode(), windows);
     }
     return false;
 }
@@ -472,44 +570,45 @@ void ViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Intersec
     if (intersection.nodePath.empty()) {
         _strRayInfoText.clear();
         _UpdateHUDText();
+        if( buttonPressed ) {
+            _osgCameraManipulator->SetSeekMode(false);
+        }
         if( _bIsSelectiveActive && buttonPressed ) {
             SelectOSGLink(OSGNodePtr(), modkeymask);
         }
     }
     else {
-        if (!intersection.nodePath.empty() ) {
-            OSGNodePtr node = intersection.nodePath.back();//intersection.drawable->getParent(0);
+        OSGNodePtr node = intersection.nodePath.back();
 
-            // something hit
-            if( buttonPressed ) {
-                if( _bIsSelectiveActive ) {
-                    if( !!node ) {
-                        SelectOSGLink(node, modkeymask);
-                    }
-                }
-                else {
-                    // ignore...
+        // something hit
+        if( buttonPressed ) {
+            if( _bIsSelectiveActive ) {
+                if( !!node ) {
+                    SelectOSGLink(node, modkeymask);
                 }
             }
             else {
-                // draw the intersection point in the HUD
-                KinBodyItemPtr item = FindKinBodyItemFromOSGNode(node);
-
-                if( !!item ) {
-                    osg::Vec3d pos = intersection.getWorldIntersectPoint();
-                    osg::Vec3d normal = intersection.getWorldIntersectNormal();
-                    KinBody::LinkPtr link = item->GetLinkFromOSG(node);
-                    std::string linkname;
-                    if( !!link ) {
-                        linkname = link->GetName();
-                    }
-                    _strRayInfoText = str(boost::format("mouse on %s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%item->GetName()%linkname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
-                }
-                else {
-                    _strRayInfoText.clear();
-                }
-                _UpdateHUDText();
+                // ignore...
             }
+        }
+        else {
+            // draw the intersection point in the HUD
+            KinBodyItemPtr item = FindKinBodyItemFromOSGNode(node);
+
+            if( !!item ) {
+                osg::Vec3d pos = intersection.getWorldIntersectPoint();
+                osg::Vec3d normal = intersection.getWorldIntersectNormal();
+                KinBody::LinkPtr link = item->GetLinkFromOSG(node);
+                std::string linkname;
+                if( !!link ) {
+                    linkname = link->GetName();
+                }
+                _strRayInfoText = str(boost::format("mouse on %s:%s: (%.5f, %.5f, %.5f), n=(%.5f, %.5f, %.5f)")%item->GetName()%linkname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+            }
+            else {
+                _strRayInfoText.clear();
+            }
+            _UpdateHUDText();
         }
     }
 }
