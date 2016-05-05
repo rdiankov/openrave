@@ -696,12 +696,15 @@ private:
             bActiveLinksOnly = !probot->GetAffineDOF();
 
             if( bActiveLinksOnly ) {
-                std::vector<bool> vactiveLinks = std::vector<bool>(probot->GetLinks().size(), false);
+                std::vector<int> vactiveLinks = std::vector<int>(probot->GetLinks().size(), false);
                 for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
-                    bool isLinkActive = false;
+                    int isLinkActive = 0;
                     LinkConstPtr plink = pbody->GetLinks()[i];
                     FOREACH(itindex, probot->GetActiveDOFIndices()) {
-                        isLinkActive = isLinkActive || probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i);
+                      if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i) ) {
+                        isLinkActive = 1;
+                        break;
+                      }
                     }
                     if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end() ) {
                         ptmpManagerBodyAgainstEnv->Register(plink);

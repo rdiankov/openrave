@@ -178,7 +178,7 @@ public:
         // IntervalTree : not working received SIGSEV at line 427 of interval_tree.cpp
         // DynamicAABBTree : initialization working
         // DynamicAABBTree_Array : initialization working, problems with unregister
-        SetBroadphaseAlgorithm("DynamicAABBTree");
+        SetBroadphaseAlgorithm("Naive");
     }
 
     virtual ~FCLSpace()
