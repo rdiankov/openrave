@@ -129,10 +129,11 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     }
 
     __description = ":Interface Author: Rosen Diankov, Gustavo Puche\n\nProvides a viewer based on OpenSceneGraph library. Currently tested with v3.4. Usage:\n\n\
-  - ESC to toggle between selection, movement, joint modes.\n\
-  - Left Click to rotate or select object.\n\
-  - Middle Click to pan.\n\
+  - ESC to toggle between camera, selection, and joint modes.\n\
+  - Left Click to rotate (or select) object.\n\
+  - Middle (or Left+Right) Click to pan.\n\
   - Right Click to zoom.\n\
+  - (Shift+)ArrowKey for moving via keyboard.\n\
   - In selection mode, Ctrl+Left Click to move object.\n\
 ";
 
@@ -557,20 +558,22 @@ void QtOSGViewer::_ProcessAboutDialog()
 void QtOSGViewer::_ChangeViewToXY()
 {
     _UpdateCameraTransform(0);
+    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
     _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
-    _Tcamera.trans.x = 0;
-    _Tcamera.trans.y = 0;
-    _Tcamera.trans.z = -_focalDistance;
+    _Tcamera.trans.x = center.x();
+    _Tcamera.trans.y = center.y();
+    _Tcamera.trans.z = center.z()+_focalDistance;
     _SetCameraTransform();
 }
 
 void QtOSGViewer::_ChangeViewToXZ()
 {
     _UpdateCameraTransform(0);
-    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(-M_PI/2));
-    _Tcamera.trans.x = 0;
-    _Tcamera.trans.y = 0;
-    _Tcamera.trans.z = -_focalDistance;
+    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
+    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
+    _Tcamera.trans.x = center.x();
+    _Tcamera.trans.y = center.y()-_focalDistance;
+    _Tcamera.trans.z = center.z();
     _SetCameraTransform();
 
 }
@@ -578,10 +581,11 @@ void QtOSGViewer::_ChangeViewToXZ()
 void QtOSGViewer::_ChangeViewToYZ()
 {
     _UpdateCameraTransform(0);
-    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(1,0,0), float(-M_PI/2)), quatFromAxisAngle(RaveVector<float>(0,0,1), float(-M_PI/2)));
-    _Tcamera.trans.x = 0;
-    _Tcamera.trans.y = 0;
-    _Tcamera.trans.z = -_focalDistance;
+    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
+    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
+    _Tcamera.trans.x = center.x()+_focalDistance;
+    _Tcamera.trans.y = center.y();
+    _Tcamera.trans.z = center.z();
     _SetCameraTransform();
 
 }
@@ -1211,7 +1215,7 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    _posgWidget->GetCameraManipulator()->setByMatrix(osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)));
+    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
         ptrackball->setDistance(_focalDistance);
