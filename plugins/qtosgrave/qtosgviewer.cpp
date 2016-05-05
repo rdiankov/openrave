@@ -131,7 +131,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     __description = ":Interface Author: Rosen Diankov, Gustavo Puche\n\nProvides a viewer based on OpenSceneGraph library. Currently tested with v3.4. Usage:\n\n\
   - ESC to toggle between camera, selection, and joint modes.\n\
   - Left Click to rotate (or select) object.\n\
-  - Middle (or Left+Right) Click to pan.\n\
+  - Middle (or Shift+Left, Left+Right) Click to pan.\n\
   - Right Click to zoom.\n\
   - (Shift+)ArrowKey for moving via keyboard.\n\
   - In selection mode, Ctrl+Left Click to move object.\n\
@@ -939,7 +939,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 //    osg::Matrix m = osg::Matrix::lookAt(eye, center, up);
 //    m.setTrans(width/2 - 40, -height/2 + 40, -50);
 
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getInverseMatrix());//osg::Matrix::inverse(m));//osg::Matrix::lookAt(eye, center, up)));
+    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
 
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
@@ -1305,8 +1305,10 @@ void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertic
 
     geometry->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
     geometry->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
-    geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    geometry->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    //geometry->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 
     geode->addDrawable(geometry.get());
 
@@ -1324,10 +1326,9 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
     for(int i = 0; i < numPoints; ++i) {
-        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
         ppoints = (float*)((char*)ppoints + stride);
-
-        vcolors->push_back(osg::Vec4f(color.x, color.y, color.z, color.w));
+        (*vcolors)[i] = osg::Vec4f(color.x, color.y, color.z, color.w);
     }
 
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize))); // copies ref counts
@@ -1341,13 +1342,13 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
     for(int i = 0; i < numPoints; ++i) {
-        vvertices->push_back(osg::Vec3(ppoints[0], ppoints[1], ppoints[2]));
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
         ppoints = (float*)((char*)ppoints + stride);
         if (bhasalpha) {
-            vcolors->push_back(osg::Vec4f(colors[i * 4 + 0], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]));
+            (*vcolors)[i] = osg::Vec4f(colors[i * 4 + 0], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]);
         }
         else {
-            vcolors->push_back(osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f));
+            (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
         }
     }
 
