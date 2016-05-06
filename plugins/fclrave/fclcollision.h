@@ -257,7 +257,10 @@ public:
     virtual void DestroyEnvironment()
     {
         RAVELOG_VERBOSE(str(boost::format("FCL User data destroying %s in env %d") % _userdatakey % GetEnv()->GetId()));
-        _envManager->clear();
+        if(!!_envManager) {
+          _envManager->clear();
+          _envManager.reset();
+        }
         _fclspace->DestroyEnvironment();
     }
 
@@ -304,7 +307,7 @@ public:
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
-        _fclspace->Synchronize();
+        //_fclspace->Synchronize();
 
         std::vector<BroadPhaseCollisionManagerPtr> vbody1Managers = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), vbody2Managers = GetBodyManager(pbody2, _options & OpenRAVE::CO_ActiveDOFs);
 
@@ -373,7 +376,7 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize();
+        _fclspace->Synchronize(plink->GetParent());
 
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
         // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
@@ -642,6 +645,7 @@ private:
         if( ballDOFs ) {
             FOREACH(itbody, attachedBodies) {
                 if( (*itbody)->IsEnabled() ) {
+                  _fclspace->Synchronize(*itbody);
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(*itbody);
                     if( !pinfo ) {
                         RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
@@ -652,6 +656,7 @@ private:
                 }
             }
         } else {
+          _fclspace->Synchronize(pbody);
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             if( !pinfo ) {
                 RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", pbody->GetName()%_userdatakey%GetEnv()->GetId());
@@ -663,6 +668,7 @@ private:
                 if( (*itbody)->IsEnabled() && *itbody != pbody ) {
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
+                      _fclspace->Synchronize(*itbody);
                         KinBodyInfoPtr pinfoGrabbed = _fclspace->GetInfo(*itbody);
                         if( !pinfoGrabbed ) {
                             RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());

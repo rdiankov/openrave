@@ -121,7 +121,7 @@ public:
             KinBody::LinkWeakPtr _plink;
 
             // TODO : What about a dynamic collection of managers containing this link ?
-            std::vector<BroadPhaseCollisionManagerWeakPtr> _vmanagers; ///< Broad phase managers containing this link's BV
+            std::list<BroadPhaseCollisionManagerWeakPtr> _vmanagers; ///< Broad phase managers containing this link's BV
             BroadPhaseCollisionManagerPtr _linkManager;
             boost::shared_ptr<TransformCollisionPair> plinkBV;
             std::vector<TransformCollisionPair> vgeoms; // fcl variant of ODE dBodyID
@@ -203,6 +203,9 @@ public:
     void DestroyEnvironment()
     {
         RAVELOG_VERBOSE("destroying fcl collision environment\n");
+        if( !!_envManager ) {
+          _envManager.reset();
+        }
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {
@@ -588,11 +591,10 @@ private:
                     // Why do we compute the AABB ?
                     pcoll->computeAABB();
 
+                    pLINK->_vmanagers.remove_if(boost::mem_fn(&boost::weak_ptr<fcl::BroadPhaseCollisionManager>::expired));
                     FOREACH(itwpmanager, pLINK->_vmanagers) {
-                        BroadPhaseCollisionManagerPtr pmanager = itwpmanager->lock();
-                        if( pmanager ) {
-                            pmanager->update(pcoll.get());
-                        }
+                      // we just removed all the expired pointers so we don't need to recheck them
+                        itwpmanager->lock()->update(pcoll.get());
                     }
                 }
             }
