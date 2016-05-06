@@ -96,6 +96,11 @@ protected:
         return osgGA::TrackballManipulator::performMovement();
     }
 
+    // make zooming faster
+    bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+    }
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
@@ -797,6 +802,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     //view->addEventHandler( new osgViewer::StatsHandler );
 
     _osgCameraManipulator = new OpenRAVETrackball();//osgGA::TrackballManipulator();//NodeTrackerManipulator();
+    _osgCameraManipulator->setWheelZoomFactor(0.2);
     view->setCameraManipulator( _osgCameraManipulator.get() );
 
     _osgCameraHUD = new osg::MatrixTransform();
