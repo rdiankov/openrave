@@ -487,23 +487,31 @@ void QtOSGViewer::LoadEnvironment()
     QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL,
                                               "Env Files (*.xml);;COLLADA Files (*.dae)");
 
-    if( s.length() == 0 )
+    if( s.length() == 0 ) {
         return;
-
+    }
+    
     _Reset();
-    GetEnv()->Reset();
+    try {
+        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        GetEnv()->Reset();
+        
+        GetEnv()->Load(s.toAscii().data());
+        
+        RAVELOG_INFO("\n---------Refresh--------\n");
+        
+        //  Refresh the screen.
+        UpdateFromModel();
+        
+        RAVELOG_INFO("----> set home <----\n");
+        
+        //  Center object in window viewer
+        _posgWidget->SetHome();
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN_FORMAT("failed to load environment %s: %s", s.toAscii().data()%ex.what());
+    }
 
-    GetEnv()->Load(s.toAscii().data());
-
-    RAVELOG_INFO("\n---------Refresh--------\n");
-
-    //  Refresh the screen.
-    UpdateFromModel();
-
-    RAVELOG_INFO("----> set home <----\n");
-
-    //  Center object in window viewer
-    _posgWidget->SetHome();
 }
 
 void QtOSGViewer::ImportEnvironment()
@@ -511,13 +519,19 @@ void QtOSGViewer::ImportEnvironment()
     QString s = QFileDialog::getOpenFileName( this, "Import Environment", NULL,
                                               "Env Files (*.xml);;COLLADA Files (*.dae)");
 
-    if( s.length() == 0 )
+    if( s.length() == 0 ) {
         return;
-
-    GetEnv()->Load(s.toAscii().data());
-
-    //  Refresh the screen.
-    UpdateFromModel();
+    }
+    try {
+        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        GetEnv()->Load(s.toAscii().data());
+        
+        //  Refresh the screen.
+        UpdateFromModel();
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN_FORMAT("failed to import model %s: %s", s.toAscii().data()%ex.what());
+    }
 }
 
 void QtOSGViewer::SaveEnvironment()
@@ -526,7 +540,13 @@ void QtOSGViewer::SaveEnvironment()
     if( s.length() == 0 ) {
         return;
     }
-    GetEnv()->Save(s.toAscii().data());
+    try {
+        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        GetEnv()->Save(s.toAscii().data());
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN_FORMAT("failed to save to file %s: %s", s.toAscii().data()%ex.what());
+    }
 }
 
 void QtOSGViewer::ResetViewToHome()
