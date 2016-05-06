@@ -19,6 +19,7 @@
 #include <osg/FrontFace>
 #include <osg/CullFace>
 #include <osg/CoordinateSystemNode>
+#include <osg/BlendFunc>
 
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
@@ -291,7 +292,20 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
 
     // initialize the environment
     _osgSceneRoot = new osg::Group();
-    _osgFigureRoot = new osg::Group();
+    {
+        _osgFigureRoot = new osg::Group();
+        osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
+        //stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT_AND_BACK));
+        //stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
+        //stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
+        //stateset->setMode(GL_NORMALIZE,osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+        //stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+        stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
+        stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
+        stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+
+        _osgFigureRoot->setStateSet(stateset);
+    }
 
     // create world axis
     _osgWorldAxis = new osg::MatrixTransform();
@@ -487,6 +501,7 @@ void ViewerWidget::SetSceneData()
 
 void ViewerWidget::ResetViewToHome()
 {
+    SetHome();
     _osgview->home();
 }
 
@@ -817,7 +832,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
     camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
     camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
-
+    camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
 
@@ -838,7 +853,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, i
     // set the view matrix
     camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
     camera->setViewMatrix(osg::Matrix::identity());
-
+    camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
 

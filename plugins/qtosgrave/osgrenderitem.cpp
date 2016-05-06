@@ -294,7 +294,7 @@ void KinBodyItem::Load()
                     state->setMode(GL_BLEND, osg::StateAttribute::ON);
                     state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-
+                    
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
