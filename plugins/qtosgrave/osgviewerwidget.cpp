@@ -401,6 +401,9 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
 
         //Set the screen alignment - always face the screen
         _osgHudText->setAxisAlignment(osgText::Text::SCREEN);
+        _osgHudText->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+        _osgHudText->setBackdropColor(osg::Vec4(1,1,1,1));
+        //setBackdropOffset
         _osgHudText->setColor(osg::Vec4(0,0,0,1));
         //text->setFontResolution(32,32);
 
