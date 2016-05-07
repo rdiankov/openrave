@@ -479,9 +479,6 @@ public:
           // Why do we compute the AABB ?
           pcoll->computeAABB();
         }
-        if( !!pLINK->_linkManager ) {
-          pLINK->_linkManager->update();
-        }
       }
     }
 

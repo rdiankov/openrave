@@ -722,6 +722,9 @@ private:
                 pLINK->_linkManager->registerObject(itgeompair->second.get());
             }
         }
+        if( !!pLINK->_linkManager ) {
+          pLINK->_linkManager->update();
+        }
         return pLINK->_linkManager;
     }
 
