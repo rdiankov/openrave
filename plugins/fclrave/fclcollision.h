@@ -463,7 +463,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        //_fclspace->Synchronize(pbody);
+        _fclspace->Synchronize(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -499,7 +499,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        //_fclspace->Synchronize(pbody);
+        _fclspace->Synchronize(pbody);
 
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -701,7 +701,6 @@ private:
 
     BroadPhaseCollisionManagerPtr GetLinkGeometriesManager(LinkConstPtr plink) {
         LinkInfoPtr pLINK = GetLinkInfo(plink);
-        _fclspace->SynchronizeGeometries(plink, pLINK);
         // why not synchronize geometries at this stage only ?
         if( !pLINK->_linkManager && HasMultipleGeometries(pLINK) ) {
             pLINK->_linkManager = CreateManager();

@@ -156,12 +156,12 @@ public:
         }
 
         void _ChangeEnableFlag() {
-            // we invalidate both managers
-            _bodyManager.reset();
-            // TODO : this might not be always necessary
-            _bodyManagerActiveDOFs.reset();
-            // we reset the list of callbacks
-            _linkEnableCallbacks.clear();
+          // we invalidate both managers
+          _bodyManager.reset();
+          // TODO : this might not be always necessary
+          _bodyManagerActiveDOFs.reset();
+          // we reset the list of callbacks
+          _linkEnableCallbacks.clear();
         }
 
         void _ChangeActiveDOFsFlag() {
@@ -286,7 +286,7 @@ public:
             if( link->vgeoms.size() == 1) {
                 // set the unique geometry as its own bounding volume
                 link->plinkBV = boost::make_shared<TransformCollisionPair>(link->vgeoms[0]);
-                //link->vgeoms.resize(0);
+                link->vgeoms.resize(0);
             } else {
                 // create the bounding volume for the link
                 fcl::BVHModel<fcl::OBB> model;
@@ -459,28 +459,9 @@ public:
 
     bool HasMultipleGeometries(LinkConstPtr plink) {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        return pinfo->vlinks[plink->GetIndex()]->vgeoms.size() > 1;
+        return !pinfo->vlinks[plink->GetIndex()]->vgeoms.empty();
     }
 
-    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {
-      // Beware that there is no timestamp ! Everything is recomputed at each calls !!!
-      FOREACHC(itgeomcoll, pLINK->vgeoms) {
-        CollisionObjectPtr pcoll = (*itgeomcoll).second;
-        Transform pose = plink->GetTransform() * (*itgeomcoll).first;
-        fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-        fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
-
-        pcoll->setTranslation(newPosition);
-        pcoll->setQuatRotation(newOrientation);
-        // Why do we compute the AABB ?
-        pcoll->computeAABB();
-
-        // may be more efficient to do this only as needed
-        if( !!pLINK->_linkManager ) {
-          pLINK->_linkManager->update(pcoll.get());
-        }
-      }
-    }
 
 
 private:
