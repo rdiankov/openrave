@@ -258,8 +258,8 @@ public:
     {
         RAVELOG_VERBOSE(str(boost::format("FCL User data destroying %s in env %d") % _userdatakey % GetEnv()->GetId()));
         if(!!_envManager) {
-          _envManager->clear();
-          _envManager.reset();
+            _envManager->clear();
+            _envManager.reset();
         }
         _fclspace->DestroyEnvironment();
     }
@@ -309,23 +309,16 @@ public:
         // We could put the synchronization directly inside GetBodyManager
         //_fclspace->Synchronize();
 
-        std::vector<BroadPhaseCollisionManagerPtr> vbody1Managers = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), vbody2Managers = GetBodyManager(pbody2, _options & OpenRAVE::CO_ActiveDOFs);
+        BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, _options & OpenRAVE::CO_ActiveDOFs);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; //TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
-            FOREACH(itmanager1, vbody1Managers) {
-                FOREACH(itmanager2, vbody2Managers) {
-                    (*itmanager1)->setup();
-                    (*itmanager2)->setup();
-                    (*itmanager1)->collide((*itmanager2).get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
-                    if( query.bstop ) {
-                        return query._bCollision;
-                    }
-                }
-            }
+            body1Manager->setup();
+            body2Manager->setup();
+            body1Manager->collide(body2Manager.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return query._bCollision;
         }
 
@@ -380,20 +373,15 @@ public:
 
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
         // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-        std::vector<BroadPhaseCollisionManagerPtr> vbodyManagers = GetBodyManager(pbody, false);
+        BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, false);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
-            FOREACH(itmanager, vbodyManagers) {
-                (*itmanager)->setup();
-                (*itmanager)->collide(pcollLink.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
-                if( query.bstop ) {
-                    return query._bCollision;
-                }
-            }
+            bodyManager->setup();
+            bodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return query._bCollision;
         }
     }
@@ -428,7 +416,7 @@ public:
 
         _fclspace->Synchronize();
 
-        std::vector<BroadPhaseCollisionManagerPtr> vbodyManagers = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
+        BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
 
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -437,13 +425,8 @@ public:
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             _envManager->setup();
-            FOREACH(itmanager, vbodyManagers) {
-                (*itmanager)->setup();
-                _envManager->collide((*itmanager).get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
-                if( query.bstop ) {
-                    return query._bCollision;
-                }
-            }
+            bodyManager->setup();
+            _envManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return query._bCollision;
         }
     }
@@ -480,7 +463,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);
+        //_fclspace->Synchronize(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -516,7 +499,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);
+        //_fclspace->Synchronize(pbody);
 
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -576,30 +559,36 @@ private:
     void SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
         if( !pinfo->_bodyManager ) {
             pinfo->_bodyManager = CreateManager();
-            pinfo->_linkEnableCallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::KinBodyInfo::_ChangeEnableFlag, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo))));
-            pinfo->_benableDirty = true;
-        }
+            const boost::function<void()>& enableChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeEnableFlag, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+            pinfo->_linkEnableCallbacks.push_back(pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, enableChangeCallback));
 
-        if( pinfo->_benableDirty ) {
             // (re)compute _bodyManager
             pinfo->_bodyManager->clear();
-            for(size_t i = 0; i < pbody->GetLinks().size(); ++i) {
-                if( pbody->GetLinks()[i]->IsEnabled() ) {
-                    pinfo->vlinks[i]->Register(pinfo->_bodyManager);
+            std::set<KinBodyPtr> attachedBodies;
+            pbody->GetAttached(attachedBodies);
+            FOREACH(itbody, attachedBodies) {
+                if( (*itbody)->IsEnabled() ) {
+                    FCLSpace::KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
+                    if( !pitinfo ) {
+                        RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
+                    } else {
+                        pinfo->_linkEnableCallbacks.push_back((*itbody)->RegisterChangeCallback(KinBody::Prop_LinkEnable, enableChangeCallback));
+                        for(size_t i = 0; i < pitinfo->vlinks.size(); ++i) {
+                          if( (*itbody)->GetLinks()[i]->IsEnabled() ) {
+                                pitinfo->vlinks[i]->Register(pinfo->_bodyManager);
+                            }
+                        }
+                    }
                 }
             }
-            pinfo->_benableDirty = false;
         }
     }
 
     void SetupManagerActiveDOFs(RobotBaseConstPtr probot, KinBodyInfoPtr pinfo) {
-        if( !pinfo->_bodyManagerActiveDOFs ) {
-            pinfo->_bodyManagerActiveDOFs = CreateManager();
-            pinfo->_activeDOFsCallback = probot->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::KinBodyInfo::_ChangeActiveDOFsFlag,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo))));
-            pinfo->_bactiveDOFsDirty = true;
-        }
 
         if( pinfo->_bactiveDOFsDirty ) {
+            // if the activeDOFs have changed the _bodyManagerActiveDOFs must be invalid
+            BOOST_ASSERT( !pinfo->_bodyManagerActiveDOFs );
             // (re)compute _vactiveLinks
             pinfo->_vactiveLinks.resize(0);
             pinfo->_vactiveLinks.resize(probot->GetLinks().size(), 0);
@@ -611,21 +600,64 @@ private:
                         break;
                     }
                 }
-                // (re)compute _bodyManagerActiveDOFs
-                if( isLinkActive ) {
-                    pinfo->vlinks[i]->Register(pinfo->_bodyManagerActiveDOFs);
-                }
                 pinfo->_vactiveLinks[i] = isLinkActive;
             }
             pinfo->_bactiveDOFsDirty = false;
+        }
+
+        if( !pinfo->_bodyManagerActiveDOFs ) {
+            pinfo->_bodyManagerActiveDOFs = CreateManager();
+            const boost::function<void()>& activeDOFsChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeActiveDOFsFlag,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+            const boost::function<void()>& enableChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeEnableFlag, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+            // what about grabbed bodies, shouldn,t we set a callback in that case too
+            pinfo->_activeDOFsCallbacks.push_back(probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, activeDOFsChangeCallback));
+
+            // (re)compute _bodyManagerActiveDOFs
+            // first we register the active links of pbody
+            for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
+                if( pinfo->_vactiveLinks[i] ) {
+                    pinfo->vlinks[i]->Register(pinfo->_bodyManagerActiveDOFs);
+                }
+            }
+
+            // then we register all the bodies attached to an active link of pbody
+            std::set<KinBodyPtr> attachedBodies;
+            probot->GetAttached(attachedBodies);
+            FOREACH(itbody, attachedBodies) {
+                if( (*itbody)->IsEnabled() && *itbody != probot ) {
+                    LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
+                    if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
+                        KinBodyInfoPtr pinfoGrabbed = _fclspace->GetInfo(*itbody);
+                        if( !pinfoGrabbed ) {
+                            RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
+                        } else {
+                            // we are only restricting to active DOFS for the original robot
+                            // i.e. for now if a robot is grabbed we consider all its DOFs
+
+                            // if the enable status of some link change we need to reset the _bodyManagerActiveDOFs
+                            pinfo->_linkEnableCallbacks.push_back((*itbody)->RegisterChangeCallback(KinBody::Prop_LinkEnable, enableChangeCallback));
+                            for(size_t i = 0; i < pinfoGrabbed->vlinks.size(); ++i) {
+                              if( (*itbody)->GetLinks()[i]->IsEnabled() ) {
+                                    pinfoGrabbed->vlinks[i]->Register(pinfo->_bodyManagerActiveDOFs);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
     /// \param pbody The broadphase manager of this kinbody is (re)computed if needed
     /// \param bactiveDOFs true if we only need to consider active DOFs
     /// \return vmanagers vector filled with the relevant broadphase managers wrt pbody upon return
-    std::vector<BroadPhaseCollisionManagerPtr> GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs) {
-        std::vector<BroadPhaseCollisionManagerPtr> vmanagers;
+    BroadPhaseCollisionManagerPtr GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs) {
+        FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+        if( !pinfo ) {
+            RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", pbody->GetName()%_userdatakey%GetEnv()->GetId());
+            return BroadPhaseCollisionManagerPtr();
+        }
+
         bool ballDOFs = true; ///< true if we consider all DOFs for the manager
         RobotBaseConstPtr probot;
         // if bactiveDOFs is false or pbody is not a robot we check all DOFs
@@ -640,49 +672,20 @@ private:
         std::set<KinBodyPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
 
-        vmanagers.reserve(attachedBodies.size());
-
         if( ballDOFs ) {
+            SetupManagerAllDOFs(pbody, pinfo);
             FOREACH(itbody, attachedBodies) {
-                if( (*itbody)->IsEnabled() ) {
-                  _fclspace->Synchronize(*itbody);
-                    FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(*itbody);
-                    if( !pinfo ) {
-                        RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
-                    } else {
-                        SetupManagerAllDOFs(*itbody, pinfo);
-                        vmanagers.push_back(pinfo->_bodyManager);
-                    }
-                }
+                _fclspace->Synchronize(*itbody);
             }
+            return pinfo->_bodyManager;
         } else {
-          _fclspace->Synchronize(pbody);
-            FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-            if( !pinfo ) {
-                RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", pbody->GetName()%_userdatakey%GetEnv()->GetId());
-                return vmanagers;
-            }
+            _fclspace->Synchronize(pbody);
             SetupManagerActiveDOFs(probot, pinfo);
-            vmanagers.push_back(pinfo->_bodyManagerActiveDOFs);
             FOREACH(itbody, attachedBodies) {
-                if( (*itbody)->IsEnabled() && *itbody != pbody ) {
-                    LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
-                    if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
-                      _fclspace->Synchronize(*itbody);
-                        KinBodyInfoPtr pinfoGrabbed = _fclspace->GetInfo(*itbody);
-                        if( !pinfoGrabbed ) {
-                            RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
-                        } else {
-                            // we are only restricting to active DOFS for the original robot
-                            // i.e. for now if a robot is grabbed we consider all its DOFs
-                            SetupManagerAllDOFs(*itbody, pinfoGrabbed);
-                            vmanagers.push_back(pinfoGrabbed->_bodyManager);
-                        }
-                    }
-                }
+                _fclspace->Synchronize(*itbody);
             }
+            return pinfo->_bodyManagerActiveDOFs;
         }
-        return vmanagers;
     }
 
     typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LINK> LinkInfoPtr;
@@ -698,6 +701,8 @@ private:
 
     BroadPhaseCollisionManagerPtr GetLinkGeometriesManager(LinkConstPtr plink) {
         LinkInfoPtr pLINK = GetLinkInfo(plink);
+        _fclspace->SynchronizeGeometries(plink, pLINK);
+        // why not synchronize geometries at this stage only ?
         if( !pLINK->_linkManager && HasMultipleGeometries(pLINK) ) {
             pLINK->_linkManager = CreateManager();
             FOREACH(itgeompair, pLINK->vgeoms) {
@@ -763,21 +768,6 @@ private:
     bool NarrowPhaseCheckGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
     {
         CollisionReport tmpReport;
-        LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
-
-        // TODO : these check are redundant, transform them in assertions
-        if( !plink1 || !plink2 ) {
-            return false;
-        }
-
-        if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
-            return false;
-        }
-
-        // Proceed to the next if the links are attached and we are not self colliding
-        if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
-            return false;
-        }
 
         pcb->_result.clear();
         size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
@@ -785,6 +775,13 @@ private:
         if( numContacts > 0 ) {
 
             if( !!pcb->_report ) {
+              LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
+
+              // these should be useless, just to make sure I haven't messed up
+              BOOST_ASSERT( plink1 && plink2 );
+              BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
+              BOOST_ASSERT( pcb->bselfCollision || !plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) );
+
                 tmpReport.Reset(_options);
                 tmpReport.plink1 = plink1;
                 tmpReport.plink2 = plink2;

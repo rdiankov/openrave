@@ -128,7 +128,7 @@ public:
             std::string bodylinkname; // for debugging purposes
         };
 
-        KinBodyInfo() : nLastStamp(0), _benableDirty(false), _bactiveDOFsDirty(false)
+        KinBodyInfo() : nLastStamp(0), _bactiveDOFsDirty(true)
         {
         }
 
@@ -156,12 +156,18 @@ public:
         }
 
         void _ChangeEnableFlag() {
-            _benableDirty = true;
-            _bactiveDOFsDirty = true;
+            // we invalidate both managers
+            _bodyManager.reset();
+            // TODO : this might not be always necessary
+            _bodyManagerActiveDOFs.reset();
+            // we reset the list of callbacks
+            _linkEnableCallbacks.clear();
         }
 
         void _ChangeActiveDOFsFlag() {
             _bactiveDOFsDirty = true;
+            _bodyManagerActiveDOFs.reset();
+            _activeDOFsCallbacks.clear();
         }
 
         // TODO : Is this used ?
@@ -175,13 +181,12 @@ public:
         vector< boost::shared_ptr<LINK> > vlinks;
         OpenRAVE::UserDataPtr _geometrycallback;
 
-        bool _benableDirty; ///< true if some link of the kinbody have been enabled or disabled since the last construction of _bodyManager
         bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
         BroadPhaseCollisionManagerPtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
         BroadPhaseCollisionManagerPtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
-        OpenRAVE::UserDataPtr _linkEnableCallback;
-        OpenRAVE::UserDataPtr _activeDOFsCallback;
+        std::list<  OpenRAVE::UserDataPtr > _linkEnableCallbacks; ///< list of handles for the callbacks called when a link attached to _bodyManager has changed its enable status
+        std::list< OpenRAVE::UserDataPtr > _activeDOFsCallbacks; ///< list of handles for the callbacks called when a the activeDOFS have changed
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -204,7 +209,7 @@ public:
     {
         RAVELOG_VERBOSE("destroying fcl collision environment\n");
         if( !!_envManager ) {
-          _envManager.reset();
+            _envManager.reset();
         }
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
@@ -281,7 +286,7 @@ public:
             if( link->vgeoms.size() == 1) {
                 // set the unique geometry as its own bounding volume
                 link->plinkBV = boost::make_shared<TransformCollisionPair>(link->vgeoms[0]);
-                link->vgeoms.resize(0);
+                //link->vgeoms.resize(0);
             } else {
                 // create the bounding volume for the link
                 fcl::BVHModel<fcl::OBB> model;
@@ -454,9 +459,28 @@ public:
 
     bool HasMultipleGeometries(LinkConstPtr plink) {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        return !pinfo->vlinks[plink->GetIndex()]->vgeoms.empty();
+        return pinfo->vlinks[plink->GetIndex()]->vgeoms.size() > 1;
     }
 
+    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {
+      // Beware that there is no timestamp ! Everything is recomputed at each calls !!!
+      FOREACHC(itgeomcoll, pLINK->vgeoms) {
+        CollisionObjectPtr pcoll = (*itgeomcoll).second;
+        Transform pose = plink->GetTransform() * (*itgeomcoll).first;
+        fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+        fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+
+        pcoll->setTranslation(newPosition);
+        pcoll->setQuatRotation(newOrientation);
+        // Why do we compute the AABB ?
+        pcoll->computeAABB();
+
+        // may be more efficient to do this only as needed
+        if( !!pLINK->_linkManager ) {
+          pLINK->_linkManager->update(pcoll.get());
+        }
+      }
+    }
 
 
 private:
@@ -593,7 +617,7 @@ private:
 
                     pLINK->_vmanagers.remove_if(boost::mem_fn(&boost::weak_ptr<fcl::BroadPhaseCollisionManager>::expired));
                     FOREACH(itwpmanager, pLINK->_vmanagers) {
-                      // we just removed all the expired pointers so we don't need to recheck them
+                        // we just removed all the expired pointers so we don't need to recheck them
                         itwpmanager->lock()->update(pcoll.get());
                     }
                 }
