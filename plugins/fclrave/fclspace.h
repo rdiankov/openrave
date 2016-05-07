@@ -74,7 +74,7 @@ public:
 
         struct LINK
         {
-            LINK(KinBody::LinkPtr plink) : _plink(plink) {
+        LINK(KinBody::LinkPtr plink) : _plink(plink), nLastStamp(0) {
             }
 
             virtual ~LINK() {
@@ -120,6 +120,7 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
+          int nLastStamp;
             // TODO : What about a dynamic collection of managers containing this link ?
             std::list<BroadPhaseCollisionManagerWeakPtr> _vmanagers; ///< Broad phase managers containing this link's BV
             BroadPhaseCollisionManagerPtr _linkManager;
@@ -235,14 +236,14 @@ public:
 
         pinfo->Reset();
         pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
+        // make sure that synchronization do occur !
+        pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
 
             boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK(*itlink));
 
-            pinfo->vlinks.push_back(link);
-            link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
 
             typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;
             GeometryInfoIterator begingeom, endgeom;
@@ -286,7 +287,6 @@ public:
             if( link->vgeoms.size() == 1) {
                 // set the unique geometry as its own bounding volume
                 link->plinkBV = boost::make_shared<TransformCollisionPair>(link->vgeoms[0]);
-                link->vgeoms.resize(0);
             } else {
                 // create the bounding volume for the link
                 fcl::BVHModel<fcl::OBB> model;
@@ -303,6 +303,10 @@ public:
                 link->plinkBV = _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
                 link->plinkBV->second->setUserData(link.get());
             }
+
+            link->nLastStamp = pinfo->nLastStamp;
+            link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
+            pinfo->vlinks.push_back(link);
         }
         if( !!_envManager ) {
             // If the _envManager does exists, we register all the links BV of the kinbody
@@ -316,8 +320,7 @@ public:
         pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
 
-        // make sure that synchronization do occur !
-        pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
+        //Do I really need to synchronize anything at that point ?
         _Synchronize(pinfo);
 
 
@@ -462,6 +465,25 @@ public:
         return !pinfo->vlinks[plink->GetIndex()]->vgeoms.empty();
     }
 
+    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {
+      if( pLINK->nLastStamp < plink->GetParent()->GetUpdateStamp() ) {
+        pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
+        FOREACHC(itgeomcoll, pLINK->vgeoms) {
+          CollisionObjectPtr pcoll = (*itgeomcoll).second;
+          Transform pose = plink->GetTransform() * (*itgeomcoll).first;
+          fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+          fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+
+          pcoll->setTranslation(newPosition);
+          pcoll->setQuatRotation(newOrientation);
+          // Why do we compute the AABB ?
+          pcoll->computeAABB();
+        }
+        if( !!pLINK->_linkManager ) {
+          pLINK->_linkManager->update();
+        }
+      }
+    }
 
 
 private:
@@ -566,42 +588,24 @@ private:
             BOOST_ASSERT( pbody->GetLinks().size() == pinfo->vlinks.size() );
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
-                boost::shared_ptr<KinBodyInfo::LINK> pLINK = pinfo->vlinks[i];
+              BOOST_ASSERT( !!pinfo->vlinks[i]->plinkBV);
+                CollisionObjectPtr pcoll = pinfo->vlinks[i]->plinkBV->second;
+                Transform pose = vtrans[i] * pinfo->vlinks[i]->plinkBV->first;
+                fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+                fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-                FOREACHC(itgeomcoll, pLINK->vgeoms) {
-                    CollisionObjectPtr pcoll = (*itgeomcoll).second;
-                    Transform pose = vtrans[i] * (*itgeomcoll).first;
-                    fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-                    fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+                pcoll->setTranslation(newPosition);
+                pcoll->setQuatRotation(newOrientation);
+                // Why do we compute the AABB ?
+                pcoll->computeAABB();
+            }
 
-                    pcoll->setTranslation(newPosition);
-                    pcoll->setQuatRotation(newOrientation);
-                    // Why do we compute the AABB ?
-                    pcoll->computeAABB();
-
-                    // may be more efficient to do this only as needed
-                    if( !!pLINK->_linkManager ) {
-                        pLINK->_linkManager->update(pcoll.get());
-                    }
-                }
-
-                if( !!pLINK->plinkBV ) {
-                    CollisionObjectPtr pcoll = pinfo->vlinks[i]->plinkBV->second;
-                    Transform pose = vtrans[i] * pinfo->vlinks[i]->plinkBV->first;
-                    fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-                    fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
-
-                    pcoll->setTranslation(newPosition);
-                    pcoll->setQuatRotation(newOrientation);
-                    // Why do we compute the AABB ?
-                    pcoll->computeAABB();
-
-                    pLINK->_vmanagers.remove_if(boost::mem_fn(&boost::weak_ptr<fcl::BroadPhaseCollisionManager>::expired));
-                    FOREACH(itwpmanager, pLINK->_vmanagers) {
-                        // we just removed all the expired pointers so we don't need to recheck them
-                        itwpmanager->lock()->update(pcoll.get());
-                    }
-                }
+            if( !!_envManager ) {
+              CollisionGroup vupdatedObjects(pbody->GetLinks().size());
+              FOREACH(itLINK, pinfo->vlinks) {
+                vupdatedObjects.push_back((*itLINK)->plinkBV->second.get());
+              }
+              _envManager->update(vupdatedObjects);
             }
 
             if( !!_synccallback ) {

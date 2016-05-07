@@ -61,6 +61,7 @@ public:
 
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
 
+    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LINK> LinkInfoPtr;
 
     // initialization of _broadPhaseCollisionManagerAlgorithm parameter :
     // Naive : initialization working
@@ -316,8 +317,6 @@ public:
             return false; //TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
-            body1Manager->setup();
-            body2Manager->setup();
             body1Manager->collide(body2Manager.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return query._bCollision;
         }
@@ -380,7 +379,6 @@ public:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
-            bodyManager->setup();
             bodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return query._bCollision;
         }
@@ -425,7 +423,6 @@ public:
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             _envManager->setup();
-            bodyManager->setup();
             _envManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::NarrowPhaseCheckCollision);
             return query._bCollision;
         }
@@ -463,7 +460,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);
+        //_fclspace->Synchronize(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -472,12 +469,19 @@ public:
             CollisionCallbackData query(shared_checker(), report);
             query.bselfCollision = true;
 
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             FOREACH(itset, nonadjacent) {
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
-                NarrowPhaseCheckCollision(GetLinkBV(pbody, index1).get(), GetLinkBV(pbody, index2).get(), &query);
-
-                if( query.bstop ) {
-                    return query._bCollision;
+                LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+                _fclspace->SynchronizeGeometries(pbody->GetLinks()[index1], pLINK1);
+                _fclspace->SynchronizeGeometries(pbody->GetLinks()[index2], pLINK2);
+                FOREACH(itgeom1, pLINK1->vgeoms) {
+                  FOREACH(itgeom2, pLINK2->vgeoms) {
+                    NarrowPhaseCheckGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
+                    if( query.bstop ) {
+                      return query._bCollision;
+                    }
+                  }
                 }
             }
             return query._bCollision;
@@ -499,7 +503,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);
+        //_fclspace->Synchronize(pbody);
 
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -508,13 +512,21 @@ public:
         } else {
             CollisionCallbackData query(shared_checker(), report);
             query.bselfCollision = true;
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             FOREACH(itset, nonadjacent) {
                 int index1 = *itset&0xffff, index2 = *itset>>16;
                 if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
-                    NarrowPhaseCheckCollision(GetLinkBV(pbody, index1).get(), GetLinkBV(pbody, index2).get(), &query);
-                }
-                if( query.bstop ) {
-                    return query._bCollision;
+                  LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+                  _fclspace->SynchronizeGeometries(pbody->GetLinks()[index1], pLINK1);
+                  _fclspace->SynchronizeGeometries(pbody->GetLinks()[index2], pLINK2);
+                  FOREACH(itgeom1, pLINK1->vgeoms) {
+                    FOREACH(itgeom2, pLINK2->vgeoms) {
+                      NarrowPhaseCheckGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
+                      if( query.bstop ) {
+                        return query._bCollision;
+                      }
+                    }
+                  }
                 }
             }
             return query._bCollision;
@@ -581,7 +593,11 @@ private:
                     }
                 }
             }
+        } else {
+          // if the bodyManager has not been created just now, we may need to update its content
+          pinfo->_bodyManager->update();
         }
+        pinfo->_bodyManager->setup();
     }
 
     void SetupManagerActiveDOFs(RobotBaseConstPtr probot, KinBodyInfoPtr pinfo) {
@@ -645,7 +661,10 @@ private:
                     }
                 }
             }
+        } else {
+          pinfo->_bodyManagerActiveDOFs->update();
         }
+        pinfo->_bodyManagerActiveDOFs->setup();
     }
 
     /// \param pbody The broadphase manager of this kinbody is (re)computed if needed
@@ -667,28 +686,22 @@ private:
             ballDOFs = probot->GetAffineDOF();
         }
 
-        // compute the vector of attachedBodies' broadPhaseCollisionManager
-        // Right now attachedBodies may not be transitive bu we assume that it returns all the object that we are interested in for collision checking
         std::set<KinBodyPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
+        // we need to synchronize all the involved bodies before setting up the manager
+        FOREACH(itbody, attachedBodies) {
+          _fclspace->Synchronize(*itbody);
+        }
 
         if( ballDOFs ) {
             SetupManagerAllDOFs(pbody, pinfo);
-            FOREACH(itbody, attachedBodies) {
-                _fclspace->Synchronize(*itbody);
-            }
             return pinfo->_bodyManager;
         } else {
-            _fclspace->Synchronize(pbody);
             SetupManagerActiveDOFs(probot, pinfo);
-            FOREACH(itbody, attachedBodies) {
-                _fclspace->Synchronize(*itbody);
-            }
             return pinfo->_bodyManagerActiveDOFs;
         }
     }
 
-    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LINK> LinkInfoPtr;
 
     LinkInfoPtr GetLinkInfo(LinkConstPtr plink) {
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(plink->GetParent());
@@ -702,6 +715,7 @@ private:
     BroadPhaseCollisionManagerPtr GetLinkGeometriesManager(LinkConstPtr plink) {
         LinkInfoPtr pLINK = GetLinkInfo(plink);
         // why not synchronize geometries at this stage only ?
+        _fclspace->SynchronizeGeometries(plink, pLINK);
         if( !pLINK->_linkManager && HasMultipleGeometries(pLINK) ) {
             pLINK->_linkManager = CreateManager();
             FOREACH(itgeompair, pLINK->vgeoms) {
