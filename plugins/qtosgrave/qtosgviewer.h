@@ -346,7 +346,8 @@ public:
     void _DeleteItemCallback(Item* pItem);
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
-    bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
+    bool _ShowWorldAxesCommand(ostream& sout, istream& sinput);
+    bool _SetItemVisualizationCommand(ostream& sout, istream& sinput);
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);

@@ -43,9 +43,6 @@ public:
     virtual const string& GetName() const {
         return _osgdata->getName();
     }
-//    virtual void SetName(const string& name) {
-//        _name = name;
-//    }
 
     /// \brief update underlying model from OSG's transformation
     virtual bool UpdateFromOSG() {
@@ -69,25 +66,28 @@ public:
         return true;
     }
     virtual void SetGrab(bool bGrab, bool bUpdate=true) {
-    } ///< call when manipulating with the mouse, etc
+    }
 
-    // Inventor related
+    /// \brief sets how the item is visualized. item string means the default.
+    virtual void SetVisualizationMode(const std::string& visualizationmode);
+    
     OSGMatrixTransformPtr GetOSGRoot() const {
         return _osgWorldTransform;
     }
 
-    OSGSwitchPtr GetOSGGeom() const {
+    OSGGroupPtr GetOSGGeom() const {
         return _osgdata;
     }
 
     /// \brief returns true if the given node is in the inventor hierarchy
     bool ContainsOSGNode(OSGNodePtr pNode);
-//    bool ContainsOSGNode(osg::NodePath *pNodePath);
 
+    
     /// \brief Set the visibility of the geometry (ON = true).
-    void SetGeomVisibility(bool bFlag);
+    //void SetGeomVisibility(bool bFlag);
 //    void SetUnpickable();
 
+    
 protected:
 
     // Instance Data
@@ -95,7 +95,9 @@ protected:
     string _name; ///< item name
     //OSGGroupPtr _osgitemroot; ///< root of this object's OSG data hierarchy
     OSGMatrixTransformPtr _osgWorldTransform; ///< Kinbody position
-    OSGSwitchPtr _osgdata; ///< item geometry hierarchy
+    OSGGroupPtr _osgdata; ///< item geometry hierarchy
+    OSGGroupPtr _osgwireframe;
+    std::string _visualizationmode; ///< current visualization mode that item is set to
 };
 
 typedef boost::shared_ptr<Item> ItemPtr;

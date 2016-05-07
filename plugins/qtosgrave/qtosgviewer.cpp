@@ -140,9 +140,9 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera, this, _1, _2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
-    RegisterCommand("SetFeedbackVisibility",boost::bind(&QtOSGViewer::_SetFeedbackVisibility, this, _1, _2),
-                    "Accepts 0/1 value that decides whether to render the cross hairs");
-    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_SetFeedbackVisibility, this, _1, _2),
+    RegisterCommand("SetItemVisualization",boost::bind(&QtOSGViewer::_SetItemVisualizationCommand, this, _1, _2),
+                    "sets the visualization mode of a kinbody/render item in the viewer");
+    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_ShowWorldAxesCommand, this, _1, _2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
@@ -187,7 +187,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 {
     osg::ArgumentParser arguments(0, NULL);
 
-    _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1));
+    _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second);
     setCentralWidget(_posgWidget);
 
     _RepaintWidgets();
@@ -484,27 +484,25 @@ void QtOSGViewer::_CreateMenus()
 
 void QtOSGViewer::LoadEnvironment()
 {
-    QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL,
-                                              "Env Files (*.xml);;COLLADA Files (*.dae)");
-
+    QString s = QFileDialog::getOpenFileName( _posgWidget, "Load Environment", QString(), "Env Files (*.xml);;COLLADA Files (*.dae|*.zae)");
     if( s.length() == 0 ) {
         return;
     }
-    
+
     _Reset();
     try {
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
         GetEnv()->Reset();
-        
+
         GetEnv()->Load(s.toAscii().data());
-        
+
         RAVELOG_INFO("\n---------Refresh--------\n");
-        
+
         //  Refresh the screen.
         UpdateFromModel();
-        
+
         RAVELOG_INFO("----> set home <----\n");
-        
+
         //  Center object in window viewer
         _posgWidget->SetHome();
     }
@@ -525,7 +523,7 @@ void QtOSGViewer::ImportEnvironment()
     try {
         EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
         GetEnv()->Load(s.toAscii().data());
-        
+
         //  Refresh the screen.
         UpdateFromModel();
     }
@@ -563,7 +561,7 @@ void QtOSGViewer::_ProcessPerspectiveViewChange()
         _qactPerspectiveView->setIcon(QIcon(":/images/perspective.png"));
     }
 
-    _posgWidget->SetViewType(_qactPerspectiveView->isChecked(), GetEnv()->GetUnit().second);
+    _posgWidget->SetViewType(_qactPerspectiveView->isChecked());
 }
 
 void QtOSGViewer::_ProcessAboutDialog()
@@ -1051,20 +1049,33 @@ bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
     return !!sinput;
 }
 
-bool QtOSGViewer::_SetFeedbackVisibility(ostream& sout, istream& sinput)
+bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
 {
-    sinput >> _bDisplayFeedBack;
-    // ViewToggleFeedBack(_bDisplayFeedBack);
+    std::string itemname, visualizationmode;
+    sinput >> itemname >> visualizationmode;
+    
+    FOREACH(it, _mapbodies) {
+        if( it->second->GetName() == itemname ) {
+            it->second->SetVisualizationMode(visualizationmode);
+        }
+    }
     return !!sinput;
+}
+
+bool QtOSGViewer::_ShowWorldAxesCommand(ostream& sout, istream& sinput)
+{
+    // TODO
+    return true;
 }
 
 bool QtOSGViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
 {
-    dReal nearplane=0.01f;
+    dReal nearplane=0.01;
     sinput >> nearplane;
-    // EnvMessagePtr pmsg(new SetNearPlaneMessage(shared_viewer(), (void**)NULL, nearplane));
-    // pmsg->callerexecute(false);
-    return true;
+    if( !!sinput ) {
+        _posgWidget->SetNearPlane(nearplane);
+    }
+    return !!sinput;
 }
 
 bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
@@ -1484,7 +1495,7 @@ void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tp
         case 2: format = GL_RG; break;
         case 3: format = GL_RGB; break;
         }
-        
+
         osg::ref_ptr<osg::Image> image;
         uint8_t* pdst = vimagedata;
         FOREACHC(ith,vtexture) {

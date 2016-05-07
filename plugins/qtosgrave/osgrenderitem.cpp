@@ -21,9 +21,7 @@
 #include <osgUtil/SmoothingVisitor>
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
-
-#define QTOSG_LOCALTRANSFORM_PREFIX "tl-"
-#define QTOSG_GLOBALTRANSFORM_PREFIX "tg-"
+#include <osg/LineStipple>
 
 namespace qtosgrave {
 
@@ -67,58 +65,8 @@ Item::Item(OSGGroupPtr osgSceneRoot) : _osgSceneRoot(osgSceneRoot)
 {
     // set up the Inventor nodes
     _osgWorldTransform = new osg::MatrixTransform;
-    _osgdata = new osg::Switch;
-    _osgdata->setAllChildrenOn();
+    _osgdata = new osg::Group();
     _osgWorldTransform->addChild(_osgdata);
-
-//    osg::ref_ptr<osg::Group> decorator = new osg::Group;
-//    _osgWorldTransform->addChild(decorator);
-//
-//    decorator->addChild(_osgdata);
-//
-//    // set up the state so that the underlying color is not seen through
-//    // and that the drawing mode is changed to wireframe, and a polygon offset
-//    // is added to ensure that we see the wireframe itself, and turn off
-//    // so texturing too.
-//    osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
-//    osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
-//    polyoffset->setFactor(-1.0f);
-//    polyoffset->setUnits(-1.0f);
-//    osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
-//    polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
-//    stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-//    stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-//
-//    //#if 1
-//    osg::ref_ptr<osg::Material> material = new osg::Material;
-//    material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-//    material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-//
-//    stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-//    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-////#else
-////    // version which sets the color of the wireframe.
-////    osg::Material* material = new osg::Material;
-////    material->setColorMode(osg::Material::OFF); // switch glColor usage off
-////    // turn all lighting off
-////    material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-////    material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-////    material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-////    // except emission... in which we set the color we desire
-////    material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
-////    stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-////    stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-////#endif
-//
-//    stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-//
-////     osg::LineStipple* linestipple = new osg::LineStipple;
-////     linestipple->setFactor(1);
-////     linestipple->setPattern(0xf0f0);
-////     stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE_ON);
-//
-//    decorator->setStateSet(stateset);
-
 
     _osgSceneRoot->addChild(_osgWorldTransform);
 }
@@ -135,15 +83,82 @@ bool Item::ContainsOSGNode(OSGNodePtr pNode)
     return search.IsFound();
 }
 
-void Item::SetGeomVisibility(bool bFlag)
+void Item::SetVisualizationMode(const std::string& visualizationmode)
 {
-    if (bFlag) {
-        _osgdata->setAllChildrenOn();
-    }
-    else {
-        _osgdata->setAllChildrenOff();
+    if( _visualizationmode != visualizationmode ) {
+
+        // have to undo the previous mode
+        if( !!_osgwireframe ) {
+            _osgWorldTransform->removeChild(_osgwireframe);
+            _osgwireframe.release();
+        }
+
+        // start the new node
+        _visualizationmode = visualizationmode;
+
+        if( _visualizationmode == "selected" ) {
+            _osgwireframe = new osg::Group;
+            _osgWorldTransform->addChild(_osgwireframe);
+            _osgwireframe->addChild(_osgdata);
+
+            // set up the state so that the underlying color is not seen through
+            // and that the drawing mode is changed to wireframe, and a polygon offset
+            // is added to ensure that we see the wireframe itself, and turn off
+            // so texturing too.
+            osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
+            osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+            polyoffset->setFactor(-1.0f);
+            polyoffset->setUnits(-1.0f);
+            osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
+            stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+
+#if 1
+            osg::ref_ptr<osg::Material> material = new osg::Material;
+            material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
+            material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
+
+            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
+#else
+            // version which sets the color of the wireframe.
+            osg::ref_ptr<osg::Material> material = new osg::Material;
+            material->setColorMode(osg::Material::OFF); // switch glColor usage off
+            // turn all lighting off
+            material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
+            material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
+            material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
+            // except emission... in which we set the color we desire
+            material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
+            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+#endif
+
+            stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
+
+            osg::ref_ptr<osg::LineStipple> linestipple = new osg::LineStipple;
+            linestipple->setFactor(1);
+            linestipple->setPattern(0xf0f0);
+            stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            
+            _osgwireframe->setStateSet(stateset);
+        }
+        else if( _visualizationmode.size() > 0 ) {
+            RAVELOG_INFO_FORMAT("unknown visualization type %s", visualizationmode);
+        }
     }
 }
+
+//void Item::SetGeomVisibility(bool bFlag)
+//{
+//    if (bFlag) {
+//        _osgdata->setAllChildrenOn();
+//    }
+//    else {
+//        _osgdata->setAllChildrenOff();
+//    }
+//}
 
 /// KinBodyItem class
 KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, KinBodyPtr pbody, ViewGeometry viewmode) : Item(osgSceneRoot), _viewmode(viewmode)
@@ -171,7 +186,7 @@ void KinBodyItem::Load()
     // Sets name of Robot or Kinbody
     _osgdata->setName(_pbody->GetName());
     _osgdata->removeChildren(0, _osgdata->getNumChildren()); // have to remove all the children before creating a new mesh
-    
+
     _veclinks.resize(0);
 
     Transform tbody = _pbody->GetTransform();
@@ -183,13 +198,13 @@ void KinBodyItem::Load()
         KinBody::LinkPtr porlink = *itlink;
         OSGGroupPtr posglinkroot = new osg::Group();
         posglinkroot->setName(str(boost::format("link%d")%porlink->GetIndex()));
-        
+
         OSGMatrixTransformPtr posglinktrans = new osg::MatrixTransform();
         SetMatrixTransform(*posglinktrans, tbodyinv * porlink->GetTransform());
         posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
-        
+
         posglinkroot->addChild(posglinktrans);
-        
+
 //        std::vector< boost::shared_ptr<KinBody::Link> > vParentLinks;
 //        porlink->GetParentLinks(vParentLinks);
 //        if( vParentLinks.size() > 0 ) {
@@ -294,7 +309,7 @@ void KinBodyItem::Load()
                     state->setMode(GL_BLEND, osg::StateAttribute::ON);
                     state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-                    
+
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
@@ -552,7 +567,7 @@ bool KinBodyItem::UpdateFromOSG()
 
     Transform tglob = GetRaveTransformFromMatrix(visitor.wcMatrix);
     WorldCoordOfNodeVisitor linkvisitor(_osgdata);
-    
+
     // need to use the WorldCoordOfNodeVisitor for getting the link transforms with respect to _osgWorldTransform since there could be draggers in between
     for(size_t ilink = 0; ilink < vtrans.size(); ++ilink) {
         linkvisitor.Reset();
@@ -609,7 +624,7 @@ bool KinBodyItem::UpdateFromModel()
         else {
             _osgdata->setName(_pbody->GetName());
         }
-        
+
         // make sure the body is still present!
         if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
@@ -667,7 +682,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
     //  Link iterator
     WorldCoordOfNodeVisitor linkvisitor(_osgdata);
-    
+
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
         linkvisitor.Reset();
         _veclinks.at(ilink).first->accept(linkvisitor);

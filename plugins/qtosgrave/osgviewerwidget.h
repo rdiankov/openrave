@@ -39,7 +39,7 @@ class OpenRAVETrackball;
 class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
 {
 public:
-    ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>());
+    ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
 
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
@@ -73,7 +73,17 @@ public:
     /// \brief Sets poligon mode (SMOOTH, FLAT or WIRED)
     void SetPolygonMode(int mode);
 
-    void SetViewType(int isorthogonal, double metersinunit=1);
+    /// \brief set the viewport to perspective or orthogonal
+    void SetViewType(int isorthogonal);
+
+    /// \brief sets the near plane for the camera
+    void SetNearPlane(double nearplane);
+
+    /// \brief returns the near plane set on the camera
+    double GetCameraNearPlane();
+    
+    /// \brief called when the qt window size changes
+    void SetViewport(int width, int height, double metersinunit);
 
     /// \brief sets user-controlled hud text
     void SetUserHUDText(const std::string& text);
@@ -95,8 +105,7 @@ public:
 
     /// \brief handle case when link is selected
     void SelectOSGLink(OSGNodePtr node, int modkeymask);
-
-    void SetViewport(int width, int height, double metersinunit);
+    
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
@@ -121,8 +130,8 @@ protected:
     QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
 
     /// \brief Create Open GL Context
-    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h );
-    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h );
+    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h, double metersinunit );
+    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit );
 
     KinBodyItemPtr _GetItemFromName(const std::string& name);
 
