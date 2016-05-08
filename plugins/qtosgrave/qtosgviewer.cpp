@@ -1766,10 +1766,10 @@ void QtOSGViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_posgWidget->GetSceneRoot(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
                     }
                     else {
-                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_posgWidget->GetSceneRoot(), pbody, _viewGeometryMode), ITEM_DELETER);
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), pbody, _viewGeometryMode), ITEM_DELETER);
                     }
                     newdata = true;
 

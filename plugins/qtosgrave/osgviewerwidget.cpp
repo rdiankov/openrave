@@ -316,70 +316,8 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _osgWorldAxis = new osg::MatrixTransform();
     //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
 
-    {
-        osg::Vec4f colors[] = {
-            osg::Vec4f(0,0,1,1),
-            osg::Vec4f(0,1,0,1),
-            osg::Vec4f(1,0,0,1)
-        };
-        osg::Quat rotations[] = {
-            osg::Quat(0, osg::Vec3f(0,0,1)),
-            osg::Quat(-M_PI/2.0, osg::Vec3f(1,0,0)),
-            osg::Quat(M_PI/2.0, osg::Vec3f(0,1,0))
-        };
-
-        // add 3 cylinder+cone axes
-        for(int i = 0; i < 3; ++i) {
-            osg::MatrixTransform* psep = new osg::MatrixTransform();
-            psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
-
-            // set a diffuse color
-            osg::StateSet* state = psep->getOrCreateStateSet();
-            osg::Material* mat = new osg::Material;
-            mat->setDiffuse(osg::Material::FRONT, colors[i]);
-            mat->setAmbient(osg::Material::FRONT, colors[i]);
-            state->setAttribute( mat );
-
-            osg::Matrix matrix;
-            osg::MatrixTransform* protation = new osg::MatrixTransform();
-            matrix.makeRotate(rotations[i]);
-            protation->setMatrix(matrix);
-
-            matrix.makeIdentity();
-            osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
-            matrix.setTrans(osg::Vec3f(0,0,16.0f));
-            pcyltrans->setMatrix(matrix);
-
-            // make SoCylinder point towards z, not y
-            osg::Cylinder* cy = new osg::Cylinder();
-            cy->setRadius(2.0f);
-            cy->setHeight(32.0f);
-            osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
-            osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
-            gcyl->addDrawable(sdcyl.get());
-
-            osg::Cone* cone = new osg::Cone();
-            cone->setRadius(4.0f);
-            cone->setHeight(16.0f);
-
-            osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
-            osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
-            gcone->addDrawable(sdcone.get());
-
-            matrix.makeIdentity();
-            osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
-            matrix.setTrans(osg::Vec3f(0,0,32.0f));
-            pconetrans->setMatrix(matrix);
-
-            psep->addChild(protation);
-            protation->addChild(pcyltrans);
-            pcyltrans->addChild(gcyl.get());
-            protation->addChild(pconetrans);
-            pconetrans->addChild(gcone.get());
-            _osgWorldAxis->addChild(psep);
-        }
-    }
-
+    _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
+    
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
 
@@ -428,6 +366,14 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _timer.start( 10 );
 }
 
+ViewerWidget::~ViewerWidget()
+{
+    if( !!_selectedItem ) {
+        _selectedItem->SetGrab(false);
+    }
+    _selectedItem.reset();
+}
+    
 bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
@@ -473,11 +419,11 @@ void ViewerWidget::SelectItem(KinBodyItemPtr item)
 {
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
-            _selectedItem->SetVisualizationMode("");
+            _selectedItem->SetGrab(false);
         }
         _selectedItem = item;
         if( !!_selectedItem ) {
-            _selectedItem->SetVisualizationMode("selected");
+            _selectedItem->SetGrab(true);
         }
 
         if (!!_selectedItem) {

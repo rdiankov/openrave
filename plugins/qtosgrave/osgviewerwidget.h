@@ -40,7 +40,8 @@ class ViewerWidget : public QWidget, public osgViewer::CompositeViewer
 {
 public:
     ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown=boost::function<bool(int)>(), double metersinunit=1);
-
+    virtual ~ViewerWidget();
+    
     /// \brief Draws bounding box around actual kinbody
     void DrawBoundingBox(bool pressed);
 

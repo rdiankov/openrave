@@ -25,6 +25,76 @@
 
 namespace qtosgrave {
 
+OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
+{
+    osg::Vec4f colors[] = {
+        osg::Vec4f(0,0,1,1),
+        osg::Vec4f(0,1,0,1),
+        osg::Vec4f(1,0,0,1)
+    };
+    osg::Quat rotations[] = {
+        osg::Quat(0, osg::Vec3f(0,0,1)),
+        osg::Quat(-M_PI/2.0, osg::Vec3f(1,0,0)),
+        osg::Quat(M_PI/2.0, osg::Vec3f(0,1,0))
+    };
+
+    OSGGroupPtr proot = new osg::Group();
+    
+    // add 3 cylinder+cone axes
+    for(int i = 0; i < 3; ++i) {
+        osg::MatrixTransform* psep = new osg::MatrixTransform();
+        //psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
+
+        // set a diffuse color
+        osg::StateSet* state = psep->getOrCreateStateSet();
+        osg::Material* mat = new osg::Material;
+        mat->setDiffuse(osg::Material::FRONT, colors[i]);
+        mat->setAmbient(osg::Material::FRONT, colors[i]);
+        state->setAttribute( mat );
+
+        osg::Matrix matrix;
+        osg::MatrixTransform* protation = new osg::MatrixTransform();
+        matrix.makeRotate(rotations[i]);
+        protation->setMatrix(matrix);
+
+        matrix.makeIdentity();
+        osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
+        matrix.setTrans(osg::Vec3f(0,0,0.5*len));
+        pcyltrans->setMatrix(matrix);
+
+        // make SoCylinder point towards z, not y
+        osg::Cylinder* cy = new osg::Cylinder();
+        cy->setRadius(axisthickness);
+        cy->setHeight(len);
+        osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
+        osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
+        sdcyl->setColor(colors[i]);
+        gcyl->addDrawable(sdcyl.get());
+
+        osg::Cone* cone = new osg::Cone();
+        cone->setRadius(axisthickness*2);
+        cone->setHeight(len*0.25);
+
+        osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
+        osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
+        gcone->addDrawable(sdcone.get());
+        sdcone->setColor(colors[i]);
+
+        matrix.makeIdentity();
+        osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
+        matrix.setTrans(osg::Vec3f(0,0,len));
+        pconetrans->setMatrix(matrix);
+        
+        psep->addChild(protation);
+        protation->addChild(pcyltrans);
+        pcyltrans->addChild(gcyl.get());
+        protation->addChild(pconetrans);
+        pconetrans->addChild(gcone.get());
+        proot->addChild(psep);
+    }
+
+    return proot;
+}
 
 
 // Visitor to return the coordinates of a node with respect to another node
@@ -61,7 +131,7 @@ private:
     bool done;
 };
 
-Item::Item(OSGGroupPtr osgSceneRoot) : _osgSceneRoot(osgSceneRoot)
+Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(osgSceneRoot), _osgFigureRoot(osgFigureRoot)
 {
     // set up the Inventor nodes
     _osgWorldTransform = new osg::MatrixTransform;
@@ -141,7 +211,7 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
             linestipple->setFactor(1);
             linestipple->setPattern(0xf0f0);
             stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            
+
             _osgwireframe->setStateSet(stateset);
         }
         else if( _visualizationmode.size() > 0 ) {
@@ -150,18 +220,8 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
     }
 }
 
-//void Item::SetGeomVisibility(bool bFlag)
-//{
-//    if (bFlag) {
-//        _osgdata->setAllChildrenOn();
-//    }
-//    else {
-//        _osgdata->setAllChildrenOff();
-//    }
-//}
-
 /// KinBodyItem class
-KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, KinBodyPtr pbody, ViewGeometry viewmode) : Item(osgSceneRoot), _viewmode(viewmode)
+KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, KinBodyPtr pbody, ViewGeometry viewmode) : Item(osgSceneRoot, osgFigureRoot), _viewmode(viewmode)
 {
     BOOST_ASSERT( !!pbody );
     _pbody = pbody;
@@ -268,11 +328,11 @@ void KinBodyItem::Load()
 
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
-//                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
-//                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-//                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-//                    transparency = 0.5f;
-//                }
+                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+                    transparency = 0.5f;
+                }
 
                 // create custom
                 if( !pgeometrydata ) {
@@ -288,8 +348,6 @@ void KinBodyItem::Load()
                 w = 1;
 
                 mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
-
-                RAVELOG_VERBOSE_FORMAT("Diffuse color= %f %f %f\n",x%y%z);
 
                 x = orgeom->GetAmbientColor().x;
                 y = orgeom->GetAmbientColor().y;
@@ -396,8 +454,6 @@ void KinBodyItem::Load()
         }
     }
 
-    //RAVELOG_VERBOSE_FORMAT("Number of links added = %d", _veclinks.size());
-
     //  Is an object without joints
     if (_pbody->GetJoints().size() < 1) {
         _osgdata->addChild(_veclinks.at(0).first);
@@ -447,7 +503,7 @@ void KinBodyItem::Load()
 void KinBodyItem::_PrintMatrix(osg::Matrix& m)
 {
     for (size_t i = 0; i < 4; i++) {
-        RAVELOG_WARN("Line '%d'= %f %f %f %f\n",i,m(i,0),m(i,1),m(i,2),m(i,3));
+        RAVELOG_INFO("Line '%d'= %f %f %f %f\n",i,m(i,0),m(i,1),m(i,2),m(i,3));
     }
 }
 
@@ -460,7 +516,7 @@ void KinBodyItem::_PrintSceneGraph(const std::string& currLevel, OSGNodePtr curr
     // if we do have a null node, return NULL.
     if ( !!currNode) {
         level = level + "-";
-        RAVELOG_VERBOSE_FORMAT("|%sNode class:%s (%s)\n",currLevel%currNode->className()%currNode->getName());
+        RAVELOG_INFO_FORMAT("|%sNode class:%s (%s)\n",currLevel%currNode->className()%currNode->getName());
         OSGGroupPtr currGroup = currNode->asGroup(); // returns NULL if not a group.
         if ( !!currGroup ) {
             for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
@@ -707,6 +763,12 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
     }
 
     bGrabbed = bGrab;
+    if( bGrab ) {
+        SetVisualizationMode("selected");
+    }
+    else {
+        SetVisualizationMode("");
+    }
 
     if( bUpdate ) {
         if( bGrab ) {
@@ -731,127 +793,18 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
     return KinBody::LinkPtr();
 }
 
-RobotItem::RobotItem(OSGGroupPtr osgSceneRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgSceneRoot, robot, viewgeom)
+RobotItem::RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(osgSceneRoot, osgFigureRoot, robot, viewgeom)
 {
-    int index = 0;
-    FOREACHC(itmanip, robot->GetManipulators()) {
+    _probot = robot;
+}
 
-        if((*itmanip)->GetEndEffector()) {
-            OSGSwitchPtr peeswitch = new osg::Switch();
-            OSGGroupPtr peesep = new osg::Group();
-            OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-            _vEndEffectors.push_back(EE(index, ptrans, peeswitch));
-
-            _osgdata->addChild(peeswitch);
-            peeswitch->addChild(ptrans);
-            peeswitch->setAllChildrenOff();
-            ptrans->addChild(peesep);
-
-            // set a diffuse color
-            {
-                osg::StateSet* state = peesep->getOrCreateStateSet();
-                osg::ref_ptr<osg::Material> mat = new osg::Material;
-
-                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1) );
-                mat->setAmbient( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1));
-
-                state->setAttribute(mat.get());
-
-                osg::Sphere* sphere = new osg::Sphere();
-                osg::Geode* geode = new osg::Geode;
-                sphere->setRadius(0.004f);
-                osg::ShapeDrawable* sd = new osg::ShapeDrawable(sphere);
-                geode->addDrawable(sd);
-                peesep->addChild(geode);
-            }
-
-            // add some axes
-            OSGGroupPtr paxes = new osg::Group();
-
-            Vector colors[] = {Vector(0,0,1),Vector(0,1,0),Vector(1,0,0)};
-            Vector rotations[] = {Vector(1,0,0,M_PI/2), Vector(1,0,0,0), Vector(0,0,1,-M_PI/2)};
-
-            // add 3 cylinder+cone axes
-            for(int i = 0; i < 3; ++i) {
-                // set a diffuse color
-                OSGGroupPtr psep = new osg::Group();
-
-                // set a diffuse color
-                osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
-                osg::ref_ptr<osg::Material> mat = new osg::Material;
-                mat->setDiffuse(osg::Material::FRONT, osg::Vec4f(colors[i].x, colors[i].y, colors[i].z,1.0));
-                mat->setAmbient(osg::Material::FRONT, osg::Vec4f(colors[i].x, colors[i].y, colors[i].z,1.0));
-
-                state->setAttribute( mat );
-
-                osg::Matrix matrix;
-                OSGMatrixTransformPtr protation = new osg::MatrixTransform();
-                matrix.makeRotate(osg::Quat(rotations[i].x,rotations[i].y,rotations[i].z,rotations[i].w));
-                protation->setMatrix(matrix);
-
-                matrix.makeIdentity();
-                OSGMatrixTransformPtr pcyltrans = new osg::MatrixTransform();
-                matrix.makeTranslate(0.0f,0.02f,0.0f);
-                pcyltrans->setMatrix(matrix);
-
-                // make SoCylinder point towards z, not y
-                osg::Cylinder* cy = new osg::Cylinder();
-                cy->setRadius(0.002f);
-                cy->setHeight(0.04f);
-                osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
-                osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
-                gcyl->addDrawable(sdcyl.get());
-
-                osg::Cone* cone = new osg::Cone();
-                cone->setRadius(0.004f);
-                cone->setHeight(0.02f);
-
-                osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
-                osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
-
-                matrix.makeIdentity();
-                OSGMatrixTransformPtr pconetrans = new osg::MatrixTransform();
-                matrix.setTrans(osg::Vec3f(0,0.02f,0));
-                pconetrans->setMatrix(matrix);
-
-                psep->addChild(protation);
-                psep->addChild(pcyltrans);
-                psep->addChild(gcyl.get());
-                psep->addChild(pconetrans);
-                psep->addChild(gcone.get());
-                paxes->addChild(psep);
-            }
-
-            peesep->addChild(paxes);
-
-            // add text
-            {
-                OSGGroupPtr ptextsep = new osg::Group();
-                osg::Geode* textGeode = new osg::Geode;
-                peesep->addChild(ptextsep);
-
-                osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
-                matrix.setTrans(osg::Vec3f(0.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
-
-                osg::ref_ptr<osgText::Text> text = new osgText::Text();
-
-                //Set the screen alignment - always face the screen
-                text->setAxisAlignment(osgText::Text::SCREEN);
-
-                text->setColor(osg::Vec4(0,0,0,1));
-                text->setFontResolution(18,18);
-
-                text->setText(str(boost::format("EE%d")%index));
-                textGeode->addDrawable(text);
-                ptextsep->addChild(textGeode);
-            }
+RobotItem::~RobotItem()
+{
+    if( !!_osgFigureRoot ) {
+        FOREACH(it, _vEndEffectors) {
+            _osgFigureRoot->removeChild(it->_pswitch);
         }
-
-        ++index;
-    }
+    }    
 }
 
 void RobotItem::SetGrab(bool bGrab, bool bUpdate)
@@ -859,12 +812,12 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
     if( !_probot ) {
         return;
     }
-    if( bGrab ) {
-        // turn off any controller commands if a robot
-        if( !!_probot->GetController() ) {
-            _probot->GetController()->SetPath(TrajectoryBaseConstPtr());
-        }
-    }
+//    if( bGrab ) {
+//        // turn off any controller commands if a robot..?
+//        if( !!_probot->GetController() ) {
+//            _probot->GetController()->SetPath(TrajectoryBaseConstPtr());
+//        }
+//    }
 
     FOREACH(itee, _vEndEffectors) {
         if( !!itee->_pswitch ) {
@@ -886,6 +839,86 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
     KinBodyItem::SetGrab(bGrab, bUpdate);
 }
 
+void RobotItem::Load()
+{
+    KinBodyItem::Load();
+    if( !!_osgFigureRoot ) {
+        FOREACH(it, _vEndEffectors) {
+            _osgFigureRoot->removeChild(it->_pswitch);
+        }
+    }
+    _vEndEffectors.resize(0);
+    
+    FOREACHC(itmanip, _probot->GetManipulators()) {
+
+        if(!!(*itmanip)->GetEndEffector()) {
+            OSGSwitchPtr peeswitch = new osg::Switch();
+            OSGGroupPtr peesep = new osg::Group();
+            OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
+            _vEndEffectors.push_back(EE(ptrans, peeswitch));
+
+            if( !!_osgFigureRoot ) {
+                _osgFigureRoot->addChild(peeswitch);
+            }
+            peeswitch->addChild(ptrans);
+            peeswitch->setAllChildrenOn();
+            ptrans->addChild(peesep);
+            SetMatrixTransform(*ptrans, (*itmanip)->GetTransform());
+
+//            // set a diffuse color
+//            {
+//                osg::ref_ptr<osg::StateSet> state = peesep->getOrCreateStateSet();
+//                osg::ref_ptr<osg::Material> mat = new osg::Material;
+//
+//                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1) );
+//                mat->setAmbient( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1));
+//
+//                state->setAttribute(mat.get());
+//
+//                osg::Sphere* sphere = new osg::Sphere();
+//                osg::Geode* geode = new osg::Geode;
+//                sphere->setRadius(0.004f);
+//                osg::ShapeDrawable* sd = new osg::ShapeDrawable(sphere);
+//                geode->addDrawable(sd);
+//                peesep->addChild(geode);
+//            }
+            
+            //peesep->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED|osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
+            peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
+
+            // add text
+            {
+                OSGGroupPtr ptextsep = new osg::Group();
+                osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
+                peesep->addChild(ptextsep);
+
+                osg::Matrix matrix;
+                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
+                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
+                ptextsep->addChild(ptrans);
+
+                osg::ref_ptr<osgText::Text> text = new osgText::Text();
+                
+                //Set the screen alignment - always face the screen
+                text->setAxisAlignment(osgText::Text::SCREEN);
+                text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+                text->setCharacterSize(25.0);
+                
+                text->setColor(osg::Vec4(0,0,0,1));
+                text->setEnableDepthWrites(false);
+
+                text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+                //text->setFontResolution(18,18);
+
+                text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
+                textGeode->addDrawable(text);
+                ptextsep->addChild(textGeode);
+            }
+        }
+    }
+}
+
 bool RobotItem::UpdateFromOSG()
 {
     if( !KinBodyItem::UpdateFromOSG() ) {
@@ -901,25 +934,21 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     }
     if( bGrabbed ) {
         // only updated when grabbing!
-        RaveTransform<float> transInvRoot = GetRaveTransform(*_osgWorldTransform).inverse();
+        //RaveTransform<float> transInvRoot = GetRaveTransform(*_osgWorldTransform).inverse();
 
         FOREACH(itee, _vEndEffectors) {
-            if( itee->_index >= 0 && itee->_index < (int)_probot->GetManipulators().size()) {
-                RobotBase::ManipulatorConstPtr manip = _probot->GetManipulators().at(itee->_index);
-                if( !!manip->GetEndEffector() ) {
-                    RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetLocalToolTransform();
-                    SetMatrixTransform(*itee->_ptrans, transInvRoot * tgrasp);
-                }
+            RobotBase::ManipulatorConstPtr manip = itee->manip;//_probot->GetManipulators().at(itee->_index);
+            if( !!manip->GetEndEffector() ) {
+                //RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetLocalToolTransform();
+                SetMatrixTransform(*itee->_ptrans, manip->GetTransform());//transInvRoot * tgrasp);
             }
         }
 
         FOREACH(itee, _vAttachedSensors) {
-            if( itee->_index >= 0 && itee->_index < (int)_probot->GetAttachedSensors().size()) {
-                RobotBase::AttachedSensorConstPtr sensor = _probot->GetAttachedSensors().at(itee->_index);
-                if( !!sensor->GetAttachingLink() ) {
-                    RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
-                    SetMatrixTransform(*itee->_ptrans, transInvRoot * tgrasp);
-                }
+            RobotBase::AttachedSensorConstPtr sensor = itee->attsensor;//_probot->GetAttachedSensors().at(itee->_index);
+            if( !!sensor->GetAttachingLink() ) {
+                //RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
+                SetMatrixTransform(*itee->_ptrans, sensor->GetTransform());//transInvRoot * tgrasp);
             }
         }
     }

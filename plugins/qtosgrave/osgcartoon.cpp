@@ -24,7 +24,7 @@ namespace qtosgrave {
 
 using namespace osgFX;
 
-osg::Image* create_sharp_lighting_map(int levels = 6, int texture_size = 256)
+osg::Image* create_sharp_lighting_map(int levels = 4, int texture_size = 256)
 {
     osg::ref_ptr<osg::Image> image = new osg::Image;
     image->setImage(texture_size, 1, 1, 4, GL_RGBA, GL_UNSIGNED_BYTE, new unsigned char[4*texture_size], osg::Image::USE_NEW_DELETE);
