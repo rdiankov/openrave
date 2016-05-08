@@ -52,7 +52,7 @@ public:
     void SetDraggerMode(const std::string& draggerName);
 
     /// \brief sets up a dragger selection for a robot or kinbody item
-    void SelectItem(KinBodyItemPtr item);
+    void SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint=KinBody::JointPtr());
 
     void SelectItemFromName(const std::string& name);
 
@@ -117,6 +117,9 @@ public:
     /// \brief Find node of Robot for the link picked
     KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
 
+    /// \brief restores cursor to what it was originally set to
+    void RestoreCursor();
+    
 protected:
     /// \brief handles a key press and looks at the modifier keys
     bool HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa);

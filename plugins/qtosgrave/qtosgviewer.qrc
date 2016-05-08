@@ -23,5 +23,6 @@
         <file>images/xyplane.png</file>
         <file>images/xzplane.png</file>
         <file>images/yzplane.png</file>
+        <file>images/rotation-icon.png</file>
     </qresource>
 </RCC>

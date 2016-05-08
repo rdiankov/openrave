@@ -228,8 +228,8 @@ public:
         }
         EE(OSGMatrixTransformPtr ptrans, OSGSwitchPtr pswitch) : _ptrans(ptrans), _pswitch(pswitch) {
         }
-        RobotBase::ManipulatorConstPtr manip;
-        RobotBase::AttachedSensorPtr attsensor;
+        RobotBase::ManipulatorWeakPtr manip;
+        RobotBase::AttachedSensorWeakPtr attsensor;
         OSGMatrixTransformPtr _ptrans;
         OSGSwitchPtr _pswitch;
     };

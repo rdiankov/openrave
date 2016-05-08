@@ -856,6 +856,7 @@ void RobotItem::Load()
             OSGGroupPtr peesep = new osg::Group();
             OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
             _vEndEffectors.push_back(EE(ptrans, peeswitch));
+            _vEndEffectors.back().manip = *itmanip;
 
             if( !!_osgFigureRoot ) {
                 _osgFigureRoot->addChild(peeswitch);
@@ -937,15 +938,15 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         //RaveTransform<float> transInvRoot = GetRaveTransform(*_osgWorldTransform).inverse();
 
         FOREACH(itee, _vEndEffectors) {
-            RobotBase::ManipulatorConstPtr manip = itee->manip;//_probot->GetManipulators().at(itee->_index);
-            if( !!manip->GetEndEffector() ) {
+            RobotBase::ManipulatorConstPtr manip = itee->manip.lock();//_probot->GetManipulators().at(itee->_index);
+            if( !!manip ) {
                 //RaveTransform<float> tgrasp = vtrans.at(manip->GetEndEffector()->GetIndex())*manip->GetLocalToolTransform();
                 SetMatrixTransform(*itee->_ptrans, manip->GetTransform());//transInvRoot * tgrasp);
             }
         }
 
         FOREACH(itee, _vAttachedSensors) {
-            RobotBase::AttachedSensorConstPtr sensor = itee->attsensor;//_probot->GetAttachedSensors().at(itee->_index);
+            RobotBase::AttachedSensorConstPtr sensor = itee->attsensor.lock();//_probot->GetAttachedSensors().at(itee->_index);
             if( !!sensor->GetAttachingLink() ) {
                 //RaveTransform<float> tgrasp = vtrans.at(sensor->GetAttachingLink()->GetIndex())*sensor->GetRelativeTransform();
                 SetMatrixTransform(*itee->_ptrans, sensor->GetTransform());//transInvRoot * tgrasp);

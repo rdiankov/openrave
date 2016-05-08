@@ -35,22 +35,24 @@ namespace qtosgrave {
 class OpenRAVETrackball : public osgGA::TrackballManipulator
 {
 public:
-    OpenRAVETrackball() {
+    OpenRAVETrackball(ViewerWidget* pviewer) {
         _bInSeekMode = false;
+        _pviewer = pviewer;
     }
 
     void SetSeekMode(bool bInSeekMode) {
         _bInSeekMode = bInSeekMode;
-        osgViewer::GraphicsWindow::MouseCursor cursortype = _bInSeekMode ? osgViewer::GraphicsWindow::CrosshairCursor : osgViewer::GraphicsWindow::LeftArrowCursor;
-        for(osgViewer::Viewer::Windows::iterator itr = _windows.begin(); itr != _windows.end(); ++itr) {
-            (*itr)->setCursor(cursortype);
+        osgViewer::Viewer::Windows windows;
+        _pviewer->getWindows(windows);
+        if( _bInSeekMode ) {
+            osgViewer::GraphicsWindow::MouseCursor cursortype = _bInSeekMode ? osgViewer::GraphicsWindow::CrosshairCursor : osgViewer::GraphicsWindow::LeftArrowCursor;
+            for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+                (*itr)->setCursor(cursortype);
+            }
         }
-
-    }
-
-    void SetSeekMode(bool bInSeekMode, osgViewer::Viewer::Windows& windows) {
-        _windows = windows;
-        SetSeekMode(bInSeekMode);
+        else {
+            _pviewer->RestoreCursor();
+        }
     }
 
     bool InSeekMode() const {
@@ -198,7 +200,7 @@ public:
     }
 
 private:
-    osgViewer::Viewer::Windows _windows;
+    ViewerWidget* _pviewer;
     bool _bInSeekMode; ///< if true, in seek mode
 };
 
@@ -364,6 +366,8 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
+
+    RestoreCursor();
 }
 
 ViewerWidget::~ViewerWidget()
@@ -386,21 +390,40 @@ bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIA
     if( key == 's' ) {
         ActivateSelection(false);
         _ClearDragger();
-        osgViewer::Viewer::Windows windows;
-        getWindows(windows);
-        _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode(), windows);
+        _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode());
     }
     return false;
 }
 
-void ViewerWidget::ActivateSelection(bool active)
+void ViewerWidget::RestoreCursor()
 {
     osgViewer::Viewer::Windows windows;
     getWindows(windows);
     for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
-        (*itr)->setCursor(active ? osgViewer::GraphicsWindow::HandCursor : osgViewer::GraphicsWindow::LeftArrowCursor);
+        // can do (*itr)->setCursor(osgViewer::GraphicsWindow::HandCursor), but cursors are limited so have to use Qt
+        GraphicsWindowQt* gw = dynamic_cast<GraphicsWindowQt*>(*itr);
+        QCursor _currentCursor;
+        if( _bIsSelectiveActive ) {
+            if( _draggerName == "TranslateTrackballDragger" ) {
+                _currentCursor = QCursor(Qt::ArrowCursor);
+            }
+            else {
+                QPixmap pixmap(":/images/no_edit.png");
+                _currentCursor = QCursor(pixmap.scaled(QSize(32,32)), Qt::KeepAspectRatio);
+            }
+        }
+        else {
+            // need a custom cursor
+            _currentCursor = QCursor(QPixmap(":/images/rotation-icon.png"));
+        }
+        gw->getGLWidget()->setCursor(_currentCursor);
     }
+}
+    
+void ViewerWidget::ActivateSelection(bool active)
+{
     _bIsSelectiveActive = active;
+    RestoreCursor();
 }
 
 void ViewerWidget::SetDraggerMode(const std::string& draggerName)
@@ -415,7 +438,7 @@ void ViewerWidget::SetDraggerMode(const std::string& draggerName)
     }
 }
 
-void ViewerWidget::SelectItem(KinBodyItemPtr item)
+void ViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
 {
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
@@ -427,7 +450,7 @@ void ViewerWidget::SelectItem(KinBodyItemPtr item)
         }
 
         if (!!_selectedItem) {
-            _AddDraggerToObject(_draggerName, _selectedItem, KinBody::JointPtr());
+            _AddDraggerToObject(_draggerName, _selectedItem, joint);
         }
         else {
             // no dragger so clear?
@@ -635,16 +658,8 @@ void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
         if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
         }
         else {
-            if( _draggerName == "RotateCylinderDragger" ) {
-                if( !!joint) {
-                    _selectedItem = item;
-                    _AddDraggerToObject("RotateCylinderDragger", item, joint);
-                }
-            }
-            else {
-                // select new body
-                SelectItem(item);
-            }
+            // select new body
+            SelectItem(item, joint);
         }
     }
 
@@ -783,7 +798,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
 
     //view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new OpenRAVETrackball();//osgGA::TrackballManipulator();//NodeTrackerManipulator();
+    _osgCameraManipulator = new OpenRAVETrackball(this);//osgGA::TrackballManipulator();//NodeTrackerManipulator();
     _osgCameraManipulator->setWheelZoomFactor(0.2);
     view->setCameraManipulator( _osgCameraManipulator.get() );
 

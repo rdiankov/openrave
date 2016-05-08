@@ -700,7 +700,7 @@ void QtOSGViewer::_CreateToolsBar()
     QToolButton *pointerButton = new QToolButton;
     pointerButton->setCheckable(true);
     pointerButton->setChecked(true);
-    pointerButton->setIcon(QIcon(":/images/pointer.png"));
+    pointerButton->setIcon(QIcon(":/images/rotation-icon.png"));
 
     QToolButton *axesButton = new QToolButton;
     axesButton->setCheckable(true);

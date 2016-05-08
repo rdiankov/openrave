@@ -521,7 +521,8 @@ private:
     };
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
-
+    typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
+    
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
