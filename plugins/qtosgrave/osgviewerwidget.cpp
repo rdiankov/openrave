@@ -388,8 +388,6 @@ bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIA
     }
 
     if( key == 's' ) {
-        ActivateSelection(false);
-        _ClearDragger();
         _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode());
     }
     return false;
@@ -1129,14 +1127,14 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, Kin
     //  Store object selected in global variable _osgSelectedNodeByDragger
     osg::Matrixd selectedmatrix;
 
-    if( !pjoint ) {
-        _osgSelectedNodeByDragger = item->GetOSGRoot();
-        selectedmatrix = item->GetOSGRoot()->getMatrix();
-    }
-    else {
+    if( draggerName == "RotateCylinderDragger" && !!pjoint ) {
         OSGMatrixTransformPtr osglinktrans = item->GetOSGLink(pjoint->GetHierarchyChildLink()->GetIndex());
         selectedmatrix = osglinktrans->getMatrix();
         _osgSelectedNodeByDragger = osglinktrans->getParent(0);
+    }
+    else {
+        _osgSelectedNodeByDragger = item->GetOSGRoot();
+        selectedmatrix = item->GetOSGRoot()->getMatrix();
     }
 
     if (draggerName == "RotateCylinderDragger" && !!pjoint) {
