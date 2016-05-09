@@ -4169,6 +4169,7 @@ void KinBody::_AttachBody(KinBodyPtr pbody)
 {
     _listAttachedBodies.push_back(pbody);
     pbody->_listAttachedBodies.push_back(shared_kinbody());
+    _PostprocessChangedParameters(Prop_BodyAttached);
 }
 
 bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
@@ -4191,7 +4192,13 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
         }
     }
 
-    return numremoved==2;
+    bool bsuccessfullyRemoved = ( numremoved == 2 );
+
+    if( bsuccessfullyRemoved ) {
+      _PostprocessChangedParameters(Prop_BodyAttached);
+    }
+
+    return bsuccessfullyRemoved;
 }
 
 void KinBody::Enable(bool bEnable)
