@@ -277,6 +277,7 @@ public:
         if(!!_envManager) {
             _envManager->clear();
             _envManager.reset();
+            envUpdateStamps.clear();
         }
         _fclspace->DestroyEnvironment();
     }
@@ -286,12 +287,16 @@ public:
         FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
+            if( _envManager ) {
+              envUpdateStamps[pbody->GetEnvironmentId()] = pinfo->nLastStamp;
+            }
         }
         return !pinfo;
     }
 
     virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     {
+      envUpdateStamps.erase(pbody->GetEnvironmentId());
         _fclspace->RemoveUserData(pbody);
     }
 
@@ -422,11 +427,18 @@ public:
 
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
 
+        // We update all the env but the bodies attached to plink
+        {
+          std::set<KinBodyPtr> attachedBodies;
+          plink->GetParent()->GetAttached(attachedBodies);
+          SetupEnvManager(attachedBodies.begin(), attachedBodies.end());
+        }
+
+
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
-            _envManager->setup();
             _envManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -446,13 +458,18 @@ public:
 
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
 
+        // We update all the env but the bodies attached to plink
+        {
+          std::set<KinBodyPtr> attachedBodies;
+          pbody->GetAttached(attachedBodies);
+          SetupEnvManager(attachedBodies.begin(), attachedBodies.end());
+        }
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
-            _envManager->setup();
             _envManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -1006,6 +1023,24 @@ private:
     }
 
 
+    template<class InputIt>
+      void SetupEnvManager(InputIt itexcludedbodiesbegin, InputIt itexcludedbodiesend) {
+      CollisionGroup vupdateObjects;
+      FOREACH(itIdStampPair, envUpdateStamps) {
+        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(itIdStampPair->first);
+        if( std::find(itexcludedbodiesbegin, itexcludedbodiesend, pbody) == itexcludedbodiesend && itIdStampPair->second != pbody->GetUpdateStamp() ) {
+          itIdStampPair->second = pbody->GetUpdateStamp();
+          vupdateObjects.reserve(vupdateObjects.size() +  pbody->GetLinks().size());
+          for(size_t i = 0; i < pbody->GetLinks().size(); i++) {
+            vupdateObjects.push_back(GetLinkBV(pbody, i).get());
+          }
+        }
+      }
+      _envManager->update(vupdateObjects);
+      _envManager->setup(); // might not be useful but won't harm in any case
+    }
+
+
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
@@ -1016,6 +1051,7 @@ private:
     std::string _broadPhaseCollisionManagerAlgorithm;
     boost::shared_ptr<SpatialHashData> _spatialHashData;
     BroadPhaseCollisionManagerPtr _envManager;
+    std::map<int, int> envUpdateStamps;
 };
 
 
