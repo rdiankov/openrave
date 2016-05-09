@@ -98,6 +98,7 @@ public:
         Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         Prop_JointCustomParameters = 0x2000, ///< when Joint::SetFloatParameters(), Joint::SetIntParameters(), and Joint::SetStringParameters() are called
         Prop_LinkCustomParameters = 0x4000, ///< when Link::SetFloatParameters(), Link::SetIntParameters(), Link::SetStringParameters() are called
+        Prop_BodyAttached=0x8000, ///< if attached bodies changed
 
         // robot only
         // 0x00010000

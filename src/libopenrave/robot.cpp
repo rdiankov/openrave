@@ -590,35 +590,58 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
             }
         }
     }
-    _vActiveDOFIndices = vJointIndices;
-    _nAffineDOFs = nAffineDOFBitmask;
+
+    bool bactivedofchanged = false;
+    if( _vActiveDOFIndices.size() != vJointIndices.size() ) {
+        bactivedofchanged = true;
+    }
+    else {
+        // same size, check to see if the values and order is the same
+        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            if( _vActiveDOFIndices[i] != vJointIndices[i] ) {
+                bactivedofchanged = true;
+                break;
+            }
+        }
+    }
+    if( bactivedofchanged ) {
+        _vActiveDOFIndices = vJointIndices;
+    }
+
+    if( _nAffineDOFs != nAffineDOFBitmask ) {
+        bactivedofchanged = true;
+        _nAffineDOFs = nAffineDOFBitmask;
+    }
+    
     _nActiveDOF = vJointIndices.size() + RaveGetAffineDOF(_nAffineDOFs);
 
-    // do not initialize interpolation, since it implies a motion sampling strategy
-    int offset = 0;
-    _activespec._vgroups.resize(0);
-    if( GetActiveDOFIndices().size() > 0 ) {
-        ConfigurationSpecification::Group group;
-        stringstream ss;
-        ss << "joint_values " << GetName();
-        FOREACHC(it,GetActiveDOFIndices()) {
-            ss << " " << *it;
+    if( bactivedofchanged ) {
+        // do not initialize interpolation, since it implies a motion sampling strategy
+        int offset = 0;
+        _activespec._vgroups.resize(0);
+        if( GetActiveDOFIndices().size() > 0 ) {
+            ConfigurationSpecification::Group group;
+            stringstream ss;
+            ss << "joint_values " << GetName();
+            FOREACHC(it,GetActiveDOFIndices()) {
+                ss << " " << *it;
+            }
+            group.name = ss.str();
+            group.dof = (int)GetActiveDOFIndices().size();
+            group.offset = offset;
+            offset += group.dof;
+            _activespec._vgroups.push_back(group);
         }
-        group.name = ss.str();
-        group.dof = (int)GetActiveDOFIndices().size();
-        group.offset = offset;
-        offset += group.dof;
-        _activespec._vgroups.push_back(group);
-    }
-    if( GetAffineDOF() > 0 ) {
-        ConfigurationSpecification::Group group;
-        group.name = str(boost::format("affine_transform %s %d")%GetName()%GetAffineDOF());
-        group.offset = offset;
-        group.dof = RaveGetAffineDOF(GetAffineDOF());
-        _activespec._vgroups.push_back(group);
-    }
+        if( GetAffineDOF() > 0 ) {
+            ConfigurationSpecification::Group group;
+            group.name = str(boost::format("affine_transform %s %d")%GetName()%GetAffineDOF());
+            group.offset = offset;
+            group.dof = RaveGetAffineDOF(GetAffineDOF());
+            _activespec._vgroups.push_back(group);
+        }
 
-    _PostprocessChangedParameters(Prop_RobotActiveDOFs);
+        _PostprocessChangedParameters(Prop_RobotActiveDOFs);
+    }
 }
 
 void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bCheckLimits)

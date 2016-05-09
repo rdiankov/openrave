@@ -156,7 +156,8 @@ public:
             _geometrycallback.reset();
         }
 
-        void _ChangeEnableFlag() {
+        // Inappropriate name...
+        void _ChangeGrabbingFlag() {
           // we invalidate both managers
           _bodyManager.reset();
           // TODO : this might not be always necessary
@@ -166,6 +167,22 @@ public:
         }
 
         void _ChangeActiveDOFsFlag() {
+          BOOST_ASSERT( GetBody()->IsRobot() );
+          std::vector<int> vcurrentActiveDOFIndices = OpenRAVE::RaveInterfaceConstCast<RobotBase>(GetBody())->GetActiveDOFIndices();
+          if( nActiveDOF == vcurrentActiveDOFIndices.size() ) {
+            bool activeDOFsModified = false;
+            FOREACH(itindex, vcurrentActiveDOFIndices) {
+              if( !vIsActiveDOF.at(*itindex) ) {
+                activeDOFsModified = true;
+                break;
+              }
+            }
+            if( !activeDOFsModified ) {
+              return;
+            }
+          }
+
+
             _bactiveDOFsDirty = true;
             _bodyManagerActiveDOFs.reset();
             _activeDOFsCallbacks.clear();
@@ -185,6 +202,8 @@ public:
         bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
         BroadPhaseCollisionManagerPtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
         BroadPhaseCollisionManagerPtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
+        int nActiveDOF;
+        std::vector<int> vIsActiveDOF;
         int nBodyManagerStamp;
         int nBodyManagerActiveDOFsStamp;
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
