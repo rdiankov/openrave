@@ -971,7 +971,7 @@ private:
                 }
 
                 pcb->_bCollision = true;
-                if( !(_options & OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts) ) {
+                if( !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts)) ) {
                     pcb->_bStopChecking = true; // stop checking collision
                 }
                 return pcb->_bStopChecking;
