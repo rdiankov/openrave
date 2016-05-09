@@ -630,7 +630,7 @@ void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     if (!node) {
         if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
             // user clicked on empty region, so remove selection
-            _ClearDragger();
+            SelectItem(KinBodyItemPtr());
         }
         return;
     }
