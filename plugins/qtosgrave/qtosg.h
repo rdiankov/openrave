@@ -118,6 +118,14 @@ using namespace std;
 
 namespace qtosgrave {
 
+template<class T>
+inline T ClampOnRange(T value, T min, T max)
+{
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
 class MyCallbackEvent : public QEvent
 {
 public:
@@ -177,6 +185,10 @@ inline RaveTransform<float> GetRaveTransform(osg::MatrixTransform& trans)
 inline void SetMatrixTransform(osg::MatrixTransform& trans, const RaveTransform<float> &t)
 {
     trans.setMatrix(GetMatrixFromRaveTransform(t));
+}
+
+inline osg::Vec3f GetOSGVec3(const RaveVector<float>&v) {
+    return osg::Vec3f(v.x, v.y, v.z);
 }
 
 // Derive a class from NodeVisitor to find a node with a specific name.

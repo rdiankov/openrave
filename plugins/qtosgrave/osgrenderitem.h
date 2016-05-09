@@ -27,11 +27,14 @@ enum ViewGeometry {
     VG_RenderCollision = 2,
 };
 
+/// \brief creates XYZ axes and returns their osg objects
+OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness);
+
 /// \brief Encapsulate the Inventor rendering of an Item
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
-    Item(OSGGroupPtr osgSceneRoot);
+    Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot);
     virtual ~Item();
 
     /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
@@ -43,9 +46,6 @@ public:
     virtual const string& GetName() const {
         return _osgdata->getName();
     }
-//    virtual void SetName(const string& name) {
-//        _name = name;
-//    }
 
     /// \brief update underlying model from OSG's transformation
     virtual bool UpdateFromOSG() {
@@ -69,33 +69,37 @@ public:
         return true;
     }
     virtual void SetGrab(bool bGrab, bool bUpdate=true) {
-    } ///< call when manipulating with the mouse, etc
+    }
 
-    // Inventor related
+    /// \brief sets how the item is visualized. item string means the default.
+    virtual void SetVisualizationMode(const std::string& visualizationmode);
+
     OSGMatrixTransformPtr GetOSGRoot() const {
         return _osgWorldTransform;
     }
 
-    OSGSwitchPtr GetOSGGeom() const {
+    OSGGroupPtr GetOSGGeom() const {
         return _osgdata;
     }
 
     /// \brief returns true if the given node is in the inventor hierarchy
     bool ContainsOSGNode(OSGNodePtr pNode);
-//    bool ContainsOSGNode(osg::NodePath *pNodePath);
+
 
     /// \brief Set the visibility of the geometry (ON = true).
-    void SetGeomVisibility(bool bFlag);
 //    void SetUnpickable();
+
 
 protected:
 
     // Instance Data
-    OSGGroupPtr _osgSceneRoot; ///< used for adding and removing itself from the viewer node
+    OSGGroupPtr _osgSceneRoot, _osgFigureRoot; ///< used for adding and removing itself from the viewer node
     string _name; ///< item name
     //OSGGroupPtr _osgitemroot; ///< root of this object's OSG data hierarchy
     OSGMatrixTransformPtr _osgWorldTransform; ///< Kinbody position
-    OSGSwitchPtr _osgdata; ///< item geometry hierarchy
+    OSGGroupPtr _osgdata; ///< item geometry hierarchy
+    OSGGroupPtr _osgwireframe;
+    std::string _visualizationmode; ///< current visualization mode that item is set to
 };
 
 typedef boost::shared_ptr<Item> ItemPtr;
@@ -121,7 +125,7 @@ private:
 class KinBodyItem : public Item
 {
 public:
-    KinBodyItem(OSGGroupPtr osgSceneRoot, KinBodyPtr, ViewGeometry viewmode);
+    KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, KinBodyPtr, ViewGeometry viewmode);
     virtual ~KinBodyItem();
 
     virtual void PrepForDeletion() {
@@ -129,9 +133,6 @@ public:
         _drawcallback.reset();
     }
 
-//    const string& GetName() const {
-//        return _pbody->GetName();
-//    }
 //    void SetName(const string& pNewName) {
 //        _pbody->SetName(pNewName);
 //    }
@@ -211,7 +212,6 @@ private:
 
     /// \brief  Print the features of the OSG Node
     void _PrintNodeFeatures(OSGNodePtr node);
-    //void _SetNamedNode(const std::string&  name, OSGNodePtr currNode);
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
@@ -226,14 +226,18 @@ public:
     {
         EE() {
         }
-        EE(int index, OSGMatrixTransformPtr ptrans, OSGSwitchPtr pswitch) : _index(index), _ptrans(ptrans), _pswitch(pswitch) {
+        EE(OSGMatrixTransformPtr ptrans, OSGSwitchPtr pswitch) : _ptrans(ptrans), _pswitch(pswitch) {
         }
-        int _index;
+        RobotBase::ManipulatorWeakPtr manip;
+        RobotBase::AttachedSensorWeakPtr attsensor;
         OSGMatrixTransformPtr _ptrans;
         OSGSwitchPtr _pswitch;
     };
 
-    RobotItem(OSGGroupPtr osgSceneRoot, RobotBasePtr robot, ViewGeometry viewmode);
+    RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewmode);
+    virtual ~RobotItem();
+    
+    virtual void Load();
 
     virtual bool UpdateFromOSG();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);

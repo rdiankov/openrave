@@ -79,6 +79,7 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
+from ..openravepy_int import RaveGetDefaultViewerType
 from . import DatabaseGenerator
 import inversekinematics, kinematicreachability
 from .. import interfaces
@@ -340,7 +341,7 @@ class VisibilityModel(DatabaseGenerator):
             
     def show(self,options=None):
         if self.env.GetViewer() is None:
-            self.env.SetViewer('qtcoin')
+            self.env.SetViewer(RaveGetDefaultViewerType())
             time.sleep(0.4) # give time for viewer to initialize
         self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.PowerOn)
         self.attachedsensor.GetSensor().Configure(Sensor.ConfigureCommand.RenderDataOn)

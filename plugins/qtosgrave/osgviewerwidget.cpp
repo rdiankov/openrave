@@ -19,6 +19,7 @@
 #include <osg/FrontFace>
 #include <osg/CullFace>
 #include <osg/CoordinateSystemNode>
+#include <osg/BlendFunc>
 
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
@@ -34,22 +35,24 @@ namespace qtosgrave {
 class OpenRAVETrackball : public osgGA::TrackballManipulator
 {
 public:
-    OpenRAVETrackball() {
+    OpenRAVETrackball(ViewerWidget* pviewer) {
         _bInSeekMode = false;
+        _pviewer = pviewer;
     }
 
     void SetSeekMode(bool bInSeekMode) {
         _bInSeekMode = bInSeekMode;
-        osgViewer::GraphicsWindow::MouseCursor cursortype = _bInSeekMode ? osgViewer::GraphicsWindow::CrosshairCursor : osgViewer::GraphicsWindow::LeftArrowCursor;
-        for(osgViewer::Viewer::Windows::iterator itr = _windows.begin(); itr != _windows.end(); ++itr) {
-            (*itr)->setCursor(cursortype);
+        osgViewer::Viewer::Windows windows;
+        _pviewer->getWindows(windows);
+        if( _bInSeekMode ) {
+            osgViewer::GraphicsWindow::MouseCursor cursortype = _bInSeekMode ? osgViewer::GraphicsWindow::CrosshairCursor : osgViewer::GraphicsWindow::LeftArrowCursor;
+            for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
+                (*itr)->setCursor(cursortype);
+            }
         }
-
-    }
-    
-    void SetSeekMode(bool bInSeekMode, osgViewer::Viewer::Windows& windows) {
-        _windows = windows;
-        SetSeekMode(bInSeekMode);
+        else {
+            _pviewer->RestoreCursor();
+        }
     }
 
     bool InSeekMode() const {
@@ -58,14 +61,14 @@ public:
 
 protected:
     class OpenRAVEAnimationData : public OrbitAnimationData {
-    public:
+public:
         osg::Vec3d _eyemovement;
     };
 
     virtual void allocAnimationData() {
         _animationData = new OpenRAVEAnimationData();
     }
-    
+
     virtual bool performMovement() {
         // return if less then two events have been added
         if( _ga_t0.get() == NULL || _ga_t1.get() == NULL ) {
@@ -95,6 +98,11 @@ protected:
         return osgGA::TrackballManipulator::performMovement();
     }
 
+    // make zooming faster
+    bool performMovementRightMouseButton( const double eventTimeDelta, const double dx, const double dy )
+    {
+        return osgGA::TrackballManipulator::performMovementRightMouseButton(eventTimeDelta, dx, dy*2);
+    }
     void applyAnimationStep( const double currentProgress, const double prevProgress )
     {
         OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData* >( _animationData.get() );
@@ -113,10 +121,10 @@ protected:
             osg::Vec3d localUp = getUpVector( coordinateFrame );
 
             fixVerticalAxis( newCenter - newEye, prevUp, prevUp, localUp, false );
-       }
+        }
 
-       // apply new transformation
-       setTransformation( newEye, newCenter, prevUp );
+        // apply new transformation
+        setTransformation( newEye, newCenter, prevUp );
     }
 
     virtual bool handleMousePush( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
@@ -192,7 +200,7 @@ protected:
     }
 
 private:
-    osgViewer::Viewer::Windows _windows;
+    ViewerWidget* _pviewer;
     bool _bInSeekMode; ///< if true, in seek mode
 };
 
@@ -262,7 +270,7 @@ private:
 //    }
 //}
 
-ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown) : QWidget(), _onKeyDown(onKeyDown)
+ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown, double metersinunit) : QWidget(), _onKeyDown(onKeyDown)
 {
     setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
 
@@ -276,7 +284,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     //  Improve FPS to 60 per viewer
     setThreadingModel(osgViewer::CompositeViewer::CullDrawThreadPerContext);
 
-    QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100), _osgview, _CreateHUDCamera(0,0,100,100), _osghudview);
+    QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100, metersinunit), _osgview, _CreateHUDCamera(0,0,100,100, metersinunit), _osghudview);
     QGridLayout* grid = new QGridLayout;
     grid->addWidget(widgetview, 0, 0);
     grid->setContentsMargins(1, 1, 1, 1);
@@ -291,76 +299,27 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
 
     // initialize the environment
     _osgSceneRoot = new osg::Group();
-    _osgFigureRoot = new osg::Group();
+    {
+        _osgFigureRoot = new osg::Group();
+        osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
+        //stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT_AND_BACK));
+        //stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
+        //stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
+        //stateset->setMode(GL_NORMALIZE,osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+        //stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+        stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
+        stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
+        stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+
+        _osgFigureRoot->setStateSet(stateset);
+    }
 
     // create world axis
     _osgWorldAxis = new osg::MatrixTransform();
     //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
 
-    {
-        osg::Vec4f colors[] = {
-            osg::Vec4f(0,0,1,1),
-            osg::Vec4f(0,1,0,1),
-            osg::Vec4f(1,0,0,1)
-        };
-        osg::Quat rotations[] = {
-            osg::Quat(0, osg::Vec3f(0,0,1)),
-            osg::Quat(-M_PI/2.0, osg::Vec3f(1,0,0)),
-            osg::Quat(M_PI/2.0, osg::Vec3f(0,1,0))
-        };
-
-        // add 3 cylinder+cone axes
-        for(int i = 0; i < 3; ++i) {
-            osg::MatrixTransform* psep = new osg::MatrixTransform();
-            psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
-
-            // set a diffuse color
-            osg::StateSet* state = psep->getOrCreateStateSet();
-            osg::Material* mat = new osg::Material;
-            mat->setDiffuse(osg::Material::FRONT, colors[i]);
-            mat->setAmbient(osg::Material::FRONT, colors[i]);
-            state->setAttribute( mat );
-
-            osg::Matrix matrix;
-            osg::MatrixTransform* protation = new osg::MatrixTransform();
-            matrix.makeRotate(rotations[i]);
-            protation->setMatrix(matrix);
-
-            matrix.makeIdentity();
-            osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
-            matrix.setTrans(osg::Vec3f(0,0,16.0f));
-            pcyltrans->setMatrix(matrix);
-
-            // make SoCylinder point towards z, not y
-            osg::Cylinder* cy = new osg::Cylinder();
-            cy->setRadius(2.0f);
-            cy->setHeight(32.0f);
-            osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
-            osg::ref_ptr<osg::ShapeDrawable> sdcyl = new osg::ShapeDrawable(cy);
-            gcyl->addDrawable(sdcyl.get());
-
-            osg::Cone* cone = new osg::Cone();
-            cone->setRadius(4.0f);
-            cone->setHeight(16.0f);
-
-            osg::ref_ptr<osg::Geode> gcone = new osg::Geode;
-            osg::ref_ptr<osg::ShapeDrawable> sdcone = new osg::ShapeDrawable(cone);
-            gcone->addDrawable(sdcone.get());
-
-            matrix.makeIdentity();
-            osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
-            matrix.setTrans(osg::Vec3f(0,0,32.0f));
-            pconetrans->setMatrix(matrix);
-
-            psep->addChild(protation);
-            protation->addChild(pcyltrans);
-            pcyltrans->addChild(gcyl.get());
-            protation->addChild(pconetrans);
-            pconetrans->addChild(gcone.get());
-            _osgWorldAxis->addChild(psep);
-        }
-    }
-
+    _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
+    
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
 
@@ -382,6 +341,9 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
 
         //Set the screen alignment - always face the screen
         _osgHudText->setAxisAlignment(osgText::Text::SCREEN);
+        _osgHudText->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+        _osgHudText->setBackdropColor(osg::Vec4(1,1,1,1));
+        //setBackdropOffset
         _osgHudText->setColor(osg::Vec4(0,0,0,1));
         //text->setFontResolution(32,32);
 
@@ -404,8 +366,18 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
+
+    RestoreCursor();
 }
 
+ViewerWidget::~ViewerWidget()
+{
+    if( !!_selectedItem ) {
+        _selectedItem->SetGrab(false);
+    }
+    _selectedItem.reset();
+}
+    
 bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
@@ -416,23 +388,40 @@ bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIA
     }
 
     if( key == 's' ) {
-        ActivateSelection(false);
-        _ClearDragger();
-        osgViewer::Viewer::Windows windows;
-        getWindows(windows);
-        _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode(), windows);
+        _osgCameraManipulator->SetSeekMode(!_osgCameraManipulator->InSeekMode());
     }
     return false;
 }
 
-void ViewerWidget::ActivateSelection(bool active)
+void ViewerWidget::RestoreCursor()
 {
     osgViewer::Viewer::Windows windows;
     getWindows(windows);
     for(osgViewer::Viewer::Windows::iterator itr = windows.begin(); itr != windows.end(); ++itr) {
-        (*itr)->setCursor(active ? osgViewer::GraphicsWindow::HandCursor : osgViewer::GraphicsWindow::LeftArrowCursor);
+        // can do (*itr)->setCursor(osgViewer::GraphicsWindow::HandCursor), but cursors are limited so have to use Qt
+        GraphicsWindowQt* gw = dynamic_cast<GraphicsWindowQt*>(*itr);
+        QCursor _currentCursor;
+        if( _bIsSelectiveActive ) {
+            if( _draggerName == "TranslateTrackballDragger" ) {
+                _currentCursor = QCursor(Qt::ArrowCursor);
+            }
+            else {
+                QPixmap pixmap(":/images/no_edit.png");
+                _currentCursor = QCursor(pixmap.scaled(QSize(32,32)), Qt::KeepAspectRatio);
+            }
+        }
+        else {
+            // need a custom cursor
+            _currentCursor = QCursor(QPixmap(":/images/rotation-icon.png"));
+        }
+        gw->getGLWidget()->setCursor(_currentCursor);
     }
+}
+    
+void ViewerWidget::ActivateSelection(bool active)
+{
     _bIsSelectiveActive = active;
+    RestoreCursor();
 }
 
 void ViewerWidget::SetDraggerMode(const std::string& draggerName)
@@ -447,15 +436,24 @@ void ViewerWidget::SetDraggerMode(const std::string& draggerName)
     }
 }
 
-void ViewerWidget::SelectItem(KinBodyItemPtr item)
+void ViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
 {
-    _selectedItem = item;
-    if (!!_selectedItem) {
-        _AddDraggerToObject(_draggerName, _selectedItem, KinBody::JointPtr());
-    }
-    else {
-        // no dragger so clear?
-        _ClearDragger();
+    if( _selectedItem != item ) {
+        if( !!_selectedItem ) {
+            _selectedItem->SetGrab(false);
+        }
+        _selectedItem = item;
+        if( !!_selectedItem ) {
+            _selectedItem->SetGrab(true);
+        }
+
+        if (!!_selectedItem) {
+            _AddDraggerToObject(_draggerName, _selectedItem, joint);
+        }
+        else {
+            // no dragger so clear?
+            _ClearDragger();
+        }
     }
 }
 
@@ -487,6 +485,7 @@ void ViewerWidget::SetSceneData()
 
 void ViewerWidget::ResetViewToHome()
 {
+    SetHome();
     _osgview->home();
 }
 
@@ -631,7 +630,7 @@ void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     if (!node) {
         if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
             // user clicked on empty region, so remove selection
-            _ClearDragger();
+            SelectItem(KinBodyItemPtr());
         }
         return;
     }
@@ -657,16 +656,8 @@ void ViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
         if( (modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
         }
         else {
-            if( _draggerName == "RotateCylinderDragger" ) {
-                if( !!joint) {
-                    _selectedItem = item;
-                    _AddDraggerToObject("RotateCylinderDragger", item, joint);
-                }
-            }
-            else {
-                // select new body
-                SelectItem(item);
-            }
+            // select new body
+            SelectItem(item, joint);
         }
     }
 
@@ -736,32 +727,56 @@ void ViewerWidget::_UpdateHUDText()
     _osgHudText->setText(s);
 }
 
-void ViewerWidget::SetViewType(int isorthogonal, double metersinunit)
+void ViewerWidget::SetNearPlane(double nearplane)
+{
+    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+        // orthogonal
+        double left, right, bottom, top, zNear, zFar;
+        _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(left, right, bottom, top, nearplane, zFar);
+    }
+    else {
+        double fovy, aspectRatio, zNear, zFar;
+        _osgview->getCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+        _osgview->getCamera()->setProjectionMatrixAsPerspective(fovy, aspectRatio, nearplane, zFar);
+    }
+}
+
+double ViewerWidget::GetCameraNearPlane()
+{
+    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+        // orthogonal
+        double left, right, bottom, top, zNear, zFar;
+        _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
+        return zNear;
+    }
+    else {
+        double fovy, aspectRatio, zNear, zFar;
+        _osgview->getCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+        return zNear;
+    }
+}
+
+void ViewerWidget::SetViewType(int isorthogonal)
 {
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
+    double nearplane = GetCameraNearPlane();
     if( isorthogonal ) {
         double distance = 0.5*_osgCameraManipulator->getDistance();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance/metersinunit, distance/metersinunit, -distance/(metersinunit*aspect), distance/(metersinunit*aspect), 0, 100.0/metersinunit);
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
     }
     else {
-        _osgview->getCamera()->setProjectionMatrixAsPerspective(30.0f, aspect, 1.0f, 100.0/metersinunit );
+        _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, nearplane, 10000*nearplane );
     }
 }
 
 void ViewerWidget::SetViewport(int width, int height, double metersinunit)
 {
     _osgview->getCamera()->setViewport(0,0,width,height);
-    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
-        // orthogonal
-        double aspect = static_cast<double>(width)/static_cast<double>(height);
-        double distance = 0.5*_osgCameraManipulator->getDistance();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance/metersinunit, distance/metersinunit, -distance/(metersinunit*aspect), distance/(metersinunit*aspect), 0, 100.0/metersinunit);
-    }
-
     _osghudview->getCamera()->setViewport(0,0,width,height);
-    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0, 1000));
+    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0.01/metersinunit, 100.0/metersinunit));
 
     osg::Matrix m = _osgCameraManipulator->getInverseMatrix();
     m.setTrans(width/2 - 40, -height/2 + 40, -50);
@@ -781,7 +796,8 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
 
     //view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new OpenRAVETrackball();//osgGA::TrackballManipulator();//NodeTrackerManipulator();
+    _osgCameraManipulator = new OpenRAVETrackball(this);//osgGA::TrackballManipulator();//NodeTrackerManipulator();
+    _osgCameraManipulator->setWheelZoomFactor(0.2);
     view->setCameraManipulator( _osgCameraManipulator.get() );
 
     _osgCameraHUD = new osg::MatrixTransform();
@@ -794,7 +810,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     return gw ? gw->getGraphWidget() : NULL;
 }
 
-osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h)
+osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
 {
     osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
 
@@ -816,12 +832,13 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
 
     camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
-    camera->setProjectionMatrixAsPerspective(30.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), 1.0f, 10000.0f );
-
+    double fnear = 0.01/metersinunit;
+    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), fnear, 100.0/metersinunit);
+    camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
 
-osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, int h)
+osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, int h, double metersinunit)
 {
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setProjectionMatrix(osg::Matrix::ortho(-1,1,-1,1,1,10));
@@ -838,7 +855,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, i
     // set the view matrix
     camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
     camera->setViewMatrix(osg::Matrix::identity());
-
+    camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
 
@@ -1110,14 +1127,14 @@ OSGNodePtr ViewerWidget::_AddDraggerToObject(const std::string& draggerName, Kin
     //  Store object selected in global variable _osgSelectedNodeByDragger
     osg::Matrixd selectedmatrix;
 
-    if( !pjoint ) {
-        _osgSelectedNodeByDragger = item->GetOSGRoot();
-        selectedmatrix = item->GetOSGRoot()->getMatrix();
-    }
-    else {
+    if( draggerName == "RotateCylinderDragger" && !!pjoint ) {
         OSGMatrixTransformPtr osglinktrans = item->GetOSGLink(pjoint->GetHierarchyChildLink()->GetIndex());
         selectedmatrix = osglinktrans->getMatrix();
         _osgSelectedNodeByDragger = osglinktrans->getParent(0);
+    }
+    else {
+        _osgSelectedNodeByDragger = item->GetOSGRoot();
+        selectedmatrix = item->GetOSGRoot()->getMatrix();
     }
 
     if (draggerName == "RotateCylinderDragger" && !!pjoint) {

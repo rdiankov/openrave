@@ -304,7 +304,12 @@ public:
     virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
     virtual void _SetGraphShow(OSGSwitchPtr handle, bool bShow);
 
-    virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute);
+    virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute, bool bUsingTransparency=false);
+    virtual void _DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency);
+    virtual void _SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices);
+    virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
+    virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
+    
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
@@ -341,7 +346,8 @@ public:
     void _DeleteItemCallback(Item* pItem);
 
     bool _SetFiguresInCamera(ostream& sout, istream& sinput);
-    bool _SetFeedbackVisibility(ostream& sout, istream& sinput);
+    bool _ShowWorldAxesCommand(ostream& sout, istream& sinput);
+    bool _SetItemVisualizationCommand(ostream& sout, istream& sinput);
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);

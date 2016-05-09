@@ -150,7 +150,7 @@ else:
 
 from .. import openrave_exception
 from ..openravepy_ext import RobotStateSaver
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from ..misc import relpath, TSP
 import time,platform,shutil,sys
@@ -991,7 +991,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     
     def show(self,delay=0.1,options=None,forceclosure=True):
         if self.env.GetViewer() is None:
-            self.env.SetViewer('qtcoin')
+            self.env.SetViewer(RaveGetDefaultViewerType())
             time.sleep(0.4) # give time for viewer to initialize
         with RobotStateSaver(self.robot):
             with self.ArmVisibility(self.manip,0.95):
