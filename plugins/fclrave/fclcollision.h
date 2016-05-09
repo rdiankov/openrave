@@ -630,28 +630,27 @@ private:
 
         if( !pinfo->_bodyManager ) {
             pinfo->_bodyManager = CreateManager();
-            if( pbody->IsRobot() ) {
-              RobotBaseConstPtr OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
-              const boost::function<void()>& grabbedChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeGrabbingFlag, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
-              pinfo->_grabbingCallback = probot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, grabbedChangeCallback);
+
+            // if the bodyAttachedCallback is not set, we set it
+            if( !pinfo->_bodyAttachedCallback ) {
+              const boost::function<void()>& attachedBodiesChangedCallback = boost::bind(&FCLSpace::KinBodyInfo::_ResetBodyManagers, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+              pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, attachedBodiesChangedCallback);
             }
 
+
             // (re)compute _bodyManager
+            // it might be interesting to update only the changed part but then we need to cache some data and face the issue of unreachable collision objects
             pinfo->_bodyManager->clear();
             pinfo->nBodyManagerStamp = 0;
             FOREACH(itbody, attachedBodies) {
-                if( (*itbody)->IsEnabled() ) {
                     FCLSpace::KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
                     if( !pitinfo ) {
                         RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
                     } else {
                       pinfo->nBodyManagerStamp += pitinfo->nLastStamp;
-                        for(size_t i = 0; i < pitinfo->vlinks.size(); ++i) {
-                          if( (*itbody)->GetLinks()[i]->IsEnabled() ) {
-                                pitinfo->vlinks[i]->Register(pinfo->_bodyManager);
-                            }
-                        }
-                    }
+                      for(size_t i = 0; i < pitinfo->vlinks.size(); ++i) {
+                        pitinfo->vlinks[i]->Register(pinfo->_bodyManager);
+                      }
                 }
             }
         } else {
@@ -677,17 +676,12 @@ private:
         if( pinfo->_bactiveDOFsDirty ) {
             // if the activeDOFs have changed the _bodyManagerActiveDOFs must be invalid
             BOOST_ASSERT( !pinfo->_bodyManagerActiveDOFs );
-            pinfo->nActiveDOF = probot->GetActiveDOF();
-            // (re)initialize vactiveDOFIndices;
-            pinfo->vIsActiveDOF.resize(0);
-            pinfo->vIsActiveDOF.resize(probot->GetDOF(), 0); 
             // (re)compute _vactiveLinks
             pinfo->_vactiveLinks.resize(0);
             pinfo->_vactiveLinks.resize(probot->GetLinks().size(), 0);
             for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
                 int isLinkActive = 0;
                 FOREACH(itindex, probot->GetActiveDOFIndices()) {
-                  pinfo->vIsActiveDOF[*itindex] = 1;
                     if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i) ) {
                         isLinkActive = 1;
                         break;
@@ -700,14 +694,23 @@ private:
 
         if( !pinfo->_bodyManagerActiveDOFs ) {
             pinfo->_bodyManagerActiveDOFs = CreateManager();
-            const boost::function<void()>& activeDOFsChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeActiveDOFsFlag,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
-            const boost::function<void()>& grabbedChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeGrabbingFlag, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
-            // what about grabbed bodies, shouldn,t we set a callback in that case too
-            pinfo->_activeDOFsCallbacks.push_back(probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, activeDOFsChangeCallback));
-            pinfo->_activeDOFsCallbacks.push_back(probot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, grabbedChangeCallback));
 
+            // if the activeDOFs callback is not set we set it
+            if( !pinfo->_activeDOFsCallback ) {
+              const boost::function<void()>& activeDOFsChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeActiveDOFsFlag,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+              pinfo->_activeDOFsCallback = probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, activeDOFsChangeCallback);
+            }
+
+            // if the attachedBodies callback is not set, we set it
+            if( !pinfo->_bodyAttachedCallback ) {
+              const boost::function<void()>& attachedBodiesChangedCallback = boost::bind(&FCLSpace::KinBodyInfo::_ResetBodyManagers, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+              pinfo->_bodyAttachedCallback = probot->RegisterChangeCallback(KinBody::Prop_BodyAttached, attachedBodiesChangedCallback);
+            }
+
+
+            // (re)compute _bodyManagerActiveDOFs and nBodyManagerActiveDOFsStamp
             pinfo->nBodyManagerActiveDOFsStamp = pinfo->nLastStamp;
-            // (re)compute _bodyManagerActiveDOFs
+
             // first we register the active links of pbody
             for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
                 if( pinfo->_vactiveLinks[i] ) {
@@ -717,7 +720,8 @@ private:
 
             // then we register all the bodies attached to an active link of pbody
             FOREACH(itbody, attachedBodies) {
-                if( (*itbody)->IsEnabled() && *itbody != probot ) {
+              if( *itbody != probot ) {
+                // We are rejecting anything grabbing the robot... (is that a feature we want ?)
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
                         KinBodyInfoPtr pinfoGrabbed = _fclspace->GetInfo(*itbody);
@@ -727,11 +731,8 @@ private:
                             // we are only restricting to active DOFS for the original robot
                             // i.e. for now if a robot is grabbed we consider all its DOFs
                           pinfo->nBodyManagerActiveDOFsStamp += pinfoGrabbed->nLastStamp;
-                            // if the enable status of some link change we need to reset the _bodyManagerActiveDOFs
                             for(size_t i = 0; i < pinfoGrabbed->vlinks.size(); ++i) {
-                              if( (*itbody)->GetLinks()[i]->IsEnabled() ) {
-                                    pinfoGrabbed->vlinks[i]->Register(pinfo->_bodyManagerActiveDOFs);
-                                }
+                              pinfoGrabbed->vlinks[i]->Register(pinfo->_bodyManagerActiveDOFs);
                             }
                         }
                     }
