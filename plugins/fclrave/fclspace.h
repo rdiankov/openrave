@@ -599,13 +599,13 @@ private:
                 pcoll->computeAABB();
             }
 
-            if( !!_envManager ) {
-              CollisionGroup vupdatedObjects(pbody->GetLinks().size());
-              FOREACH(itLINK, pinfo->vlinks) {
-                vupdatedObjects.push_back((*itLINK)->plinkBV->second.get());
-              }
-              _envManager->update(vupdatedObjects);
-            }
+//            if( !!_envManager ) {
+//              CollisionGroup vupdatedObjects(pbody->GetLinks().size());
+//              FOREACH(itLINK, pinfo->vlinks) {
+//                vupdatedObjects.push_back((*itLINK)->plinkBV->second.get());
+//              }
+//              _envManager->update(vupdatedObjects);
+//            }
 
             if( !!_synccallback ) {
                 _synccallback(pinfo);
