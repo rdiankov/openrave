@@ -185,6 +185,8 @@ public:
         bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
         BroadPhaseCollisionManagerPtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
         BroadPhaseCollisionManagerPtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
+        int nBodyManagerStamp;
+        int nBodyManagerActiveDOFsStamp;
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
         std::list<  OpenRAVE::UserDataPtr > _linkEnableCallbacks; ///< list of handles for the callbacks called when a link attached to _bodyManager has changed its enable status
         std::list< OpenRAVE::UserDataPtr > _activeDOFsCallbacks; ///< list of handles for the callbacks called when a the activeDOFS have changed

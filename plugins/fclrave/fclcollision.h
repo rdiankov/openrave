@@ -608,6 +608,9 @@ private:
     }
 
     void SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
+      std::set<KinBodyPtr> attachedBodies;
+      pbody->GetAttached(attachedBodies);
+
         if( !pinfo->_bodyManager ) {
             pinfo->_bodyManager = CreateManager();
             const boost::function<void()>& enableChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeEnableFlag, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
@@ -615,14 +618,14 @@ private:
 
             // (re)compute _bodyManager
             pinfo->_bodyManager->clear();
-            std::set<KinBodyPtr> attachedBodies;
-            pbody->GetAttached(attachedBodies);
+            pinfo->nBodyManagerStamp = 0;
             FOREACH(itbody, attachedBodies) {
                 if( (*itbody)->IsEnabled() ) {
                     FCLSpace::KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
                     if( !pitinfo ) {
                         RAVELOG_ERROR_FORMAT("The kinbody %s has no info in checker %s, env %d", (*itbody)->GetName()%_userdatakey%GetEnv()->GetId());
                     } else {
+                      pinfo->nBodyManagerStamp += pitinfo->nLastStamp;
                         pinfo->_linkEnableCallbacks.push_back((*itbody)->RegisterChangeCallback(KinBody::Prop_LinkEnable, enableChangeCallback));
                         for(size_t i = 0; i < pitinfo->vlinks.size(); ++i) {
                           if( (*itbody)->GetLinks()[i]->IsEnabled() ) {
@@ -634,12 +637,23 @@ private:
             }
         } else {
           // if the bodyManager has not been created just now, we may need to update its content
-          pinfo->_bodyManager->update();
+          int currentStamp = 0;
+          FOREACH(itbody, attachedBodies) {
+            currentStamp += (*itbody)->GetUpdateStamp();
+          }
+          BOOST_ASSERT( pinfo->nBodyManagerStamp <= currentStamp );
+          if( pinfo->nBodyManagerStamp < currentStamp ) {
+            pinfo->_bodyManager->update();
+            pinfo->nBodyManagerStamp = currentStamp;
+          }
         }
         pinfo->_bodyManager->setup();
     }
 
     void SetupManagerActiveDOFs(RobotBaseConstPtr probot, KinBodyInfoPtr pinfo) {
+
+      std::set<KinBodyPtr> attachedBodies;
+      probot->GetAttached(attachedBodies);
 
         if( pinfo->_bactiveDOFsDirty ) {
             // if the activeDOFs have changed the _bodyManagerActiveDOFs must be invalid
@@ -667,6 +681,7 @@ private:
             // what about grabbed bodies, shouldn,t we set a callback in that case too
             pinfo->_activeDOFsCallbacks.push_back(probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, activeDOFsChangeCallback));
 
+            pinfo->nBodyManagerActiveDOFsStamp = pinfo->nLastStamp;
             // (re)compute _bodyManagerActiveDOFs
             // first we register the active links of pbody
             for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
@@ -676,8 +691,6 @@ private:
             }
 
             // then we register all the bodies attached to an active link of pbody
-            std::set<KinBodyPtr> attachedBodies;
-            probot->GetAttached(attachedBodies);
             FOREACH(itbody, attachedBodies) {
                 if( (*itbody)->IsEnabled() && *itbody != probot ) {
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
@@ -688,7 +701,7 @@ private:
                         } else {
                             // we are only restricting to active DOFS for the original robot
                             // i.e. for now if a robot is grabbed we consider all its DOFs
-
+                          pinfo->nBodyManagerActiveDOFsStamp += pinfoGrabbed->nLastStamp;
                             // if the enable status of some link change we need to reset the _bodyManagerActiveDOFs
                             pinfo->_linkEnableCallbacks.push_back((*itbody)->RegisterChangeCallback(KinBody::Prop_LinkEnable, enableChangeCallback));
                             for(size_t i = 0; i < pinfoGrabbed->vlinks.size(); ++i) {
@@ -701,7 +714,15 @@ private:
                 }
             }
         } else {
-          pinfo->_bodyManagerActiveDOFs->update();
+          int currentStamp = 0;
+          FOREACH(itbody, attachedBodies) {
+            currentStamp += (*itbody)->GetUpdateStamp();
+              }
+          BOOST_ASSERT( pinfo->nBodyManagerActiveDOFsStamp <= currentStamp );
+          if( pinfo->nBodyManagerStamp < currentStamp ) {
+            pinfo->_bodyManagerActiveDOFs->update();
+            pinfo->nBodyManagerActiveDOFsStamp = currentStamp;
+          }
         }
         pinfo->_bodyManagerActiveDOFs->setup();
     }
