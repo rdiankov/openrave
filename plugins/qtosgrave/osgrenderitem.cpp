@@ -862,7 +862,7 @@ void RobotItem::Load()
                 _osgFigureRoot->addChild(peeswitch);
             }
             peeswitch->addChild(ptrans);
-            peeswitch->setAllChildrenOn();
+            peeswitch->setAllChildrenOff();
             ptrans->addChild(peesep);
             SetMatrixTransform(*ptrans, (*itmanip)->GetTransform());
 
