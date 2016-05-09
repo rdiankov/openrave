@@ -156,12 +156,13 @@ public:
             _geometrycallback.reset();
         }
 
-        // Inappropriate name...
         void _ResetBodyManagers() {
           // we invalidate both managers
           _bodyManager.reset();
           // TODO : this might not be always necessary, i.e. when the attached or detached body is not on an active link...
           _bodyManagerActiveDOFs.reset();
+          // we reinitialize the link-enabled callbacks
+          _linkEnabledCallbacks.clear();
         }
 
         void _ChangeActiveDOFsFlag() {
@@ -188,6 +189,7 @@ public:
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
+      std::list<OpenRAVE::UserDataPtr> _linkEnabledCallbacks;
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
