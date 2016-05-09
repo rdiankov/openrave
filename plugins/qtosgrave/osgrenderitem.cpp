@@ -445,6 +445,7 @@ void KinBodyItem::Load()
             }
 
             if( !!pgeometrydata ) {
+                //RAVELOG_VERBOSE_FORMAT("creating geom %s:%d", (*itlink)->GetName()%igeom);
                 pgeometrydata->setName(str(boost::format("geomdata%d")%igeom));
                 pgeometryroot->addChild(pgeometrydata);
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
@@ -455,44 +456,38 @@ void KinBodyItem::Load()
     }
 
     //  Is an object without joints
-    if (_pbody->GetJoints().size() < 1) {
-        _osgdata->addChild(_veclinks.at(0).first);
+    std::vector<uint8_t> addedlinks(_pbody->GetLinks().size(), 0);
+
+    //  Assemble link hierarchy
+    FOREACH(itjoint, _pbody->GetDependencyOrderedJoints()) {
+        if( addedlinks[(*itjoint)->GetHierarchyChildLink()->GetIndex()] == 0 ) {
+            OSGGroupPtr parent = _veclinks.at((*itjoint)->GetHierarchyParentLink()->GetIndex()).first;
+            OSGGroupPtr child = _veclinks.at(((*itjoint)->GetHierarchyChildLink()->GetIndex())).first;
+            parent->addChild(child);
+            addedlinks.at((*itjoint)->GetHierarchyChildLink()->GetIndex()) = 1;
+        }
+        else {
+            // already set, cannot set twice...
+        }
     }
-    //  Object with joints
-    else {
-        std::vector<uint8_t> addedlinks(_pbody->GetLinks().size(), 0);
 
-        //  Assemble link hierarchy
-        FOREACH(itjoint, _pbody->GetDependencyOrderedJoints()) {
-            if( addedlinks[(*itjoint)->GetHierarchyChildLink()->GetIndex()] == 0 ) {
-                OSGGroupPtr parent = _veclinks.at((*itjoint)->GetHierarchyParentLink()->GetIndex()).first;
-                OSGGroupPtr child = _veclinks.at(((*itjoint)->GetHierarchyChildLink()->GetIndex())).first;
-                parent->addChild(child);
-                addedlinks.at((*itjoint)->GetHierarchyChildLink()->GetIndex()) = 1;
-            }
-            else {
-                // already set, cannot set twice...
-            }
+    //  Assemble passive joints
+    FOREACH(itjoint, _pbody->GetPassiveJoints()) {
+        if( addedlinks[(*itjoint)->GetHierarchyChildLink()->GetIndex()] == 0 ) {
+            OSGGroupPtr parent = _veclinks.at((*itjoint)->GetHierarchyParentLink()->GetIndex()).first;
+            OSGGroupPtr child = _veclinks.at((*itjoint)->GetHierarchyChildLink()->GetIndex()).first;
+            parent->addChild(child);
+            addedlinks.at((*itjoint)->GetHierarchyChildLink()->GetIndex()) = 1;
         }
-
-        //  Assemble passive joints
-        FOREACH(itjoint, _pbody->GetPassiveJoints()) {
-            if( addedlinks[(*itjoint)->GetHierarchyChildLink()->GetIndex()] == 0 ) {
-                OSGGroupPtr parent = _veclinks.at((*itjoint)->GetHierarchyParentLink()->GetIndex()).first;
-                OSGGroupPtr child = _veclinks.at((*itjoint)->GetHierarchyChildLink()->GetIndex()).first;
-                parent->addChild(child);
-                addedlinks.at((*itjoint)->GetHierarchyChildLink()->GetIndex()) = 1;
-            }
-            else {
-                // already set, cannot set twice...
-            }
+        else {
+            // already set, cannot set twice...
         }
+    }
 
-        // have to add the left over links to the root group
-        for(size_t ilink = 0; ilink < addedlinks.size(); ++ilink) {
-            if( addedlinks[ilink] == 0 ) {
-                _osgdata->addChild(_veclinks.at(ilink).first);
-            }
+    // have to add the left over links to the root group
+    for(size_t ilink = 0; ilink < addedlinks.size(); ++ilink) {
+        if( addedlinks[ilink] == 0 ) {
+            _osgdata->addChild(_veclinks.at(ilink).first);
         }
     }
 
