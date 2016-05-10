@@ -806,8 +806,8 @@ private:
             // if the bodyManager has not been created just now, we may need to update its content
             CollisionGroup vupdateObjects;
             FOREACH(itbody, attachedBodies) {
-                if( pinfo->_bodyManager->mUpdateStamps[(*itbody)->GetEnvironmentId()] < (*itbody)->GetUpdateStamp() ) {
-                    pinfo->_bodyManager->mUpdateStamps[(*itbody)->GetEnvironmentId()] = (*itbody)->GetUpdateStamp();
+                if( pinfo->_bodyManagerActiveDOFs->mUpdateStamps[(*itbody)->GetEnvironmentId()] < (*itbody)->GetUpdateStamp() ) {
+                    pinfo->_bodyManagerActiveDOFs->mUpdateStamps[(*itbody)->GetEnvironmentId()] = (*itbody)->GetUpdateStamp();
                     CollectEnabledLinkBVs(*itbody, vupdateObjects);
                 }
             }
