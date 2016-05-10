@@ -767,7 +767,7 @@ private:
             // Test if the manager already exists
             ManagerTable::iterator it = _cachedManagers->find(*pkey);
             if(it != _cachedManagers->end()) {
-                pinfo->_bodyManager = it->second;
+                pinfo->_bodyManagerActiveDOFs = it->second;
             } else {
                 // if it does not exists yet create and cache it
                 ManagerInstancePtr bodyManager = boost::make_shared<ManagerInstance>();
