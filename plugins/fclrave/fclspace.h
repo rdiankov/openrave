@@ -7,6 +7,19 @@
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
+
+struct ManagerInstance {
+    BroadPhaseCollisionManagerPtr pmanager;
+    std::map<int, int> mUpdateStamps;
+};
+typedef boost::shared_ptr<ManagerInstance> ManagerInstancePtr;
+typedef std::vector< std::pair< int, std::vector<int> > > ManagerKey; ///< pair of an environment id and a vector of link index
+typedef boost::shared_ptr<ManagerKey> ManagerKeyPtr;
+typedef boost::shared_ptr<const ManagerKey> ManagerKeyConstPtr;
+typedef boost::unordered_map<ManagerKey, ManagerInstancePtr> ManagerTable;
+typedef boost::shared_ptr<ManagerTable> ManagerTablePtr;
+typedef boost::weak_ptr<ManagerTable> ManagerTableWeakPtr;
+
 // Warning : this is the only place where we use std::shared_ptr (compatibility with fcl)
 typedef shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
 typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
@@ -74,7 +87,7 @@ public:
 
         struct LINK
         {
-        LINK(KinBody::LinkPtr plink) : _plink(plink), nLastStamp(0) {
+            LINK(KinBody::LinkPtr plink) : _plink(plink), nLastStamp(0) {
             }
 
             virtual ~LINK() {
@@ -88,11 +101,16 @@ public:
                 }
 
                 if( !!plinkBV ) {
-                    FOREACH(itwpmanager, _vmanagers) {
-                        BroadPhaseCollisionManagerPtr pmanager = itwpmanager->lock();
-                        if( pmanager ) {
-                            pmanager->unregisterObject(plinkBV->second.get());
+                    ManagerTablePtr ptable = _ptable.lock();
+                    if( !!ptable ) {
+                        FOREACH(itmanagerKey, _vmanagerKeys) {
+                            // we need to invalidate all the cached managers containing this link since the collision object for this link won't be valid anymore
+                            ptable->erase(**itmanagerKey);
                         }
+                    }
+                    BroadPhaseCollisionManagerPtr envManager = _envManager.lock();
+                    if( !!envManager ) {
+                      envManager->unregisterObject(plinkBV->second.get());
                     }
                     plinkBV.reset();
                 }
@@ -103,16 +121,22 @@ public:
                 vgeoms.resize(0);
             }
 
-            void Register(BroadPhaseCollisionManagerPtr pmanager) {
-                // We cannot use find here because eqaulity is not well-defined between 2 weak pointers
-                FOREACH(itmanager, _vmanagers) {
-                    if ( itmanager->lock() == pmanager ) {
-                        return;
-                    }
+            void Register(BroadPhaseCollisionManagerPtr pmanager, ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
+                if( std::find(_vmanagerKeys.begin(), _vmanagerKeys.end(), pkey) == _vmanagerKeys.end() ) {
+                    pmanager->registerObject(plinkBV->second.get());
+                    _vmanagerKeys.push_back(pkey);
+                    BOOST_ASSERT( !!ptable.lock() );
+                    _ptable = ptable;
                 }
-                pmanager->registerObject(plinkBV->second.get());
-                _vmanagers.push_back(BroadPhaseCollisionManagerWeakPtr(pmanager));
             }
+
+          // The env manager still works differently
+          void Register(BroadPhaseCollisionManagerPtr envManager) {
+            if( !!envManager && !!plinkBV ) {
+              _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
+              envManager->registerObject(plinkBV->second.get());
+            }
+          }
 
             KinBody::LinkPtr GetLink() {
                 return _plink.lock();
@@ -120,9 +144,11 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
-          int nLastStamp;
+            int nLastStamp;
+            ManagerTableWeakPtr _ptable;
             // TODO : What about a dynamic collection of managers containing this link ?
-            std::list<BroadPhaseCollisionManagerWeakPtr> _vmanagers; ///< Broad phase managers containing this link's BV
+            std::list<ManagerKeyConstPtr> _vmanagerKeys; ///< Broad phase managers' keys containing this link's BV
+          BroadPhaseCollisionManagerWeakPtr _envManager;
             BroadPhaseCollisionManagerPtr _linkManager;
             boost::shared_ptr<TransformCollisionPair> plinkBV;
             std::vector<TransformCollisionPair> vgeoms; // fcl variant of ODE dBodyID
@@ -140,11 +166,9 @@ public:
         void Reset()
         {
             if( !!_bodyManager ) {
-                _bodyManager->clear();
                 _bodyManager.reset();
             }
             if( !!_bodyManagerActiveDOFs ) {
-                _bodyManagerActiveDOFs->clear();
                 _bodyManagerActiveDOFs.reset();
             }
 
@@ -157,12 +181,12 @@ public:
         }
 
         void _ResetBodyManagers() {
-          // we invalidate both managers
-          _bodyManager.reset();
-          // TODO : this might not be always necessary, i.e. when the attached or detached body is not on an active link...
-          _bodyManagerActiveDOFs.reset();
-          // we reinitialize the link-enabled callbacks
-          _linkEnabledCallbacks.clear();
+            // we invalidate both managers
+            _bodyManager.reset();
+            // TODO : this might not be always necessary, i.e. when the attached or detached body is not on an active link...
+            _bodyManagerActiveDOFs.reset();
+            // we reinitialize the link-enabled callbacks
+            _linkEnabledCallbacks.clear();
         }
 
         void _ChangeActiveDOFsFlag() {
@@ -182,14 +206,14 @@ public:
         OpenRAVE::UserDataPtr _geometrycallback;
 
         bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
-        BroadPhaseCollisionManagerPtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
-        BroadPhaseCollisionManagerPtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
+        ManagerInstancePtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
+        ManagerInstancePtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
         int nBodyManagerStamp; // sum of the update stamps of all attached bodies; TODO : consider a vector
         int nBodyManagerActiveDOFsStamp;
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
-      std::list<OpenRAVE::UserDataPtr> _linkEnabledCallbacks;
+        std::list<OpenRAVE::UserDataPtr> _linkEnabledCallbacks;
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -313,7 +337,7 @@ public:
         if( !!_envManager ) {
             // If the _envManager does exists, we register all the links BV of the kinbody
             FOREACH(itpLINK, pinfo->vlinks) {
-                (*itpLINK)->Register(_envManager);
+              (*itpLINK)->Register(_envManager);
             }
         }
 
@@ -453,11 +477,10 @@ public:
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             BOOST_ASSERT( !!pinfo );
-            pinfo->_bodyManager.reset();
-            pinfo->_bodyManagerActiveDOFs.reset();
+            pinfo->_ResetBodyManagers();
             FOREACH(itlink, pinfo->vlinks) {
                 (*itlink)->_linkManager.reset();
-                (*itlink)->_vmanagers.resize(0);
+                (*itlink)->_vmanagerKeys.resize(0);
             }
         }
     }
@@ -468,20 +491,20 @@ public:
     }
 
     void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {
-      if( pLINK->nLastStamp < plink->GetParent()->GetUpdateStamp() ) {
-        pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
-        FOREACHC(itgeomcoll, pLINK->vgeoms) {
-          CollisionObjectPtr pcoll = (*itgeomcoll).second;
-          Transform pose = plink->GetTransform() * (*itgeomcoll).first;
-          fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-          fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+        if( pLINK->nLastStamp < plink->GetParent()->GetUpdateStamp() ) {
+            pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
+            FOREACHC(itgeomcoll, pLINK->vgeoms) {
+                CollisionObjectPtr pcoll = (*itgeomcoll).second;
+                Transform pose = plink->GetTransform() * (*itgeomcoll).first;
+                fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+                fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-          pcoll->setTranslation(newPosition);
-          pcoll->setQuatRotation(newOrientation);
-          // Why do we compute the AABB ?
-          pcoll->computeAABB();
+                pcoll->setTranslation(newPosition);
+                pcoll->setQuatRotation(newOrientation);
+                // Why do we compute the AABB ?
+                pcoll->computeAABB();
+            }
         }
-      }
     }
 
 
@@ -587,7 +610,7 @@ private:
             BOOST_ASSERT( pbody->GetLinks().size() == pinfo->vlinks.size() );
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
-              BOOST_ASSERT( !!pinfo->vlinks[i]->plinkBV);
+                BOOST_ASSERT( !!pinfo->vlinks[i]->plinkBV);
                 CollisionObjectPtr pcoll = pinfo->vlinks[i]->plinkBV->second;
                 Transform pose = vtrans[i] * pinfo->vlinks[i]->plinkBV->first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
