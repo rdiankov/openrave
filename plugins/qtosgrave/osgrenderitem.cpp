@@ -815,7 +815,7 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 //    }
 
     FOREACH(itee, _vEndEffectors) {
-        if( !!itee->_pswitch ) {
+        if( bGrab ) {
             itee->_pswitch->setAllChildrenOn();
         }
         else {
@@ -823,7 +823,7 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
         }
     }
     FOREACH(itee, _vAttachedSensors) {
-        if( !!itee->_pswitch ) {
+        if( bGrab ) {
             itee->_pswitch->setAllChildrenOn();
         }
         else {
@@ -904,6 +904,10 @@ void RobotItem::Load()
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
 
+                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+                text->setBackdropColor(osg::Vec4(1,1,1,1));
+
+        
                 text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
                 //text->setFontResolution(18,18);
 

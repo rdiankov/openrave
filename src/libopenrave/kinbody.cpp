@@ -2722,7 +2722,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             if( !!pjoint->_info._infoElectricMotor ) {
                 // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
             }
-            
+
             pjoint->_ComputePartialVelocities(vpartials,0,mapcachedpartials);
             FOREACH(itpartial,vpartials) {
                 int dofindex = itpartial->first;
@@ -4192,13 +4192,11 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
         }
     }
 
-    bool bsuccessfullyRemoved = ( numremoved == 2 );
-
-    if( bsuccessfullyRemoved ) {
-      _PostprocessChangedParameters(Prop_BodyAttached);
+    if( numremoved > 0 ) {
+        _PostprocessChangedParameters(Prop_BodyAttached);
     }
 
-    return bsuccessfullyRemoved;
+    return numremoved == 2;
 }
 
 void KinBody::Enable(bool bEnable)
