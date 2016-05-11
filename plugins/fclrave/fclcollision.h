@@ -7,7 +7,7 @@
 
 #include "fclspace.h"
 
-#define FCLUSESTATISTICS 1
+//#define FCLUSESTATISTICS 1
 #include "fclstatistics.h"
 #define START_TIMING_OPT(statistics, label, options, isRobot) \
   START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
@@ -669,6 +669,7 @@ private:
     void SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
         std::set<KinBodyPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
+        bool bUpdateManager = true;
 
         if( !pinfo->_bodyManager ) {
 
@@ -697,6 +698,8 @@ private:
                 }
                 _cachedManagers->insert(std::pair<ManagerKey, ManagerInstancePtr>(*pkey, bodyManager));
                 pinfo->_bodyManager = bodyManager;
+                // Since we just created the manager we don't need to update it
+                bUpdateManager = false;
             }
 
 
@@ -713,7 +716,9 @@ private:
                 pinfo->_linkEnabledCallbacks.push_back((*itbody)->RegisterChangeCallback(KinBody::Prop_LinkEnable, linkEnabledChangedCallback));
             }
 
-        } else {
+        }
+
+        if( bUpdateManager ) {
 
             // if the bodyManager has not been created just now, we may need to update its content
             CollisionGroup vupdateObjects;
@@ -732,6 +737,7 @@ private:
 
         std::set<KinBodyPtr> attachedBodies;
         probot->GetAttached(attachedBodies);
+        bool bUpdateManager = true;
 
         if( pinfo->_bactiveDOFsDirty ) {
             // if the activeDOFs have changed the _bodyManagerActiveDOFs must be invalid
@@ -794,6 +800,8 @@ private:
                 }
                 _cachedManagers->insert(std::pair<ManagerKey, ManagerInstancePtr>(*pkey, bodyManager));
                 pinfo->_bodyManagerActiveDOFs = bodyManager;
+                // Since we just created the manager we don't need to update it
+                bUpdateManager = false;
             }
 
 
@@ -815,7 +823,9 @@ private:
                 pinfo->_linkEnabledCallbacks.push_back((*itbody)->RegisterChangeCallback(KinBody::Prop_LinkEnable, linkEnabledChangedCallback));
             }
 
-        } else {
+        }
+
+        if( bUpdateManager ){
             // if the bodyManager has not been created just now, we may need to update its content
             CollisionGroup vupdateObjects;
             FOREACH(itbody, attachedBodies) {

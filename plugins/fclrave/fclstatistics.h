@@ -19,7 +19,7 @@ class FCLStatistics {
   }
 
   ~FCLStatistics() {
-    Display();
+    //Display();
   }
 
   void DisplayAll() {
@@ -48,7 +48,8 @@ class FCLStatistics {
       double mean = 0;
       FOREACH(itd, durations) {
         mean += *itd;
-        histograph[static_cast<int>(std::floor(numCells * *itd / max))]++;
+        //TODO:correct the formula which seems to be wrong
+        //histograph.at(static_cast<int>(std::floor(numCells * *itd / max)))++;
       }
       mean /= static_cast<double>(durations.size());
       RAVELOG_WARN_FORMAT("%s %s %d %Lf\n", name%ittiming->first%durations.size()%mean);
@@ -103,7 +104,7 @@ class FCLStatistics {
 };
 
 #define SETUP_STATISTICS(statistics, userdatakey, id)
-#define START_TIMING(statistics, label) do {} while(false)
+#define START_TIMING(statistics, label) do {} while(false);
 #define DISPLAY(statistics) do {} while(false)
 
 #endif
