@@ -7,6 +7,11 @@
 
 #include "fclspace.h"
 
+#define FCLUSESTATISTICS 1
+#include "fclstatistics.h"
+#define START_TIMING_OPT(statistics, label, options, isRobot) \
+  START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
+
 typedef FCLSpace::KinBodyInfoConstPtr KinBodyInfoConstPtr;
 typedef FCLSpace::KinBodyInfoPtr KinBodyInfoPtr;
 
@@ -94,6 +99,7 @@ public:
         _options = 0;
         _numMaxContacts = std::numeric_limits<int>::max(); // TODO
         __description = ":Interface Author: Kenji Maillard\n\nFlexible Collision Library collision checker";
+        SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId())
 
         RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::_SetBroadphaseAlgorithm, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
 
@@ -306,12 +312,14 @@ public:
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Body/Env",_options,pbody1->IsRobot())
         // TODO : tailor this case when stuff become stable enough
       return CheckCollision(pbody1, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Body/Body",_options,(pbody1->IsRobot() || pbody2->IsRobot()))
       if( !!report ) {
         report->Reset(_options);
       }
@@ -347,12 +355,14 @@ public:
 
     virtual bool CheckCollision(LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Link/Env",_options,false)
         // TODO : tailor this case when stuff become stable enough
       return CheckCollision(plink, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
     }
 
     virtual bool CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Link/Link",_options,false)
       if( !!report ) {
         report->Reset(_options);
       }
@@ -378,6 +388,7 @@ public:
 
     virtual bool CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Link/Body",_options,pbody->IsRobot())
 
       if( !!report ) {
         report->Reset(_options);
@@ -495,6 +506,7 @@ public:
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "BodySelf",_options,pbody->IsRobot())
       if( !!report ) {
         report->Reset(_options);
       }
@@ -542,6 +554,7 @@ public:
 
     virtual bool CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "LinkSelf",_options,false)
       if( !!report ) {
         report->Reset(_options);
       }
@@ -1072,6 +1085,10 @@ private:
     boost::shared_ptr<SpatialHashData> _spatialHashData;
     BroadPhaseCollisionManagerPtr _envManager;
     std::map<int, int> envUpdateStamps;
+
+    #ifdef FCLUSESTATISTICS
+    FCLStatisticsPtr _statistics;
+    #endif
 };
 
 
