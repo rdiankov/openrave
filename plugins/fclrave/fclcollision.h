@@ -294,6 +294,9 @@ public:
               FOREACH(itpLINK, pinfo->vlinks) {
                 (*itpLINK)->Register(envManagerInstance->pmanager, _currentEnvKey, boost::weak_ptr<ManagerTable>(_cachedManagers));
               }
+            } else {
+              // This is really not efficient
+              _envManagerInstance.reset();
             }
         }
         return !pinfo;
@@ -903,15 +906,15 @@ private:
 
             // Compute current ManagerKey
              ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
-             pkey->complement = true;
              _currentEnvKey = pkey;
+             //pkey->complement = true;
 
-             /* //pkey->linkList.reserve(envBodies.size());
+              //pkey->linkList.reserve(envBodies.size());
             FOREACH(itbody, envBodies) {
                 if( (*itbody)->IsEnabled() ) {
                     pkey->Add(*itbody, GetEnabledLinks(*itbody));
                 }
-                }*/
+                }
 
             envManagerInstance = GetManagerInstance(pkey, bUpdateManager);
             _envManagerInstance = ManagerInstanceWeakPtr(envManagerInstance);
@@ -927,8 +930,8 @@ private:
             FOREACH(itbody, envBodies) {
               std::map<int, int>::iterator it = envManagerInstance->mUpdateStamps.find((*itbody)->GetEnvironmentId());
               if( it == envManagerInstance->mUpdateStamps.end()) {
-                // The object is not yet in the manager ; this happens when an object is reset and the manager 
-                
+                // TODO : DEBUG ME !!!
+                // The object is not yet in the manager ; This is weird ! It shouldn't happen but it does when using complement
               } else if ( it->second < (*itbody)->GetUpdateStamp() ) {
                     it->second = (*itbody)->GetUpdateStamp();
                     CollectEnabledLinkBVs(*itbody, vupdateObjects);
