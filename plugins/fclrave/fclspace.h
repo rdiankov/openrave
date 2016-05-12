@@ -8,13 +8,56 @@ typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
 
+
+///< Signature of a part of the environment
+struct Signature {
+  Signature() : complement(false) {}
+
+  ///< \param pbody
+  ///< \param vlinkIndexes a vector of link indexes from pbody sorted in increasing order
+  void Add(KinBodyConstPtr pbody, std::vector<int>&& vlinkIndexes) {
+    linkList.insert(std::make_pair(pbody->GetEnvironmentId(), vlinkIndexes));
+  }
+
+  bool operator==(const Signature& s) const {
+    return complement == s.complement && linkList == s.linkList;
+  }
+
+  // TODO : should I use a map instead of a vector so that the hashed value does not depend on the order of insertion ?
+  std::map< int, std::vector<int> > linkList; ///< a vector of pairs of an environment id and a vector of link indexes
+  // TODO : consider interpreting as "if true the Signature corresponds to the (necessarily disjoint) union of all the bodies in the environment *NOT* appearing in linkList and the element of linkList"
+  bool complement; ///< if true the Signature corresponds to all the link in the environment *NOT* contained in linkList
+};
+
+/// specialization of the standard hash for Signature
+std::size_t hash_value(const Signature& s) {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, s.complement);
+      boost::hash_combine(seed, s.linkList);
+      return seed;
+}
+
+namespace std
+{
+  template<>
+  struct hash<Signature>
+  {
+    std::size_t operator()(const Signature& s) const {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, s.complement);
+      boost::hash_combine(seed, s.linkList);
+      return seed;
+    }
+  };
+}
+
 struct ManagerInstance {
     BroadPhaseCollisionManagerPtr pmanager;
     std::map<int, int> mUpdateStamps;
 };
 typedef boost::shared_ptr<ManagerInstance> ManagerInstancePtr;
 typedef boost::weak_ptr<ManagerInstance> ManagerInstanceWeakPtr;
-typedef std::vector< std::pair< int, std::vector<int> > > ManagerKey; ///< pair of an environment id and a vector of link index
+typedef Signature ManagerKey;
 typedef boost::shared_ptr<ManagerKey> ManagerKeyPtr;
 typedef boost::shared_ptr<const ManagerKey> ManagerKeyConstPtr;
 typedef boost::unordered_map<ManagerKey, ManagerInstancePtr> ManagerTable;
@@ -106,6 +149,7 @@ public:
                     if( !!ptable ) {
                         FOREACH(itmanagerKey, _vmanagerKeys) {
                             // we need to invalidate all the cached managers containing this link since the collision object for this link won't be valid anymore
+                          // TODO : use unregisterObject when possible (i.e. when (*itmanagerKey)->complement is set and the manager still exists)
                             ptable->erase(**itmanagerKey);
                         }
                     }
@@ -341,6 +385,8 @@ public:
                 KinBodyInfoPtr pinfo = this->GetInfo(*itbody);
                 if( !!pinfo ) {
                     InitKinBody(*itbody, pinfo);
+                } else {
+                  RAVELOG_ERROR_FORMAT("KinBody %s does not have attached info in space %s, env %d", (*itbody)->GetName()%_userdatakey%_penv->GetId());
                 }
             }
         }

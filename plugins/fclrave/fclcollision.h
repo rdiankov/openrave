@@ -288,7 +288,13 @@ public:
         FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
-            _envManagerInstance.reset();
+            ManagerInstancePtr envManagerInstance = _envManagerInstance.lock();
+            if( !!envManagerInstance && !!_currentEnvKey && _currentEnvKey->complement) {
+              envManagerInstance->mUpdateStamps[pbody->GetEnvironmentId()] = pinfo->nLastStamp;
+              FOREACH(itpLINK, pinfo->vlinks) {
+                (*itpLINK)->Register(envManagerInstance->pmanager, _currentEnvKey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+              }
+            }
         }
         return !pinfo;
     }
@@ -621,7 +627,7 @@ private:
     inline std::vector<int> GetEnabledLinks(KinBodyConstPtr pbody) {
         std::vector<int> venabledLinks;
         venabledLinks.reserve(pbody->GetLinks().size());
-        for(int i = 0; i < pbody->GetLinks().size(); ++i) {
+        for(size_t i = 0; i < pbody->GetLinks().size(); ++i) {
             if( pbody->GetLinks()[i]->IsEnabled() ) {
                 venabledLinks.push_back(i);
             }
@@ -639,6 +645,71 @@ private:
         }
     }
 
+    ///< \param pkey signature characterizing part of the environment
+    ///< \return a ManagerInstancePtr containing the part of the environment indicated by pkey
+    ManagerInstancePtr BuildManagerInstanceFromSignature(ManagerKeyPtr pkey) {
+      ManagerInstancePtr managerInstance = boost::make_shared<ManagerInstance>();
+      managerInstance->pmanager = CreateManager();
+      if( pkey->complement ) {
+        // Register all the initialized element which are not in pkey->linkList
+        FOREACH(itbody, _fclspace->GetEnvBodies()) {
+          std::map< int, std::vector<int> >::iterator it = pkey->linkList.find((*itbody)->GetEnvironmentId());
+          KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
+          bool bObjectAdded = false;
+          if( it == pkey->linkList.end() ) {
+            // There is no link to exclude, we just add all the links
+            FOREACH(itpLINK, pitinfo->vlinks) {
+              (*itpLINK)->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+              bObjectAdded = true;
+            }
+          } else {
+            // The element in it->second are assumed to be sorted, so we use that to simplify the filtering
+            std::vector<int>::iterator itexcludedlink = it->second.begin();
+            for(size_t i = 0; i < pitinfo->vlinks.size() ; ++i) {
+              if( itexcludedlink == it->second.end() || i != *itexcludedlink ) {
+                // this index is not excluded
+                pitinfo->vlinks[i]->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+                bObjectAdded = true;
+              } else {
+                // we pass this index since it is excluded and increment the excluded link iterator
+                itexcludedlink++;
+              }
+            }
+          }
+
+          if( bObjectAdded ) {
+            managerInstance->mUpdateStamps[(*itbody)->GetEnvironmentId()] = pitinfo->nLastStamp;
+          }
+        }
+      } else {
+        //Register all the element which are in pkey->linkList
+        FOREACH(itIdLinkIndexPair, pkey->linkList) {
+          KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
+          managerInstance->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
+          FOREACH(itindex, itIdLinkIndexPair->second) {
+            pitinfo->vlinks[*itindex]->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+          }
+        }
+      }
+      return managerInstance;
+    }
+
+
+    ManagerInstancePtr GetManagerInstance(ManagerKeyPtr pkey, bool& fromCache) {
+      // Test if the manager already exists
+      ManagerTable::iterator it = _cachedManagers->find(*pkey);
+      if(it != _cachedManagers->end()) {
+        fromCache = true;
+        return it->second;
+      } else {
+        // if it does not exists yet create and cache it
+        ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
+        std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
+        _cachedManagers->insert(insertedPair);
+        fromCache = false;
+        return bodyManager;
+      }
+    }
 
 
     BroadPhaseCollisionManagerPtr SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
@@ -652,33 +723,13 @@ private:
 
             // Compute current ManagerKey
             ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
-            pkey->reserve(attachedBodies.size());
+            //pkey->linkList.reserve(attachedBodies.size());
             FOREACH(itbody, attachedBodies) {
-                std::vector<int> enabledLinks = GetEnabledLinks(*itbody);
-                pkey->push_back(std::pair< int, std::vector<int> >((*itbody)->GetEnvironmentId(), enabledLinks));
+                pkey->Add(*itbody, GetEnabledLinks(*itbody));
             }
 
-            // Test if the manager already exists
-            ManagerTable::iterator it = _cachedManagers->find(*pkey);
-            if(it != _cachedManagers->end()) {
-                bodyManager = it->second;
-            } else {
-                // if it does not exists yet create and cache it
-                bodyManager = boost::make_shared<ManagerInstance>();
-                bodyManager->pmanager = CreateManager();
-                FOREACH(itIdLinkIndexPair, *pkey) {
-                    KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
-                    bodyManager->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
-                    FOREACH(itindex, itIdLinkIndexPair->second) {
-                        pitinfo->vlinks[*itindex]->Register(bodyManager->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-                    }
-                }
-                std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
-                _cachedManagers->insert(insertedPair);
-                // Since we just created the manager we don't need to update it
-                bUpdateManager = false;
-            }
-
+            // The manager will need to be updated only if it comes from the cache
+            bodyManager = GetManagerInstance(pkey, bUpdateManager);
             pinfo->_bodyManager = bodyManager;
 
             // Set the callbacks to invalidate the manager
@@ -743,7 +794,7 @@ private:
 
             // Compute current ManagerKey
             ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
-            pkey->reserve(attachedBodies.size());
+            //pkey->linkList.reserve(attachedBodies.size());
             FOREACH(itbody, attachedBodies) {
                 if( *itbody == probot ) {
                     std::vector<int> enabledActiveLinks, enabledLinks = GetEnabledLinks(*itbody);
@@ -753,38 +804,18 @@ private:
                             enabledActiveLinks.push_back(*itindex);
                         }
                     }
-                    pkey->push_back(std::pair< int, std::vector<int> >((*itbody)->GetEnvironmentId(), enabledActiveLinks));
+                    pkey->Add(*itbody, std::move(enabledActiveLinks));
                 } else {
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
-                        std::vector<int> enabledLinks = GetEnabledLinks(*itbody);
-                        pkey->push_back(std::pair< int, std::vector<int> >((*itbody)->GetEnvironmentId(), enabledLinks));
+                        pkey->Add(*itbody, GetEnabledLinks(*itbody));
                     }
                 }
             }
 
 
-            // Test if the manager already exists
-            ManagerTable::iterator it = _cachedManagers->find(*pkey);
-            if(it != _cachedManagers->end()) {
-                bodyManager = it->second;
-            } else {
-                // if it does not exists yet create and cache it
-                bodyManager = boost::make_shared<ManagerInstance>();
-                bodyManager->pmanager = CreateManager();
-                FOREACH(itIdLinkIndexPair, *pkey) {
-                    KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
-                    bodyManager->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
-                    FOREACH(itindex, itIdLinkIndexPair->second) {
-                        pitinfo->vlinks[*itindex]->Register(bodyManager->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-                    }
-                }
-                std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
-                _cachedManagers->insert(insertedPair);
-                // Since we just created the manager we don't need to update it
-                bUpdateManager = false;
-            }
-
+            // The manager will need to be updated only if it comes from the cache
+            bodyManager = GetManagerInstance(pkey, bUpdateManager);
             pinfo->_bodyManagerActiveDOFs = ManagerInstanceWeakPtr(bodyManager);
 
             // Set the callbacks to invalidate the manager
@@ -855,23 +886,10 @@ private:
         }
     }
 
-//    template<class InputIt>
-//    void SetupEnvManager(InputIt itexcludedbodiesbegin, InputIt itexcludedbodiesend) {
-//        CollisionGroup vupdateObjects;
-//        FOREACH(itIdStampPair, envUpdateStamps) {
-//            KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(itIdStampPair->first);
-//            if( std::find(itexcludedbodiesbegin, itexcludedbodiesend, pbody) == itexcludedbodiesend && itIdStampPair->second != pbody->GetUpdateStamp() ) {
-//                itIdStampPair->second = pbody->GetUpdateStamp();
-//                vupdateObjects.reserve(vupdateObjects.size() +  pbody->GetLinks().size());
-//                for(size_t i = 0; i < pbody->GetLinks().size(); i++) {
-//                    vupdateObjects.push_back(GetLinkBV(pbody, i).get());
-//                }
-//            }
-//        }
-//        _envManager->update(vupdateObjects);
-//        _envManager->setup(); // might not be useful but won't harm in any case
-//    }
 
+    ///< \param itexcludedbodiesbegin forward iterator to the first KinBodyConstPtr that can be safely excluded
+    ///< \param itexcludedbodiesend iterator to the after-the-last element to be excluded
+    // TODO : test if excluding helps
     template<class InputIt>
     BroadPhaseCollisionManagerPtr GetEnvManager(InputIt itexcludedbodiesbegin, InputIt itexcludedbodiesend) {
         bool bUpdateManager = true;
@@ -884,37 +902,18 @@ private:
         if( !envManagerInstance ) {
 
             // Compute current ManagerKey
-            ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
-            pkey->reserve(envBodies.size());
+             ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
+             pkey->complement = true;
+             _currentEnvKey = pkey;
+
+             /* //pkey->linkList.reserve(envBodies.size());
             FOREACH(itbody, envBodies) {
                 if( (*itbody)->IsEnabled() ) {
-                    std::vector<int> enabledLinks = GetEnabledLinks(*itbody);
-                    pkey->push_back(std::pair< int, std::vector<int> >((*itbody)->GetEnvironmentId(), enabledLinks));
+                    pkey->Add(*itbody, GetEnabledLinks(*itbody));
                 }
-            }
+                }*/
 
-
-            // Test if the manager already exists
-            ManagerTable::iterator it = _cachedManagers->find(*pkey);
-            if(it != _cachedManagers->end()) {
-                envManagerInstance = it->second;
-            } else {
-                // if it does not exists yet create and cache it
-                envManagerInstance = boost::make_shared<ManagerInstance>();
-                envManagerInstance->pmanager = CreateManager();
-                FOREACH(itIdLinkIndexPair, *pkey) {
-                    KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
-                    envManagerInstance->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
-                    FOREACH(itindex, itIdLinkIndexPair->second) {
-                        pitinfo->vlinks[*itindex]->Register(envManagerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-                    }
-                }
-                std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, envManagerInstance);
-                _cachedManagers->insert(insertedPair);
-                // Since we just created the manager we don't need to update it
-                bUpdateManager = false;
-            }
-
+            envManagerInstance = GetManagerInstance(pkey, bUpdateManager);
             _envManagerInstance = ManagerInstanceWeakPtr(envManagerInstance);
 
             // Set the callbacks to invalidate the manager
@@ -926,8 +925,12 @@ private:
         if( bUpdateManager ) {
             CollisionGroup vupdateObjects;
             FOREACH(itbody, envBodies) {
-                if( envManagerInstance->mUpdateStamps[(*itbody)->GetEnvironmentId()] < (*itbody)->GetUpdateStamp() ) {
-                    envManagerInstance->mUpdateStamps[(*itbody)->GetEnvironmentId()] = (*itbody)->GetUpdateStamp();
+              std::map<int, int>::iterator it = envManagerInstance->mUpdateStamps.find((*itbody)->GetEnvironmentId());
+              if( it == envManagerInstance->mUpdateStamps.end()) {
+                // The object is not yet in the manager ; this happens when an object is reset and the manager 
+                
+              } else if ( it->second < (*itbody)->GetUpdateStamp() ) {
+                    it->second = (*itbody)->GetUpdateStamp();
                     CollectEnabledLinkBVs(*itbody, vupdateObjects);
                 }
             }
@@ -1131,7 +1134,7 @@ private:
         return LinkConstPtr();
     }
 
-
+    // TODO : This is becoming really stupid, I should just add optional additional data for DynamicAABBTree
     BroadPhaseCollisionManagerPtr _CreateManagerFromBroadphaseAlgorithm(std::string const &algorithm)
     {
         if(algorithm == "Naive") {
@@ -1159,13 +1162,24 @@ private:
             boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
             pmanager->tree_init_level = 2;
             return pmanager;
-            return boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
         } else if(algorithm == "DynamicAABBTree3") {
             boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager>();
             pmanager->tree_init_level = 3;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree_Array") {
             return boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+        } else if(algorithm == "DynamicAABBTree1_Array") {
+          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+          pmanager->tree_init_level = 1;
+          return pmanager;
+        } else if(algorithm == "DynamicAABBTree2_Array") {
+          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+          pmanager->tree_init_level = 2;
+          return pmanager;
+        } else if(algorithm == "DynamicAABBTree3_Array") {
+          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+          pmanager->tree_init_level = 3;
+          return pmanager;
         } else {
             throw OPENRAVE_EXCEPTION_FORMAT("Unknown broad-phase algorithm '%s'.", algorithm, OpenRAVE::ORE_InvalidArguments);
         }
@@ -1184,7 +1198,7 @@ private:
     std::string _broadPhaseCollisionManagerAlgorithm;
     boost::shared_ptr<SpatialHashData> _spatialHashData;
     ManagerInstanceWeakPtr _envManagerInstance;
-
+    ManagerKeyPtr _currentEnvKey;
     ManagerTablePtr _cachedManagers;
 
     #ifdef FCLUSESTATISTICS
