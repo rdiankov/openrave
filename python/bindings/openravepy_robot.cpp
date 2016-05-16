@@ -1371,7 +1371,7 @@ public:
 class ManipulatorInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyRobotBase::PyManipulatorInfo& r)
+    static boost::python::tuple getstate(const PyRobotBase::PyManipulatorInfo& r)
     {
         return boost::python::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames);
     }
@@ -1390,7 +1390,7 @@ public:
 class GrabbedInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyRobotBase::PyGrabbedInfo& r)
+    static boost::python::tuple getstate(const PyRobotBase::PyGrabbedInfo& r)
     {
         return boost::python::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
     }
