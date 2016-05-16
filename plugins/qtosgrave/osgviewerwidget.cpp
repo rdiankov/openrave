@@ -52,10 +52,6 @@ public:
         return false;
     }
 
-    virtual void accept(osgGA::GUIEventHandlerVisitor& v)   {
-        v.visit(*this);
-    }
-
 private:
     boost::function<bool(int)> _onKeyDown; ///< called when key is pressed
 };
