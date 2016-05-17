@@ -710,6 +710,10 @@ PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr pgeom)
         if( pgeom->GetType() == SensorBase::ST_Camera ) {
             return PySensorGeometryPtr(new PyCameraGeomData(boost::static_pointer_cast<SensorBase::CameraGeomData const>(pgeom)));
         }
+        else if( pgeom->GetType() == SensorBase::ST_Laser ) {
+            return PySensorGeometryPtr(new PyLaserGeomData(boost::static_pointer_cast<SensorBase::LaserGeomData const>(pgeom)));
+        }
+
     }
     return PySensorGeometryPtr();
 }
