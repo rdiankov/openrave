@@ -357,7 +357,7 @@ public:
 
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
     {
-        OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
+        OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Laser );
         *_pgeom = *boost::static_pointer_cast<LaserGeomData const>(pgeometry);
         _Reset();
     }
