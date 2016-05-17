@@ -2255,11 +2255,20 @@ void RobotBase::_ComputeInternalInformation()
         ConfigurationSpecification::Group group;
         stringstream ss;
         ss << "joint_values " << GetName();
-        FOREACHC(it,_vAllDOFIndices) {
-            ss << " " << *it;
+        if( _nActiveDOF >= 0 ) {
+            // use _vActiveDOFIndices
+            FOREACHC(it,_vActiveDOFIndices) {
+                ss << " " << *it;
+            }
+            group.dof = (int)_vActiveDOFIndices.size();
+        }
+        else {
+            FOREACHC(it,_vAllDOFIndices) {
+                ss << " " << *it;
+            }
+            group.dof = (int)_vAllDOFIndices.size();
         }
         group.name = ss.str();
-        group.dof = (int)_vAllDOFIndices.size();
         group.offset = 0;
         // do not initialize interpolation, since it implies a motion sampling strategy
         _activespec._vgroups.push_back(group);
