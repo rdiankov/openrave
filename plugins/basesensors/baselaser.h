@@ -371,7 +371,13 @@ protected:
     virtual void _Reset()
     {
         boost::mutex::scoped_lock lock(_mutexdata);
-        int N = (int)( (_pgeom->max_angle[0]-_pgeom->min_angle[0])/_pgeom->resolution[0] + 0.5f)+1;
+        int N;
+        if( _pgeom->resolution[0] > 0 ) {
+            N = (int)( (_pgeom->max_angle[0]-_pgeom->min_angle[0])/_pgeom->resolution[0] + 0.5f)+1;
+        }
+        else {
+            N = 1;
+        }
         _pdata->positions.resize(1);
         _pdata->ranges.resize(N);
         _pdata->intensity.resize(N);
