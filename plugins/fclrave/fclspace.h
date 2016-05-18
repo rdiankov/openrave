@@ -238,6 +238,7 @@ public:
                             ptable->erase(**itmanagerKey);
                           }
                         }
+                        _vmanagerKeys.resize(0);
                     }
                     plinkBV.reset();
                 }
