@@ -1,6 +1,7 @@
 #ifndef OPENRAVE_FCL_SPACE
 #define OPENRAVE_FCL_SPACE
 
+namespace fclrave {
 
 // TODO : I should put these in some namespace...
 
@@ -11,47 +12,125 @@ typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionMa
 
 ///< Signature of a part of the environment
 struct Signature {
-  Signature() : complement(false) {}
+    Signature() : complement(false) {
+    }
 
-  ///< \param pbody
-  ///< \param vlinkIndexes a vector of link indexes from pbody sorted in increasing order
-  void Add(KinBodyConstPtr pbody, std::vector<int>&& vlinkIndexes) {
-    linkList.insert(std::make_pair(pbody->GetEnvironmentId(), vlinkIndexes));
+    ///< \param pbody
+    ///< \param vlinkIndexes a vector of link indexes from pbody sorted in increasing order
+    void Add(KinBodyConstPtr pbody, std::vector<int>&& vlinkIndexes) {
+        linkList.insert(std::make_pair(pbody->GetEnvironmentId(), vlinkIndexes));
+    }
+
+  size_t GetSize() const {
+    size_t size = 0;
+    FOREACH(itvlinkIndexes, linkList) {
+      size += itvlinkIndexes->second.size();
+    }
+    return size;
   }
 
-  bool operator==(const Signature& s) const {
-    return complement == s.complement && linkList == s.linkList;
-  }
+    bool operator==(const Signature& s) const {
+        return complement == s.complement && linkList == s.linkList;
+    }
 
-  // TODO : should I use a map instead of a vector so that the hashed value does not depend on the order of insertion ?
-  std::map< int, std::vector<int> > linkList; ///< a vector of pairs of an environment id and a vector of link indexes
-  // TODO : consider interpreting as "if true the Signature corresponds to the (necessarily disjoint) union of all the bodies in the environment *NOT* appearing in linkList and the element of linkList"
-  bool complement; ///< if true the Signature corresponds to all the link in the environment *NOT* contained in linkList
+    // TODO : should I use a map instead of a vector so that the hashed value does not depend on the order of insertion ?
+    std::map< int, std::vector<int> > linkList; ///< a vector of pairs of an environment id and a vector of link indexes
+    // TODO : consider interpreting as "if true the Signature corresponds to the (necessarily disjoint) union of all the bodies in the environment *NOT* appearing in linkList and the element of linkList"
+    bool complement; ///< if true the Signature corresponds to all the link in the environment *NOT* contained in linkList
 };
 
 /// specialization of the standard hash for Signature
 std::size_t hash_value(const Signature& s) {
-      std::size_t seed = 0;
-      boost::hash_combine(seed, s.complement);
-      boost::hash_combine(seed, s.linkList);
-      return seed;
+    std::size_t seed = 0;
+    boost::hash_combine(seed, s.complement);
+    boost::hash_combine(seed, s.linkList);
+    return seed;
 }
+
+ struct SignatureIntersection {
+   Signature intersection;
+   Signature onlyFirst;
+   Signature onlySecond;
+ };
+
+/// \brief Computes the intersection and symmetric difference between s1 and s2
+ SignatureIntersection ComputeSignatureIntersection(const Signature& s1, const Signature& s2) {
+   SignatureIntersection result;
+   std::map<int, std::vector<int>>::const_iterator it1 = s1.linkList.begin(), it2 = s2.linkList.begin();
+   while( it1 != s1.linkList.end() && it2 != s2.linkList.end() ) {
+     if ( it1->first > it2->first ) {
+       result.onlySecond.linkList.insert(result.onlySecond.linkList.end(), *it2);
+       it2++;
+     } else if( it1->first < it2->first ) {
+       result.onlyFirst.linkList.insert(result.onlyFirst.linkList.end(), *it1);
+       it1++;
+     } else {
+       // the same id occurs in both signature, we compute the symmetric difference of the links indexes
+       std::vector<int> common, linkIndexes1, linkIndexes2;
+       std::vector<int>::const_iterator itLinkIndexes1 = it1->second.begin(), itLinkIndexes2 = it2->second.begin();
+       while( itLinkIndexes1 != it1->second.end() && itLinkIndexes2 != it2->second.end() ) {
+         if( *itLinkIndexes1 > *itLinkIndexes2 ) {
+           linkIndexes2.push_back(*itLinkIndexes2);
+           itLinkIndexes2++;
+         } else if( *itLinkIndexes1 < *itLinkIndexes2 ) {
+           linkIndexes1.push_back(*itLinkIndexes1);
+           itLinkIndexes1++;
+         } else {
+           common.push_back(*itLinkIndexes1);
+           itLinkIndexes1++;
+           itLinkIndexes2++;
+         }
+       }
+       // we copy everything left over (at most one of the two next call is really doing something)
+       std::copy(itLinkIndexes1, it1->second.end(), std::back_inserter(linkIndexes1));
+       std::copy(itLinkIndexes2, it2->second.end(), std::back_inserter(linkIndexes2));
+       if( common.size() > 0 ) {
+         result.intersection.linkList.insert(result.intersection.linkList.end(), std::make_pair(it1->first, common));
+       }
+       if( linkIndexes1.size() > 0 ) {
+         result.onlyFirst.linkList.insert(result.onlyFirst.linkList.end(), std::make_pair(it1->first, linkIndexes1));
+       }
+       if( linkIndexes2.size() > 0 ) {
+         result.onlySecond.linkList.insert(result.onlySecond.linkList.end(), std::make_pair(it2->first, linkIndexes2));
+       }
+       it1++;
+       it2++;
+     }
+   }
+   // we copy everything left over (at most one of the two next call is really doing something)
+   std::copy(it1, s1.linkList.end(), std::inserter(result.onlyFirst.linkList, result.onlyFirst.linkList.end()));
+   std::copy(it2, s2.linkList.end(), std::inserter(result.onlySecond.linkList, result.onlySecond.linkList.end()));
+   BOOST_ASSERT( result.onlyFirst.GetSize() + result.onlySecond.GetSize() + 2*result.intersection.GetSize() == s1.GetSize() + s2.GetSize());
+   return result;
+ }
+}
+
 
 namespace std
 {
-  template<>
-  struct hash<Signature>
-  {
-    std::size_t operator()(const Signature& s) const {
-      std::size_t seed = 0;
-      boost::hash_combine(seed, s.complement);
-      boost::hash_combine(seed, s.linkList);
-      return seed;
+template<>
+  struct hash<fclrave::Signature>
+{
+  std::size_t operator()(const fclrave::Signature& s) const {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, s.complement);
+        boost::hash_combine(seed, s.linkList);
+        return seed;
     }
-  };
+};
 }
 
+
+namespace fclrave {
 struct ManagerInstance {
+  // copy constructor is only valid when we are working with DynamicAABBTree_Array
+  void Clone(const ManagerInstance& otherInstance) {
+    boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> _pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+    _pmanager->clone(*static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(otherInstance.pmanager.get()));
+    pmanager = _pmanager;
+    mUpdateStamps = otherInstance.mUpdateStamps;
+  }
+
     BroadPhaseCollisionManagerPtr pmanager;
     std::map<int, int> mUpdateStamps;
 };
@@ -149,8 +228,15 @@ public:
                     if( !!ptable ) {
                         FOREACH(itmanagerKey, _vmanagerKeys) {
                             // we need to invalidate all the cached managers containing this link since the collision object for this link won't be valid anymore
-                          // TODO : use unregisterObject when possible (i.e. when (*itmanagerKey)->complement is set and the manager still exists)
+                            // TODO : use unregisterObject when possible (i.e. when (*itmanagerKey)->complement is set,  and the manager still exists)
+                          if( (*itmanagerKey)->complement && !(*itmanagerKey)->linkList.count(GetLink()->GetParent()->GetEnvironmentId()) ) {
+                            ManagerTable::iterator it = ptable->find(**itmanagerKey);
+                            if( it != ptable->end() ) {
+                              it->second->pmanager->unregisterObject(plinkBV->second.get());
+                            }
+                          } else {
                             ptable->erase(**itmanagerKey);
+                          }
                         }
                     }
                     plinkBV.reset();
@@ -233,12 +319,14 @@ public:
         vector< boost::shared_ptr<LINK> > vlinks;
         OpenRAVE::UserDataPtr _geometrycallback;
 
-        bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
         ManagerInstanceWeakPtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
+        ManagerKeyPtr bodyManagerReferenceKey;
+
+        bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
         ManagerInstanceWeakPtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
-        int nBodyManagerStamp; // sum of the update stamps of all attached bodies; TODO : consider a vector
-        int nBodyManagerActiveDOFsStamp;
+        ManagerKeyPtr bodyManagerActiveDOFSsReferenceKey;
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
+
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
         std::list<OpenRAVE::UserDataPtr> _linkEnabledCallbacks;
@@ -386,7 +474,7 @@ public:
                 if( !!pinfo ) {
                     InitKinBody(*itbody, pinfo);
                 } else {
-                  RAVELOG_ERROR_FORMAT("KinBody %s does not have attached info in space %s, env %d", (*itbody)->GetName()%_userdatakey%_penv->GetId());
+                    RAVELOG_ERROR_FORMAT("KinBody %s does not have attached info in space %s, env %d", (*itbody)->GetName()%_userdatakey%_penv->GetId());
                 }
             }
         }
@@ -526,9 +614,9 @@ public:
     }
 
 
-  const std::set<KinBodyConstPtr> GetEnvBodies() const {
-    return _setInitializedBodies;
-  }
+    const std::set<KinBodyConstPtr>& GetEnvBodies() const {
+        return _setInitializedBodies;
+    }
 
 
 private:
@@ -685,5 +773,6 @@ BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo)
 BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::KinBodyInfo::LINK)
 #endif
 
+}
 
 #endif

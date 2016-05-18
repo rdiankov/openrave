@@ -7,6 +7,9 @@
 
 #include "fclspace.h"
 
+
+namespace fclrave {
+
 //#define FCLUSESTATISTICS 1
 #include "fclstatistics.h"
 #define START_TIMING_OPT(statistics, label, options, isRobot) \
@@ -95,7 +98,7 @@ public:
     // DynamicAABBTree : initialization working
     // DynamicAABBTree_Array : initialization working, problems with unregister
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
-        : OpenRAVE::CollisionCheckerBase(penv), _bIsSelfCollisionChecker(true), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
+        : OpenRAVE::CollisionCheckerBase(penv), _bIsSelfCollisionChecker(true), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2_Array")
     {
 
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
@@ -289,14 +292,8 @@ public:
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
             ManagerInstancePtr envManagerInstance = _envManagerInstance.lock();
-            if( !!envManagerInstance && !!_currentEnvKey && _currentEnvKey->complement) {
-              envManagerInstance->mUpdateStamps[pbody->GetEnvironmentId()] = pinfo->nLastStamp;
-              FOREACH(itpLINK, pinfo->vlinks) {
-                (*itpLINK)->Register(envManagerInstance->pmanager, _currentEnvKey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-              }
-            } else {
-              // This is really not efficient
-              _envManagerInstance.reset();
+            if( _currentEnvKey && !_currentEnvKey->complement) {
+                _envManagerInstance.reset();
             }
         }
         return !pinfo;
@@ -304,7 +301,9 @@ public:
 
     virtual void RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     {
+      if( _currentEnvKey && !_currentEnvKey->complement) {
         _envManagerInstance.reset();
+      }
         _fclspace->RemoveUserData(pbody);
     }
 
@@ -443,6 +442,7 @@ public:
         std::set<KinBodyPtr> attachedBodies;
         plink->GetParent()->GetAttached(attachedBodies);
         BroadPhaseCollisionManagerPtr envManager = GetEnvManager(attachedBodies.begin(), attachedBodies.end());
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManager.get())->isValid());
 
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
@@ -466,10 +466,12 @@ public:
         _fclspace->Synchronize();
 
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager.get())->isValid());
 
         std::set<KinBodyPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
         BroadPhaseCollisionManagerPtr envManager = GetEnvManager(attachedBodies.begin(), attachedBodies.end());
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManager.get())->isValid());
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -651,69 +653,119 @@ private:
     ///< \param pkey signature characterizing part of the environment
     ///< \return a ManagerInstancePtr containing the part of the environment indicated by pkey
     ManagerInstancePtr BuildManagerInstanceFromSignature(ManagerKeyPtr pkey) {
-      ManagerInstancePtr managerInstance = boost::make_shared<ManagerInstance>();
-      managerInstance->pmanager = CreateManager();
-      if( pkey->complement ) {
-        // Register all the initialized element which are not in pkey->linkList
-        FOREACH(itbody, _fclspace->GetEnvBodies()) {
-          std::map< int, std::vector<int> >::iterator it = pkey->linkList.find((*itbody)->GetEnvironmentId());
-          KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
-          bool bObjectAdded = false;
-          if( it == pkey->linkList.end() ) {
-            // There is no link to exclude, we just add all the links
-            FOREACH(itpLINK, pitinfo->vlinks) {
-              (*itpLINK)->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-              bObjectAdded = true;
-            }
-          } else {
-            // The element in it->second are assumed to be sorted, so we use that to simplify the filtering
-            std::vector<int>::iterator itexcludedlink = it->second.begin();
-            for(size_t i = 0; i < pitinfo->vlinks.size() ; ++i) {
-              if( itexcludedlink == it->second.end() || i != *itexcludedlink ) {
-                // this index is not excluded
-                pitinfo->vlinks[i]->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-                bObjectAdded = true;
-              } else {
-                // we pass this index since it is excluded and increment the excluded link iterator
-                itexcludedlink++;
-              }
-            }
-          }
+        ManagerInstancePtr managerInstance = boost::make_shared<ManagerInstance>();
+        managerInstance->pmanager = CreateManager();
+        if( pkey->complement ) {
+          const std::set<KinBodyConstPtr>& bodies = _fclspace->GetEnvBodies();
+            // Register all the initialized element which are not in pkey->linkList
+          FOREACH(itbody, bodies) {
+                std::map< int, std::vector<int> >::iterator it = pkey->linkList.find((*itbody)->GetEnvironmentId());
+                KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
+                bool bObjectAdded = false;
+                if( it == pkey->linkList.end() ) {
+                    // There is no link to exclude, we just add all the links
+                    FOREACH(itpLINK, pitinfo->vlinks) {
+                        (*itpLINK)->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+                        bObjectAdded = true;
+                    }
+                } else {
+                    // The element in it->second are assumed to be sorted, so we use that to simplify the filtering
+                    std::vector<int>::iterator itexcludedlink = it->second.begin();
+                    for(size_t i = 0; i < pitinfo->vlinks.size(); ++i) {
+                        if( itexcludedlink == it->second.end() || i != *itexcludedlink ) {
+                            // this index is not excluded
+                            pitinfo->vlinks[i]->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+                            bObjectAdded = true;
+                        } else {
+                            // we pass this index since it is excluded and increment the excluded link iterator
+                            itexcludedlink++;
+                        }
+                    }
+                }
 
-          if( bObjectAdded ) {
-            managerInstance->mUpdateStamps[(*itbody)->GetEnvironmentId()] = pitinfo->nLastStamp;
-          }
+                if( bObjectAdded ) {
+                    managerInstance->mUpdateStamps[it->first] = pitinfo->nLastStamp;
+                }
+            }
+        } else {
+            //Register all the element which are in pkey->linkList
+            FOREACH(itIdLinkIndexPair, pkey->linkList) {
+                KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
+                managerInstance->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
+                FOREACH(itindex, itIdLinkIndexPair->second) {
+                    pitinfo->vlinks[*itindex]->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+                }
+            }
         }
-      } else {
-        //Register all the element which are in pkey->linkList
-        FOREACH(itIdLinkIndexPair, pkey->linkList) {
-          KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
-          managerInstance->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
-          FOREACH(itindex, itIdLinkIndexPair->second) {
-            pitinfo->vlinks[*itindex]->Register(managerInstance->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-          }
-        }
-      }
-      return managerInstance;
+        return managerInstance;
     }
 
+    void UpdateManagerWithKey(ManagerInstancePtr baseManager, ManagerKey newElements, ManagerKeyPtr pkey) {
+      // it does not seem useful to implement the other case right now
+      BOOST_ASSERT( !pkey->complement );
+      FOREACH(itIdLinkIndexPair, newElements.linkList) {
+        KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
+        baseManager->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
+        FOREACH(itindex, itIdLinkIndexPair->second) {
+          pitinfo->vlinks[*itindex]->Register(baseManager->pmanager, pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+        }
+      }
+    }
+
+
+    ManagerInstancePtr GetManagerInstance(ManagerKeyPtr pkey, bool& fromCache, ManagerKeyPtr& preference) {
+        // Test if the manager already exists
+        ManagerTable::iterator it = _cachedManagers->find(*pkey);
+        if(it != _cachedManagers->end()) {
+          RAVELOG_WARN("FCL COLLISION : Getting manager from cache");
+            fromCache = true;
+            BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(it->second->pmanager.get())->isValid());
+            return it->second;
+        } else {
+          if( !preference || !_cachedManagers->count(*preference) ) {
+            RAVELOG_WARN_FORMAT("FCL COLLISION : Rebuilding manager (%d)", !!preference);
+            RAVELOG_WARN_FORMAT("FCL COLLISION (key size) all : %d", pkey->GetSize());
+            ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
+            BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
+            std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
+            _cachedManagers->insert(insertedPair);
+            preference = pkey;
+            fromCache = false;
+            return bodyManager;
+          } else {
+            SignatureIntersection keyReferenceIntersection = ComputeSignatureIntersection(*pkey, *preference);
+            ManagerInstancePtr referenceManager;
+            if( keyReferenceIntersection.onlySecond.linkList.size() > 0 ) {
+              RAVELOG_WARN("FCL COLLISION : Rebuilding reference manager");
+              RAVELOG_WARN_FORMAT("FCL COLLISION (key size) second : %d", keyReferenceIntersection.onlySecond.GetSize());
+              // recompute the reference manager from the intersection data
+              // TODO : it might be more efficient to unregister the element of  keyReferenceIntersection.onlySecond.linkList
+              preference = boost::make_shared<Signature>(keyReferenceIntersection.intersection);
+              referenceManager = BuildManagerInstanceFromSignature(preference);
+              BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(referenceManager->pmanager.get())->isValid());
+              fromCache = false;
+              _cachedManagers->insert(make_pair(keyReferenceIntersection.intersection, referenceManager));
+            } else {
+              RAVELOG_WARN("FCL COLLISION : Getting reference manager from cache");
+              referenceManager = _cachedManagers->at(keyReferenceIntersection.intersection);
+              BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(referenceManager->pmanager.get())->isValid());
+              fromCache = true;
+            }
+            RAVELOG_WARN_FORMAT("FCL COLLISION (key size) first : %d", keyReferenceIntersection.onlyFirst.GetSize());
+            // We copy the referenceManager and add the missing objects from pkey
+            ManagerInstancePtr bodyManager = boost::make_shared<ManagerInstance>();
+            bodyManager->Clone(*referenceManager);
+            UpdateManagerWithKey(bodyManager, keyReferenceIntersection.onlyFirst, pkey);
+            BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
+            return bodyManager;
+          }
+        }
+    }
 
     ManagerInstancePtr GetManagerInstance(ManagerKeyPtr pkey, bool& fromCache) {
-      // Test if the manager already exists
-      ManagerTable::iterator it = _cachedManagers->find(*pkey);
-      if(it != _cachedManagers->end()) {
-        fromCache = true;
-        return it->second;
-      } else {
-        // if it does not exists yet create and cache it
-        ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
-        std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
-        _cachedManagers->insert(insertedPair);
-        fromCache = false;
-        return bodyManager;
-      }
+      ManagerKeyPtr dummy;
+      return GetManagerInstance(pkey, fromCache, dummy);
     }
-
 
     BroadPhaseCollisionManagerPtr SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
         std::set<KinBodyPtr> attachedBodies;
@@ -732,7 +784,7 @@ private:
             }
 
             // The manager will need to be updated only if it comes from the cache
-            bodyManager = GetManagerInstance(pkey, bUpdateManager);
+            bodyManager = GetManagerInstance(pkey, bUpdateManager, pinfo->bodyManagerReferenceKey);
             pinfo->_bodyManager = bodyManager;
 
             // Set the callbacks to invalidate the manager
@@ -749,6 +801,7 @@ private:
             }
 
         }
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
 
         if( bUpdateManager ) {
 
@@ -760,9 +813,11 @@ private:
                     CollectEnabledLinkBVs(*itbody, vupdateObjects);
                 }
             }
+            BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
             bodyManager->pmanager->update(vupdateObjects);
         }
         bodyManager->pmanager->setup();
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
         return bodyManager->pmanager;
     }
 
@@ -818,7 +873,7 @@ private:
 
 
             // The manager will need to be updated only if it comes from the cache
-            bodyManager = GetManagerInstance(pkey, bUpdateManager);
+            bodyManager = GetManagerInstance(pkey, bUpdateManager, pinfo->bodyManagerActiveDOFSsReferenceKey);
             pinfo->_bodyManagerActiveDOFs = ManagerInstanceWeakPtr(bodyManager);
 
             // Set the callbacks to invalidate the manager
@@ -840,6 +895,7 @@ private:
             }
 
         }
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
 
         if( bUpdateManager ) {
             // if the bodyManager has not been created just now, we may need to update its content
@@ -850,9 +906,11 @@ private:
                     CollectEnabledLinkBVs(*itbody, vupdateObjects);
                 }
             }
+            BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
             bodyManager->pmanager->update(vupdateObjects);
         }
         bodyManager->pmanager->setup();
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
         return bodyManager->pmanager;
     }
 
@@ -904,17 +962,18 @@ private:
 
         if( !envManagerInstance ) {
 
+          RAVELOG_WARN("FCL COLLISION : Rebuilding env manager");
             // Compute current ManagerKey
-             ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
-             _currentEnvKey = pkey;
-             //pkey->complement = true;
+            ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
+            _currentEnvKey = pkey;
+            pkey->complement = true;
 
-              //pkey->linkList.reserve(envBodies.size());
-            FOREACH(itbody, envBodies) {
+            //pkey->linkList.reserve(envBodies.size());
+            /*FOREACH(itbody, envBodies) {
                 if( (*itbody)->IsEnabled() ) {
                     pkey->Add(*itbody, GetEnabledLinks(*itbody));
                 }
-                }
+                }*/
 
             envManagerInstance = GetManagerInstance(pkey, bUpdateManager);
             _envManagerInstance = ManagerInstanceWeakPtr(envManagerInstance);
@@ -924,23 +983,45 @@ private:
             // TODO : Make sure _envManagerInstance is reset at the correct places
         }
 
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManagerInstance->pmanager.get())->isValid());
+
 
         if( bUpdateManager ) {
             CollisionGroup vupdateObjects;
             FOREACH(itbody, envBodies) {
               std::map<int, int>::iterator it = envManagerInstance->mUpdateStamps.find((*itbody)->GetEnvironmentId());
               if( it == envManagerInstance->mUpdateStamps.end()) {
-                // TODO : DEBUG ME !!!
-                // The object is not yet in the manager ; This is weird ! It shouldn't happen but it does when using complement
-              } else if ( it->second < (*itbody)->GetUpdateStamp() ) {
-                    it->second = (*itbody)->GetUpdateStamp();
-                    CollectEnabledLinkBVs(*itbody, vupdateObjects);
+                // if the complement flag is not set we can ignore any object which does not have an update stamp
+                if( !_currentEnvKey->complement ) {
+                  continue;
                 }
+                // The object is not yet in the manager : either it has been explicitly removed or it has not been added yet
+                if( _currentEnvKey->linkList.count(it->first) ) {
+                  // *itbody is entirely removed from the manager
+                  BOOST_ASSERT( _currentEnvKey->linkList.at(it->first).size() == (*itbody)->GetLinks().size() );
+                  continue;
+                } else {
+                  // *itbody must be added in the manager
+                  KinBodyInfoConstPtr pinfo = _fclspace->GetInfo(*itbody);
+                  envManagerInstance->mUpdateStamps[(*itbody)->GetEnvironmentId()] = pinfo->nLastStamp;
+                  for(size_t i = 0; i < (*itbody)->GetLinks().size(); ++i) {
+                    if((*itbody)->GetLinks()[i]->IsEnabled()) {
+                      pinfo->vlinks[i]->Register(envManagerInstance->pmanager, _currentEnvKey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+                    }
+                  }
+                }
+              } else if ( it->second < (*itbody)->GetUpdateStamp() ) {
+                it->second = (*itbody)->GetUpdateStamp();
+                CollectEnabledLinkBVs(*itbody, vupdateObjects);
+              }
             }
+            BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManagerInstance->pmanager.get())->isValid());
             envManagerInstance->pmanager->update(vupdateObjects);
         }
 
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManagerInstance->pmanager.get())->isValid());
         envManagerInstance->pmanager->setup();
+        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManagerInstance->pmanager.get())->isValid());
         return envManagerInstance->pmanager;
     }
 
@@ -1172,17 +1253,17 @@ private:
         } else if(algorithm == "DynamicAABBTree_Array") {
             return boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
         } else if(algorithm == "DynamicAABBTree1_Array") {
-          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
-          pmanager->tree_init_level = 1;
-          return pmanager;
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            pmanager->tree_init_level = 1;
+            return pmanager;
         } else if(algorithm == "DynamicAABBTree2_Array") {
-          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
-          pmanager->tree_init_level = 2;
-          return pmanager;
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            pmanager->tree_init_level = 2;
+            return pmanager;
         } else if(algorithm == "DynamicAABBTree3_Array") {
-          boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
-          pmanager->tree_init_level = 3;
-          return pmanager;
+            boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            pmanager->tree_init_level = 3;
+            return pmanager;
         } else {
             throw OPENRAVE_EXCEPTION_FORMAT("Unknown broad-phase algorithm '%s'.", algorithm, OpenRAVE::ORE_InvalidArguments);
         }
@@ -1209,5 +1290,6 @@ private:
     #endif
 };
 
+}
 
 #endif
