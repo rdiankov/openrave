@@ -1336,7 +1336,7 @@ public:
     bool SetViewer(const string &viewername, bool showviewer=true)
     {
         ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
-        return pviewer;
+        return !(pviewer == NULL);
     }
 
     /// \brief sets the default viewer
