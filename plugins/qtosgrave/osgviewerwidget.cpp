@@ -243,6 +243,7 @@ public:
         default:
             return false;
         }
+        return false;
     }
 
 private:

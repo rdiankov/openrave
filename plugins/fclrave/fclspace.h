@@ -3,6 +3,10 @@
 
 namespace fclrave {
 
+#include <boost/shared_ptr.hpp>
+#include <memory> // c++11
+#include <vector>
+
 // TODO : I should put these in some namespace...
 
 typedef KinBody::LinkConstPtr LinkConstPtr;
@@ -64,7 +68,7 @@ typedef boost::shared_ptr<ManagerTable> ManagerTablePtr;
 typedef boost::weak_ptr<ManagerTable> ManagerTableWeakPtr;
 
 // Warning : this is the only place where we use std::shared_ptr (compatibility with fcl)
-typedef shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
+typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
 typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
 typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
