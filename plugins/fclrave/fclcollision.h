@@ -863,12 +863,13 @@ namespace fclrave {
     }
 
 
-    ///< \param itexcludedbodiesbegin forward iterator to the first KinBodyConstPtr that can be safely excluded
-    ///< \param itexcludedbodiesend iterator to the after-the-last element to be excluded
-    // TODO : test if excluding helps
+    ///< \param sexcludedbodies set of bodies which can be safely omitted from the collision checking
+    ///< \return an up to date and setup broadphase collision manager containing at least the collision object of the enviroment which are relevant
     BroadPhaseCollisionManagerPtr GetEnvManager(const std::set<KinBodyPtr>& sexcludedbodies) {
 
       _fclspace->Synchronize();
+
+      const std::set<KinBodyConstPtr>& envBodies = _fclspace->GetEnvBodies();
 
       std::set<int> sexcludedbodiesid;
       FOREACH(itbody, sexcludedbodies) {
@@ -880,7 +881,6 @@ namespace fclrave {
       if( !envManagerInstance ) {
 
         RAVELOG_WARN("FCL COLLISION : Rebuilding env manager");
-        const std::set<KinBodyConstPtr>& envBodies = _fclspace->GetEnvBodies();
 
         CollisionGroup vregisterBodies;
         envManagerInstance = boost::make_shared<ManagerInstance>();
@@ -920,31 +920,22 @@ namespace fclrave {
       } else {
 
         CollisionGroup vupdateObjects;
-        FOREACH(itIdStampPair, envManagerInstance->mUpdateStamps) {
-          KinBodyConstPtr pbody = GetEnv()->GetBodyFromEnvironmentId(itIdStampPair->first);
-          if ( !!pbody && itIdStampPair->second < pbody->GetUpdateStamp() ) {
-            BOOST_ASSERT(itIdStampPair->first);
-            envManagerInstance->mUpdateStamps[itIdStampPair->first] = pbody->GetUpdateStamp();
-            CollectEnabledLinkBVs(pbody, vupdateObjects);
+        FOREACH(itbody, envBodies) {
+          int bodyId = (*itbody)->GetEnvironmentId();
+          if( _fclspace->GetEnvExcludiedBodies().count(bodyId) && !sexcludedbodiesid.count(bodyId) ) {
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(*itbody);
+            if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
+              envManagerInstance->mUpdateStamps[bodyId] = pinfo->nLastStamp;
+            }
+          } else {
+            std::map<int, int>::iterator itIdStampPair = envManagerInstance->mUpdateStamps.find(bodyId);
+            if ( itIdStampPair != envManagerInstance->mUpdateStamps.end() && itIdStampPair->second < (*itbody)->GetUpdateStamp() ) {
+              envManagerInstance->mUpdateStamps[itIdStampPair->first] = (*itbody)->GetUpdateStamp();
+              CollectEnabledLinkBVs((*itbody), vupdateObjects);
+            }
           }
         }
         envManagerInstance->pmanager->update(vupdateObjects);
-
-        FOREACH(itid, _fclspace->GetEnvExcludiedBodies()) {
-          // if some kinbody is not excluded anymore we need to add it to the envManager
-          if( !sexcludedbodiesid.count(*itid) ) {
-            KinBodyConstPtr pbody = GetEnv()->GetBodyFromEnvironmentId(*itid);
-            if( !pbody ) {
-              RAVELOG_DEBUG_FORMAT("Object not existing : %d", *itid);
-              continue;
-            }
-            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-            if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
-              BOOST_ASSERT( *itid );
-              envManagerInstance->mUpdateStamps[*itid] = pinfo->nLastStamp;
-            }
-          }
-        }
         _fclspace->SetEnvExcludiedBodiesId(sexcludedbodiesid);
       }
 
