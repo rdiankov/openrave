@@ -815,7 +815,7 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
 //    }
 
     FOREACH(itee, _vEndEffectors) {
-        if( !!itee->_pswitch ) {
+        if( bGrab ) {
             itee->_pswitch->setAllChildrenOn();
         }
         else {
@@ -823,7 +823,7 @@ void RobotItem::SetGrab(bool bGrab, bool bUpdate)
         }
     }
     FOREACH(itee, _vAttachedSensors) {
-        if( !!itee->_pswitch ) {
+        if( bGrab ) {
             itee->_pswitch->setAllChildrenOn();
         }
         else {
@@ -843,9 +843,9 @@ void RobotItem::Load()
         }
     }
     _vEndEffectors.resize(0);
-    
+    _vAttachedSensors.resize(0);
+        
     FOREACHC(itmanip, _probot->GetManipulators()) {
-
         if(!!(*itmanip)->GetEndEffector()) {
             OSGSwitchPtr peeswitch = new osg::Switch();
             OSGGroupPtr peesep = new osg::Group();
@@ -860,26 +860,7 @@ void RobotItem::Load()
             peeswitch->setAllChildrenOff();
             ptrans->addChild(peesep);
             SetMatrixTransform(*ptrans, (*itmanip)->GetTransform());
-
-//            // set a diffuse color
-//            {
-//                osg::ref_ptr<osg::StateSet> state = peesep->getOrCreateStateSet();
-//                osg::ref_ptr<osg::Material> mat = new osg::Material;
-//
-//                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1) );
-//                mat->setAmbient( osg::Material::FRONT, osg::Vec4f(1,0.5,0.5,1));
-//
-//                state->setAttribute(mat.get());
-//
-//                osg::Sphere* sphere = new osg::Sphere();
-//                osg::Geode* geode = new osg::Geode;
-//                sphere->setRadius(0.004f);
-//                osg::ShapeDrawable* sd = new osg::ShapeDrawable(sphere);
-//                geode->addDrawable(sd);
-//                peesep->addChild(geode);
-//            }
             
-            //peesep->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::PROTECTED|osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
@@ -904,10 +885,68 @@ void RobotItem::Load()
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
 
+                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+                text->setBackdropColor(osg::Vec4(1,1,1,1));
+
+        
                 text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
                 //text->setFontResolution(18,18);
 
                 text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
+                textGeode->addDrawable(text);
+                ptextsep->addChild(textGeode);
+            }
+        }
+    }
+
+    FOREACHC(itattsensor, _probot->GetAttachedSensors()) {
+        if(!!(*itattsensor)->GetAttachingLink()) {
+            OSGSwitchPtr peeswitch = new osg::Switch();
+            OSGGroupPtr peesep = new osg::Group();
+            OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
+            _vAttachedSensors.push_back(EE(ptrans, peeswitch));
+            _vAttachedSensors.back().attsensor = *itattsensor;
+
+            if( !!_osgFigureRoot ) {
+                _osgFigureRoot->addChild(peeswitch);
+            }
+            peeswitch->addChild(ptrans);
+            peeswitch->setAllChildrenOff();
+            ptrans->addChild(peesep);
+            SetMatrixTransform(*ptrans, (*itattsensor)->GetTransform());
+            
+            peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
+
+            // add text
+            {
+                OSGGroupPtr ptextsep = new osg::Group();
+                osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
+                peesep->addChild(ptextsep);
+
+                osg::Matrix matrix;
+                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
+                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
+                ptextsep->addChild(ptrans);
+
+                osg::ref_ptr<osgText::Text> text = new osgText::Text();
+                
+                //Set the screen alignment - always face the screen
+                text->setAxisAlignment(osgText::Text::SCREEN);
+                text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+                text->setCharacterSize(25.0);
+                
+                text->setColor(osg::Vec4(0,0,0,1));
+                text->setEnableDepthWrites(false);
+
+                text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+                text->setBackdropColor(osg::Vec4(1,1,1,1));
+
+        
+                text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+                //text->setFontResolution(18,18);
+
+                text->setText((*itattsensor)->GetName());//str(boost::format("EE%d")%index));
                 textGeode->addDrawable(text);
                 ptextsep->addChild(textGeode);
             }
