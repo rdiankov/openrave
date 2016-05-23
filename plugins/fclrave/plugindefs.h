@@ -58,6 +58,7 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/range/concepts.hpp>
 #include <boost/range/detail/any_iterator.hpp>
+#include <boost/unordered_map.hpp>
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_oderave", msgid)
 

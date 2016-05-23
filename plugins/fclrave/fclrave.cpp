@@ -23,7 +23,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
 {
 
   if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-      return InterfaceBasePtr(new FCLCollisionChecker(penv, sinput));
+    return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
   }
 
   return InterfaceBasePtr();
