@@ -7,7 +7,7 @@
 
 #include "fclspace.h"
 
-//#define FCLUSESTATISTICS 1
+#define FCLUSESTATISTICS 1
 #include "fclstatistics.h"
 
 namespace fclrave {
@@ -345,6 +345,7 @@ public:
             return false; //TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             body1Manager->collide(body2Manager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -378,7 +379,11 @@ public:
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
             return false; // TODO
         } else {
+            if( !pcollLink1->getAABB().overlap(pcollLink2->getAABB()) ) {
+                return false;
+            }
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
             return query._bCollision;
         }
@@ -415,6 +420,7 @@ public:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             bodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -445,7 +451,30 @@ public:
             return false;
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+            ADD_TIMING(_statistics);
             envManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+
+            // TODO : consider testing this before the env
+            // The robots are not contained in the envManager, we need to consider them separately
+            if( !query._bStopChecking ) {
+                // TODO : precompute the list of robots
+                FOREACH(itbody, _fclspace->GetEnvBodies() ) {
+                    if( (*itbody)->IsRobot() ) {
+
+                        if( (*itbody)->IsAttached(plink->GetParent()) ) {
+                            continue;
+                        }
+                        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+                        BroadPhaseCollisionManagerPtr robotManager = GetBodyManager(*itbody, false);
+                        robotManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+
+                        if( query._bStopChecking ) {
+                            return query._bCollision;
+                        }
+                    }
+                }
+            }
+
             return query._bCollision;
         }
     }
@@ -475,7 +504,28 @@ public:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+            ADD_TIMING(_statistics);
             envManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+
+            // The robots are not contained in the envManager, we need to consider them separately
+            if( !query._bStopChecking ) {
+                FOREACH(itbody, _fclspace->GetEnvBodies() ) {
+                    if( (*itbody)->IsRobot() ) {
+
+                        if( (*itbody)->IsAttached(pbody) ) {
+                            continue;
+                        }
+                        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+                        BroadPhaseCollisionManagerPtr robotManager = GetBodyManager(*itbody, false);
+                        robotManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+
+                        if( query._bStopChecking ) {
+                            return query._bCollision;
+                        }
+                    }
+                }
+            }
+
             return query._bCollision;
         }
     }
@@ -887,6 +937,10 @@ private:
             envManagerInstance = boost::make_shared<ManagerInstance>();
             envManagerInstance->pmanager = CreateManager();
             FOREACH(itbody, envBodies) {
+                // we treat the case of robots separately
+                if( (*itbody)->IsRobot() ) {
+                    continue;
+                }
                 int bodyId = (*itbody)->GetEnvironmentId();
                 BOOST_ASSERT( bodyId );
                 if( sexcludedbodiesid.count(bodyId) ) {
@@ -923,6 +977,9 @@ private:
             CollisionGroup vupdateObjects;
             FOREACH(itbody, envBodies) {
                 int bodyId = (*itbody)->GetEnvironmentId();
+                if( (*itbody)->IsRobot() || sexcludedbodiesid.count(bodyId)) {
+                    continue;
+                }
                 if( _fclspace->GetEnvExcludiedBodies().count(bodyId) && !sexcludedbodiesid.count(bodyId) ) {
                     KinBodyInfoPtr pinfo = _fclspace->GetInfo(*itbody);
                     if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
@@ -978,6 +1035,7 @@ private:
 
     bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb) {
 
+        ADD_TIMING(_statistics);
         if( pcb->_bStopChecking ) {
             return true;     // don't test anymore
         }

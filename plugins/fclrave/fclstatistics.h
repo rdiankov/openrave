@@ -5,6 +5,7 @@
 #ifdef FCLUSESTATISTICS
 
 #include "plugindefs.h"
+#include <sstream>
 
 namespace fclrave {
 
@@ -19,6 +20,7 @@ public:
     FCLStatistics(std::string const& key, int id) {
         name = str(boost::format("%d;%s")%id%key);
         RAVELOG_WARN_FORMAT("FCL STATISTICS %s", name);
+        currentTimings.reserve(64); // so that we don't allocate during the timing
     }
 
     ~FCLStatistics() {
@@ -34,8 +36,15 @@ public:
         }
     }
 
-    void DisplaySingle(const std::string& label, duration timing) {
-        RAVELOG_WARN_FORMAT("FCL STATISTICS;%s;%Lf", label % timing.count());
+    void DisplaySingle(const std::string& label, std::vector<time_point> timings) {
+        std::stringstream ss;
+        std::vector<time_point>::iterator it = timings.begin();
+        time_point t = *it;
+        while(++it != timings.end()) {
+            ss << ";" << (*it - t).count();
+            t = *it;
+        }
+        RAVELOG_WARN_FORMAT("FCL STATISTICS;%s%s", label % ss.str());
     }
 
     void Display() {
@@ -61,14 +70,19 @@ public:
 
     void StartManualTiming(std::string const& label) {
         currentTimingLabel = str(boost::format("%s;%s")%name%label);
-        currentTimingBegin = std::chrono::high_resolution_clock::now();
+        currentTimings.resize(0);
+        currentTimings.push_back(std::chrono::high_resolution_clock::now());
     }
 
     void StopManualTiming() {
-        time_point end = std::chrono::high_resolution_clock::now();
-        duration timing = end - currentTimingBegin;
+        currentTimings.push_back(std::chrono::high_resolution_clock::now());
+        duration timing = *currentTimings.begin() - *(currentTimings.end()-1);
         timings[currentTimingLabel].push_back(timing);
-        DisplaySingle(currentTimingLabel, timing);
+        DisplaySingle(currentTimingLabel, currentTimings);
+    }
+
+    void AddTimepoint() {
+        currentTimings.push_back(std::chrono::high_resolution_clock::now());
     }
 
     struct Timing {
@@ -88,7 +102,7 @@ private:
 
     std::string name;
     std::string currentTimingLabel;
-    time_point currentTimingBegin;
+    std::vector<time_point> currentTimings;
     std::map< std::string, std::vector<duration> > timings;
 };
 
@@ -99,6 +113,8 @@ typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;
     globalStatistics.push_back(boost::weak_ptr<FCLStatistics>(statistics))
 
 #define START_TIMING(statistics, label) FCLStatistics::Timing t = statistics->StartTiming(label)
+
+#define ADD_TIMING(statistics) statistics->AddTimepoint()
 
 #define DISPLAY(statistics) statistics->DisplayAll()
 
@@ -113,6 +129,7 @@ class FCLStatistics {
 
 #define SETUP_STATISTICS(statistics, userdatakey, id) do {} while(false)
 #define START_TIMING(statistics, label) do {} while(false)
+#define ADD_TIMING(statistics) do {} while(false)
 #define DISPLAY(statistics) do {} while(false)
 
 }
