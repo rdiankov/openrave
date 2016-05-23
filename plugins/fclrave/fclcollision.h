@@ -669,13 +669,13 @@ private:
         // Test if the manager already exists
         ManagerTable::iterator it = _cachedManagers->find(*pkey);
         if(it != _cachedManagers->end()) {
-            RAVELOG_WARN_FORMAT("FCL COLLISION : Getting manager from cache (env = %d)", GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Getting manager from cache (env = %d)", GetEnv()->GetId());
             fromCache = true;
 //        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(it->second->pmanager.get())->isValid());
             return it->second;
         } else {
-            RAVELOG_WARN_FORMAT("FCL COLLISION : Rebuilding manager (env = %d)", GetEnv()->GetId());
-            RAVELOG_WARN_FORMAT("FCL COLLISION : (key size) all %d (env = %d)", pkey->GetSize()%GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding manager (env = %d)", GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : (key size) all %d (env = %d)", pkey->GetSize()%GetEnv()->GetId());
             ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
 //        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
             std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
@@ -881,7 +881,7 @@ private:
 
         if( !envManagerInstance ) {
 
-            RAVELOG_WARN_FORMAT("FCL COLLISION : Rebuilding env manager (env = %d)", GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding env manager (env = %d)", GetEnv()->GetId());
 
             CollisionGroup vregisterBodies;
             envManagerInstance = boost::make_shared<ManagerInstance>();
@@ -933,7 +933,7 @@ private:
                     if ( itIdStampPair != envManagerInstance->mUpdateStamps.end() && itIdStampPair->second < (*itbody)->GetUpdateStamp() ) {
                         envManagerInstance->mUpdateStamps[itIdStampPair->first] = (*itbody)->GetUpdateStamp();
                         CollectEnabledLinkBVs((*itbody), vupdateObjects);
-                    } else if( itIdStampPair == envManagerInstance->mUpdateStamps.end() && !sexcludedbodiesid.count(bodyId) && GetEnabledLinks(*itbody).size() > 0 ) {
+                    } else if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) && itIdStampPair == envManagerInstance->mUpdateStamps.end() && !sexcludedbodiesid.count(bodyId) && GetEnabledLinks(*itbody).size() > 0 ) {
                         RAVELOG_ERROR_FORMAT("FCL COLLISION : Kinbody %s (id %d) has been forgotten (env = id)", (*itbody)->GetName()%bodyId%GetEnv()->GetId());
                     }
                 }
