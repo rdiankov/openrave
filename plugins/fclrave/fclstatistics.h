@@ -1,11 +1,12 @@
 #ifndef OPENRAVE_FCL_STATISTICS
 #define OPENRAVE_FCL_STATISTICS
 
-namespace fclrave {
 
 #ifdef FCLUSESTATISTICS
 
 #include "plugindefs.h"
+
+namespace fclrave {
 
 class FCLStatistics;
 
@@ -95,23 +96,28 @@ typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;
 
 #define SETUP_STATISTICS(statistics, userdatakey, id) \
     statistics = boost::make_shared<FCLStatistics>(userdatakey, id); \
-    globalStatistics.push_back(boost::weak_ptr<FCLStatistics>(statistics));
+    globalStatistics.push_back(boost::weak_ptr<FCLStatistics>(statistics))
 
-#define START_TIMING(statistics, label) FCLStatistics::Timing t = statistics->StartTiming(label);
+#define START_TIMING(statistics, label) FCLStatistics::Timing t = statistics->StartTiming(label)
 
-#define DISPLAY(statistics) statistics->DisplayAll();
+#define DISPLAY(statistics) statistics->DisplayAll()
+
+} // fclrave
 
 #else // FCLUSESTATISTICS is not defined
+
+namespace fclrave {
 
 class FCLStatistics {
 };
 
-#define SETUP_STATISTICS(statistics, userdatakey, id)
-#define START_TIMING(statistics, label) do {} while(false);
+#define SETUP_STATISTICS(statistics, userdatakey, id) do {} while(false)
+#define START_TIMING(statistics, label) do {} while(false)
 #define DISPLAY(statistics) do {} while(false)
 
+}
 #endif
 
-}
+
 
 #endif

@@ -18,24 +18,24 @@ typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionMa
 struct Signature {
     ///< \param pbody
     ///< \param vlinkIndexes a vector of link indexes from pbody sorted in increasing order
-    void Add(KinBodyConstPtr pbody, std::vector<int>&& vlinkIndexes) {
-        linkList.insert(std::make_pair(pbody->GetEnvironmentId(), vlinkIndexes));
+    void Add(KinBodyConstPtr pbody, std::vector<int>&& vlinkIndexes, const std::string& geometryGroup) {
+        linkList.insert(std::make_pair(pbody->GetEnvironmentId(), std::make_pair(geometryGroup, vlinkIndexes)));
     }
 
-  size_t GetSize() const {
-    size_t size = 0;
-    FOREACH(itvlinkIndexes, linkList) {
-      size += itvlinkIndexes->second.size();
+    size_t GetSize() const {
+        size_t size = 0;
+        FOREACH(itvlinkIndexes, linkList) {
+            size += itvlinkIndexes->second.second.size();
+        }
+        return size;
     }
-    return size;
-  }
 
     bool operator==(const Signature& s) const {
         return linkList == s.linkList;
     }
 
     // TODO : should I use a map instead of a vector so that the hashed value does not depend on the order of insertion ?
-    std::map< int, std::vector<int> > linkList; ///< a vector of pairs of an environment id and a vector of link indexes
+    std::map< int, std::pair<const std::string, std::vector<int> > > linkList; ///< a vector of pairs of an environment id and a vector of link indexes
 };
 
 /// specialization of the standard hash for Signature
@@ -47,13 +47,13 @@ std::size_t hash_value(const Signature& s) {
 
 
 struct ManagerInstance {
-  // copy constructor is only valid when we are working with DynamicAABBTree_Array
-  void Clone(const ManagerInstance& otherInstance) {
-    boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> _pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
-    _pmanager->clone(*static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(otherInstance.pmanager.get()));
-    pmanager = _pmanager;
-    mUpdateStamps = otherInstance.mUpdateStamps;
-  }
+    // copy constructor is only valid when we are working with DynamicAABBTree_Array
+    void Clone(const ManagerInstance& otherInstance) {
+        boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> _pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+        _pmanager->clone(*static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(otherInstance.pmanager.get()));
+        pmanager = _pmanager;
+        mUpdateStamps = otherInstance.mUpdateStamps;
+    }
 
     BroadPhaseCollisionManagerPtr pmanager;
     std::map<int, int> mUpdateStamps;
@@ -151,15 +151,15 @@ public:
                     ManagerTablePtr ptable = _ptable.lock();
                     if( !!ptable ) {
                         FOREACH(itmanagerKey, _vmanagerKeys) {
-                          // we need to invalidate all the cached managers containing this link since the collision object for this link won't be valid anymore
-                          ptable->erase(**itmanagerKey);
+                            // we need to invalidate all the cached managers containing this link since the collision object for this link won't be valid anymore
+                            ptable->erase(**itmanagerKey);
                         }
                         _vmanagerKeys.resize(0);
                     }
 
                     BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
                     if( !!localEnvManager ) {
-                      localEnvManager->unregisterObject(plinkBV->second.get());
+                        localEnvManager->unregisterObject(plinkBV->second.get());
                     }
 
                     plinkBV.reset();
@@ -180,37 +180,38 @@ public:
                 }
             }
 
-          CollisionObjectPtr PrepareRegistering(ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
-              _vmanagerKeys.push_back(pkey);
-              BOOST_ASSERT( !!ptable.lock() );
-              _ptable = ptable;
-              return plinkBV->second;
-          }
-
-          CollisionObjectPtr PrepareEnvManagerRegistering(BroadPhaseCollisionManagerPtr envManager) {
-            _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
-            return plinkBV->second;
-          }
-
-          void Register(BroadPhaseCollisionManagerPtr envManager) {
-            BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
-            // if the localEnvManager is already set then the link is already registered
-            if( !localEnvManager ) {
-              _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
-              envManager->registerObject(plinkBV->second.get());
-            } else {
-              BOOST_ASSERT( localEnvManager == envManager );
+            CollisionObjectPtr PrepareRegistering(ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
+                _vmanagerKeys.push_back(pkey);
+                BOOST_ASSERT( !!ptable.lock() );
+                _ptable = ptable;
+                return plinkBV->second;
             }
-          }
 
-          void Unregister() {
-            BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
-            // if the localEnvManager does not exists we don't need to unregister
-            if( !!localEnvManager ) {
-                localEnvManager->unregisterObject(plinkBV->second.get());
-                _envManager.reset();
+            CollisionObjectPtr PrepareEnvManagerRegistering(BroadPhaseCollisionManagerPtr envManager) {
+                _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
+                return plinkBV->second;
             }
-          }
+
+            void Register(BroadPhaseCollisionManagerPtr envManager) {
+                BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
+                // if the localEnvManager is already set then the link is already registered
+                if( !localEnvManager ) {
+                    _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
+                    envManager->registerObject(plinkBV->second.get());
+                } else {
+                    // debug only
+                    BOOST_ASSERT( localEnvManager == envManager );
+                }
+            }
+
+            void Unregister() {
+                BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
+                // if the localEnvManager does not exists we don't need to unregister
+                if( !!localEnvManager ) {
+                    localEnvManager->unregisterObject(plinkBV->second.get());
+                    _envManager.reset();
+                }
+            }
 
             KinBody::LinkPtr GetLink() {
                 return _plink.lock();
@@ -222,7 +223,7 @@ public:
             ManagerTableWeakPtr _ptable;
             // TODO : What about a dynamic collection of managers containing this link ?
             std::list<ManagerKeyConstPtr> _vmanagerKeys; ///< Broad phase managers' keys containing this link's BV
-          BroadPhaseCollisionManagerWeakPtr _envManager;
+            BroadPhaseCollisionManagerWeakPtr _envManager;
             BroadPhaseCollisionManagerPtr _linkManager;
             boost::shared_ptr<TransformCollisionPair> plinkBV;
             std::vector<TransformCollisionPair> vgeoms; // fcl variant of ODE dBodyID
@@ -251,22 +252,22 @@ public:
         }
 
         void UnregisterAllLinks() {
-          FOREACH(itpLINK, vlinks) {
-            (*itpLINK)->Unregister();
-          }
+            FOREACH(itpLINK, vlinks) {
+                (*itpLINK)->Unregister();
+            }
         }
 
         bool UpdateLinksRegisterStatus(BroadPhaseCollisionManagerPtr envManager) {
-          bool bhasRegisteredLink = false;
-          FOREACH(itpLINK, vlinks) {
-            if( (*itpLINK)->GetLink()->IsEnabled() ) {
-              bhasRegisteredLink = true;
-              (*itpLINK)->Register(envManager);
-            } else {
-              (*itpLINK)->Unregister();
+            bool bhasRegisteredLink = false;
+            FOREACH(itpLINK, vlinks) {
+                if( (*itpLINK)->GetLink()->IsEnabled() ) {
+                    bhasRegisteredLink = true;
+                    (*itpLINK)->Register(envManager);
+                } else {
+                    (*itpLINK)->Unregister();
+                }
             }
-          }
-          return bhasRegisteredLink;
+            return bhasRegisteredLink;
         }
 
         void _ResetBodyManagers() {
@@ -350,6 +351,7 @@ public:
 
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
+            pinfo->_geometrygroup = _geometrygroup;
         }
 
         pinfo->Reset();
@@ -434,7 +436,7 @@ public:
         pbody->SetUserData(_userdatakey, pinfo);
         _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
         if( !!_envManagerInstance ) {
-          pinfo->UpdateLinksRegisterStatus(_envManagerInstance->pmanager);
+            pinfo->UpdateLinksRegisterStatus(_envManagerInstance->pmanager);
         }
         _setInitializedBodies.insert(pbody);
 
@@ -446,12 +448,12 @@ public:
     }
 
     bool HasDifferentGeometry(KinBodyConstPtr pbody, const std::string& groupname) {
-      FOREACH(itlink, pbody->GetLinks()) {
-        if(groupname.size() > 0 && (*itlink)->GetGroupNumGeometries(groupname) >= 0) {
-          return true;
+        FOREACH(itlink, pbody->GetLinks()) {
+            if(groupname.size() > 0 && (*itlink)->GetGroupNumGeometries(groupname) >= 0) {
+                return true;
+            }
         }
-      }
-      return false;
+        return false;
     }
 
 
@@ -461,7 +463,7 @@ public:
             _geometrygroup = groupname;
 
             FOREACHC(itbody, _setInitializedBodies) {
-              SetBodyGeometryGroup(*itbody, groupname);
+                SetBodyGeometryGroup(*itbody, groupname);
             }
         }
     }
@@ -473,28 +475,34 @@ public:
 
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-      if( HasDifferentGeometry(pbody, groupname) ) {
-        // Save the already existing KinBodyInfoPtr for the old geometry group
-        KinBodyInfoPtr poldinfo = GetInfo(pbody);
-        if( !!_envManagerInstance ) {
-          BOOST_ASSERT( !!_envManagerInstance->pmanager );
-          poldinfo->UnregisterAllLinks();
-        }
-        _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
+        if( HasDifferentGeometry(pbody, groupname) ) {
+            // Save the already existing KinBodyInfoPtr for the old geometry group
+            KinBodyInfoPtr poldinfo = GetInfo(pbody);
+            if( !!_envManagerInstance ) {
+                BOOST_ASSERT( !!_envManagerInstance->pmanager );
+                _envManagerInstance->mUpdateStamps.erase(pbody->GetEnvironmentId());
+                poldinfo->UnregisterAllLinks();
+            }
+            _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
 
-        KinBodyInfoPtr& pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
-        pinfo->_geometrygroup = groupname;
+            KinBodyInfoPtr& pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
 
-        if(!pinfo) {
-          InitKinBody(pbody, pinfo);
-        } else {
-          // Set the current user data to use the KinBodyInfoPtr associated to groupname
-          pbody->SetUserData(_userdatakey, pinfo);
-          _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
-          // Reset the KinBodyInfoPtr from the cache so that only pbody holds a pointer to the current info
-          pinfo.reset();
+
+            if(!pinfo) {
+                RAVELOG_DEBUG_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+                pinfo.reset(new KinBodyInfo);
+                pinfo->_geometrygroup = groupname;
+                InitKinBody(pbody, pinfo);
+            } else {
+                RAVELOG_DEBUG_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+                // Set the current user data to use the KinBodyInfoPtr associated to groupname
+                pbody->SetUserData(_userdatakey, pinfo);
+                // Reset the KinBodyInfoPtr from the cache so that only pbody holds a pointer to the current info
+                pinfo.reset();
+            }
+            // Notify to the environment manager that this kinbody must be added
+            _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
         }
-      }
     }
 
 
@@ -633,20 +641,20 @@ public:
     }
 
     void SetEnvManagerInstance(ManagerInstancePtr envManagerInstance) {
-      BOOST_ASSERT( !_envManagerInstance );
-      _envManagerInstance = envManagerInstance;
+        BOOST_ASSERT( !_envManagerInstance );
+        _envManagerInstance = envManagerInstance;
     }
 
     ManagerInstancePtr GetEnvManagerInstance() const {
-      return _envManagerInstance;
+        return _envManagerInstance;
     }
 
     void SetEnvExcludiedBodiesId(const std::set<int>& envExcludedBodiesId) {
-      _envExcludedBodies = envExcludedBodiesId;
+        _envExcludedBodies = envExcludedBodiesId;
     }
 
     const std::set<int>& GetEnvExcludiedBodies() const {
-      return _envExcludedBodies;
+        return _envExcludedBodies;
     }
 
 
@@ -783,7 +791,7 @@ private:
     }
 
     void _ExcludeBodyFromEnv(int bodyId) {
-      _envExcludedBodies.insert(bodyId);
+        _envExcludedBodies.insert(bodyId);
     }
 
 
@@ -800,7 +808,7 @@ private:
     std::set<int> _envExcludedBodies;
 
     std::set<KinBodyConstPtr> _setInitializedBodies;
-    std::map< int , std::map< std::string , KinBodyInfoPtr > > _cachedpinfo;
+    std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo;
 };
 
 
