@@ -1,6 +1,7 @@
 #ifndef OPENRAVE_FCL_SPACE
 #define OPENRAVE_FCL_SPACE
 
+#include <memory>
 
 #include <boost/shared_ptr.hpp>
 #include <memory> // c++11
