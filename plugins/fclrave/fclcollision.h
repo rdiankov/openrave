@@ -7,7 +7,7 @@
 
 #include "fclspace.h"
 
-#define FCLUSESTATISTICS 1
+//#define FCLUSESTATISTICS 1
 #include "fclstatistics.h"
 
 namespace fclrave {
@@ -1144,9 +1144,9 @@ private:
                 copy(_reportcache.contacts.begin(),_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
                 // pcb->_report->contacts.swap(_report.contacts); // would be faster but seems just wrong...
 
-                LinkPair linkPair = MakeLinkPair(plink1, plink2);
                 if( _options & OpenRAVE::CO_AllLinkCollisions ) {
                     // We maintain vLinkColliding ordered
+                    LinkPair linkPair = MakeLinkPair(plink1, plink2);
                     typedef std::vector< std::pair< LinkConstPtr, LinkConstPtr > >::iterator PairIterator;
                     PairIterator end = pcb->_report->vLinkColliding.end(), first = std::lower_bound(pcb->_report->vLinkColliding.begin(), end, linkPair);
                     if( first == end || *first != linkPair ) {
