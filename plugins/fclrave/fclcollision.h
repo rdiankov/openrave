@@ -776,7 +776,7 @@ private:
             CollisionGroup vupdateObjects;
             FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
               KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-              if( !!pbody && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+              if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
                 itWkbodyStampPair->second = pbody->GetUpdateStamp();
                 CollectEnabledLinkBVs(pbody, vupdateObjects);
               }
@@ -874,7 +874,7 @@ private:
           CollisionGroup vupdateObjects;
           FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
             KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-            if( !!pbody && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+            if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
               itWkbodyStampPair->second = pbody->GetUpdateStamp();
               CollectEnabledLinkBVs(pbody, vupdateObjects);
             }
@@ -997,7 +997,7 @@ private:
             CollisionGroup vupdateObjects;
             FOREACH(itWkbodyStampPair, envManagerInstance->vUpdateStamps) {
               KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-              if( !!pbody && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+              if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
                 itWkbodyStampPair->second = pbody->GetUpdateStamp();
                 CollectEnabledLinkBVs(pbody, vupdateObjects);
               }

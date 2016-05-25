@@ -560,6 +560,8 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
+            _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
+            _envExcludedBodies.erase(pbody->GetEnvironmentId());
             bool is_consistent = pbody->RemoveUserData(_userdatakey);
             if( !is_consistent ) {
                 RAVELOG_WARN("inconsistency detected with fclspace user data\n");
