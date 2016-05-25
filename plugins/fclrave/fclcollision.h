@@ -702,30 +702,30 @@ private:
     ManagerInstancePtr BuildManagerInstanceFromSignature(ManagerKeyPtr pkey) {
         ManagerInstancePtr managerInstance = boost::make_shared<ManagerInstance>();
         managerInstance->pmanager = CreateManager();
-        FOREACH(pcollobj, *pkey) {
-          FCLSpace::KinBodyInfo::LINK* pLINK = static_cast< FCLSpace::KinBodyInfo::LINK*>((*pcollobj)->getUserData());
-          BOOST_ASSERT( pLINK != nullptr );
-          pLINK->RegisterKey(pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
-        }
+//        FOREACH(pcollobj, *pkey) {
+//          FCLSpace::KinBodyInfo::LINK* pLINK = static_cast< FCLSpace::KinBodyInfo::LINK*>((*pcollobj)->getUserData());
+//          BOOST_ASSERT( pLINK != nullptr );
+//          pLINK->RegisterKey(pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
+//        }
         managerInstance->pmanager->registerObjects(*pkey);
         return managerInstance;
     }
 
     ManagerInstancePtr GetManagerInstance(ManagerKeyPtr pkey, bool& fromCache) {
         // Test if the manager already exists
-        ManagerTable::iterator it = _cachedManagers->find(*pkey);
-        if(it != _cachedManagers->end()) {
-            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Getting manager from cache (env = %d)", GetEnv()->GetId());
-            fromCache = true;
-            return it->second;
-        } else {
+//        ManagerTable::iterator it = _cachedManagers->find(*pkey);
+//        if(it != _cachedManagers->end()) {
+//            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Getting manager from cache (env = %d)", GetEnv()->GetId());
+//            fromCache = true;
+//            return it->second;
+//        } else {
             RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding manager (env = %d)", GetEnv()->GetId());
             ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
             std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
             _cachedManagers->insert(insertedPair);
             fromCache = false;
             return bodyManager;
-        }
+//        }
     }
 
     BroadPhaseCollisionManagerPtr SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
