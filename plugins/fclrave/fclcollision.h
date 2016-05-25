@@ -702,16 +702,12 @@ private:
     ManagerInstancePtr BuildManagerInstanceFromSignature(ManagerKeyPtr pkey) {
         ManagerInstancePtr managerInstance = boost::make_shared<ManagerInstance>();
         managerInstance->pmanager = CreateManager();
-        CollisionGroup vregisterBodies;
-        vregisterBodies.reserve(pkey->GetSize());
-        FOREACH(itIdLinkIndexPair, pkey->linkList) {
-            KinBodyInfoPtr pitinfo = _fclspace->GetInfo(GetEnv()->GetBodyFromEnvironmentId(itIdLinkIndexPair->first));
-            managerInstance->mUpdateStamps[itIdLinkIndexPair->first] = pitinfo->nLastStamp;
-            FOREACH(itindex, itIdLinkIndexPair->second.second) {
-                vregisterBodies.push_back(pitinfo->vlinks[*itindex]->PrepareRegistering(pkey, boost::weak_ptr<ManagerTable>(_cachedManagers)).get());
-            }
+        FOREACH(pcollobj, *pkey) {
+          FCLSpace::KinBodyInfo::LINK* pLINK = static_cast< FCLSpace::KinBodyInfo::LINK*>((*pcollobj)->getUserData());
+          BOOST_ASSERT( pLINK != nullptr );
+          pLINK->RegisterKey(pkey, boost::weak_ptr<ManagerTable>(_cachedManagers));
         }
-        managerInstance->pmanager->registerObjects(vregisterBodies);
+        managerInstance->pmanager->registerObjects(*pkey);
         return managerInstance;
     }
 
@@ -721,13 +717,10 @@ private:
         if(it != _cachedManagers->end()) {
             RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Getting manager from cache (env = %d)", GetEnv()->GetId());
             fromCache = true;
-//        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(it->second->pmanager.get())->isValid());
             return it->second;
         } else {
             RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding manager (env = %d)", GetEnv()->GetId());
-            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : (key size) all %d (env = %d)", pkey->GetSize()%GetEnv()->GetId());
             ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
-//        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
             std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
             _cachedManagers->insert(insertedPair);
             fromCache = false;
@@ -736,23 +729,31 @@ private:
     }
 
     BroadPhaseCollisionManagerPtr SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
-        std::set<KinBodyPtr> attachedBodies;
-        pbody->GetAttached(attachedBodies);
         bool bUpdateManager = true;
 
         ManagerInstancePtr bodyManager = pinfo->_bodyManager.lock();
 
         if( !bodyManager ) {
 
+          std::set<KinBodyPtr> attachedBodies;
+          pbody->GetAttached(attachedBodies);
+
             // Compute current ManagerKey
-            ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
+          ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
             FOREACH(itbody, attachedBodies) {
-                pkey->Add(*itbody, GetEnabledLinks(*itbody), _fclspace->GetInfo(*itbody)->_geometrygroup);
+              CollectEnabledLinkBVs(*itbody, *pkey);
             }
 
             // The manager will need to be updated only if it comes from the cache
             bodyManager = GetManagerInstance(pkey, bUpdateManager);
             pinfo->_bodyManager = bodyManager;
+
+            if( !bUpdateManager ) {
+              // otherwise the bodyManager has just been created and we need to initialize the update stamps
+              FOREACH(itbody, attachedBodies) {
+                bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+              }
+            }
 
             // Set the callbacks to invalidate the manager
 
@@ -768,30 +769,26 @@ private:
             }
 
         }
-//      BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
 
         if( bUpdateManager ) {
 
             // if the bodyManager has not been created just now, we may need to update its content
             CollisionGroup vupdateObjects;
-            FOREACH(itbody, attachedBodies) {
-                if( bodyManager->mUpdateStamps[(*itbody)->GetEnvironmentId()] < (*itbody)->GetUpdateStamp() ) {
-                    bodyManager->mUpdateStamps[(*itbody)->GetEnvironmentId()] = (*itbody)->GetUpdateStamp();
-                    CollectEnabledLinkBVs(*itbody, vupdateObjects);
-                }
+            FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
+              KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+              if( !!pbody && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                CollectEnabledLinkBVs(pbody, vupdateObjects);
+              }
             }
-//        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
             bodyManager->pmanager->update(vupdateObjects);
         }
         bodyManager->pmanager->setup();
-//      BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
         return bodyManager->pmanager;
     }
 
     BroadPhaseCollisionManagerPtr SetupManagerActiveDOFs(RobotBaseConstPtr probot, KinBodyInfoPtr pinfo) {
 
-        std::set<KinBodyPtr> attachedBodies;
-        probot->GetAttached(attachedBodies);
         bool bUpdateManager = true;
 
         ManagerInstancePtr bodyManager = pinfo->_bodyManagerActiveDOFs.lock();
@@ -817,22 +814,24 @@ private:
 
         if( !bodyManager ) {
 
+          std::set<KinBodyPtr> attachedBodies;
+          probot->GetAttached(attachedBodies);
+
             // Compute current ManagerKey
             ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
             FOREACH(itbody, attachedBodies) {
                 if( *itbody == probot ) {
                     std::vector<int> enabledActiveLinks, enabledLinks = GetEnabledLinks(*itbody);
-                    enabledActiveLinks.reserve(enabledLinks.size());
+                    pkey->reserve(enabledLinks.size());
                     FOREACH(itindex, enabledLinks) {
                         if(pinfo->_vactiveLinks[*itindex]) {
-                            enabledActiveLinks.push_back(*itindex);
+                          pkey->push_back(pinfo->vlinks[*itindex]->plinkBV->second.get());
                         }
                     }
-                    pkey->Add(*itbody, std::move(enabledActiveLinks), pinfo->_geometrygroup);
                 } else {
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
-                        pkey->Add(*itbody, GetEnabledLinks(*itbody), _fclspace->GetInfo(*itbody)->_geometrygroup);
+                      CollectEnabledLinkBVs(*itbody, *pkey);
                     }
                 }
             }
@@ -841,6 +840,13 @@ private:
             // The manager will need to be updated only if it comes from the cache
             bodyManager = GetManagerInstance(pkey, bUpdateManager);
             pinfo->_bodyManagerActiveDOFs = ManagerInstanceWeakPtr(bodyManager);
+
+            if( !bUpdateManager ) {
+              // otherwise the bodyManager has just been created and we need to initialize the update stamps
+              FOREACH(itbody, attachedBodies) {
+                bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+              }
+            }
 
             // Set the callbacks to invalidate the manager
             // if the activeDOFs callback is not set we set it
@@ -861,22 +867,22 @@ private:
             }
 
         }
-//      BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
 
         if( bUpdateManager ) {
-            // if the bodyManager has not been created just now, we may need to update its content
-            CollisionGroup vupdateObjects;
-            FOREACH(itbody, attachedBodies) {
-                if( bodyManager->mUpdateStamps[(*itbody)->GetEnvironmentId()] < (*itbody)->GetUpdateStamp() ) {
-                    bodyManager->mUpdateStamps[(*itbody)->GetEnvironmentId()] = (*itbody)->GetUpdateStamp();
-                    CollectEnabledLinkBVs(*itbody, vupdateObjects);
-                }
+
+          // if the bodyManager has not been created just now, we may need to update its content
+          CollisionGroup vupdateObjects;
+          FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
+            KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+            if( !!pbody && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+              itWkbodyStampPair->second = pbody->GetUpdateStamp();
+              CollectEnabledLinkBVs(pbody, vupdateObjects);
             }
-//        BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
-            bodyManager->pmanager->update(vupdateObjects);
-        }
+          }
+          bodyManager->pmanager->update(vupdateObjects);
+        } 
+
         bodyManager->pmanager->setup();
-//      BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(bodyManager->pmanager.get())->isValid());
         return bodyManager->pmanager;
     }
 
@@ -956,7 +962,7 @@ private:
                     }
                 }
                 if( bsetUpdateStamp ) {
-                    envManagerInstance->mUpdateStamps[bodyId] = pitinfo->nLastStamp;
+                  envManagerInstance->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), pitinfo->nLastStamp));
                 }
             }
             // do not forget to register the objects which have been registered
@@ -974,7 +980,6 @@ private:
 
         } else {
 
-            CollisionGroup vupdateObjects;
             FOREACH(itbody, envBodies) {
                 int bodyId = (*itbody)->GetEnvironmentId();
                 if( (*itbody)->IsRobot() || sexcludedbodiesid.count(bodyId)) {
@@ -982,19 +987,22 @@ private:
                 }
                 if( _fclspace->GetEnvExcludiedBodies().count(bodyId) && !sexcludedbodiesid.count(bodyId) ) {
                     KinBodyInfoPtr pinfo = _fclspace->GetInfo(*itbody);
+                    // TODO : The links might not have been updated in the manager (i.e. an already registered link)
                     if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
-                        envManagerInstance->mUpdateStamps[bodyId] = pinfo->nLastStamp;
-                    }
-                } else {
-                    std::map<int, int>::iterator itIdStampPair = envManagerInstance->mUpdateStamps.find(bodyId);
-                    if ( itIdStampPair != envManagerInstance->mUpdateStamps.end() && itIdStampPair->second < (*itbody)->GetUpdateStamp() ) {
-                        envManagerInstance->mUpdateStamps[itIdStampPair->first] = (*itbody)->GetUpdateStamp();
-                        CollectEnabledLinkBVs((*itbody), vupdateObjects);
-                    } else if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) && itIdStampPair == envManagerInstance->mUpdateStamps.end() && !sexcludedbodiesid.count(bodyId) && GetEnabledLinks(*itbody).size() > 0 ) {
-                        RAVELOG_ERROR_FORMAT("FCL COLLISION : Kinbody %s (id %d) has been forgotten (env = id)", (*itbody)->GetName()%bodyId%GetEnv()->GetId());
+                      envManagerInstance->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), pinfo->nLastStamp));
                     }
                 }
             }
+
+            CollisionGroup vupdateObjects;
+            FOREACH(itWkbodyStampPair, envManagerInstance->vUpdateStamps) {
+              KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+              if( !!pbody && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                CollectEnabledLinkBVs(pbody, vupdateObjects);
+              }
+            }
+
             envManagerInstance->pmanager->update(vupdateObjects);
             _fclspace->SetEnvExcludiedBodiesId(sexcludedbodiesid);
         }

@@ -12,60 +12,13 @@ namespace fclrave {
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
-
-
-///< Signature of a part of the environment
-struct Signature {
-    ///< \param pbody
-    ///< \param vlinkIndexes a vector of link indexes from pbody sorted in increasing order
-    void Add(KinBodyConstPtr pbody, std::vector<int>&& vlinkIndexes, const std::string& geometryGroup) {
-        linkList.insert(std::make_pair(pbody->GetEnvironmentId(), std::make_pair(geometryGroup, vlinkIndexes)));
-    }
-
-    size_t GetSize() const {
-        size_t size = 0;
-        FOREACH(itvlinkIndexes, linkList) {
-            size += itvlinkIndexes->second.second.size();
-        }
-        return size;
-    }
-
-    bool operator==(const Signature& s) const {
-        return linkList == s.linkList;
-    }
-
-    // TODO : should I use a map instead of a vector so that the hashed value does not depend on the order of insertion ?
-    std::map< int, std::pair<const std::string, std::vector<int> > > linkList; ///< a vector of pairs of an environment id and a vector of link indexes
-};
-
-/// specialization of the standard hash for Signature
-std::size_t hash_value(const Signature& s) {
-    std::size_t seed = 0;
-    boost::hash_combine(seed, s.linkList);
-    return seed;
-}
-
-
+typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
 struct ManagerInstance {
-    // copy constructor is only valid when we are working with DynamicAABBTree_Array
-    void Clone(const ManagerInstance& otherInstance) {
-        boost::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> _pmanager = boost::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
-        _pmanager->clone(*static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(otherInstance.pmanager.get()));
-        pmanager = _pmanager;
-        mUpdateStamps = otherInstance.mUpdateStamps;
-    }
-
     BroadPhaseCollisionManagerPtr pmanager;
-    std::map<int, int> mUpdateStamps;
+  std::vector< std::pair<KinBodyConstWeakPtr, int> > vUpdateStamps;
 };
 typedef boost::shared_ptr<ManagerInstance> ManagerInstancePtr;
 typedef boost::weak_ptr<ManagerInstance> ManagerInstanceWeakPtr;
-typedef Signature ManagerKey;
-typedef boost::shared_ptr<ManagerKey> ManagerKeyPtr;
-typedef boost::shared_ptr<const ManagerKey> ManagerKeyConstPtr;
-typedef boost::unordered_map<ManagerKey, ManagerInstancePtr> ManagerTable;
-typedef boost::shared_ptr<ManagerTable> ManagerTablePtr;
-typedef boost::weak_ptr<ManagerTable> ManagerTableWeakPtr;
 
 // Warning : this is the only place where we use std::shared_ptr (compatibility with fcl)
 typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
@@ -73,6 +26,14 @@ typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
 typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
+
+typedef CollisionGroup ManagerKey;
+typedef boost::shared_ptr<ManagerKey> ManagerKeyPtr;
+typedef boost::shared_ptr<const ManagerKey> ManagerKeyConstPtr;
+typedef boost::unordered_map<ManagerKey, ManagerInstancePtr> ManagerTable;
+typedef boost::shared_ptr<ManagerTable> ManagerTablePtr;
+typedef boost::weak_ptr<ManagerTable> ManagerTableWeakPtr;
+
 using OpenRAVE::ORE_Assert;
 
 /* Helper functions for conversions from OpenRAVE to FCL */
@@ -162,10 +123,12 @@ public:
                         localEnvManager->unregisterObject(plinkBV->second.get());
                     }
 
+                    plinkBV->second->setUserData(nullptr);
                     plinkBV.reset();
                 }
 
                 FOREACH(itgeompair, vgeoms) {
+                  (*itgeompair).second->setUserData(nullptr);
                     (*itgeompair).second.reset();
                 }
                 vgeoms.resize(0);
@@ -180,11 +143,10 @@ public:
                 }
             }
 
-            CollisionObjectPtr PrepareRegistering(ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
+            void RegisterKey(ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
                 _vmanagerKeys.push_back(pkey);
                 BOOST_ASSERT( !!ptable.lock() );
                 _ptable = ptable;
-                return plinkBV->second;
             }
 
             CollisionObjectPtr PrepareEnvManagerRegistering(BroadPhaseCollisionManagerPtr envManager) {
@@ -201,6 +163,8 @@ public:
                 } else {
                     // debug only
                     BOOST_ASSERT( localEnvManager == envManager );
+                    // ...
+                    //envManager->update(plinkBV->second.get());
                 }
             }
 
@@ -480,7 +444,12 @@ public:
             KinBodyInfoPtr poldinfo = GetInfo(pbody);
             if( !!_envManagerInstance ) {
                 BOOST_ASSERT( !!_envManagerInstance->pmanager );
-                _envManagerInstance->mUpdateStamps.erase(pbody->GetEnvironmentId());
+                FOREACH(itWkbodyStampPair, _envManagerInstance->vUpdateStamps) {
+                  if( itWkbodyStampPair->first.lock() == pbody ) {
+                    _envManagerInstance->vUpdateStamps.erase(itWkbodyStampPair);
+                    break;
+                  }
+                }
                 poldinfo->UnregisterAllLinks();
             }
             _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
@@ -792,6 +761,15 @@ private:
 
     void _ExcludeBodyFromEnv(int bodyId) {
         _envExcludedBodies.insert(bodyId);
+        if( !!_envManagerInstance ) {
+          FOREACH(itWkbodyStampPair, _envManagerInstance->vUpdateStamps) {
+            KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+            if( !!pbody && pbody->GetEnvironmentId() == bodyId ) {
+              _envManagerInstance->vUpdateStamps.erase(itWkbodyStampPair);
+              break;
+            }
+          }
+        }
     }
 
 
