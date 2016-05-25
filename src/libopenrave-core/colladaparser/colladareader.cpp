@@ -3040,7 +3040,9 @@ public:
                             pjoint = result.first;
                             pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
-                                listOrderedJoints.push_back(pjoint);
+                                if( find(probot->_vPassiveJoints.begin(), probot->_vPassiveJoints.end(), pjoint) == probot->_vPassiveJoints.end() ) { // don't allow passive joints!
+                                    listOrderedJoints.push_back(pjoint);
+                                }
                             }
                             else {
                                 RAVELOG_WARN(str(boost::format("failed to find joint %s in actuator %s\n")%pchild->getAttribute("joint")%name));

@@ -2619,7 +2619,7 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
 class GeometryInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyGeometryInfo& r)
+    static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
         return boost::python::make_tuple(r._t, boost::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
@@ -2647,7 +2647,7 @@ public:
 class LinkInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyLinkInfo& r)
+    static boost::python::tuple getstate(const PyLinkInfo& r)
     {
         return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters);
     }
@@ -2672,7 +2672,7 @@ public:
 class ElectricMotorActuatorInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyElectricMotorActuatorInfo& r)
+    static boost::python::tuple getstate(const PyElectricMotorActuatorInfo& r)
     {
         return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, boost::python::make_tuple(r.stall_torque, r.max_instantaneous_torque), boost::python::make_tuple(r.nominal_speed_torque_points, r.max_speed_torque_points), r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance, boost::python::make_tuple(r.coloumb_friction, r.viscous_friction));
     }
@@ -2700,7 +2700,7 @@ public:
 class JointInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyJointInfo& r)
+    static boost::python::tuple getstate(const PyJointInfo& r)
     {
         return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
     }

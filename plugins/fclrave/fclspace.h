@@ -42,7 +42,7 @@ Vector ConvertQuaternionFromFCL(fcl::Quaternion3f const &v) {
 template <class T>
 CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std::vector<fcl::Triangle> const &triangles)
 {
-    shared_ptr< fcl::BVHModel<T> > const model = make_shared<fcl::BVHModel<T> >();
+    std::shared_ptr< fcl::BVHModel<T> > const model = make_shared<fcl::BVHModel<T> >();
     model->beginModel(triangles.size(), points.size());
     model->addSubModel(points, triangles);
     model->endModel();
