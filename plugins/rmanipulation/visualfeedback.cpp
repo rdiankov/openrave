@@ -863,7 +863,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     }
                 }
             }
-            else if( cmd == "sphere" ) {
+            else if( cmd == "sphere" || cmd == "invertsphere" ) {
                 if( !bSetTargetCenter && !!_target ) {
                     KinBody::KinBodyStateSaver saver(_target);
                     _target->SetTransform(Transform());
@@ -878,6 +878,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 FOREACH(it,vdists) {
                     sinput >> *it;
                 }
+                bool bInvert = cmd == "invertsphere";
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vtransforms.begin();
@@ -888,6 +889,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
                             itcamera->trans += vTargetLocalCenter;
+                            if( bInvert ) {
+                                *itcamera = itcamera->inverse();
+                            }
                             ++itcamera;
                         }
                     }

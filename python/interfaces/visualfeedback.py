@@ -79,7 +79,7 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         return res
-    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
+    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,invertsphere=None,conedirangles=None):
         """See :ref:`module-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
@@ -96,9 +96,13 @@ class VisualFeedback:
             for f in numpy.reshape(extents,len(extents)*3):
                 cmd += str(f) + ' '
         if sphere is not None:
-            cmd += 'sphere %d %d '%(sphere[0],len(sphere)-1)
+            cmd += 'sphere %d %d ' % (sphere[0], len(sphere) - 1)
             for s in sphere[1:]:
-                cmd += '%.15e '%s
+                cmd += '%.15e ' % s
+        elif invertsphere is not None:
+            cmd += 'invertsphere %d %d ' % (invertsphere[0], len(invertsphere) - 1)
+            for s in invertsphere[1:]:
+                cmd += '%.15e ' % s
         if conedirangles is not None:
             for conedirangle in conedirangles:
                 cmd += 'conedirangle %.15e %.15e %.15e '%(conedirangle[0],conedirangle[1],conedirangle[2])
