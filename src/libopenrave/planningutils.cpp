@@ -1725,6 +1725,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
             traj->Remove(endindex+1, traj->GetNumWaypoints());
         }
     }
+    // TODO there might be a problem here if the first traj point has deltatime > 0
     if( starttime > 0 ) {
         size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
         if( startindex > 0 ) {
@@ -1733,7 +1734,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
             std::vector<dReal> vdeltatime;
             traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
             traj->Sample(values, starttime);
-            dReal fSampleDeltaTime;
+            dReal fSampleDeltaTime=0;
             traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
             // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
             int endremoveindex = startindex;
@@ -1755,37 +1756,38 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
 
 TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
 {
+    std::vector<dReal> values;
+    const ConfigurationSpecification& spec = traj->GetConfigurationSpecification();
     TrajectoryBasePtr outtraj = RaveCreateTrajectory(traj->GetEnv(), traj->GetXMLId());
-    outtraj->Init(traj->GetConfigurationSpecification());
+    outtraj->Init(spec);
 
+    // TODO
 //    size_t startindex = 0;
 //    if( starttime > 0 ) {
-//        size_t startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
+//        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
 //        if( startindex > 0 ) {
 //            ConfigurationSpecification deltatimespec;
 //            deltatimespec.AddDeltaTimeGroup();
 //            std::vector<dReal> vdeltatime;
 //            traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
 //            traj->Sample(values, starttime);
-//            dReal fSampleDeltaTime;
-//            traj->GetConfigurationSpecification().ExtractDeltaTime(fSampleDeltaTime, values.begin());
+//            dReal fSampleDeltaTime=0;
+//            spec.ExtractDeltaTime(fSampleDeltaTime, values.begin());
+//
+//            // have to set deltatime to 0 and insert values
+//            spec.InsertDeltaTime(values.begin(), 0);
+//            traj.Insert(0, values);
+//            
 //            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
-//            int endremoveindex = startindex;
 //            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
-//                traj->Insert(startindex-1, values, true);
-//                // have to write the new delta time
+//                // have to insert a new point
 //                vdeltatime[0] -= fSampleDeltaTime;
 //                traj->Insert(startindex, vdeltatime, deltatimespec, true);
 //                endremoveindex -= 1;
 //            }
-//            traj->Remove(0, endremoveindex);
-//            // have to reset the delta time of the first point
-//            vdeltatime[0] = 0;
-//            traj->Insert(0, vdeltatime, deltatimespec, true);
-//
 //        }
 //    }
-
+//
 //    std::vector<dReal> values;
 //    if( endtime < traj->GetDuration() ) {
 //        size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
