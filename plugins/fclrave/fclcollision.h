@@ -24,6 +24,27 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
 }
 
 
+ typedef std::pair<fcl::CollisionObject*, fcl::CollisionObject*> CollisionPair;
+}
+
+namespace std {
+  template<>
+    struct hash<fclrave::CollisionPair>
+    {
+      size_t operator()(const fclrave::CollisionPair& collpair) const {
+        static const size_t shift = (size_t)log2(1 + sizeof(fcl::CollisionObject*));
+        size_t seed = (size_t)(collpair.first) >> shift;
+        boost::hash_combine(seed, (size_t)(collpair.second) >> shift);
+        return seed;
+      }
+
+    };
+}
+
+
+namespace fclrave {
+
+typedef std::unordered_map<CollisionPair, fcl::Vec3f> NarrowCollisionCache;
 
 
 
@@ -1095,6 +1116,9 @@ private:
         return pcb->_bStopChecking;
     }
 
+
+
+
     static bool CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
         CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
         return pcb->_pchecker->CheckNarrowPhaseGeomCollision(o1, o2, pcb);
@@ -1107,7 +1131,19 @@ private:
         }
 
         pcb->_result.clear();
+
+        CollisionPair collpair = MakeCollisionPair(o1, o2);
+        NarrowCollisionCache::iterator it = mCollisionCachedGuesses.find(collpair);
+        if( it != mCollisionCachedGuesses.end() ) {
+          pcb->_request.cached_gjk_guess = it->second;
+        } else {
+          // Is there anything more intelligent we could do there with the collision objects AABB ?
+          pcb->_request.cached_gjk_guess = fcl::Vec3f(1,0,0);
+        }
+
         size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
+
+        mCollisionCachedGuesses[collpair] = pcb->_result.cached_gjk_guess;
 
         if( numContacts > 0 ) {
 
@@ -1184,14 +1220,24 @@ private:
         return false;
     }
 
+    static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2)
+    {
+      if( o1 < o2 ) {
+        return make_pair(o1, o2);
+      } else {
+        return make_pair(o2, o1);
+      }
+    }
+
     static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
     {
         if( plink1.get() < plink2.get() ) {
             return make_pair(plink1, plink2);
         } else {
-            return make_pair(plink1, plink2);
+            return make_pair(plink2, plink1);
         }
     }
+
 
     LinkConstPtr GetCollisionLink(const fcl::CollisionObject &collObj) {
         FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>(collObj.getUserData());
@@ -1270,6 +1316,8 @@ private:
     std::string _broadPhaseCollisionManagerAlgorithm;
     boost::shared_ptr<SpatialHashData> _spatialHashData;
     ManagerTablePtr _cachedManagers;
+
+    NarrowCollisionCache mCollisionCachedGuesses;
 
 #ifdef FCLUSESTATISTICS
     FCLStatisticsPtr _statistics;
