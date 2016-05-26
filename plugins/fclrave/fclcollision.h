@@ -57,6 +57,7 @@ public:
                 _request.enable_contact = false; // explicitly disable
             }
 
+            _request.gjk_solver_type = fcl::GST_INDEP;
 
             if( !!_report ) {
                 _report->Reset(_pchecker->GetCollisionOptions());
