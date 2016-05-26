@@ -88,6 +88,7 @@ import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class VisibilityModel(DatabaseGenerator):
+    visibilitytransforms = None # a list of camera pose in the pattern coordinate system
     class GripperVisibility:
         """Used to hide links not beloning to gripper.
 
