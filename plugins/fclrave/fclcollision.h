@@ -24,22 +24,22 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
 }
 
 
- typedef std::pair<fcl::CollisionObject*, fcl::CollisionObject*> CollisionPair;
-}
+typedef std::pair<fcl::CollisionObject*, fcl::CollisionObject*> CollisionPair;
+} // fclrave
 
 namespace std {
-  template<>
-    struct hash<fclrave::CollisionPair>
-    {
-      size_t operator()(const fclrave::CollisionPair& collpair) const {
+template<>
+struct hash<fclrave::CollisionPair>
+{
+    size_t operator()(const fclrave::CollisionPair& collpair) const {
         static const size_t shift = (size_t)log2(1 + sizeof(fcl::CollisionObject*));
         size_t seed = (size_t)(collpair.first) >> shift;
         boost::hash_combine(seed, (size_t)(collpair.second) >> shift);
         return seed;
-      }
+    }
 
-    };
-}
+};
+} // std
 
 
 namespace fclrave {
@@ -741,29 +741,29 @@ private:
 //            fromCache = true;
 //            return it->second;
 //        } else {
-            RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding manager (env = %d)", GetEnv()->GetId());
-            ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
-            std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
-            _cachedManagers->insert(insertedPair);
-            fromCache = false;
-            return bodyManager;
+        RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding manager (env = %d)", GetEnv()->GetId());
+        ManagerInstancePtr bodyManager = BuildManagerInstanceFromSignature(pkey);
+        std::pair<ManagerKey, ManagerInstancePtr> insertedPair(*pkey, bodyManager);
+        _cachedManagers->insert(insertedPair);
+        fromCache = false;
+        return bodyManager;
 //        }
     }
 
     BroadPhaseCollisionManagerPtr SetupManagerAllDOFs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo) {
         bool bUpdateManager = true;
 
-        ManagerInstancePtr bodyManager = pinfo->_bodyManager.lock();
+        ManagerInstancePtr bodyManager = pinfo->_bodyManager;
 
         if( !bodyManager ) {
 
-          std::set<KinBodyPtr> attachedBodies;
-          pbody->GetAttached(attachedBodies);
+            std::set<KinBodyPtr> attachedBodies;
+            pbody->GetAttached(attachedBodies);
 
             // Compute current ManagerKey
-          ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
+            ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
             FOREACH(itbody, attachedBodies) {
-              CollectEnabledLinkBVs(*itbody, *pkey);
+                CollectEnabledLinkBVs(*itbody, *pkey);
             }
 
             // The manager will need to be updated only if it comes from the cache
@@ -771,10 +771,10 @@ private:
             pinfo->_bodyManager = bodyManager;
 
             if( !bUpdateManager ) {
-              // otherwise the bodyManager has just been created and we need to initialize the update stamps
-              FOREACH(itbody, attachedBodies) {
-                bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
-              }
+                // otherwise the bodyManager has just been created and we need to initialize the update stamps
+                FOREACH(itbody, attachedBodies) {
+                    bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+                }
             }
 
             // Set the callbacks to invalidate the manager
@@ -797,11 +797,11 @@ private:
             // if the bodyManager has not been created just now, we may need to update its content
             CollisionGroup vupdateObjects;
             FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
-              KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-              if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
-                itWkbodyStampPair->second = pbody->GetUpdateStamp();
-                CollectEnabledLinkBVs(pbody, vupdateObjects);
-              }
+                KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+                if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                    itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                    CollectEnabledLinkBVs(pbody, vupdateObjects);
+                }
             }
             bodyManager->pmanager->update(vupdateObjects);
         }
@@ -813,7 +813,7 @@ private:
 
         bool bUpdateManager = true;
 
-        ManagerInstancePtr bodyManager = pinfo->_bodyManagerActiveDOFs.lock();
+        ManagerInstancePtr bodyManager = pinfo->_bodyManagerActiveDOFs;
 
         if( pinfo->_bactiveDOFsDirty ) {
             // if the activeDOFs have changed the _bodyManagerActiveDOFs must be invalid
@@ -836,8 +836,8 @@ private:
 
         if( !bodyManager ) {
 
-          std::set<KinBodyPtr> attachedBodies;
-          probot->GetAttached(attachedBodies);
+            std::set<KinBodyPtr> attachedBodies;
+            probot->GetAttached(attachedBodies);
 
             // Compute current ManagerKey
             ManagerKeyPtr pkey = boost::make_shared<ManagerKey>();
@@ -847,13 +847,13 @@ private:
                     pkey->reserve(enabledLinks.size());
                     FOREACH(itindex, enabledLinks) {
                         if(pinfo->_vactiveLinks[*itindex]) {
-                          pkey->push_back(pinfo->vlinks[*itindex]->plinkBV->second.get());
+                            pkey->push_back(pinfo->vlinks[*itindex]->plinkBV->second.get());
                         }
                     }
                 } else {
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
-                      CollectEnabledLinkBVs(*itbody, *pkey);
+                        CollectEnabledLinkBVs(*itbody, *pkey);
                     }
                 }
             }
@@ -861,13 +861,13 @@ private:
 
             // The manager will need to be updated only if it comes from the cache
             bodyManager = GetManagerInstance(pkey, bUpdateManager);
-            pinfo->_bodyManagerActiveDOFs = ManagerInstanceWeakPtr(bodyManager);
+            pinfo->_bodyManagerActiveDOFs = bodyManager;
 
             if( !bUpdateManager ) {
-              // otherwise the bodyManager has just been created and we need to initialize the update stamps
-              FOREACH(itbody, attachedBodies) {
-                bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
-              }
+                // otherwise the bodyManager has just been created and we need to initialize the update stamps
+                FOREACH(itbody, attachedBodies) {
+                    bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+                }
             }
 
             // Set the callbacks to invalidate the manager
@@ -892,17 +892,17 @@ private:
 
         if( bUpdateManager ) {
 
-          // if the bodyManager has not been created just now, we may need to update its content
-          CollisionGroup vupdateObjects;
-          FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
-            KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-            if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
-              itWkbodyStampPair->second = pbody->GetUpdateStamp();
-              CollectEnabledLinkBVs(pbody, vupdateObjects);
+            // if the bodyManager has not been created just now, we may need to update its content
+            CollisionGroup vupdateObjects;
+            FOREACH(itWkbodyStampPair, bodyManager->vUpdateStamps) {
+                KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+                if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                    itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                    CollectEnabledLinkBVs(pbody, vupdateObjects);
+                }
             }
-          }
-          bodyManager->pmanager->update(vupdateObjects);
-        } 
+            bodyManager->pmanager->update(vupdateObjects);
+        }
 
         bodyManager->pmanager->setup();
         return bodyManager->pmanager;
@@ -942,17 +942,17 @@ private:
     }
 
 
-    ///< \param sexcludedbodies set of bodies which can be safely omitted from the collision checking
+    ///< \param _sexcludedbodies set of bodies which can be safely omitted from the collision checking
     ///< \return an up to date and setup broadphase collision manager containing at least the collision object of the enviroment which are relevant
-    BroadPhaseCollisionManagerPtr GetEnvManager(const std::set<KinBodyPtr>& sexcludedbodies) {
+    BroadPhaseCollisionManagerPtr GetEnvManager(const std::set<KinBodyPtr>& _sexcludedbodies) {
 
         _fclspace->Synchronize();
 
         const std::set<KinBodyConstPtr>& envBodies = _fclspace->GetEnvBodies();
 
-        std::set<int> sexcludedbodiesid;
-        FOREACH(itbody, sexcludedbodies) {
-            sexcludedbodiesid.insert((*itbody)->GetEnvironmentId());
+        std::set<KinBodyConstPtr> sexcludedbodies;
+        FOREACH(itbody, _sexcludedbodies) {
+          sexcludedbodies.insert(sexcludedbodies.end(), *itbody);
         }
 
         ManagerInstancePtr envManagerInstance = _fclspace->GetEnvManagerInstance();
@@ -969,9 +969,7 @@ private:
                 if( (*itbody)->IsRobot() ) {
                     continue;
                 }
-                int bodyId = (*itbody)->GetEnvironmentId();
-                BOOST_ASSERT( bodyId );
-                if( sexcludedbodiesid.count(bodyId) ) {
+                if( sexcludedbodies.count(*itbody) ) {
                     continue;
                 }
                 KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
@@ -984,13 +982,13 @@ private:
                     }
                 }
                 if( bsetUpdateStamp ) {
-                  envManagerInstance->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), pitinfo->nLastStamp));
+                    envManagerInstance->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), pitinfo->nLastStamp));
                 }
             }
             // do not forget to register the objects which have been registered
             envManagerInstance->pmanager->registerObjects(vregisterBodies);
 
-            _fclspace->SetEnvExcludiedBodiesId(sexcludedbodiesid);
+            _fclspace->SetEnvExcludiedBodiesId(sexcludedbodies);
             _fclspace->SetEnvManagerInstance(envManagerInstance);
 
             // Set the callbacks to update the manager
@@ -1002,31 +1000,27 @@ private:
 
         } else {
 
-            FOREACH(itbody, envBodies) {
-                int bodyId = (*itbody)->GetEnvironmentId();
-                if( (*itbody)->IsRobot() || sexcludedbodiesid.count(bodyId)) {
-                    continue;
-                }
-                if( _fclspace->GetEnvExcludiedBodies().count(bodyId) && !sexcludedbodiesid.count(bodyId) ) {
+            FOREACH(itbody, _fclspace->GetEnvExcludiedBodies()) {
+                if( !sexcludedbodies.count(*itbody) ) {
                     KinBodyInfoPtr pinfo = _fclspace->GetInfo(*itbody);
                     // TODO : The links might not have been updated in the manager (i.e. an already registered link)
                     if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
-                      envManagerInstance->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), pinfo->nLastStamp));
+                        envManagerInstance->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), pinfo->nLastStamp));
                     }
                 }
             }
 
             CollisionGroup vupdateObjects;
             FOREACH(itWkbodyStampPair, envManagerInstance->vUpdateStamps) {
-              KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-              if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
-                itWkbodyStampPair->second = pbody->GetUpdateStamp();
-                CollectEnabledLinkBVs(pbody, vupdateObjects);
-              }
+                KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+                if( !!pbody && !!_fclspace->GetInfo(pbody) && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                    itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                    CollectEnabledLinkBVs(pbody, vupdateObjects);
+                }
             }
 
             envManagerInstance->pmanager->update(vupdateObjects);
-            _fclspace->SetEnvExcludiedBodiesId(sexcludedbodiesid);
+            _fclspace->SetEnvExcludiedBodiesId(sexcludedbodies);
         }
 
         envManagerInstance->pmanager->setup();
@@ -1135,10 +1129,10 @@ private:
         CollisionPair collpair = MakeCollisionPair(o1, o2);
         NarrowCollisionCache::iterator it = mCollisionCachedGuesses.find(collpair);
         if( it != mCollisionCachedGuesses.end() ) {
-          pcb->_request.cached_gjk_guess = it->second;
+            pcb->_request.cached_gjk_guess = it->second;
         } else {
-          // Is there anything more intelligent we could do there with the collision objects AABB ?
-          pcb->_request.cached_gjk_guess = fcl::Vec3f(1,0,0);
+            // Is there anything more intelligent we could do there with the collision objects AABB ?
+            pcb->_request.cached_gjk_guess = fcl::Vec3f(1,0,0);
         }
 
         size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
@@ -1222,11 +1216,11 @@ private:
 
     static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2)
     {
-      if( o1 < o2 ) {
-        return make_pair(o1, o2);
-      } else {
-        return make_pair(o2, o1);
-      }
+        if( o1 < o2 ) {
+            return make_pair(o1, o2);
+        } else {
+            return make_pair(o2, o1);
+        }
     }
 
     static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
@@ -1324,6 +1318,6 @@ private:
 #endif
 };
 
-}
+} // fclrave
 
 #endif

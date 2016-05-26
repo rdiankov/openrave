@@ -15,7 +15,7 @@ typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionMa
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
 struct ManagerInstance {
     BroadPhaseCollisionManagerPtr pmanager;
-  std::vector< std::pair<KinBodyConstWeakPtr, int> > vUpdateStamps;
+    std::vector< std::pair<KinBodyConstWeakPtr, int> > vUpdateStamps;
 };
 typedef boost::shared_ptr<ManagerInstance> ManagerInstancePtr;
 typedef boost::weak_ptr<ManagerInstance> ManagerInstanceWeakPtr;
@@ -109,15 +109,6 @@ public:
                 }
 
                 if( !!plinkBV ) {
-                    ManagerTablePtr ptable = _ptable.lock();
-                    if( !!ptable ) {
-                        FOREACH(itmanagerKey, _vmanagerKeys) {
-                            // we need to invalidate all the cached managers containing this link since the collision object for this link won't be valid anymore
-                            ptable->erase(**itmanagerKey);
-                        }
-                        _vmanagerKeys.resize(0);
-                    }
-
                     BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
                     if( !!localEnvManager ) {
                         localEnvManager->unregisterObject(plinkBV->second.get());
@@ -128,26 +119,13 @@ public:
                 }
 
                 FOREACH(itgeompair, vgeoms) {
-                  (*itgeompair).second->setUserData(nullptr);
+                    (*itgeompair).second->setUserData(nullptr);
                     (*itgeompair).second.reset();
                 }
                 vgeoms.resize(0);
             }
 
-            void Register(BroadPhaseCollisionManagerPtr pmanager, ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
-                if( std::find(_vmanagerKeys.begin(), _vmanagerKeys.end(), pkey) == _vmanagerKeys.end() ) {
-                    pmanager->registerObject(plinkBV->second.get());
-                    _vmanagerKeys.push_back(pkey);
-                    BOOST_ASSERT( !!ptable.lock() );
-                    _ptable = ptable;
-                }
-            }
 
-            void RegisterKey(ManagerKeyConstPtr pkey, ManagerTableWeakPtr ptable) {
-                _vmanagerKeys.push_back(pkey);
-                BOOST_ASSERT( !!ptable.lock() );
-                _ptable = ptable;
-            }
 
             CollisionObjectPtr PrepareEnvManagerRegistering(BroadPhaseCollisionManagerPtr envManager) {
                 _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
@@ -184,9 +162,6 @@ public:
             KinBody::LinkWeakPtr _plink;
 
             int nLastStamp;
-            ManagerTableWeakPtr _ptable;
-            // TODO : What about a dynamic collection of managers containing this link ?
-            std::list<ManagerKeyConstPtr> _vmanagerKeys; ///< Broad phase managers' keys containing this link's BV
             BroadPhaseCollisionManagerWeakPtr _envManager;
             BroadPhaseCollisionManagerPtr _linkManager;
             boost::shared_ptr<TransformCollisionPair> plinkBV;
@@ -259,12 +234,10 @@ public:
         vector< boost::shared_ptr<LINK> > vlinks;
         OpenRAVE::UserDataPtr _geometrycallback;
 
-        ManagerInstanceWeakPtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
-        ManagerKeyPtr bodyManagerReferenceKey;
+        ManagerInstancePtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
 
         bool _bactiveDOFsDirty; ///< true if some active link has been added or removed since the last construction of _bodyManagerActiveDOFs
-        ManagerInstanceWeakPtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
-        ManagerKeyPtr bodyManagerActiveDOFSsReferenceKey;
+        ManagerInstancePtr _bodyManagerActiveDOFs; ///< Broad phase manager containing all the active links of the kinbody (does not contain attached kinbodies' links)
         std::vector<int> _vactiveLinks; ///< ith element is 1 if the ith link of the kinbody is active, 0 otherwise ; ensured to be correct only after a call to GetBodyManager(true)
 
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
@@ -395,10 +368,10 @@ public:
         }
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
-        pinfo->_excludecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ExcludeBodyFromEnv, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), pbody->GetEnvironmentId()));
+        pinfo->_excludecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ExcludeWkBodyFromEnv, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBody const>(pbody)));
 
         pbody->SetUserData(_userdatakey, pinfo);
-        _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
+        _ExcludeBodyFromEnv(pbody);
         if( !!_envManagerInstance ) {
             pinfo->UpdateLinksRegisterStatus(_envManagerInstance->pmanager);
         }
@@ -445,10 +418,10 @@ public:
             if( !!_envManagerInstance ) {
                 BOOST_ASSERT( !!_envManagerInstance->pmanager );
                 FOREACH(itWkbodyStampPair, _envManagerInstance->vUpdateStamps) {
-                  if( itWkbodyStampPair->first.lock() == pbody ) {
-                    _envManagerInstance->vUpdateStamps.erase(itWkbodyStampPair);
-                    break;
-                  }
+                    if( itWkbodyStampPair->first.lock() == pbody ) {
+                        _envManagerInstance->vUpdateStamps.erase(itWkbodyStampPair);
+                        break;
+                    }
                 }
                 poldinfo->UnregisterAllLinks();
             }
@@ -470,7 +443,7 @@ public:
                 pinfo.reset();
             }
             // Notify to the environment manager that this kinbody must be added
-            _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
+            _ExcludeBodyFromEnv(pbody);
         }
     }
 
@@ -560,8 +533,8 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
-            _ExcludeBodyFromEnv(pbody->GetEnvironmentId());
-            _envExcludedBodies.erase(pbody->GetEnvironmentId());
+            _ExcludeBodyFromEnv(pbody);
+            _envExcludedBodies.erase(pbody);
             bool is_consistent = pbody->RemoveUserData(_userdatakey);
             if( !is_consistent ) {
                 RAVELOG_WARN("inconsistency detected with fclspace user data\n");
@@ -577,7 +550,6 @@ public:
             pinfo->_ResetBodyManagers();
             FOREACH(itlink, pinfo->vlinks) {
                 (*itlink)->_linkManager.reset();
-                (*itlink)->_vmanagerKeys.resize(0);
             }
         }
         _envManagerInstance.reset();
@@ -620,11 +592,11 @@ public:
         return _envManagerInstance;
     }
 
-    void SetEnvExcludiedBodiesId(const std::set<int>& envExcludedBodiesId) {
+    void SetEnvExcludiedBodiesId(const std::set<KinBodyConstPtr>& envExcludedBodiesId) {
         _envExcludedBodies = envExcludedBodiesId;
     }
 
-    const std::set<int>& GetEnvExcludiedBodies() const {
+    const std::set<KinBodyConstPtr>& GetEnvExcludiedBodies() const {
         return _envExcludedBodies;
     }
 
@@ -761,16 +733,25 @@ private:
         _cachedpinfo.erase(pbody->GetEnvironmentId());
     }
 
-    void _ExcludeBodyFromEnv(int bodyId) {
-        _envExcludedBodies.insert(bodyId);
+    void _ExcludeWkBodyFromEnv(boost::weak_ptr<KinBody const> _pbody) {
+        KinBodyConstPtr pbody = _pbody.lock();
+        if( !!pbody ) {
+            _ExcludeBodyFromEnv(pbody);
+        }
+    }
+
+    void _ExcludeBodyFromEnv(KinBodyConstPtr pbody) {
+        if( pbody->IsRobot() ) {
+            return;
+        }
+        _envExcludedBodies.insert(pbody);
         if( !!_envManagerInstance ) {
-          FOREACH(itWkbodyStampPair, _envManagerInstance->vUpdateStamps) {
-            KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-            if( !!pbody && pbody->GetEnvironmentId() == bodyId ) {
-              _envManagerInstance->vUpdateStamps.erase(itWkbodyStampPair);
-              break;
+            FOREACH(itWkbodyStampPair, _envManagerInstance->vUpdateStamps) {
+                if( itWkbodyStampPair->first.lock() == pbody ) {
+                    _envManagerInstance->vUpdateStamps.erase(itWkbodyStampPair);
+                    break;
+                }
             }
-          }
         }
     }
 
@@ -785,7 +766,7 @@ private:
     MeshFactory _meshFactory;
 
     ManagerInstancePtr _envManagerInstance;
-    std::set<int> _envExcludedBodies;
+    std::set<KinBodyConstPtr> _envExcludedBodies;
 
     std::set<KinBodyConstPtr> _setInitializedBodies;
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo;
