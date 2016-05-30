@@ -265,12 +265,13 @@ class DatabaseGenerator(metaclass.AutoReloader):
             if destroyenv and env is not None:
                 env.Destroy()
 
-import inversekinematics
-import grasping
-import convexdecomposition
-import linkstatistics
-import kinematicreachability
-import inversereachability
+from . import inversekinematics
+from . import grasping
+from . import convexdecomposition
+from . import boundingmesh
+from . import linkstatistics
+from . import kinematicreachability
+from . import inversereachability
     
 # python 2.5 raises 'import *' not allowed with 'from .'
 from sys import version_info

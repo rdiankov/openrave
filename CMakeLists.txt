@@ -758,6 +758,14 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
+message(STATUS "compiling local bounding-mesh library")
+add_subdirectory(3rdparty/bounding-mesh)
+check_cxx_compiler_flag("-std=c++0x" HAS_CXX_COMPILER_FLAG_STDCXX0X)
+if(HAS_CXX_COMPILER_FLAG_STDCXX0X)
+	set(BOUNDINGMESH_CXXFLAGS "-std=c++0x")
+endif()
+set(BOUNDINGMESH_FOUND 1)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
