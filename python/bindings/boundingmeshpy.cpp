@@ -27,13 +27,13 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
+#include <boundingmesh/boundingmesh.h>
 
 #define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
 
 #include <openrave/openrave.h>
 #include "openravepy_int.h"
-#include "boundingmesh.h"
 
 using namespace boost::python;
 using namespace std;

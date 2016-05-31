@@ -268,14 +268,24 @@ class DatabaseGenerator(metaclass.AutoReloader):
 from . import inversekinematics
 from . import grasping
 from . import convexdecomposition
-from . import boundingmesh
 from . import linkstatistics
 from . import kinematicreachability
 from . import inversereachability
-    
+
+
 # python 2.5 raises 'import *' not allowed with 'from .'
 from sys import version_info
 if version_info[0:3]>=(2,6,0):
-    import visibilitymodel
+    from . import visibilitymodel
 else:
     log.warn('some openravepy.datbases cannot be used python versions < 2.6')
+
+# Build the boundingmesh database generator only if the boundingmesh library is present
+import pkgutil
+try:
+    from .. import boundingmeshpy
+    boundingmeshpy_exists = True
+except ImportError:
+    boundingmeshpy_exists = False
+if boundingmeshpy_exists:
+    from . import boundingmesh

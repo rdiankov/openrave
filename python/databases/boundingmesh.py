@@ -52,7 +52,7 @@ log = logging.getLogger('openravepy.' + __name__.split('.',2)[-1])
 try:
     from .. import boundingmeshpy
 except Exception, e:
-    print 'failed to import boundingmeshpy', e
+    print 'failed to import boundingmeshpy (boundingmesh might not be installed)', e
 
 class BoundingMeshError(Exception):
     def __init__(self, msg=u''):

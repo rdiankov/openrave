@@ -104,6 +104,7 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
       if( BOUNDINGMESH_FOUND )
         add_library(boundingmeshpy SHARED boundingmeshpy.cpp bindings.cpp bindings.h)
         include_directories(${BOUNDINGMESH_INCLUDE_DIRS})
+        # TODO : Debug message, erase it when not used anymore
         message(STATUS "checking the content of BOUNDINGMESH_LIBRARIES : ${BOUNDINGMESH_LIBRARIES}")
         target_link_libraries(boundingmeshpy ${STDC_LIBRARY} ${BOUNDINGMESH_LIBRARIES} ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs} libopenrave openravepy_int)
         set_target_properties(boundingmeshpy PROPERTIES PREFIX "" COMPILE_FLAGS "${BOUNDINGMESH_CXX_FLAGS} ${OPENRAVEPY_COMPILE_FLAGS}" )
