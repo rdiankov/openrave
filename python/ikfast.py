@@ -2344,7 +2344,7 @@ class IKFastSolver(AutoReloader):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        self.Tfinal = zeros((4,4))
+        self.Tfinal = zeros(4,4)
         self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
         endbranchtree = [AST.SolverStoreSolution(jointvars,isHinge=[self.IsHinge(var.name) for var in jointvars])]
@@ -2387,7 +2387,7 @@ class IKFastSolver(AutoReloader):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        self.Tfinal = zeros((4,4))
+        self.Tfinal = zeros(4,4)
         self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         self.Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
@@ -2528,7 +2528,7 @@ class IKFastSolver(AutoReloader):
                 # more than 2 variables is almost always useless
                 break
         if len(Positions) == 0:
-            Positions.append(zeros((2,1)))
+            Positions.append(zeros(2,1))
             Positionsee.append(self.multiplyMatrix(T1links)[0:2,3])
         AllEquations = self.buildEquationsFromTwoSides(Positions,Positionsee,solvejointvars+self.freejointvars,uselength=True)
 
@@ -2555,7 +2555,7 @@ class IKFastSolver(AutoReloader):
         Links = LinksRaw[:]
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        self.Tfinal = zeros((4,4))
+        self.Tfinal = zeros(4,4)
         self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         self.Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
@@ -2659,7 +2659,7 @@ class IKFastSolver(AutoReloader):
 
         LinksInv = [self.affineInverse(link) for link in Links]
         T = self.multiplyMatrix(Links)
-        self.Tfinal = zeros((4,4))
+        self.Tfinal = zeros(4,4)
         self.Tfinal[0,0:3] = (T[0:3,0:3]*basedir).transpose()
         self.Tfinal[0:3,3] = T[0:3,0:3]*basepos+T[0:3,3]
         self.testconsistentvalues = self.ComputeConsistentValues(jointvars,self.Tfinal,numsolutions=4)
@@ -3146,7 +3146,7 @@ class IKFastSolver(AutoReloader):
             for tvar in transvars:
                 solvedvarsubs += self.Variable(tvar).subs
 
-        Ree = zeros((3,3))
+        Ree = zeros(3,3)
         for i in range(3):
             for j in range(3):
                 Ree[i,j] = Symbol('new_r%d%d'%(i,j))
@@ -3330,7 +3330,7 @@ class IKFastSolver(AutoReloader):
         
         LinksInv = [self.affineInverse(link) for link in Links]
         Tallmult = self.multiplyMatrix(Links)
-        self.Tfinal = zeros((4,4))
+        self.Tfinal = zeros(4,4)
         if normaldir is None:
             self.Tfinal[0,0] = acos(globaldir.dot(Tallmult[0:3,0:3]*basedir))
         else:
@@ -3620,7 +3620,7 @@ class IKFastSolver(AutoReloader):
                 # more than 2 variables is almost always useless
                 break
         if len(Positions) == 0:
-            Positions.append(zeros((len(indices),1)))
+            Positions.append(zeros(len(indices),1))
             Positionsee.append(self.multiplyMatrix(T1links).extract(indices,[3]))
         if removesmallnumbers:
             for i in range(len(Positions)):
@@ -3900,7 +3900,7 @@ class IKFastSolver(AutoReloader):
         leftsideeqs = [leftsideeqs[ileft] for rank,ileft,coeffs in systemcoeffs]
         rightsideeqs = [rightsideeqs[ileft] for rank,ileft,coeffs in systemcoeffs]
 
-        A = zeros((len(allmonomsleft),len(allmonomsleft)))
+        A = zeros(len(allmonomsleft),len(allmonomsleft))
         Asymbols = []
         for i in range(A.shape[0]):
             Asymbols.append([Symbol('gconst%d_%d'%(i,j)) for j in range(A.shape[1])])
@@ -4745,16 +4745,16 @@ class IKFastSolver(AutoReloader):
             complexity = [(self.codeComplexity(peq[0].as_expr()),peq) for peq in neweqs_test]
             complexity.sort(key=itemgetter(0))
             neweqs_test = [peq for c,peq in complexity]
-            A = zeros((len(neweqs_test),len(allmonoms)))
-            B = zeros((len(neweqs_test),1))
+            A = zeros(len(neweqs_test),len(allmonoms))
+            B = zeros(len(neweqs_test),1)
             for ipeq,peq in enumerate(neweqs_test):
                 for m,c in peq[0].terms():
                     A[ipeq,allmonoms.index(m)] = c.subs(self.freevarsubs)
                 B[ipeq] = peq[1].as_expr().subs(self.freevarsubs)
-            AU = zeros((len(allmonoms),len(allmonoms)))
-            AL = zeros((A.shape[0]-len(allmonoms),len(allmonoms)))
-            BU = zeros((len(allmonoms),1))
-            BL = zeros((A.shape[0]-len(allmonoms),1))
+            AU = zeros(len(allmonoms),len(allmonoms))
+            AL = zeros(A.shape[0]-len(allmonoms),len(allmonoms))
+            BU = zeros(len(allmonoms),1)
+            BL = zeros(A.shape[0]-len(allmonoms),1)
             AUadjugate = None
             AU = A[:A.shape[1],:]
             nummatrixsymbols = 0
@@ -4836,7 +4836,7 @@ class IKFastSolver(AutoReloader):
                 log.info('AU has symbols, so working with inverse might take some time')
                 AUdet = self.trigsimp(AUdet.subs(self.freevarsubsinv),self.freejointvars).subs(self.freevarsubs)
                 # find the adjugate by simplifying from the inverse
-                AUadjugate = zeros(AUinv.shape)
+                AUadjugate = zeros(AUinv.shape[0],AUinv.shape[1])
                 sinsubs = []
                 for freevar in self.freejointvars:
                     var=self.Variable(freevar)
@@ -4895,7 +4895,7 @@ class IKFastSolver(AutoReloader):
                     preprocesssolutiontree.append(matrixsolution)
                     self.usinglapack = True
                     # evaluate the inverse at various solutions and see which entries are always zero
-                    isnotzero = zeros((AU.shape[0],AU.shape[1]))
+                    isnotzero = zeros(AU.shape[0],AU.shape[1])
                     epsilon = 1e-15
                     epsilondet = 1e-30
                     hasOneNonSingular = False
@@ -4922,7 +4922,7 @@ class IKFastSolver(AutoReloader):
                     if not hasOneNonSingular:
                         raise self.CannotSolveError('inverse matrix is always singular')
                     
-                    AUinv = zeros((AU.shape[0],AU.shape[1]))
+                    AUinv = zeros(AU.shape[0],AU.shape[1])
                     for i in range(AUinv.shape[0]):
                         for j in range(AUinv.shape[1]):
                             if isnotzero[i,j] == 0:
@@ -5572,10 +5572,10 @@ class IKFastSolver(AutoReloader):
                     log.info('success in solving sub-coeff matrix!')
                     shape=Mall[0].shape
                     Malltemp = [None]*len(Mall)
-                    M = zeros(shape)
+                    M = zeros(shape[0],shape[1])
                     dictequations2 = list(dictequations)
                     for idegree in range(len(Mall)):
-                        Malltemp[idegree] = zeros(shape)
+                        Malltemp[idegree] = zeros(shape[0],shape[1])
                         for i in range(shape[0]):
                             for j in range(shape[1]):
                                 if Mall[idegree][i,j] != S.Zero:
@@ -6143,8 +6143,8 @@ class IKFastSolver(AutoReloader):
         if len(allmonoms) == 0 or len(allmonoms)>2*len(dialyticeqs):
             raise self.CannotSolveError('solveDialytically: more unknowns than equations %d>%d'%(len(allmonoms), 2*len(dialyticeqs)))
         
-        Mall = [zeros((2*len(dialyticeqs),len(allmonoms))) for i in range(maxdegree+1)]
-        Mallindices = [-ones((2*len(dialyticeqs),len(allmonoms))) for i in range(maxdegree+1)]
+        Mall = [zeros(2*len(dialyticeqs),len(allmonoms)) for i in range(maxdegree+1)]
+        Mallindices = [-ones(2*len(dialyticeqs),len(allmonoms)) for i in range(maxdegree+1)]
         exportcoeffeqs = [S.Zero]*(len(dialyticeqs)*len(origmonoms)*(maxdegree+1))
         for ipeq,peq in enumerate(dialyticeqs):
             for m,c in peq.terms():
@@ -6218,7 +6218,7 @@ class IKFastSolver(AutoReloader):
                     for i in range(C.shape[0]):
                         for j in range(C.shape[1]):
                             C[i,j] = self._SubstituteGlobalSymbols(C[i,j]).subs(subs).evalf()
-                    A2 = zeros((B.shape[0],B.shape[0]*2))
+                    A2 = zeros(B.shape[0],B.shape[0]*2)
                     for i in range(B.shape[0]):
                         A2[i,B.shape[0]+i] = S.One
                     A2=A2.col_join((-C).row_join(-B))
@@ -7697,6 +7697,7 @@ class IKFastSolver(AutoReloader):
             newpolyeqs = [Poly(eq,varsyms[1-ileftvar].htvar) for eq in polyeqs]
             mindegree = __builtin__.min([max(peq.degree_list()) for peq in newpolyeqs])
             maxdegree = __builtin__.max([max(peq.degree_list()) for peq in newpolyeqs])
+
             for peq in newpolyeqs:
                 if len(peq.monoms()) == 1:
                     possiblefinaleq = self.checkFinalEquation(Poly(peq.LC(),leftvar),subs)
@@ -7712,7 +7713,7 @@ class IKFastSolver(AutoReloader):
                     possibilities = []
                     unusedindices = range(len(newpolyeqs2))
                     for eqsindices in combinations(range(len(newpolyeqs2)),degree+1):
-                        Mall = zeros((degree+1,degree+1))
+                        Mall = zeros(degree+1,degree+1)
                         totalcomplexity = 0
                         for i,eqindex in enumerate(eqsindices):
                             eq = newpolyeqs2[eqindex]
@@ -7823,9 +7824,9 @@ class IKFastSolver(AutoReloader):
                     shape=Mall[0].shape
                     assert(shape[0] == 4 and shape[1] == 4)
                     Malltemp = [None]*len(Mall)
-                    M = zeros(shape)
+                    M = zeros(shape[0],shape[1])
                     for idegree in range(len(Mall)):
-                        Malltemp[idegree] = zeros(shape)
+                        Malltemp[idegree] = zeros(shape[0],shape[1])
                         for i in range(shape[0]):
                             for j in range(shape[1]):
                                 if Mall[idegree][i,j] != S.Zero:
@@ -8674,8 +8675,8 @@ class IKFastSolver(AutoReloader):
         if len(systemofequations) >= 4:
             singleeqs = None
             for eqs in combinations(systemofequations,4):
-                M = zeros((4,4))
-                B = zeros((4,1))
+                M = zeros(4,4)
+                B = zeros(4,1)
                 for i,arr in enumerate(eqs):
                     for j in range(4):
                         M[i,j] = arr[j]
