@@ -186,9 +186,9 @@ public:
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
 
-#ifdef ABBB_CACHING
+#ifdef AABB_CACHING
         // TODO : would be more efficient to modify _meshcollision so that the first k vertices are the extreme points
-        std::vector<int> _vextremePointsIndices; ///< Indices of the extreme points of _meshcollision (points on the convex hull)
+        int _numExtremePoints; ///< Number of points on the convex hull (placed first in _meshcollision)
 #endif
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;

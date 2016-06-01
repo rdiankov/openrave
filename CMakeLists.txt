@@ -664,6 +664,11 @@ else()
   set(QHULL_FOUND 1)
 endif()
 
+if( AABB_CACHING )
+  message(STATUS "AABB_CACHING set")
+  add_definitions(-DAABB_CACHING)
+endif()
+
 ## check ANN library
 check_include_file_cxx(ANN/ANN.h HAVE_ANN_H)
 if( HAVE_ANN_H )
