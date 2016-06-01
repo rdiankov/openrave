@@ -706,7 +706,7 @@ endif()
 #endif()
 
 # function expression parser library
-find_package(FPARSER 4.4.3)
+find_package(FPARSER 4.5 QUIET)
 if( NOT FPARSER_FOUND )
   if( PKG_CONFIG_FOUND )
     pkg_search_module(FPARSER fparser)
