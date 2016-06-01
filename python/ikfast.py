@@ -6268,7 +6268,7 @@ class IKFastSolver(AutoReloader):
                         linearlyindependent = True
                     break
                 else:
-                    log.info('not all eigenvalues are > 0. min is %e', min([Abs(f) > eps for f in eigenvals]))
+                    log.info('not all abs(eigenvalues) are > 0. min is %e', min([Abs(f) for f in eigenvals if Abs(f) > eps]))
             if not linearlyindependent:
                 raise self.CannotSolveError('equations are not linearly independent')
 
