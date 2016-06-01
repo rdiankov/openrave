@@ -153,7 +153,7 @@ public:
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
-        
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -185,6 +185,11 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+
+#ifdef ABBB_CACHING
+        // TODO : would be more efficient to modify _meshcollision so that the first k vertices are the extreme points
+        std::vector<int> _vextremePointsIndices; ///< Indices of the extreme points of _meshcollision (points on the convex hull)
+#endif
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -653,6 +658,9 @@ protected:
         LinkInfo _info; ///< parameter information of the link
 
 private:
+        /// \brief Updates the cached local AABB
+        virtual void _UpdateLocalAABB();
+
         /// Sensitive variables that are auto-generated and should not be modified by the user.
         /// @name Private Link Variables
         //@{
@@ -662,6 +670,7 @@ private:
         std::vector<int> _vRigidlyAttachedLinks;         ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
         TriMesh _collision; ///< triangles for collision checking, triangles are always the triangulation
                             ///< of the body when it is at the identity transformation
+        AABB _localAABB; ///< local AABB of the link, that is containing the _collision TriMesh
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -794,9 +803,9 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
-        
+
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
-        
+
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -863,7 +872,7 @@ public:
         /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
         /// \return min and max of torque limits
         std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
-        
+
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
         }

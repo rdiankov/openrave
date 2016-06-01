@@ -644,10 +644,18 @@ set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
 
 ## check qhull library
 check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
+check_library_exists(qhull_r qh_new_qhull "" QHULL_REENTRANT_FOUND_LIB)
 check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
 if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
   set(QHULL_FOUND 1)
   set(QHULL_INCLUDE_DIR)
+  if( QHULL_REENTRANT_FOUND_LIB )
+    set(QHULL_REENTRANT 1)
+    add_definitions(-DQHULL_REENTRANT)
+    # TODO : a real check shoul be done
+    set(QHULLCPP_FOUND 1)
+    add_definitions(-DQHULLCPP_FOUND)
+  endif()
 else()
   # have to compile from sources
   message(STATUS "compiling local qhull library")

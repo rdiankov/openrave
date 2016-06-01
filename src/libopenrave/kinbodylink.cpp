@@ -147,6 +147,9 @@ void KinBody::Link::SetMass(dReal mass)
 
 AABB KinBody::Link::ComputeLocalAABB() const
 {
+#ifdef AABB_CACHING
+    return _localAABB;
+#else
     if( _vGeometries.size() == 1) {
         return _vGeometries.front()->ComputeAABB(Transform());
     }
@@ -196,8 +199,10 @@ AABB KinBody::Link::ComputeLocalAABB() const
             ab.extents = vmax - ab.pos;
         }
         return ab;
+    } else {
+        return AABB();
     }
-    return AABB();
+#endif
 }
 
 AABB KinBody::Link::ComputeAABB() const
@@ -503,7 +508,65 @@ void KinBody::Link::_Update(bool parameterschanged)
         }
     }
     if( parameterschanged ) {
+#ifdef AABB_CACHING
+        _UpdateLocalAABB();
+#endif
         GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
+    }
+}
+
+void KinBody::Link::_UpdateLocalAABB() {
+    if( _vGeometries.size() == 1) {
+        _localAABB = _vGeometries.front()->ComputeAABB(Transform());
+    }
+    else if( _vGeometries.size() > 1 ) {
+        Vector vmin, vmax;
+        bool binitialized=false;
+        AABB ab;
+        FOREACHC(itgeom,_vGeometries) {
+            ab = (*itgeom)->ComputeAABB(Transform());
+            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
+                continue;
+            }
+            Vector vnmin = ab.pos - ab.extents;
+            Vector vnmax = ab.pos + ab.extents;
+            if( !binitialized ) {
+                vmin = vnmin;
+                vmax = vnmax;
+                binitialized = true;
+            }
+            else {
+                if( vmin.x > vnmin.x ) {
+                    vmin.x = vnmin.x;
+                }
+                if( vmin.y > vnmin.y ) {
+                    vmin.y = vnmin.y;
+                }
+                if( vmin.z > vnmin.z ) {
+                    vmin.z = vnmin.z;
+                }
+                if( vmax.x < vnmax.x ) {
+                    vmax.x = vnmax.x;
+                }
+                if( vmax.y < vnmax.y ) {
+                    vmax.y = vnmax.y;
+                }
+                if( vmax.z < vnmax.z ) {
+                    vmax.z = vnmax.z;
+                }
+            }
+        }
+        if( !binitialized ) {
+            ab.pos = _info._t.trans;
+            ab.extents = Vector(0,0,0);
+        }
+        else {
+            ab.pos = (dReal)0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
+        _localAABB = ab;
+    } else {
+        _localAABB = AABB();
     }
 }
 
