@@ -3233,7 +3233,7 @@ class IKFastSolver(AutoReloader):
                         endbranchtree=[AST.SolverSequence([leftovervarstree])]
                         unusedsymbols = []
                         for solvejointvar in solvejointvars:
-                            usedinequs = any([var in rawpolyeqs[0][0].gens or var in rawpolyeqs[0][1] for var in self.Variable(solvejointvar).vars])
+                            usedinequs = any([var in rawpolyeqs[0][0].gens or var in rawpolyeqs[0][1].gens for var in self.Variable(solvejointvar).vars])
                             if not usedinequs:
                                 unusedsymbols += self.Variable(solvejointvar).vars
                         AllEquationsExtra = []
