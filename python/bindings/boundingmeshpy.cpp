@@ -41,8 +41,6 @@ using namespace openravepy;
 using OpenRAVE::TriMesh;
 using OpenRAVE::Vector;
 
-class PyTriMesh;
-
 object _DecimatorCallbackFunction;
 
 // TODO : check the name of the last two parameters

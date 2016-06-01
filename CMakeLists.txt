@@ -764,6 +764,11 @@ if( BoundingMesh_FOUND )
   set(BOUNDINGMESH_FOUND 1)
 endif()
 
+find_package(vhacd CONFIG)
+if( vhacd_FOUND )
+  set(VHACD_FOUND 1)
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 

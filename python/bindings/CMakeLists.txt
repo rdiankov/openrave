@@ -122,6 +122,26 @@ if( Boost_PYTHON_FOUND AND Boost_THREAD_FOUND )
         endif()
         install(TARGETS boundingmeshpy DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
       endif()
+
+      ## vhacd binding
+      if( VHACD_FOUND )
+        add_library(vhacdpy SHARED vhacdpy.cpp bindings.cpp bindings.h)
+        target_link_libraries(vhacdpy ${STDC_LIBRARY} ::vhacd ${PYTHON_LIBRARIES} ${Boost_PYTHON_LIBRARY} ${Boost_THREAD_LIBRARY} ${extralibs} libopenrave openravepy_int)
+        set_target_properties(vhacdpy PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}" LINK_FLAGS "${OpenMP_CXX_FLAGS}")
+        add_dependencies(vhacdpy ::vhacd)
+        if( WIN32 )
+          set_target_properties(vhacdpy PROPERTIES SUFFIX ".pyd")
+          if( MSVC )
+            # set "link library dependencies" for visual studio in order to include symbols for other statically linked libs
+            # this is such an unbelievable hack, that it's disgusting
+            set_target_properties(vhacdpy PROPERTIES STATIC_LIBRARY_FLAGS "\" LinkLibraryDependencies=\"true")
+          endif()
+        elseif( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+          # on mac osx, python cannot import libraries with .dylib extension
+          set_target_properties(vhacdpy PROPERTIES SUFFIX ".so")
+        endif()
+        install(TARGETS vhacdpy DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+      endif()
     else()
       message(STATUS "failed to use boost python libraries, check if python-numpy is installed.")
     endif()
