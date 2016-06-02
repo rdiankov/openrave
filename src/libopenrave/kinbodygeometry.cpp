@@ -336,7 +336,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 #ifdef AABB_CACHING
-    if( _info._type == GT_TriMesh ) {
+    if( _info._type == GT_TriMesh && _info._vextremePointIndices.size() == 0 ) {
         ComputeExtremePointsIndices(_info);
     }
 #endif //AABB_CACHING
