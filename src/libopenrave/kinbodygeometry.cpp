@@ -172,6 +172,7 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
 ///< \brief Computes the convex hull of the TriMesh contained in info and modify the TriMesh so that the vertices on the convex hull are at the beginning of the TriMesh
 void ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
 {
+    RAVELOG_DEBUG_FORMAT("Recomputing extreme points (vertices : %d, faces : %d, filenames : %s %s)", info._meshcollision.vertices.size()%info._meshcollision.indices.size()%info._filenamerender%info._filenamecollision);
     if( info._meshcollision.vertices.size() == 0 ) {
         return;
     }
