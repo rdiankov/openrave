@@ -194,11 +194,11 @@ void KinBody::Link::Geometry::ComputeExtremePointsIndices(KinBody::GeometryInfo&
     orgQhull::Qhull qhull("", dim, numPoints, &qpoints[0], flags);
 
     if( !qhull.qhullStatus() ) {
-        info._vextremePointIndices.resize(0);
-        info._vextremePointIndices.reserve(qhull.vertexCount());
+        info._vextremePointsIndices.resize(0);
+        info._vextremePointsIndices.reserve(qhull.vertexCount());
         for(orgQhull::QhullVertex vertex = qhull.beginVertex(); vertex != qhull.endVertex(); vertex = vertex.next()) {
             BOOST_ASSERT( 0 <= vertex.point().id() && vertex.point().id() <= numPoints );
-            info._vextremePointIndices.push_back(vertex.point().id());
+            info._vextremePointsIndices.push_back(vertex.point().id());
         }
         qhull.clearQhullMessage();
 
@@ -337,7 +337,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 #ifdef AABB_CACHING
-    if( _info._type == GT_TriMesh && _info._vextremePointIndices.size() == 0 ) {
+    if( _info._type == GT_TriMesh && _info._vextremePointsIndices.size() == 0 ) {
         KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
     }
 #endif //AABB_CACHING
@@ -383,10 +383,10 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         break;
     case GT_TriMesh:
 #ifdef AABB_CACHING
-        if( _info._vextremePointIndices.size() > 0 ) {
+        if( _info._vextremePointsIndices.size() > 0 ) {
             Vector vmin, vmax;
-            vmin = vmax = tglobal * _info._meshcollision.vertices.at(_info._vextremePointIndices.at(0));
-            FOREACH(itind, _info._vextremePointIndices) {
+            vmin = vmax = tglobal * _info._meshcollision.vertices.at(_info._vextremePointsIndices.at(0));
+            FOREACH(itind, _info._vextremePointsIndices) {
                 Vector v = tglobal * _info._meshcollision.vertices.at(*itind);
                 if( vmin.x > v.x ) {
                     vmin.x = v.x;
