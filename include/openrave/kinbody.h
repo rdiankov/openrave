@@ -368,6 +368,11 @@ public:
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
+
+#ifdef AABB_CACHING
+            /// \brief Computes and sets the field info._vextremePointIndices
+            static void ComputeExtremePointsIndices(const KinBody::GeometryInfo& info);
+#endif // AABB_CACHING
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
             friend class OpenRAVEXMLParser::LinkXMLReader;

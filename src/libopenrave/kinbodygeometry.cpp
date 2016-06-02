@@ -170,7 +170,7 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
 
 #ifdef AABB_CACHING
 ///< \brief Computes the convex hull of the TriMesh contained in info and modify the TriMesh so that the vertices on the convex hull are at the beginning of the TriMesh
-void ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
+void KinBody::Link::Geometry::ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
 {
     RAVELOG_DEBUG_FORMAT("Recomputing extreme points (vertices : %d, faces : %d, filenames : %s %s)", info._meshcollision.vertices.size()%info._meshcollision.indices.size()%info._filenamerender%info._filenamecollision);
     if( info._meshcollision.vertices.size() == 0 ) {
@@ -338,7 +338,7 @@ KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::Geomet
 {
 #ifdef AABB_CACHING
     if( _info._type == GT_TriMesh && _info._vextremePointIndices.size() == 0 ) {
-        ComputeExtremePointsIndices(_info);
+        KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
     }
 #endif //AABB_CACHING
 }
@@ -473,7 +473,7 @@ void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
     _info._meshcollision = mesh;
 #ifdef AABB_CACHING
     if( _info._type == GT_TriMesh ) {
-        ComputeExtremePointsIndices(_info);
+        KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
     }
 #endif //AABB_CACHING
     parent->_Update();
