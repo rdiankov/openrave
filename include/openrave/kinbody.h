@@ -188,7 +188,7 @@ public:
 
 #ifdef AABB_CACHING
         // TODO : would be more efficient to modify _meshcollision so that the first k vertices are the extreme points
-        int _numExtremePoints; ///< Number of points on the convex hull (placed first in _meshcollision)
+        std::vector<int> _vextremePointIndices; ///< Number of points on the convex hull (placed first in _meshcollision)
 #endif
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;

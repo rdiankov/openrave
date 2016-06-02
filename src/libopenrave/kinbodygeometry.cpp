@@ -173,7 +173,6 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
 void ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
 {
     if( info._meshcollision.vertices.size() == 0 ) {
-        info._numExtremePoints = 0;
         return;
     }
 
@@ -194,32 +193,14 @@ void ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
     orgQhull::Qhull qhull("", dim, numPoints, &qpoints[0], flags);
 
     if( !qhull.qhullStatus() ) {
-        std::vector<int> vextremePointsIndices;
-        vextremePointsIndices.reserve(qhull.vertexCount());
+        info._vextremePointIndices.resize(0);
+        info._vextremePointIndices.reserve(qhull.vertexCount());
         for(orgQhull::QhullVertex vertex = qhull.beginVertex(); vertex != qhull.endVertex(); vertex = vertex.next()) {
             BOOST_ASSERT( 0 <= vertex.point().id() && vertex.point().id() <= numPoints );
-            vextremePointsIndices.push_back(vertex.point().id());
+            info._vextremePointIndices.push_back(vertex.point().id());
         }
         qhull.clearQhullMessage();
 
-        std::sort(vextremePointsIndices.begin(), vextremePointsIndices.end());
-        std::vector<int> vperm(info._meshcollision.vertices.size());
-        for(int i = 0; i < vperm.size(); ++i) {
-            vperm[i] = i;
-        }
-
-        for(int k = 0; k < vextremePointsIndices.size(); ++k) {
-            int ind = vextremePointsIndices[k];
-            if(ind != k) {
-                std::swap(info._meshcollision.vertices[ind], info._meshcollision.vertices[k]);
-                std::swap(vperm[ind], vperm[k]);
-            }
-        }
-        FOREACH(itind, info._meshcollision.indices) {
-            *itind = vperm.at(*itind);
-        }
-
-        info._numExtremePoints = vextremePointsIndices.size();
     } else {
         RAVELOG_DEBUG_FORMAT("Error when computing convex hull with qhull : %s", qhull.qhullMessage());
     }
@@ -401,12 +382,11 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         break;
     case GT_TriMesh:
 #ifdef AABB_CACHING
-        if( _info._numExtremePoints > 0 ) {
+        if( _info._vextremePointIndices.size() > 0 ) {
             Vector vmin, vmax;
-            vmin = vmax = tglobal * _info._meshcollision.vertices.at(0);
-            BOOST_ASSERT( _info._numExtremePoints <= _info._meshcollision.vertices.size() );
-            for(int i = 0; i < _info._numExtremePoints; ++i) {
-                Vector v = tglobal * _info._meshcollision.vertices.at(i);
+            vmin = vmax = tglobal * _info._meshcollision.vertices.at(_info._vextremePointIndices.at(0));
+            FOREACH(itind, _info._vextremePointIndices) {
+                Vector v = tglobal * _info._meshcollision.vertices.at(*itind);
                 if( vmin.x > v.x ) {
                     vmin.x = v.x;
                 }
@@ -492,7 +472,7 @@ void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
     _info._meshcollision = mesh;
 #ifdef AABB_CACHING
     if( _info._type == GT_TriMesh ) {
-      ComputeExtremePointsIndices(_info);
+        ComputeExtremePointsIndices(_info);
     }
 #endif //AABB_CACHING
     parent->_Update();
