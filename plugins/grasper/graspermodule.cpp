@@ -18,6 +18,11 @@
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 
+#ifdef QHULLCPP_FOUND
+#include <libqhullcpp/Qhull.h>
+#include <libqhullcpp/QhullFacetList.h>
+#include <libqhullcpp/QhullVertexSet.h>
+#else
 #ifdef QHULL_FOUND
 
 extern "C"
@@ -32,6 +37,7 @@ extern "C"
 #include <qhull/stat.h>
 }
 
+#endif
 #endif
 
 #include <boost/thread/once.hpp>
@@ -1602,6 +1608,75 @@ protected:
     /// \param vconvexplaces the places of the convex hull, dimension is dim+1
     virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, boost::shared_ptr< vector<int> > vconvexfaces, int dim)
     {
+#ifdef QHULLCPP_FOUND
+        vconvexplanes.resize(0);
+
+        // TODO : Is this copy really necessary ?
+        vector<coordT> qpoints(vpoints.size());
+        std::copy(vpoints.begin(),vpoints.end(),qpoints.begin());
+
+        char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
+        orgQhull::Qhull qhull("", dim, qpoints.size()/dim, &qpoints[0], flags);
+
+        if( !qhull.qhullStatus() ) {
+            vconvexplanes.reserve(1000);
+            if( !!vconvexfaces ) {
+                // fill with face indices
+                vconvexfaces->resize(0);
+                vconvexfaces->push_back(0);
+            }
+
+            FOREACH(itfacet, qhull.facetList()) {
+                if( !!vconvexfaces && itfacet->vertices().count() ) {
+                    size_t startindex = vconvexfaces->size();
+                    vconvexfaces->push_back(0);
+                    FOREACH(itvertex, itfacet->vertices()) {
+                        int id = (*itvertex).point().id();
+                        BOOST_ASSERT(id>=0);
+                        vconvexfaces->push_back(id);
+                    }
+                    vconvexfaces->at(startindex) = vconvexfaces->size()-startindex-1;
+                    vconvexfaces->at(0) += 1;
+                }
+                if( itfacet->hyperplane().isValid() ) {
+                    for(int i = 0; i < dim; ++i) {
+                        vconvexplanes.push_back(itfacet->hyperplane()[i]);
+                    }
+                    vconvexplanes.push_back(itfacet->hyperplane().offset());
+                }
+            }
+        } else {
+            RAVELOG_WARN_FORMAT("Qhull failed with error %s", qhull.qhullMessage());
+            return 0;
+        }
+
+        double totvol = qhull.volume();
+
+        vector<double> vmean(dim,0);
+        for(size_t i = 0; i < vpoints.size(); i += dim) {
+            for(int j = 0; j < dim; ++j)
+                vmean[j] += vpoints[i+j];
+        }
+        double fipoints = 1/(double)(vpoints.size()/dim);
+        for(int j = 0; j < dim; ++j) {
+            vmean[j] *= fipoints;
+        }
+        for(size_t i = 0; i < vconvexplanes.size(); i += dim+1) {
+            double meandist = 0;
+            for(int j = 0; j < dim; ++j) {
+                meandist += vconvexplanes[i+j]*vmean[j];
+            }
+            meandist += vconvexplanes.at(i+dim);
+            if( meandist > 0 ) {
+                for(int j = 0; j < dim; ++j) {
+                    vconvexplanes[i+j] = -vconvexplanes[i+j];
+                }
+            }
+        }
+
+        return totvol;     // return volume
+
+#else
         boost::mutex::scoped_lock lock(s_QhullMutex);
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
@@ -1609,7 +1684,6 @@ protected:
         std::copy(vpoints.begin(),vpoints.end(),qpoints.begin());
 
         boolT ismalloc = 0;               // True if qhull should free points in qh_freeqhull() or reallocation
-        char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
 
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
@@ -1691,6 +1765,7 @@ protected:
 #else
         throw openrave_exception(str(boost::format("QHull library not found, cannot compute convex hull of contact points")));
         return 0;
+#endif
 #endif
     }
 
