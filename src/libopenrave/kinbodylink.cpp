@@ -150,7 +150,6 @@ AABB KinBody::Link::ComputeLocalAABB() const
 {
 #ifdef AABB_CACHING
     if( _blocalAABBdirty ) {
-        RAVELOG_DEBUG("Updating local AABB");
         if( _vGeometries.size() == 1) {
             _localAABB = _vGeometries.front()->ComputeAABB(Transform());
         }
@@ -204,12 +203,9 @@ AABB KinBody::Link::ComputeLocalAABB() const
             _localAABB = AABB();
         }
         _blocalAABBdirty = false;
-    } else {
-        RAVELOG_DEBUG("Returning local AABB");
     }
     return _localAABB;
 #else
-    RAVELOG_DEBUG("Computing local AABB (old)");
     if( _vGeometries.size() == 1) {
         return _vGeometries.front()->ComputeAABB(Transform());
     }
@@ -267,7 +263,6 @@ AABB KinBody::Link::ComputeLocalAABB() const
 
 AABB KinBody::Link::ComputeAABB() const
 {
-    RAVELOG_DEBUG("Computing AABB");
     if( _vGeometries.size() == 1) {
         return _vGeometries.front()->ComputeAABB(_info._t);
     }
