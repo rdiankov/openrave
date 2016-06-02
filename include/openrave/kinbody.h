@@ -371,7 +371,7 @@ protected:
 
 #ifdef AABB_CACHING
             /// \brief Computes and sets the field info._vextremePointIndices
-            static void ComputeExtremePointsIndices(const KinBody::GeometryInfo& info);
+            static void ComputeExtremePointsIndices(KinBody::GeometryInfo& info);
 #endif // AABB_CACHING
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
