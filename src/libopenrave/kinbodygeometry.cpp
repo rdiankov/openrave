@@ -212,8 +212,7 @@ void ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
             int ind = vextremePointsIndices[k];
             if(ind != k) {
                 std::swap(info._meshcollision.vertices[ind], info._meshcollision.vertices[k]);
-                vperm[ind] = k;
-                vperm[k] = ind;
+                std::swap(vperm[ind], vperm[k]);
             }
         }
         FOREACH(itind, info._meshcollision.indices) {
@@ -492,7 +491,9 @@ void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
     LinkPtr parent(_parent);
     _info._meshcollision = mesh;
 #ifdef AABB_CACHING
-    ComputeExtremePointsIndices(_info);
+    if( _info._type == GT_TriMesh ) {
+      ComputeExtremePointsIndices(_info);
+    }
 #endif //AABB_CACHING
     parent->_Update();
 }

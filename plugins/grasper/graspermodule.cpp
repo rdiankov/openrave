@@ -1647,8 +1647,14 @@ protected:
             }
         } else {
             RAVELOG_WARN_FORMAT("Qhull failed with error %s", qhull.qhullMessage());
+            vconvexplanes.resize(0);
+            if( !!vconvexfaces ) {
+              vconvexfaces->resize(0);
+            }
             return 0;
         }
+
+        qhull.clearQhullMessage();
 
         double totvol = qhull.volume();
 

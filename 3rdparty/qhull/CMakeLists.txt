@@ -349,8 +349,8 @@ endif()
 set(
     qhull_TARGETS_INSTALL
         ${qhull_CPP} ${qhull_STATIC} ${qhull_STATICR} ${qhull_SHAREDR}
-        qhull rbox qconvex qdelaunay qvoronoi qhalf
-        ${qhull_SHARED} ${qhull_SHAREDP}  # Deprecated, use qhull_r instead
+#        qhull rbox qconvex qdelaunay qvoronoi qhalf
+#        ${qhull_SHARED} ${qhull_SHAREDP}  # Deprecated, use qhull_r instead
 )
 set(
     qhull_TARGETS_TEST   # Unused
@@ -610,10 +610,10 @@ set_target_properties(${qhull_CPP} PROPERTIES
 ## Define install
 ## ---------------------------------------
 #
-#install(TARGETS ${qhull_TARGETS_INSTALL}
-#        RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-#        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-#        ARCHIVE DESTINATION ${LIB_INSTALL_DIR})
+install(TARGETS ${qhull_TARGETS_INSTALL}
+        RUNTIME DESTINATION ${BIN_INSTALL_DIR}
+        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+        ARCHIVE DESTINATION ${LIB_INSTALL_DIR})
 #
 #install(FILES ${libqhull_HEADERS}    DESTINATION ${INCLUDE_INSTALL_DIR}/libqhull)
 #install(FILES ${libqhull_DOC}        DESTINATION ${INCLUDE_INSTALL_DIR}/libqhull)

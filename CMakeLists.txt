@@ -663,6 +663,7 @@ else()
   include_directories("${QHULL_INCLUDE_DIR}")
   add_subdirectory(3rdparty/qhull)
   set(QHULLCPP_FOUND 1)
+  add_definitions(-DQHULLCPP_FOUND)
   endif()
 endif()
 
