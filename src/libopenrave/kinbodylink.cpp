@@ -570,7 +570,9 @@ void KinBody::Link::_Update(bool parameterschanged)
             _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
         }
     }
+#ifdef AABB_CACHING
     _blocalAABBdirty = true;
+#endif //AABB_CACHING
     if( parameterschanged ) {
         GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
     }

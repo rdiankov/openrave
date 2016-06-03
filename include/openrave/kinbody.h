@@ -672,8 +672,10 @@ private:
         std::vector<int> _vRigidlyAttachedLinks;         ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
         TriMesh _collision; ///< triangles for collision checking, triangles are always the triangulation
                             ///< of the body when it is at the identity transformation
+#ifdef AABB_CACHING
         mutable bool _blocalAABBdirty; ///< if true, the local AABB needs to be recomputed before being used
         mutable AABB _localAABB; ///< local AABB of the link, that is containing the _collision TriMesh, only set up if _blocalAABBdirty == false
+#endif AABB_CACHING
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
