@@ -4145,7 +4145,6 @@ private:
                             }
                             BOOST_ASSERT(plink->GetParent()==pbody);
 
-                            // TODO : Is referenceElt the right element from which we need to search the URI ?
                             domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
                             if( !domgeom ) {
                                 RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
