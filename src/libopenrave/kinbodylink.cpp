@@ -455,7 +455,7 @@ void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::
     it->second.resize(geometries.size());
 #ifdef AABB_CACHING
     FOREACH(itgeominfo, geometries) {
-        if( (*itgeominfo)->_vextremePointsIndices.size() == 0 ) {
+      if( (*itgeominfo)->_type == GT_TriMesh && (*itgeominfo)->_vextremePointsIndices.size() == 0 ) {
             KinBody::Link::Geometry::ComputeExtremePointsIndices(**itgeominfo);
         }
     }

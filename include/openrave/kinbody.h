@@ -370,7 +370,7 @@ protected:
             KinBody::GeometryInfo _info; ///< geometry info
 
 #ifdef AABB_CACHING
-            /// \brief Computes and sets the field info._vextremePointIndices
+            /// \brief Computes and sets the extreme points indices of the TriMesh contained in info
             static void ComputeExtremePointsIndices(KinBody::GeometryInfo& info);
 #endif // AABB_CACHING
 #ifdef RAVE_PRIVATE
