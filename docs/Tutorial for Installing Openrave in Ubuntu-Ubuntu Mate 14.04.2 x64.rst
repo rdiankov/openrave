@@ -1,4 +1,4 @@
-===================================================================================
+﻿===================================================================================
 Install instructions for OpenRave in Ubuntu/Ubuntu Mate 14.04.2 x64
 ===================================================================================
 Installing ODE and Bullet is Optional, must be downloaded and installed. This Instructions work for branches master & latest_stable.
@@ -27,7 +27,7 @@ Some packages (like pkg-config) are required just in case your using Ubuntu Mate
 8.	sudo apt-get install libpcre++-dev
 9.	sudo apt-get install libboost-all-dev
 10.	sudo apt-get install libassimp-dev
-11.	sudo apt-get install pkg-config
+11.	sudo apt-get install pkg-config gettext
 
 Install Bullet (optional, needs version 2.80, ubuntu official repo has ver. 2.81)
 ---------------------------------------------------------------------------------
