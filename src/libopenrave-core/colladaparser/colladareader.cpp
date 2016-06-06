@@ -423,6 +423,21 @@ public:
             return false;
         }
 
+        if( !!_dom->getAsset() ) {
+            if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
+                float f = -9.7979302;
+                if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_X_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(f,0,0));
+                }
+                else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Y_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(0,f,0));
+                }
+                else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Z_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
+                }
+            }
+        }
+
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
         std::vector<KinematicsSceneBindings> allbindings(allscene->getInstance_kinematics_scene_array().getCount());
@@ -3912,10 +3927,21 @@ private:
         }
     }
 
-    static void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
+    void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
     {
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
             domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            if( !pscene ) {
+                continue;
+            }
+            if( !!pscene->getTechnique_common() && !!pscene->getTechnique_common()->getGravity()) {
+                const domFloat3& domgravity = pscene->getTechnique_common()->getGravity()->getValue();
+                if( domgravity.getCount() == 3 ) {
+                    if( !!_penv->GetPhysicsEngine() ) {
+                        _penv->GetPhysicsEngine()->SetGravity(Vector(domgravity[0], domgravity[1], domgravity[2]));
+                    }
+                }
+            }
             for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
                 domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
                 domPhysics_modelRef pmodel = daeSafeCast<domPhysics_model> (ipmodel->getUrl().getElement().cast());

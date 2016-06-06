@@ -975,7 +975,14 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
         }
 
         if( bTracking ) {
+            
             RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
+            if( !!GetEnv()->GetPhysicsEngine() ) {
+                Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
+                if( vgravity.lengthsqr3() > g_fEpsilon ) {
+                    vup = -vgravity*(1.0/RaveSqrt(vgravity.lengthsqr3()));
+                }
+            }
             RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
             vlookatdir -= vup*vup.dot3(vlookatdir);
             float flookatlen = sqrtf(vlookatdir.lengthsqr3());
