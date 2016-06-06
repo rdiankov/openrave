@@ -141,8 +141,7 @@ public:
                 } else {
                     // debug only
                     BOOST_ASSERT( localEnvManager == envManager );
-                    // ...
-                    //envManager->update(plinkBV->second.get());
+                    envManager->update(plinkBV->second.get(), false);
                 }
             }
 

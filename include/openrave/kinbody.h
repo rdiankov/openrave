@@ -1937,6 +1937,7 @@ private:
     ///
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
+    virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     virtual bool HasAttached() const;
