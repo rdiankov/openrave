@@ -816,24 +816,25 @@ private:
             // Compute current set of collision objects
             std::set<KinBodyConstPtr> attachedBodies;
             probot->GetAttached(attachedBodies);
-            attachedBodies.erase(probot);
 
             _tmpbuffer.resize(0);
-            _tmpbuffer.reserve(probot->GetLinks().size());
-            FOREACH(itlink, probot->GetLinks()) {
-                int index = (*itlink)->GetIndex();
-                if( (*itlink)->IsEnabled() && pinfo->_vactiveLinks[index] ) {
-                    _tmpbuffer.push_back(GetLinkBV(pinfo, index).get());
-                }
-            }
-            pinfo->_bodyManagerActiveDOFs->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(probot), pinfo->nLastStamp));
 
             FOREACH(itbody, attachedBodies) {
-                BOOST_ASSERT(*itbody != probot);
-                LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
-                if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
-                    CollectEnabledLinkBVs(*itbody, _tmpbuffer);
-                    pinfo->_bodyManagerActiveDOFs->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+                if( *itbody == probot ) {
+                    _tmpbuffer.reserve(probot->GetLinks().size());
+                    FOREACH(itlink, probot->GetLinks()) {
+                        int index = (*itlink)->GetIndex();
+                        if( (*itlink)->IsEnabled() && pinfo->_vactiveLinks[index] ) {
+                            _tmpbuffer.push_back(GetLinkBV(pinfo, index).get());
+                        }
+                    }
+                    pinfo->_bodyManagerActiveDOFs->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(probot), pinfo->nLastStamp));
+                } else {
+                    LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
+                    if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
+                        CollectEnabledLinkBVs(*itbody, _tmpbuffer);
+                        pinfo->_bodyManagerActiveDOFs->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+                    }
                 }
             }
 
