@@ -111,7 +111,12 @@ class LinkStatisticsModel(DatabaseGenerator):
         DatabaseGenerator.save(self,self.grabbedjointspheres)
     
     def LoadPickle(self):
-        params = DatabaseGenerator.load(self)
+        try:
+            params = DatabaseGenerator.load(self)
+        except Exception, e:
+            log.warn(u'failed to load linkstatistics: %s', e)
+            return False
+        
         if params is None:
             return False
         self.grabbedjointspheres = params
