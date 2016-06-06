@@ -438,6 +438,21 @@ public:
             }
         }
 
+        for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
+            domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            if( !pscene ) {
+                continue;
+            }
+            if( !!pscene->getTechnique_common() && !!pscene->getTechnique_common()->getGravity()) {
+                const domFloat3& domgravity = pscene->getTechnique_common()->getGravity()->getValue();
+                if( domgravity.getCount() == 3 ) {
+                    if( !!_penv->GetPhysicsEngine() ) {
+                        _penv->GetPhysicsEngine()->SetGravity(Vector(domgravity[0], domgravity[1], domgravity[2]));
+                    }
+                }
+            }
+        }
+
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
         std::vector<KinematicsSceneBindings> allbindings(allscene->getInstance_kinematics_scene_array().getCount());
@@ -3933,14 +3948,6 @@ private:
             domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
             if( !pscene ) {
                 continue;
-            }
-            if( !!pscene->getTechnique_common() && !!pscene->getTechnique_common()->getGravity()) {
-                const domFloat3& domgravity = pscene->getTechnique_common()->getGravity()->getValue();
-                if( domgravity.getCount() == 3 ) {
-                    if( !!_penv->GetPhysicsEngine() ) {
-                        _penv->GetPhysicsEngine()->SetGravity(Vector(domgravity[0], domgravity[1], domgravity[2]));
-                    }
-                }
             }
             for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
                 domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
