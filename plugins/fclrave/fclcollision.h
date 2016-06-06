@@ -708,7 +708,7 @@ private:
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
         group.reserve(group.size() + pbody->GetLinks().size());
         FOREACH(itlink, pbody->GetLinks()) {
-          if( ((*itlink)->IsEnabled()) ) {
+            if( ((*itlink)->IsEnabled()) ) {
                 // not a very good idea to access it directly for code maintenance
                 group.push_back(GetLinkBV(pinfo, (*itlink)->GetIndex()).get());
             }
@@ -753,8 +753,8 @@ private:
 
         if( !pinfo->_bodyManager ) {
 
-          pinfo->_bodyManager = boost::make_shared<ManagerInstance>();
-          pinfo->_bodyManager->pmanager = CreateManager();
+            pinfo->_bodyManager = boost::make_shared<ManagerInstance>();
+            pinfo->_bodyManager->pmanager = CreateManager();
 
             std::set<KinBodyConstPtr> attachedBodies;
             pbody->GetAttached(attachedBodies);
@@ -810,8 +810,8 @@ private:
 
         if( !pinfo->_bodyManagerActiveDOFs ) {
 
-          pinfo->_bodyManagerActiveDOFs = boost::make_shared<ManagerInstance>();
-          pinfo->_bodyManagerActiveDOFs->pmanager = CreateManager();
+            pinfo->_bodyManagerActiveDOFs = boost::make_shared<ManagerInstance>();
+            pinfo->_bodyManagerActiveDOFs->pmanager = CreateManager();
 
             // Compute current set of collision objects
             std::set<KinBodyConstPtr> attachedBodies;
@@ -960,11 +960,11 @@ private:
                                 sexcludedbodies.begin(),
                                 sexcludedbodies.end(),
                                 boost::make_function_output_iterator([this, &envManagerInstance](KinBodyConstPtr pbody) {
-                                    KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-                                    if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
-                                      envManagerInstance->vUpdateStamps.push_back(std::make_pair(pinfo->_pbody, pinfo->nLastStamp));
-                                    }
-                                  }));
+                                                                         KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+                                                                         if( !!pinfo && pinfo->UpdateLinksRegisterStatus(envManagerInstance->pmanager) ) {
+                                                                             envManagerInstance->vUpdateStamps.push_back(std::make_pair(pinfo->_pbody, pinfo->nLastStamp));
+                                                                         }
+                                                                     }));
             _fclspace->SetEnvExcludiedBodiesId(sexcludedbodies);
 
             UpdateManagerInstance(envManagerInstance);
