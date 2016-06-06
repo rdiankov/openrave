@@ -1073,6 +1073,7 @@ private:
 
         pcb->_result.clear();
 
+#ifdef NARROW_COLLISION_CACHING
         CollisionPair collpair = MakeCollisionPair(o1, o2);
         NarrowCollisionCache::iterator it = mCollisionCachedGuesses.find(collpair);
         if( it != mCollisionCachedGuesses.end() ) {
@@ -1081,10 +1082,11 @@ private:
             // Is there anything more intelligent we could do there with the collision objects AABB ?
             pcb->_request.cached_gjk_guess = fcl::Vec3f(1,0,0);
         }
-
+#endif
         size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
-
+#ifdef NARROW_COLLISION_CACHING
         mCollisionCachedGuesses[collpair] = pcb->_result.cached_gjk_guess;
+#endif
 
         if( numContacts > 0 ) {
 
