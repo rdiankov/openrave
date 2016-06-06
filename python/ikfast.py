@@ -7697,6 +7697,8 @@ class IKFastSolver(AutoReloader):
             newpolyeqs = [Poly(eq,varsyms[1-ileftvar].htvar) for eq in polyeqs]
             mindegree = __builtin__.min([max(peq.degree_list()) for peq in newpolyeqs])
             maxdegree = __builtin__.max([max(peq.degree_list()) for peq in newpolyeqs])
+            # limit mindegree to -1
+            mindegree = -1 if mindegree is S.NegativeInfinity else mindegree
 
             for peq in newpolyeqs:
                 if len(peq.monoms()) == 1:
