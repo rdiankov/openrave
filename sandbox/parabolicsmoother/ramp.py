@@ -1,4 +1,4 @@
-from mpmath import mp, fabs, fadd, fmul, fneg, fprod, fsub, fsum, arange
+from mpmath import mp, arange
 import numpy as np
 import matplotlib.pyplot as plt
 import bisect
@@ -7,7 +7,7 @@ _prec = 500
 epsilon = mp.mpf('1e-100')
 
 mp.dps = _prec
-_pointfive = mp.mpf('0.5')
+pointfive = mp.mpf('0.5')
 zero = mp.mpf('0')
 
 """
@@ -18,33 +18,33 @@ For testing and verifying results of precise interpolation.
 
 # Aliases (alphabetically ordered)
 def Abs(a):
-    return fabs(a)
+    return mp.fabs(a)
 
 def Add(a, b):
-    return fadd(a, b, exact=True)
+    return mp.fadd(a, b, exact=True)
 
 def Mul(a, b):
-    return fmul(a, b, exact=True)
+    return mp.fmul(a, b, exact=True)
 
 def Neg(a):
-    return fneg(a, exact=True)
+    return mp.fneg(a, exact=True)
 
 def Prod(A):
     assert(len(A) > 0)
-    return fprod(A)
+    return mp.fprod(A)
 
 def Sub(a, b):
-    return fsub(a, b, exact=True)
+    return mp.fsub(a, b, exact=True)
 
 def Sum(A):
     assert(len(A) > 0)
-    return fsum(A)
+    return mp.fsum(A)
 
 
 class Ramp(object):
     """
     """
-    def __init__(self, v0, a, dur, x0):
+    def __init__(self, v0, a, dur, x0=zero):
         if type(dur) is not mp.mpf:
             dur = mp.mpf(str(dur))
         assert(dur > -epsilon)
@@ -63,7 +63,7 @@ class Ramp(object):
         self.duration = dur
         
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
-        self.d = Prod([_pointfive, Add(self.v0, self.v1), self.duration])
+        self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
    
 
     def UpdateDuration(self, newDur):
@@ -73,7 +73,7 @@ class Ramp(object):
 
         self.duration = newDur
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
-        self.d = Prod([_pointfive, Add(self.v0, self.v1), self.duration])
+        self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
 
 
     def EvalPos(self, t):
@@ -82,7 +82,7 @@ class Ramp(object):
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)        
 
-        d_incr = Mul(t, Add(self.v0, Prod([_pointfive, t, self.a])))
+        d_incr = Mul(t, Add(self.v0, Prod([pointfive, t, self.a])))
         return Add(self.x0, d_incr)
 
     
@@ -110,26 +110,32 @@ class ParabolicCurve(object):
     """
     def __init__(self, ramps=[]):
         self.switchpointsList = [] # a list of all switch points, including ones at t = 0 and t = duration
-        totalt = zero
-
+        dur = zero
+        d = zero
+        self.ramps = []
+        
         if len(ramps) == 0:
-            self.ramps = []
             self.isEmpty = True
             self.x0 = zero
             self.switchpointsList = []
-            self.duration = zero
-            self.d = zero
+            self.duration = dur
+            self.d = d
         else:
-            self.ramps = ramps[:]
+            ramps_ = ramps[:]
             self.isEmpty = False
-            self.x0 = ramps[0].x0
-            self.switchpointsList.append(totalt)
-            for ramp in ramps:
-                totalt = Add(totalt, ramp.duration)
-                self.switchpointsList.append(totalt)
+            self.x0 = ramps_[0].x0
+            self.switchpointsList.append(dur)
+            for ramp in ramps_:
+                self.ramps.append(ramp)
+                # Update displacement
+                self.ramps[-1].x0 = d
+                d = Add(d, self.ramps[-1].d)
+                
+                dur = Add(dur, self.ramps[-1].duration)
+                self.switchpointsList.append(dur)
 
-            self.duration = totalt
-            self.d = Sum([ramp.d for ramp in ramps])
+            self.duration = dur
+            self.d = d
 
 
     def __getitem__(self, index):
@@ -155,14 +161,16 @@ class ParabolicCurve(object):
         else:
             dur = self.duration
             d = self.d
-            for ramp in curve:
+            ramps_ = curve[:]
+            for ramp in ramps_:
                 self.ramps.append(ramp)
-                # update duration
-                dur = Add(dur, ramp.duration)
-                self.switchpointsList.append(dur)
-                # update displacement
+                # Update displacement
                 self.ramps[-1].x0 = d
-                d = Add(d, ramp.d)
+                d = Add(d, self.ramps[-1].d)
+                
+                dur = Add(dur, self.ramps[-1].duration)
+                self.switchpointsList.append(dur)
+
             self.duration = dur
             self.d = d
 
