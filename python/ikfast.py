@@ -328,6 +328,14 @@ def trigsimp_custom(self, **args):
 if not sympy_smaller_073:
     trigsimp = trigsimp_custom
 
+if sympy_version < '0.7.2':
+    # matrices/matrices.py (matrices/dense.py)
+    # API-changes in zeros() and ones()
+    from sympy import zeros as _zeros, ones as _ones
+    zeros = lambda r, c=None: _zeros(r) if c is None else _zeros((r,c))
+    ones  = lambda r, c=None: _ones(r) if c is None else _ones((r,c))
+
+
 # def custom_trigsimp_nonrecursive(expr, deep=False):
 #     """
 #     A nonrecursive trig simplifier, used from trigsimp.
