@@ -102,6 +102,24 @@ class Ramp(object):
         assert(t < self.duration + epsilon)
 
         return self.a
+
+
+    def PlotVel(self, t0=0, fignum=None, **kwargs):
+        if fignum is not None:
+            plt.figure(fignum)
+
+        line = plt.plot([t0, t0 + self.duration], [self.v0, self.v1], **kwargs)[0]
+        plt.show(False)
+        return line
+
+
+    def PlotAcc(self, t0=0, fignum=None, **kwargs):
+        if fignum is not None:
+            plt.figure(fignum)
+
+        line = plt.plot([t0, t0 + self.duration], [self.a, self.a], **kwargs)[0]
+        plt.show(False)
+        return line
 # end class Ramp
 
 
@@ -285,28 +303,36 @@ class ParabolicCurve(object):
         plt.show(False)
 
 
-    def PlotVel(self, fignum=None, color='b', dt=0.01, lw=2):
-        tVect = arange(0, self.duration, dt)
-        if tVect[-1] < self.duration:
-            tVect = np.append(tVect, self.duration)
-
-        vVect = [self.EvalVel(t) for t in tVect]
+    def PlotVel(self, fignum=None, color=None, lw=2, **kwargs):
         if fignum is not None:
             plt.figure(fignum)
-        plt.plot(tVect, vVect, color=color, linewidth=lw)
+
+        t0 = zero
+        for ramp in self.ramps:
+            if color is None:
+                line = ramp.PlotVel(t0=t0, fignum=fignum, linewidth=lw, **kwargs)
+                color = line.get_color()
+            else:
+                line = ramp.PlotVel(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
+            t0 += ramp.duration
         plt.show(False)
+        return line
 
 
-    def PlotAcc(self, fignum=None, color='m', dt=0.01, lw=2):
-        tVect = arange(0, self.duration, dt)
-        if tVect[-1] < self.duration:
-            tVect = np.append(tVect, self.duration)
-
-        aVect = [self.EvalAcc(t) for t in tVect]
+    def PlotAcc(self, fignum=None, color=None, lw=2, **kwargs):
         if fignum is not None:
             plt.figure(fignum)
-        plt.plot(tVect, aVect, color=color, linewidth=lw)
+            
+        t0 = zero
+        for ramp in self.ramps:
+            if color is None:
+                line = ramp.PlotAcc(t0=t0, fignum=fignum, linewidth=lw, **kwargs)
+                color = line.get_color()
+            else:
+                line = ramp.PlotAcc(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
+            t0 += ramp.duration
         plt.show(False)
+        return line
 # end class ParabolicCurve
 
 
@@ -418,9 +444,8 @@ class ParabolicCurvesND(object):
 
 
     # Visualization
-    def PlotPos(self, fignum=None, includingSW=False, dt=0.005):
-        if fignum is not None:
-            plt.figure(fignum)
+    def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005):
+        plt.figure(fignum)
 
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
@@ -438,18 +463,16 @@ class ParabolicCurvesND(object):
         plt.show(False)
         
 
-    def PlotVel(self, fignum=None, includingSW=False, dt=0.005):
-        if fignum is not None:
-            plt.figure(fignum)
+    def PlotVel(self, fignum='Velocity Profile', includingSW=False, **kwargs):
+        plt.figure(fignum)
+        plt.hold(True)
 
-        tVect = arange(0, self.duration, dt)
-        if tVect[-1] < self.duration:
-            tVect = np.append(tVect, self.duration)
+        lines = []
+        for curve in self.curves:
+            lines.append(curve.PlotVel(fignum=fignum, **kwargs))
 
-        vVect = [self.EvalVel(t) for t in tVect]
-        plt.plot(tVect, vVect, linewidth=2)
-        handle = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
-        plt.legend(handle)
+        handles = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
+        plt.legend(lines, handles)
 
         if includingSW:
             ax = plt.gca().axis()
@@ -458,31 +481,17 @@ class ParabolicCurvesND(object):
         plt.show(False)
         
 
-    def PlotAcc(self, fignum=None, includingSW=False, dt=0.005):
-        if fignum is not None:
-            plt.figure(fignum)
+    def PlotAcc(self, fignum='Acceleration Profiles', **kwargs):
+        plt.figure(fignum)
+        plt.hold(True)
 
+        lines = []
         for curve in self.curves:
-            aVect = []
-            for ramp in curve:
-                aVect.append(ramp.a)
-                aVect.append(ramp.a)
-            tVect = []
-            for s in self.switchpointsList:
-                tVect.append(s)
-                tVect.append(s)
-            tVect.pop()
-            tVect.pop(0)
-            plt.plot(tVect, aVect, linewidth=2)
+            lines.append(curve.PlotAcc(fignum=fignum, **kwargs))
 
-        handle = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
-        plt.legend(handle)
-
-        if includingSW:
-            ax = plt.gca().axis()
-            for s in self.switchpointsList:
-                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
-        plt.show(False)        
+        handles = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
+        plt.legend(lines, handles)
+        plt.show(False)
 # end class ParabolicCurvesND
 
     
