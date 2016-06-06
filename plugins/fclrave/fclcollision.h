@@ -1005,7 +1005,7 @@ private:
 
     bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb) {
 
-        ADD_TIMING(_statistics);
+      //ADD_TIMING(_statistics);
         if( pcb->_bStopChecking ) {
             return true;     // don't test anymore
         }
@@ -1258,7 +1258,9 @@ private:
     std::string _broadPhaseCollisionManagerAlgorithm;
     boost::shared_ptr<SpatialHashData> _spatialHashData;
 
+#ifdef NARROW_COLLISION_CACHING
     NarrowCollisionCache mCollisionCachedGuesses;
+#endif
 
 #ifdef FCLUSESTATISTICS
     FCLStatisticsPtr _statistics;

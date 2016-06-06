@@ -7,6 +7,7 @@
 #include "plugindefs.h"
 #include <sstream>
 
+
 namespace fclrave {
 
 class FCLStatistics;
@@ -24,7 +25,9 @@ public:
     }
 
     ~FCLStatistics() {
-        //Display();
+#ifndef FCL_STATISTICS_DISPLAY_CONTINUOUSLY
+        Display();
+#endif
     }
 
     void DisplayAll() {
@@ -49,22 +52,7 @@ public:
 
     void Display() {
         FOREACH(ittiming, timings) {
-            std::vector<double> durations;
-            durations.reserve(ittiming->second.size());
-            FOREACH(itd, ittiming->second) {
-                durations.push_back(itd->count());
-            }
-            double max = *std::max_element(durations.begin(), durations.end());
-            const double numCells = 20, cellSize = max/numCells;
-            std::vector<int> histograph(0, numCells);
-            double mean = 0;
-            FOREACH(itd, durations) {
-                mean += *itd;
-                //TODO:correct the formula which seems to be wrong
-                //histograph.at(static_cast<int>(std::floor(numCells * *itd / max)))++;
-            }
-            mean /= static_cast<double>(durations.size());
-            RAVELOG_WARN_FORMAT("%s %s %d %Lf\n", name%ittiming->first%durations.size()%mean);
+            DisplaySingle(ittiming->first, ittiming->second);
         }
     }
 
@@ -78,7 +66,9 @@ public:
         currentTimings.push_back(std::chrono::high_resolution_clock::now());
         duration timing = *currentTimings.begin() - *(currentTimings.end()-1);
         timings[currentTimingLabel].push_back(timing);
+#ifdef FCL_STATISTICS_DISPLAY_CONTINUOUSLY
         DisplaySingle(currentTimingLabel, currentTimings);
+#endif
     }
 
     void AddTimepoint() {
