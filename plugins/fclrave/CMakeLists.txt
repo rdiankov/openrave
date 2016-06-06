@@ -12,6 +12,10 @@ if(NARROW_COLLISION_CACHING)
   add_definitions(-DNARROW_COLLISION_CACHING)
 endif()
 
+if(FCL_USE_STATISTICS)
+  add_definitions(-DFCLUSESTATISTICS)
+endif()
+
 if(FCL_FOUND)
   link_directories(${OPENRAVE_LINK_DIRS} ${FCL_LIBRARY_DIRS})
   include_directories(${FCL_INCLUDE_DIRS} ${FCL_INCLUDEDIR})

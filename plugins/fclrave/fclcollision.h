@@ -8,7 +8,6 @@
 
 #include "fclspace.h"
 
-//#define FCLUSESTATISTICS 1
 #include "fclstatistics.h"
 
 namespace fclrave {
