@@ -4102,6 +4102,12 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
+#ifdef AABB_CACHING
+    FOREACH(itplink, GetLinks()) {
+      (*itplink)->_globalAABBChangedCallback = RegisterChangeCallback(Prop_LinkTransforms, boost::bind(&KinBody::Link::_ResetAABB, boost::bind(&OpenRAVE::utils::sptr_from<KinBody::Link>, boost::weak_ptr<KinBody::Link>(*itplink))));
+    }
+#endif
+
     // notify any callbacks of the changes
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;

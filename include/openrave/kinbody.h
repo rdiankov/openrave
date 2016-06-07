@@ -658,6 +658,14 @@ protected:
         /// \param parameterschanged if true, will
         virtual void _Update(bool parameterschanged=true);
 
+#ifdef AABB_CACHING
+        virtual void _ResetAABB() {
+          _bglobalAABBdirty = true;
+        }
+
+        OpenRAVE::UserDataPtr _globalAABBChangedCallback;
+#endif
+
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
         LinkInfo _info; ///< parameter information of the link
@@ -675,7 +683,9 @@ private:
 #ifdef AABB_CACHING
         mutable bool _blocalAABBdirty; ///< if true, the local AABB needs to be recomputed before being used
         mutable AABB _localAABB; ///< local AABB of the link, that is containing the _collision TriMesh, only set up if _blocalAABBdirty == false
-#endif AABB_CACHING
+        mutable bool _bglobalAABBdirty;
+        mutable AABB _globalAABB;
+#endif // AABB_CACHING
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
