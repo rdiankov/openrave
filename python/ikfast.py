@@ -185,7 +185,7 @@ __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Lesser GPL, Version 3'
 __version__ = '0x10000049' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
-import sys, copy, time, math, datetime
+import sys, os, copy, time, math, datetime
 import __builtin__
 from optparse import OptionParser
 try:
@@ -281,35 +281,8 @@ except ImportError:
     pass
 
 # changes to sympy:
-
-# core/power.py Pow
-def Pow_eval_subs(self, old, new):
-    if self == old:
-        return new
-    
-    if old.func is self.func and self.base == old.base:
-        coeff1, terms1 = self.exp.as_coeff_mul()
-        coeff2, terms2 = old.exp.as_coeff_mul()
-        if terms1==terms2:
-#             pow = coeff1/coeff2
-#             if pow.is_Integer or self.base.is_commutative:
-#                 return Pow(new, pow) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3)
-            # only divide if coeff2 is a divisor of coeff1
-            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
-                return new ** (coeff1/coeff2) # (x**(2*y)).subs(x**(3*y),z) -> z**(2/3*y)
-            
-    if old.func is C.exp:
-        coeff1, terms1 = old.args[0].as_coeff_mul()
-        coeff2, terms2 = (self.exp*C.log(self.base)).as_coeff_mul()
-        if terms1==terms2:
-            # only divide if coeff2 is a divisor of coeff1
-            if coeff1.is_integer and coeff2.is_integer and (coeff1/coeff2).is_integer:
-                return new ** (coeff1/coeff2) # (x**(2*y)).subs(exp(3*y*log(x)),z) -> z**(2/3*y)
-            
-    return Pow(self.base._eval_subs(old, new), self.exp._eval_subs(old, new))
-
-if sympy_smaller_073:
-    power.Pow._eval_subs = Pow_eval_subs
+curdir = os.path.dirname(os.path.abspath(__file__))
+execfile(os.path.join(curdir, 'sympy_compat.py'))
 
 # simplify/simplify.py
 def trigsimp_custom(self, **args):
@@ -327,14 +300,6 @@ def trigsimp_custom(self, **args):
 
 if not sympy_smaller_073:
     trigsimp = trigsimp_custom
-
-if sympy_version < '0.7.2':
-    # matrices/matrices.py (matrices/dense.py)
-    # API-changes in zeros() and ones()
-    from sympy import zeros as _zeros, ones as _ones
-    zeros = lambda r, c=None: _zeros(r) if c is None else _zeros((r,c))
-    ones  = lambda r, c=None: _ones(r) if c is None else _ones((r,c))
-
 
 # def custom_trigsimp_nonrecursive(expr, deep=False):
 #     """
