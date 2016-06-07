@@ -556,6 +556,11 @@ protected:
         }
         virtual GeometryPtr GetGeometry(int index);
 
+#ifdef AABB_CACHING
+        /// \brief returns a list of the AABB of all the geometry objects in the world coordinate system
+        const std::vector<AABB>& GetGeometriesAABB() const;
+#endif
+
         /// \brief inits the current geometries with the new geometry info.
         ///
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
@@ -685,6 +690,7 @@ private:
         mutable AABB _localAABB; ///< local AABB of the link, that is containing the _collision TriMesh, only set up if _blocalAABBdirty == false
         mutable bool _bglobalAABBdirty;
         mutable AABB _globalAABB;
+        mutable std::vector<AABB> _vGeometriesGlobalAABB;
 #endif // AABB_CACHING
         //@}
 #ifdef RAVE_PRIVATE

@@ -154,8 +154,11 @@ AABB KinBody::Link::ComputeLocalAABB() const
 {
 #ifdef AABB_CACHING
     if( _blocalAABBdirty ) {
+      _vGeometriesGlobalAABB.resize(0);
+      _vGeometriesGlobalAABB.reserve(_vGeometries.size());
         if( _vGeometries.size() == 1) {
             _localAABB = _vGeometries.front()->ComputeAABB(Transform());
+            _vGeometriesGlobalAABB.push_back(_localAABB);
         }
         else if( _vGeometries.size() > 1 ) {
             Vector vmin, vmax;
@@ -163,6 +166,7 @@ AABB KinBody::Link::ComputeLocalAABB() const
             AABB ab;
             FOREACHC(itgeom,_vGeometries) {
                 ab = (*itgeom)->ComputeAABB(Transform());
+                _vGeometriesGlobalAABB.push_back(ab);
                 if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
                     continue;
                 }
@@ -442,6 +446,16 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
 {
     return _vGeometries.at(index);
 }
+
+#ifdef AABB_CACHING
+const std::vector<AABB>& KinBody::Link::GetGeometriesAABB() const
+{
+  if( _bglobalAABBdirty ) {
+    ComputeAABB();
+  }
+  return _vGeometriesGlobalAABB;
+}
+#endif
 
 void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries)
 {
