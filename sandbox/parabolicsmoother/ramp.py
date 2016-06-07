@@ -1,4 +1,4 @@
-from mpmath import mp, arange
+from mpmath import mp, iv, arange
 import numpy as np
 import matplotlib.pyplot as plt
 import bisect
@@ -7,6 +7,7 @@ _prec = 500
 epsilon = mp.mpf('1e-100')
 
 mp.dps = _prec
+iv.dps = _prec
 pointfive = mp.mpf('0.5')
 zero = mp.mpf('0')
 
@@ -22,6 +23,11 @@ def Abs(a):
 
 def Add(a, b):
     return mp.fadd(a, b, exact=True)
+
+def IsEqual(a, b):
+    # It is better to check equality using this function than using == when a or b or both are a
+    # product of some operations involving division.    
+    return Abs(Sub(a, b)) < epsilon
 
 def Mul(a, b):
     return mp.fmul(a, b, exact=True)

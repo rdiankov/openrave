@@ -1,20 +1,16 @@
-from mpmath import mp, arange
+from mpmath import mp, iv, arange
 import numpy as np
 
 from ramp import Ramp, ParabolicCurve, ParabolicCurvesND
 from ramp import zero, pointfive, epsilon
-from ramp import Add, Abs, Mul, Neg, Prod, Sub, Sum
+from ramp import Add, Abs, IsEqual, Mul, Neg, Prod, Sub, Sum
 
 inf = mp.inf
 one = mp.mpf('1')
-
-def IsEqual(a, b):
-    # It is better to check equality using this function than using == when a or b or both are a
-    # product of some operations involving division.    
-    return Abs(Sub(a, b)) < epsilon
+number = mp.mpf
 
 def ConvertFloatArrayToMPF(a):
-    a_ = np.asarray([mp.mpf(str(x)) for x in a])
+    a_ = np.asarray([mp.mpf(str(x)) for x in a if type(x) is not mp.mpf])
     return a_
 
 
@@ -116,7 +112,210 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
 
 
 def ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta=zero):
-    pass
+    ndof = len(curves)
+    assert(ndof == len(vmVect))
+    assert(ndof == len(amVect))
+    assert(maxIndex < ndof)
+
+    # Convert all vector elements into mp.mpf (if necessary)
+    vmVect_ = ConvertFloatArrayToMPF(vmVect)
+    amVect_ = ConvertFloatArrayToMPF(amVect)
+
+    newDuration = curves[maxIndex].duration
+    newCurves = []
+    for (idof, curve) in enumerate(curves):
+        if idof == maxIndex:
+            newCurves.append(curve)
+            continue
+
+        stretchedCurve = _Stretch1D(curve, newDuration, vmVect[idof], amVect[idof])
+        if stretchedCurve.isEmpty:
+            print 'ReinterpolateNDFixedDuration: dof {0} failed'.format(idof)
+            return ParabolicCurvesND()
+        else:
+            newCurves.append(stretchedCurve)
+    assert(len(newCurves) == ndof)
+    return ParabolicCurvesND(newCurves)
+
+
+def _Stretch1D(curve, newDuration, vm, am):
+    # Check types
+    if type(newDuration) is not mp.mpf:
+        newDuration = mp.mpf(str(newDuration))
+    if type(vm) is not mp.mpf:
+        vm = mp.mpf(str(vm))
+    if type(am) is not mp.mpf:
+        am = mp.mpf(str(am))
+
+    # Check inputs
+    assert(newDuration > curve.duration)
+    assert(vm > zero)
+    assert(am > zero)
+
+    v0 = curve[0].v0
+    v1 = curve[-1].v1
+    d = curve.d
+
+    # First assume no velocity bound -> re-interpolated trajectory will have only two ramps.
+    # Solve for a1 and a2 (the acceleration of the first and the last ramps).
+    #         a1 = A + B/t1
+    #         a2 = A + B/(t - t1)
+    # where t is the (new) total duration, t1 is the (new) duration of the first ramp, and
+    #         A = (v1 - v0)/t
+    #         B = (2d/t) - (v0 + v1).
+    newDurInverse = mp.fdiv(one, newDuration)
+    A = Mul(Sub(v1, v0), newDurInverse)
+    B = Sub(Prod([mp.mpf('2'), d, newDurInverse]), Add(v0, v1))
+
+    interval0 = iv.mpf([zero, newDuration]) # initial interval for t1
+
+    # Now consider the interval(s) computed from a1's constraints
+    sum1 = Neg(Add(am, A))
+    sum2 = Sub(am, A)
+    C = mp.fdiv(B, sum1)
+    D = mp.fdiv(B, sum2)
+    if IsEqual(sum1, zero):
+        raise NotImplementedError # not yet considered
+    elif sum1 > epsilon:
+        interval1 = iv.mpf([Neg(inf), C])
+    else:
+        interval1 = iv.mpf([C, inf])
+        
+    if IsEqual(sum2, zero):
+        raise NotImplementedError # not yet considered
+    elif sum2 > epsilon:
+        interval2 = iv.mpf([D, inf])
+    else:
+        interval2 = iv.mpf([Neg(inf), D])
+
+    if Sub(interval2.a, interval1.b) > epsilon or Sub(interval1.a, interval2.b) > epsilon:
+        # interval1 and interval2 do not intersect each other
+        return ParabolicCurve()    
+    # interval3 = interval1 \cap interval2 : valid interval for t1 computed from a1's constraints
+    interval3 = iv.mpf([max(interval1.a, interval2.a), min(interval1.b, interval2.b)])
+    
+    # Now consider the interval(s) computed from a2's constraints
+    if IsEqual(sum1, zero):
+        raise NotImplementedError # not yet considered
+    elif sum1 > epsilon:
+        interval4 = iv.mpf([Add(C, newDuration), inf])
+    else:
+        interval4 = iv.mpf([Neg(inf), Add(C, newDuration)])
+        
+    if IsEqual(sum2, zero):
+        raise NotImplementedError # not yet considered
+    elif sum2 > epsilon:
+        interval5 = iv.mpf([Neg(inf), Add(D, newDuration)])
+    else:
+        interval5 = iv.mpf([Add(D, newDuration), inf])
+
+    if Sub(interval5.a, interval4.b) > epsilon or Sub(interval4.a, interval5.b) > epsilon:
+        # interval4 and interval5 do not intersect each other
+        return ParabolicCurve()
+    # interval6 = interval4 \cap interval5 : valid interval for t1 computed from a2's constraints
+    interval6 = iv.mpf([max(interval4.a, interval5.a), min(interval4.b, interval5.b)])
+
+    if Sub(interval3.a, interval6.b) > epsilon or Sub(interval6.a, interval3.b) > epsilon:
+        # interval3 and interval6 do not intersect each other
+        return ParabolicCurve()
+    # interval7 = interval3 \cap interval6
+    interval7 = iv.mpf([max(interval3.a, interval6.a), min(interval3.b, interval6.b)])
+
+    if Sub(interval0.a, interval7.b) > epsilon or Sub(interval7.a, interval0.b) > epsilon:
+        # interval0 and interval7 do not intersect each other
+        return ParabolicCurve()
+    # interval8 = interval0 \cap interval7 : valid interval of t1 when considering all constraints (from a1 and a2)
+    interval8 = iv.mpf([max(interval0.a, interval7.a), min(interval0.b, interval7.b)])
+
+    # from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+    # We choose the value t1 (the duration of the first ramp) by selecting the mid point of the
+    # valid interval of t1.
+    
+    # t1 = mp.convert(interval8.mid)
+    t1 = _SolveForT1(A, B, newDuration, interval8)
+    t2 = Sub(newDuration, t1)
+
+    a1 = Add(A, Mul(mp.fdiv(one, t1), B))
+    a2 = Add(A, Mul(mp.fdiv(one, Neg(t2)), B))
+    assert(Sub(Abs(a1), am) < epsilon) # check if a1 is really below the bound
+    assert(Sub(Abs(a2), am) < epsilon) # check if a2 is really below the bound
+
+    ramp1 = Ramp(v0, a1, t1, curve.x0)
+    ramp2 = Ramp(ramp1.v1, a2, t2)
+    newCurve = ParabolicCurve([ramp1, ramp2])
+    return newCurve
+
+
+def _SolveForT1(A, B, t, tInterval):
+    """There are four solutions to the equation (including complex ones). Here we use x instead of t1
+    for convenience.
+    """
+
+    """
+    SolveQuartic(2*A, -4*A*T + 2*B, 3*A*T**2 - 3*B*T, -A*T**3 + 3*B*T**2, -B*T**3)
+    """
+    sols = SolveQuartic(Add(A, A),
+                        Add(Prod([number('-4'), A, t]), Mul(number('2'), B)),
+                        Sub(Prod([number('3'), A, t, t]), Prod([number('3'), B, t])),
+                        Sub(Prod([number('3'), B, t, t]), Mul(A, mp.power(t, 3))),
+                        Neg(Mul(B, mp.power(t, 3))))
+
+    realSols = [sol for sol in sols if type(sol) is mp.mpf and sol in tInterval]
+    if len(realSols) > 1:
+        # I think this should not happen. We should either have one or no solution.
+        raise NotImplementedError
+    elif len(realSols) == 0:
+        return None
+    else:
+        return realSols[0]
+    
+
+def SolveQuartic(a, b, c, d, e):
+    """
+    SolveQuartic solves a quartic (fouth order) equation of the form
+            ax^4 + bx^3 + cx^2 + dx + e = 0.
+    For the detail of formulae presented here, see https://en.wikipedia.org/wiki/Quartic_function
+    """
+    # Check types
+    if type(a) is not mp.mpf:
+        a = mp.mpf(str(a))
+    if type(b) is not mp.mpf:
+        b = mp.mpf(str(b))
+    if type(c) is not mp.mpf:
+        c = mp.mpf(str(c))
+    if type(d) is not mp.mpf:
+        d = mp.mpf(str(d))
+    if type(e) is not mp.mpf:
+        e = mp.mpf(str(e))
+
+    """
+    # Working code
+    p = (8*a*c - 3*b*b)/(8*a*a)
+    q = (b**3 - 4*a*b*c + 8*a*a*d)/(8*a*a*a)
+    delta0 = c*c - 3*b*d + 12*a*e
+    delta1 = 2*(c**3) - 9*b*c*d + 27*b*b*e + 27*a*d*d - 72*a*c*e
+    Q = mp.nthroot(pointfive*(delta1 + mp.sqrt(delta1*delta1 - 4*mp.power(delta0, 3))), 3)
+    S = pointfive*mp.sqrt(-mp.fdiv(mp.mpf('2'), mp.mpf('3'))*p + (one/(3*a))*(Q + delta0/Q))
+
+    x1 = -b/(4*a) - S + pointfive*mp.sqrt(-4*S*S - 2*p + q/S)
+    x2 = -b/(4*a) - S - pointfive*mp.sqrt(-4*S*S - 2*p + q/S)
+    x3 = -b/(4*a) + S + pointfive*mp.sqrt(-4*S*S - 2*p - q/S)
+    x4 = -b/(4*a) + S - pointfive*mp.sqrt(-4*S*S - 2*p - q/S)
+    """
+    number = mp.mpf
+    p = mp.fdiv(Sub(Prod([number('8'), a, c]), Mul(number('3'), mp.power(b, 2))), Mul(number('8'), mp.power(a, 2)))
+    q = mp.fdiv(Sum([mp.power(b, 3), Prod([number('-4'), a, b, c]), Prod([number('8'), mp.power(a, 2), d])]), Mul(8, mp.power(a, 3)))
+    delta0 = Sum([mp.power(c, 2), Prod([number('-3'), b, d]), Prod([number('12'), a, e])])
+    delta1 = Sum([Mul(2, mp.power(c, 3)), Prod([number('-9'), b, c, d]), Prod([number('27'), mp.power(b, 2), e]), Prod([number('27'), a, mp.power(d, 2)]), Prod([number('-72'), a, c, e])])
+    Q = mp.nthroot(Mul(pointfive, Add(delta1, mp.sqrt(Add(mp.power(delta1, 2), Mul(number('-4'), mp.power(delta0, 3)))))), 3)
+    S = Mul(pointfive, mp.sqrt(Mul(mp.fdiv(mp.mpf('-2'), mp.mpf('3')), p) + Mul(mp.fdiv(one, Mul(number('3'), a)), Add(Q, mp.fdiv(delta0, Q)))))
+
+    x1 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)])))])
+    x2 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)]))))])
+    x3 = Sum([mp.fdiv(b, Mul(number('-4'), a)), S, Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), Neg(mp.fdiv(q, S))])))])
+    x4 = Sum([mp.fdiv(b, Mul(number('-4'), a)), S, Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), Neg(mp.fdiv(q, S))]))))])
+    
+    return [x1, x2, x3, x4]
 
 
 ####################################################################################################
@@ -170,7 +369,7 @@ def _Interpolate1DNoVelocityLimit(x0, x1, v0, v1, am):
     # Check for an appropriate acceleration direction of the first ramp
     d = Sub(x1, x0)
     dv = Sub(v1, v0)
-    sumVSqr = Add(v0**2, v1**2)
+    difVSqr = Sub(v1**2, v0**2)
     
     if Abs(dv) < epsilon:
         if Abs(d) < epsilon:
@@ -181,7 +380,7 @@ def _Interpolate1DNoVelocityLimit(x0, x1, v0, v1, am):
         else:
             dStraight = zero
     else:    
-        dStraight = mp.fdiv(sumVSqr, Prod([2, mp.sign(dv), am]))
+        dStraight = mp.fdiv(difVSqr, Prod([2, mp.sign(dv), am]))
     
     if IsEqual(d, dStraight):
         # With the given distance, v0 and v1 can be directly connected using max/min
@@ -190,6 +389,7 @@ def _Interpolate1DNoVelocityLimit(x0, x1, v0, v1, am):
         ramp0 = Ramp(v0, a0, mp.fdiv(dv, a0), x0)
         return ParabolicCurve([ramp0])
 
+    sumVSqr = Add(v0**2, v1**2)
     sigma = mp.sign(Sub(d, dStraight))
     a0 = sigma * am # acceleration of the first ramp
     vp = sigma * mp.sqrt(Add(Mul(pointfive, sumVSqr), Mul(a0, d)))
