@@ -61,6 +61,12 @@ if sympy_version < '0.7.2':
     zeros = lambda r, c=None: _zeros(r) if c is None else _zeros((r,c))
     ones  = lambda r, c=None: _ones(r) if c is None else _ones((r,c))
 
+    # polys/monomialtools.py
+    # API-changes in Monomial.__init__
+    from sympy import Monomial as _Monomial
+    _Monomial_init = _Monomial.__init__
+    Monomial.__init__ = lambda self, m, gens=None: _Monomial_init(self, *m)
+
 
 if sympy_version < '0.7.3':
     # core/power.py
