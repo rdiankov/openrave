@@ -73,3 +73,9 @@ if sympy_version < '0.7.3':
     # Workaround that has been fixed in sympy >= 0.7.3
     power.Pow._eval_subs = Pow_eval_subs
 
+if sympy_version < '0.7.4':
+    # simplify/simplify.py
+    # trigsimp was already expanded (not simplified)
+    from sympy.simplify import trigsimp as _trigsimp
+    trigsimp_expanded = lambda expr, **opts: _trigsimp(expr, **opts)
+

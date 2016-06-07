@@ -178,7 +178,6 @@ from __future__ import with_statement # for python 2.5
 from sympy import __version__ as sympy_version
 if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
-sympy_smaller_073 = sympy_version < '0.7.3'
 
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
@@ -280,26 +279,27 @@ try:
 except ImportError:
     pass
 
-# changes to sympy:
-curdir = os.path.dirname(os.path.abspath(__file__))
-execfile(os.path.join(curdir, 'sympy_compat.py'))
 
-# simplify/simplify.py
-def trigsimp_custom(self, **args):
+# TR10 for sin-cos of sums -> sin-cos prod
+try:
+    from sympy.simplify.fu import TR10
+except ImportError:
+    pass
+
+def trigsimp_expanded(expr, **opts):
     """
     Default trigsimp (in sympy >= 0.7.3) reduces sum of sin/cos products, for example
 
         trigsimp(-sin(x)⋅cos(y) + sin(y)⋅cos(x))
         >> -sin(x - y)
 
-    We have to undo this step, which is what happens here.
+    We have to undo this step if possible/provided, which is what happens here.
     """
-    from sympy.simplify import trigsimp as sympy_trigsimp 
-    from sympy.simplify.fu import TR10
-    return TR10(sympy_trigsimp(self, **args))
+    return TR10(trigsimp(expr, **opts))
 
-if not sympy_smaller_073:
-    trigsimp = trigsimp_custom
+# changes to sympy:
+curdir = os.path.dirname(os.path.abspath(__file__))
+execfile(os.path.join(curdir, 'sympy_compat.py'))
 
 # def custom_trigsimp_nonrecursive(expr, deep=False):
 #     """
@@ -1507,7 +1507,7 @@ class IKFastSolver(AutoReloader):
 
     @staticmethod
     def affineSimplify(T):
-        return Matrix(T.shape[0],T.shape[1],[trigsimp(x.expand()) for x in T])
+        return Matrix(T.shape[0],T.shape[1],[trigsimp_expanded(x.expand()) for x in T])
 
     @staticmethod
     def multiplyMatrix(Ts):
@@ -2599,7 +2599,7 @@ class IKFastSolver(AutoReloader):
                 basedir[i] = value
             else:
                 basedir[i] = self.convertRealToRational(basedir[i],5)
-        basedirlen2 = trigsimp(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
+        basedirlen2 = trigsimp_expanded(basedir[0]*basedir[0]+basedir[1]*basedir[1]+basedir[2]*basedir[2]) # unfortunately have to do it again...
         basedir /= sqrt(basedirlen2)
         
         offsetdist = basedir.dot(basepos)
@@ -6755,7 +6755,7 @@ class IKFastSolver(AutoReloader):
                         newsubs = [(value, sin(dummyvar)) for value in sindummyvarsols] + [(value, cos(dummyvar)) for value in cosdummyvarsols] + [(-value, -sin(dummyvar)) for value in sindummyvarsols] + [(-value, -cos(dummyvar)) for value in cosdummyvarsols]
                         allzeros = True
                         for eq in NewEquationsAll:
-                            if trigsimp(eq.subs(newsubs)) != S.Zero:
+                            if trigsimp_expanded(eq.subs(newsubs)) != S.Zero:
                                 allzeros = False
                                 break
                         if allzeros:
@@ -8416,7 +8416,7 @@ class IKFastSolver(AutoReloader):
                 m = eqnew.match(a*varsym.cvar+b*varsym.svar+c)
                 if m is not None:
                     symbols += [(varsym.svar,sin(var)),(varsym.cvar,cos(var))]
-                    asinsol = trigsimp(asin(-m[c]/Abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols),deep=True)
+                    asinsol = trigsimp_expanded(asin(-m[c]/Abs(sqrt(m[a]*m[a]+m[b]*m[b]))).subs(symbols),deep=True)
                     # can't use atan2().evalf()... maybe only when m[a] or m[b] is complex?
                     if m[a].has(I) or m[b].has(I):
                         continue
