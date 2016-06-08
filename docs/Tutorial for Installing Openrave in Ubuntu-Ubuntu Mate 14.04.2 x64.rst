@@ -11,7 +11,7 @@ Info sources from:
 
 Tutorial made by Carlos Rubert: cescuder@uji.es
 
-Last Update 15 October, 2015
+Last Update 6 June, 2016
 
 Install Package Dependences
 ---------------------------
