@@ -174,6 +174,8 @@ from ..misc import SpaceSamplerExtra
 from .. import interfaces
 from optparse import OptionParser
 
+import random
+
 try:
     from itertools import product as iterproduct
 except:
@@ -241,6 +243,8 @@ class GraspingModel(DatabaseGenerator):
         self.disableallbodies=True
         self.translationstepmult = None
         self.finestep = None
+        self.mode = None
+        self.numgrasps = None
         # only the indices used by the TaskManipulation plugin should start with an 'i'
         graspdof = {'igraspdir':3,'igrasppos':3,'igrasproll':1,'igraspstandoff':1,'igrasppreshape':len(self.manip.GetGripperIndices()),'igrasptrans':12,'imanipulatordirection':3,'forceclosure':1,'grasptrans_nocol':12,'performance':1,'vintersectplane':4, 'igraspfinalfingers':len(self.manip.GetGripperIndices()), 'ichuckingdirection':len(self.manip.GetGripperIndices()), 'graspikparam_nocol':8, 'approachdirectionmanip':3, 'igrasptranslationoffset':3 }
         if graspparametersdof is not None:
@@ -332,6 +336,8 @@ class GraspingModel(DatabaseGenerator):
         directiondelta=0
         translationstepmult=None
         finestep=None
+        mode=None
+        numgrasps=None
         if options is not None:
             if hasattr(options,'preshapes') and options.preshapes is not None:
                 preshapes = array([array([float(s) for s in preshape.split()]) for preshape in options.preshapes])
@@ -363,6 +369,10 @@ class GraspingModel(DatabaseGenerator):
                 finestep = options.finestep
             if hasattr(options,'numthreads') and options.numthreads is not None:
                 self.numthreads = options.numthreads
+            if hasattr(options,'mode') and options.mode is not None:
+                self.mode = options.mode
+            if hasattr(options,'numgrasps') and options.numgrasps is not None:
+                self.numgrasps = options.numgrasps
         # check for specific robots
         if self.robot.GetRobotStructureHash() == '2b0b07cce5d2f9c321010e74273a77f2' or self.robot.GetRobotStructureHash() == 'ca823aed89e08c7020b2cd7d2e5ff145': # wam+barretthand
             if preshapes is None:
@@ -404,13 +414,30 @@ class GraspingModel(DatabaseGenerator):
                     if self.env.GetViewer() is not None:
                         self.env.UpdatePublishedBodies()
                     producer,consumer,gatherer,numjobs = self.generatepcg(*args,**kwargs)
+                    if self.numgrasps is None:
+                        self.numgrasps=numjobs
                     counter = 0
-                    for work in producer():
-                        print 'grasp %d/%d'%(counter,numjobs)
-                        counter += 1
-                        results = consumer(*work)
-                        if len(results) > 0:
-                            gatherer(*results)
+                    if self.mode is None:
+                        for work in producer():
+                            print 'grasp %d/%d'%(counter,numjobs)
+                            counter += 1
+                            results = consumer(*work)
+                            if len(results) > 0:
+                                gatherer(*results)
+                            if len(self.grasps)>=self.numgrasps:                                 
+                                break
+                    else:
+                        producerList=[]
+                        for work in producer():
+                            producerList.append(work)
+                        while len(self.grasps)<self.numgrasps and counter < numjobs:
+                            print 'grasp %d/%d'%(counter,numjobs)
+                            counter += 1
+                            index=random.randrange(len(producerList))
+                            work=producerList.pop(index)
+                            results = consumer(*work)
+                            if len(results) > 0:
+                                gatherer(*results)
                     gatherer() # gather results
         finally:
             for b,enable in bodies:
@@ -1006,7 +1033,7 @@ class GraspingModel(DatabaseGenerator):
                     for approachray in approachrays:
                         R = rotationMatrixFromQuat(quatRotateDirection(array((0,0,1)),approachray[3:6]))
                         newapproachrays = r_[newapproachrays,c_[tile(approachray[0:3],(len(dirs),1)),dot(dirs,transpose(R))]]
-                    approachrays = newapproachrays
+                    approachrays = concatenate((approachrays,newapproachrays))
                 return approachrays
         finally:
             cc.DestroyEnvironment()
