@@ -155,7 +155,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("StartViewerLoop", boost::bind(&QtOSGViewer::_StartViewerLoopCommand, this, _1, _2),
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
-                    "sets the viewer projection mode, 0 is perspective view, 1 is orthogonal view");
+                    "sets the viewer projection mode, perspective or orthogonal");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -1179,16 +1179,24 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
 
 bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
 {
-    int projectionMode = 0;
+    std::string projectionMode = "";
     sinput >> projectionMode;
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
     return true;
 }
 
-void QtOSGViewer::_SetProjectionMode(int projectionMode)
+void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
-    _qactPerspectiveView->setChecked(projectionMode);
-    _posgWidget->SetViewType(projectionMode);
+    if (projectionMode == "orthogonal")
+    {
+        _qactPerspectiveView->setChecked(true);
+        _posgWidget->SetViewType(true);
+    }
+    else
+    {
+        _qactPerspectiveView->setChecked(false);
+        _posgWidget->SetViewType(false);
+    }
 }
 
 int QtOSGViewer::main(bool bShow)

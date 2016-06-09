@@ -313,7 +313,7 @@ public:
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
-    virtual void _SetProjectionMode(int projectionMode);
+    virtual void _SetProjectionMode(const std::string& projectionMode);
 
     /// \brief posts a function to be executed in the GUI thread
     ///
