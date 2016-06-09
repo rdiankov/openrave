@@ -156,6 +156,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "sets a new angle to up");
     RegisterCommand("StartViewerLoop", boost::bind(&QtOSGViewer::_StartViewerLoopCommand, this, _1, _2),
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
+    RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
+                    "sets the viewer projection mode, perspective or orthogonal");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -966,13 +968,21 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     int height = centralWidget()->size().height();
     _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
 
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
         _focalDistance = ptrackball->getDistance();
     }
     else {
         _focalDistance = 0;
+    }
+
+    // before getting the camera transform, set the trackball distance to 0 so that the transform does not contain this information.
+    if( !!ptrackball ) {
+        ptrackball->setDistance(0);
+    }
+    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
+    if( !!ptrackball ) {
+        ptrackball->setDistance(_focalDistance);
     }
 
     if( fTimeElapsed > 0 ) {
@@ -1184,6 +1194,28 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
+{
+    std::string projectionMode = "";
+    sinput >> projectionMode;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
+    return true;
+}
+
+void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
+{
+    if (projectionMode == "orthogonal")
+    {
+        _qactPerspectiveView->setChecked(true);
+        _posgWidget->SetViewType(true);
+    }
+    else
+    {
+        _qactPerspectiveView->setChecked(false);
+        _posgWidget->SetViewType(false);
+    }
+}
+
 int QtOSGViewer::main(bool bShow)
 {
     if( !QApplication::instance() ) {
@@ -1250,8 +1282,12 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+    // before setting the camera transform, set the trackball distance to 0 because the transform should not contain this information.
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
+    if( !!ptrackball ) {
+        ptrackball->setDistance(0);
+    }
+    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
     if( !!ptrackball ) {
         ptrackball->setDistance(_focalDistance);
     }
