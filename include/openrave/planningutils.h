@@ -603,8 +603,10 @@ protected:
     struct SampleInfo
     {
         IkParameterization _ikparam;
+        SpaceSamplerBasePtr _psampler; ///< sampler used to sample the free parameters of the iksolver
+        std::vector<dReal> _vfreesamples; ///< optional samples N*vfree.size()
+        std::vector< std::pair<int, dReal> > _vcachedists; ///< used for sorting freesamples. the sample closest to the midpoint is at the back of the vector (so it can be popped efficiently)
         int _numleft;
-        SpaceSamplerBasePtr _psampler;
         int _orgindex;
     };
     RobotBasePtr _probot;
@@ -617,6 +619,7 @@ protected:
     std::vector< IkReturnPtr > _vikreturns;
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
+    std::vector<dReal> _vfreeweights; ///< the joint weights of the free indices
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
     int _ikfilteroptions;
     bool _searchfreeparameters;

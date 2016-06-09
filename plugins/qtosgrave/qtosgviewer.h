@@ -156,6 +156,10 @@ public slots:
     /// \brief show an about dialog
     void _ProcessAboutDialog();
 
+    void _SetDebugLevelDebug();
+
+    void _SetDebugLevelVerbose();
+
     /// \brief change camera to see xy plane
     void _ChangeViewToXY();
 
@@ -412,7 +416,8 @@ public:
     QAction* viewCamAct;
     QAction* viewColAct;
     QAction* pubilshAct;
-    QAction* printAct;
+    QAction* debugLevelDebugAct;
+    QAction* debugLevelVerboseAct;
     QAction* showAct;
     QAction* playAct;
     QAction* stopAct;

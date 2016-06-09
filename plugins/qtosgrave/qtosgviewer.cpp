@@ -89,6 +89,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _qactChangeViewtoXY = _qactChangeViewtoYZ = _qactChangeViewtoXZ = NULL;
     //osg::setNotifyLevel(osg::DEBUG_FP);
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
+    debugLevelDebugAct = NULL;
+    debugLevelVerboseAct = NULL;
 
     //
     // read viewer parameters
@@ -316,7 +318,11 @@ void QtOSGViewer::_CreateActions()
 
     pubilshAct = new QAction(tr("Pubilsh Bodies Anytimes"), this);
 
-    printAct = new QAction(tr("Print Debug Output"), this);
+    debugLevelDebugAct = new QAction(tr("Debug Level (Debug)"), this);
+    connect(debugLevelDebugAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelDebug()));
+
+    debugLevelVerboseAct = new QAction(tr("Debug Level (Verbose)"), this);
+    connect(debugLevelVerboseAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelVerbose()));
 
     showAct = new QAction(tr("Show Framerate"), this);
 
@@ -463,7 +469,8 @@ void QtOSGViewer::_CreateMenus()
 
     viewMenu->addAction(viewColAct);
     viewMenu->addAction(pubilshAct);
-    viewMenu->addAction(printAct);
+    viewMenu->addAction(debugLevelDebugAct);
+    viewMenu->addAction(debugLevelVerboseAct);
     viewMenu->addAction(showAct);
 
 //	animation = menuBar()->addMenu(tr("&Animation"));
@@ -572,6 +579,16 @@ void QtOSGViewer::_ProcessAboutDialog()
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
     msgBox.exec();
+}
+
+void QtOSGViewer::_SetDebugLevelDebug()
+{
+    RaveSetDebugLevel(Level_Debug);
+}
+
+void QtOSGViewer::_SetDebugLevelVerbose()
+{
+    RaveSetDebugLevel(Level_Verbose);
 }
 
 void QtOSGViewer::_ChangeViewToXY()
@@ -975,7 +992,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
         }
 
         if( bTracking ) {
-            
+
             RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
             if( !!GetEnv()->GetPhysicsEngine() ) {
                 Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
@@ -1060,7 +1077,7 @@ bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
 {
     std::string itemname, visualizationmode;
     sinput >> itemname >> visualizationmode;
-    
+
     FOREACH(it, _mapbodies) {
         if( it->second->GetName() == itemname ) {
             it->second->SetVisualizationMode(visualizationmode);
