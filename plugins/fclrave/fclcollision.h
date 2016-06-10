@@ -266,6 +266,16 @@ private:
         return _fclspace->GetGeometryGroup();
     }
 
+    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    {
+      _fclspace->SetBodyGeometryGroup(pbody, groupname);
+    }
+
+    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    {
+      return _fclspace->GetBodyGeometryGroup(pbody);
+    }
+
 
     virtual bool SetCollisionOptions(int collision_options)
     {
