@@ -7,6 +7,11 @@
 
 #include "fclspace.h"
 
+#include "fclstatistics.h"
+
+#define START_TIMING_OPT(statistics, label, options, isRobot);          \
+  START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
+
 typedef FCLSpace::KinBodyInfoConstPtr KinBodyInfoConstPtr;
 typedef FCLSpace::KinBodyInfoPtr KinBodyInfoPtr;
 
@@ -190,6 +195,9 @@ private:
         _numMaxContacts = std::numeric_limits<int>::max(); // TODO
         __description = ":Interface Author: Kenji Maillard\n\nFlexible Collision Library collision checker";
 
+
+        SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId());
+
         RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::_SetBroadphaseAlgorithm, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
 
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
@@ -361,12 +369,14 @@ private:
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Body/Env",_options,pbody1->IsRobot());
         // TODO : tailor this case when stuff become stable enough
         return CheckCollision(pbody1, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Body/Body",_options,(pbody1->IsRobot() || pbody2->IsRobot()));
         if( !!report ) {
             report->Reset(_options);
         }
@@ -397,6 +407,7 @@ private:
             return false; //TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             tmpManagerBody1Body2.Collide(query);
             return query._bCollision;
         }
@@ -404,12 +415,14 @@ private:
 
     virtual bool CheckCollision(LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Link/Env",_options,false);
         // TODO : tailor this case when stuff become stable enough
         return CheckCollision(plink, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
     }
 
     virtual bool CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Link/Link",_options,false);
         if( !!report ) {
             report->Reset(_options);
         }
@@ -429,6 +442,7 @@ private:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
             return query._bCollision;
         }
@@ -436,6 +450,7 @@ private:
 
     virtual bool CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "Link/Body",_options,pbody->IsRobot());
         if( !!report ) {
             report->Reset(_options);
         }
@@ -474,6 +489,7 @@ private:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             tmpManagerBodyLink.Collide(query);
             return query._bCollision;
         }
@@ -530,6 +546,7 @@ private:
             return false;
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             tmpManagerLinkAgainstEnv.Collide(query);
             return query._bCollision;
         }
@@ -557,6 +574,7 @@ private:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             tmpManagerBodyAgainstEnv.Collide(query);
             return query._bCollision;
         }
@@ -582,6 +600,7 @@ private:
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "BodySelf",_options,pbody->IsRobot());
         if( !!report ) {
             report->Reset(_options);
         }
@@ -606,6 +625,7 @@ private:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             query.bselfCollision = true;
 
             FOREACH(itset, nonadjacent) {
@@ -635,6 +655,7 @@ private:
 
     virtual bool CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
     {
+      START_TIMING_OPT(_statistics, "LinkSelf",_options,false);
         KinBodyPtr pbody = plink->GetParent();
         if( pbody->GetLinks().size() <= 1 ) {
             return false;
@@ -671,6 +692,7 @@ private:
             return false; //TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             query.bselfCollision = true;
             // TODO : consider using the link BV
             linkManager->collide(bodyManager.get(), &query, &CheckNarrowPhaseGeomCollision);
@@ -1022,6 +1044,10 @@ private:
     std::string _userdatakey;
     bool _bIsSelfCollisionChecker; ///< if true, then this collision checker will be solely used for self collision checking. a collision checker is environment if InitEnvironment is called.
     CollisionReport _reportcache; ///< cache the report
+
+#ifdef FCLUSESTATISTICS
+    FCLStatisticsPtr _statistics;
+#endif
 };
 
 
