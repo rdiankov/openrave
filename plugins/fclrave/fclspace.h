@@ -366,9 +366,9 @@ public:
             pinfo->vlinks.push_back(link);
         }
 
-        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
+        pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
+        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         pinfo->_excludecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ExcludeWkBodyFromEnv, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBody const>(pbody)));
-        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
 
         pbody->SetUserData(_userdatakey, pinfo);
         _ExcludeBodyFromEnv(pbody);
@@ -740,15 +740,30 @@ private:
     }
 
 
-    void _ResetKinBodyCallback(boost::weak_ptr<KinBody const> _pbody)
+    void _ResetCurrentGeometryCallback(boost::weak_ptr<KinBody const> _pbody)
     {
         KinBodyConstPtr pbody(_pbody);
-        std::pair<KinBodyInfoPtr, bool> infocreated = GetCreateInfo(pbody);
-        if( !infocreated.second ) {
-            BOOST_ASSERT( infocreated.first->GetBody() == pbody );
-            InitKinBody(pbody, infocreated.first);
+        RAVELOG_DEBUG_FORMAT("Resetting current geometry for kinbody %s (in env %d, collision manager %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        KinBodyInfoPtr pinfo = GetInfo(pbody);
+        if( !!pinfo && pinfo->_geometrygroup == "" ) {
+            InitKinBody(pbody, pinfo);
         }
+        _cachedpinfo[pbody->GetEnvironmentId()].erase("");
+    }
+
+    void _ResetGeometryGroupsCallback(boost::weak_ptr<KinBody const> _pbody)
+    {
+        KinBodyConstPtr pbody(_pbody);
+        RAVELOG_DEBUG_FORMAT("Resetting geometry groups for kinbody %s (in env %d, collision manager %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        KinBodyInfoPtr pinfo = GetInfo(pbody);
+        if( !!pinfo && pinfo->_geometrygroup != "" ) {
+            InitKinBody(pbody, pinfo);
+        }
+        KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][""];
         _cachedpinfo.erase(pbody->GetEnvironmentId());
+        if( !!pinfoCurrentGeometry ) {
+            _cachedpinfo[pbody->GetEnvironmentId()][""] = pinfoCurrentGeometry;
+        }
     }
 
     void _ExcludeWkBodyFromEnv(boost::weak_ptr<KinBody const> _pbody) {
