@@ -51,14 +51,9 @@ public:
     }
 
     void Display() {
-        std::stringstream ss;
         FOREACH(ittiming, timings) {
-            ss << "|" << ittiming->first;
-            FOREACH(itd, ittiming->second) {
-                ss << ";" << itd->count();
-            }
+          DisplaySingle(ittiming->first, ittiming->second);
         }
-        RAVELOG_WARN_FORMAT("FCL STATISTICS%s", ss.str());
     }
 
     void StartManualTiming(std::string const& label) {
@@ -69,8 +64,7 @@ public:
 
     void StopManualTiming() {
         currentTimings.push_back(std::chrono::high_resolution_clock::now());
-        duration timing = *currentTimings.begin() - *(currentTimings.end()-1);
-        timings[currentTimingLabel].push_back(timing);
+        timings[currentTimingLabel].push_back(currentTimings);
 #ifdef FCL_STATISTICS_DISPLAY_CONTINUOUSLY
         DisplaySingle(currentTimingLabel, currentTimings);
 #endif
@@ -98,7 +92,7 @@ private:
     std::string name;
     std::string currentTimingLabel;
     std::vector<time_point> currentTimings;
-    std::map< std::string, std::vector<duration> > timings;
+    std::map< std::string, std::vector< std::vector<time_point> > > timings;
 };
 
 typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;
