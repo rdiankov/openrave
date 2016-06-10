@@ -232,6 +232,7 @@ public:
         int nLastStamp;  // used during synchronization ("is transform up to date")
         vector< boost::shared_ptr<LINK> > vlinks;
         OpenRAVE::UserDataPtr _geometrycallback;
+        OpenRAVE::UserDataPtr _geometrygroupcallback;
 
         ManagerInstancePtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
 
@@ -410,24 +411,6 @@ public:
         return _geometrygroup;
     }
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-      KinBodyInfoPtr pinfo = GetInfo(pbody);
-      if( !pinfo || pinfo->_geometrygroup != groupname ) {
-        pinfo = boost::make_shared<KinBodyInfo>();
-        pinfo->_geometrygroup = groupname;
-        InitKinBody(pbody, pinfo);
-      }
-    }
-
-    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
-      KinBodyInfoPtr pinfo = GetInfo(pbody);
-      if( !!pinfo ) {
-        return pinfo->_geometrygroup;
-      } else {
-        return "";
-      }
-    }
-
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
         if( HasDifferentGeometry(pbody, groupname) ) {
@@ -463,6 +446,15 @@ public:
             // Notify to the environment manager that this kinbody must be added
             _ExcludeBodyFromEnv(pbody);
         }
+    }
+
+    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
+      KinBodyInfoPtr pinfo = GetInfo(pbody);
+      if( !!pinfo ) {
+        return pinfo->_geometrygroup;
+      } else {
+        return "";
+      }
     }
 
 
