@@ -4146,6 +4146,18 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
     }
 }
 
+void KinBody::GetAttached(std::set<KinBodyConstPtr>&setAttached) const
+{
+    setAttached.insert(shared_kinbody_const());
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyConstPtr pattached = itbody->lock();
+        if( !!pattached && setAttached.insert(pattached).second ) {
+            pattached->GetAttached(setAttached);
+        }
+    }
+}
+
+
 bool KinBody::HasAttached() const
 {
     return _listAttachedBodies.size() > 0;

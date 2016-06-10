@@ -162,6 +162,7 @@ public:
         vector< boost::shared_ptr<LINK> > vlinks;
         BroadPhaseCollisionManagerPtr _bodyManager;
         OpenRAVE::UserDataPtr _geometrycallback;
+        OpenRAVE::UserDataPtr _geometrygroupcallback;
         std::string _geometrygroup;
     };
 
@@ -302,6 +303,7 @@ public:
         }
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
+        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
 
         pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
