@@ -667,8 +667,6 @@ protected:
         virtual void _ResetAABB() {
           _bglobalAABBdirty = true;
         }
-
-        OpenRAVE::UserDataPtr _globalAABBChangedCallback;
 #endif
 
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries

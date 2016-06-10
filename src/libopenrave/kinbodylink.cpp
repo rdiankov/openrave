@@ -26,15 +26,14 @@ KinBody::Link::Link(KinBodyPtr parent)
 {
     _parent = parent;
     _index = -1;
+#ifdef AABB_CACHING
     _blocalAABBdirty = true;
     _bglobalAABBdirty = true;
+#endif
 }
 
 KinBody::Link::~Link()
 {
-#ifdef AABB_CACHING
-  _globalAABBChangedCallback.reset();
-#endif
 }
 
 
@@ -154,11 +153,8 @@ AABB KinBody::Link::ComputeLocalAABB() const
 {
 #ifdef AABB_CACHING
     if( _blocalAABBdirty ) {
-      _vGeometriesGlobalAABB.resize(0);
-      _vGeometriesGlobalAABB.reserve(_vGeometries.size());
         if( _vGeometries.size() == 1) {
             _localAABB = _vGeometries.front()->ComputeAABB(Transform());
-            _vGeometriesGlobalAABB.push_back(_localAABB);
         }
         else if( _vGeometries.size() > 1 ) {
             Vector vmin, vmax;
@@ -166,7 +162,6 @@ AABB KinBody::Link::ComputeLocalAABB() const
             AABB ab;
             FOREACHC(itgeom,_vGeometries) {
                 ab = (*itgeom)->ComputeAABB(Transform());
-                _vGeometriesGlobalAABB.push_back(ab);
                 if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
                     continue;
                 }
@@ -272,62 +267,67 @@ AABB KinBody::Link::ComputeLocalAABB() const
 AABB KinBody::Link::ComputeAABB() const
 {
 #ifdef AABB_CACHING
-  if( _bglobalAABBdirty ) {
-    if( _vGeometries.size() == 1) {
-        _globalAABB = _vGeometries.front()->ComputeAABB(_info._t);
-    }
-    else if( _vGeometries.size() > 1 ) {
-        Vector vmin, vmax;
-        bool binitialized=false;
-        AABB ab;
-        FOREACHC(itgeom,_vGeometries) {
-            ab = (*itgeom)->ComputeAABB(_info._t);
-            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
-                continue;
+    if( _bglobalAABBdirty ) {
+        //RAVELOG_VERBOSE_FORMAT("Recomputing global AABB %s/%s, update stamp %d", GetParent()->GetName()%GetName()%GetParent()->_nUpdateStampId);
+        _vGeometriesGlobalAABB.resize(0);
+        _vGeometriesGlobalAABB.reserve(_vGeometries.size());
+        if( _vGeometries.size() == 1) {
+            _globalAABB = _vGeometries.front()->ComputeAABB(_info._t);
+            _vGeometriesGlobalAABB.push_back(_globalAABB);
+        }
+        else if( _vGeometries.size() > 1 ) {
+            Vector vmin, vmax;
+            bool binitialized=false;
+            AABB ab;
+            FOREACHC(itgeom,_vGeometries) {
+                ab = (*itgeom)->ComputeAABB(_info._t);
+                _vGeometriesGlobalAABB.push_back(ab);
+                if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
+                    continue;
+                }
+                Vector vnmin = ab.pos - ab.extents;
+                Vector vnmax = ab.pos + ab.extents;
+                if( !binitialized ) {
+                    vmin = vnmin;
+                    vmax = vnmax;
+                    binitialized = true;
+                }
+                else {
+                    if( vmin.x > vnmin.x ) {
+                        vmin.x = vnmin.x;
+                    }
+                    if( vmin.y > vnmin.y ) {
+                        vmin.y = vnmin.y;
+                    }
+                    if( vmin.z > vnmin.z ) {
+                        vmin.z = vnmin.z;
+                    }
+                    if( vmax.x < vnmax.x ) {
+                        vmax.x = vnmax.x;
+                    }
+                    if( vmax.y < vnmax.y ) {
+                        vmax.y = vnmax.y;
+                    }
+                    if( vmax.z < vnmax.z ) {
+                        vmax.z = vnmax.z;
+                    }
+                }
             }
-            Vector vnmin = ab.pos - ab.extents;
-            Vector vnmax = ab.pos + ab.extents;
             if( !binitialized ) {
-                vmin = vnmin;
-                vmax = vnmax;
-                binitialized = true;
+                ab.pos = _info._t.trans;
+                ab.extents = Vector(0,0,0);
             }
             else {
-                if( vmin.x > vnmin.x ) {
-                    vmin.x = vnmin.x;
-                }
-                if( vmin.y > vnmin.y ) {
-                    vmin.y = vnmin.y;
-                }
-                if( vmin.z > vnmin.z ) {
-                    vmin.z = vnmin.z;
-                }
-                if( vmax.x < vnmax.x ) {
-                    vmax.x = vnmax.x;
-                }
-                if( vmax.y < vnmax.y ) {
-                    vmax.y = vnmax.y;
-                }
-                if( vmax.z < vnmax.z ) {
-                    vmax.z = vnmax.z;
-                }
+                ab.pos = (dReal)0.5 * (vmin + vmax);
+                ab.extents = vmax - ab.pos;
             }
+            _globalAABB = ab;
+        } else {
+            _globalAABB = AABB(_info._t.trans,Vector(0,0,0));
         }
-        if( !binitialized ) {
-            ab.pos = _info._t.trans;
-            ab.extents = Vector(0,0,0);
-        }
-        else {
-            ab.pos = (dReal)0.5 * (vmin + vmax);
-            ab.extents = vmax - ab.pos;
-        }
-        _globalAABB = ab;
-    } else {
-      _globalAABB = AABB(_info._t.trans,Vector(0,0,0));
+        _bglobalAABBdirty = false;
     }
-    _bglobalAABBdirty = false;
-  }
-  return _globalAABB;
+    return _globalAABB;
 #else
     if( _vGeometries.size() == 1) {
         return _vGeometries.front()->ComputeAABB(_info._t);
@@ -412,6 +412,9 @@ void KinBody::Link::SetTransform(const Transform& t)
 {
     _info._t = t;
     GetParent()->_nUpdateStampId++;
+#ifdef AABB_CACHING
+    _ResetAABB();
+#endif
 }
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
@@ -450,10 +453,10 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
 #ifdef AABB_CACHING
 const std::vector<AABB>& KinBody::Link::GetGeometriesAABB() const
 {
-  if( _bglobalAABBdirty ) {
-    ComputeAABB();
-  }
-  return _vGeometriesGlobalAABB;
+    if( _bglobalAABBdirty ) {
+        ComputeAABB();
+    }
+    return _vGeometriesGlobalAABB;
 }
 #endif
 
@@ -532,12 +535,13 @@ void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::
     it->second.resize(geometries.size());
 #ifdef AABB_CACHING
     FOREACH(itgeominfo, geometries) {
-      if( (*itgeominfo)->_type == GT_TriMesh && (*itgeominfo)->_vextremePointsIndices.size() == 0 ) {
+        if( (*itgeominfo)->_type == GT_TriMesh && (*itgeominfo)->_vextremePointsIndices.size() == 0 ) {
             KinBody::Link::Geometry::ComputeExtremePointsIndices(**itgeominfo);
         }
     }
 #endif // AABB_CACHING
     std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
 int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
