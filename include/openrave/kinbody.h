@@ -89,13 +89,13 @@ public:
 
         Prop_Name=0x20,     ///< name changed
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
-        Prop_LinkGeometry=0x80,     ///< the geometry of the link changed
+        Prop_LinkGeometry=0x80,     ///< the current geometry of the link changed
         Prop_LinkTransforms=0x100, ///< if any of the link transforms changed, this implies the DOF values of the robot changed
-        // 0x200
+        Prop_LinkGeometryGroup=0x200, ///< the geometry informations of some geometry group changed
         Prop_LinkStatic=0x400,     ///< static property of link changed
         Prop_LinkEnable=0x800,     ///< enable property of link changed
         Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
-        Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
+        Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkGeometryGroup|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         Prop_JointCustomParameters = 0x2000, ///< when Joint::SetFloatParameters(), Joint::SetIntParameters(), and Joint::SetStringParameters() are called
         Prop_LinkCustomParameters = 0x4000, ///< when Link::SetFloatParameters(), Link::SetIntParameters(), Link::SetStringParameters() are called
         Prop_BodyAttached=0x8000, ///< if attached bodies changed

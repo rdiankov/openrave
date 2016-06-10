@@ -3239,7 +3239,22 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
 
     if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
         if( !!report ) {
-            RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                std::vector<OpenRAVE::dReal> v;
+                GetDOFValues(v);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                ss << "self collision report=" << report->__str__() << " ";
+                for(size_t i = 0; i < v.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << v[i];
+                    }
+                    else {
+                        ss << "colvalues=[" << v[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
         }
         return true;
     }
@@ -4146,17 +4161,16 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
     }
 }
 
-
-  void KinBody::GetAttached(std::set<KinBodyConstPtr>&setAttached) const
-  {
+void KinBody::GetAttached(std::set<KinBodyConstPtr>&setAttached) const
+{
     setAttached.insert(shared_kinbody_const());
     FOREACHC(itbody,_listAttachedBodies) {
-      KinBodyConstPtr pattached = itbody->lock();
-      if( !!pattached && setAttached.insert(pattached).second ) {
-        pattached->GetAttached(setAttached);
-      }
+        KinBodyConstPtr pattached = itbody->lock();
+        if( !!pattached && setAttached.insert(pattached).second ) {
+            pattached->GetAttached(setAttached);
+        }
     }
-  }
+}
 
 bool KinBody::HasAttached() const
 {

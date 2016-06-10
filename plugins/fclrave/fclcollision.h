@@ -131,6 +131,9 @@ public:
         __description = ":Interface Author: Kenji Maillard\n\nFlexible Collision Library collision checker";
         SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId());
 
+
+        SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId());
+
         RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::_SetBroadphaseAlgorithm, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
 
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
@@ -197,8 +200,14 @@ public:
         return _fclspace->GetGeometryGroup();
     }
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-        _fclspace->SetBodyGeometryGroup(pbody, groupname);
+    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    {
+      _fclspace->SetBodyGeometryGroup(pbody, groupname);
+    }
+
+    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    {
+      return _fclspace->GetBodyGeometryGroup(pbody);
     }
 
 
@@ -592,6 +601,7 @@ public:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             query.bselfCollision = true;
 
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
@@ -642,6 +652,7 @@ public:
             return false; //TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            ADD_TIMING(_statistics);
             query.bselfCollision = true;
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             FOREACH(itset, nonadjacent) {

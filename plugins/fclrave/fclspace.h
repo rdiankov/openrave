@@ -305,8 +305,8 @@ public:
             GeometryInfoIterator begingeom, endgeom;
 
             // Glue code for a unified access to geometries
-            if(pinfo->_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(_geometrygroup) >= 0) {
-                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(_geometrygroup);
+            if(pinfo->_geometrygroup.size() > 0 && (*itlink)->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
+                const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = (*itlink)->GetGeometriesFromGroup(pinfo->_geometrygroup);
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::GeometryInfoPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::GeometryInfoPtr>::const_iterator> PtrGeomInfoIterator;
                 Func deref = boost::mem_fn(&KinBody::GeometryInfoPtr::operator*);
@@ -368,6 +368,7 @@ public:
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
         pinfo->_excludecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ExcludeWkBodyFromEnv, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBody const>(pbody)));
+        pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetKinBodyCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
 
         pbody->SetUserData(_userdatakey, pinfo);
         _ExcludeBodyFromEnv(pbody);
@@ -407,6 +408,24 @@ public:
     const std::string& GetGeometryGroup() const
     {
         return _geometrygroup;
+    }
+
+    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+      KinBodyInfoPtr pinfo = GetInfo(pbody);
+      if( !pinfo || pinfo->_geometrygroup != groupname ) {
+        pinfo = boost::make_shared<KinBodyInfo>();
+        pinfo->_geometrygroup = groupname;
+        InitKinBody(pbody, pinfo);
+      }
+    }
+
+    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
+      KinBodyInfoPtr pinfo = GetInfo(pbody);
+      if( !!pinfo ) {
+        return pinfo->_geometrygroup;
+      } else {
+        return "";
+      }
     }
 
 
@@ -507,7 +526,7 @@ public:
 
 
 
-    KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody)
+    KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
         return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }

@@ -1477,6 +1477,36 @@ void init_openravepy_robot()
                        .value("Transform",DOF_Transform)
     ;
 
+
+    object manipulatorinfo = class_<PyRobotBase::PyManipulatorInfo, boost::shared_ptr<PyRobotBase::PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
+                             .def_readwrite("_name",&PyRobotBase::PyManipulatorInfo::_name)
+                             .def_readwrite("_sBaseLinkName",&PyRobotBase::PyManipulatorInfo::_sBaseLinkName)
+                             .def_readwrite("_sEffectorLinkName",&PyRobotBase::PyManipulatorInfo::_sEffectorLinkName)
+                             .def_readwrite("_tLocalTool",&PyRobotBase::PyManipulatorInfo::_tLocalTool)
+                             .def_readwrite("_vChuckingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection)
+                             .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection) // back compat
+                             .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
+                             .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
+                             .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
+                             .def_pickle(ManipulatorInfo_pickle_suite())
+    ;
+
+    object attachedsensorinfo = class_<PyRobotBase::PyAttachedSensorInfo, boost::shared_ptr<PyRobotBase::PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
+                                .def_readwrite("_name", &PyRobotBase::PyAttachedSensorInfo::_name)
+                                .def_readwrite("_linkname", &PyRobotBase::PyAttachedSensorInfo::_linkname)
+                                .def_readwrite("_trelative", &PyRobotBase::PyAttachedSensorInfo::_trelative)
+                                .def_readwrite("_sensorname", &PyRobotBase::PyAttachedSensorInfo::_sensorname)
+                                .def_readwrite("_sensorgeometry", &PyRobotBase::PyAttachedSensorInfo::_sensorgeometry)
+    ;
+
+    object grabbedinfo = class_<PyRobotBase::PyGrabbedInfo, boost::shared_ptr<PyRobotBase::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(RobotBase::GrabbedInfo))
+                         .def_readwrite("_grabbedname",&PyRobotBase::PyGrabbedInfo::_grabbedname)
+                         .def_readwrite("_robotlinkname",&PyRobotBase::PyGrabbedInfo::_robotlinkname)
+                         .def_readwrite("_trelative",&PyRobotBase::PyGrabbedInfo::_trelative)
+                         .def_readwrite("_setRobotLinksToIgnore",&PyRobotBase::PyGrabbedInfo::_setRobotLinksToIgnore)
+                         .def_pickle(GrabbedInfo_pickle_suite())
+    ;
+
     {
         void (PyRobotBase::*psetactivedofs1)(object) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs2)(object, int) = &PyRobotBase::SetActiveDOFs;
@@ -1591,6 +1621,9 @@ void init_openravepy_robot()
                       .def("__unicode__", &PyRobotBase::__unicode__)
         ;
         robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
+        robot.attr("ManipulatorInfo") = manipulatorinfo;
+        robot.attr("AttachedSensorInfo") = attachedsensorinfo;
+        robot.attr("GrabbedInfo") = grabbedinfo;
 
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
@@ -1700,39 +1733,6 @@ void init_openravepy_robot()
         .def("Release",&PyRobotBase::PyRobotStateSaver::Release,DOXY_FN(Robot::RobotStateSaver, Release))
         .def("__str__",&PyRobotBase::PyRobotStateSaver::__str__)
         .def("__unicode__",&PyRobotBase::PyRobotStateSaver::__unicode__)
-        ;
-    }
-
-    {
-        scope manipulatorinfo = class_<PyRobotBase::PyManipulatorInfo, boost::shared_ptr<PyRobotBase::PyManipulatorInfo> >("ManipulatorInfo", DOXY_CLASS(RobotBase::ManipulatorInfo))
-                                .def_readwrite("_name",&PyRobotBase::PyManipulatorInfo::_name)
-                                .def_readwrite("_sBaseLinkName",&PyRobotBase::PyManipulatorInfo::_sBaseLinkName)
-                                .def_readwrite("_sEffectorLinkName",&PyRobotBase::PyManipulatorInfo::_sEffectorLinkName)
-                                .def_readwrite("_tLocalTool",&PyRobotBase::PyManipulatorInfo::_tLocalTool)
-                                .def_readwrite("_vChuckingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection)
-                                .def_readwrite("_vClosingDirection",&PyRobotBase::PyManipulatorInfo::_vChuckingDirection) // back compat
-                                .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
-                                .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
-                                .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
-                                .def_pickle(ManipulatorInfo_pickle_suite())
-        ;
-    }
-    {
-        scope attachedsensorinfo = class_<PyRobotBase::PyAttachedSensorInfo, boost::shared_ptr<PyRobotBase::PyAttachedSensorInfo> >("AttachedSensorInfo", DOXY_CLASS(RobotBase::AttachedSensorInfo))
-                                   .def_readwrite("_name", &PyRobotBase::PyAttachedSensorInfo::_name)
-                                   .def_readwrite("_linkname", &PyRobotBase::PyAttachedSensorInfo::_linkname)
-                                   .def_readwrite("_trelative", &PyRobotBase::PyAttachedSensorInfo::_trelative)
-                                   .def_readwrite("_sensorname", &PyRobotBase::PyAttachedSensorInfo::_sensorname)
-                                   .def_readwrite("_sensorgeometry", &PyRobotBase::PyAttachedSensorInfo::_sensorgeometry)
-        ;
-    }
-    {
-        scope grabbedinfo = class_<PyRobotBase::PyGrabbedInfo, boost::shared_ptr<PyRobotBase::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(RobotBase::GrabbedInfo))
-                            .def_readwrite("_grabbedname",&PyRobotBase::PyGrabbedInfo::_grabbedname)
-                            .def_readwrite("_robotlinkname",&PyRobotBase::PyGrabbedInfo::_robotlinkname)
-                            .def_readwrite("_trelative",&PyRobotBase::PyGrabbedInfo::_trelative)
-                            .def_readwrite("_setRobotLinksToIgnore",&PyRobotBase::PyGrabbedInfo::_setRobotLinksToIgnore)
-                            .def_pickle(GrabbedInfo_pickle_suite())
         ;
     }
 

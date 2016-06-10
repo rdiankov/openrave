@@ -64,8 +64,7 @@ public:
 
     void StopManualTiming() {
         currentTimings.push_back(std::chrono::high_resolution_clock::now());
-        duration timing = *currentTimings.begin() - *(currentTimings.end()-1);
-        timings[currentTimingLabel].push_back(timing);
+        timings[currentTimingLabel].push_back(currentTimings);
 #ifdef FCL_STATISTICS_DISPLAY_CONTINUOUSLY
         DisplaySingle(currentTimingLabel, currentTimings);
 #endif
@@ -93,7 +92,11 @@ private:
     std::string name;
     std::string currentTimingLabel;
     std::vector<time_point> currentTimings;
+<<<<<<< HEAD
     std::map< std::string, std::vector<duration> > timings;
+=======
+    std::map< std::string, std::vector< std::vector<time_point> > > timings;
+>>>>>>> productionStats
 };
 
 typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;
