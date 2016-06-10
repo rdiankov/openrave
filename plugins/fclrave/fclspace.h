@@ -338,7 +338,7 @@ public:
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
       KinBodyInfoPtr pinfo = GetInfo(pbody);
-      if( !pbody || pbody->_geometrygroup != groupname ) {
+      if( !pinfo || pinfo->_geometrygroup != groupname ) {
         pinfo = boost::make_shared<KinBodyInfo>();
         pinfo->_geometrygroup = groupname;
         InitKinBody(pbody, pinfo);
@@ -348,7 +348,7 @@ public:
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
       KinBodyInfoPtr pinfo = GetInfo(pbody);
       if( !!pinfo ) {
-        return ->_geometrygroup;
+        return pinfo->_geometrygroup;
       } else {
         return "";
       }
