@@ -1,0 +1,111 @@
+//-*- coding: utf-8 -*-
+#ifndef PARABOLIC_RAMP_H
+#define PARABOLIC_RAMP_H
+
+#include <vector>
+#include <cassert>
+#include <openrave/openrave.h>
+#include <boost/format.hpp>
+#include "paraboliccommon.h"
+
+// extern "C" {
+// int fast_expansion_sum_zeroelim(int elen, double* e, int flen, double* f, double* h);
+// }
+
+namespace ParabolicRampInternal {
+
+// #define OpenRAVE::dReal Real
+// typedef double Real;
+const static Real epsilon = 1e-8;
+const static Real inf = 1e300;
+
+class Ramp {
+public:
+    Ramp () {
+    }
+    Ramp(Real v0, Real a, Real dur, Real x0=0);
+    ~Ramp () {
+    }
+
+    // Functions
+    Real EvalPos(Real t) const;
+    Real EvalVel(Real t) const;
+    Real EvalAcc(Real t) const;
+
+    void Initialize(Real v0, Real a, Real dur, Real x0=0);
+    void PrintInfo(std::string name="") const;
+    void UpdateDuration(Real newDuration);
+
+    // Members
+    Real v0;       // initial velocity
+    Real a;        // acceleration
+    Real duration; // total duration
+    Real x0;       // initial displacement
+
+    Real v1;       // final velocity
+    Real d;        // total displacement
+}; // end class Ramp
+
+class ParabolicCurve {
+public:
+    ParabolicCurve() {
+    }
+    ParabolicCurve(std::vector<Ramp> ramps);
+    ~ParabolicCurve() {
+    }
+
+    // Functions
+    Real EvalPos(Real t) const;
+    Real EvalVel(Real t) const;
+    Real EvalAcc(Real t) const;
+
+    void Append(ParabolicCurve curve);
+    void FindRampIndex(Real t, int& i, Real& rem) const;
+    void Initialize(std::vector<Ramp> ramps);
+    bool IsEmpty() const {
+        return ramps.size() == 0;
+    }
+    void PrintInfo(std::string name="") const;
+
+    // Members
+    Real x0;
+    Real duration;
+    Real d;
+    std::vector<Real> switchpointsList;
+    std::vector<Ramp> ramps;
+
+}; // end class ParabolicCurve
+
+class ParabolicCurvesND {
+public:
+    ParabolicCurvesND() {
+    }
+    ParabolicCurvesND(std::vector<ParabolicCurve> curves);
+    ~ParabolicCurvesND() {
+    }
+
+    // Functions
+    std::vector<Real> EvalPos(Real t) const;
+    std::vector<Real> EvalVel(Real t) const;
+    std::vector<Real> EvalAcc(Real t) const;
+
+    void Append(ParabolicCurvesND curvesnd);
+    void Initialize(std::vector<ParabolicCurve> curves);
+    bool IsEmpty() const {
+        return curves.size() == 0;
+    }
+    void PrintInfo(std::string name="") const;
+
+    int ndof;
+    Real duration;
+    std::vector<Real> x0Vect;
+    std::vector<Real> switchpointsList;
+    std::vector<ParabolicCurve> curves;
+
+}; // end class ParabolicCurversND
+
+std::string GenerateStringFromVector(const std::vector<Real>& vect);
+
+
+} // end namespace ParabolicRampInternal
+#endif
