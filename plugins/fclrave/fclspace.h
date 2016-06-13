@@ -349,10 +349,7 @@ public:
                 // create the bounding volume for the link
                 fcl::BVHModel<fcl::OBB> model;
                 model.beginModel();
-                // This could be costly
-                FOREACH(itgeom, (*itlink)->GetGeometries()) {
-                    (*itgeom)->InitCollisionMesh(0.1f);
-                }
+                // TODO : Check if I can assume that the collision mesh are already initialized
                 for(GeometryInfoIterator it = begingeom; it != endgeom; ++it) {
                     _bvAddSubmodelFromGeomInfo(model, *it);
                 }
