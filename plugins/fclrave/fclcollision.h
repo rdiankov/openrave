@@ -412,6 +412,7 @@ public:
                 return false;
             }
             CollisionCallbackData query(shared_checker(), report);
+            query.bselfCollision = true;
             ADD_TIMING(_statistics);
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
             return query._bCollision;
