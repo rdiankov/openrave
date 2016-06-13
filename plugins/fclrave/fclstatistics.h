@@ -6,6 +6,7 @@
 
 #include "plugindefs.h"
 #include <sstream>
+#include <fstream>
 
 
 namespace fclrave {
@@ -13,6 +14,7 @@ namespace fclrave {
 class FCLStatistics;
 
 static std::vector<boost::weak_ptr<FCLStatistics> > globalStatistics;
+static EnvironmentMutex log_out_mutex;
 typedef std::chrono::time_point<std::chrono::high_resolution_clock> time_point;
 typedef std::chrono::duration<double> duration;
 
@@ -51,10 +53,20 @@ public:
     }
 
     void Display() {
-        FOREACH(ittiming, timings) {
+      EnvironmentMutex::scoped_lock lock(log_out_mutex);
+      std::fstream f("fclstatistics.log", std::fstream::out | std::fstream::app);
+      FOREACH(ittiming, timings) {
+          f << ittiming->first;
           FOREACH(ittimingvector, ittiming->second) {
-            DisplaySingle(ittiming->first, *ittimingvector);
+            f << ";";
+            std::vector<time_point>::iterator it = ittimingvector->begin();
+            time_point t = *it;
+            while(++it != ittimingvector->end()) {
+              f << "|" << (*it - t).count();
+              t = *it;
+            }
           }
+          f << std::endl;
         }
     }
 
