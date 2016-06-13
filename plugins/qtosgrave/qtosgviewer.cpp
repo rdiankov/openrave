@@ -1274,11 +1274,14 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
         ptrackball->setDistance(_focalDistance);
     }
+
+    // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
+    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+
     //osg::Vec3d eye, center, up;
     //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
     //_posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);
