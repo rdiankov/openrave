@@ -52,7 +52,9 @@ public:
 
     void Display() {
         FOREACH(ittiming, timings) {
-            DisplaySingle(ittiming->first, ittiming->second);
+          FOREACH(ittimingvector, ittiming->second) {
+            DisplaySingle(ittiming->first, *ittimingvector);
+          }
         }
     }
 
@@ -92,11 +94,7 @@ private:
     std::string name;
     std::string currentTimingLabel;
     std::vector<time_point> currentTimings;
-<<<<<<< HEAD
-    std::map< std::string, std::vector<duration> > timings;
-=======
     std::map< std::string, std::vector< std::vector<time_point> > > timings;
->>>>>>> productionStats
 };
 
 typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;
