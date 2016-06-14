@@ -11,9 +11,9 @@ namespace RampOptimizerInternal {
 ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect,
                                        std::vector<Real>& vmVect, std::vector<Real>& amVect, Real delta) {
     int ndof = x0Vect.size();
-    assert(ndof == (int) x1Vect.size());
-    assert(ndof == (int) vmVect.size());
-    assert(ndof == (int) amVect.size());
+    BOOST_ASSERT(ndof == (int) x1Vect.size());
+    BOOST_ASSERT(ndof == (int) vmVect.size());
+    BOOST_ASSERT(ndof == (int) amVect.size());
 
     std::vector<Real> dVect(ndof);
     // Calculate sdMax (vMin) and sddMax (aMin)
@@ -26,8 +26,8 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
             aMin = Min(aMin, amVect[i]/Abs(dVect[i]));
         }
     }
-    assert(vMin < inf);
-    assert(aMin < inf);
+    BOOST_ASSERT(vMin < inf);
+    BOOST_ASSERT(aMin < inf);
 
     ParabolicCurve sdProfile;
     if (FuzzyZero(delta, epsilon)) {
@@ -35,7 +35,7 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
     }
     else {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
 
     // Scale each input dof according to the obtained sd-profile
@@ -66,11 +66,11 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
                                             std::vector<Real>& v0Vect, std::vector<Real>& v1Vect,
                                             std::vector<Real>& vmVect, std::vector<Real>& amVect, Real delta) {
     int ndof = x0Vect.size();
-    assert(ndof == (int) x1Vect.size());
-    assert(ndof == (int) v0Vect.size());
-    assert(ndof == (int) v1Vect.size());
-    assert(ndof == (int) vmVect.size());
-    assert(ndof == (int) amVect.size());
+    BOOST_ASSERT(ndof == (int) x1Vect.size());
+    BOOST_ASSERT(ndof == (int) v0Vect.size());
+    BOOST_ASSERT(ndof == (int) v1Vect.size());
+    BOOST_ASSERT(ndof == (int) vmVect.size());
+    BOOST_ASSERT(ndof == (int) amVect.size());
 
     std::vector<Real> dVect(ndof);
     for (int i = 0; i < ndof; ++i) {
@@ -92,7 +92,7 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
     }
     else {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
 
     return ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta);
@@ -102,9 +102,9 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
 ParabolicCurvesND ReinterpolateNDFixedDuration(std::vector<ParabolicCurve> curves,
                                                std::vector<Real> vmVect, std::vector<Real> amVect, int maxIndex, Real delta) {
     int ndof = curves.size();
-    assert(ndof == (int) vmVect.size());
-    assert(ndof == (int) amVect.size());
-    assert(maxIndex < ndof);
+    BOOST_ASSERT(ndof == (int) vmVect.size());
+    BOOST_ASSERT(ndof == (int) amVect.size());
+    BOOST_ASSERT(maxIndex < ndof);
 
     ParabolicCurvesND curvesnd;
     Real newDuration = curves[maxIndex].duration;
@@ -127,11 +127,11 @@ ParabolicCurvesND ReinterpolateNDFixedDuration(std::vector<ParabolicCurve> curve
 ////////////////////////////////////////////////////////////////////////////////
 // Single DOF
 ParabolicCurve Interpolate1D(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, Real delta) {
-    assert(vm > 0);
-    assert(am > 0);
-    assert(delta > -epsilon);
-    assert(Abs(v0) < vm + epsilon);
-    assert(Abs(v1) < vm + epsilon);
+    BOOST_ASSERT(vm > 0);
+    BOOST_ASSERT(am > 0);
+    BOOST_ASSERT(delta > -epsilon);
+    BOOST_ASSERT(Abs(v0) < vm + epsilon);
+    BOOST_ASSERT(Abs(v1) < vm + epsilon);
     if (delta < 0) delta = 0;
     if (v0 > vm) v0 = vm;
     if (v1 > vm) v1 = vm;
@@ -142,13 +142,13 @@ ParabolicCurve Interpolate1D(Real x0, Real x1, Real v0, Real v1, Real vm, Real a
     }
     if (delta > 0) {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
     return ImposeVelocityLimit(curve, vm);
 }
 
 ParabolicCurve Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am) {
-    assert(am > 0);
+    BOOST_ASSERT(am > 0);
 
     // Check for the appropriate direction of the acceleration of the first ramp.
     Real d = x1 - x0;
@@ -193,20 +193,20 @@ ParabolicCurve Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, 
     Real t1 = (vp - v1)/a0;
     std::cout << str(boost::format("t0 = %.15e, t1 = %.15e")%t0 %t1) << std::endl;
     Ramp ramp0(v0, a0, t0, x0);
-    assert(FuzzyEquals(ramp0.v1, vp, epsilon));
+    BOOST_ASSERT(FuzzyEquals(ramp0.v1, vp, epsilon));
     Ramp ramp1(ramp0.v1, -a0, t1);
 
     std::vector<Ramp> ramps(2);
     ramps[0] = ramp0;
     ramps[1] = ramp1;
     ParabolicCurve curve(ramps);
-    assert(FuzzyEquals(curve.d, d, epsilon));
+    BOOST_ASSERT(FuzzyEquals(curve.d, d, epsilon));
     return curve;
 }
 
 ParabolicCurve ImposeVelocityLimit(ParabolicCurve curve, Real vm) {
-    assert(vm > 0);
-    assert(curve.ramps.size() == 2); // may remove this later
+    BOOST_ASSERT(vm > 0);
+    BOOST_ASSERT(curve.ramps.size() == 2); // may remove this later
 
     ParabolicCurve newCurve;
     if (curve.ramps[0].v0 > vm) {
@@ -226,7 +226,7 @@ ParabolicCurve ImposeVelocityLimit(ParabolicCurve curve, Real vm) {
 
     Real a0 = curve.ramps[0].a;
     Real h = Abs(vp) - vm;
-    assert(h > 0);
+    BOOST_ASSERT(h > 0);
     Real t = h/Abs(a0);
 
     std::vector<Ramp> ramps(3);
@@ -248,9 +248,9 @@ ParabolicCurve ImposeVelocityLimit(ParabolicCurve curve, Real vm) {
 }
 
 ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real am) {
-    assert(newDuration > curveIn.duration);
-    assert(vm > 0);
-    assert(am > 0);
+    BOOST_ASSERT(newDuration > curveIn.duration);
+    BOOST_ASSERT(vm > 0);
+    BOOST_ASSERT(am > 0);
 
     Real v0 = curveIn.ramps[0].v0;
     Real v1 = curveIn.ramps.back().v1;
@@ -282,7 +282,7 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     D = B/sum2;
     if (FuzzyZero(sum1, epsilon)) {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
     else if (sum1 > epsilon) {
         interval1.h = C;
@@ -292,7 +292,7 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     }
     if (FuzzyZero(sum2, epsilon)) {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
     else if (sum2 > epsilon) {
         interval2.l = D;
@@ -309,7 +309,7 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     Interval interval3, interval4;
     if (FuzzyZero(sum1, epsilon)) {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
     else if (sum1 > epsilon) {
         interval3.l = C + newDuration;
@@ -319,7 +319,7 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     }
     if (FuzzyZero(sum2, epsilon)) {
         // Not implemented yet
-        assert(false);
+        BOOST_ASSERT(false);
     }
     else if (sum2 > epsilon) {
         interval4.h = D + newDuration;
@@ -357,8 +357,8 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     Real t1 = newDuration - t0;
     Real a0 = A + (B/t0);
     Real a1 = A - (B/t1);
-    assert(am - Abs(a0) > epsilon);
-    assert(am - Abs(a1) > epsilon);
+    BOOST_ASSERT(am - Abs(a0) > epsilon);
+    BOOST_ASSERT(am - Abs(a1) > epsilon);
 
     Ramp ramp0(v0, a0, t0, curveIn.x0);
     Ramp ramp1(ramp0.v1, a1, t1);

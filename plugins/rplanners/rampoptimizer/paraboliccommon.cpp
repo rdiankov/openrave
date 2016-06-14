@@ -30,7 +30,7 @@
 
 #include "paraboliccommon.h"
 
-namespace ParabolicRampInternal {
+namespace RampOptimizerInternal {
 
 //a flag used during testing of failed ramps
 bool gSuppressSavingRamps = false;

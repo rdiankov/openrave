@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-using namespace ParabolicRampInternal;
+using namespace RampOptimizerInternal;
 
 Real RandomDouble(Real l, Real h) {
     assert(l <= h);
@@ -142,5 +142,6 @@ int main() {
     aMaxAskul[4] = 1.042064260990877e+01;
     aMaxAskul[5] = 1.405959717209913e+01;
 
-
+    std::cout << "vmax_askul = " << GenerateStringFromVector(vMaxAskul) << std::endl;
+    std::cout << "amax_askul = " << GenerateStringFromVector(aMaxAskul) << std::endl;
 }

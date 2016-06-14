@@ -12,7 +12,7 @@
 // int fast_expansion_sum_zeroelim(int elen, double* e, int flen, double* f, double* h);
 // }
 
-namespace RampOptimizerInternal { {
+namespace RampOptimizerInternal {
 
 // #define OpenRAVE::dReal Real
 // typedef double Real;
@@ -33,7 +33,10 @@ public:
     Real EvalAcc(Real t) const;
 
     void Initialize(Real v0, Real a, Real dur, Real x0=0);
-    void PrintInfo(std::string name="") const;
+    void PrintInfo(std::string name) const;
+    void PrintInfo() const {
+        PrintInfo("");
+    }
     void UpdateDuration(Real newDuration);
 
     // Members
@@ -65,12 +68,17 @@ public:
     bool IsEmpty() const {
         return ramps.size() == 0;
     }
-    void PrintInfo(std::string name="") const;
+    void PrintInfo(std::string name) const;
+    void PrintInfo() const {
+        PrintInfo("");
+    }
 
     // Members
     Real x0;
     Real duration;
     Real d;
+    Real v0;
+    Real v1;
     std::vector<Real> switchpointsList;
     std::vector<Ramp> ramps;
 
@@ -94,11 +102,17 @@ public:
     bool IsEmpty() const {
         return curves.size() == 0;
     }
-    void PrintInfo(std::string name="") const;
-
+    void PrintInfo(std::string name) const;
+    void PrintInfo() const {
+        PrintInfo("");
+    }
+    
     int ndof;
     Real duration;
     std::vector<Real> x0Vect;
+    std::vector<Real> dVect;
+    std::vector<Real> v0Vect;
+    std::vector<Real> v1Vect;
     std::vector<Real> switchpointsList;
     std::vector<ParabolicCurve> curves;
 

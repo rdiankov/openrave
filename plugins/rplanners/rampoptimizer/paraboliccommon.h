@@ -4,7 +4,7 @@
 
 #include <openrave/openrave.h>
 
-namespace ParabolicRampInternal {
+namespace RampOptimizerInternal {
 
 typedef OpenRAVE::dReal Real;
 typedef std::vector<Real> Vector;
