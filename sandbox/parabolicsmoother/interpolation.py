@@ -10,7 +10,7 @@ one = mp.mpf('1')
 number = mp.mpf
 
 def ConvertFloatArrayToMPF(a):
-    a_ = np.asarray([mp.mpf(str(x)) for x in a if type(x) is not mp.mpf])
+    a_ = np.asarray([mp.mpf("{:.16e}".format(x)) for x in a if type(x) is not mp.mpf])
     return a_
 
 
@@ -37,7 +37,7 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
     dVect = x1Vect - x0Vect
 
     if type(delta) is not mp.mpf:
-        delta = mp.mpf(str(delta))
+        delta = mp.mpf("{:.16e}".format(delta))
 
     vMin = inf # the tightest velocity bound
     aMin = inf # the tightest acceleration bound
@@ -92,7 +92,7 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
     dVect = x1Vect - x0Vect
 
     if type(delta) is not mp.mpf:
-        delta = mp.mpf(str(delta))
+        delta = mp.mpf("{:.16e}".format(delta))
 
     # First independently interpolate each DOF to find out the slowest one.
     curves = []
@@ -100,14 +100,14 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
     maxIndex = 0
     for i in xrange(ndof):
         if delta == zero:
-            curve = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i])
+            curve = Interpolate1D(x0Vect_[i], x1Vect_[i], v0Vect_[i], v1Vect_[i], vmVect_[i], amVect_)[i]
         else:
             raise NotImplementedError
         if curve.duration > maxDuration:
             maxDuration = curve.duration
             maxIndex = i        
 
-    curvesnd = ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta)
+    curvesnd = ReinterpolateNDFixedDuration(curves, vmVect_, amVect_, maxIndex, delta)
     return curvesnd
 
 
@@ -141,11 +141,11 @@ def ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta=zero):
 def _Stretch1D(curve, newDuration, vm, am):
     # Check types
     if type(newDuration) is not mp.mpf:
-        newDuration = mp.mpf(str(newDuration))
+        newDuration = mp.mpf("{:.16e}".format(newDuration))
     if type(vm) is not mp.mpf:
-        vm = mp.mpf(str(vm))
+        vm = mp.mpf("{:.16e}".format(vm))
     if type(am) is not mp.mpf:
-        am = mp.mpf(str(am))
+        am = mp.mpf("{:.16e}".format(am))
 
     # Check inputs
     assert(newDuration > curve.duration)
@@ -227,12 +227,16 @@ def _Stretch1D(curve, newDuration, vm, am):
     # interval8 = interval0 \cap interval7 : valid interval of t1 when considering all constraints (from a1 and a2)
     interval8 = iv.mpf([max(interval0.a, interval7.a), min(interval0.b, interval7.b)])
 
-    # from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+    # from IPython.terminal import embed
+    # ipshell = embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+    
     # We choose the value t1 (the duration of the first ramp) by selecting the mid point of the
     # valid interval of t1.
     
     # t1 = mp.convert(interval8.mid)
     t1 = _SolveForT1(A, B, newDuration, interval8)
+    if t1 is None:
+        return ParabolicCurve()
     t2 = Sub(newDuration, t1)
 
     a1 = Add(A, Mul(mp.fdiv(one, t1), B))
@@ -270,54 +274,6 @@ def _SolveForT1(A, B, t, tInterval):
         return realSols[0]
     
 
-def SolveQuartic(a, b, c, d, e):
-    """
-    SolveQuartic solves a quartic (fouth order) equation of the form
-            ax^4 + bx^3 + cx^2 + dx + e = 0.
-    For the detail of formulae presented here, see https://en.wikipedia.org/wiki/Quartic_function
-    """
-    # Check types
-    if type(a) is not mp.mpf:
-        a = mp.mpf(str(a))
-    if type(b) is not mp.mpf:
-        b = mp.mpf(str(b))
-    if type(c) is not mp.mpf:
-        c = mp.mpf(str(c))
-    if type(d) is not mp.mpf:
-        d = mp.mpf(str(d))
-    if type(e) is not mp.mpf:
-        e = mp.mpf(str(e))
-
-    """
-    # Working code
-    p = (8*a*c - 3*b*b)/(8*a*a)
-    q = (b**3 - 4*a*b*c + 8*a*a*d)/(8*a*a*a)
-    delta0 = c*c - 3*b*d + 12*a*e
-    delta1 = 2*(c**3) - 9*b*c*d + 27*b*b*e + 27*a*d*d - 72*a*c*e
-    Q = mp.nthroot(pointfive*(delta1 + mp.sqrt(delta1*delta1 - 4*mp.power(delta0, 3))), 3)
-    S = pointfive*mp.sqrt(-mp.fdiv(mp.mpf('2'), mp.mpf('3'))*p + (one/(3*a))*(Q + delta0/Q))
-
-    x1 = -b/(4*a) - S + pointfive*mp.sqrt(-4*S*S - 2*p + q/S)
-    x2 = -b/(4*a) - S - pointfive*mp.sqrt(-4*S*S - 2*p + q/S)
-    x3 = -b/(4*a) + S + pointfive*mp.sqrt(-4*S*S - 2*p - q/S)
-    x4 = -b/(4*a) + S - pointfive*mp.sqrt(-4*S*S - 2*p - q/S)
-    """
-    number = mp.mpf
-    p = mp.fdiv(Sub(Prod([number('8'), a, c]), Mul(number('3'), mp.power(b, 2))), Mul(number('8'), mp.power(a, 2)))
-    q = mp.fdiv(Sum([mp.power(b, 3), Prod([number('-4'), a, b, c]), Prod([number('8'), mp.power(a, 2), d])]), Mul(8, mp.power(a, 3)))
-    delta0 = Sum([mp.power(c, 2), Prod([number('-3'), b, d]), Prod([number('12'), a, e])])
-    delta1 = Sum([Mul(2, mp.power(c, 3)), Prod([number('-9'), b, c, d]), Prod([number('27'), mp.power(b, 2), e]), Prod([number('27'), a, mp.power(d, 2)]), Prod([number('-72'), a, c, e])])
-    Q = mp.nthroot(Mul(pointfive, Add(delta1, mp.sqrt(Add(mp.power(delta1, 2), Mul(number('-4'), mp.power(delta0, 3)))))), 3)
-    S = Mul(pointfive, mp.sqrt(Mul(mp.fdiv(mp.mpf('-2'), mp.mpf('3')), p) + Mul(mp.fdiv(one, Mul(number('3'), a)), Add(Q, mp.fdiv(delta0, Q)))))
-
-    x1 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)])))])
-    x2 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)]))))])
-    x3 = Sum([mp.fdiv(b, Mul(number('-4'), a)), S, Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), Neg(mp.fdiv(q, S))])))])
-    x4 = Sum([mp.fdiv(b, Mul(number('-4'), a)), S, Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), Neg(mp.fdiv(q, S))]))))])
-    
-    return [x1, x2, x3, x4]
-
-
 ####################################################################################################
 # Single DOF
 
@@ -325,17 +281,17 @@ def SolveQuartic(a, b, c, d, e):
 def Interpolate1D(x0, x1, v0, v1, vm, am, delta=zero):
     # Check types
     if type(x0) is not mp.mpf:
-        x0 = mp.mpf(str(x0))
+        x0 = mp.mpf("{:.16e}".format(x0))
     if type(x1) is not mp.mpf:
-        x1 = mp.mpf(str(x1))
+        x1 = mp.mpf("{:.16e}".format(x1))
     if type(v0) is not mp.mpf:
-        v0 = mp.mpf(str(v0))
+        v0 = mp.mpf("{:.16e}".format(v0))
     if type(v1) is not mp.mpf:
-        v1 = mp.mpf(str(v1))
+        v1 = mp.mpf("{:.16e}".format(v1))
     if type(vm) is not mp.mpf:
-        vm = mp.mpf(str(vm))
+        vm = mp.mpf("{:.16e}".format(vm))
     if type(am) is not mp.mpf:
-        am = mp.mpf(str(am))
+        am = mp.mpf("{:.16e}".format(am))
 
     # Check inputs
     assert(vm > zero)
@@ -353,15 +309,15 @@ def Interpolate1D(x0, x1, v0, v1, vm, am, delta=zero):
 def _Interpolate1DNoVelocityLimit(x0, x1, v0, v1, am):
     # Check types
     if type(x0) is not mp.mpf:
-        x0 = mp.mpf(str(x0))
+        x0 = mp.mpf("{:.16e}".format(x0))
     if type(x1) is not mp.mpf:
-        x1 = mp.mpf(str(x1))
+        x1 = mp.mpf("{:.16e}".format(x1))
     if type(v0) is not mp.mpf:
-        v0 = mp.mpf(str(v0))
+        v0 = mp.mpf("{:.16e}".format(v0))
     if type(v1) is not mp.mpf:
-        v1 = mp.mpf(str(v1))
+        v1 = mp.mpf("{:.16e}".format(v1))
     if type(am) is not mp.mpf:
-        am = mp.mpf(str(am))
+        am = mp.mpf("{:.16e}".format(am))
 
     # Check inputs
     assert(am > zero)
@@ -411,7 +367,7 @@ def _ImposeVelocityLimit(curve, vm):
     """
     # Check types
     if type(vm) is not mp.mpf:
-        vm = mp.mpf(str(vm))
+        vm = mp.mpf("{:.16e}".format(vm))
 
     # Check inputs
     assert(vm > zero)
@@ -459,3 +415,58 @@ def _ImposeVelocityLimit(curve, vm):
     return ParabolicCurve(ramps)
 
 
+####################################################################################################
+# Utilities
+
+def SolveQuartic(a, b, c, d, e):
+    """
+    SolveQuartic solves a quartic (fouth order) equation of the form
+            ax^4 + bx^3 + cx^2 + dx + e = 0.
+    For the detail of formulae presented here, see https://en.wikipedia.org/wiki/Quartic_function
+    """
+    # Check types
+    if type(a) is not mp.mpf:
+        a = mp.mpf("{:.16e}".format(a))
+    if type(b) is not mp.mpf:
+        b = mp.mpf("{:.16e}".format(b))
+    if type(c) is not mp.mpf:
+        c = mp.mpf("{:.16e}".format(c))
+    if type(d) is not mp.mpf:
+        d = mp.mpf("{:.16e}".format(d))
+    if type(e) is not mp.mpf:
+        e = mp.mpf("{:.16e}".format(e))
+
+    """
+    # Working code (more readable but probably less precise)
+    p = (8*a*c - 3*b*b)/(8*a*a)
+    q = (b**3 - 4*a*b*c + 8*a*a*d)/(8*a*a*a)
+    delta0 = c*c - 3*b*d + 12*a*e
+    delta1 = 2*(c**3) - 9*b*c*d + 27*b*b*e + 27*a*d*d - 72*a*c*e
+    Q = mp.nthroot(pointfive*(delta1 + mp.sqrt(delta1*delta1 - 4*mp.power(delta0, 3))), 3)
+    S = pointfive*mp.sqrt(-mp.fdiv(mp.mpf('2'), mp.mpf('3'))*p + (one/(3*a))*(Q + delta0/Q))
+
+    x1 = -b/(4*a) - S + pointfive*mp.sqrt(-4*S*S - 2*p + q/S)
+    x2 = -b/(4*a) - S - pointfive*mp.sqrt(-4*S*S - 2*p + q/S)
+    x3 = -b/(4*a) + S + pointfive*mp.sqrt(-4*S*S - 2*p - q/S)
+    x4 = -b/(4*a) + S - pointfive*mp.sqrt(-4*S*S - 2*p - q/S)
+    """
+    p = mp.fdiv(Sub(Prod([number('8'), a, c]), Mul(number('3'), mp.power(b, 2))), Mul(number('8'), mp.power(a, 2)))
+    q = mp.fdiv(Sum([mp.power(b, 3), Prod([number('-4'), a, b, c]), Prod([number('8'), mp.power(a, 2), d])]), Mul(8, mp.power(a, 3)))
+    delta0 = Sum([mp.power(c, 2), Prod([number('-3'), b, d]), Prod([number('12'), a, e])])
+    delta1 = Sum([Mul(2, mp.power(c, 3)), Prod([number('-9'), b, c, d]), Prod([number('27'), mp.power(b, 2), e]), Prod([number('27'), a, mp.power(d, 2)]), Prod([number('-72'), a, c, e])])
+    Q = mp.nthroot(Mul(pointfive, Add(delta1, mp.sqrt(Add(mp.power(delta1, 2), Mul(number('-4'), mp.power(delta0, 3)))))), 3)
+    S = Mul(pointfive, mp.sqrt(Mul(mp.fdiv(mp.mpf('-2'), mp.mpf('3')), p) + Mul(mp.fdiv(one, Mul(number('3'), a)), Add(Q, mp.fdiv(delta0, Q)))))
+
+    print "p = {0}".format(p)
+    print "q = {0}".format(q)
+    print "delta0 = {0}".format(delta0)
+    print "delta1 = {0}".format(delta1)
+    print "Q = {0}".format(Q)
+    print "S = {0}".format(S)
+
+    x1 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)])))])
+    x2 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)]))))])
+    x3 = Sum([mp.fdiv(b, Mul(number('-4'), a)), S, Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), Neg(mp.fdiv(q, S))])))])
+    x4 = Sum([mp.fdiv(b, Mul(number('-4'), a)), S, Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), Neg(mp.fdiv(q, S))]))))])
+    
+    return [x1, x2, x3, x4]

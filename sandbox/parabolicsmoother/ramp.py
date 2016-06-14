@@ -52,16 +52,16 @@ class Ramp(object):
     """
     def __init__(self, v0, a, dur, x0=zero):
         if type(dur) is not mp.mpf:
-            dur = mp.mpf(str(dur))
+            dur = mp.mpf("{:.16e}".format(dur))
         assert(dur > -epsilon)
 
         # Check types
         if type(x0) is not mp.mpf:
-            x0 = mp.mpf(str(x0))
+            x0 = mp.mpf("{:.16e}".format(x0))
         if type(v0) is not mp.mpf:
-            v0 = mp.mpf(str(v0))
+            v0 = mp.mpf("{:.16e}".format(v0))
         if type(a) is not mp.mpf:
-            a = mp.mpf(str(a))
+            a = mp.mpf("{:.16e}".format(a))
         
         self.x0 = x0
         self.v0 = v0
@@ -74,7 +74,7 @@ class Ramp(object):
 
     def UpdateDuration(self, newDur):
         if type(newDur) is not mp.mpf:
-            newDur = mp.mpf(str(newDur))
+            newDur = mp.mpf("{:.16e}".format(newDur))
         assert(newDur > -epsilon)
 
         self.duration = newDur
@@ -84,7 +84,7 @@ class Ramp(object):
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)        
 
@@ -94,7 +94,7 @@ class Ramp(object):
     
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -103,7 +103,7 @@ class Ramp(object):
 
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -141,6 +141,7 @@ class ParabolicCurve(object):
         if len(ramps) == 0:
             self.isEmpty = True
             self.x0 = zero
+            self.v0 = zero
             self.switchpointsList = []
             self.duration = dur
             self.d = d
@@ -148,6 +149,7 @@ class ParabolicCurve(object):
             ramps_ = ramps[:]
             self.isEmpty = False
             self.x0 = ramps_[0].x0
+            self.v0 = ramps_[0].v0
             self.switchpointsList.append(dur)
             for ramp in ramps_:
                 self.ramps.append(ramp)
@@ -223,7 +225,7 @@ class ParabolicCurve(object):
 
 
     def _FindRampIndex(self, t):
-        # t = mp.mpf(str(t))
+        # t = mp.mpf("{:.16e}".format(t))
         # assert(t > -epsilon)
         # assert(t < self.duration + epsilon)
 
@@ -238,7 +240,7 @@ class ParabolicCurve(object):
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -248,7 +250,7 @@ class ParabolicCurve(object):
 
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -258,7 +260,7 @@ class ParabolicCurve(object):
 
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -277,7 +279,7 @@ class ParabolicCurve(object):
         Return True if the operation is successful, False otherwise.
         """
         if type(deltaT) is not mp.mpf:
-            dt = mp.mpf(str(deltaT))
+            dt = mp.mpf("{:.16e}".format(deltaT))
         else:
             dt = deltaT
         if dt > self.duration:
@@ -421,7 +423,7 @@ class ParabolicCurvesND(object):
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -431,7 +433,7 @@ class ParabolicCurvesND(object):
 
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -441,7 +443,7 @@ class ParabolicCurvesND(object):
 
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf(str(t))
+            t = mp.mpf("{:.16e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -501,4 +503,15 @@ class ParabolicCurvesND(object):
 # end class ParabolicCurvesND
 
     
-        
+################################################################################
+# Utilities (for checking)
+def CheckRamp(ramp, vm, am, **kwargs):
+    pass
+
+
+def CheckParabolicCurve(curve, vm, am, **kwargs):
+    pass
+
+
+def CheckParabolicCurvesND(curvesnd, vmVect, amVect, **kwargs):
+    pass
