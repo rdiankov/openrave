@@ -429,6 +429,7 @@ private:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            query.bselfCollision = true;  // for ignoring attached information!
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
             return query._bCollision;
         }
