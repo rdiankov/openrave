@@ -91,6 +91,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
     debugLevelDebugAct = NULL;
     debugLevelVerboseAct = NULL;
+    _projectionMode = "perspective";
 
     //
     // read viewer parameters
@@ -1200,11 +1201,13 @@ void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
     {
         _qactPerspectiveView->setChecked(true);
         _posgWidget->SetViewType(true);
+        _projectionMode = "orthogonal";
     }
     else
     {
         _qactPerspectiveView->setChecked(false);
         _posgWidget->SetViewType(false);
+        _projectionMode = "perspective";
     }
 }
 
@@ -1298,10 +1301,18 @@ void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 
     _SetCameraTransform();
     _UpdateCameraTransform(0);
+
+    // whenever camera transform is set manually
+    // force refresh the view type in order to trigger setProjectionMatrixAsOrtho
+    // because orbit manipulator does not work with orthogonal mode right now
+    _SetProjectionMode(_projectionMode);
 }
 
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
+    // disable tracking when camera transform is manually set
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
 }
 

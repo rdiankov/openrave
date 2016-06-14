@@ -497,6 +497,8 @@ public:
 
     bool _bRenderFiguresInCamera;
 
+    std::string _projectionMode; ///< last set projection mode, either "perspective" or "orthogonal"
+
     friend class ItemSelectionCallbackData;
     friend class ViewerThreadCallbackData;
     friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);

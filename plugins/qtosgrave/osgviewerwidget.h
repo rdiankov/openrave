@@ -202,6 +202,7 @@ protected:
 
     bool _bLightOn; ///< whether lights are on or not
     bool _bIsSelectiveActive; ///< if true, then can select a new
+    double _zNear; ///< remember zNear when switching from perspective to orthogonal view
 };
 
 }

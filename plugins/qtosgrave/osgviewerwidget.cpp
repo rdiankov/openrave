@@ -281,6 +281,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _bIsSelectiveActive = false;
     _osgview = new osgViewer::View();
     _osghudview = new osgViewer::View();
+    _zNear = 0.1;
 
     //  Improve FPS to 60 per viewer
     setThreadingModel(osgViewer::CompositeViewer::CullDrawThreadPerContext);
@@ -745,17 +746,16 @@ void ViewerWidget::SetNearPlane(double nearplane)
 
 double ViewerWidget::GetCameraNearPlane()
 {
-    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
-        // orthogonal
-        double left, right, bottom, top, zNear, zFar;
-        _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
-        return zNear;
-    }
-    else {
+    // because internally in osg, znear is updated according to the scene by the cull visitor
+    // it can sometimes get negative which breaks the perspective view
+    // hence we save the last known znear value for perspective mode
+    if( _osgview->getCamera()->getProjectionMatrix()(2,3) != 0 ) {
+        // perspective
         double fovy, aspectRatio, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
-        return zNear;
+        _zNear = zNear;
     }
+    return _zNear;
 }
 
 void ViewerWidget::SetViewType(int isorthogonal)
