@@ -2703,10 +2703,10 @@ class JointInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
+        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
-        r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
+        r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
         r._name = state[0][1];
         r._linkname0 = state[0][2];
         r._linkname1 = state[0][3];
@@ -2820,6 +2820,22 @@ void init_openravepy_kinbody()
                                        .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
+    ;
+
+    object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
+                       .value("None",KinBody::JointNone)
+                       .value("Hinge",KinBody::JointHinge)
+                       .value("Revolute",KinBody::JointRevolute)
+                       .value("Slider",KinBody::JointSlider)
+                       .value("Prismatic",KinBody::JointPrismatic)
+                       .value("RR",KinBody::JointRR)
+                       .value("RP",KinBody::JointRP)
+                       .value("PR",KinBody::JointPR)
+                       .value("PP",KinBody::JointPP)
+                       .value("Universal",KinBody::JointUniversal)
+                       .value("Hinge2",KinBody::JointHinge2)
+                       .value("Spherical",KinBody::JointSpherical)
+                       .value("Trajectory",KinBody::JointTrajectory)
     ;
 
     object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
@@ -3068,21 +3084,7 @@ void init_openravepy_kinbody()
         .value("Enabled",KinBody::AO_Enabled)
         .value("ActiveDOFs",KinBody::AO_ActiveDOFs)
         ;
-        object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
-                           .value("None",KinBody::JointNone)
-                           .value("Hinge",KinBody::JointHinge)
-                           .value("Revolute",KinBody::JointRevolute)
-                           .value("Slider",KinBody::JointSlider)
-                           .value("Prismatic",KinBody::JointPrismatic)
-                           .value("RR",KinBody::JointRR)
-                           .value("RP",KinBody::JointRP)
-                           .value("PR",KinBody::JointPR)
-                           .value("PP",KinBody::JointPP)
-                           .value("Universal",KinBody::JointUniversal)
-                           .value("Hinge2",KinBody::JointHinge2)
-                           .value("Spherical",KinBody::JointSpherical)
-                           .value("Trajectory",KinBody::JointTrajectory)
-        ;
+        kinbody.attr("JointType") = jointtype;
         kinbody.attr("LinkInfo") = linkinfo;
         kinbody.attr("GeometryInfo") = geometryinfo;
         kinbody.attr("JointInfo") = jointinfo;
