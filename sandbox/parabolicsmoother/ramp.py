@@ -46,6 +46,16 @@ def Sum(A):
     assert(len(A) > 0)
     return mp.fsum(A)
 
+def ConvertFloatToMPF(a):
+    if type(a) is not mp.mpf:
+        return mp.mpf("{:.15e}".format(a))
+    else:
+        return a
+
+def ConvertFloatArrayToMPF(a):
+    a_ = np.asarray([mp.mpf("{:.15e}".format(x)) for x in a if type(x) is not mp.mpf])
+    return a_
+
 
 class Ramp(object):
     """
@@ -159,14 +169,16 @@ class ParabolicCurve(object):
         else:
             self.ramps = ramps[:] # copy all the ramps
             self.isEmpty = False
-            self.SetInitialValue(self.ramps[0].x0) # set self.x0 and self.d
+            self.SetInitialValue(self.ramps[0].x0) # set self.x0
             self.v0 = self.ramps[0].v0
             
             self.switchpointsList.append(dur)
             for ramp in self.ramps:
                 dur = Add(dur, ramp.duration)
                 self.switchpointsList.append(dur)
+                d = Add(d, ramp.d)
             self.duration = dur
+            self.d = d
 
 
     def __getitem__(self, index):
@@ -274,12 +286,13 @@ class ParabolicCurve(object):
 
 
     def SetInitialValue(self, x0):
+        if type(x0) is not mp.mpf:
+            x0 = mp.mpf("{:.15e}".format(x0))
         self.x0 = x0
-        d = 0
+        newx0 = x0
         for ramp in self.ramps:
-            ramp.x0 = d
-            d = Add(d, ramp.d)
-        self.d = d
+            ramp.x0 = newx0
+            newx0 = Add(newx0, ramp.d)
     
 
     def Trim(self, deltaT):
@@ -442,6 +455,13 @@ class ParabolicCurvesND(object):
             self.switchpointsList.extend(newSwitchpoints)
 
 
+    def SetInitialValues(self, x0Vect):
+        x0Vect_ = ConvertFloatArrayToMPF(x0Vect)
+        self.x0Vect = np.array(x0Vect_)
+        for (i, curve) in enumerate(self.curves):
+            curve.SetInitialValue(self.x0Vect[i])
+            
+
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
@@ -526,13 +546,143 @@ class ParabolicCurvesND(object):
     
 ################################################################################
 # Utilities (for checking)
-def CheckRamp(ramp, vm, am, **kwargs):
-    pass
+_printInfo = True
+def FuzzyEquals(a, b, eps):
+    return Abs(Sub(a, b)) < eps
+
+def CheckRamp(rampIn, vm, am, **kwargs):
+    x0passed = True
+    x1passed = True
+    v0passed = True
+    v1passed = True
+    vboundpassed = True
+    aboundpassed = True
+    dpassed = True
+    if kwargs.has_key('x0'):
+        x0 = ConvertFloatToMPF(kwargs['x0'])
+        x0passed = FuzzyEquals(rampIn.x0, x0, epsilon)
+        if _printInfo and (not x0passed):
+            print "CheckRamp: check x0 failed"
+    if kwargs.has_key('x1'):
+        x1 = ConvertFloatToMPF(kwargs['x1'])
+        x1passed = FuzzyEquals(rampIn.Eval(rampIn.duration), kwargs['x1'], epsilon)
+        if _printInfo and (not x1passed):
+            print "CheckRamp: check x1 failed"
+    if kwargs.has_key('v0'):
+        v0 = ConvertFloatToMPF(kwargs['v0'])
+        v0passed = FuzzyEquals(rampIn.v0, kwargs['v0'], epsilon)
+        if _printInfo and (not v0passed):
+            print "CheckRamp: check v0 failed"
+    if kwargs.has_key('v1'):
+        v0 = ConvertFloatToMPF(kwargs['v1'])
+        v1passed = FuzzyEquals(rampIn.v0, kwargs['v1'], epsilon)
+        if _printInfo and (not v1passed):
+            print "CheckRamp: check v1 failed"
+    if kwargs.has_key('d'):
+        v0 = ConvertFloatToMPF(kwargs['d'])
+        dpassed = FuzzyEquals(rampIn.v0, kwargs['d'], epsilon)
+        if _printInfo and (not dpassed):
+            print "CheckRamp: check d failed"
+    vm = ConvertFloatToMPF(vm)
+    vboundpassed = ((Abs(rampIn.v0) < vm + epsilon) and (Abs(rampIn.v1) < vm + epsilon))
+    if _printInfo and (not vboundpassed):
+        print "CheckRamp: check v-bound failed"
+    am = ConvertFloatToMPF(am)
+    aboundpassed = (Abs(rampIn.a) < am + epsilon)
+    if _printInfo and (not aboundpassed):
+        print "CheckRamp: check a-bound failed"
+    result = x0passed and x1passed and v0passed and v1passed and vboundpassed and aboundpassed and dpassed
+    return result
 
 
 def CheckParabolicCurve(curve, vm, am, **kwargs):
-    pass
+    allRampsPassed = True
+    x0passed = True
+    x1passed = True
+    v0passed = True
+    durationpassed = True
+    dpassed = True
+    nRamps = len(curve)
+    print "{0:.15e}, {1:.15e}".format(vm, am)
+    for i in xrange(nRamps):
+        # Check velocity continuity as well as velocity and acceleration bounds
+        if i == 0:
+            if kwargs.has_key('v0'):
+                v0 = ConvertFloatToMPF(kwargs['v0'])
+                allRampsPassed = allRampsPassed and CheckRamp(curve[i], vm, am, v0=v0)
+            else:
+                allRampsPassed = allRampsPassed and CheckRamp(curve[i], vm, am)
+        else:
+            allRampsPassed = allRampsPassed and CheckRamp(curve[i], vm, am, v0=curve[i - 1].v1)
+        if _printInfo and (not allRampsPassed):
+            print "CheckParabolicCurve: Check Ramp {0} failed".format(i)
+
+    if kwargs.has_key('x0'):
+        # Check initial condition
+        x0 = ConvertFloatToMPF(kwargs['x0'])
+        x0passed = FuzzyEquals(curve[0].x0, x0, epsilon) and FuzzyEquals(curve.x0, x0, epsilon)
+        if _printInfo and (not x0passed):
+            print "CheckParabolicCurve: check x0 failed"
+    if kwargs.has_key('x1'):
+        # Check initial condition
+        x1 = ConvertFloatToMPF(kwargs['x1'])
+        x1passed = (FuzzyEquals(curve[0].EvalPos(curve[0].duration), x0, epsilon) and
+                    FuzzyEquals(curve.EvalPos(curve.duration), x0, epsilon))
+        if _printInfo and (not x1passed):
+            print "CheckParabolicCurve: check x1 failed"
+    if kwargs.has_key('v0'):
+        # Check initial velocity (of this Curve)
+        v0passed = FuzzyEquals(curve.v0, v0, epsilon)
+        if _printInfo and (not v0passed):
+            print "CheckParabolicCurve: check v0 failed"
+    if kwargs.has_key('duration'):
+        # Check duration
+        duration = ConvertFloatToMPF(kwargs['duration'])
+        durationpassed = FuzzyEquals(curve.duration, duration, epsilon)
+        if _printInfo and (not durationpassed):
+            print "CheckParabolicCurve: check duration failed"
+    if kwargs.has_key('d'):
+        # Check displacement
+        d = ConvertFloatToMPF(kwargs['d'])
+        dpassed = FuzzyEquals(curve.d, d, epsilon)
+        if _printInfo and (not dpassed):
+            print "CheckParabolicCurve: check displacement failed"
+
+    result = allRampsPassed and x0passed and v0passed and durationpassed and dpassed
+    return result
 
 
 def CheckParabolicCurvesND(curvesnd, vmVect, amVect, **kwargs):
-    pass
+    allCurvesPassed = True
+    durationpassed = True
+
+    newkwargs = dict() # for passing to CheckParabolicCurve
+    hasx0Vect = kwargs.has_key('x0Vect')
+    if hasx0Vect:
+        x0Vect = ConvertFloatArrayToMPF(kwargs['x0Vect'])
+    hasx1Vect = kwargs.has_key('x1Vect')
+    if hasx1Vect:
+        x1Vect = ConvertFloatArrayToMPF(kwargs['x1Vect'])
+    hasdVect = kwargs.has_key('dVect')
+    if hasdVect:
+        dVect = ConvertFloatArrayToMPF(kwargs['dVect'])
+
+    ndof = curvesnd.ndof
+    for i in xrange(ndof):
+        if hasx0Vect:
+            newkwargs['x0'] = x0Vect[i]
+        if hasx1Vect:
+            newkwargs['x1'] = x1Vect[i]
+        if hasdVect:
+            newkwargs['d'] = dVect[i]
+        allCurvesPassed = allCurvesPassed and CheckParabolicCurve(curvesnd[i], vmVect[i], amVect[i], kwargs=newkwargs)
+        if _printInfo and (not allCurvesPassed):
+            print "CheckParabolicCurvesND: DOF {0} failed".format(i)
+        if not allCurvesPassed:
+            return False
+        durationpassed = durationpassed and FuzzyEquals(curvesnd.duration, curvesnd[i].duration, epsilon)
+        if _printInfo and (not durationpassed):
+            print "CheckParabolicCurvesND: DOF {0} duration failed".format(i)
+
+    result = allCurvesPassed and durationpassed
+    return result

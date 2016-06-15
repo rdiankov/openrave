@@ -2,16 +2,13 @@ from mpmath import mp, iv, arange
 import numpy as np
 
 from ramp import Ramp, ParabolicCurve, ParabolicCurvesND
+from ramp import ConvertFloatArrayToMPF
 from ramp import zero, pointfive, epsilon
 from ramp import Add, Abs, IsEqual, Mul, Neg, Prod, Sub, Sum
 
 inf = mp.inf
 one = mp.mpf('1')
 number = mp.mpf
-
-def ConvertFloatArrayToMPF(a):
-    a_ = np.asarray([mp.mpf("{:.15e}".format(x)) for x in a if type(x) is not mp.mpf])
-    return a_
 
 
 ####################################################################################################
@@ -102,13 +99,16 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
     maxIndex = 0
     for i in xrange(ndof):
         if delta == zero:
-            curve = Interpolate1D(x0Vect_[i], x1Vect_[i], v0Vect_[i], v1Vect_[i], vmVect_[i], amVect_)[i]
+            curve = Interpolate1D(x0Vect_[i], x1Vect_[i], v0Vect_[i], v1Vect_[i], vmVect_[i], amVect_[i])
         else:
             raise NotImplementedError
+        curves.append(curve)
         if curve.duration > maxDuration:
             maxDuration = curve.duration
             maxIndex = i        
 
+    ## TEMPORARY
+    print "maxIndex = {0}".format(maxIndex)
     curvesnd = ReinterpolateNDFixedDuration(curves, vmVect_, amVect_, maxIndex, delta)
     return curvesnd
 
@@ -405,13 +405,13 @@ def _ImposeVelocityLimit(curve, vm):
         
     nom = h**2
     denom = Mul(Abs(curve[0].a), vm)
-    newRamp1 = Ramp(vm, zero, Sum([t, t, mp.fdiv(nom, denom)]), newRamp0.x0)
+    newRamp1 = Ramp(Mul(mp.sign(vp), vm), zero, Sum([t, t, mp.fdiv(nom, denom)]), newRamp0.x0)
     ramps.append(newRamp1)
 
     if IsEqual(Abs(ramp1.v1), vm):
         assert(IsEqual(ramp1.duration, t)) # check soundness
     else:
-        newRamp2 = Ramp(vm, ramp1.a, Sub(ramp1.duration, t))
+        newRamp2 = Ramp(Mul(mp.sign(vp), vm), ramp1.a, Sub(ramp1.duration, t))
         ramps.append(newRamp2)
 
     return ParabolicCurve(ramps)
