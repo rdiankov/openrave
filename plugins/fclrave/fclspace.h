@@ -561,6 +561,7 @@ public:
             }
         }
         _envManagerInstance.reset();
+        _cachedpinfo->clear();
     }
 
     bool HasMultipleGeometries(LinkConstPtr plink) {
