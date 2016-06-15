@@ -2621,7 +2621,7 @@ class GeometryInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, boost::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
         int num = len(state);
@@ -2632,7 +2632,7 @@ public:
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
-        r._type = boost::python::extract<GeometryType>(state[5]);
+        r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
         r._filenamerender = state[6];
         r._filenamecollision = state[7];
         r._vRenderScale = state[8];
@@ -2658,13 +2658,14 @@ public:
         r._t = state[2];
         r._tMassFrame = state[3];
         r._mass = boost::python::extract<dReal>(state[4]);
-        r._mapFloatParameters = dict(state[5]);
-        r._mapIntParameters = dict(state[6]);
-        r._vForcedAdjacentLinks = dict(state[7]);
-        r._bStatic = boost::python::extract<bool>(state[8]);
-        r._bIsEnabled = boost::python::extract<bool>(state[9]);
-        if( num > 10 ) {
-            r._mapStringParameters = dict(state[10]);
+        r._vinertiamoments = state[5];
+        r._mapFloatParameters = dict(state[6]);
+        r._mapIntParameters = dict(state[7]);
+        r._vForcedAdjacentLinks = dict(state[8]);
+        r._bStatic = boost::python::extract<bool>(state[9]);
+        r._bIsEnabled = boost::python::extract<bool>(state[10]);
+        if( num > 11 ) {
+            r._mapStringParameters = dict(state[11]);
         }
     }
 };
@@ -2819,6 +2820,69 @@ void init_openravepy_kinbody()
                                        .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
                                        .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
+    ;
+
+    object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
+                          .def_readwrite("_t",&PyGeometryInfo::_t)
+                          .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
+                          .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
+                          .def_readwrite("_vGeomData3",&PyGeometryInfo::_vGeomData3)
+                          .def_readwrite("_vDiffuseColor",&PyGeometryInfo::_vDiffuseColor)
+                          .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
+                          .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
+                          .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
+                          .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
+                          .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
+                          .def_readwrite("_vCollisionScale",&PyGeometryInfo::_vCollisionScale)
+                          .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
+                          .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
+                          .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
+                          .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
+                          .def_pickle(GeometryInfo_pickle_suite())
+    ;
+    object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
+                      .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
+                      .def_readwrite("_name",&PyLinkInfo::_name)
+                      .def_readwrite("_t",&PyLinkInfo::_t)
+                      .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
+                      .def_readwrite("_mass",&PyLinkInfo::_mass)
+                      .def_readwrite("_vinertiamoments",&PyLinkInfo::_vinertiamoments)
+                      .def_readwrite("_mapFloatParameters",&PyLinkInfo::_mapFloatParameters)
+                      .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
+                      .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
+                      .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
+                      .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
+                      .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
+                      .def_pickle(LinkInfo_pickle_suite())
+    ;
+    object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
+                       .def_readwrite("_type",&PyJointInfo::_type)
+                       .def_readwrite("_name",&PyJointInfo::_name)
+                       .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
+                       .def_readwrite("_linkname1",&PyJointInfo::_linkname1)
+                       .def_readwrite("_vanchor",&PyJointInfo::_vanchor)
+                       .def_readwrite("_vaxes",&PyJointInfo::_vaxes)
+                       .def_readwrite("_vcurrentvalues",&PyJointInfo::_vcurrentvalues)
+                       .def_readwrite("_vresolution",&PyJointInfo::_vresolution)
+                       .def_readwrite("_vmaxvel",&PyJointInfo::_vmaxvel)
+                       .def_readwrite("_vhardmaxvel",&PyJointInfo::_vhardmaxvel)
+                       .def_readwrite("_vmaxaccel",&PyJointInfo::_vmaxaccel)
+                       .def_readwrite("_vmaxtorque",&PyJointInfo::_vmaxtorque)
+                       .def_readwrite("_vmaxinertia",&PyJointInfo::_vmaxinertia)
+                       .def_readwrite("_vweights",&PyJointInfo::_vweights)
+                       .def_readwrite("_voffsets",&PyJointInfo::_voffsets)
+                       .def_readwrite("_vlowerlimit",&PyJointInfo::_vlowerlimit)
+                       .def_readwrite("_vupperlimit",&PyJointInfo::_vupperlimit)
+                       .def_readwrite("_trajfollow",&PyJointInfo::_trajfollow)
+                       .def_readwrite("_vmimic",&PyJointInfo::_vmimic)
+                       .def_readwrite("_mapFloatParameters",&PyJointInfo::_mapFloatParameters)
+                       .def_readwrite("_mapIntParameters",&PyJointInfo::_mapIntParameters)
+                       .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
+                       .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
+                       .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
+                       .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
+                       .def_pickle(JointInfo_pickle_suite())
     ;
 
     {
@@ -3019,68 +3083,9 @@ void init_openravepy_kinbody()
                            .value("Spherical",KinBody::JointSpherical)
                            .value("Trajectory",KinBody::JointTrajectory)
         ;
-        object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
-                              .def_readwrite("_t",&PyGeometryInfo::_t)
-                              .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
-                              .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
-                              .def_readwrite("_vGeomData3",&PyGeometryInfo::_vGeomData3)
-                              .def_readwrite("_vDiffuseColor",&PyGeometryInfo::_vDiffuseColor)
-                              .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
-                              .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
-                              .def_readwrite("_type",&PyGeometryInfo::_type)
-                              .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
-                              .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
-                              .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
-                              .def_readwrite("_vCollisionScale",&PyGeometryInfo::_vCollisionScale)
-                              .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
-                              .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
-                              .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
-                              .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
-                              .def_pickle(GeometryInfo_pickle_suite())
-        ;
-        object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
-                          .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
-                          .def_readwrite("_name",&PyLinkInfo::_name)
-                          .def_readwrite("_t",&PyLinkInfo::_t)
-                          .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
-                          .def_readwrite("_mass",&PyLinkInfo::_mass)
-                          .def_readwrite("_vinertiamoments",&PyLinkInfo::_vinertiamoments)
-                          .def_readwrite("_mapFloatParameters",&PyLinkInfo::_mapFloatParameters)
-                          .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
-                          .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
-                          .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
-                          .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
-                          .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
-                          .def_pickle(LinkInfo_pickle_suite())
-        ;
-        object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
-                           .def_readwrite("_type",&PyJointInfo::_type)
-                           .def_readwrite("_name",&PyJointInfo::_name)
-                           .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
-                           .def_readwrite("_linkname1",&PyJointInfo::_linkname1)
-                           .def_readwrite("_vanchor",&PyJointInfo::_vanchor)
-                           .def_readwrite("_vaxes",&PyJointInfo::_vaxes)
-                           .def_readwrite("_vcurrentvalues",&PyJointInfo::_vcurrentvalues)
-                           .def_readwrite("_vresolution",&PyJointInfo::_vresolution)
-                           .def_readwrite("_vmaxvel",&PyJointInfo::_vmaxvel)
-                           .def_readwrite("_vhardmaxvel",&PyJointInfo::_vhardmaxvel)
-                           .def_readwrite("_vmaxaccel",&PyJointInfo::_vmaxaccel)
-                           .def_readwrite("_vmaxtorque",&PyJointInfo::_vmaxtorque)
-                           .def_readwrite("_vmaxinertia",&PyJointInfo::_vmaxinertia)
-                           .def_readwrite("_vweights",&PyJointInfo::_vweights)
-                           .def_readwrite("_voffsets",&PyJointInfo::_voffsets)
-                           .def_readwrite("_vlowerlimit",&PyJointInfo::_vlowerlimit)
-                           .def_readwrite("_vupperlimit",&PyJointInfo::_vupperlimit)
-                           .def_readwrite("_trajfollow",&PyJointInfo::_trajfollow)
-                           .def_readwrite("_vmimic",&PyJointInfo::_vmimic)
-                           .def_readwrite("_mapFloatParameters",&PyJointInfo::_mapFloatParameters)
-                           .def_readwrite("_mapIntParameters",&PyJointInfo::_mapIntParameters)
-                           .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
-                           .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
-                           .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
-                           .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
-                           .def_pickle(JointInfo_pickle_suite())
-        ;
+        kinbody.attr("LinkInfo") = linkinfo;
+        kinbody.attr("GeometryInfo") = geometryinfo;
+        kinbody.attr("JointInfo") = jointinfo;
         {
             scope link = class_<PyLink, boost::shared_ptr<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
                          .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
