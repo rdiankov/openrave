@@ -177,6 +177,7 @@ class ParabolicCurve(object):
             if not curve.isEmpty:
                 self.ramps = curve.ramps[:]
                 self.x0 = curve.x0
+                self.v0 = curve.v0
                 self.switchpointsList = curve.switchpointsList[:]
                 self.isEmpty = False
                 self.duration = curve.duration
@@ -267,6 +268,15 @@ class ParabolicCurve(object):
         i, remainder = self._FindRampIndex(t)
         return self.ramps[i].EvalAcc(remainder)
 
+
+    def SetInitialValue(self, x0):
+        self.x0 = x0
+        d = x0
+        for ramp in self.ramps:
+            ramp.x0 = d
+            d = Add(d, ramp.d)
+        self.d = d
+    
 
     def Trim(self, deltaT):
         """

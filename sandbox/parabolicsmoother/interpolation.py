@@ -67,6 +67,8 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
             curve = ParabolicCurve([ramp])
             curves[j].Append(curve)
 
+    for (i, curve) in enumerate(curves):
+        curve.SetInitialValue(x0Vect[i])        
     curvesnd = ParabolicCurvesND(curves)
 
     return curvesnd
