@@ -15,6 +15,10 @@ namespace fclrave {
 #define START_TIMING_OPT(statistics, label, options, isRobot);           \
     START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
 
+#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
+static EnvironmentMutex log_collision_use_mutex;
+#endif
+
 typedef FCLSpace::KinBodyInfoConstPtr KinBodyInfoConstPtr;
 typedef FCLSpace::KinBodyInfoPtr KinBodyInfoPtr;
 
@@ -159,6 +163,25 @@ public:
     virtual ~FCLCollisionChecker() {
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s destroyed in env %d", _userdatakey%GetEnv()->GetId());
         DestroyEnvironment();
+
+#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
+        EnvironmentMutex::scoped_lock lock(log_collision_use_mutex);
+
+        FOREACH(itpair, _currentlyused) {
+          if(itpair->second > 0) {
+            _usestatistics[itpair->first][itpair->second]++;
+          }
+        }
+        std::fstream f("fclrave_collision_use.log", std::fstream::app | std::fstream::out);
+        FOREACH(itpair, _usestatistics) {
+          f << GetEnv()->GetId() << "|" << _userdatakey << "|" << itpair->first;
+          FOREACH(itintpair, itpair->second) {
+            f << "|" << itintpair->first << ";" << itintpair->second;
+          }
+          f << std::endl;
+        }
+        f.close();
+#endif
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -485,23 +508,18 @@ public:
 
             // TODO : consider testing this before the env
             // The robots are not contained in the envManager, we need to consider them separately
-            if( !query._bStopChecking ) {
-                // TODO : precompute the list of robots
-                FOREACH(itbody, _fclspace->GetEnvBodies() ) {
-                    if( (*itbody)->IsRobot() ) {
+            FOREACH(itbody, _fclspace->GetEnvRobots()) {
+              if( query._bStopChecking ) {
+                return query._bCollision;
+              }
 
-                        if( (*itbody)->IsAttached(plink->GetParent()) ) {
-                            continue;
-                        }
-                        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-                        BroadPhaseCollisionManagerPtr robotManager = GetBodyManager(*itbody, false);
-                        robotManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+              if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
+                continue;
+              }
+              // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+              BroadPhaseCollisionManagerPtr robotManager = GetBodyManager(*itbody, false);
+              robotManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
 
-                        if( query._bStopChecking ) {
-                            return query._bCollision;
-                        }
-                    }
-                }
             }
 
             return query._bCollision;
@@ -535,22 +553,17 @@ public:
             envManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
 
             // The robots are not contained in the envManager, we need to consider them separately
-            if( !query._bStopChecking ) {
-                FOREACH(itbody, _fclspace->GetEnvBodies() ) {
-                    if( (*itbody)->IsRobot() ) {
+            FOREACH(itbody, _fclspace->GetEnvRobots()) {
+              if( query._bStopChecking ) {
+                return query._bCollision;
+              }
 
-                        if( (*itbody)->IsAttached(pbody) ) {
-                            continue;
-                        }
-                        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-                        BroadPhaseCollisionManagerPtr robotManager = GetBodyManager(*itbody, false);
-                        robotManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
-
-                        if( query._bStopChecking ) {
-                            return query._bCollision;
-                        }
-                    }
-                }
+              if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(pbody) ) {
+                continue;
+              }
+              // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+              BroadPhaseCollisionManagerPtr robotManager = GetBodyManager(*itbody, false);
+              robotManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             }
 
             return query._bCollision;
@@ -923,6 +936,19 @@ private:
 
         ManagerInstancePtr envManagerInstance = _fclspace->GetEnvManagerInstance();
 
+#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
+        FOREACH(itbody, _fclspace->GetEnvExcludiedBodies()) {
+          FOREACH(itpLINK, _fclspace->GetInfo(*itbody)->vlinks) {
+            fcl::CollisionObject* pcoll = (*itpLINK)->plinkBV->second.get();
+            int& n = _currentlyused[pcoll];
+            if( n > 0 ) {
+              _usestatistics[pcoll][n]++;
+            }
+            n = 0;
+          }
+        }
+#endif
+
         if( !envManagerInstance ) {
 
             RAVELOG_VERBOSE_FORMAT("FCL COLLISION : Rebuilding env manager (env = %d)", GetEnv()->GetId());
@@ -978,8 +1004,42 @@ private:
                                                                      }));
             _fclspace->SetEnvExcludiedBodiesId(sexcludedbodies);
 
+#ifndef FCLRAVE_COLLISION_OBJECTS_STATISTICS
             UpdateManagerInstance(envManagerInstance);
+#else
+            FOREACH(itWkbodyStampPair, envManagerInstance->vUpdateStamps) {
+              KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+              if( !!pbody ) {
+                KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+                if( !!pinfo && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                  itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                  FOREACH(itlink, pbody->GetLinks()) {
+                    if( (*itlink)->IsEnabled() ) {
+                      // Do not forget to setup the manager at the end since we are deactivating the automatic setup there
+                      envManagerInstance->pmanager->update(GetLinkBV(pinfo, (*itlink)->GetIndex()).get(), false);
+                      fcl::CollisionObject* pcoll = GetLinkBV(pinfo, (*itlink)->GetIndex()).get();
+                      int& n = _currentlyused[pcoll];
+                      if( n > 0 ) {
+                        _usestatistics[pcoll][n]++;
+                      }
+                      n = 0;
+
+                    }
+                  }
+                }
+              }
+            }
+            envManagerInstance->pmanager->setup();
+#endif
         }
+
+#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
+        CollisionGroup tmpgroup;
+        envManagerInstance->pmanager->getObjects(tmpgroup);
+        FOREACH(itcoll, tmpgroup) {
+          _currentlyused[*itcoll]++;
+        }
+#endif
 
         return envManagerInstance->pmanager;
     }
@@ -1268,6 +1328,11 @@ private:
 
     std::string _broadPhaseCollisionManagerAlgorithm;
     boost::shared_ptr<SpatialHashData> _spatialHashData;
+
+#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
+    std::map<fcl::CollisionObject*, int> _currentlyused;
+    std::map<fcl::CollisionObject*, std::map<int, int> > _usestatistics;
+#endif
 
 #ifdef NARROW_COLLISION_CACHING
     NarrowCollisionCache mCollisionCachedGuesses;

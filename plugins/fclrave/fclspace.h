@@ -362,6 +362,9 @@ public:
             link->nLastStamp = pinfo->nLastStamp;
             link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
             pinfo->vlinks.push_back(link);
+#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
+            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", link->plinkBV->second.get()%link->bodylinkname);
+#endif
         }
 
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBody const>(pbody)));
@@ -373,6 +376,9 @@ public:
         if( !!_envManagerInstance ) {
             pinfo->UpdateLinksRegisterStatus(_envManagerInstance->pmanager);
         }
+        if( pbody->IsRobot() ) {
+          _initializedRobots.insert(pbody);
+        }
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -383,8 +389,11 @@ public:
     }
 
     bool HasDifferentGeometry(KinBodyConstPtr pbody, const std::string& groupname) {
+        if( groupname.size() == 0 ) {
+            return true;
+        }
         FOREACH(itlink, pbody->GetLinks()) {
-            if(groupname.size() > 0 && (*itlink)->GetGroupNumGeometries(groupname) >= 0) {
+            if( (*itlink)->GetGroupNumGeometries(groupname) >= 0 ) {
                 return true;
             }
         }
@@ -413,6 +422,10 @@ public:
         if( HasDifferentGeometry(pbody, groupname) ) {
             // Save the already existing KinBodyInfoPtr for the old geometry group
             KinBodyInfoPtr poldinfo = GetInfo(pbody);
+            if( poldinfo->_geometrygroup == groupname ) {
+              return;
+            }
+
             if( !!_envManagerInstance ) {
                 BOOST_ASSERT( !!_envManagerInstance->pmanager );
                 FOREACH(itWkbodyStampPair, _envManagerInstance->vUpdateStamps) {
@@ -503,7 +516,7 @@ public:
 
     void Synchronize(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = GetCreateInfo(pbody).first;
+        KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->GetBody() == pbody);
         _Synchronize(pinfo);
     }
@@ -526,7 +539,6 @@ public:
         bool bcreated = false;
         if( !pinfo ) {
             pinfo = InitKinBody(pbody, KinBodyInfoPtr());
-            pbody->SetUserData(_userdatakey, pinfo);
             bcreated = true;
         }
         return std::make_pair(pinfo, bcreated);
@@ -536,6 +548,9 @@ public:
         if( !!pbody ) {
             RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
+            if( pbody->IsRobot() ) {
+              _initializedRobots.erase(pbody);
+            }
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
@@ -589,6 +604,10 @@ public:
 
     const std::set<KinBodyConstPtr>& GetEnvBodies() const {
         return _setInitializedBodies;
+    }
+
+    const std::set<KinBodyConstPtr>& GetEnvRobots() const {
+      return _initializedRobots;
     }
 
     void SetEnvManagerInstance(ManagerInstancePtr envManagerInstance) {
@@ -791,6 +810,7 @@ private:
     ManagerInstancePtr _envManagerInstance;
     std::set<KinBodyConstPtr> _envExcludedBodies;
 
+    std::set<KinBodyConstPtr> _initializedRobots;
     std::set<KinBodyConstPtr> _setInitializedBodies;
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo;
 };
