@@ -16,7 +16,7 @@ def RandVect1(n, l, u):
 def RandVect2(l, u):
     return np.asarray([rng.uniform(l[i], u[i]) for i in xrange(len(l))])
 ################################################################################
-
+# test precision for easy number assignments
 ramp1 = ramp.Ramp(0, 2, 1, 0)
 ramp2 = ramp.Ramp(ramp1.v1, -ramp1.a, 0.8, ramp1.d)
 curve = ramp.ParabolicCurve([ramp1, ramp2])
@@ -41,7 +41,8 @@ curve2 = Interpolate1D(x0, x1, v0, v1, 1.5, am)
 # curvesnd.PlotAcc()
 
 ################################################################################
-
+# Check displacement after interpolation (d == x1 - x0)
+# Check velocity continuity between consecutive ramps
 x0 = 0
 x1 = 3
 maxit = 100
@@ -77,9 +78,11 @@ v1 = RandVect2(-vmVect, vmVect)
 
 curvesnd = InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect)
 # Check the duration of each parabolic curve
+# Check the displacement after interpolation
 dur = curvesnd[0].duration
-for curve in curvesnd[1:]:
+for (i, curve) in enumerate(curvesnd[1:]):
     assert(curve.duration == dur)
+    assert(ramp.IsEqual(curve.d, x1Vect[i + 1] - x0Vect[i + 1]))
 
 ################################################################################
 # Check interpolation with fixed duration
@@ -93,10 +96,11 @@ am = 1.8
 
 prevCurve = Interpolate1D(x0, x1, v0, v1, vm, am)
 fixedCurve = interpolation._Stretch1D(prevCurve, duration, vm, am)
+# Check if the interpolation preserves the displacement
 assert(ramp.IsEqual(prevCurve.d, 3))
 assert(ramp.IsEqual(fixedCurve.d, 3))
+# Check if the interpolation preserves the duration
 assert(ramp.IsEqual(fixedCurve.duration, duration))
-
 
 x0 = 0
 x1 = mp.rand()*3
@@ -108,8 +112,10 @@ am = 1.8
 
 prevCurve = Interpolate1D(x0, x1, v0, v1, vm, am)
 fixedCurve = interpolation._Stretch1D(prevCurve, duration, vm, am)
+# Check if the interpolation preserves the displacement
 assert(ramp.IsEqual(prevCurve.d, mp.mpf(str(x1))))
 assert(ramp.IsEqual(fixedCurve.d, mp.mpf(str(x1))))
+# Check if the interpolation preserves the duration
 assert(ramp.IsEqual(fixedCurve.duration, duration))
 
 nTrials = 1000
