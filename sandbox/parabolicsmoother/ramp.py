@@ -49,19 +49,24 @@ def Sum(A):
 
 class Ramp(object):
     """
+    v0 : the initial velocity
+    a  : the acceleration
+    duration  : the duration
+    v1 : the final velocity
+    d  : the total displacement 'done' by this ramp (i.e. x1 = x0 + d)
     """
     def __init__(self, v0, a, dur, x0=zero):
         if type(dur) is not mp.mpf:
-            dur = mp.mpf("{:.16e}".format(dur))
+            dur = mp.mpf("{:.15e}".format(dur))
         assert(dur > -epsilon)
 
         # Check types
         if type(x0) is not mp.mpf:
-            x0 = mp.mpf("{:.16e}".format(x0))
+            x0 = mp.mpf("{:.15e}".format(x0))
         if type(v0) is not mp.mpf:
-            v0 = mp.mpf("{:.16e}".format(v0))
+            v0 = mp.mpf("{:.15e}".format(v0))
         if type(a) is not mp.mpf:
-            a = mp.mpf("{:.16e}".format(a))
+            a = mp.mpf("{:.15e}".format(a))
         
         self.x0 = x0
         self.v0 = v0
@@ -74,7 +79,7 @@ class Ramp(object):
 
     def UpdateDuration(self, newDur):
         if type(newDur) is not mp.mpf:
-            newDur = mp.mpf("{:.16e}".format(newDur))
+            newDur = mp.mpf("{:.15e}".format(newDur))
         assert(newDur > -epsilon)
 
         self.duration = newDur
@@ -84,7 +89,7 @@ class Ramp(object):
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)        
 
@@ -94,7 +99,7 @@ class Ramp(object):
     
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -103,7 +108,7 @@ class Ramp(object):
 
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -131,6 +136,12 @@ class Ramp(object):
 
 class ParabolicCurve(object):
     """
+    ramps    : a list of all ramps
+    v0       : the initial velocity of this curve (v0 = ramps[0].v0)
+    x0       : the initial displacement of this curve (x0 = ramps[0].x0)
+    d        : the total displacement 'done' by this curve (i.e. x1 = x0 + d)
+    duration : the total duration of this curve
+    switchpointsList : a list of all switch points (nSwitchpoints = nRamps + 1, i.e. we have 2 switch points for each ramp)
     """
     def __init__(self, ramps=[]):
         self.switchpointsList = [] # a list of all switch points, including ones at t = 0 and t = duration
@@ -146,22 +157,16 @@ class ParabolicCurve(object):
             self.duration = dur
             self.d = d
         else:
-            ramps_ = ramps[:]
+            self.ramps = ramps[:] # copy all the ramps
             self.isEmpty = False
-            self.x0 = ramps_[0].x0
-            self.v0 = ramps_[0].v0
+            self.SetInitialValue(self.ramps[0].x0) # set self.x0 and self.d
+            self.v0 = self.ramps[0].v0
+            
             self.switchpointsList.append(dur)
-            for ramp in ramps_:
-                self.ramps.append(ramp)
-                # Update displacement
-                self.ramps[-1].x0 = d
-                d = Add(d, self.ramps[-1].d)
-                
-                dur = Add(dur, self.ramps[-1].duration)
+            for ramp in self.ramps:
+                dur = Add(dur, ramp.duration)
                 self.switchpointsList.append(dur)
-
             self.duration = dur
-            self.d = d
 
 
     def __getitem__(self, index):
@@ -193,8 +198,7 @@ class ParabolicCurve(object):
                 self.ramps.append(ramp)
                 # Update displacement
                 self.ramps[-1].x0 = d
-                d = Add(d, self.ramps[-1].d)
-                
+                d = Add(d, self.ramps[-1].d)                
                 dur = Add(dur, self.ramps[-1].duration)
                 self.switchpointsList.append(dur)
 
@@ -226,7 +230,7 @@ class ParabolicCurve(object):
 
 
     def _FindRampIndex(self, t):
-        # t = mp.mpf("{:.16e}".format(t))
+        # t = mp.mpf("{:.15e}".format(t))
         # assert(t > -epsilon)
         # assert(t < self.duration + epsilon)
 
@@ -241,7 +245,7 @@ class ParabolicCurve(object):
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -251,7 +255,7 @@ class ParabolicCurve(object):
 
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -261,7 +265,7 @@ class ParabolicCurve(object):
 
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
 
@@ -271,7 +275,7 @@ class ParabolicCurve(object):
 
     def SetInitialValue(self, x0):
         self.x0 = x0
-        d = x0
+        d = 0
         for ramp in self.ramps:
             ramp.x0 = d
             d = Add(d, ramp.d)
@@ -289,7 +293,7 @@ class ParabolicCurve(object):
         Return True if the operation is successful, False otherwise.
         """
         if type(deltaT) is not mp.mpf:
-            dt = mp.mpf("{:.16e}".format(deltaT))
+            dt = mp.mpf("{:.15e}".format(deltaT))
         else:
             dt = deltaT
         if dt > self.duration:
@@ -362,6 +366,8 @@ class ParabolicCurvesND(object):
             self.curves = []
             self.isEmpty = True
             self.x0Vect = None
+            self.v0Vect = None
+            self.dVect = None
             self.ndof = 0
             self.switchpointsList = []
             self.duration = zero
@@ -387,6 +393,8 @@ class ParabolicCurvesND(object):
             self.curves = curves_
             self.ndof = len(self.curves)
             self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+            self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+            self.dVect = np.asarray([curve.d for curve in self.curves])
 
             # Create a list of switch points
             switchpointsList = curves[0].switchpointsList[:]
@@ -418,6 +426,8 @@ class ParabolicCurvesND(object):
                 self.curves = curvesnd[:]
                 self.ndof = len(self.curves)
                 self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+                self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+                self.dVect = np.asarray([curve.d for curve in self.curves])
                 self.switchpointsList = curvesnd.switchpointsList[:]
                 self.isEmpty = False
         else:
@@ -426,6 +436,7 @@ class ParabolicCurvesND(object):
             self.duration = Add(self.duration, curvesnd.duration)
             for (i, curve) in enumerate(curvesnd):
                 self.curves[i].Append(curve)
+                self.dVect[i] = Add(self.dVect[i], curve.d)
 
             newSwitchpoints = [Add(s, originalDur) for s in curvesnd.switchpointsList]
             self.switchpointsList.extend(newSwitchpoints)
@@ -433,7 +444,7 @@ class ParabolicCurvesND(object):
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -443,7 +454,7 @@ class ParabolicCurvesND(object):
 
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         
@@ -453,7 +464,7 @@ class ParabolicCurvesND(object):
 
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
-            t = mp.mpf("{:.16e}".format(t))
+            t = mp.mpf("{:.15e}".format(t))
         assert(t > -epsilon)
         assert(t < self.duration + epsilon)
         

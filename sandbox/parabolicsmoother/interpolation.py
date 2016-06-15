@@ -10,7 +10,7 @@ one = mp.mpf('1')
 number = mp.mpf
 
 def ConvertFloatArrayToMPF(a):
-    a_ = np.asarray([mp.mpf("{:.16e}".format(x)) for x in a if type(x) is not mp.mpf])
+    a_ = np.asarray([mp.mpf("{:.15e}".format(x)) for x in a if type(x) is not mp.mpf])
     return a_
 
 
@@ -37,7 +37,7 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
     dVect = x1Vect - x0Vect
 
     if type(delta) is not mp.mpf:
-        delta = mp.mpf("{:.16e}".format(delta))
+        delta = mp.mpf("{:.15e}".format(delta))
 
     vMin = inf # the tightest velocity bound
     aMin = inf # the tightest acceleration bound
@@ -94,7 +94,7 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
     dVect = x1Vect - x0Vect
 
     if type(delta) is not mp.mpf:
-        delta = mp.mpf("{:.16e}".format(delta))
+        delta = mp.mpf("{:.15e}".format(delta))
 
     # First independently interpolate each DOF to find out the slowest one.
     curves = []
@@ -143,11 +143,11 @@ def ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta=zero):
 def _Stretch1D(curve, newDuration, vm, am):
     # Check types
     if type(newDuration) is not mp.mpf:
-        newDuration = mp.mpf("{:.16e}".format(newDuration))
+        newDuration = mp.mpf("{:.15e}".format(newDuration))
     if type(vm) is not mp.mpf:
-        vm = mp.mpf("{:.16e}".format(vm))
+        vm = mp.mpf("{:.15e}".format(vm))
     if type(am) is not mp.mpf:
-        am = mp.mpf("{:.16e}".format(am))
+        am = mp.mpf("{:.15e}".format(am))
 
     # Check inputs
     assert(newDuration > curve.duration)
@@ -283,17 +283,17 @@ def _SolveForT1(A, B, t, tInterval):
 def Interpolate1D(x0, x1, v0, v1, vm, am, delta=zero):
     # Check types
     if type(x0) is not mp.mpf:
-        x0 = mp.mpf("{:.16e}".format(x0))
+        x0 = mp.mpf("{:.15e}".format(x0))
     if type(x1) is not mp.mpf:
-        x1 = mp.mpf("{:.16e}".format(x1))
+        x1 = mp.mpf("{:.15e}".format(x1))
     if type(v0) is not mp.mpf:
-        v0 = mp.mpf("{:.16e}".format(v0))
+        v0 = mp.mpf("{:.15e}".format(v0))
     if type(v1) is not mp.mpf:
-        v1 = mp.mpf("{:.16e}".format(v1))
+        v1 = mp.mpf("{:.15e}".format(v1))
     if type(vm) is not mp.mpf:
-        vm = mp.mpf("{:.16e}".format(vm))
+        vm = mp.mpf("{:.15e}".format(vm))
     if type(am) is not mp.mpf:
-        am = mp.mpf("{:.16e}".format(am))
+        am = mp.mpf("{:.15e}".format(am))
 
     # Check inputs
     assert(vm > zero)
@@ -311,15 +311,15 @@ def Interpolate1D(x0, x1, v0, v1, vm, am, delta=zero):
 def _Interpolate1DNoVelocityLimit(x0, x1, v0, v1, am):
     # Check types
     if type(x0) is not mp.mpf:
-        x0 = mp.mpf("{:.16e}".format(x0))
+        x0 = mp.mpf("{:.15e}".format(x0))
     if type(x1) is not mp.mpf:
-        x1 = mp.mpf("{:.16e}".format(x1))
+        x1 = mp.mpf("{:.15e}".format(x1))
     if type(v0) is not mp.mpf:
-        v0 = mp.mpf("{:.16e}".format(v0))
+        v0 = mp.mpf("{:.15e}".format(v0))
     if type(v1) is not mp.mpf:
-        v1 = mp.mpf("{:.16e}".format(v1))
+        v1 = mp.mpf("{:.15e}".format(v1))
     if type(am) is not mp.mpf:
-        am = mp.mpf("{:.16e}".format(am))
+        am = mp.mpf("{:.15e}".format(am))
 
     # Check inputs
     assert(am > zero)
@@ -369,7 +369,7 @@ def _ImposeVelocityLimit(curve, vm):
     """
     # Check types
     if type(vm) is not mp.mpf:
-        vm = mp.mpf("{:.16e}".format(vm))
+        vm = mp.mpf("{:.15e}".format(vm))
 
     # Check inputs
     assert(vm > zero)
@@ -428,15 +428,15 @@ def SolveQuartic(a, b, c, d, e):
     """
     # Check types
     if type(a) is not mp.mpf:
-        a = mp.mpf("{:.16e}".format(a))
+        a = mp.mpf("{:.15e}".format(a))
     if type(b) is not mp.mpf:
-        b = mp.mpf("{:.16e}".format(b))
+        b = mp.mpf("{:.15e}".format(b))
     if type(c) is not mp.mpf:
-        c = mp.mpf("{:.16e}".format(c))
+        c = mp.mpf("{:.15e}".format(c))
     if type(d) is not mp.mpf:
-        d = mp.mpf("{:.16e}".format(d))
+        d = mp.mpf("{:.15e}".format(d))
     if type(e) is not mp.mpf:
-        e = mp.mpf("{:.16e}".format(e))
+        e = mp.mpf("{:.15e}".format(e))
 
     """
     # Working code (more readable but probably less precise)
@@ -459,12 +459,12 @@ def SolveQuartic(a, b, c, d, e):
     Q = mp.nthroot(Mul(pointfive, Add(delta1, mp.sqrt(Add(mp.power(delta1, 2), Mul(number('-4'), mp.power(delta0, 3)))))), 3)
     S = Mul(pointfive, mp.sqrt(Mul(mp.fdiv(mp.mpf('-2'), mp.mpf('3')), p) + Mul(mp.fdiv(one, Mul(number('3'), a)), Add(Q, mp.fdiv(delta0, Q)))))
 
-    print "p = {0}".format(p)
-    print "q = {0}".format(q)
-    print "delta0 = {0}".format(delta0)
-    print "delta1 = {0}".format(delta1)
-    print "Q = {0}".format(Q)
-    print "S = {0}".format(S)
+    # print "p = {0}".format(p)
+    # print "q = {0}".format(q)
+    # print "delta0 = {0}".format(delta0)
+    # print "delta1 = {0}".format(delta1)
+    # print "Q = {0}".format(Q)
+    # print "S = {0}".format(S)
 
     x1 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)])))])
     x2 = Sum([mp.fdiv(b, Mul(number('-4'), a)), Neg(S), Neg(Mul(pointfive, mp.sqrt(Sum([Mul(number('-4'), mp.power(S, 2)), Mul(number('-2'), p), mp.fdiv(q, S)]))))])
