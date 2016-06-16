@@ -1091,33 +1091,28 @@ private:
             return false;
         }
 
+        // Proceed to the next if the links are attached and not enabled
+        if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
+          return false;
+        }
+
         if( IsIn<KinBodyConstPtr>(plink1->GetParent(), pcb->_vbodyexcluded) || IsIn<KinBodyConstPtr>(plink2->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink1, pcb->_vlinkexcluded) || IsIn<LinkConstPtr>(plink2, pcb->_vlinkexcluded) ) {
             return false;
         }
 
-        // Proceed to the next if the links are attached and not enabled
-        if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
-            return false;
-        }
+        LinkInfoPtr pLINK1 = GetLinkInfo(plink1), pLINK2 = GetLinkInfo(plink2);
+        _fclspace->SynchronizeGeometries(plink1, pLINK1);
+        _fclspace->SynchronizeGeometries(plink2, pLINK2);
 
-        BroadPhaseCollisionManagerPtr plink1Manager = GetLinkGeometriesManager(plink1), plink2Manager = GetLinkGeometriesManager(plink2);
-
-        if( !!plink1Manager ) {
-            if( !!plink2Manager ) {
-                plink1Manager->setup();
-                plink2Manager->setup();
-                plink1Manager->collide(plink2Manager.get(), pcb, &FCLCollisionChecker::CheckNarrowPhaseGeomCollision);
-            } else {
-                plink1Manager->setup();
-                plink1Manager->collide(o2, pcb, &FCLCollisionChecker::CheckNarrowPhaseGeomCollision);
+        FOREACH(itgeompair1, pLINK1->vgeoms) {
+          FOREACH(itgeompair2, pLINK2->vgeoms) {
+            if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
+              CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), itgeompair2->second.get(), pcb);
+              if( pcb->_bStopChecking ) {
+                return true;
+              }
             }
-        } else {
-            if( !!plink2Manager ) {
-                plink2Manager->setup();
-                plink2Manager->collide(o1, pcb, &FCLCollisionChecker::CheckNarrowPhaseGeomCollision);
-            } else {
-                CheckNarrowPhaseGeomCollision(o1, o2, pcb);
-            }
+          }
         }
 
         if( pcb->_bCollision && !(_options & OpenRAVE::CO_AllLinkCollisions) ) {
