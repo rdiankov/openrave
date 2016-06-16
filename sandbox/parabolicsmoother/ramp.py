@@ -39,6 +39,9 @@ def Prod(A):
     assert(len(A) > 0)
     return mp.fprod(A)
 
+def Sqr(a):
+    return mp.fmul(a, a, exact=True)
+
 def Sub(a, b):
     return mp.fsub(a, b, exact=True)
 
@@ -52,9 +55,9 @@ def ConvertFloatToMPF(a):
     else:
         return a
 
-def ConvertFloatArrayToMPF(a):
-    a_ = np.asarray([mp.mpf("{:.15e}".format(x)) for x in a if type(x) is not mp.mpf])
-    return a_
+def ConvertFloatArrayToMPF(A):
+    A_ = np.asarray([ConvertFloatToMPF(x) for x in A])
+    return A_
 
 
 class Ramp(object):
@@ -566,35 +569,15 @@ class ParabolicCheckReturn:
     VDiscrepancy = 6
     DurationDiscrepancy = 7
 
-    def __getitem__(self, index):
-        if index == 0:
-            return 'Normal'
-        elif index == 1:
-            return 'NegativeDuration'
-        elif index == 2:
-            return 'VBoundViolated'
-        elif index == 3:
-            return 'ABoundViolated'
-        elif index == 4:
-            return 'VDiscontinuous'
-        elif index == 5:
-            return 'XDiscrepancy'
-        elif index == 6:
-            return 'VDiscrepancy'
-        elif index == 7:
-            return 'DurationDiscrepancy'
-        else:
-            raise ValueError
-
 
 def CheckRamp(ramp, vm, am):
     vm = ConvertFloatToMPF(vm)
     am = ConvertFloatToMPF(am)
     if (ramp.duration < Neg(epsilon)):
         return ParabolicCheckReturn.NegativeDuration
-    if (Abs(ramp.v0) > vm) or (Abs(ramp.v1) > vm):
+    if (Abs(ramp.v0) > Add(vm, epsilon)) or (Abs(ramp.v1) > Add(vm, epsilon)):
         return ParabolicCheckReturn.VBoundViolated
-    if (Abs(ramp.a) > am):
+    if (Abs(ramp.a) > Add(am, epsilon)):
         return ParabolicCheckReturn.ABoundViolated
     return ParabolicCheckReturn.Normal
 
