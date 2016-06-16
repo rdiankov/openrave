@@ -120,7 +120,7 @@ assert(ramp.IsEqual(fixedCurve.d, mp.mpf(str(x1))))
 # Check if the interpolation preserves the duration
 assert(ramp.IsEqual(fixedCurve.duration, duration))
 
-nTrials = 1000
+nTrials = 0
 nSuccess = 0
 for _ in xrange(nTrials):
     x0 = mp.rand()
@@ -175,11 +175,15 @@ for _ in xrange(nTrials):
             nSuccess += 1
         elif ret == PCR.VBoundViolated:
             vboundfailed += 1
+            break
+        else:
+            print ret
+            raw_input()
         # if ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, x0Vect=x0Vect, x1Vect=x1Vect):
         #     nSuccess += 1
         #     break
     else:
         interpfailed += 1
-print "Real bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials)
+print "Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials)
 print "Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials)
-print "Real bounds : v-bound violated = {0}/{1}".format(vboundfailed, nTrials)
+print "Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed, nTrials)
