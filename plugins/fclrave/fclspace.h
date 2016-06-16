@@ -740,6 +740,21 @@ private:
                 pcoll->setQuatRotation(newOrientation);
                 // Why do we compute the AABB ?
                 pcoll->computeAABB();
+
+
+                pinfo->vlinks[i]->nLastStamp = pinfo->nLastStamp;
+                FOREACHC(itgeomcoll, pinfo->vlinks[i]->vgeoms) {
+                  CollisionObjectPtr pcoll = (*itgeomcoll).second;
+                  Transform pose = vtrans[i] * (*itgeomcoll).first;
+                  fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+                  fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+
+                  pcoll->setTranslation(newPosition);
+                  pcoll->setQuatRotation(newOrientation);
+                  // Why do we compute the AABB ?
+                  // it will be usefull anyway for the DynamicAABBTree broadphasemanager
+                  pcoll->computeAABB();
+                }
             }
 
             if( !!_synccallback ) {

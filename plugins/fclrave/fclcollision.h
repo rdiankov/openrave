@@ -388,7 +388,6 @@ public:
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
-        //_fclspace->Synchronize();
 
         BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, _options & OpenRAVE::CO_ActiveDOFs);
 
@@ -489,7 +488,6 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize();
 
 
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
@@ -536,7 +534,6 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize();
 
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
 
@@ -607,7 +604,6 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        //_fclspace->Synchronize(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -657,7 +653,6 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        //_fclspace->Synchronize(pbody);
 
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -1101,8 +1096,8 @@ private:
         }
 
         LinkInfoPtr pLINK1 = GetLinkInfo(plink1), pLINK2 = GetLinkInfo(plink2);
-        _fclspace->SynchronizeGeometries(plink1, pLINK1);
-        _fclspace->SynchronizeGeometries(plink2, pLINK2);
+        //_fclspace->SynchronizeGeometries(plink1, pLINK1);
+        //_fclspace->SynchronizeGeometries(plink2, pLINK2);
 
         FOREACH(itgeompair1, pLINK1->vgeoms) {
           FOREACH(itgeompair2, pLINK2->vgeoms) {
