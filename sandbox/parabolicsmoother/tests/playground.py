@@ -6,6 +6,7 @@ import sys
 sys.path.append('../')
 
 import ramp
+from ramp import ParabolicCheckReturn as PCR
 
 import random
 rng = random.SystemRandom()
@@ -15,6 +16,7 @@ def RandVect1(n, l, u):
 
 def RandVect2(l, u):
     return np.asarray([rng.uniform(l[i], u[i]) for i in xrange(len(l))])
+
 ################################################################################
 # test precision for easy number assignments
 ramp1 = ramp.Ramp(0, 2, 1, 0)
@@ -119,6 +121,7 @@ assert(ramp.IsEqual(fixedCurve.d, mp.mpf(str(x1))))
 assert(ramp.IsEqual(fixedCurve.duration, duration))
 
 nTrials = 1000
+nSuccess = 0
 for _ in xrange(nTrials):
     x0 = mp.rand()
     x1 = mp.rand()*3
@@ -130,6 +133,53 @@ for _ in xrange(nTrials):
 
     prevCurve = Interpolate1D(x0, x1, v0, v1, vm, am)
     fixedCurve = interpolation._Stretch1D(prevCurve, duration, vm, am)
-    assert(ramp.IsEqual(prevCurve.d, ramp.Sub(mp.mpf(str(x1)), mp.mpf(str(x0)))))
-    assert(ramp.IsEqual(fixedCurve.d, ramp.Sub(mp.mpf(str(x1)), mp.mpf(str(x0)))))
-    assert(ramp.IsEqual(fixedCurve.duration, duration))
+    if not fixedCurve.isEmpty:
+        assert(ramp.IsEqual(prevCurve.d, ramp.Sub(mp.mpf(str(x1)), mp.mpf(str(x0)))))
+        assert(ramp.IsEqual(fixedCurve.d, ramp.Sub(mp.mpf(str(x1)), mp.mpf(str(x0)))))
+        assert(ramp.IsEqual(fixedCurve.duration, duration))
+        nSuccess += 1
+print "Easy bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials)
+
+################################################################################
+# Check interpolation with fixed duration (bounds from a real robot)
+xMin = np.array([-2.96705972839036, -2.094395102393195, 2.181661564992912,
+                 -4.71238898038469, -2.094395102393195, -6.283185307179586])
+xMax = np.array([ 2.96705972839036, 2.094395102393195, 2.705260340591211,
+                  4.71238898038469, 2.094395102393195, 6.283185307179586])
+vMax = np.array([ 3.926990816987241, 2.617993877991494, 2.858325715991114,
+                  3.926990816987241, 3.021688533977783, 6.283185307179586])
+vMin = -1.0*np.array(vMax)
+
+realAcc = np.array([ 19.73356518767389, 16.84469620977287, 20.70885517368832,
+                     20.96646577128268, 23.72286425895733, 33.51032163829112])
+aScale = 0.5
+aMax = aScale * realAcc
+aMin = -1.0 * aMax
+
+nTrials = 1000
+nSuccess = 0
+vboundfailed = 0
+interpfailed = 0
+for _ in xrange(nTrials):
+    x0Vect = RandVect2(xMin, xMax)
+    x1Vect = RandVect2(xMin, xMax)
+    v0Vect = RandVect2(vMin, vMax)
+    v1Vect = RandVect2(vMin, vMax)
+
+    curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vMax, aMax)
+    if not curvesnd.isEmpty:
+        ret = ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, v0Vect, v1Vect, x0Vect, x1Vect)
+        # print ret
+        # raw_input()
+        if ret == PCR.Normal:
+            nSuccess += 1
+        elif ret == PCR.VBoundViolated:
+            vboundfailed += 1
+        # if ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, x0Vect=x0Vect, x1Vect=x1Vect):
+        #     nSuccess += 1
+        #     break
+    else:
+        interpfailed += 1
+print "Real bounds : interpolation with fixed duration successful instance = {0}/{1}".format(nSuccess, nTrials)
+print "Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials)
+print "Real bounds : v-bound violated = {0}/{1}".format(vboundfailed, nTrials)
