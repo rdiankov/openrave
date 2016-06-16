@@ -23,8 +23,8 @@ Ramp::Ramp(Real v0_, Real a_, Real dur_, Real x0_)  {
 Real Ramp::EvalPos(Real t) const {
     BOOST_ASSERT(t > -epsilon);
     BOOST_ASSERT(t < duration + epsilon);
-    if (t < 0) t = 0;
-    else if (t > duration) t = duration;
+    if (t <= 0) return x0;
+    else if (t >= duration) return x0 + d;
 
     return t*(v0 + 0.5*a*t) + x0;
 }
@@ -32,8 +32,8 @@ Real Ramp::EvalPos(Real t) const {
 Real Ramp::EvalVel(Real t) const {
     BOOST_ASSERT(t > -epsilon);
     BOOST_ASSERT(t < duration + epsilon);
-    if (t < 0) t = 0;
-    else if (t > duration) t = duration;
+    if (t <= 0) return v0;
+    else if (t >= duration) return v1;
 
     return v0 + (a*t);
 }
@@ -85,17 +85,16 @@ ParabolicCurve::ParabolicCurve(std::vector<Ramp> rampsIn) {
     d = 0.0;
     duration = 0.0;
     switchpointsList.push_back(duration);
-    x0 = rampsIn[0].x0;
 
     for (std::size_t i = 0; i != rampsIn.size(); ++i) {
         ramps.push_back(rampsIn[i]);
-        ramps[i].x0 = d;
-        d = d + ramps[i].d; ///<
+        d = d + ramps.back().d; ///<
         duration = duration + ramps[i].duration; ///<
         switchpointsList.push_back(duration);
     }
-
+    v0 = rampsIn.front().v0;
     v1 = rampsIn.back().v1;
+    SetInitialValue(rampsIn[0].x0);
 }
 
 void ParabolicCurve::Append(ParabolicCurve curve) {
@@ -116,13 +115,21 @@ void ParabolicCurve::Append(ParabolicCurve curve) {
 
     for (std::size_t i = 0; i != sz; ++i) {
         ramps.push_back(curve.ramps[i]);
-        ramps.back().x0 = d;
         d = d + ramps.back().d; ///<
         duration = duration + ramps.back().duration; ///<
         switchpointsList.push_back(duration);
     }
-
     v1 = curve.v1;
+    SetInitialValue(x0);
+}
+
+void ParabolicCurve::SetInitialValue(Real newx0) {
+    x0 = newx0;
+    size_t nRamps = ramps.size();
+    for (size_t i = 0; i < nRamps; ++i) {
+        ramps[i].x0 = newx0;
+        newx0 = newx0 + ramps[i].d;
+    }
 }
 
 void ParabolicCurve::FindRampIndex(Real t, int& index, Real& remainder) const {
@@ -140,12 +147,20 @@ void ParabolicCurve::FindRampIndex(Real t, int& index, Real& remainder) const {
         index = 0;
         // Iterate through switchpointsList
         std::vector<Real>::const_iterator it = switchpointsList.begin();
-        while (it != switchpointsList.end() && t < *it) {
+        while (it != switchpointsList.end() && t > *it) {
             index++;
             it++;
         }
-        BOOST_ASSERT(index < (int)switchpointsList.size() - 1);
-        remainder = t - *it;
+        BOOST_ASSERT(index < (int)switchpointsList.size());
+        index = index - 1;
+        remainder = t - *(it - 1);
+        // std::vector<Real>::const_iterator it = switchpointsList.begin();
+        // while (it != switchpointsList.end() && t < *it) {
+        //     index++;
+        //     it++;
+        // }
+        // BOOST_ASSERT(index < (int)switchpointsList.size() - 1);
+        // remainder = t - *it;
     }
     return;
 }
@@ -159,17 +174,16 @@ void ParabolicCurve::Initialize(std::vector<Ramp> rampsIn) {
     d = 0.0;
     duration = 0.0;
     switchpointsList.push_back(duration);
-    x0 = rampsIn[0].x0;
-    v0 = rampsIn[0].v0;
+    v0 = rampsIn.front().v0;
     v1 = rampsIn.back().v1;
 
     for (std::size_t i = 0; i != rampsIn.size(); ++i) {
         ramps.push_back(rampsIn[i]);
-        ramps[i].x0 = d;
-        d = d + ramps[i].d; ///<
+        d = d + ramps.back().d; ///<
         duration = duration + ramps[i].duration; ///<
         switchpointsList.push_back(duration);
     }
+    SetInitialValue(rampsIn[0].x0);
 }
 
 void ParabolicCurve::PrintInfo(std::string name) const {
@@ -188,7 +202,7 @@ Real ParabolicCurve::EvalPos(Real t) const {
     BOOST_ASSERT(t > -epsilon);
     BOOST_ASSERT(t < duration + epsilon);
     if (t <= 0) return x0;
-    else if (t >= duration) return d;
+    else if (t >= duration) return x0 + d;
 
     int index;
     Real remainder;
@@ -212,7 +226,7 @@ Real ParabolicCurve::EvalAcc(Real t) const {
     BOOST_ASSERT(t > -epsilon);
     BOOST_ASSERT(t < duration + epsilon);
     if (t <= 0) return ramps[0].a;
-    else if (t > duration) return ramps.back().a;
+    else if (t >= duration) return ramps.back().a;
 
     int index;
     Real remainder;
@@ -241,12 +255,13 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     x0Vect.reserve(ndof);
     dVect.reserve(ndof);
     v0Vect.reserve(ndof);
-    v1Vect.reserve(ndof);  
+    v1Vect.reserve(ndof);
     for (int i = 0; i < ndof; ++i) {
         x0Vect.push_back(curves[i].x0);
         v0Vect.push_back(curves[i].v0);
+        // std::cout << v0Vect.back() << std::endl;
         v1Vect.push_back(curves[i].v1);
-        dVect.push_back(curves[i].EvalPos(minDur));
+        dVect.push_back(curves[i].d);
     }
 
     // Manage switch points (later I will merge this for loop with the one above)
@@ -268,7 +283,7 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
 void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
     BOOST_ASSERT(!curvesnd.IsEmpty());
     // Users need to make sure that the displacement and velocity vectors are continuous
-    
+
     if (curves.empty()) {
         curves = curvesnd.curves;
         ndof = curves.size();
@@ -318,12 +333,12 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     x0Vect.reserve(ndof);
     dVect.reserve(ndof);
     v0Vect.reserve(ndof);
-    v1Vect.reserve(ndof);  
+    v1Vect.reserve(ndof);
     for (int i = 0; i < ndof; ++i) {
         x0Vect.push_back(curves[i].x0);
         v0Vect.push_back(curves[i].v0);
         v1Vect.push_back(curves[i].v1);
-        dVect.push_back(curves[i].EvalPos(minDur));
+        dVect.push_back(curves[i].d);
     }
 
     // Manage switch points (later I will merge this for loop with the one above)
@@ -340,6 +355,8 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
             }
         }
     }
+
+    // std::cout << "INITIALIZATION WITH DURATION = " << duration << std::endl;
 }
 
 void ParabolicCurvesND::PrintInfo(std::string name) const {
@@ -358,7 +375,7 @@ std::vector<Real> ParabolicCurvesND::EvalPos(Real t) const {
     BOOST_ASSERT(t > -epsilon);
     BOOST_ASSERT(t < duration + epsilon);
     if (t <= 0) return x0Vect;
-    else if (t >= duration) return dVect;
+    else if (t > duration) t = duration;
 
     std::vector<Real> xVect(ndof);
     for (int i = 0; i < ndof; i++) {
