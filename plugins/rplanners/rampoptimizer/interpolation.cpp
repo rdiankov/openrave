@@ -16,6 +16,8 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
     BOOST_ASSERT(ndof == (int) amVect.size());
 
     std::vector<Real> dVect(ndof);
+    std::vector<ParabolicCurve> curves;
+    curves.reserve(ndof);
     // Calculate sdMax (vMin) and sddMax (aMin)
     Real vMin = inf;
     Real aMin = inf;
@@ -25,6 +27,7 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
             vMin = Min(vMin, vmVect[i]/Abs(dVect[i]));
             aMin = Min(aMin, amVect[i]/Abs(dVect[i]));
         }
+        curves.push_back(*(new ParabolicCurve()));
     }
     BOOST_ASSERT(vMin < inf);
     BOOST_ASSERT(aMin < inf);
@@ -39,7 +42,6 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
     }
 
     // Scale each input dof according to the obtained sd-profile
-    std::vector<ParabolicCurve> curves(ndof);
     for (std::vector<Ramp>::const_iterator itRamp = sdProfile.ramps.begin(); itRamp != sdProfile.ramps.end(); ++itRamp) {
         Real sd0, sdd;
         Real dur = itRamp->duration;
@@ -55,10 +57,12 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
     }
 
     for (int i = 0; i < ndof; ++i) {
-        curves[i].x0 = x0Vect[i];
+        curves[i].SetInitialValue(x0Vect[i]);
+        // std::cout << curves[i].x0 << " " << x0Vect[i] << " " << curves[i].ramps[0].x0 << std::endl;
     }
 
     ParabolicCurvesND curvesnd(curves);
+
     return curvesnd;
 }
 
@@ -81,9 +85,10 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
     std::vector<ParabolicCurve> curves(ndof);
     Real maxDuration = 0;
     int maxIndex;
-    if (!FuzzyZero(delta, epsilon)) {
+    if (FuzzyZero(delta, epsilon)) {
         for (int i = 0; i < ndof; ++i) {
             curves[i] = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i]);
+            // std::cout << "FINALVEL" << curves[i].v1 << " " << v1Vect[i] << std::endl;
             if (curves[i].duration > maxDuration) {
                 maxDuration = curves[i].duration;
                 maxIndex = i;
@@ -94,7 +99,8 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
         // Not implemented yet
         BOOST_ASSERT(false);
     }
-
+    // std::cout << "ARBITRARY VEL INTERPOLATION: MAX DURATION = " << maxDuration << std::endl;
+    // std::cout << "MAXINDEX = " << maxIndex << std::endl;
     return ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta);
 }
 
@@ -114,12 +120,14 @@ ParabolicCurvesND ReinterpolateNDFixedDuration(std::vector<ParabolicCurve> curve
             newCurves[i] = curves[i];
         }
         else {
+            // std::cout << "STRETCHING DOF " << i << std::endl;
             newCurves[i] = Stretch1D(curves[i], newDuration, vmVect[i], amVect[i]);
             if (newCurves[i].IsEmpty()) {
                 return curvesnd; // return an empty ParabolicCurvesND
             }
         }
     }
+    // std::cout << "FINALLY" << std::endl;
     curvesnd.Initialize(newCurves);
     return curvesnd;
 }
@@ -191,7 +199,7 @@ ParabolicCurve Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, 
     Real vp = sigma*Sqrt((0.5*sumVSqr) + (a0*d));
     Real t0 = (vp - v0)/a0;
     Real t1 = (vp - v1)/a0;
-    std::cout << str(boost::format("t0 = %.15e, t1 = %.15e")%t0 %t1) << std::endl;
+    // std::cout << str(boost::format("t0 = %.15e, t1 = %.15e")%t0 %t1) << std::endl;
     Ramp ramp0(v0, a0, t0, x0);
     BOOST_ASSERT(FuzzyEquals(ramp0.v1, vp, epsilon));
     Ramp ramp1(ramp0.v1, -a0, t1);
@@ -201,6 +209,7 @@ ParabolicCurve Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, 
     ramps[1] = ramp1;
     ParabolicCurve curve(ramps);
     BOOST_ASSERT(FuzzyEquals(curve.d, d, epsilon));
+    // std::cout << str(boost::format("DURATION = %.15e")%curve.duration) << std::endl;
     return curve;
 }
 
@@ -209,17 +218,17 @@ ParabolicCurve ImposeVelocityLimit(ParabolicCurve curve, Real vm) {
     BOOST_ASSERT(curve.ramps.size() == 2); // may remove this later
 
     ParabolicCurve newCurve;
-    if (curve.ramps[0].v0 > vm) {
+    if (Abs(curve.ramps[0].v0) > vm) {
         // Initial velocity violates the velocity constraint
         return newCurve;
     }
-    if (curve.ramps[1].v1 > vm) {
+    if (Abs(curve.ramps[1].v1) > vm) {
         // Final velocity violates the velocity constraint
         return newCurve;
     }
 
     Real vp = curve.ramps[0].v1;
-    if (vp < vm) {
+    if (Abs(vp) < vm) {
         // The initial curve does not violate the constraint
         return curve;
     }
@@ -236,11 +245,11 @@ ParabolicCurve ImposeVelocityLimit(ParabolicCurve curve, Real vm) {
 
     Real nom = h*h;
     Real denom = Abs(a0)*vm;
-    Ramp newRamp1(vm, 0, 2*t + (nom/denom));
+    Ramp newRamp1(Sign(vp)*vm, 0, 2*t + (nom/denom));
     ramps[1] = newRamp1;
 
     itRamp += 1;
-    Ramp newRamp2(vm, itRamp->a, itRamp->duration - t);
+    Ramp newRamp2(Sign(vp)*vm, itRamp->a, itRamp->duration - t);
     ramps[2] = newRamp2;
 
     newCurve.Initialize(ramps);
@@ -256,6 +265,13 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     Real v1 = curveIn.ramps.back().v1;
     Real d = curveIn.d;
 
+    // std::cout << str(boost::format("newDuration = %.15e")%newDuration) << std::endl;
+    // std::cout << str(boost::format("vm = %.15e")%vm) << std::endl;
+    // std::cout << str(boost::format("am = %.15e")%am) << std::endl;
+    // std::cout << str(boost::format("v0 = %.15e")%v0) << std::endl;
+    // std::cout << str(boost::format("v1 = %.15e")%v1) << std::endl;
+    // std::cout << str(boost::format("d = %.15e")%d) << std::endl;
+
     ParabolicCurve curve;
 
     // First we assume no velocity bound -> the re-interpolated trajectory will have only two
@@ -270,6 +286,10 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     A = (v1 - v0) * newDurInverse;
     B = (2*d*newDurInverse) - (v0 + v1);
 
+    // std::cout << str(boost::format("A = %.15e")%A) << std::endl;
+    // std::cout << str(boost::format("B = %.15e")%B) << std::endl;
+    // std::cout << str(boost::format("newDurInverse = %.15e")%newDurInverse) << std::endl;
+    
     Interval interval0(0, newDuration); // initial interval for t0
 
     // Now consider the intervals computed from constraints on a0
@@ -280,6 +300,10 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     Real sum2 = am - A;
     C = B/sum1;
     D = B/sum2;
+    // std::cout << str(boost::format("sum1 = %.15e")%sum1) << std::endl;
+    // std::cout << str(boost::format("sum2 = %.15e")%sum2) << std::endl;
+    // std::cout << str(boost::format("C = %.15e")%C) << std::endl;
+    // std::cout << str(boost::format("D = %.15e")%D) << std::endl;
     if (FuzzyZero(sum1, epsilon)) {
         // Not implemented yet
         BOOST_ASSERT(false);
@@ -300,10 +324,13 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
     else {
         interval2.h = D;
     }
+    // std::cout << str(boost::format("interval1 L = %.15e; H = %.15e")%interval1.l %interval1.h) << std::endl;
+    // std::cout << str(boost::format("interval2 L = %.15e; H = %.15e")%interval2.l %interval2.h) << std::endl;
     interval2.Intersect(interval1);
     if (interval2.isVoid) {
         return curve;
     }
+    
 
     // Now consider the intervals computed from constraints on a1
     Interval interval3, interval4;
@@ -354,19 +381,128 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
         return curve;
     }
 
-    Real t1 = newDuration - t0;
+    Real t1 = newDuration - t0; ///<
     Real a0 = A + (B/t0);
     Real a1 = A - (B/t1);
-    BOOST_ASSERT(am - Abs(a0) > epsilon);
-    BOOST_ASSERT(am - Abs(a1) > epsilon);
+    BOOST_ASSERT(am - Abs(a0) > epsilon); // check if a0 is really below the bound
+    BOOST_ASSERT(am - Abs(a1) > epsilon); // check if a1 is really below the bound
+    
+    Real vp = v0 + (a0*t0); // the peak velocity
+    if (Abs(vp) > vm + epsilon) {
+        // Inside this if, we reuse the variables A, B, C, D
+        // std::cout << "CURVE INFORMATION" << std::endl;
+        // std::cout << str(boost::format("v0 = %.15e")%curveIn.v0) << std::endl;
+        // std::cout << str(boost::format("v1 = %.15e")%curveIn.v1) << std::endl;
+        // std::cout << str(boost::format("x0 = %.15e")%curveIn.x0) << std::endl;
+        // std::cout << str(boost::format("x1 = %.15e")%curveIn.EvalPos(curveIn.duration)) << std::endl;
+        // std::cout << str(boost::format("vm = %.15e")%vm) << std::endl;
+        // std::cout << str(boost::format("am = %.15e")%am) << std::endl;
+        // std::cout << str(boost::format("newDuration = %.15e")%newDuration) << std::endl;
 
-    Ramp ramp0(v0, a0, t0, curveIn.x0);
-    Ramp ramp1(ramp0.v1, a1, t1);
-    std::vector<Ramp> ramps(2);
-    ramps[0] = ramp0;
-    ramps[1] = ramp1;
-    curve.Initialize(ramps);
-    return curve;
+        // std::cout << str(boost::format("a0 = %.15e")%a0) << std::endl;
+        // std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
+        
+        Real vmNew = Sign(vp)*vm; // the max velocity to be used in the preceding formulae (taking into account the sign)
+        Real dv = vp - vmNew;
+        D = 0.5*dv*dv*((1/a0) - (1/a1)); // area under the curve above vm (or below -vm)
+        dv = vmNew - v0;
+        A = dv*dv;
+        Real t0Trimmed = dv/a0; // the duration of the trimmed first ramp (removing the part above vm)
+        dv = v1 - vmNew;
+        B = -dv*dv;
+        Real t1Trimmed = dv/a1; // the duration of the trimmed last ramp (removing the part above vm)
+        C = t0Trimmed*(vmNew - v0) + t1Trimmed*(vmNew - v1) - 2*D;
+        Real temp = A*B*B;
+        Real rawRoots[3];
+        Real root;
+        bool hasRoot = false;
+        int numRoots;
+        Real coeffs[4] = {1, 0, 0, -temp};
+        FindPolyRoots3(coeffs, rawRoots, numRoots);
+        if (numRoots == 0) {
+            BOOST_ASSERT("CANNOT SOLVE A CUBIC EQUATION.");
+        }
+        else {
+            // std::cout << str(boost::format("temp = %.15e")%temp) << std::endl;
+            // std::cout << "NUM ROOTS" << numRoots << std::endl;
+            for (int k = 0; k < numRoots; ++k) {
+                // std::cout << "ROOT " << k << " " << rawRoots[k] << std::endl;
+                if (FuzzyEquals(rawRoots[k]*rawRoots[k]*rawRoots[k], temp, temp*epsilon)) {
+                    root = rawRoots[k];
+                    hasRoot = true;
+                }
+            }
+            // root = rawRoots[0];
+            // std::cout << str(boost::format("temp = %.15e")%temp) << std::endl;
+            // std::cout << str(boost::format("root = %.15e")%root) << std::endl;
+            // std::cout << str(boost::format("cubed = %.15e")%(root*root*root)) << std::endl;
+            // BOOST_ASSERT(FuzzyEquals(root*root*root, temp, epsilon));
+        }
+        BOOST_ASSERT(hasRoot);
+        // std::cout << str(boost::format("A = %.15e")%A) << std::endl;
+        // std::cout << str(boost::format("B = %.15e")%B) << std::endl;
+        // std::cout << str(boost::format("C = %.15e")%C) << std::endl;
+        // std::cout << str(boost::format("D = %.15e")%D) << std::endl;
+
+        
+        Real a0New = (A + root)/C;
+        if (Abs(a0New) > am + epsilon) {
+            // a0New exceeds the bound, make it stay at the bound
+            a0New = Sign(a0New)*am;
+        }
+        Real a1New = (B/C)*(1 + A/(C*a0New - A));
+        // std::cout << str(boost::format("***** a1New = %.15e")%a1New) << std::endl;
+        // std::cout << str(boost::format("B/C = %.15e")%(B/C)) << std::endl;
+        // std::cout << str(boost::format("second term = %.15e")%(A/(C*a0New - A))) << std::endl;
+        if (Abs(a1New) > am + epsilon) {
+            // a1New exceeds the bound, make it stay at the bound. Also modify a0New acordingly.
+            a1New = Sign(a1New)*am;
+            a0New = (A/C)*(1 + B/(C*a1New - B));
+        }
+
+        if ((Abs(a0New) > am + epsilon) or (Abs(a1New) > am + epsilon)) {
+            // After modification, the acceleration constraint is still violated.
+            // No heuristic to handle this case yet.
+            return curve;
+        }
+
+        
+        // std::cout << str(boost::format("a0 = %.15e")%a0) << std::endl;
+        // std::cout << str(boost::format("a0New = %.15e")%a0New) << std::endl;
+        // std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
+        // std::cout << str(boost::format("a1New = %.15e")%a1New) << std::endl;
+
+        
+        
+        Real t0New = (vmNew - v0)/a0New;
+        // std::cout << str(boost::format("t0New = %.15e")%t0New) << std::endl;
+        BOOST_ASSERT(t0New > 0);
+        Ramp ramp0(v0, a0New, t0New, curveIn.x0);
+
+        Real t1New = (v1 - vmNew)/a1New;
+        // std::cout << str(boost::format("t1New = %.15e")%t1New) << std::endl;
+        BOOST_ASSERT(t1New > 0);
+        Ramp ramp2(ramp0.v1, a1New, t1New);
+
+        Ramp ramp1(ramp0.v1, 0, newDuration - (t0New + t1New));
+
+        std::vector<Ramp> ramps(3);
+        ramps[0] = ramp0;
+        ramps[1] = ramp1;
+        ramps[2] = ramp2;
+        curve.Initialize(ramps);
+        return curve;
+        
+    }
+    else {
+        Ramp ramp0(v0, a0, t0, curveIn.x0);
+        Ramp ramp1(ramp0.v1, a1, t1);
+        std::vector<Ramp> ramps(2);
+        ramps[0] = ramp0;
+        ramps[1] = ramp1;
+        curve.Initialize(ramps);
+        return curve;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
