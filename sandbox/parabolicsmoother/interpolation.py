@@ -4,7 +4,7 @@ import numpy as np
 from ramp import Ramp, ParabolicCurve, ParabolicCurvesND
 from ramp import ConvertFloatArrayToMPF
 from ramp import zero, pointfive, epsilon
-from ramp import Add, Abs, IsEqual, Mul, Neg, Prod, Sub, Sum
+from ramp import Add, Abs, IsEqual, Mul, Neg, Prod, Sqr, Sub, Sum
 
 inf = mp.inf
 one = mp.mpf('1')
@@ -246,10 +246,82 @@ def _Stretch1D(curve, newDuration, vm, am):
     assert(Sub(Abs(a1), am) < epsilon) # check if a1 is really below the bound
     assert(Sub(Abs(a2), am) < epsilon) # check if a2 is really below the bound
 
-    ramp1 = Ramp(v0, a1, t1, curve.x0)
-    ramp2 = Ramp(ramp1.v1, a2, t2)
-    newCurve = ParabolicCurve([ramp1, ramp2])
-    return newCurve
+    # Check if the velocity bound is violated    
+    vp = Add(v0, Mul(a1, t1))
+    if Abs(vp) > vm:
+        vmnew = Mul(mp.sign(vp), vm)
+        d = Prod([pointfive, Sqr(Sub(vp, vmnew)), Sub(mp.fdiv(one, a1), mp.fdiv(one, a2))])
+        print "d",
+        mp.nprint(d, n=15)
+        print "vmnew",
+        mp.nprint(vmnew, n=15)
+        A = Sqr(Sub(vmnew, v0))
+        B = Neg(Sqr(Sub(vmnew, v1)))
+        t1trimmed = mp.fdiv(Sub(vmnew, v0), a1)
+        t2trimmed = mp.fdiv(Sub(v1, vmnew), a2)
+        C = Sum([Mul(t1trimmed, Sub(vmnew, v0)), Mul(t2trimmed, Sub(vmnew, v1)), Mul(mp.mpf('-2'), d)])
+        # A = Mul(Sub(v0, vm), Abs(Sub(v0, vm)))
+        # B = Mul(Sub(vm, v1), Abs(Sub(v1, vm)))
+        # t1prev = mp.fdiv(Sub(vm, v0), a1)
+        # t2prev = mp.fdiv(Sub(v1, vm), a2)
+        # C = Sum([Mul(mp.mpf('2'), d), Neg(Mul(t1prev, Abs(Sub(vm, v0)))), Neg(Mul(t2prev, Abs(Sub(vm, v1))))])
+        temp = Prod([A, B, B])
+        initguess = mp.sign(temp)*(Abs(temp)**(1./3.))
+        root = mp.findroot(lambda x: Sub(Prod([x, x, x]), temp), x0=initguess)
+        a1new = mp.fdiv(Add(A, root), C)
+        if (Abs(a1new) > Add(am, epsilon)):
+            a1new = Mul(mp.sign(a1new), am)
+        a2new = Mul(mp.fdiv(B, C), Add(one, mp.fdiv(A, Sub(Mul(C, a1new), A))))
+        if (Abs(a2new) > Add(am, epsilon)):
+            a2new = Mul(mp.sign(a2new), am)
+            a1new = Mul(mp.fdiv(A, C), Add(one, mp.fdiv(B, Sub(Mul(C, a2new), B))))
+
+        if (Abs(a1new) > Add(am, epsilon)) or (Abs(a2new) > Add(am, epsilon)):
+            return ParabolicCurve()
+        
+        print "a1",
+        mp.nprint(a1, n=15)
+        print "a1new",
+        mp.nprint(a1new, n=15)
+
+        if (Abs(a1new) > Add(am, epsilon)):
+            a1new = Mul(mp.sign(a1new), am)
+        t1new = mp.fdiv(Sub(vmnew, v0), a1new)
+        assert(t1new > 0)
+        ramp1 = Ramp(v0, a1new, t1new, curve.x0)
+        
+
+        
+        t2new = mp.fdiv(Sub(v1, vmnew), a2new)
+        assert(t2new > 0)
+        ramp3 = Ramp(ramp1.v1, a2new, t2new)
+        print "a2",
+        mp.nprint(a2, n=15)
+        print "a2new",
+        mp.nprint(a2new, n=15)
+        
+        print "t1trimmed",
+        mp.nprint(t1trimmed, n=15)
+        print "t1new",
+        mp.nprint(t1new, n=15)
+        print "t2trimmed", 
+        mp.nprint(t2trimmed, n=15)
+        print "t2new", 
+        mp.nprint(t2new, n=15)
+        print "T", 
+        mp.nprint(newDuration, n=15)
+
+        ramp2 = Ramp(ramp1.v1, zero, Sub(newDuration, Add(t1new , t2new)))
+        newCurve = ParabolicCurve([ramp1, ramp2, ramp3])
+
+        # import IPython; IPython.embed()
+        
+        return newCurve
+    else:    
+        ramp1 = Ramp(v0, a1, t1, curve.x0)
+        ramp2 = Ramp(ramp1.v1, a2, t2)
+        newCurve = ParabolicCurve([ramp1, ramp2])
+        return newCurve
 
 
 def _SolveForT1(A, B, t, tInterval):
