@@ -11,7 +11,11 @@ namespace fclrave {
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
+typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
+ using OpenRAVE::ORE_Assert;
+
+/// \brief A broadphase collision manager together with the current update stamps of the bodies it contains
 struct ManagerInstance {
     BroadPhaseCollisionManagerPtr pmanager;
     std::vector< std::pair<KinBodyConstWeakPtr, int> > vUpdateStamps;
@@ -25,9 +29,8 @@ typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
 typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
+typedef std::pair<Transform, CollisionObjectPtr> TransformCollisionPair;
 
-
-using OpenRAVE::ORE_Assert;
 
 /* Helper functions for conversions from OpenRAVE to FCL */
 
@@ -66,24 +69,16 @@ class FCLSpace : public boost::enable_shared_from_this<FCLSpace>
 
 
 public:
-    typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
-    typedef boost::shared_ptr<Transform> TransformPtr;
-    typedef pair<Transform, CollisionObjectPtr> TransformCollisionPair;
-
-
 
     inline boost::weak_ptr<FCLSpace> weak_space() {
         return shared_from_this();
     }
-
-
 
     // corresponds to FCLUserData
     class KinBodyInfo : public boost::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
 public:
 
-        typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
 
         struct LINK
         {
@@ -95,33 +90,27 @@ public:
             }
 
             void Reset() {
-                if( !!_linkManager ) {
-                    _linkManager->clear();
-                    _linkManager.reset();
-                }
 
-                if( !!plinkBV ) {
-                    BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
-                    if( !!localEnvManager ) {
-                        localEnvManager->unregisterObject(plinkBV->second.get());
-                    }
+              BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
+              if( !!localEnvManager ) {
+                localEnvManager->unregisterObject(linkBV.second.get());
+              }
 
-                    plinkBV->second->setUserData(nullptr);
-                    plinkBV.reset();
-                }
+              linkBV->second->setUserData(nullptr);
+              linkBV.second.reset();
 
-                FOREACH(itgeompair, vgeoms) {
-                    (*itgeompair).second->setUserData(nullptr);
-                    (*itgeompair).second.reset();
-                }
-                vgeoms.resize(0);
+              FOREACH(itgeompair, vgeoms) {
+                (*itgeompair).second->setUserData(nullptr);
+                (*itgeompair).second.reset();
+              }
+              vgeoms.resize(0);
             }
 
 
 
             CollisionObjectPtr PrepareEnvManagerRegistering(BroadPhaseCollisionManagerPtr envManager) {
                 _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
-                return plinkBV->second;
+                return linkBV.second;
             }
 
             void Register(BroadPhaseCollisionManagerPtr envManager) {
@@ -129,11 +118,11 @@ public:
                 // if the localEnvManager is already set then the link is already registered
                 if( !localEnvManager ) {
                     _envManager = BroadPhaseCollisionManagerWeakPtr(envManager);
-                    envManager->registerObject(plinkBV->second.get());
+                    envManager->registerObject(linkBV.second.get());
                 } else {
                     // debug only
                     BOOST_ASSERT( localEnvManager == envManager );
-                    envManager->update(plinkBV->second.get(), false);
+                    envManager->update(linkBV.second.get(), false);
                 }
             }
 
@@ -141,7 +130,7 @@ public:
                 BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
                 // if the localEnvManager does not exists we don't need to unregister
                 if( !!localEnvManager ) {
-                    localEnvManager->unregisterObject(plinkBV->second.get());
+                    localEnvManager->unregisterObject(linkBV.second.get());
                     _envManager.reset();
                 }
             }
@@ -152,11 +141,10 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
-            int nLastStamp;
-            BroadPhaseCollisionManagerWeakPtr _envManager;
-            BroadPhaseCollisionManagerPtr _linkManager;
-            boost::shared_ptr<TransformCollisionPair> plinkBV;
-            std::vector<TransformCollisionPair> vgeoms; // fcl variant of ODE dBodyID
+          int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp
+          BroadPhaseCollisionManagerWeakPtr _envManager; ///< If set the linkBV is part of this collision manager
+          TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
+          std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
         };
 
@@ -179,6 +167,8 @@ public:
             }
             vlinks.resize(0);
             _geometrycallback.reset();
+            _geometrygroupcallback.reset();
+            _excludecallback.reset();
         }
 
         void UnregisterAllLinks() {
@@ -221,8 +211,6 @@ public:
         KinBodyWeakPtr _pbody;
         int nLastStamp;  // used during synchronization ("is transform up to date")
         vector< boost::shared_ptr<LINK> > vlinks;
-        OpenRAVE::UserDataPtr _geometrycallback;
-        OpenRAVE::UserDataPtr _geometrygroupcallback;
 
         ManagerInstancePtr _bodyManager; ///< Broad phase manager containing all the enabled links of the kinbody (does not contain attached kinbodies' links)
 
@@ -234,9 +222,11 @@ public:
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
         std::list<OpenRAVE::UserDataPtr> _linkEnabledCallbacks;
 
-        OpenRAVE::UserDataPtr _excludecallback; ///< handle for the callback called when some link enable status of this kinbody has changed so that the envManager is updated
+        OpenRAVE::UserDataPtr _geometrycallback; ///< handle for the callback called when the current geometry of the kinbody changed ( Prop_LinkGeometry )
+        OpenRAVE::UserDataPtr _geometrygroupcallback; ///< handle for the callback called when some geometry group of one of the links of this kinbody changed ( Prop_LinkGeometryGroup )
+        OpenRAVE::UserDataPtr _excludecallback; ///< handle for the callback called when some link enable status of this kinbody has changed so that the envManager is updated ( Prop_LinkEnable )
 
-        std::string _geometrygroup;
+        std::string _geometrygroup; ///< name of the geometry group tracked by this kinbody info ; if empty, tracks the current geometries
     };
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
@@ -246,6 +236,7 @@ public:
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey)
     {
+      // After many test, OBB seems to be the only real option (followed by kIOS)
         SetBVHRepresentation("OBB");
     }
 
@@ -267,6 +258,7 @@ public:
                 RAVELOG_WARN("inconsistency detected with fclspace user data\n");
             }
         }
+        _unstableBodies.clear();
         _setInitializedBodies.clear();
     }
 
@@ -333,7 +325,7 @@ public:
 
             if( link->vgeoms.size() == 1) {
                 // set the unique geometry as its own bounding volume
-                link->plinkBV = boost::make_shared<TransformCollisionPair>(link->vgeoms[0]);
+                link->linkBV = link->vgeoms[0];
             } else {
                 // create the bounding volume for the link
                 fcl::BVHModel<fcl::OBB> model;
@@ -344,15 +336,15 @@ public:
                 }
                 model.endModel();
                 OPENRAVE_ASSERT_OP( model.getNumBVs(), !=, 0);
-                link->plinkBV = _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
-                link->plinkBV->second->setUserData(link.get());
+                link->linkBV = _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
+                link->linkBV.second->setUserData(link.get());
             }
 
             link->nLastStamp = pinfo->nLastStamp;
             link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
             pinfo->vlinks.push_back(link);
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", link->plinkBV->second.get()%link->bodylinkname);
+            RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", link->linkBV.second.get()%link->bodylinkname);
 #endif
         }
 
@@ -373,7 +365,8 @@ public:
         return pinfo;
     }
 
-    bool HasDifferentGeometry(KinBodyConstPtr pbody, const std::string& groupname) {
+    bool HasNamedGeometry(KinBodyConstPtr pbody, const std::string& groupname) {
+      // The empty string corresponds to current geometries so all kinbodies have it
         if( groupname.size() == 0 ) {
             return true;
         }
@@ -404,7 +397,7 @@ public:
 
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
-        if( HasDifferentGeometry(pbody, groupname) ) {
+        if( HasNamedGeometry(pbody, groupname) ) {
             // Save the already existing KinBodyInfoPtr for the old geometry group
             KinBodyInfoPtr poldinfo = GetInfo(pbody);
             if( poldinfo->_geometrygroup == groupname ) {
@@ -656,7 +649,7 @@ private:
         model.addSubModel(fcl_points, fcl_triangles);
     }
 
-    static boost::shared_ptr<TransformCollisionPair> _CreateTransformCollisionPairFromOBB(fcl::OBB const &bv) {
+    static TransformCollisionPair _CreateTransformCollisionPairFromOBB(fcl::OBB const &bv) {
         CollisionGeometryPtr pbvGeom = make_shared<fcl::Box>(bv.extent[0]*2.0f, bv.extent[1]*2.0f, bv.extent[2]*2.0f);
         CollisionObjectPtr pbvColl = boost::make_shared<fcl::CollisionObject>(pbvGeom);
         fcl::Quaternion3f fclBvRot;
@@ -664,7 +657,7 @@ private:
         Vector bvRotation = ConvertQuaternionFromFCL(fclBvRot);
         Vector bvTranslation = ConvertVectorFromFCL(bv.center());
 
-        return boost::make_shared<TransformCollisionPair>(Transform(bvRotation, bvTranslation), pbvColl);
+        return std::make_pair(Transform(bvRotation, bvTranslation), pbvColl);
     }
 
     // couldn't we make this static / what about the tests on non-zero size (eg. box extents) ?
@@ -728,9 +721,8 @@ private:
             BOOST_ASSERT( pbody->GetLinks().size() == pinfo->vlinks.size() );
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
-                BOOST_ASSERT( !!pinfo->vlinks[i]->plinkBV);
-                CollisionObjectPtr pcoll = pinfo->vlinks[i]->plinkBV->second;
-                Transform pose = vtrans[i] * pinfo->vlinks[i]->plinkBV->first;
+                CollisionObjectPtr pcoll = pinfo->vlinks[i]->linkBV.second;
+                Transform pose = vtrans[i] * pinfo->vlinks[i]->linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 

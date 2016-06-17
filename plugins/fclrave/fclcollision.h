@@ -751,7 +751,7 @@ public:
     }
 
     CollisionObjectPtr GetLinkBV(KinBodyInfoPtr pinfo, int index) {
-        return pinfo->vlinks.at(index)->plinkBV->second;
+        return pinfo->vlinks.at(index)->linkBV.second;
     }
 
     BroadPhaseCollisionManagerPtr CreateManager() {
@@ -985,7 +985,7 @@ private:
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
         FOREACH(itbody, _fclspace->GetEnvExcludiedBodies()) {
           FOREACH(itpLINK, _fclspace->GetInfo(*itbody)->vlinks) {
-            fcl::CollisionObject* pcoll = (*itpLINK)->plinkBV->second.get();
+            fcl::CollisionObject* pcoll = (*itpLINK)->linkBV.second.get();
             int& n = _currentlyused[pcoll];
             if( n > 0 ) {
               _usestatistics[pcoll][n]++;
