@@ -163,7 +163,7 @@ public:
             ss << "]" << endl;
             throw OPENRAVE_EXCEPTION_FORMAT0(ss.str(), ORE_InvalidArguments);
         }
-        
+
         return _CallFilters(vsolution, pmanip, param, ikreturn, minpriority, maxpriority);
     }
 
@@ -208,7 +208,7 @@ public:
     const std::string& GetKinematicsStructureHash() const {
         return _kinematicshash;
     }
-    
+
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
@@ -401,12 +401,12 @@ public:
             }
             return -1; // don't know
         }
-        
+
         void RegisterCollidingEndEffector(const Transform& t, bool bcolliding)
         {
             _listCollidingTransforms.push_back(std::make_pair(t, bcolliding));
         }
-        
+
 protected:
         void _InitSavers()
         {
@@ -678,22 +678,39 @@ protected:
     {
         IkSolverBase::Clone(preference, cloningoptions);
         boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
+
+        _pmanip.reset();
+        _cblimits.reset();
+        _vchildlinks.resize(0);
+        _vchildlinkindices.resize(0);
+        _vindependentlinks.resize(0);
+        RobotBase::ManipulatorPtr rmanip = r->_pmanip.lock();
+        if( !!rmanip ) {
+            RobotBasePtr probot = GetEnv()->GetRobot(rmanip->GetRobot()->GetName());
+            if( !!probot ) {
+                RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(rmanip->GetName());
+                _pmanip = pmanip;
+                _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
+
+                if( !!pmanip ) {
+                    pmanip->GetChildLinks(_vchildlinks);
+                    _vchildlinkindices.resize(_vchildlinks.size());
+                    for(size_t i = 0; i < _vchildlinks.size(); ++i) {
+                        _vchildlinkindices[i] = _vchildlinks[i]->GetIndex();
+                    }
+                    pmanip->GetIndependentLinks(_vindependentlinks);
+                }
+            }
+        }
         _vfreeparams = r->_vfreeparams;
         _vfreerevolute = r->_vfreerevolute;
         _vjointrevolute = r->_vjointrevolute;
         _vfreeparamscales = r->_vfreeparamscales;
+        _ikfunctions = r->_ikfunctions; // probably not necessary, but not setting it here could create inconsistency problems later on
         _vFreeInc = r->_vFreeInc;
         _fFreeIncRevolute = r->_fFreeIncRevolute;
         _fFreeIncPrismaticNum = r->_fFreeIncPrismaticNum;
         _nTotalDOF = r->_nTotalDOF;
-        //?
-        //_ikfunctions = r->_ikfunctions;
-        //_cblimits;
-        //_vchildlinks, _vindependentlinks
-        //_resource
-
-        _ikthreshold = r->_ikthreshold;
-        _kinematicshash = r->_kinematicshash;
         _qlower = r->_qlower;
         _qupper = r->_qupper;
         _qmid = r->_qmid;
@@ -701,6 +718,11 @@ protected:
         _qbigrangemaxsols = r->_qbigrangemaxsols;
         _qbigrangemaxcumprod = r->_qbigrangemaxcumprod;
         _iktype = r->_iktype;
+
+        _kinematicshash = r->_kinematicshash;
+        _ikthreshold = r->_ikthreshold;
+
+        _bEmptyTransform6D = r->_bEmptyTransform6D;
     }
 
 protected:
@@ -1170,7 +1192,7 @@ protected:
 
         /// if have to check for closest solution, make sure this new solution is closer than best found so far
         //dReal d = dReal(1e30);
-        
+
         int filteroptions = boost::get<2>(freeq0check);
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
             _ComputeAllSimilarJointAngles(vravesols, vravesol);
@@ -1343,7 +1365,7 @@ protected:
                         stateCheck.RegisterCollidingEndEffector(pmanip->GetTransform(), bIsEndEffectorCollision);
                     }
                 }
-                
+
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                     ss << "ikfast collision " << report.__str__() << " colvalues=[";
@@ -1377,7 +1399,7 @@ protected:
             RAVELOG_ERROR(ss.str());
             return static_cast<IkReturnAction>(retactionall|IKRA_RejectKinematicsPrecision);
         }
-        
+
         if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
             // order the listlocalikreturns depending on the distance to boost::get<1>(freeq0check), that way first solution is prioritized
             std::vector< std::pair<size_t, dReal> > vdists; vdists.reserve(listlocalikreturns.size());
@@ -1392,7 +1414,7 @@ protected:
             if( vdists.size() == 0 ) {
                 return IKRA_Reject; // none could pass already computed solution
             }
-            
+
             std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
             listlocalikreturns.clear();
             for(size_t i = 0; i < vdists.size(); ++i) {
@@ -1402,11 +1424,11 @@ protected:
                 listlocalikreturns.push_back(vtempikreturns.at(vdists[i].first));
             }
         }
-        
+
         if( listlocalikreturns.size() == 0 ) {
             return IKRA_Reject;
         }
-        
+
         // check ones with filter <= 0
         if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(IKSP_MinPriority, 0) ) {
 //            unsigned int maxsolutions = 1;
@@ -1426,7 +1448,7 @@ protected:
                 FOREACH(it, localret->_mapdata["solutionindices"]) {
                     _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
                 }
-                
+
                 probot->SetActiveDOFValues(localret->_vsolution,false);
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
@@ -1901,13 +1923,14 @@ protected:
     std::vector<int> _qbigrangeindices; ///< indices into _qlower/_qupper of joints that are revolute, not circular, and have ranges > 360
     std::vector<size_t> _qbigrangemaxsols, _qbigrangemaxcumprod;
     IkParameterizationType _iktype;
-    boost::shared_ptr<void> _resource;
     std::string _kinematicshash;
     dReal _ikthreshold;
 
+    //@{
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters)
     std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
     int _nSameStateRepeatCount;
+    //@}
 
     bool _bEmptyTransform6D; ///< if true, then the iksolver has been built with identity of the manipulator transform. Only valid for Transform6D IKs.
 };

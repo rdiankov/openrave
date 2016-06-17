@@ -18,6 +18,8 @@
 
 #include <openrave/mathextra.h>
 
+namespace rplanners {
+    
 /**
    t,dt,v0,v1,px = symbols('t,dt,v0,v1,px')
 
@@ -312,3 +314,5 @@ protected:
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
     return PlannerBasePtr(new CubicTrajectoryRetimer(penv, sinput));
 }
+
+} // end namespace rplanners
