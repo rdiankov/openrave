@@ -30,7 +30,7 @@ ParabolicCurve Stretch1D(ParabolicCurve curve, Real newDuration, Real vm, Real a
 // Utilities
 bool _SolveForT0(Real A, Real B, Real t, Real tLow, Real tHigh, Real& t0);
 
-// Compute roots of a quartic polynomial. This functions is taken from OpenRAVE ik generator file.
+// Compute roots of a cubic polynomial. This functions is taken from OpenRAVE ik generator file.
 static inline void FindPolyRoots3(IkReal rawcoeffs[4], IkReal rawroots[3], int& numroots) {
     using std::complex;
     if( rawcoeffs[0] == 0 ) {

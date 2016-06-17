@@ -369,7 +369,7 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
         return curve;
     }
 
-    // Now we have already obtained a range of feasiblt values for t0. We choose a value of t0 by
+    // Now we have already obtained a range of feasible values for t0. We choose a value of t0 by
     // selecting the one which minimize (a0^2 + a1^2).
 
     // An alternative is to choose t0 = 0.5(t0Max + t0Min), i.e., the midpoint of the interval (to
