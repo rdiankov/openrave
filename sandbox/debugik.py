@@ -1084,6 +1084,7 @@ def test_ik():
     rawnormaldir = [0.0,0.0,1.0]
     rawbasedir=dot(ikmodel.manip.GetLocalToolTransform()[0:3,0:3],ikmodel.manip.GetDirection())
     rawbasepos=ikmodel.manip.GetLocalToolTransform()[0:3,3]
+    import sys; sys.setrecursionlimit(1500)
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn,ikfastoptions=1)
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator(version=ikmodel.ikfast.__version__).generate(chaintree)

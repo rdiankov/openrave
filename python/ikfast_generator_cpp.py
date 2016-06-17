@@ -664,7 +664,7 @@ int main(int argc, char** argv)
         self.symbolgen = cse_main.numbered_symbols('x')
 
         code = ''
-        if node.Tfk:
+        if 0:#node.Tfk:
             code += self.getFKFunctionPreamble()
             allvars = node.solvejointvars + node.freejointvars
             subexprs,reduced_exprs = customcse(node.Tfk[0:3,0:4].subs([(v[0],Symbol('j[%d]'%v[1])) for v in allvars]),self.symbolgen)
