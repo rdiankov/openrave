@@ -7,7 +7,6 @@ namespace fclrave {
 #include <memory> // c++11
 #include <vector>
 
-// TODO : I should put these in some namespace...
 
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
@@ -20,19 +19,13 @@ struct ManagerInstance {
 typedef boost::shared_ptr<ManagerInstance> ManagerInstancePtr;
 typedef boost::weak_ptr<ManagerInstance> ManagerInstanceWeakPtr;
 
-// Warning : this is the only place where we use std::shared_ptr (compatibility with fcl)
+// Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)
 typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr;
 typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
 typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
 
-typedef CollisionGroup ManagerKey;
-typedef boost::shared_ptr<ManagerKey> ManagerKeyPtr;
-typedef boost::shared_ptr<const ManagerKey> ManagerKeyConstPtr;
-typedef boost::unordered_map<ManagerKey, ManagerInstancePtr> ManagerTable;
-typedef boost::shared_ptr<ManagerTable> ManagerTablePtr;
-typedef boost::weak_ptr<ManagerTable> ManagerTableWeakPtr;
 
 using OpenRAVE::ORE_Assert;
 
@@ -75,7 +68,6 @@ class FCLSpace : public boost::enable_shared_from_this<FCLSpace>
 public:
     typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
     typedef boost::shared_ptr<Transform> TransformPtr;
-    // TODO : is it okay to leave a plain transform there instead of a pointer
     typedef pair<Transform, CollisionObjectPtr> TransformCollisionPair;
 
 
@@ -211,7 +203,6 @@ public:
         void _ResetBodyManagers() {
             // we invalidate both managers
             _bodyManager.reset();
-            // TODO : this might not be always necessary, i.e. when the attached or detached body is not on an active link...
             _bodyManagerActiveDOFs.reset();
             // we reinitialize the link-enabled callbacks
             _linkEnabledCallbacks.clear();
@@ -222,7 +213,6 @@ public:
             _bodyManagerActiveDOFs.reset();
         }
 
-        // TODO : Is this used ?
         KinBodyPtr GetBody()
         {
             return _pbody.lock();
@@ -256,7 +246,6 @@ public:
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey)
     {
-        // TODO : test best default choice
         SetBVHRepresentation("OBB");
     }
 
@@ -372,12 +361,8 @@ public:
         pinfo->_excludecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ExcludeWkBodyFromEnv, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBody const>(pbody)));
 
         pbody->SetUserData(_userdatakey, pinfo);
-        _ExcludeBodyFromEnv(pbody);
-        if( !!_envManagerInstance ) {
-            pinfo->UpdateLinksRegisterStatus(_envManagerInstance->pmanager);
-        }
-        if( pbody->IsRobot() ) {
-          _initializedRobots.insert(pbody);
+        if( !_unstableBodies.count(pbody) ) {
+          _ExcludeBodyFromEnv(pbody);
         }
         _setInitializedBodies.insert(pbody);
 
@@ -459,14 +444,31 @@ public:
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
+      static const std::string empty;
       KinBodyInfoPtr pinfo = GetInfo(pbody);
       if( !!pinfo ) {
         return pinfo->_geometrygroup;
       } else {
-        return "";
+        return empty;
       }
     }
 
+    void SetBodyUnstable(KinBodyConstPtr pbody, bool bsetUnstable) {
+      RAVELOG_DEBUG_FORMAT("FCL User : Setting unstable status %d to body %s (env = %d, %s)", bsetUnstable%pbody->GetName()%_penv->GetId()%_userdatakey);
+      if( bsetUnstable ) {
+        _unstableBodies.insert(pbody);
+      } else {
+        _unstableBodies.erase(pbody);
+      }
+      if( !!GetInfo(pbody) ) {
+        // excluding the body from env will either remove it from current environment or add it during the next update
+        _ExcludeBodyFromEnv(pbody);
+      }
+    }
+
+    bool IsBodyUnstable(KinBodyConstPtr pbody) const {
+      return _unstableBodies.count(pbody);
+    }
 
     // Already existing geometry not updated !
     // Is that the behaviour we want ?
@@ -548,15 +550,13 @@ public:
         if( !!pbody ) {
             RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
-            if( pbody->IsRobot() ) {
-              _initializedRobots.erase(pbody);
-            }
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
             _ExcludeBodyFromEnv(pbody);
             _envExcludedBodies.erase(pbody);
+            _unstableBodies.erase(pbody);
             _cachedpinfo.erase(pbody->GetEnvironmentId());
             bool is_consistent = pbody->RemoveUserData(_userdatakey);
             if( !is_consistent ) {
@@ -606,8 +606,8 @@ public:
         return _setInitializedBodies;
     }
 
-    const std::set<KinBodyConstPtr>& GetEnvRobots() const {
-      return _initializedRobots;
+    const std::set<KinBodyConstPtr>& GetUnstableBodies() const {
+      return _unstableBodies;
     }
 
     void SetEnvManagerInstance(ManagerInstancePtr envManagerInstance) {
@@ -682,10 +682,8 @@ private:
             return make_shared<fcl::Sphere>(info._vGeomData.x);
 
         case OpenRAVE::GT_Cylinder:
-            // TODO double check this
             return make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
-        // TODO : Is that ok ? (consider testing the transformatiom with boxes)
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
         {
@@ -798,7 +796,7 @@ private:
     }
 
     void _ExcludeBodyFromEnv(KinBodyConstPtr pbody) {
-        if( pbody->IsRobot() ) {
+      if( _unstableBodies.count(pbody) ) {
             return;
         }
         _envExcludedBodies.insert(pbody);
@@ -825,7 +823,7 @@ private:
     ManagerInstancePtr _envManagerInstance;
     std::set<KinBodyConstPtr> _envExcludedBodies;
 
-    std::set<KinBodyConstPtr> _initializedRobots;
+    std::set<KinBodyConstPtr> _unstableBodies;
     std::set<KinBodyConstPtr> _setInitializedBodies;
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo;
 };
