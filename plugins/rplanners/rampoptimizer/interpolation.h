@@ -115,8 +115,8 @@ static inline void FindPolyRoots4(IkReal rawcoeffs[5], IkReal rawroots[4], int& 
     using std::complex;
     if( rawcoeffs[0] == 0 ) {
         // solve with one reduced degree
-        //%(reducedpolyroots)s(&rawcoeffs[1], &rawroots[0], numroots);
-        numroots = 0;
+        FindPolyRoots3(&rawcoeffs[1], &rawroots[0], numroots);
+        // numroots = 0;
         return;
     }
     const IkReal tol = 128.0*std::numeric_limits<IkReal>::epsilon();
