@@ -92,11 +92,10 @@ public:
             void Reset() {
 
               BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
-              if( !!localEnvManager ) {
+              if( !!localEnvManager && !!linkBV.second ) {
                 localEnvManager->unregisterObject(linkBV.second.get());
               }
 
-              linkBV->second->setUserData(nullptr);
               linkBV.second.reset();
 
               FOREACH(itgeompair, vgeoms) {

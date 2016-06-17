@@ -1232,6 +1232,7 @@ private:
         return false;
     }
 
+#ifdef NARROW_COLLISION_CACHING
     static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2)
     {
         if( o1 < o2 ) {
@@ -1240,6 +1241,7 @@ private:
             return make_pair(o2, o1);
         }
     }
+#endif
 
     static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
     {
