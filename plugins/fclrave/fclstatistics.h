@@ -57,8 +57,10 @@ public:
       std::fstream f("fclstatistics.log", std::fstream::out | std::fstream::app);
       FOREACH(ittiming, timings) {
           f << ittiming->first;
+          size_t maxTimingCount = 0;
           FOREACH(ittimingvector, ittiming->second) {
             f << ";";
+            maxTimingCount = std::max(maxTimingCount, ittimingvector->size() - 1);
             std::vector<time_point>::iterator it = ittimingvector->begin();
             time_point t = *it;
             while(++it != ittimingvector->end()) {
@@ -66,7 +68,7 @@ public:
               t = *it;
             }
           }
-          f << std::endl;
+          f << ";" << maxTimingCount << std::endl;
         }
     }
 
