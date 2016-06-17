@@ -22,11 +22,11 @@
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
 
-  if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-    return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
-  }
+    if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
+        return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
+    }
 
-  return InterfaceBasePtr();
+    return InterfaceBasePtr();
 }
 
 void GetPluginAttributesValidated(PLUGININFO& info)

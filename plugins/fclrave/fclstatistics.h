@@ -53,22 +53,22 @@ public:
     }
 
     void Display() {
-      EnvironmentMutex::scoped_lock lock(log_out_mutex);
-      std::fstream f("fclstatistics.log", std::fstream::out | std::fstream::app);
-      FOREACH(ittiming, timings) {
-          f << ittiming->first;
-          size_t maxTimingCount = 0;
-          FOREACH(ittimingvector, ittiming->second) {
-            f << ";";
-            maxTimingCount = std::max(maxTimingCount, ittimingvector->size() - 1);
-            std::vector<time_point>::iterator it = ittimingvector->begin();
-            time_point t = *it;
-            while(++it != ittimingvector->end()) {
-              f << "|" << (*it - t).count();
-              t = *it;
+        EnvironmentMutex::scoped_lock lock(log_out_mutex);
+        std::fstream f("fclstatistics.log", std::fstream::out | std::fstream::app);
+        FOREACH(ittiming, timings) {
+            f << ittiming->first;
+            size_t maxTimingCount = 0;
+            FOREACH(ittimingvector, ittiming->second) {
+                f << ";";
+                maxTimingCount = std::max(maxTimingCount, ittimingvector->size() - 1);
+                std::vector<time_point>::iterator it = ittimingvector->begin();
+                time_point t = *it;
+                while(++it != ittimingvector->end()) {
+                    f << "|" << (*it - t).count();
+                    t = *it;
+                }
             }
-          }
-          f << ";" << maxTimingCount << std::endl;
+            f << ";" << maxTimingCount << std::endl;
         }
     }
 

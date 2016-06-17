@@ -13,7 +13,7 @@ typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
 typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
- using OpenRAVE::ORE_Assert;
+using OpenRAVE::ORE_Assert;
 
 /// \brief A broadphase collision manager together with the current update stamps of the bodies it contains
 struct ManagerInstance {
@@ -91,18 +91,18 @@ public:
 
             void Reset() {
 
-              BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
-              if( !!localEnvManager && !!linkBV.second ) {
-                localEnvManager->unregisterObject(linkBV.second.get());
-              }
+                BroadPhaseCollisionManagerPtr localEnvManager = _envManager.lock();
+                if( !!localEnvManager && !!linkBV.second ) {
+                    localEnvManager->unregisterObject(linkBV.second.get());
+                }
 
-              linkBV.second.reset();
+                linkBV.second.reset();
 
-              FOREACH(itgeompair, vgeoms) {
-                (*itgeompair).second->setUserData(nullptr);
-                (*itgeompair).second.reset();
-              }
-              vgeoms.resize(0);
+                FOREACH(itgeompair, vgeoms) {
+                    (*itgeompair).second->setUserData(nullptr);
+                    (*itgeompair).second.reset();
+                }
+                vgeoms.resize(0);
             }
 
 
@@ -140,10 +140,10 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
-          int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp
-          BroadPhaseCollisionManagerWeakPtr _envManager; ///< If set the linkBV is part of this collision manager
-          TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
-          std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
+            int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp
+            BroadPhaseCollisionManagerWeakPtr _envManager; ///< If set the linkBV is part of this collision manager
+            TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
+            std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
         };
 
@@ -236,7 +236,7 @@ public:
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
         : _penv(penv), _userdatakey(userdatakey)
     {
-      // After many test, OBB seems to be the only real option (followed by kIOS)
+        // After many test, OBB seems to be the only real option (followed by kIOS)
         SetBVHRepresentation("OBB");
     }
 
@@ -364,7 +364,7 @@ public:
     }
 
     bool HasNamedGeometry(KinBodyConstPtr pbody, const std::string& groupname) {
-      // The empty string corresponds to current geometries so all kinbodies have it
+        // The empty string corresponds to current geometries so all kinbodies have it
         if( groupname.size() == 0 ) {
             return true;
         }
@@ -399,7 +399,7 @@ public:
             // Save the already existing KinBodyInfoPtr for the old geometry group
             KinBodyInfoPtr poldinfo = GetInfo(pbody);
             if( poldinfo->_geometrygroup == groupname ) {
-              return;
+                return;
             }
 
             if( !!_envManagerInstance ) {
@@ -435,30 +435,30 @@ public:
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
-      static const std::string empty;
-      KinBodyInfoPtr pinfo = GetInfo(pbody);
-      if( !!pinfo ) {
-        return pinfo->_geometrygroup;
-      } else {
-        return empty;
-      }
+        static const std::string empty;
+        KinBodyInfoPtr pinfo = GetInfo(pbody);
+        if( !!pinfo ) {
+            return pinfo->_geometrygroup;
+        } else {
+            return empty;
+        }
     }
 
     void SetBodyUnstable(KinBodyConstPtr pbody, bool bsetUnstable) {
-      RAVELOG_DEBUG_FORMAT("FCL User : Setting unstable status %d to body %s (env = %d, %s)", bsetUnstable%pbody->GetName()%_penv->GetId()%_userdatakey);
-      if( bsetUnstable ) {
-        _unstableBodies.insert(pbody);
-      } else {
-        _unstableBodies.erase(pbody);
-      }
-      if( !!GetInfo(pbody) ) {
-        // excluding the body from env will either remove it from current environment or add it during the next update
-        _ExcludeBodyFromEnv(pbody);
-      }
+        RAVELOG_DEBUG_FORMAT("FCL User : Setting unstable status %d to body %s (env = %d, %s)", bsetUnstable%pbody->GetName()%_penv->GetId()%_userdatakey);
+        if( bsetUnstable ) {
+            _unstableBodies.insert(pbody);
+        } else {
+            _unstableBodies.erase(pbody);
+        }
+        if( !!GetInfo(pbody) ) {
+            // excluding the body from env will either remove it from current environment or add it during the next update
+            _ExcludeBodyFromEnv(pbody);
+        }
     }
 
     bool IsBodyUnstable(KinBodyConstPtr pbody) const {
-      return _unstableBodies.count(pbody);
+        return _unstableBodies.count(pbody);
     }
 
     // Already existing geometry not updated !
@@ -511,7 +511,7 @@ public:
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         if( !pinfo ) {
-          return;
+            return;
         }
         BOOST_ASSERT( pinfo->GetBody() == pbody);
         _Synchronize(pinfo);
@@ -593,7 +593,7 @@ public:
     }
 
     const std::set<KinBodyConstPtr>& GetUnstableBodies() const {
-      return _unstableBodies;
+        return _unstableBodies;
     }
 
     void SetEnvManagerInstance(ManagerInstancePtr envManagerInstance) {
@@ -727,15 +727,15 @@ private:
 
                 pinfo->vlinks[i]->nLastStamp = pinfo->nLastStamp;
                 FOREACHC(itgeomcoll, pinfo->vlinks[i]->vgeoms) {
-                  CollisionObjectPtr pcoll = (*itgeomcoll).second;
-                  Transform pose = vtrans[i] * (*itgeomcoll).first;
-                  fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-                  fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+                    CollisionObjectPtr pcoll = (*itgeomcoll).second;
+                    Transform pose = vtrans[i] * (*itgeomcoll).first;
+                    fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+                    fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
-                  pcoll->setTranslation(newPosition);
-                  pcoll->setQuatRotation(newOrientation);
-                  // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-                  pcoll->computeAABB();
+                    pcoll->setTranslation(newPosition);
+                    pcoll->setQuatRotation(newOrientation);
+                    // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
+                    pcoll->computeAABB();
                 }
             }
 
@@ -780,7 +780,7 @@ private:
     }
 
     void _ExcludeBodyFromEnv(KinBodyConstPtr pbody) {
-      if( _unstableBodies.count(pbody) ) {
+        if( _unstableBodies.count(pbody) ) {
             return;
         }
         _envExcludedBodies.insert(pbody);

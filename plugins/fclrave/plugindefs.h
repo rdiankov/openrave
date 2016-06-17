@@ -36,8 +36,8 @@
 
 #else
 
-#define FOREACH(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
 
 #endif
 

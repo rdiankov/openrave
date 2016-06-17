@@ -56,8 +56,8 @@ typedef FCLSpace::LinkInfoPtr LinkInfoPtr;
 
 
 template<typename T>
-  inline bool IsIn(T const& x, std::vector<T> const &collection) {
-  return std::find(collection.begin(), collection.end(), x) != collection.end();
+inline bool IsIn(T const& x, std::vector<T> const &collection) {
+    return std::find(collection.begin(), collection.end(), x) != collection.end();
 }
 
 class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
@@ -171,17 +171,17 @@ public:
         EnvironmentMutex::scoped_lock lock(log_collision_use_mutex);
 
         FOREACH(itpair, _currentlyused) {
-          if(itpair->second > 0) {
-            _usestatistics[itpair->first][itpair->second]++;
-          }
+            if(itpair->second > 0) {
+                _usestatistics[itpair->first][itpair->second]++;
+            }
         }
         std::fstream f("fclrave_collision_use.log", std::fstream::app | std::fstream::out);
         FOREACH(itpair, _usestatistics) {
-          f << GetEnv()->GetId() << "|" << _userdatakey << "|" << itpair->first;
-          FOREACH(itintpair, itpair->second) {
-            f << "|" << itintpair->first << ";" << itintpair->second;
-          }
-          f << std::endl;
+            f << GetEnv()->GetId() << "|" << _userdatakey << "|" << itpair->first;
+            FOREACH(itintpair, itpair->second) {
+                f << "|" << itintpair->first << ";" << itintpair->second;
+            }
+            f << std::endl;
         }
         f.close();
 #endif
@@ -207,11 +207,11 @@ public:
 
 #ifdef FCLRAVE_PERMANENT_UNSTABLE
         FOREACH(itbodyname, globalUnstableBodynames) {
-          RAVELOG_DEBUG_FORMAT("FCL User : Trying to set unstable status %s (env %d, %s)", *itbodyname%GetEnv()->GetId()%_userdatakey);
-          KinBodyConstPtr pbody = GetEnv()->GetKinBody(*itbodyname);
-          if( !!pbody ) {
-            SetBodyUnstable(pbody);
-          }
+            RAVELOG_DEBUG_FORMAT("FCL User : Trying to set unstable status %s (env %d, %s)", *itbodyname%GetEnv()->GetId()%_userdatakey);
+            KinBodyConstPtr pbody = GetEnv()->GetKinBody(*itbodyname);
+            if( !!pbody ) {
+                SetBodyUnstable(pbody);
+            }
         }
 #endif
         RAVELOG_VERBOSE(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
@@ -239,35 +239,35 @@ public:
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
-      _fclspace->SetBodyGeometryGroup(pbody, groupname);
+        _fclspace->SetBodyGeometryGroup(pbody, groupname);
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
     {
-      return _fclspace->GetBodyGeometryGroup(pbody);
+        return _fclspace->GetBodyGeometryGroup(pbody);
     }
 
 #ifdef FCLRAVE_PERMANENT_UNSTABLE
     bool _SetUnstable(ostream& out, istream& sinput) {
-      std::string bodyname;
-      sinput >> bodyname;
-      globalUnstableBodynames.push_back(bodyname);
-      KinBodyConstPtr pbody = GetEnv()->GetKinBody(bodyname);
-      if( !!pbody ) {
-        SetBodyUnstable(pbody);
-      }
-      return !!pbody;
+        std::string bodyname;
+        sinput >> bodyname;
+        globalUnstableBodynames.push_back(bodyname);
+        KinBodyConstPtr pbody = GetEnv()->GetKinBody(bodyname);
+        if( !!pbody ) {
+            SetBodyUnstable(pbody);
+        }
+        return !!pbody;
     }
 #endif
 
     virtual void SetBodyUnstable(KinBodyConstPtr pbody, bool bsetUnstable = true)
     {
-      _fclspace->SetBodyUnstable(pbody, bsetUnstable);
+        _fclspace->SetBodyUnstable(pbody, bsetUnstable);
     }
 
     virtual bool IsBodyUnstable(KinBodyConstPtr pbody) const
     {
-      return _fclspace->IsBodyUnstable(pbody);
+        return _fclspace->IsBodyUnstable(pbody);
     }
 
     virtual bool SetCollisionOptions(int collision_options)
@@ -371,11 +371,11 @@ public:
         }
 #ifdef FCLRAVE_PERMANENT_UNSTABLE
         FOREACH(itbodyname, globalUnstableBodynames) {
-          RAVELOG_DEBUG_FORMAT("FCL User : Trying to set unstable status %s (env %d, %s)", *itbodyname%GetEnv()->GetId()%_userdatakey);
-          KinBodyConstPtr pbody = GetEnv()->GetKinBody(*itbodyname);
-          if( !!pbody ) {
-            SetBodyUnstable(pbody);
-          }
+            RAVELOG_DEBUG_FORMAT("FCL User : Trying to set unstable status %s (env %d, %s)", *itbodyname%GetEnv()->GetId()%_userdatakey);
+            KinBodyConstPtr pbody = GetEnv()->GetKinBody(*itbodyname);
+            if( !!pbody ) {
+                SetBodyUnstable(pbody);
+            }
         }
 #endif
         return true;
@@ -396,7 +396,7 @@ public:
 #ifdef FCLRAVE_PERMANENT_UNSTABLE
         auto it = std::find(globalUnstableBodynames.begin(), globalUnstableBodynames.end(), pbody->GetName());
         if( it != globalUnstableBodynames.end() ) {
-          SetBodyUnstable(pbody);
+            SetBodyUnstable(pbody);
         }
 #endif
         return !pinfo;
@@ -556,16 +556,16 @@ public:
 
             // The unstable bodies are not contained in the envManager, we need to consider them separately
             FOREACH(itbody, _fclspace->GetUnstableBodies()) {
-              if( query._bStopChecking ) {
-                return query._bCollision;
-              }
+                if( query._bStopChecking ) {
+                    return query._bCollision;
+                }
 
-              if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
-                continue;
-              }
-              // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-              BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
-              itbodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+                if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
+                    continue;
+                }
+                // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+                BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+                itbodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
 
             }
 
@@ -600,16 +600,16 @@ public:
 
             // The robots are not contained in the envManager, we need to consider them separately
             FOREACH(itbody, _fclspace->GetUnstableBodies()) {
-              if( query._bStopChecking ) {
-                return query._bCollision;
-              }
+                if( query._bStopChecking ) {
+                    return query._bCollision;
+                }
 
-              if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(pbody) ) {
-                continue;
-              }
-              // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-              BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
-              itbodyManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+                if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(pbody) ) {
+                    continue;
+                }
+                // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+                BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+                itbodyManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             }
 
             return query._bCollision;
@@ -736,25 +736,25 @@ public:
 private:
 
     inline CollisionObjectPtr GetLinkBV(LinkConstPtr plink) {
-      return GetLinkBV(plink->GetParent(), plink->GetIndex());
+        return GetLinkBV(plink->GetParent(), plink->GetIndex());
     }
 
     inline CollisionObjectPtr GetLinkBV(KinBodyConstPtr pbody, int index) {
-      KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-      if( !!pinfo ) {
-        return GetLinkBV(pinfo, index);
-      } else {
-        RAVELOG_WARN(str(boost::format("KinBody %s is not initialized in fclspace %s, env %d")%pbody->GetName()%_userdatakey%GetEnv()->GetId()));
-        return CollisionObjectPtr();
-      }
+        KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+        if( !!pinfo ) {
+            return GetLinkBV(pinfo, index);
+        } else {
+            RAVELOG_WARN(str(boost::format("KinBody %s is not initialized in fclspace %s, env %d")%pbody->GetName()%_userdatakey%GetEnv()->GetId()));
+            return CollisionObjectPtr();
+        }
     }
 
     inline CollisionObjectPtr GetLinkBV(KinBodyInfoPtr pinfo, int index) {
-      return pinfo->vlinks.at(index)->linkBV.second;
+        return pinfo->vlinks.at(index)->linkBV.second;
     }
 
     inline BroadPhaseCollisionManagerPtr CreateManager() {
-      return _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
+        return _CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
     }
 
     inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
@@ -817,11 +817,11 @@ private:
             // Compute current collision objects
             _tmpbuffer.resize(0);
             FOREACH(itbody, attachedBodies) {
-              // The attached bodies might not be in the environment (Strange feature of current OpenRAVE)
-              if( !!_fclspace->GetInfo(*itbody) ) {
-                CollectEnabledLinkBVs(*itbody, _tmpbuffer);
-                pinfo->_bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
-              }
+                // The attached bodies might not be in the environment (Strange feature of current OpenRAVE)
+                if( !!_fclspace->GetInfo(*itbody) ) {
+                    CollectEnabledLinkBVs(*itbody, _tmpbuffer);
+                    pinfo->_bodyManager->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(*itbody), _fclspace->GetInfo(*itbody)->nLastStamp));
+                }
             }
             pinfo->_bodyManager->pmanager->registerObjects(_tmpbuffer);
             pinfo->_bodyManager->pmanager->setup();
@@ -883,7 +883,7 @@ private:
                         }
                     }
                     pinfo->_bodyManagerActiveDOFs->vUpdateStamps.push_back(std::make_pair(KinBodyConstWeakPtr(probot), pinfo->nLastStamp));
-                } else if( !!_fclspace->GetInfo(*itbody) ){
+                } else if( !!_fclspace->GetInfo(*itbody) ) {
                     LinkConstPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && pinfo->_vactiveLinks[pgrabbinglink->GetIndex()] ) {
                         CollectEnabledLinkBVs(*itbody, _tmpbuffer);
@@ -950,9 +950,9 @@ private:
         }
 
         if( ballDOFs ) {
-          return SetupManagerAllDOFs(pbody, pinfo, attachedBodies);
+            return SetupManagerAllDOFs(pbody, pinfo, attachedBodies);
         } else {
-          return SetupManagerActiveDOFs(probot, pinfo, attachedBodies);
+            return SetupManagerActiveDOFs(probot, pinfo, attachedBodies);
         }
     }
 
@@ -967,14 +967,14 @@ private:
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
         FOREACH(itbody, _fclspace->GetEnvExcludiedBodies()) {
-          FOREACH(itpLINK, _fclspace->GetInfo(*itbody)->vlinks) {
-            fcl::CollisionObject* pcoll = (*itpLINK)->linkBV.second.get();
-            int& n = _currentlyused[pcoll];
-            if( n > 0 ) {
-              _usestatistics[pcoll][n]++;
+            FOREACH(itpLINK, _fclspace->GetInfo(*itbody)->vlinks) {
+                fcl::CollisionObject* pcoll = (*itpLINK)->linkBV.second.get();
+                int& n = _currentlyused[pcoll];
+                if( n > 0 ) {
+                    _usestatistics[pcoll][n]++;
+                }
+                n = 0;
             }
-            n = 0;
-          }
         }
 #endif
 
@@ -987,7 +987,7 @@ private:
             envManagerInstance->pmanager = CreateManager();
             FOREACH(itbody, _fclspace->GetEnvBodies()) {
                 // we treat the case of unstable kinbodies separately
-              if( _fclspace->IsBodyUnstable(*itbody) || sexcludedbodies.count(*itbody) ) {
+                if( _fclspace->IsBodyUnstable(*itbody) || sexcludedbodies.count(*itbody) ) {
                     continue;
                 }
                 KinBodyInfoPtr pitinfo = _fclspace->GetInfo(*itbody);
@@ -1018,7 +1018,7 @@ private:
 
         } else {
 
-          // We need to add to the env manager all the previously excluded bodies which are not excluded anymore
+            // We need to add to the env manager all the previously excluded bodies which are not excluded anymore
             std::set_difference(_fclspace->GetEnvExcludiedBodies().begin(),
                                 _fclspace->GetEnvExcludiedBodies().end(),
                                 sexcludedbodies.begin(),
@@ -1035,26 +1035,26 @@ private:
             UpdateManagerInstance(envManagerInstance);
 #else
             FOREACH(itWkbodyStampPair, envManagerInstance->vUpdateStamps) {
-              KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
-              if( !!pbody ) {
-                KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-                if( !!pinfo && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
-                  itWkbodyStampPair->second = pbody->GetUpdateStamp();
-                  FOREACH(itlink, pbody->GetLinks()) {
-                    if( (*itlink)->IsEnabled() ) {
-                      // Do not forget to setup the manager at the end since we are deactivating the automatic setup there
-                      envManagerInstance->pmanager->update(GetLinkBV(pinfo, (*itlink)->GetIndex()).get(), false);
-                      fcl::CollisionObject* pcoll = GetLinkBV(pinfo, (*itlink)->GetIndex()).get();
-                      int& n = _currentlyused[pcoll];
-                      if( n > 0 ) {
-                        _usestatistics[pcoll][n]++;
-                      }
-                      n = 0;
+                KinBodyConstPtr pbody = itWkbodyStampPair->first.lock();
+                if( !!pbody ) {
+                    KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+                    if( !!pinfo && itWkbodyStampPair->second < pbody->GetUpdateStamp() ) {
+                        itWkbodyStampPair->second = pbody->GetUpdateStamp();
+                        FOREACH(itlink, pbody->GetLinks()) {
+                            if( (*itlink)->IsEnabled() ) {
+                                // Do not forget to setup the manager at the end since we are deactivating the automatic setup there
+                                envManagerInstance->pmanager->update(GetLinkBV(pinfo, (*itlink)->GetIndex()).get(), false);
+                                fcl::CollisionObject* pcoll = GetLinkBV(pinfo, (*itlink)->GetIndex()).get();
+                                int& n = _currentlyused[pcoll];
+                                if( n > 0 ) {
+                                    _usestatistics[pcoll][n]++;
+                                }
+                                n = 0;
 
+                            }
+                        }
                     }
-                  }
                 }
-              }
             }
             envManagerInstance->pmanager->setup();
 #endif
@@ -1064,7 +1064,7 @@ private:
         CollisionGroup tmpgroup;
         envManagerInstance->pmanager->getObjects(tmpgroup);
         FOREACH(itcoll, tmpgroup) {
-          _currentlyused[*itcoll]++;
+            _currentlyused[*itcoll]++;
         }
 #endif
 
@@ -1098,7 +1098,7 @@ private:
         }
 
         if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(KinBodyConstPtr(plink2->GetParent())) ) {
-          return false;
+            return false;
         }
 
         if( IsIn<KinBodyConstPtr>(plink1->GetParent(), pcb->_vbodyexcluded) || IsIn<KinBodyConstPtr>(plink2->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink1, pcb->_vlinkexcluded) || IsIn<LinkConstPtr>(plink2, pcb->_vlinkexcluded) ) {
@@ -1108,14 +1108,14 @@ private:
         LinkInfoPtr pLINK1 = GetLinkInfo(plink1), pLINK2 = GetLinkInfo(plink2);
 
         FOREACH(itgeompair1, pLINK1->vgeoms) {
-          FOREACH(itgeompair2, pLINK2->vgeoms) {
-            if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
-              CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), itgeompair2->second.get(), pcb);
-              if( pcb->_bStopChecking ) {
-                return true;
-              }
+            FOREACH(itgeompair2, pLINK2->vgeoms) {
+                if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
+                    CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), itgeompair2->second.get(), pcb);
+                    if( pcb->_bStopChecking ) {
+                        return true;
+                    }
+                }
             }
-          }
         }
 
         if( pcb->_bCollision && !(_options & OpenRAVE::CO_AllLinkCollisions) ) {
@@ -1195,10 +1195,10 @@ private:
                 pcb->_report->plink1 = _reportcache.plink1;
                 pcb->_report->plink2 = _reportcache.plink2;
                 if( pcb->_report->contacts.size() == 0) {
-                  pcb->_report->contacts.swap(_reportcache.contacts);
+                    pcb->_report->contacts.swap(_reportcache.contacts);
                 } else {
-                  pcb->_report->contacts.reserve(pcb->_report->contacts.size() + numContacts);
-                  copy(_reportcache.contacts.begin(),_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
+                    pcb->_report->contacts.reserve(pcb->_report->contacts.size() + numContacts);
+                    copy(_reportcache.contacts.begin(),_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
                 }
 
                 if( _options & OpenRAVE::CO_AllLinkCollisions ) {
