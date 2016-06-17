@@ -231,6 +231,7 @@ public:
 
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef boost::shared_ptr<FCLSpace::KinBodyInfo::LINK> LinkInfoPtr;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
@@ -353,9 +354,7 @@ public:
         pinfo->_excludecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ExcludeWkBodyFromEnv, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBody const>(pbody)));
 
         pbody->SetUserData(_userdatakey, pinfo);
-        if( !_unstableBodies.count(pbody) ) {
-          _ExcludeBodyFromEnv(pbody);
-        }
+        _ExcludeBodyFromEnv(pbody);
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -428,7 +427,7 @@ public:
                 RAVELOG_VERBOSE_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
                 // Set the current user data to use the KinBodyInfoPtr associated to groupname
                 pbody->SetUserData(_userdatakey, pinfo);
-                // Reset the KinBodyInfoPtr from the cache so that only pbody holds a pointer to the current info
+                // Revoke the information inside the cache so that a potentially outdated object does not survive
                 pinfo.reset();
             }
             // Notify to the environment manager that this kinbody must be added
@@ -512,6 +511,9 @@ public:
     void Synchronize(KinBodyConstPtr pbody)
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
+        if( !pinfo ) {
+          return;
+        }
         BOOST_ASSERT( pinfo->GetBody() == pbody);
         _Synchronize(pinfo);
     }
@@ -564,16 +566,8 @@ public:
             BOOST_ASSERT( !!pinfo );
             // We may not need this anymore...
             pinfo->_ResetBodyManagers();
-            FOREACH(itlink, pinfo->vlinks) {
-                (*itlink)->_linkManager.reset();
-            }
         }
         _envManagerInstance.reset();
-    }
-
-    bool HasMultipleGeometries(LinkConstPtr plink) {
-        KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
-        return !pinfo->vlinks[plink->GetIndex()]->vgeoms.empty();
     }
 
     void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {
@@ -587,8 +581,7 @@ public:
 
                 pcoll->setTranslation(newPosition);
                 pcoll->setQuatRotation(newOrientation);
-                // Why do we compute the AABB ?
-                // it will be usefull anyway for the DynamicAABBTree broadphasemanager
+                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                 pcoll->computeAABB();
             }
         }
@@ -660,7 +653,7 @@ private:
         return std::make_pair(Transform(bvRotation, bvTranslation), pbvColl);
     }
 
-    // couldn't we make this static / what about the tests on non-zero size (eg. box extents) ?
+    // what about the tests on non-zero size (eg. box extents) ?
     static CollisionGeometryPtr _CreateFCLGeomFromGeometryInfo(const MeshFactory &mesh_factory, const KinBody::GeometryInfo &info)
     {
         switch(info._type) {
@@ -728,7 +721,7 @@ private:
 
                 pcoll->setTranslation(newPosition);
                 pcoll->setQuatRotation(newOrientation);
-                // Why do we compute the AABB ?
+                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                 pcoll->computeAABB();
 
 
@@ -741,8 +734,7 @@ private:
 
                   pcoll->setTranslation(newPosition);
                   pcoll->setQuatRotation(newOrientation);
-                  // Why do we compute the AABB ?
-                  // it will be usefull anyway for the DynamicAABBTree broadphasemanager
+                  // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                   pcoll->computeAABB();
                 }
             }
@@ -813,11 +805,11 @@ private:
     MeshFactory _meshFactory;
 
     ManagerInstancePtr _envManagerInstance;
-    std::set<KinBodyConstPtr> _envExcludedBodies;
+    std::set<KinBodyConstPtr> _envExcludedBodies; ///< Set of the kinbodies which are temporarily excluded of the environment
 
-    std::set<KinBodyConstPtr> _unstableBodies;
-    std::set<KinBodyConstPtr> _setInitializedBodies;
-    std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo;
+    std::set<KinBodyConstPtr> _unstableBodies; ///< Set of the kinbodies which should NOT be managed by the _envManagerInstance
+    std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
+    std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
 };
 
 
