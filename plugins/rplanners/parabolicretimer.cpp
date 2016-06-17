@@ -15,7 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "trajectoryretimer.h"
 #include <openrave/planningutils.h>
+
 #include "ParabolicPathSmooth/ParabolicRamp.h"
+
+namespace rplanners {
 
 namespace ParabolicRamp = ParabolicRampInternal;
 
@@ -96,13 +99,86 @@ protected:
             }
         }
         _ramps.resize(info->gpos.dof);
-        dReal mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
-#ifdef _DEBUG
-        if( mintime < 0 && IS_DEBUGLEVEL(Level_Verbose) ) {
-            // do again for debugging reproduction
-            mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
+
+        dReal mintime = -1;
+        
+        // succeeded, check if manipulator constraints are in effect
+        if( _bmanipconstraints && !!_manipconstraintchecker ) {
+            // only possible to check manip constraints if robot is the only configuration!
+            OPENRAVE_ASSERT_OP(_parameters->GetDOF(), ==, info->gpos.dof);
+            OPENRAVE_ASSERT_OP(_manipconstraintchecker->GetCheckManips().size(),==,1);
+            RobotBase::ManipulatorPtr pmanip = _manipconstraintchecker->GetCheckManips().front().pmanip;
+            OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),==,info->gpos.dof);
+            
+            // look at the first pose and try to determine proper velocity limits
+            std::vector<dReal>& vellimits=_cachevellimits, &accellimits=_cacheaccellimits;
+            vellimits = info->_vConfigVelocityLimit;
+            accellimits = info->_vConfigAccelerationLimit;
+
+            // cannot use _parameters->SetStateValues...
+            pmanip->GetRobot()->SetDOFValues(_v0pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v0vel, vellimits, accellimits);
+
+            pmanip->GetRobot()->SetDOFValues(_v1pos, KinBody::CLA_CheckLimits, pmanip->GetArmIndices());
+            _manipconstraintchecker->GetMaxVelocitiesAccelerations(_v1vel, vellimits, accellimits);
+
+            for(size_t j = 0; j < info->_vConfigVelocityLimit.size(); ++j) {
+                // have to watch out that velocities don't drop under dx0 & dx1!
+                dReal fminvel = max(RaveFabs(_v0vel[j]), RaveFabs(_v1vel[j]));
+                if( vellimits[j] < fminvel ) {
+                    vellimits[j] = fminvel;
+                }
+                else {
+                    dReal f = max(fminvel, info->_vConfigVelocityLimit[j]);
+                    if( vellimits[j] > f ) {
+                        vellimits[j] = f;
+                    }
+                }
+                {
+                    dReal f = info->_vConfigAccelerationLimit[j];
+                    if( accellimits[j] > f ) {
+                        accellimits[j] = f;
+                    }
+                }
+            }
+
+            for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
+                mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, accellimits, vellimits, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
+                if( mintime < 0 ) {
+                    break;
+                }
+                if( mintime < g_fEpsilon ) {
+                    break;
+                }
+
+                _rampsnd.resize(0);
+                ParabolicRampInternal::CombineRamps(_ramps, _rampsnd);
+                ParabolicRampInternal::CheckReturn retseg = _manipconstraintchecker->CheckManipConstraints2(_rampsnd);
+                if( retseg.retcode == 0 ) {
+                    break;
+                }
+                RAVELOG_VERBOSE_FORMAT("env=%d manip constraints invalidated try %d, slowing down by %f", GetEnv()->GetId()%islowdowntry%retseg.fTimeBasedSurpassMult);
+                // have to slow down the ramp and check again
+                for(size_t j = 0; j < vellimits.size(); ++j) {
+                    // have to watch out that velocities don't drop under dx0 & dx1!
+                    dReal fminvel = max(RaveFabs(_v0vel[j]), RaveFabs(_v1vel[j]));
+                    vellimits[j] = max(vellimits[j]*retseg.fTimeBasedSurpassMult, fminvel);
+                    accellimits[j] *= retseg.fTimeBasedSurpassMult;
+                }
+                mintime = -1; // have to reset in case this is the last try
+            }
         }
+        else {
+            // no manip constraints
+            mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
+#ifdef _DEBUG
+            if( mintime < 0 && IS_DEBUGLEVEL(Level_Verbose) ) {
+                // do again for debugging reproduction
+                mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps,_parameters->_multidofinterp);
+            }
 #endif
+        }
+
         return mintime;
     }
 
@@ -825,11 +901,17 @@ protected:
     }
 
     string _trajxmlid;
+
+    // cache
     ParabolicRamp::Vector _v0pos, _v0vel, _v1pos, _v1vel;
     vector<dReal> _vtrajpoints;
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > _ramps;
+    std::vector<ParabolicRamp::ParabolicRampND> _rampsnd;
+    std::vector<dReal> _cachevellimits, _cacheaccellimits;
 };
 
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
     return PlannerBasePtr(new ParabolicTrajectoryRetimer(penv, sinput));
 }
+
+} // end namespace rplanners
