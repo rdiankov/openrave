@@ -533,13 +533,13 @@ void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::
 {
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname,std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
-#ifdef AABB_CACHING
+#ifdef AABB_CONVEX_HULL
     FOREACH(itgeominfo, geometries) {
         if( (*itgeominfo)->_type == GT_TriMesh && (*itgeominfo)->_vextremePointsIndices.size() == 0 ) {
             KinBody::Link::Geometry::ComputeExtremePointsIndices(**itgeominfo);
         }
     }
-#endif // AABB_CACHING
+#endif // AABB_CONVEX_HULL
     std::copy(geometries.begin(),geometries.end(),it->second.begin());
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry); // have to notify collision checkers that the geometry info they are caching could have changed.
 }

@@ -17,7 +17,7 @@
 #include "libopenrave.h"
 #include <algorithm>
 
-#ifdef AABB_CACHING
+#ifdef AABB_CONVEX_HULL
 #ifdef QHULLCPP_FOUND
 
 #include <libqhullcpp/Qhull.h>
@@ -209,7 +209,7 @@ void KinBody::Link::Geometry::ComputeExtremePointsIndices(KinBody::GeometryInfo&
     throw openrave_exception(str(boost::format("QHull c++ library (libqhullcpp) not found, cannot compute convex hull for AABB caching")));
 #endif // QHULLCPP_FOUND
 }
-#endif //AABB_CACHING
+#endif //AABB_CONVEX_HULL
 
 KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
 {
@@ -336,11 +336,11 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
-#ifdef AABB_CACHING
+#ifdef AABB_CONVEX_HULL
     if( _info._type == GT_TriMesh && _info._vextremePointsIndices.size() == 0 ) {
         KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
     }
-#endif //AABB_CACHING
+#endif //AABB_CONVEX_HULL
 }
 
 bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
@@ -382,7 +382,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
     case GT_TriMesh:
-#ifdef AABB_CACHING
+#ifdef AABB_CONVEX_HULL
         if( _info._vextremePointsIndices.size() > 0 ) {
             Vector vmin, vmax;
             vmin = vmax = tglobal * _info._meshcollision.vertices.at(_info._vextremePointsIndices.at(0));
@@ -413,7 +413,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         else {
             ab.pos = tglobal.trans;
         }
-#else // AABB_CACHING not defined
+#else // AABB_CONVEX_HULL not defined
       // just use _info._meshcollision
         if( _info._meshcollision.vertices.size() > 0 ) {
             Vector vmin, vmax; vmin = vmax = tglobal*_info._meshcollision.vertices.at(0);
@@ -444,7 +444,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         else {
             ab.pos = tglobal.trans;
         }
-#endif // AABB_CACHING
+#endif // AABB_CONVEX_HULL
         break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
@@ -471,11 +471,11 @@ void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
     LinkPtr parent(_parent);
     _info._meshcollision = mesh;
-#ifdef AABB_CACHING
+#ifdef AABB_CONVEX_HULL
     if( _info._type == GT_TriMesh ) {
         KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
     }
-#endif //AABB_CACHING
+#endif //AABB_CONVEX_HULL
     parent->_Update();
 }
 

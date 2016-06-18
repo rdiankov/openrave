@@ -670,6 +670,10 @@ endif()
 if( AABB_CACHING )
   message(STATUS "AABB_CACHING set")
   add_definitions(-DAABB_CACHING)
+  if( AABB_CONVEX_HULL AND QHULLCPP_FOUND )
+    message(STATUS "Using convex hulls to compute AABBs (can be slower)")
+    add_definitions(-DAABB_CONVEX_HULL)
+  endif()
 endif()
 
 ## check ANN library
