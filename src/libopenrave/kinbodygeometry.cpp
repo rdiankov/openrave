@@ -23,7 +23,7 @@
 #include <libqhullcpp/Qhull.h>
 
 #endif // QHULLCPP_FOUND
-#endif // AABB_CACHING
+#endif // AABB_CONVEX_HULL
 
 namespace OpenRAVE {
 
@@ -168,7 +168,7 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-#ifdef AABB_CACHING
+#ifdef AABB_CONVEX_HULL
 ///< \brief Computes the convex hull of the TriMesh contained in info and modify the TriMesh so that the vertices on the convex hull are at the beginning of the TriMesh
 void KinBody::Link::Geometry::ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
 {
