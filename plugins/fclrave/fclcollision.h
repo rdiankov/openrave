@@ -429,6 +429,7 @@ private:
             return false; // TODO
         } else {
             CollisionCallbackData query(shared_checker(), report);
+            query.bselfCollision = true;  // for ignoring attached information!
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
             return query._bCollision;
         }
@@ -459,7 +460,9 @@ private:
 
         _fclspace->Synchronize(plink->GetParent());
         FOREACH(itbody, attachedBodies) {
-            _fclspace->Synchronize(*itbody);
+            if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                _fclspace->Synchronize(*itbody);
+            }
         }
 
         TemporaryManager tmpManagerBodyLink(_fclspace);
@@ -502,7 +505,9 @@ private:
         plinkParent->GetAttached(excludedBodies);
 
         FOREACH(itbody, vbodyexcluded) {
-            excludedBodies.insert(GetEnv()->GetBodyFromEnvironmentId((*itbody)->GetEnvironmentId()));
+            if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                excludedBodies.insert(GetEnv()->GetBodyFromEnvironmentId((*itbody)->GetEnvironmentId()));
+            }
         }
 
         FOREACH(itbody, excludedBodies) {
@@ -733,6 +738,9 @@ private:
                     if(*itbody == pbody) {
                         continue;
                     }
+                    if( (*itbody)->GetEnvironmentId() == 0 ) { // for now GetAttached can hold bodies that are not initialized
+                        continue;
+                    }
                     if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
                         KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                         if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
@@ -760,16 +768,20 @@ private:
 
             if( vlinkexcluded.size() == 0 ) {
                 FOREACH(itbody, attachedBodies) {
-                    if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
-                        tmpManagerBodyAgainstEnv.TransferRegistration(*itbody);
+                    if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                        if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
+                            tmpManagerBodyAgainstEnv.TransferRegistration(*itbody);
+                        }
                     }
                 }
             } else {
                 FOREACH(itbody, attachedBodies) {
-                    if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
-                        FOREACH(itlink, (*itbody)->GetLinks()) {
-                            if( find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end() ) {
-                                tmpManagerBodyAgainstEnv.TransferRegistration(*itlink);
+                    if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                        if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
+                            FOREACH(itlink, (*itbody)->GetLinks()) {
+                                if( find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end() ) {
+                                    tmpManagerBodyAgainstEnv.TransferRegistration(*itlink);
+                                }
                             }
                         }
                     }
@@ -824,6 +836,9 @@ private:
                     if(*itbody == pbody) {
                         continue;
                     }
+                    if( (*itbody)->GetEnvironmentId() == 0 ) { // for now GetAttached can hold bodies that are not initialized
+                        continue;
+                    }
                     KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
                     if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
                         tmpManager.Register(*itbody, first);
@@ -836,7 +851,9 @@ private:
             std::set<KinBodyPtr> attachedBodies;
             pbody->GetAttached(attachedBodies);
             FOREACH(itbody, attachedBodies) {
-                tmpManager.Register(*itbody, first);
+                if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                    tmpManager.Register(*itbody, first);
+                }
             }
         }
     }

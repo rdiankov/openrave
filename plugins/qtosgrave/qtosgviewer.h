@@ -156,6 +156,10 @@ public slots:
     /// \brief show an about dialog
     void _ProcessAboutDialog();
 
+    void _SetDebugLevelDebug();
+
+    void _SetDebugLevelVerbose();
+
     /// \brief change camera to see xy plane
     void _ChangeViewToXY();
 
@@ -313,6 +317,8 @@ public:
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
+    virtual void _SetProjectionMode(const std::string& projectionMode);
+
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
@@ -353,6 +359,7 @@ public:
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
+    bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
@@ -412,7 +419,8 @@ public:
     QAction* viewCamAct;
     QAction* viewColAct;
     QAction* pubilshAct;
-    QAction* printAct;
+    QAction* debugLevelDebugAct;
+    QAction* debugLevelVerboseAct;
     QAction* showAct;
     QAction* playAct;
     QAction* stopAct;
