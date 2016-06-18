@@ -273,22 +273,23 @@ protected:
                     }
                 }
 
+                listtempviewers.clear(); // viewers to add to env once lock is released
                 listviewers.clear();
                 std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
                 while(itinfo != _listviewerinfos.end() ) {
                     ViewerInfoPtr pinfo = *itinfo;
                     if( !pinfo->_pviewer ) {
                         pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
+                        // have to notify other thread that viewer is present before the environment lock happens! otherwise we can get into deadlock between c++ and python
+                        pinfo->_cond.notify_all();
                         if( !!pinfo->_pviewer ) {
-                            pinfo->_penv->AddViewer(pinfo->_pviewer);
+                            listtempviewers.push_back(pinfo->_pviewer);
                             ++itinfo;
                         }
                         else {
                             // erase from _listviewerinfos
                             itinfo = _listviewerinfos.erase(itinfo);
                         }
-                        // notify other thread that viewer failed
-                        pinfo->_cond.notify_all();
                     }
                     else {
                         ++itinfo;
@@ -301,6 +302,10 @@ protected:
                         listviewers.push_back(pinfo->_pviewer);
                     }
                 }
+            }
+
+            FOREACH(itaddviewer, listtempviewers) {
+                (*itaddviewer)->GetEnv()->AddViewer(*itaddviewer);
             }
             
             ViewerBasePtr puseviewer;

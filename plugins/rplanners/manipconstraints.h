@@ -62,6 +62,8 @@ public:
         }
     }
 
+    const std::list< ManipConstraintInfo >& GetCheckManips() const { return _listCheckManips; }
+
     /// \brief Compute the AABB that encloses all the links in linklist with respect to a coordinate system Tparent
     ///
     /// \param tparent is most likely the end effector of a manipulator
@@ -163,6 +165,15 @@ public:
                         }
                     }
                     info.fmaxdistfromcenter = RaveSqrt(info.fmaxdistfromcenter);
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "[";
+                        FOREACH(itpoint, info.checkpoints) {
+                            ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+                    }
                     setCheckedManips.insert(endeffector);
                 }
             }
@@ -301,6 +312,7 @@ public:
         }
     }
 
+    
     /// checks at each ramp's edges. This is called in the critical loop
     ParabolicRampInternal::CheckReturn CheckManipConstraints2(const std::vector<ParabolicRampInternal::ParabolicRampND>& outramps)
     {
