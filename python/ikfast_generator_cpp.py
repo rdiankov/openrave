@@ -323,7 +323,7 @@ inline double IKlog(double f) { return log(f); }
 
 // used to check input to atan2 for degenerate cases. has to be smaller than thresholds used for branch conds and evaluation
 #ifndef IKFAST_ATAN2_MAGTHRESH
-#define IKFAST_ATAN2_MAGTHRESH ((IkReal)1e-7)
+#define IKFAST_ATAN2_MAGTHRESH ((IkReal)1e-9)
 #endif
 
 // minimum distance of separate solutions
@@ -333,7 +333,7 @@ inline double IKlog(double f) { return log(f); }
 
 // there are checkpoints in ikfast that are evaluated to make sure they are 0. This threshold speicfies by how much they can deviate
 #ifndef IKFAST_EVALCOND_THRESH
-#define IKFAST_EVALCOND_THRESH ((IkReal)0.00001)
+#define IKFAST_EVALCOND_THRESH ((IkReal)0.001)
 #endif
 
 

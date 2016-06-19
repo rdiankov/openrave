@@ -778,7 +778,7 @@ class AST:
             self.zerobranch = zerobranch
             self.nonzerobranch = nonzerobranch
             if thresh is None:
-                self.thresh = 0.000001
+                self.thresh = 0.0000001
             else:
                 self.thresh = thresh
             self.anycondition = anycondition
@@ -3323,6 +3323,8 @@ class IKFastSolver(AutoReloader):
         if len(curvars) > 0:
             self.sortComplexity(AllEquationsExtra)
             self.checkSolvability(AllEquationsExtra,curvars,self.freejointvars+usedvars)
+            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+            
             leftovertree = self.SolveAllEquations(AllEquationsExtra,curvars=curvars,othersolvedvars = self.freejointvars+usedvars,solsubs = solsubs,endbranchtree=origendbranchtree)
             leftovervarstree.append(AST.SolverFunction('innerfn',leftovertree))
         else:
