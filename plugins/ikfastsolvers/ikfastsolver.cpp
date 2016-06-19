@@ -800,12 +800,14 @@ protected:
     /// \param tLocalTool _pmanip->GetLocalToolTransform()
     inline bool _CallIk(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
     {
+        bool bsuccess = false;
         if( !!_ikfunctions->_ComputeIk2 ) {
-            return _CallIk2(param, vfree, tLocalTool, solutions);
+            bsuccess = _CallIk2(param, vfree, tLocalTool, solutions);
         }
         else {
-            return _CallIk1(param, vfree, tLocalTool, solutions);
+            bsuccess = _CallIk1(param, vfree, tLocalTool, solutions);
         }
+        return bsuccess;
     }
 
     bool _CallIk1(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
@@ -956,13 +958,13 @@ protected:
                 }
                 IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-//                stringstream ss; ss << "./ik " << std::setprecision(16);
-//                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
-//                FOREACH(itfree,vfree) {
-//                    ss << *itfree << " ";
-//                }
-//                ss << endl;
-//                RAVELOG_INFO(ss.str());
+                stringstream ss; ss << _manip->GetRobot()->GetName() << ":" << _manip->GetName() << " ./ik " << std::setprecision(16);
+                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
+                FOREACH(itfree,vfree) {
+                    ss << *itfree << " ";
+                }
+                ss << endl;
+                RAVELOG_INFO(ss.str());
                 return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
             }
             case IKP_Rotation3D: {

@@ -167,6 +167,9 @@ protected:
                 }
                 mintime = -1; // have to reset in case this is the last try
             }
+            if( mintime < 0 ) {
+                RAVELOG_WARN_FORMAT("env=%d manip constraints failed to slow ramp down by", GetEnv()->GetId());
+            }
         }
         else {
             // no manip constraints
