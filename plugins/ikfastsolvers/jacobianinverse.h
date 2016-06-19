@@ -49,7 +49,7 @@ public:
     JacobianInverseSolver() {
         _errorthresh2 = 1e-12;
         _lastiter = -1;
-        _nMaxIterations = 10;
+        _nMaxIterations = 20;
     }
 
     /// \brief initializes with the manipulator, but doesn't store it!
