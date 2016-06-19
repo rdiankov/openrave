@@ -323,7 +323,7 @@ inline double IKlog(double f) { return log(f); }
 
 // used to check input to atan2 for degenerate cases. has to be smaller than thresholds used for branch conds and evaluation
 #ifndef IKFAST_ATAN2_MAGTHRESH
-#define IKFAST_ATAN2_MAGTHRESH ((IkReal)1e-9)
+#define IKFAST_ATAN2_MAGTHRESH ((IkReal)1e-11)
 #endif
 
 // minimum distance of separate solutions
@@ -333,7 +333,7 @@ inline double IKlog(double f) { return log(f); }
 
 // there are checkpoints in ikfast that are evaluated to make sure they are 0. This threshold speicfies by how much they can deviate
 #ifndef IKFAST_EVALCOND_THRESH
-#define IKFAST_EVALCOND_THRESH ((IkReal)0.001)
+#define IKFAST_EVALCOND_THRESH ((IkReal)0.01)
 #endif
 
 
@@ -2438,7 +2438,7 @@ static inline bool %s(const IkReal* Breal)
     for(int i = 0; i < 11; ++i) {
         norm += IKabs(Breal[i]);
     }
-    IkReal tol = 1e-6*norm; // have to increase the threshold since many computations are involved
+    IkReal tol = 1e-4*norm; // have to increase the threshold since many computations are involved
     return IKabs(Breal[0]*Breal[0]-Breal[1]) < tol && IKabs(Breal[0]*Breal[2]-Breal[3]) < tol && IKabs(Breal[1]*Breal[2]-Breal[4]) < tol && IKabs(Breal[2]*Breal[2]-Breal[5]) < tol && IKabs(Breal[0]*Breal[5]-Breal[6]) < tol && IKabs(Breal[1]*Breal[5]-Breal[7]) < tol && IKabs(Breal[2]*Breal[5]-Breal[8]) < tol && IKabs(Breal[0]*Breal[8]-Breal[9]) < tol && IKabs(Breal[1]*Breal[8]-Breal[10]) < tol;
 }
 """%name
