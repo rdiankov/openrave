@@ -668,6 +668,8 @@ void ParabolicRamp1D::SolveBraking(Real amax)
  */
 bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
 {
+    // return SolveMinAccel(endTime, vmax, amax);
+    
     ParabolicRamp p;
     PPRamp pp;
     PLPRamp plp;
@@ -2819,7 +2821,7 @@ Real SolveMinTimeBounded2(const Vector& x0,const Vector& v0,const Vector& x1,con
             }
 
             //now solve minimum acceleration within bounds
-            if (0) {//( multidofinterp == 2 ) {
+            if ( multidofinterp == 2 ) {
                 if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],tempramps)) {
                     // because SolveMaxAccel doesn't check for boundaries, this could fail
                     PARABOLIC_RAMP_PLOG("Failed solving bounded max accel for joint %d\n",i);
@@ -2829,7 +2831,7 @@ Real SolveMinTimeBounded2(const Vector& x0,const Vector& v0,const Vector& x1,con
                 }
                 ramps[i] = tempramps;
             }
-            else if(0) {//( multidofinterp == 1 ) {
+            else if ( multidofinterp == 1 ) {
                 if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],tempramps)) {
                     endTime *= 1.05;
                     solved = false;
@@ -2912,7 +2914,7 @@ Real SolveMinTimeBounded2(const Vector& x0,const Vector& v0,const Vector& x1,con
             continue; //go back and re-solve
         }
 
-        if (0) {//( multidofinterp == 2 ) {
+        if ( multidofinterp == 2 ) {
             // find the ramp that saturates the slowest and convert all switching points to it
             // because we're not computing with limits, there should only be one ramp
             for(size_t i=0; i < ramps.size(); ++i) {
