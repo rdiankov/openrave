@@ -49,15 +49,14 @@ public:
     JacobianInverseSolver() {
         _errorthresh2 = 1e-12;
         _lastiter = -1;
-        _nMaxIterations = 20;
+        _nMaxIterations = 100;
     }
 
     /// \brief initializes with the manipulator, but doesn't store it!
     ///
     /// \param errorthresh the threshold of the error on the constraints
-    void Init(const RobotBase::Manipulator& manip, T errorthresh=1e-5)
+    void Init(const RobotBase::Manipulator& manip)
     {
-        _errorthresh2 = errorthresh*errorthresh;
         RobotBasePtr probot = manip.GetRobot();
 
         _J.resize(6,probot->GetActiveDOF());
@@ -80,6 +79,11 @@ public:
         _errorthresh2 = errorthresh*errorthresh;
     }
     
+    void SetMaxIterations(int nMaxIterations)
+    {
+        _nMaxIterations = nMaxIterations;
+    }
+
     /// \brief computes the jacobian inverse solution.
     ///
     /// robot is at the starting solution and solution should already be very close to the goal.
@@ -106,7 +110,7 @@ public:
             return -1;
         }
         
-        const T lambda2 = 1e-8;         // normalization constant
+        const T lambda2 = 1e-16;         // normalization constant
         using namespace boost::numeric::ublas;
 
         T firsterror2 = totalerror2;
@@ -180,7 +184,7 @@ public:
             }
             _invJ = prod(_Jt,_invJJt);
             _qdelta = prod(_invJ,_error);
-            dReal fmindeltascale = 0.5; // depending on
+            dReal fmindeltascale = 0.6; // depending on
             for(size_t i = 0; i < vnew.size(); ++i) {
                 if(!isfinite(_qdelta(i,0))) { // don't assert since it is frequent and could destroy the entire plan
                     RAVELOG_WARN_FORMAT("inverse matrix produced a non-finite value: %e", _qdelta(i,0));
