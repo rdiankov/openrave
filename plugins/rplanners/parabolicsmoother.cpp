@@ -543,7 +543,7 @@ public:
                             for(size_t idilate = 0; idilate < 5; ++idilate ) {
                                 tempramps1d.resize(0);
                                 endTime *= mult;
-                                if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                if( ParabolicRamp::SolveAccelBounded2(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
                                     temprampsnd.resize(0);
                                     CombineRamps(tempramps1d, temprampsnd);
 
@@ -566,7 +566,7 @@ public:
                                     if( !bHasBadRamp ) {
                                         if( bTrimmed ) {
                                             // have to retime the original ramp without trimming
-                                            if( !ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                            if( !ParabolicRamp::SolveAccelBounded2(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
                                                 break;
                                             }
                                             temprampsnd.resize(0);
@@ -734,6 +734,8 @@ public:
             if( ret != 0 ) {
                 ParabolicRamp::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
+                    RAVELOG_WARN("SEGMENT FEASIBLE2: from CHECKPATHALLCONSTRAINTS retcode = 0x4");
+                                                    
                     checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
                 }
                 return checkret;
@@ -770,6 +772,7 @@ public:
                                 if( 0.9*_parameters->_vConfigVelocityLimit.at(idof) < 0.1*RaveFabs(newvel[idof]) ) {
                                     RAVELOG_WARN_FORMAT("new velocity for dof %d is too high %f > %f", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof));
                                 }
+                                RAVELOG_WARN("SEGMENT FEASIBLE2: retcode = 0x4");
                                 return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
                             }
                         }
@@ -816,6 +819,7 @@ public:
             try {
                 ParabolicRamp::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(outramps);
                 if( retmanip.retcode != 0 ) {
+                    std::cout << "SEGMENT FEASIBLE2 RETMANIP = " << retmanip.retcode << std::endl;
                     return retmanip;
                 }
             }

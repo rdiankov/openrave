@@ -190,6 +190,8 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
 /// if 0 - SolveMinAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
 bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
+bool SolveAccelBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);////////Puttichai
+
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
 //void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
 //void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::list<ParabolicRampND>& ndramps);
