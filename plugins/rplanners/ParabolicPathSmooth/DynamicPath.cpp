@@ -87,7 +87,13 @@ bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,const Vect
     }
     else {
         vector<std::vector<ParabolicRamp1D> > ramps;
-        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);
+        ////////Puttichai
+
+        // we can switch between the original implementation (SolveMinTImeBounded) and a new
+        // implementation (SolveMinTimeBounded2) here
+        
+        //Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);
+        Real res=SolveMinTimeBounded2(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);////////Puttichai
         if(res < 0) {
             return false;
         }

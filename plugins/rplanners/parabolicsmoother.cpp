@@ -444,6 +444,10 @@ public:
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
+                std::cout << "================================================================================" << std::endl;
+                std::cout << "NUMSHORTCUTS " << numshortcuts << std::endl;
+                std::cout << "================================================================================" << std::endl;
+                    
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
                 }
@@ -1006,6 +1010,10 @@ protected:
 
     int _Shortcut(ParabolicRamp::DynamicPath& dynamicpath, int numIters, ParabolicRamp::RandomNumberGeneratorBase* rng, dReal mintimestep)
     {
+        std::cout << "================================================================================" << std::endl;
+        std::cout << "START SHORTCUT" << std::endl;
+        std::cout << "================================================================================" << std::endl;
+                
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         int shortcuts = 0;
         vector<dReal> rampStartTime(ramps.size());
@@ -1109,11 +1117,13 @@ protected:
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
                     iIterProgress += 0x1000;
                     if(!res) {
+                        // std::cout << "    Shortcut failed" << std::endl;
                         break;
                     }
                     // check the new ramp time makes significant steps
                     dReal newramptime = intermediate.GetTotalTime();
                     if( newramptime+mintimestep > t2-t1 ) {
+                        // std::cout << "    Shortcut successful but did not make significant improvement" << std::endl;
                         // reject since it didn't make significant improvement
                         RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected times [%f, %f]. final trajtime=%fs", iters%t1%t2%(endTime-(t2-t1)+newramptime));
                         break;

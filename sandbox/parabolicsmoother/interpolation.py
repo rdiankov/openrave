@@ -176,6 +176,20 @@ def _Stretch1D(curve, newDuration, vm, am):
     sum2 = Sub(am, A)
     C = mp.fdiv(B, sum1)
     D = mp.fdiv(B, sum2)
+
+    print "A",
+    mp.nprint(A, n=15)
+    print "B",
+    mp.nprint(B, n=15)
+    print "C",
+    mp.nprint(C, n=15)
+    print "D",
+    mp.nprint(D, n=15)
+    print "sum1",
+    mp.nprint(sum1, n=15)
+    print "sum2",
+    mp.nprint(sum2, n=15)
+    
     if IsEqual(sum1, zero):
         raise NotImplementedError # not yet considered
     elif sum1 > epsilon:
@@ -229,8 +243,8 @@ def _Stretch1D(curve, newDuration, vm, am):
     # interval8 = interval0 \cap interval7 : valid interval of t1 when considering all constraints (from a1 and a2)
     interval8 = iv.mpf([max(interval0.a, interval7.a), min(interval0.b, interval7.b)])
 
-    # from IPython.terminal import embed
-    # ipshell = embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+    from IPython.terminal import embed
+    ipshell = embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
     
     # We choose the value t1 (the duration of the first ramp) by selecting the mid point of the
     # valid interval of t1.
@@ -343,11 +357,16 @@ def _SolveForT1(A, B, t, tInterval):
     """
     SolveQuartic(2*A, -4*A*T + 2*B, 3*A*T**2 - 3*B*T, -A*T**3 + 3*B*T**2, -B*T**3)
     """
-    sols = SolveQuartic(Add(A, A),
-                        Add(Prod([number('-4'), A, t]), Mul(number('2'), B)),
-                        Sub(Prod([number('3'), A, t, t]), Prod([number('3'), B, t])),
-                        Sub(Prod([number('3'), B, t, t]), Mul(A, mp.power(t, 3))),
-                        Neg(Mul(B, mp.power(t, 3))))
+    if (Abs(A) < epsilon):
+        def f(x):
+            return Mul(number('2'), B)*x*x*x - Prod([number('3'), B, t])*x*x + Prod([number('3'), B, t, t])*x - Mul(B, mp.power(t, 3))
+        sols = [mp.findroot(f, x0=0.5*t)]
+    else:
+        sols = SolveQuartic(Add(A, A),
+                            Add(Prod([number('-4'), A, t]), Mul(number('2'), B)),
+                            Sub(Prod([number('3'), A, t, t]), Prod([number('3'), B, t])),
+                            Sub(Prod([number('3'), B, t, t]), Mul(A, mp.power(t, 3))),
+                            Neg(Mul(B, mp.power(t, 3))))
 
     realSols = [sol for sol in sols if type(sol) is mp.mpf and sol in tInterval]
     if len(realSols) > 1:
@@ -357,7 +376,7 @@ def _SolveForT1(A, B, t, tInterval):
         return None
     else:
         return realSols[0]
-    
+
 
 ####################################################################################################
 # Single DOF
