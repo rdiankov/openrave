@@ -260,7 +260,52 @@ class BoundingMeshModel(DatabaseGenerator):
         d = { v[i] : i for i in range(0, len(v)) }
         reducedMesh = TriMesh()
         reducedMesh.vertices = array(map(array, v))
-        reducedMesh.indices = vectorize(lambda i : d[to3Tuple(trimesh.vertices[i])])(trimesh.indices)
+        inds = vectorize(lambda i : d[to3Tuple(trimesh.vertices[i])])(trimesh.indices)
+        reducedMesh.indices = inds[logical_and(inds[:,0] != inds[:,1], logical_and(inds[:,1] != inds[:,2], inds[:,0] != inds[:,2]))]
+        return reducedMesh
+
+    @staticmethod
+    def ReduceTrimeshUpto(trimesh, epsilon, eta):
+        to3Tuple = lambda v : (v[0], v[1], v[2])
+        def dist(u, v):
+            return u[0]*v[0] + u[1]*v[1] + u[2]*v[2]
+        d = {}
+        for v in map(to3Tuple, trimesh.vertices):
+            group = None
+            for v0 in d:
+                if dist(v, v0) < espilon:
+                    if group is None:
+                        group = v0
+                    else:
+                        d[v0] = group
+            if group is None:
+                group = v
+            d[v] = group
+        def ancestor(v):
+            if d[v] == v:
+                return v
+            else:
+                d[v] = ancestor(v)
+                return d[v]
+        d1 = {}
+        for v in d:
+            if d[v] = v:
+                d1[v] = { v }
+            else:
+                d1[ancestor(v)].add(v)
+        d2 = {}
+        l = []
+        for v in d1:
+            s = d1[v]
+            if len({ dist(v0,v1) < eta for v0 in s for v1 in s }) == 2:
+                RaveLogWarn("Found a cluster of vertices with drifting value over the maximum value set")
+            d2[v] = len(l)
+            l.append(array(list(s)).mean(axis=0))
+        reducedMesh = TriMesh()
+        reducedMesh.vertices = array(l)
+
+        inds = vectorize(lambda i : d2[d[to3Tuple(trimesh.vertices[i])]])(trimesh.indices)
+        reducedMesh.indices = inds[logical_and(inds[:,0] != inds[:,1], logical_and(inds[:,1] != inds[:,2], inds[:,0] != inds[:,2]))]
         return reducedMesh
 
     def CheckBoundingMesh(self, originalmesh, boundingmesh):
