@@ -184,9 +184,12 @@ class BoundingMeshModel(DatabaseGenerator):
     def setrobot(self):
         with self.env:
             for link, linkboundingmeshes in izip(self.robot.GetLinks(), self.linkgeometry):
+                selfgeometrygroup = link.GetGeometriesFromGroup('self')
                 for ig, boundingmesh in linkboundingmeshes:
-                    if link.GetGeometries()[ig].IsModifiable():
-                        link.GetGeometries()[ig].SetCollisionMesh(boundingmesh)
+                    if len(selfgeometrygroup) > ig and selfgeometrygroup[ig]._bModifiable:
+                        selfgeometrygroup[ig]._meshcollision = boundingmesh
+                link.SetGroupGeometries('self', selfgeometrygroup)
+                link.SetGeometriesFromGroup('self')
 
     def getfilename(self, read = False):
         filename = 'boundingmesh.3f.pp'
