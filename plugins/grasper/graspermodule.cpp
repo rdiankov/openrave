@@ -1615,7 +1615,7 @@ protected:
         vector<coordT> qpoints(vpoints.size());
         std::copy(vpoints.begin(),vpoints.end(),qpoints.begin());
 
-        char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
+        const char* flags = "Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
         orgQhull::Qhull qhull("", dim, qpoints.size()/dim, &qpoints[0], flags);
 
         if( !qhull.qhullStatus() ) {
@@ -1694,6 +1694,8 @@ protected:
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
         }
+        const flags[]= "qhull Tv FA";
+
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, errfile, errfile);
         if (!exitcode) {
             vconvexplanes.reserve(1000);
