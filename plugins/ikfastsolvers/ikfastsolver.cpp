@@ -984,16 +984,16 @@ protected:
                 }
                 IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-                RobotBase::ManipulatorPtr pmanip(_pmanip);
-                stringstream ss; ss << pmanip->GetRobot()->GetName() << ":" << pmanip->GetName() << " ./ik " << std::setprecision(17);
-                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
-                FOREACH(itfree,vfree) {
-                    ss << *itfree << " ";
-                }
-                ss << endl;
+//                RobotBase::ManipulatorPtr pmanip(_pmanip);
+//                stringstream ss; ss << pmanip->GetRobot()->GetName() << ":" << pmanip->GetName() << " ./ik " << std::setprecision(17);
+//                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
+//                FOREACH(itfree,vfree) {
+//                    ss << *itfree << " ";
+//                }
+//                ss << endl;
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
-                ss << "ret=" << bret << " numsols=" << solutions.GetNumSolutions();
-                RAVELOG_INFO(ss.str());
+//                ss << "ret=" << bret << " numsols=" << solutions.GetNumSolutions();
+//                RAVELOG_INFO(ss.str());
                 return bret;
             }
             case IKP_Rotation3D: {
