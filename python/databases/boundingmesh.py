@@ -34,7 +34,7 @@ __author__ = ''
 __copyright__= 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 
-from numpy import array, vectorize
+from numpy import array, vectorize, logical_and
 
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
 from ..openravepy_ext import transformPoints, transformInversePoints
@@ -289,7 +289,7 @@ class BoundingMeshModel(DatabaseGenerator):
                 return d[v]
         d1 = {}
         for v in d:
-            if d[v] = v:
+            if d[v] == v:
                 d1[v] = { v }
             else:
                 d1[ancestor(v)].add(v)
