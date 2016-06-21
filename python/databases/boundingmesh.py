@@ -273,7 +273,7 @@ class BoundingMeshModel(DatabaseGenerator):
         for v in map(to3Tuple, trimesh.vertices):
             group = None
             for v0 in d:
-                if dist(v, v0) < espilon:
+                if dist(v, v0) < epsilon:
                     if group is None:
                         group = v0
                     else:
@@ -281,12 +281,15 @@ class BoundingMeshModel(DatabaseGenerator):
             if group is None:
                 group = v
             d[v] = group
-        def ancestor(v):
-            if d[v] == v:
-                return v
-            else:
-                d[v] = ancestor(v)
-                return d[v]
+        def ancestor(v0):
+            stack = []
+            v = v0
+            while d[v] != v:
+                stack.append(v)
+                v = d[v]
+            for v1 in stack:
+                d[v1] = v
+            return d[v0]
         d1 = {}
         for v in d:
             if d[v] == v:
