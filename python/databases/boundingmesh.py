@@ -45,6 +45,7 @@ import os.path
 from os import makedirs
 from optparse import OptionParser
 from itertools import izip
+from multiprocessing import Pool
 
 import logging
 log = logging.getLogger('openravepy.' + __name__.split('.',2)[-1])
@@ -214,7 +215,7 @@ class BoundingMeshModel(DatabaseGenerator):
         except:
             return None
 
-    def generate(self, skipLinks = None, **kwargs):
+    def generate(self, processes=None, skipLinks = None, **kwargs):
         """
         :param skipLinks : a list of link names which should keep their original mesh
         """
@@ -223,28 +224,34 @@ class BoundingMeshModel(DatabaseGenerator):
             skipLinks = []
         log.info(u'Generating Bounding Meshes : %r', self.boundingparams)
         starttime = time.time()
+
+        def GenerateGeom(il, countlinks, ig, countgeometries, geom):
+            trimesh = geom.GetCollisionMesh()
+            if len(trimesh.indices) == 0:
+                geom.InitCollisionMesh(100.0)
+                trimesh = geom.GetCollisionMesh()
+            log.info(u'Computing bounding mesh for link %d/%d geom %d/%d', il, countlinks, ig, countgeometries)
+            resultmesh = self.ComputeBoundingMesh(trimesh)
+            if not self.CheckBoundingMesh(trimesh, resultmesh):
+                raise BoundingMeshError(u'Geom link %s could not be bounded correctly', link.GetName())
+            vsize = resultmesh.vertices.shape[0]
+            indsize = resultmesh.indices.shape[0]
+            log.info(u'Vertices left : %d (%f%%), Triangles left : %d (%f%%)', vsize, 100 * float(vsize )/float(trimesh.vertices.shape[0]), indsize, 100*float(indsize)/float(trimesh.indices.shape[0]))
+            return (il, (ig, resultmesh))
+
         self.linkgeometry = []
         with self.env:
             links = self.robot.GetLinks()
-            for il, link in enumerate(links):
-                if link in skipLinks:
-                    continue
-                boundingmeshes = []
-                geometries = link.GetGeometries()
-                for ig, geom in enumerate(geometries):
-                    trimesh = geom.GetCollisionMesh()
-                    if len(trimesh.indices) == 0:
-                        geom.InitCollisionMesh(100.0)
-                        trimesh = geom.GetCollisionMesh()
-                    log.info(u'Computing bounding mesh for link %d/%d geom %d/%d', il, len(links), ig, len(geometries))
-                    resultmesh = self.ComputeBoundingMesh(trimesh)
-                    if not self.CheckBoundingMesh(trimesh, resultmesh):
-                        raise BoundingMeshError(u'Geom link %s could not be bounded correctly', link.GetName())
-                    vsize = resultmesh.vertices.shape[0]
-                    indsize = resultmesh.indices.shape[0]
-                    log.info(u'Vertices left : %d (%f%%), Triangles left : %d (%f%%)', vsize, 100 * float(vsize )/float(trimesh.vertices.shape[0]), indsize, 100*float(indsize)/float(trimesh.indices.shape[0]))
-                    boundingmeshes.append((ig, resultmesh))
-                self.linkgeometry.append(boundingmeshes)
+            datas = [ (il, len(links), ig, len(link.GetGeometries()), geom) for il, link in enumerate(links) if link not in skiplinks for ig, geom in enumerate link.GetGeometries() ]
+            res = None
+            if processes is None:
+                res = map(GenerateGeom, datas)
+            else:
+                p = Pool(processes)
+                res = p.map(GenerateGeom, datas)
+            self.linkgeometry = [] * len(links)
+            for (il, boundingmesh) in res:
+                self.linkgeometry[il].append(boundingmesh)
         log.info(u'All meshes bounded in %fs', time.time()-starttime)
 
     def ComputeBoundingMesh(self, trimesh):
