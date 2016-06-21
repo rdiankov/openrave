@@ -105,6 +105,27 @@ object LoadFromFile(str pyfilename) {
   return toPyTriMesh(openraveMesh);
 }
 
+bool WriteToFile(str pyfilename, object otrimesh) {
+  const std::string filename((const char*)(extract<const char*>(pyfilename)));
+  TriMesh trimesh;
+  boundingmesh::Mesh mesh;
+  if( !ExtractTriMesh(otrimesh, trimesh) ) {
+    return false;
+  }
+  ExtractMesh(trimesh, mesh);
+  if( pyfilename.endswith(".obj") ) {
+    mesh.writeObj(filename);
+  } else if ( pyfilename.endswith(".off") ) {
+    mesh.writeOff(filename);
+  } else if( pyfilename.endswith(".wrl") ) {
+    mesh.writeWrl(filename);
+  } else if( pyfilename.endswith(".stl") ) {
+    mesh.writeStl(filename);
+  } else {
+    return false;
+  }
+  return true;
+}
 
 // note : boundingmesh::Real == double
 /// \param oMesh python object containing a PyTriMesh
@@ -192,6 +213,7 @@ BOOST_PYTHON_MODULE(boundingmeshpy)
   typedef return_value_policy< copy_const_reference > return_copy_const_ref;
 
   def("LoadFromFile", LoadFromFile);
+  def("WriteToFile", WriteToFile);
 
   def("ComputeBoundingMesh", ComputeBoundingMesh,
       ComputeBoundingMesh_overloads(args("mesh",
