@@ -320,10 +320,11 @@ class BoundingMeshModel(DatabaseGenerator):
         self.env.UpdatePublishedBodies()
         if not self.has():
             self.autogenerate(options=options)
-        for link, linkboundingmeshes in izip(self.robot.GetLinks(), self.linkgeometry):
-            for ig, boundingmesh in linkboundingmeshes:
-                if link.GetGeometries()[ig].IsModifiable():
-                    link.GetGeometries()[ig].SetCollisionMesh(boundingmesh)
+        robotCopy = RaveCreateKinBody(self.env, '')
+        robotCopy.Clone(self.robot, CloningOptions.Bodies)
+        robotCopy.SetName(self.robot.GetName()+'Copy')
+        self.env.Add(robotCopy)
+        self.setrobot()
         #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
         raw_input('Press any key to exit : ')
 
