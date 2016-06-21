@@ -414,7 +414,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
                 return false; // maybe we should try a bit harder here if this really fails.
             }
             if (modifiedTemp) temp = temp*1000;
-            RAVELOG_WARN_FORMAT("FindPolyRoots3: numRoots = %d", numRoots);
+            // RAVELOG_WARN_FORMAT("FindPolyRoots3: numRoots = %d", numRoots);
             for (int k = 0; k < 3; ++k) {
                 if (modifiedTemp) rawRoots[k] = rawRoots[k]*10;
                 // Note the epsilon that we use here. Sometimes the magnitude of temp is huge.
@@ -493,7 +493,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
             tswitch2 = endTime - (dx1 - vmaxNew)/a2;
             ttotal = endTime;
         }
-        RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f; A = %.15f; B = %.15f; C = %.15f; D = %.15f", a1%a2%A%B%C%D);
+        // RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f; A = %.15f; B = %.15f; C = %.15f; D = %.15f", a1%a2%A%B%C%D);
         return true;
     }
     else {
