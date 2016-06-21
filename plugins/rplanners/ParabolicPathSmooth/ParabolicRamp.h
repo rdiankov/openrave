@@ -161,6 +161,9 @@ public:
 
 };
 
+/// Calculates the minimum total duration that a ramp has to be stretched to
+bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real vmax, Real amax, Real& newEndTime); ////////Puttichai
+
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given
 /// acceleration, velocity, and x bounds.  Returns true if successful.
 bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Real xmin,Real xmax, ParabolicRamp1D& ramp);
@@ -190,7 +193,7 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
 /// if 0 - SolveMinAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
 bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
-bool SolveAccelBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);////////Puttichai
+bool SolveAccelBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real& endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp, int& counterStart, int& counterEnd);////////Puttichai
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
 //void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
@@ -397,7 +400,8 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
 ////////Puttichai
 // The following two functions are added for SolveMinAccel
 // Compute roots of a cubic polynomial. This functions is taken from OpenRAVE ik generator file.
-static inline void FindPolyRoots3(Real rawcoeffs[4], Real rawroots[3], int& numroots) {
+static inline void FindPolyRoots3(Real rawcoeffs[4], Real rawroots[3], int& numroots)
+{
     using std::complex;
     if( rawcoeffs[0] == 0 ) {
         // solve with one reduced degree
@@ -467,14 +471,14 @@ static inline void FindPolyRoots3(Real rawcoeffs[4], Real rawroots[3], int& numr
             if( n > 1 ) {
                 newroot /= n;
             }
-            // there are still cases where even the mean is not accurate enough, until a better
-            // multi-root algorithm is used, need to use the sqrt
+            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
             if( fabs(imag(newroot)) < tolsqrt ) {
                 rawroots[numroots++] = real(newroot);
             }
         }
     }
 }
+    
 
 static inline void FindPolyRoots4(Real rawcoeffs[5], Real rawroots[4], int& numroots)
 {

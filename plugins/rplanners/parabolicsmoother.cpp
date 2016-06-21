@@ -540,10 +540,13 @@ public:
                             bool bSuccess = false;
                             dReal mult = 1.05;
                             dReal endTime = rampndtrimmed.endTime;
-                            for(size_t idilate = 0; idilate < 5; ++idilate ) {
+                            // (Puttichai) now go up to 3.0 multiplier
+                            for(size_t idilate = 0; idilate < 6; ++idilate ) {
                                 tempramps1d.resize(0);
                                 endTime *= mult;
-                                if( ParabolicRamp::SolveAccelBounded2(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                int counterStart = 0;
+                                int counterEnd = 6;
+                                if( ParabolicRamp::SolveAccelBounded2(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, counterStart, counterEnd) ) {
                                     temprampsnd.resize(0);
                                     CombineRamps(tempramps1d, temprampsnd);
 
@@ -555,6 +558,7 @@ public:
                                     //                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
                                     //                                }
                                     bool bHasBadRamp=false;
+                                    std::cout << "\nendTime*mult = " << endTime << std::endl;
                                     FOREACH(itnewrampnd, temprampsnd) {
                                         ParabolicRamp::CheckReturn newrampret = _feasibilitychecker.Check2(*itnewrampnd, 0xffff, outramps);
                                         if( newrampret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
@@ -566,7 +570,9 @@ public:
                                     if( !bHasBadRamp ) {
                                         if( bTrimmed ) {
                                             // have to retime the original ramp without trimming
-                                            if( !ParabolicRamp::SolveAccelBounded2(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp) ) {
+                                            counterStart = 0;
+                                            counterEnd = 6;
+                                            if( !ParabolicRamp::SolveAccelBounded2(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, counterStart, counterEnd) ) {
                                                 break;
                                             }
                                             temprampsnd.resize(0);
@@ -576,6 +582,9 @@ public:
                                         break;
                                     }
                                     mult += 0.05;
+                                    if (mult > 3.0) {
+                                        
+                                    }                                                      
                                 }
                             }
                             if( !bSuccess ) {
