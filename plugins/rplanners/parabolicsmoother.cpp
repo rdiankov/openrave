@@ -540,10 +540,14 @@ public:
                             bool bSuccess = false;
                             dReal mult = 1.05;
                             dReal endTime = rampndtrimmed.endTime;
+                            dReal incr = 0.1*endTime;
                             // (Puttichai) now go up to 3.0 multiplier
-                            for(size_t idilate = 0; idilate < 6; ++idilate ) {
+                            // (Puttichai) try using an increment instead of a multiplier
+                            size_t maxIncrement = 30;
+                            for(size_t idilate = 0; idilate < maxIncrement; ++idilate ) {
                                 tempramps1d.resize(0);
-                                endTime *= mult;
+                                // endTime *= mult;
+                                endTime += incr;
                                 int counterStart = 0;
                                 int counterEnd = 6;
                                 if( ParabolicRamp::SolveAccelBounded2(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, counterStart, counterEnd) ) {
@@ -581,10 +585,7 @@ public:
                                         bSuccess = true;
                                         break;
                                     }
-                                    mult += 0.05;
-                                    if (mult > 3.0) {
-                                        
-                                    }                                                      
+                                    // mult += 0.05;                                                   
                                 }
                             }
                             if( !bSuccess ) {
