@@ -491,6 +491,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
             // (dx1 - vmaxNew)/a2 is actually the duration of the last ramp.
             tswitch2 = endTime - (dx1 - vmaxNew)/a2;
+            PARABOLIC_RAMP_ASSERT(tswitch2 > 0);
             ttotal = endTime;
         }
         // RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f; A = %.15f; B = %.15f; C = %.15f; D = %.15f", a1%a2%A%B%C%D);
