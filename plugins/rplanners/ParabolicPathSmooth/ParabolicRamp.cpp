@@ -355,7 +355,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
     // the interval (to save computational effort). The midpoint, in my opinion, prevides a good
     // approximation of the real minimizer.
     bool res = SolveForTSwitch1(A, B, endTime, i4l, i4u);
-    if (!res) {
+    if ((!res) || FuzzyZero(tswitch1, EpsilonT)) {
         tswitch1 = 0.5*(i4u + i4l);
         // return false;
     }
@@ -364,6 +364,11 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
     // Now we already obtain a potential candidate for tswitch1. See if the velocity bound is
     // violated.
+    // if (FuzzyZero(tswitch1, EpsilonT)) {
+    //     PARABOLICWARN("the calculated tswitch1 is zero");
+    //     RAVELOG_WARN_FORMAT("i4l = %.15e; i4u = %.15e", i4l%i4u);
+    //     tswitch1 = 0.5*i4u;
+    // }
     a1 = A + (B/tswitch1);
     if (FuzzyZero(endTime - tswitch1, EpsilonT)) {
         a2 = 0;
@@ -378,23 +383,28 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
         Real dv, t1Trimmed, t2Trimmed, temp; // temporary variables to help in calculation
 
         // Here we are just reusing the variable A, B, C, and D.
+        Real A2, B2, C2, D2;
         dv = v - vmaxNew;
-        D = 0.5*dv*dv*((1/a1) - (1/a2));
+        D2 = 0.5*dv*dv*((1/a1) - (1/a2));
 
         dv = vmaxNew - dx0;
-        A = dv*dv;
+        A2 = dv*dv;
         t1Trimmed = dv/a1;
 
         dv = dx1 - vmaxNew;
-        B = -dv*dv;
+        B2 = -dv*dv;
         t2Trimmed = dv/a2;
 
-        C = t1Trimmed*(vmaxNew - dx0) + t2Trimmed*(vmaxNew - dx1) - 2*D;
-        temp = A*B*B;
+        C2 = t1Trimmed*(vmaxNew - dx0) + t2Trimmed*(vmaxNew - dx1) - 2*D2;
+        temp = A2*B2*B2;
+
+
+        // RAVELOG_DEBUG_FORMAT("A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", A2%B2%C2%D2);
+        // RAVELOG_DEBUG_FORMAT("temp = %.15e", temp);
         // We need to find a cube root of A*B*B. Currently we are using FindPolyRoots functions
         // taken from ikfast generator. A direct cube-root finding method might be better?
         Real root = -Inf;
-        if (FuzzyEquals(temp, 0, EpsilonT)) {
+        if (FuzzyEquals(temp, 0, EpsilonT*EpsilonT*EpsilonT)) {
             root = 0;
         }
         else {
@@ -402,38 +412,54 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
             int numRoots;
             bool modifiedTemp = false;
-            if (Abs(temp) < 1e-2) {
-                // FindPolyRoots3 has problems when the magnitude of A*B*B is too small
-                temp = temp*1000;
+            Real rootDivisor = 1.0;
+            int counter = 0;
+            while (Abs(temp) < 1) {
                 modifiedTemp = true;
+                temp *= 1000;
+                counter += 1;
+                // RAVELOG_DEBUG_FORMAT("temp = %.15e", temp);
             }
+            // if (Abs(temp) < 1e-2) {
+            //     // FindPolyRoots3 has problems when the magnitude of A*B*B is too small
+            //     temp = temp*1000;
+            //     modifiedTemp = true;
+            // }
             Real coeffs[4] = {1, 0, 0, -temp};
             FindPolyRoots3(coeffs, rawRoots, numRoots);
             if (numRoots == 0) {
                 RAVELOG_WARN_FORMAT("FindPolyRoots3 failed (numRoots = 0): ABB = %.15f, root1 = %.15f, root2 = %.15f, root3 = %.15f", temp%rawRoots[0]%rawRoots[1]%rawRoots[2]);
                 return false; // maybe we should try a bit harder here if this really fails.
             }
-            if (modifiedTemp) temp = temp*1000;
+            // if (modifiedTemp) temp = temp*1000;
             // RAVELOG_WARN_FORMAT("FindPolyRoots3: numRoots = %d", numRoots);
+            if (modifiedTemp) {
+                for (int k = 0; k < counter; ++k) {
+                    rootDivisor *= 10;
+                }
+            }
             for (int k = 0; k < 3; ++k) {
-                if (modifiedTemp) rawRoots[k] = rawRoots[k]*10;
                 // Note the epsilon that we use here. Sometimes the magnitude of temp is huge.
-                if (FuzzyEquals(rawRoots[k]*rawRoots[k]*rawRoots[k], temp, temp*EpsilonT)) root = rawRoots[k];
+                if (FuzzyEquals(rawRoots[k]*rawRoots[k]*rawRoots[k], temp, temp*EpsilonT)) {
+                    if (modifiedTemp) root = rawRoots[k]/rootDivisor;
+                    else root = rawRoots[k];
+                }
             }
             if (root == -Inf) {
                 RAVELOG_WARN_FORMAT("FindPolyRoots3 failed: ABB = %.15f, root1 = %.15f, root2 = %.15f, root3 = %.15f", temp%rawRoots[0]%rawRoots[1]%rawRoots[2]);
                 return false;
             } // solving cube root failed, somehow.
         }
+        // RAVELOG_DEBUG_FORMAT("root = %.15e", root);
         
-        a1 = (A + root)/C;
+        a1 = (A2 + root)/C2;
         if (Abs(a1) > amax + EpsilonA) {
             // a1 exceeds the bound, fix it by making it staying at the bound.
             a1 = Sign(a1)*amax;
         }
 
         if (Abs(a1) < EpsilonA) {
-            a2 = B/C;
+            a2 = B2/C2;
             if (Abs(a2) > amax + EpsilonA) {
                 // Cannot fix this case
                 PARABOLICWARN("abs(a2) > amax");
@@ -441,23 +467,24 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
             }
         }
         else {
-            if (FuzzyZero(C*a1 - A, EpsilonA)) {
+            if (FuzzyZero(C2*a1 - A2, EpsilonA)) {
                 // RAVELOG_WARN_FORMAT("C*a1 - A = 0: x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15e; endTime=%.15f; vm=%.15f; am=%.15f", x0%x1%dx0%dx1%endTime%vmax%amax);
                 a2 = 0;
             }
             else {
-                a2 = (B/C)*(1 + A/(C*a1 - A));
+                a2 = (B2/C2)*(1 + A2/(C2*a1 - A2));
                 if (Abs(a2) > amax + EpsilonA) {
                     // a2 exceeds the bound, fix it by making it staying at the bound.
                     a2 = Sign(a2)*amax;
                     // Resolve the value of a1
-                    if (FuzzyZero(C*a2 - B, EpsilonA)) {
-                        RAVELOG_WARN_FORMAT("C*a2 - B = 0: x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15e; endTime=%.15f; vm=%.15f; am=%.15f", x0%x1%dx0%dx1%endTime%vmax%amax);
+                    if (FuzzyZero(C2*a2 - B2, EpsilonA)) {
+                        RAVELOG_WARN_FORMAT("C2*a2 - B2 = 0: x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15e; endTime=%.15f; vm=%.15f; am=%.15f", x0%x1%dx0%dx1%endTime%vmax%amax);
                     }
-                    a1 = (A/C)*(1 + B/(C*a2 - B));
+                    a1 = (A2/C2)*(1 + B2/(C2*a2 - B2));
                 }
             }
         }
+        RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f", a1%a2);
 
         if ((Abs(a1) > amax + EpsilonA) || (Abs(a2) > amax + EpsilonA)) {
             PARABOLICWARN("Cannot fix acceleration bounds violation");
@@ -466,7 +493,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
         if ((Abs(a1) < EpsilonA) && (Abs(a2) < EpsilonA)) {
             PARABOLICWARN("Both accelerations are zero. Shuold we allow this?");
-            RAVELOG_WARN_FORMAT("A = %.15f; B = %.15f; C = %.15f; D = %.15f", A%B%C%D);
+            RAVELOG_WARN_FORMAT("A2 = %.15f; B2 = %.15f; C2 = %.15f; D2 = %.15f", A2%B2%C2%D2);
             return false;
         }
 
@@ -490,18 +517,61 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
             v = dx0 + a1*tswitch1;
 
             // (dx1 - vmaxNew)/a2 is actually the duration of the last ramp.
-            tswitch2 = endTime - (dx1 - vmaxNew)/a2;
-            PARABOLIC_RAMP_ASSERT(tswitch2 > 0);
+            Real tLastRamp = (dx1 - vmaxNew)/a2;
+            if (tswitch1 + tLastRamp > endTime) {
+                // Final fix.
+                // RAVELOG_DEBUG_FORMAT("A = %.15f; B = %.15f; tswitch1 = %.15f; tswitch2 = %.15f", A%B%tswitch1%tswitch2);
+                tswitch1 = (vmaxNew - dx0 - B)/A;
+                tswitch2 = endTime - tswitch1;
+                PARABOLIC_RAMP_ASSERT(tswitch2 > 0);
+
+                a1 = A + (B/tswitch1);
+                a2 = A - (B/(endTime - tswitch1));
+                v = dx0 + a1*tswitch1;
+            }
+            else {
+                tswitch2 = endTime - tLastRamp;
+            }
             ttotal = endTime;
         }
-        // RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f; A = %.15f; B = %.15f; C = %.15f; D = %.15f", a1%a2%A%B%C%D);
-        return true;
+        // RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f; A2 = %.15f; B2 = %.15f; C2 = %.15f; D2 = %.15f", a1%a2%A2%B2%C2%D2);
+        // PARABOLIC_RAMP_ASSERT(IsValid());
+        if (IsValid()) {
+            return true;
+        }
+        else {
+            std::cout << str(boost::format("tswitch1 = %.15e")%tswitch1) << std::endl;
+            std::cout << str(boost::format("tswitch2 = %.15e")%tswitch2) << std::endl;
+            std::cout << str(boost::format("endTime = %.15e")%endTime) << std::endl;
+            std::cout << str(boost::format("ttotal = %.15e")%ttotal) << std::endl;
+            std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
+            std::cout << str(boost::format("a2 = %.15e")%a2) << std::endl;
+            std::cout << str(boost::format("v = %.15e")%v) << std::endl;
+                    
+            return false;
+        }
     }
     else {
+        // RAVELOG_DEBUG_FORMAT("tswitch1 = %.15e; tswitch2 = %.15e; endTime = %.15e; ttotal = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", tswitch1%tswitch2%endTime%ttotal%a1%a1%v);
+        
         // This two-ramp profile works. Go for it.
         tswitch2 = tswitch1;
         ttotal = endTime;
-        return true;
+        // PARABOLIC_RAMP_ASSERT(IsValid());
+        if (IsValid()) {
+            return true;
+        }
+        else {
+            std::cout << str(boost::format("tswitch1 = %.15e")%tswitch1) << std::endl;
+            std::cout << str(boost::format("tswitch2 = %.15e")%tswitch2) << std::endl;
+            std::cout << str(boost::format("endTime = %.15e")%endTime) << std::endl;
+            std::cout << str(boost::format("ttotal = %.15e")%ttotal) << std::endl;
+            std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
+            std::cout << str(boost::format("a2 = %.15e")%a2) << std::endl;
+            std::cout << str(boost::format("v = %.15e")%v) << std::endl;
+            
+            return false;
+        }
     }
 }
 
@@ -1084,6 +1154,9 @@ void ParabolicRamp1D::TrimFront(Real tcut)
         PARABOLIC_RAMP_PLOG("Hmm... want to trim front of curve at time %.15e, end time %.15e\n",tcut,ttotal);
     }
     PARABOLIC_RAMP_ASSERT(tcut <= ttotal);
+    if (!IsValid()) {
+        RAVELOG_WARN_FORMAT("Before trimming: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0%x1%dx0%dx1%a1%a1%v%tswitch1%tswitch2);
+    }
     x0 = Evaluate(tcut);
     dx0 = Derivative(tcut);
     ttotal -= tcut;
@@ -1092,7 +1165,11 @@ void ParabolicRamp1D::TrimFront(Real tcut)
     if(tswitch1 < 0) tswitch1=0;
     if(tswitch2 < 0) tswitch2=0;
     // std::cout << "running IsValid in TrimFront" << std::endl;
+    if (!IsValid()) {
+        RAVELOG_WARN_FORMAT("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0%x1%dx0%dx1%a1%a1%v%tswitch1%tswitch2);
+    }
     PARABOLIC_RAMP_ASSERT(IsValid());
+    // PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0, x1, dx0, dx1, a1, a1, v, tswitch1, tswitch2);
 
 }
 
@@ -1134,7 +1211,6 @@ void ParabolicRamp1D::Bounds(Real ta,Real tb,Real& xmin,Real& xmax) const
 
     if(xmin > xmax) Swap(xmin,xmax);
     // PARABOLIC_RAMP_PLOG("current xmin = %.15e, xmax = %.15e", xmin, xmax);
-    // PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, v0=%.15e, v1=%.15e, tswitch1=%.15e, tswitch2=%.15e, ttotal=%.15e, a1=%.15e, a2=%.15e, v=%.15e\n",x0,x1,dx0,dx1, tswitch1, tswitch2, ttotal, a1, a2, v);
 
     Real tflip1=0,tflip2=0;
     if(ta < tswitch1) {
@@ -1159,6 +1235,10 @@ void ParabolicRamp1D::Bounds(Real ta,Real tb,Real& xmin,Real& xmax) const
         if(xflip < xmin) xmin = xflip;
         else if(xflip > xmax) xmax = xflip;
     }
+
+    // PARABOLIC_RAMP_PLOG("tflip1=%.15e, tflip2=%.15e", tflip1, tflip2);
+    // PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, v0=%.15e, v1=%.15e, tswitch1=%.15e, tswitch2=%.15e, ttotal=%.15e, a1=%.15e, a2=%.15e, v=%.15e\n",x0, x1, dx0, dx1, tswitch1, tswitch2, ttotal, a1, a2, v);
+
 }
 
 void ParabolicRamp1D::DerivBounds(Real& vmin,Real& vmax) const
@@ -2051,8 +2131,9 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real vma
     ramp.dx0 = v0;
     ramp.x1 = x1;
     ramp.dx1 = v1;
+    Real prevDuration = ramp.ttotal;
     if(!ramp.SolveMinAccel(endTime,vmax,amax)) {////////Puttichai
-        RAVELOG_WARN_FORMAT("SolveMinAccel failed: x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; newDuration=%.15f; vm=%.15f; am=%.15f", x0%x1%v0%v1%endTime%vmax%amax);
+        RAVELOG_WARN_FORMAT("SolveMinAccel failed: x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; newDuration=%.15f; vm=%.15f; am=%.15f, prevDuration=%.15f", x0%x1%v0%v1%endTime%vmax%amax%prevDuration);
         return false;
     }
     Real bmin,bmax;
@@ -2063,7 +2144,8 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real vma
         ramps[0] = ramp;
         return true;
     }
-    RAVELOG_WARN_FORMAT("SolveMinAccel passed but x bounds violated: xmin=%.15f; bmin=%.15f; xmax=%.15f; bmax=%.15f", xmin%xmax%bmin%bmax);
+    // RAVELOG_WARN_FORMAT("SolveMinAccel passed but x bounds violated: xmin=%.15f; bmin=%.15f; xmax=%.15f; bmax=%.15f", xmin%bmin%xmax%bmax);
+    PARABOLIC_RAMP_PLOG("SolveMinAccel passed but x bounds violated: xmin=%.15f; bmin=%.15f; xmax=%.15f; bmax=%.15f", xmin, bmin, xmax, bmax);
     PARABOLIC_RAMP_PLOG("x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; newDuration=%.15f; vm=%.15f; am=%.15f", x0, x1, v0, v1, endTime, vmax, amax);
     
     //not within bounds, do the more complex procedure
@@ -2271,6 +2353,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real vma
         PARABOLIC_RAMP_PLOG("\n");
     }
     PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+    PARABOLIC_RAMP_PLOG("Successfully fixed x bounds violation");
     return true;
 }
 
