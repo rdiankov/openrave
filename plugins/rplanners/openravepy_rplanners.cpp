@@ -13,6 +13,7 @@
 // limitations under the License.
 /// \author Puttichai Lertkultanon
 #include "rampoptimizer/ramp.h"
+#include "rampoptimizer/interpolation.h"
 #include "openraveplugindefs.h" // defining FOREACH
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
@@ -166,6 +167,8 @@ inline numeric::array toPyArray(const std::vector<T>& v) {
     }
     return toPyArrayN(&v[0], v.size());
 }
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 typedef boost::shared_ptr<Ramp> RampPtr;
 typedef boost::shared_ptr<ParabolicCurve> CurvePtr;
@@ -240,6 +243,18 @@ public:
     Real v0, v1, a, x0, d, duration;
 }; // end class PyRamp
 
+// inline numeric::array toPyRampArray(const std::vector<PyRamp> ramps) {
+//     if (ramps.size() == 0) {
+//         return static_cast<numeric::array>(numeric::array(boost::python::list()).astype("u4"));
+//     }
+//     npy_intp dims[] = {npy_intp(ramps.size())};
+//     PyObject* pyvalues = PyArray_SimpleNew(1, &dims[0], PyArrayObject);
+//     if (ramps != NULL) {
+//         memcpy(PyArray_DATA(ramps), ramps, ramps.size()*sizeof(PyRamp));
+//     }
+//     return static_cast<numeric::array>(handle<>(ramps));
+// }
+
 typedef boost::shared_ptr<PyRamp> PyRampPtr;
 
 class PyParabolicCurve {
@@ -252,16 +267,46 @@ public:
         std::vector<PyRampPtr> vpramps = ExtractArray<PyRampPtr>(pyRampsArray);
         Initialize(vpramps);
     }
+    PyParabolicCurve(ParabolicCurve curve) {
+        pcurve.reset(new ParabolicCurve(curve.ramps));
+        // *pcurve = curve;
+
+        v0 = pcurve->ramps.front().v0;
+        duration = pcurve->duration;
+        x0 = pcurve->ramps.front().x0;
+        d = pcurve->d;
+        v1 = pcurve->ramps.back().v1;
+        switchpointsList.reserve(pcurve->switchpointsList.size());
+        switchpointsList = pcurve->switchpointsList;
+    }
     ~PyParabolicCurve() {
     }
 
     // Initialize PyParabolicCurve from an std::vector of PyRampPtrs
-    void Initialize(std::vector<PyRampPtr> vpramps) {
+    void Initialize(std::vector<PyRampPtr>& vpramps) {
         std::vector<Ramp> ramps(vpramps.size());
+        Real newx0 = vpramps.front()->x0;
         for (size_t i = 0; i < vpramps.size(); ++i) {
+            // vpramps[i]->x0 = newx0; // also modify input ramps
             ramps[i] = Ramp(vpramps[i]->v0, vpramps[i]->a, vpramps[i]->duration, vpramps[i]->x0);
+            newx0 = newx0 + vpramps[i]->d;
         }
         pcurve.reset(new ParabolicCurve(ramps));
+
+        v0 = pcurve->ramps.front().v0;
+        duration = pcurve->duration;
+        x0 = pcurve->ramps.front().x0;
+        d = pcurve->d;
+        v1 = pcurve->ramps.back().v1;
+        switchpointsList.reserve(pcurve->switchpointsList.size());
+        switchpointsList = pcurve->switchpointsList;
+
+    }
+
+    // Initialize PyParabolicCurve from a Parabolic Curve (interface between interpolation stuff and python stuff)
+    void Initialize(ParabolicCurve curve) {
+        pcurve.reset(new ParabolicCurve(curve.ramps));
+        // *pcurve = curve;
 
         v0 = pcurve->ramps.front().v0;
         duration = pcurve->duration;
@@ -296,6 +341,15 @@ public:
         return pcurve->EvalAcc(t);
     }
 
+    // void SetInitialValue(Real newx0) {
+    //     x0 = newx0;
+    //     size_t nRamps = pcurve->ramps.size();
+    //     for (size_t i = 0; i < nRamps; ++i) {
+    //         pcurve->ramps[i].x0 = newx0;
+    //         newx0 = newx0 + pcurve->ramps[i].d;
+    //     }
+    // }
+
     bool _IsEmpty() const {
         return pcurve->ramps.size() == 0;
     }
@@ -316,6 +370,14 @@ public:
         BOOST_ASSERT(pyramp.duration == it->duration);
         return pyramp;
     }
+
+    // object _GetRamps() {
+    //     std::vector<PyRamp> ramps(pcurve->ramps.size());
+    //     for (size_t i = 0; i < ramps.size(); ++i) {
+    //         ramps[i] = _GetRamp(i);
+    //     }
+    //     return toPyRampArray(ramps);
+    // }
 
     object _GetSwitchpointsList() {
         return toPyArray(switchpointsList);
@@ -342,6 +404,32 @@ public:
         std::vector<PyCurvePtr> vpcurves = ExtractArray<PyCurvePtr>(pyCurvesArray);
         Initialize(vpcurves);
     }
+    PyParabolicCurvesND(ParabolicCurvesND curvesnd) {
+        ndof = curvesnd.ndof;
+        pcurvesnd.reset(new ParabolicCurvesND());
+        *pcurvesnd = curvesnd;
+        // pcurvesnd.reset(new ParabolicCurvesND());
+        // pcurvesnd->Initialize(curvesnd.curves);
+        // *pcurvesnd = curvesnd;
+        std::cout << "HI" << std::endl;
+        std::cout << curvesnd.curves[0].x0 << std::endl;
+
+        std::cout << curvesnd.v0Vect[0] << " " << curvesnd.v0Vect[1] << " " << curvesnd.v0Vect[2] << " " << curvesnd.v0Vect[3] << " " << curvesnd.v0Vect[4] << " " << curvesnd.v0Vect[5] << " " << std::endl;
+        std::cout << pcurvesnd->v0Vect[0] << " " << pcurvesnd->v0Vect[1] << " " << pcurvesnd->v0Vect[2] << " " << pcurvesnd->v0Vect[3] << " " << pcurvesnd->v0Vect[4] << " " << pcurvesnd->v0Vect[5] << " " << std::endl;
+        x0Vect = (*pcurvesnd).x0Vect;
+        dVect = (*pcurvesnd).dVect;
+        v0Vect = (*pcurvesnd).v0Vect;
+        v1Vect = (*pcurvesnd).v1Vect;
+        duration = (*pcurvesnd).duration;
+        switchpointsList = (*pcurvesnd).switchpointsList;
+
+        // x0Vect = pcurvesnd->x0Vect;
+        // dVect = pcurvesnd->dVect;
+        // v0Vect = pcurvesnd->v0Vect;
+        // v1Vect = pcurvesnd->v1Vect;
+        // duration = pcurvesnd->duration;
+        // switchpointsList = pcurvesnd->switchpointsList;
+    }
     ~PyParabolicCurvesND() {
     }
 
@@ -360,6 +448,21 @@ public:
         dVect = pcurvesnd->dVect;
         v0Vect = pcurvesnd->v0Vect;
         v1Vect = pcurvesnd->v1Vect;
+        switchpointsList = pcurvesnd->switchpointsList;
+    }
+
+    // Initialize PyParabolicCurvesND from a ParabolicCurvesND (interface between interpolation stuff and python stuff)
+    void Initialize(ParabolicCurvesND curvesnd) {
+        ndof = curvesnd.ndof;
+        pcurvesnd.reset(new ParabolicCurvesND());
+        pcurvesnd->Initialize(curvesnd.curves);
+        // *pcurvesnd = curvesnd;
+
+        x0Vect = pcurvesnd->x0Vect;
+        dVect = pcurvesnd->dVect;
+        v0Vect = pcurvesnd->v0Vect;
+        v1Vect = pcurvesnd->v1Vect;
+        duration = pcurvesnd->duration;
         switchpointsList = pcurvesnd->switchpointsList;
     }
 
@@ -385,6 +488,12 @@ public:
             aVect[i] = pcurvesnd->curves[i].EvalAcc(t);
         }
         return toPyArray(aVect);
+    }
+
+    PyParabolicCurve _GetCurve(size_t index) {
+        // std::vector<ParabolicCurve>::const_iterator it = pcurvesnd->curves.begin() + index;
+        PyParabolicCurve pycurve(pcurvesnd->curves[index]);
+        return pycurve;
     }
 
     object _GetSwitchpointsList() {
@@ -419,6 +528,21 @@ public:
 
 }; //end class PyParabolicCurvesND
 
+// Interpolation utilities
+PyParabolicCurvesND PyInterpolateZeroVelND(object pyx0Vect, object pyx1Vect, object pyvmVect, object pyamVect) {
+    std::vector<Real> x0Vect = ExtractArray<Real>(pyx0Vect);
+    std::vector<Real> x1Vect = ExtractArray<Real>(pyx1Vect);
+    std::vector<Real> vmVect = ExtractArray<Real>(pyvmVect);
+    std::vector<Real> amVect = ExtractArray<Real>(pyamVect);
+
+    ParabolicCurvesND resultCurvesND = InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect);
+
+    std::cout << "In openravepy_rplanners.cpp" << std::endl;
+    std::cout << resultCurvesND.v0Vect[0] << " " << resultCurvesND.v0Vect[1] << " " << resultCurvesND.v0Vect[2] << " " << resultCurvesND.v0Vect[3] << " " << resultCurvesND.v0Vect[4] << " " << resultCurvesND.v0Vect[5] << " " << std::endl;
+    PyParabolicCurvesND pyCurvesND(resultCurvesND);
+    return pyCurvesND;
+}
+
 } // end namespace rplanners
 
 
@@ -452,8 +576,12 @@ BOOST_PYTHON_MODULE(openravepy_rplanners) {
 
     ////////////////////////////////////////////////////////////////////////////////
     // PyParabolicCurve
+    void (PyParabolicCurve::*pycurveinit1)(std::vector<PyRampPtr>&) = &PyParabolicCurve::Initialize;
+    void (PyParabolicCurve::*pycurveinit2)(ParabolicCurve) = &PyParabolicCurve::Initialize;
+
     class_<PyParabolicCurve>("PyParabolicCurve", init<>())
     .def(init<object>())
+    .def(init<ParabolicCurve>())
     .def_readonly("v0", &PyParabolicCurve::v0)
     .def_readonly("duration", &PyParabolicCurve::duration)
     .def_readonly("x0", &PyParabolicCurve::x0)
@@ -461,19 +589,26 @@ BOOST_PYTHON_MODULE(openravepy_rplanners) {
     .def_readonly("d", &PyParabolicCurve::d)
     .add_property("switchpointsList", &PyParabolicCurve::_GetSwitchpointsList)
     .add_property("isEmpty", &PyParabolicCurve::_IsEmpty)
-    .def("Initialize", &PyParabolicCurve::Initialize)
+    // .add_property("ramps", &PyParabolicCurve::_GetRamps)
+
     .def("Append", &PyParabolicCurve::Append)
     .def("EvalPos", &PyParabolicCurve::EvalPos)
     .def("EvalVel", &PyParabolicCurve::EvalVel)
     .def("EvalAcc", &PyParabolicCurve::EvalAcc)
+    .def("Initialize", pycurveinit1)
+    .def("Initialize", pycurveinit2)
     .def("__len__", &PyParabolicCurve::_GetLength)
     .def("__getitem__", &PyParabolicCurve::_GetRamp)
     ;
 
     ////////////////////////////////////////////////////////////////////////////////
     // PyParabolicCurvesND
+    void (PyParabolicCurvesND::*pycurvesndinit1)(std::vector<PyCurvePtr>) = &PyParabolicCurvesND::Initialize;
+    void (PyParabolicCurvesND::*pycurvesndinit2)(ParabolicCurvesND) = &PyParabolicCurvesND::Initialize;
+
     class_<PyParabolicCurvesND>("PyParabolicCurvesND", init<>())
     .def(init<object>())
+    .def(init<ParabolicCurvesND>())
     .def_readonly("ndof", &PyParabolicCurvesND::ndof)
     .def_readonly("duration", &PyParabolicCurvesND::duration)
     .add_property("switchpointsList", &PyParabolicCurvesND::_GetSwitchpointsList)
@@ -484,7 +619,14 @@ BOOST_PYTHON_MODULE(openravepy_rplanners) {
     .def("EvalPos", &PyParabolicCurvesND::EvalPos)
     .def("EvalVel", &PyParabolicCurvesND::EvalVel)
     .def("EvalAcc", &PyParabolicCurvesND::EvalAcc)
+    .def("Initialize", pycurvesndinit1)
+    .def("Initialize", pycurvesndinit2)
+    .def("__getitem__", &PyParabolicCurvesND::_GetCurve)
     ;
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Interpolation Utilities
+    def("InterpolateZeroVelND", &PyInterpolateZeroVelND);
 
     // ////////////////////////////////////////////////////////////////////////////////
     // // Ramp

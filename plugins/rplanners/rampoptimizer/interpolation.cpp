@@ -58,7 +58,6 @@ ParabolicCurvesND InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Re
 
     for (int i = 0; i < ndof; ++i) {
         curves[i].SetInitialValue(x0Vect[i]);
-        // std::cout << curves[i].x0 << " " << x0Vect[i] << " " << curves[i].ramps[0].x0 << std::endl;
     }
 
     ParabolicCurvesND curvesnd(curves);
@@ -88,7 +87,6 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
     if (FuzzyZero(delta, epsilon)) {
         for (int i = 0; i < ndof; ++i) {
             curves[i] = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i]);
-            // std::cout << "FINALVEL" << curves[i].v1 << " " << v1Vect[i] << std::endl;
             if (curves[i].duration > maxDuration) {
                 maxDuration = curves[i].duration;
                 maxIndex = i;
@@ -99,8 +97,7 @@ ParabolicCurvesND InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vect
         // Not implemented yet
         BOOST_ASSERT(false);
     }
-    // std::cout << "ARBITRARY VEL INTERPOLATION: MAX DURATION = " << maxDuration << std::endl;
-    // std::cout << "MAXINDEX = " << maxIndex << std::endl;
+    // std::cout << "maxIndex = " << maxIndex << std::endl;
     return ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta);
 }
 
@@ -120,14 +117,12 @@ ParabolicCurvesND ReinterpolateNDFixedDuration(std::vector<ParabolicCurve> curve
             newCurves[i] = curves[i];
         }
         else {
-            // std::cout << "STRETCHING DOF " << i << std::endl;
             newCurves[i] = Stretch1D(curves[i], newDuration, vmVect[i], amVect[i]);
             if (newCurves[i].IsEmpty()) {
                 return curvesnd; // return an empty ParabolicCurvesND
             }
         }
     }
-    // std::cout << "FINALLY" << std::endl;
     curvesnd.Initialize(newCurves);
     return curvesnd;
 }
@@ -209,7 +204,6 @@ ParabolicCurve Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, 
     ramps[1] = ramp1;
     ParabolicCurve curve(ramps);
     BOOST_ASSERT(FuzzyEquals(curve.d, d, epsilon));
-    // std::cout << str(boost::format("DURATION = %.15e")%curve.duration) << std::endl;
     return curve;
 }
 
@@ -398,7 +392,6 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
         // std::cout << str(boost::format("vm = %.15e")%vm) << std::endl;
         // std::cout << str(boost::format("am = %.15e")%am) << std::endl;
         // std::cout << str(boost::format("newDuration = %.15e")%newDuration) << std::endl;
-
         // std::cout << str(boost::format("a0 = %.15e")%a0) << std::endl;
         // std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
         
@@ -451,9 +444,6 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
             a0New = Sign(a0New)*am;
         }
         Real a1New = (B/C)*(1 + A/(C*a0New - A));
-        // std::cout << str(boost::format("***** a1New = %.15e")%a1New) << std::endl;
-        // std::cout << str(boost::format("B/C = %.15e")%(B/C)) << std::endl;
-        // std::cout << str(boost::format("second term = %.15e")%(A/(C*a0New - A))) << std::endl;
         if (Abs(a1New) > am + epsilon) {
             // a1New exceeds the bound, make it stay at the bound. Also modify a0New acordingly.
             a1New = Sign(a1New)*am;
@@ -465,15 +455,11 @@ ParabolicCurve Stretch1D(ParabolicCurve curveIn, Real newDuration, Real vm, Real
             // No heuristic to handle this case yet.
             return curve;
         }
-
-        
         // std::cout << str(boost::format("a0 = %.15e")%a0) << std::endl;
         // std::cout << str(boost::format("a0New = %.15e")%a0New) << std::endl;
         // std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
         // std::cout << str(boost::format("a1New = %.15e")%a1New) << std::endl;
 
-        
-        
         Real t0New = (vmNew - v0)/a0New;
         // std::cout << str(boost::format("t0New = %.15e")%t0New) << std::endl;
         BOOST_ASSERT(t0New > 0);

@@ -81,6 +81,7 @@ protected:
     }
 
     dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) {
+        
         _v0pos.resize(info->gpos.dof);
         _v1pos.resize(info->gpos.dof);
         for(int i = 0; i < info->gpos.dof; ++i) {
@@ -99,7 +100,6 @@ protected:
             }
         }
         _ramps.resize(info->gpos.dof);
-
         dReal mintime = -1;
         
         // succeeded, check if manipulator constraints are in effect

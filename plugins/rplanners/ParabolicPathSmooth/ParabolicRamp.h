@@ -65,6 +65,12 @@ public:
     bool SolveMinTime2(Real amax,Real vmax,Real tLowerBound);
     /// Solves for minimum acceleration given end time and velocity bounds
     bool SolveMinAccel(Real endTime,Real vmax);
+
+    /// Solves for minimum acceleration given end time and velocity bounds with a new method. \author Puttichai Lertkultanon
+    bool SolveMinAccel(Real endTime, Real vmax, Real amax); ////////Puttichai
+    /// Solves for a value of tswitch1 (used in SolveMinAccel)
+    bool SolveForTSwitch1(Real A, Real B, Real endTime, Real l, Real u); ////////Puttichai
+
     /// Solves for the minimum-time braking trajectory starting from x0,dx0
     void SolveBraking(Real amax);
     /// Solves for the ramp given max the exact time
@@ -155,6 +161,9 @@ public:
 
 };
 
+/// Calculates the minimum total duration that a ramp has to be stretched to
+bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real vmax, Real amax, Real& newEndTime); ////////Puttichai
+
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given
 /// acceleration, velocity, and x bounds.  Returns true if successful.
 bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Real xmin,Real xmax, ParabolicRamp1D& ramp);
@@ -164,6 +173,8 @@ bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Re
 /// velocity and x bounds.  Returns true if successful.
 bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
 
+bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real vmax, Real amax, Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps); ////////Puttichai
+
 bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime, Real amax, Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
 
 /// Vector version of above.
@@ -171,12 +182,18 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime, Real am
 /// \param multidofinterp if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
 Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
 
+Real SolveMinTimeBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);////////Puttichai
+
 /// Vector version of above.
 /// Returns true if successful.
 bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
+bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& amax, const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);////////Puttichai
+
 /// if 0 - SolveMinAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
 bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
+
+bool SolveAccelBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real& endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp, int& counterStart, int& counterEnd);////////Puttichai
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
 //void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
@@ -203,7 +220,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
             tmax = tdofmax;
         }
     }
-    
+
     std::vector<Real> timeOffsets(ramps.size(),0);  //start time of current index
     Real t=0; // current time
     while(true) {
@@ -227,7 +244,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                 break;
             }
         }
-        
+
         if(!(tnext > t || t == 0)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: error finding next time step?\n");
             PARABOLIC_RAMP_PLOG("tnext = %g, t = %g, step = %d\n",tnext,t,ndramps.size());
@@ -340,7 +357,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                     PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
                 }
                 //PARABOLIC_RAMP_ASSERT(itramp->ramps[i].IsValid());
-                
+
             }
         }
         PARABOLIC_RAMP_ASSERT(itramp->IsValid());
@@ -379,6 +396,172 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
         ndramps.back().dx1[i] = ndramps.back().ramps[i].dx1 = ramps[i].back().dx1;
     }
 }
+
+////////Puttichai
+// The following two functions are added for SolveMinAccel
+// Compute roots of a cubic polynomial. This functions is taken from OpenRAVE ik generator file.
+static inline void FindPolyRoots3(Real rawcoeffs[4], Real rawroots[3], int& numroots)
+{
+    using std::complex;
+    if( rawcoeffs[0] == 0 ) {
+        // solve with one reduced degree
+        //%(reducedpolyroots)s(&rawcoeffs[1], &rawroots[0], numroots);
+        numroots = 0;
+        return;
+    }
+    const Real tol = 128.0*std::numeric_limits<Real>::epsilon();
+    const Real tolsqrt = sqrt(std::numeric_limits<Real>::epsilon());
+    complex<Real> coeffs[3];
+    const int maxsteps = 110;
+    for(int i = 0; i < 3; ++i) {
+        coeffs[i] = complex<Real>(rawcoeffs[i+1]/rawcoeffs[0]);
+    }
+    complex<Real> roots[3];
+    Real err[3];
+    roots[0] = complex<Real>(1,0);
+    roots[1] = complex<Real>(0.4,0.9); // any complex number not a root of unity works
+    err[0] = 1.0;
+    err[1] = 1.0;
+    for(int i = 2; i < 3; ++i) {
+        roots[i] = roots[i-1]*roots[1];
+        err[i] = 1.0;
+    }
+    for(int step = 0; step < maxsteps; ++step) {
+        bool changed = false;
+        for(int i = 0; i < 3; ++i) {
+            if ( err[i] >= tol ) {
+                changed = true;
+                // evaluate
+                complex<Real> x = roots[i] + coeffs[0];
+                for(int j = 1; j < 3; ++j) {
+                    x = roots[i] * x + coeffs[j];
+                }
+                for(int j = 0; j < 3; ++j) {
+                    if( i != j ) {
+                        if( roots[i] != roots[j] ) {
+                            x /= (roots[i] - roots[j]);
+                        }
+                    }
+                }
+                roots[i] -= x;
+                err[i] = abs(x);
+            }
+        }
+        if( !changed ) {
+            break;
+        }
+    }
+
+    numroots = 0;
+    bool visited[3] = {false};
+    for(int i = 0; i < 3; ++i) {
+        if( !visited[i] ) {
+            // might be a multiple root, in which case it will have more error than the other roots
+            // find any neighboring roots, and take the average
+            complex<Real> newroot=roots[i];
+            int n = 1;
+            for(int j = i+1; j < 3; ++j) {
+                // care about error in real much more than imaginary
+                if( std::abs(real(roots[i])-real(roots[j])) < tolsqrt && std::abs(imag(roots[i])-imag(roots[j])) < 0.002 ) {
+                    newroot += roots[j];
+                    n += 1;
+                    visited[j] = true;
+                }
+            }
+            if( n > 1 ) {
+                newroot /= n;
+            }
+            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
+            if( fabs(imag(newroot)) < tolsqrt ) {
+                rawroots[numroots++] = real(newroot);
+            }
+        }
+    }
+}
+    
+
+static inline void FindPolyRoots4(Real rawcoeffs[5], Real rawroots[4], int& numroots)
+{
+    using std::complex;
+    if( rawcoeffs[0] == 0 ) {
+        // solve with one reduced degree
+        //%(reducedpolyroots)s(&rawcoeffs[1], &rawroots[0], numroots);
+        Real newrawcoeffs[4] = {rawcoeffs[1], rawcoeffs[2], rawcoeffs[3], rawcoeffs[4]};
+        FindPolyRoots3(newrawcoeffs, rawroots, numroots);
+        // numroots = 0;
+        return;
+    }
+    const Real tol = 128.0*std::numeric_limits<Real>::epsilon();
+    const Real tolsqrt = sqrt(std::numeric_limits<Real>::epsilon());
+    complex<Real> coeffs[4];
+    const int maxsteps = 110;
+    for(int i = 0; i < 4; ++i) {
+        coeffs[i] = complex<Real>(rawcoeffs[i+1]/rawcoeffs[0]);
+    }
+    complex<Real> roots[4];
+    Real err[4];
+    roots[0] = complex<Real>(1,0);
+    roots[1] = complex<Real>(0.4,0.9); // any complex number not a root of unity works
+    err[0] = 1.0;
+    err[1] = 1.0;
+    for(int i = 2; i < 4; ++i) {
+        roots[i] = roots[i-1]*roots[1];
+        err[i] = 1.0;
+    }
+    for(int step = 0; step < maxsteps; ++step) {
+        bool changed = false;
+        for(int i = 0; i < 4; ++i) {
+            if ( err[i] >= tol ) {
+                changed = true;
+                // evaluate
+                complex<Real> x = roots[i] + coeffs[0];
+                for(int j = 1; j < 4; ++j) {
+                    x = roots[i] * x + coeffs[j];
+                }
+                for(int j = 0; j < 4; ++j) {
+                    if( i != j ) {
+                        if( roots[i] != roots[j] ) {
+                            x /= (roots[i] - roots[j]);
+                        }
+                    }
+                }
+                roots[i] -= x;
+                err[i] = abs(x);
+            }
+        }
+        if( !changed ) {
+            break;
+        }
+    }
+
+    numroots = 0;
+    bool visited[4] = {false};
+    for(int i = 0; i < 4; ++i) {
+        if( !visited[i] ) {
+            // might be a multiple root, in which case it will have more error than the other roots
+            // find any neighboring roots, and take the average
+            complex<Real> newroot=roots[i];
+            int n = 1;
+            for(int j = i+1; j < 4; ++j) {
+                // care about error in real much more than imaginary
+                if( std::abs(real(roots[i])-real(roots[j])) < tolsqrt && std::abs(imag(roots[i])-imag(roots[j])) < 0.002 ) {
+                    newroot += roots[j];
+                    n += 1;
+                    visited[j] = true;
+                }
+            }
+            if( n > 1 ) {
+                newroot /= n;
+            }
+            // there are still cases where even the mean is not accurate enough, until a better
+            // multi-root algorithm is used, need to use the sqrt
+            if( fabs(imag(newroot)) < tolsqrt ) {
+                rawroots[numroots++] = real(newroot);
+            }
+        }
+    }
+}
+
 
 
 } //namespace ParabolicRamp
