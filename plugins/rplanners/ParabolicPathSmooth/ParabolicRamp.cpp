@@ -398,10 +398,10 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
         C2 = t1Trimmed*(vmaxNew - dx0) + t2Trimmed*(vmaxNew - dx1) - 2*D2;
         temp = A2*B2*B2;
 
-
         // RAVELOG_DEBUG_FORMAT("A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", A2%B2%C2%D2);
         // RAVELOG_DEBUG_FORMAT("temp = %.15e", temp);
-        // We need to find a cube root of A*B*B. Currently we are using FindPolyRoots functions
+
+        // We need to find a cube root of A2*B2*B2. Currently we are using FindPolyRoots functions
         // taken from ikfast generator. A direct cube-root finding method might be better?
         Real root = -Inf;
         if (FuzzyEquals(temp, 0, EpsilonT*EpsilonT*EpsilonT)) {
@@ -412,43 +412,33 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
             int numRoots;
             bool modifiedTemp = false;
-            Real rootDivisor = 1.0;
-            int counter = 0;
+            Real rootMultiplier = 1.0;
             while (Abs(temp) < 1) {
                 modifiedTemp = true;
                 temp *= 1000;
-                counter += 1;
+                rootMultiplier *= 0.1;
                 // RAVELOG_DEBUG_FORMAT("temp = %.15e", temp);
             }
-            // if (Abs(temp) < 1e-2) {
-            //     // FindPolyRoots3 has problems when the magnitude of A*B*B is too small
-            //     temp = temp*1000;
-            //     modifiedTemp = true;
-            // }
             Real coeffs[4] = {1, 0, 0, -temp};
             FindPolyRoots3(coeffs, rawRoots, numRoots);
             if (numRoots == 0) {
                 RAVELOG_WARN_FORMAT("FindPolyRoots3 failed (numRoots = 0): ABB = %.15f, root1 = %.15f, root2 = %.15f, root3 = %.15f", temp%rawRoots[0]%rawRoots[1]%rawRoots[2]);
                 return false; // maybe we should try a bit harder here if this really fails.
             }
-            // if (modifiedTemp) temp = temp*1000;
+            
             // RAVELOG_WARN_FORMAT("FindPolyRoots3: numRoots = %d", numRoots);
-            if (modifiedTemp) {
-                for (int k = 0; k < counter; ++k) {
-                    rootDivisor *= 10;
-                }
-            }
             for (int k = 0; k < 3; ++k) {
                 // Note the epsilon that we use here. Sometimes the magnitude of temp is huge.
                 if (FuzzyEquals(rawRoots[k]*rawRoots[k]*rawRoots[k], temp, temp*EpsilonT)) {
-                    if (modifiedTemp) root = rawRoots[k]/rootDivisor;
+                    if (modifiedTemp) root = rawRoots[k]*rootMultiplier;
                     else root = rawRoots[k];
                 }
             }
             if (root == -Inf) {
                 RAVELOG_WARN_FORMAT("FindPolyRoots3 failed: ABB = %.15f, root1 = %.15f, root2 = %.15f, root3 = %.15f", temp%rawRoots[0]%rawRoots[1]%rawRoots[2]);
+                // solving cube root failed, somehow.
                 return false;
-            } // solving cube root failed, somehow.
+            }
         }
         // RAVELOG_DEBUG_FORMAT("root = %.15e", root);
         
@@ -484,7 +474,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
                 }
             }
         }
-        RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f", a1%a2);
+        // RAVELOG_DEBUG_FORMAT("a1 = %.15f; a2 = %.15f", a1%a2);
 
         if ((Abs(a1) > amax + EpsilonA) || (Abs(a2) > amax + EpsilonA)) {
             PARABOLICWARN("Cannot fix acceleration bounds violation");
@@ -499,15 +489,17 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
         if (Abs(a1) < EpsilonA) {
             a1 = 0;
-            tswitch1 = 0;
+            // tswitch1 = 0;
             tswitch2 = endTime - (dx1 - vmaxNew)/a2;
+            tswitch1 = tswitch2;
             v = vmaxNew;
             ttotal = endTime;
         }
         else if (Abs(a2) < EpsilonA) {
             a2 = 0;
             tswitch1 = (vmaxNew - dx0)/a1;
-            tswitch2 = endTime;
+            tswitch2 = tswitch1;
+            // tswitch2 = endTime;
             v = vmaxNew;
             ttotal = endTime;
         }
@@ -518,11 +510,12 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
 
             // (dx1 - vmaxNew)/a2 is actually the duration of the last ramp.
             Real tLastRamp = (dx1 - vmaxNew)/a2;
-            if (tswitch1 + tLastRamp > endTime) {
+            if (tswitch1 + tLastRamp >= endTime) {
                 // Final fix.
                 // RAVELOG_DEBUG_FORMAT("A = %.15f; B = %.15f; tswitch1 = %.15f; tswitch2 = %.15f", A%B%tswitch1%tswitch2);
                 tswitch1 = (vmaxNew - dx0 - B)/A;
-                tswitch2 = endTime - tswitch1;
+                // tswitch2 = endTime - tswitch1;
+                tswitch2 = tswitch1;
                 PARABOLIC_RAMP_ASSERT(tswitch2 > 0);
 
                 a1 = A + (B/tswitch1);
@@ -531,6 +524,7 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {///////
             }
             else {
                 tswitch2 = endTime - tLastRamp;
+                PARABOLIC_RAMP_ASSERT(tswitch2 > tswitch1);
             }
             ttotal = endTime;
         }
@@ -831,12 +825,14 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     // std::cout << str(boost::format("a1 = %.15e")%a1) << std::endl;
     // std::cout << str(boost::format("v = %.15e")%v) << std::endl;
     // std::cout << str(boost::format("a2 = %.15e")%a2) << std::endl;
-    if (IsValid()) {
-        return true;
-    }
-    else {
-        return false;
-    }
+    // if (IsValid()) {
+    //     return true;
+    // }
+    // else {
+    //     return false;
+    // }
+    return res;
+    
     // ParabolicRamp p;
     // PPRamp pp;
     // PLPRamp plp;
