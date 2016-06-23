@@ -129,10 +129,12 @@ public:
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         for(size_t idof = 0; idof < q0.size(); ++idof) {
                             if( RaveFabs(q1[idof]-segmentoutramps.back().x1[idof]) > ParabolicRamp::EpsilonX ) {
-                                RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired position values %f, so rejecting", (q0[idof]-rampnd.x1[idof]));
+                                // RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired position values %f, so rejecting", (q0[idof]-rampnd.x1[idof]));
+                                RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired position values %f, so rejecting", (q1[idof]-rampnd.x1[idof]));
                             }
                             if( RaveFabs(dq1[idof]-segmentoutramps.back().dx1[idof]) > ParabolicRamp::EpsilonV ) {
-                                RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %e, so reforming ramp", (dq0[idof]-rampnd.dx1[idof]));
+                                // RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %e, so reforming ramp", (dq0[idof]-rampnd.dx1[idof]));
+                                RAVELOG_VERBOSE_FORMAT("ramp end point does not finish at desired velocity values %e, so reforming ramp", (dq1[idof]-segmentoutramps.back().dx1[idof]));
                             }
                         }
                     }
@@ -782,7 +784,7 @@ public:
                                 if( 0.9*_parameters->_vConfigVelocityLimit.at(idof) < 0.1*RaveFabs(newvel[idof]) ) {
                                     RAVELOG_WARN_FORMAT("new velocity for dof %d is too high %f > %f", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof));
                                 }
-                                RAVELOG_WARN("SEGMENT FEASIBLE2: retcode = 0x4");
+                                RAVELOG_WARN_FORMAT("SEGMENT FEASIBLE2: retcode = 0x4; idof = %d; newvel[idof] = %.15e; vellimit = %.15e; g_fEpsilon = %.15e", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof)%g_fEpsilon);
                                 return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
                             }
                         }
@@ -1127,6 +1129,9 @@ protected:
                 }
 
                 dReal fcurmult = fstarttimemult;
+
+                RAVELOG_VERBOSE_FORMAT("shortcutting from t1 = %.15e to t2 = %.15e", t1%t2);
+                    
                 for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
                     iIterProgress += 0x1000;
