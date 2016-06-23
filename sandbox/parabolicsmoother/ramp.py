@@ -558,6 +558,8 @@ _printInfo = False#True
 def FuzzyEquals(a, b, eps):
     return Abs(Sub(a, b)) < eps
 
+def FuzzyZero(a, eps):
+    return Abs(a) < eps
 
 class ParabolicCheckReturn:
     Normal = 0
@@ -586,6 +588,9 @@ def CheckRamps(rampsVect, vm, am):
     ret = CheckRamp(rampsVect[0], vm, am)
     if not (ret == ParabolicCheckReturn.Normal):
         return ret
+    vm = ConvertFloatToMPF(vm)
+    am = ConvertFloatToMPF(am)
+    
     for i in xrange(1, len(rampsVect)):
         if not FuzzyEquals(rampsVect[i - 1].v1, rampsVect[i].v0, epsilon):
             return ParabolicCheckReturn.VDiscrepancy
@@ -600,6 +605,13 @@ def CheckParabolicCurve(curve, vm, am, v0, v1, x0, x1):
     if not (ret == ParabolicCheckReturn.Normal):
         return ret
     # Check boundary conditions
+    vm = ConvertFloatToMPF(vm)
+    am = ConvertFloatToMPF(am)
+    v0 = ConvertFloatToMPF(v0)
+    v1 = ConvertFloatToMPF(v1)
+    x0 = ConvertFloatToMPF(x0)
+    x1 = ConvertFloatToMPF(x1)
+
     if not FuzzyEquals(curve.v0, curve.ramps[0].v0, epsilon):
         return ParabolicCheckReturn.VDiscrepancy
     if not FuzzyEquals(curve.v0, v0, epsilon):

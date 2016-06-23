@@ -160,13 +160,14 @@ nTrials = 1000
 nSuccess = 0
 vboundfailed = 0
 interpfailed = 0
-for _ in xrange(nTrials):
+for it in xrange(nTrials):
+    print "iteration {0}/{1}".format(it + 1, nTrials)
     x0Vect = RandVect2(xMin, xMax)
     x1Vect = RandVect2(xMin, xMax)
     v0Vect = RandVect2(vMin, vMax)
     v1Vect = RandVect2(vMin, vMax)
 
-    curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vMax, aMax)
+    curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vMax, aMax, tryHarder=True)
     if not curvesnd.isEmpty:
         ret = ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, v0Vect, v1Vect, x0Vect, x1Vect)
         # print ret
