@@ -36,7 +36,7 @@ __license__ = 'Apache License, Version 2.0'
 
 from numpy import array, vectorize, logical_and
 
-from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
+from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType, RaveCreateKinBody, CloningOptions
 from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
 
@@ -62,6 +62,86 @@ class BoundingMeshError(Exception):
         return u'Convex Decomposition Error : %s' % self.msg
     def __str__(self):
         return unicode(self).encode('utf-8')
+
+
+
+
+def ReduceTrimesh(trimesh):
+    to3Tuple = lambda v : (v[0], v[1], v[2])
+    v = list(set(map(to3Tuple, trimesh.vertices)))
+    d = { v[i] : i for i in range(0, len(v)) }
+    reducedMesh = TriMesh()
+    reducedMesh.vertices = array(map(array, v))
+    inds = vectorize(lambda i : d[to3Tuple(trimesh.vertices[i])])(trimesh.indices)
+    reducedMesh.indices = inds[logical_and(inds[:,0] != inds[:,1], logical_and(inds[:,1] != inds[:,2], inds[:,0] != inds[:,2]))]
+    return reducedMesh
+
+def ReduceTrimeshUpto(trimesh, epsilon, eta):
+    to3Tuple = lambda v : (v[0], v[1], v[2])
+    def dist(u, v):
+        return u[0]*v[0] + u[1]*v[1] + u[2]*v[2]
+    d = {}
+    for v in map(to3Tuple, trimesh.vertices):
+        group = None
+        for v0 in d:
+            if dist(v, v0) < epsilon:
+                if group is None:
+                    group = v0
+                else:
+                    d[v0] = group
+        if group is None:
+            group = v
+        d[v] = group
+    def ancestor(v0):
+        stack = []
+        v = v0
+        while d[v] != v:
+            stack.append(v)
+            v = d[v]
+        for v1 in stack:
+            d[v1] = v
+        return d[v0]
+    d1 = {}
+    for v in d:
+        if d[v] == v:
+            d1[v] = { v }
+        else:
+            d1[ancestor(v)].add(v)
+    d2 = {}
+    l = []
+    for v in d1:
+        s = d1[v]
+        if len({ dist(v0,v1) < eta for v0 in s for v1 in s }) == 2:
+            RaveLogWarn("Found a cluster of vertices with drifting value over the maximum value set")
+        d2[v] = len(l)
+        l.append(array(list(s)).mean(axis=0))
+    reducedMesh = TriMesh()
+    reducedMesh.vertices = array(l)
+
+    inds = vectorize(lambda i : d2[d[to3Tuple(trimesh.vertices[i])]])(trimesh.indices)
+    reducedMesh.indices = inds[logical_and(inds[:,0] != inds[:,1], logical_and(inds[:,1] != inds[:,2], inds[:,0] != inds[:,2]))]
+    return reducedMesh
+
+
+def ComputeBoundingMesh(boundingparams, trimesh):
+    trimesh = ReduceTrimesh(trimesh)
+    if len(trimesh.indices) > 0:
+        return boundingmeshpy.ComputeBoundingMesh(trimesh, **boundingparams)
+    return trimesh
+
+def CheckBoundingMesh(originalmesh, boundingmesh):
+    # TODO : do a real exhaustive check that the distance to the original mesh is bounded by the maximum error and that all points are outside of the mesh
+    return len(boundingmesh.indices) > 0
+
+def GenerateGeom((il, countlinks, ig, countgeometries, trimesh, boundingparams)):
+    log.info(u'Computing bounding mesh for link %d/%d geom %d/%d', il, countlinks, ig, countgeometries)
+    resultmesh = ComputeBoundingMesh(boundingparams, trimesh)
+    if not CheckBoundingMesh(trimesh, resultmesh):
+        raise BoundingMeshError(u'Geom link %s could not be bounded correctly', link.GetName())
+    vsize = resultmesh.vertices.shape[0]
+    indsize = resultmesh.indices.shape[0]
+    log.info(u'Vertices left : %d (%f%%), Triangles left : %d (%f%%)', vsize, 100 * float(vsize )/float(trimesh.vertices.shape[0]), indsize, 100*float(indsize)/float(trimesh.indices.shape[0]))
+    return (il, (ig, resultmesh))
 
 class BoundingMeshModel(DatabaseGenerator):
     """Computes the bounding mesh of all the robot's links"""
@@ -198,7 +278,8 @@ class BoundingMeshModel(DatabaseGenerator):
 
     def autogenerate(self, options = None):
         if options is not None:
-            self.generate(skipLinks=options.skipLinks.split(','),
+            self.generate(processes=options.processes,
+                          skipLinks=options.skipLinks.split(','),
                           targetVerticesCount=options.targetVerticesCount,
                           maximumError=options.maximumError,
                           direction=self.GetOptional(boundingmeshpy.DecimationDirection, options.direction),
@@ -215,8 +296,9 @@ class BoundingMeshModel(DatabaseGenerator):
         except:
             return None
 
-    def generate(self, processes=None, skipLinks = None, **kwargs):
+    def generate(self, processes=1, skipLinks = None, **kwargs):
         """
+        :param processes : number of processes to use in order to compute the bounding meshes
         :param skipLinks : a list of link names which should keep their original mesh
         """
         self.boundingparams = kwargs
@@ -225,102 +307,33 @@ class BoundingMeshModel(DatabaseGenerator):
         log.info(u'Generating Bounding Meshes : %r', self.boundingparams)
         starttime = time.time()
 
-        def GenerateGeom(il, countlinks, ig, countgeometries, geom):
-            trimesh = geom.GetCollisionMesh()
-            if len(trimesh.indices) == 0:
-                geom.InitCollisionMesh(100.0)
-                trimesh = geom.GetCollisionMesh()
-            log.info(u'Computing bounding mesh for link %d/%d geom %d/%d', il, countlinks, ig, countgeometries)
-            resultmesh = self.ComputeBoundingMesh(trimesh)
-            if not self.CheckBoundingMesh(trimesh, resultmesh):
-                raise BoundingMeshError(u'Geom link %s could not be bounded correctly', link.GetName())
-            vsize = resultmesh.vertices.shape[0]
-            indsize = resultmesh.indices.shape[0]
-            log.info(u'Vertices left : %d (%f%%), Triangles left : %d (%f%%)', vsize, 100 * float(vsize )/float(trimesh.vertices.shape[0]), indsize, 100*float(indsize)/float(trimesh.indices.shape[0]))
-            return (il, (ig, resultmesh))
 
         self.linkgeometry = []
         with self.env:
             links = self.robot.GetLinks()
-            datas = [ (il, len(links), ig, len(link.GetGeometries()), geom) for il, link in enumerate(links) if link not in skiplinks for ig, geom in enumerate link.GetGeometries() ]
+            datas = []
+            for il, link in enumerate(links):
+                if link not in skipLinks:
+                    for ig, geom in enumerate(link.GetGeometries()):
+                        ig, len(link.GetGeometries()), geom
+                        trimesh = geom.GetCollisionMesh()
+                        if len(trimesh.indices) == 0:
+                            geom.InitCollisionMesh(100.0)
+                            trimesh = geom.GetCollisionMesh()
+                        datas.append((il, len(links), ig, len(link.GetGeometries()), trimesh, self.boundingparams))
             res = None
-            if processes is None:
+            if processes == None or processes < 2 :
                 res = map(GenerateGeom, datas)
             else:
                 p = Pool(processes)
                 res = p.map(GenerateGeom, datas)
-            self.linkgeometry = [] * len(links)
+            self.linkgeometry = [[] for l in links]
             for (il, boundingmesh) in res:
                 self.linkgeometry[il].append(boundingmesh)
         log.info(u'All meshes bounded in %fs', time.time()-starttime)
 
-    def ComputeBoundingMesh(self, trimesh):
-        trimesh = self.ReduceTrimesh(trimesh)
-        if len(trimesh.indices) > 0:
-            return boundingmeshpy.ComputeBoundingMesh(trimesh, **self.boundingparams)
-        return trimesh
 
-    @staticmethod
-    def ReduceTrimesh(trimesh):
-        to3Tuple = lambda v : (v[0], v[1], v[2])
-        v = list(set(map(to3Tuple, trimesh.vertices)))
-        d = { v[i] : i for i in range(0, len(v)) }
-        reducedMesh = TriMesh()
-        reducedMesh.vertices = array(map(array, v))
-        inds = vectorize(lambda i : d[to3Tuple(trimesh.vertices[i])])(trimesh.indices)
-        reducedMesh.indices = inds[logical_and(inds[:,0] != inds[:,1], logical_and(inds[:,1] != inds[:,2], inds[:,0] != inds[:,2]))]
-        return reducedMesh
 
-    @staticmethod
-    def ReduceTrimeshUpto(trimesh, epsilon, eta):
-        to3Tuple = lambda v : (v[0], v[1], v[2])
-        def dist(u, v):
-            return u[0]*v[0] + u[1]*v[1] + u[2]*v[2]
-        d = {}
-        for v in map(to3Tuple, trimesh.vertices):
-            group = None
-            for v0 in d:
-                if dist(v, v0) < epsilon:
-                    if group is None:
-                        group = v0
-                    else:
-                        d[v0] = group
-            if group is None:
-                group = v
-            d[v] = group
-        def ancestor(v0):
-            stack = []
-            v = v0
-            while d[v] != v:
-                stack.append(v)
-                v = d[v]
-            for v1 in stack:
-                d[v1] = v
-            return d[v0]
-        d1 = {}
-        for v in d:
-            if d[v] == v:
-                d1[v] = { v }
-            else:
-                d1[ancestor(v)].add(v)
-        d2 = {}
-        l = []
-        for v in d1:
-            s = d1[v]
-            if len({ dist(v0,v1) < eta for v0 in s for v1 in s }) == 2:
-                RaveLogWarn("Found a cluster of vertices with drifting value over the maximum value set")
-            d2[v] = len(l)
-            l.append(array(list(s)).mean(axis=0))
-        reducedMesh = TriMesh()
-        reducedMesh.vertices = array(l)
-
-        inds = vectorize(lambda i : d2[d[to3Tuple(trimesh.vertices[i])]])(trimesh.indices)
-        reducedMesh.indices = inds[logical_and(inds[:,0] != inds[:,1], logical_and(inds[:,1] != inds[:,2], inds[:,0] != inds[:,2]))]
-        return reducedMesh
-
-    def CheckBoundingMesh(self, originalmesh, boundingmesh):
-        # TODO : do a real exhaustive check that the distance to the original mesh is bounded by the maximum error and that all points are outside of the mesh
-        return len(boundingmesh.indices) > 0
 
 
     def show(self, options=None):
@@ -333,10 +346,13 @@ class BoundingMeshModel(DatabaseGenerator):
         robotCopy = RaveCreateKinBody(self.env, '')
         robotCopy.Clone(self.robot, CloningOptions.Bodies)
         robotCopy.SetName(self.robot.GetName()+'Copy')
+        T = self.robot.GetTransform()
+        T[1,3] = 3*self.robot.ComputeAABB().extents()[1]
+        self.robot.SetTransform(T)
         self.env.Add(robotCopy)
         self.setrobot()
-        #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
-        raw_input('Press any key to exit : ')
+        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+        #raw_input('Press any key to exit : ')
 
     @staticmethod
     def CreateOptionParser():
@@ -373,6 +389,12 @@ class BoundingMeshModel(DatabaseGenerator):
                           dest='initialization',
                           default='DistancePrimitives',
                           help="How to initialize the algorithm, either DistancePrimitives or Midpoint (default:%default)")
+        parser.add_option('--processes',
+                          action='store',
+                          type='int',
+                          dest='processes',
+                          default=1,
+                          help='Comma separated list of link names whose meshes must be left intact')
         parser.add_option('--skipLinks',
                           action='store',
                           type='str',
