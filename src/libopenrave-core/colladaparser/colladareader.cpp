@@ -423,6 +423,36 @@ public:
             return false;
         }
 
+        if( !!_dom->getAsset() ) {
+            if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
+                float f = -9.7979302;
+                if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_X_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(f,0,0));
+                }
+                else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Y_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(0,f,0));
+                }
+                else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Z_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
+                }
+            }
+        }
+
+        for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
+            domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            if( !pscene ) {
+                continue;
+            }
+            if( !!pscene->getTechnique_common() && !!pscene->getTechnique_common()->getGravity()) {
+                const domFloat3& domgravity = pscene->getTechnique_common()->getGravity()->getValue();
+                if( domgravity.getCount() == 3 ) {
+                    if( !!_penv->GetPhysicsEngine() ) {
+                        _penv->GetPhysicsEngine()->SetGravity(Vector(domgravity[0], domgravity[1], domgravity[2]));
+                    }
+                }
+            }
+        }
+
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
         std::vector<KinematicsSceneBindings> allbindings(allscene->getInstance_kinematics_scene_array().getCount());
@@ -668,7 +698,7 @@ public:
                 }
             }
         }
-        
+
         RAVELOG_VERBOSE("collada read time %fs\n",(utils::GetNanoPerformanceTime()-starttime)*1e-9);
         return true;
     }
@@ -994,9 +1024,17 @@ public:
 
         if( !!articulated_system->getMotion() ) {
             domInstance_articulated_systemRef ias_new = articulated_system->getMotion()->getInstance_articulated_system();
+            if( !ias_new ) {
+                RAVELOG_WARN_FORMAT("failed to get articulated_system of <motion> from %s", articulated_system->getId());
+                return false;
+            }
             if( !!articulated_system->getMotion()->getTechnique_common() ) {
                 for(size_t i = 0; i < articulated_system->getMotion()->getTechnique_common()->getAxis_info_array().getCount(); ++i) {
                     domMotion_axis_infoRef motion_axis_info = articulated_system->getMotion()->getTechnique_common()->getAxis_info_array()[i];
+                    if( !ias_new->getUrl().getElement() ) {
+                        RAVELOG_WARN("could not resolve ias_new\n");
+                        continue;
+                    }
                     // this should point to a kinematics axis_info
                     domKinematics_axis_infoRef kinematics_axis_info = daeSafeCast<domKinematics_axis_info>(daeSidRef(motion_axis_info->getAxis(), ias_new->getUrl().getElement()).resolve().elt);
                     if( !!kinematics_axis_info ) {
@@ -2949,7 +2987,7 @@ public:
     {
         std::list< std::pair<RobotBase::AttachedSensorPtr, daeElementRef> > listSensorsToExtract; // accumulate a list of sensor/element pairs to call _ExtractSensor on. This has to be done after all sensors have been processed.
         std::map<std::string, std::string> mapSensorURLsToNames;
-        
+
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
             if( !pextra->getType() ) {
@@ -2987,7 +3025,7 @@ public:
                         }
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
-                    
+
                     probot->GetAttachedSensors().push_back(pattachedsensor);
                 }
                 else {
@@ -2995,20 +3033,20 @@ public:
                 }
             }
         }
-        
+
         FOREACH(itextract, listSensorsToExtract) {
             RobotBase::AttachedSensorPtr pattachedsensor = itextract->first;
             if( !pattachedsensor->psensor ) {
                 continue;
             }
-            
+
             // Create the custom XML reader to read in the data (determined by users)
             BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->psensor->GetXMLId(),pattachedsensor->psensor, AttributesList());
             if( !pcurreader ) {
                 pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
                 continue;
             }
-            
+
             if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
                 if( !!pcurreader->GetReadable() ) {
                     pattachedsensor->psensor->SetReadableInterface(pattachedsensor->psensor->GetXMLId(),pcurreader->GetReadable());
@@ -3017,7 +3055,7 @@ public:
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
         }
     }
-    
+
     /// \brief extract the robot manipulators
     void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
@@ -3216,7 +3254,7 @@ public:
         }
         return pinfo;
     }
-    
+
 //    /// \brief Extract and parse an instance of a sensor
 //    bool _ExtractSensor(SensorBasePtr& psensor, daeElementRef instance_sensor)
 //    {
@@ -3904,10 +3942,13 @@ private:
         }
     }
 
-    static void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
+    void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
     {
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
             domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            if( !pscene ) {
+                continue;
+            }
             for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
                 domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
                 domPhysics_modelRef pmodel = daeSafeCast<domPhysics_model> (ipmodel->getUrl().getElement().cast());
@@ -5026,7 +5067,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
             articulatdSystemId = itatt->second;
         }
     }
-    
+
     return reader.Extract(probot, articulatdSystemId);
 }
 
