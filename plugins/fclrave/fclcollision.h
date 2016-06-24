@@ -491,7 +491,7 @@ public:
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
 
-        BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, CO_ActiveDOFs);
+        BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, false);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
           DistanceCallbackData query(shared_checker(), report);
@@ -582,7 +582,6 @@ public:
         _fclspace->Synchronize(plink->GetParent());
 
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
-        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, false);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
@@ -621,6 +620,13 @@ public:
         std::set<KinBodyConstPtr> attachedBodies;
         plink->GetParent()->GetAttached(attachedBodies);
         BroadPhaseCollisionManagerPtr envManager = GetEnvManager(attachedBodies);
+
+        if( _options & OpenRAVE::CO_Distance ) {
+            return false;
+        } else {
+            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+            ADD_TIMING(_statistics);
+            envManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
           DistanceCallbackData query(shared_checker(), report);
