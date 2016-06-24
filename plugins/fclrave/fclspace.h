@@ -567,7 +567,7 @@ public:
             pinfo->_ResetBodyManagers();
         }
         _envManagerInstance.reset();
-        _cachedpinfo->clear();
+        _cachedpinfo.clear();
     }
 
     void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {
