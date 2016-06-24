@@ -440,7 +440,7 @@ public:
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
 
-        BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, _options & OpenRAVE::CO_ActiveDOFs);
+        BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, false);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -515,7 +515,6 @@ public:
         _fclspace->Synchronize(plink->GetParent());
 
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
-        // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, false);
 
         if( _options & OpenRAVE::CO_Distance ) {
@@ -545,7 +544,6 @@ public:
         std::set<KinBodyConstPtr> attachedBodies;
         plink->GetParent()->GetAttached(attachedBodies);
         BroadPhaseCollisionManagerPtr envManager = GetEnvManager(attachedBodies);
-//      BOOST_ASSERT(static_cast<fcl::DynamicAABBTreeCollisionManager_Array*>(envManager.get())->isValid());
 
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
