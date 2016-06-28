@@ -446,9 +446,9 @@ public:
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
-                std::cout << "================================================================================" << std::endl;
-                std::cout << "NUMSHORTCUTS " << numshortcuts << std::endl;
-                std::cout << "================================================================================" << std::endl;
+                // std::cout << "================================================================================" << std::endl;
+                // std::cout << "NUMSHORTCUTS " << numshortcuts << std::endl;
+                // std::cout << "================================================================================" << std::endl;
                     
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
@@ -564,7 +564,7 @@ public:
                                     //                                    temprampsnd[0].TrimBack(fTrimEdgesTime);
                                     //                                }
                                     bool bHasBadRamp=false;
-                                    std::cout << "\nendTime*mult = " << endTime << std::endl;
+                                    RAVELOG_VERBOSE_FORMAT("newEndTime = %.15e", endTime);
                                     FOREACH(itnewrampnd, temprampsnd) {
                                         ParabolicRamp::CheckReturn newrampret = _feasibilitychecker.Check2(*itnewrampnd, 0xffff, outramps);
                                         if( newrampret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
@@ -746,7 +746,7 @@ public:
             if( ret != 0 ) {
                 ParabolicRamp::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    RAVELOG_WARN("SEGMENT FEASIBLE2: from CHECKPATHALLCONSTRAINTS retcode = 0x4");
+                    RAVELOG_WARN("from CHECKPATHALLCONSTRAINTS: retcode = 0x4");
                                                     
                     checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
                 }
@@ -831,7 +831,7 @@ public:
             try {
                 ParabolicRamp::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(outramps);
                 if( retmanip.retcode != 0 ) {
-                    std::cout << "SEGMENT FEASIBLE2 RETMANIP = " << retmanip.retcode << std::endl;
+                    RAVELOG_WARN_FORMAT("from CheckManipConstraints2: retcode = %d", retmanip.retcode);
                     return retmanip;
                 }
             }
@@ -1026,9 +1026,9 @@ protected:
 
     int _Shortcut(ParabolicRamp::DynamicPath& dynamicpath, int numIters, ParabolicRamp::RandomNumberGeneratorBase* rng, dReal mintimestep)
     {
-        std::cout << "================================================================================" << std::endl;
-        std::cout << "START SHORTCUT" << std::endl;
-        std::cout << "================================================================================" << std::endl;
+        // std::cout << "================================================================================" << std::endl;
+        // std::cout << "START SHORTCUT" << std::endl;
+        // std::cout << "================================================================================" << std::endl;
                 
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         int shortcuts = 0;
