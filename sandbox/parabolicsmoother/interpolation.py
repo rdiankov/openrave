@@ -342,7 +342,7 @@ def _Stretch1D(curve, newDuration, vm, am):
         am = mp.mpf("{:.15e}".format(am))
 
     # Check inputs
-    assert(newDuration > curve.duration)
+    # assert(newDuration > curve.duration)
     assert(vm > zero)
     assert(am > zero)
 
@@ -369,12 +369,9 @@ def _Stretch1D(curve, newDuration, vm, am):
     C = mp.fdiv(B, sum1)
     D = mp.fdiv(B, sum2)
 
-    log.debug("A = {0}".format(mp.nstr(A, n=_prec)))
-    log.debug("B = {0}".format(mp.nstr(B, n=_prec)))
-    log.debug("C = {0}".format(mp.nstr(C, n=_prec)))
-    log.debug("D = {0}".format(mp.nstr(D, n=_prec)))
-    log.debug("sum1 = {0}".format(mp.nstr(sum1, n=_prec)))
-    log.debug("sum2 = {0}".format(mp.nstr(sum2, n=_prec)))
+    log.debug("\nA = {0}; \nB = {1}; \nC = {2}; \nD = {3}; \nsum1 = {4}; \nsum2 = {5};".\
+              format(mp.nstr(A, n=_prec), mp.nstr(B, n=_prec), mp.nstr(C, n=_prec), mp.nstr(D, n=_prec),
+                     mp.nstr(sum1, n=_prec), mp.nstr(sum2, n=_prec)))
 
     assert(not (sum1 > zero))
     assert(not (sum2 < zero))
@@ -472,10 +469,7 @@ def _Stretch1D(curve, newDuration, vm, am):
         t1trimmed = mp.fdiv(Sub(v1, vmnew), a1)
         C2 = Sum([Mul(t0trimmed, Sub(vmnew, v0)), Mul(t1trimmed, Sub(vmnew, v1)), Mul(mp.mpf('-2'), D2)])
 
-        log.debug("A2 = {0}".format(mp.nstr(A2, n=_prec)))
-        log.debug("B2 = {0}".format(mp.nstr(B2, n=_prec)))
-        log.debug("C2 = {0}".format(mp.nstr(C2, n=_prec)))
-        log.debug("D2 = {0}".format(mp.nstr(D2, n=_prec)))
+        log.debug("\nA2 = {0}; \nB2 = {1}; \nC2 = {2}; \nD2 = {3};".format(mp.nstr(A2, n=_prec), mp.nstr(B2, n=_prec), mp.nstr(C2, n=_prec), mp.nstr(D2, n=_prec)))
         
         temp = Prod([A2, B2, B2])
         initguess = mp.sign(temp)*(Abs(temp)**(1./3.))
@@ -496,6 +490,7 @@ def _Stretch1D(curve, newDuration, vm, am):
 
         else:
             if FuzzyZero(Sub(Mul(C2, a0new), A2), epsilon):
+                import IPython; IPython.embed()
                 a1new = 0
             else:
                 a1new = Mul(mp.fdiv(B2, C2), Add(one, mp.fdiv(A2, Sub(Mul(C2, a0new), A2))))
@@ -507,15 +502,8 @@ def _Stretch1D(curve, newDuration, vm, am):
             log.warn("Cannot fix acceleration bounds violation")
             return ParabolicCurve()        
 
-        # print "a0",
-        # mp.nprint(a0, n=15)
-        # print "a0new",
-        # mp.nprint(a0new, n=15)
-        # print "a1",
-        # mp.nprint(a1, n=15)
-        # print "a1new",
-        # mp.nprint(a1new, n=15)
-
+        log.debug("\a0 = {0}; \na0New = {1}; \na1 = {2}; \na1New = {3};".format(mp.nstr(a0, n=_prec), mp.nstr(a0New, n=_prec), mp.nstr(a1, n=_prec), mp.nstr(a1New, n=_prec)))
+        
         if (Abs(a0new) < epsilon) and (Abs(a1new) < epsilon):
             log.warn("Both accelerations are zero. Should we allow this case?")
             return ParabolicCurve()
@@ -629,6 +617,23 @@ def _CalculateLeastUpperBoundInoperativeInterval(x0, x1, v0, v1, vm, am):
 
     newDuration = max(max(T0, T1), max(T2, T3))
     if newDuration > zero:
+        dStraight = Prod([pointfive, Add(v0, v1), newDuration])
+        if Sub(d, dStraight) > 0:
+            amNew = am
+            vmNew = vm
+        else:
+            amNew = -am
+            vmNew = -vm
+
+        # import IPython; IPython.embed()
+
+        vp = Mul(pointfive, Sum([Mul(newDuration, amNew), v0, v1])) # the peak velocity
+        if (Abs(vp) > vm):
+            dExcess = mp.fdiv(Sqr(Sub(vp, vmNew)), am)
+            assert(dExcess > 0)
+            deltaTime = mp.fdiv(dExcess, vm)
+            newDuration = Add(newDuration, deltaTime)
+        
         newDuration = Mul(newDuration, number('1.01')) # add 1% safety bound
         return newDuration
     else:
