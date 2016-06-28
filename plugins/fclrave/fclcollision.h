@@ -74,7 +74,7 @@ public:
 
     class CollisionCallbackData {
 public:
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, std::vector<KinBodyConstPtr> vbodyexcluded = std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr> vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
+        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded = std::vector<KinBodyConstPtr>(), const std::vector<LinkConstPtr>& vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
         {
             _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -126,9 +126,10 @@ public:
 
     class DistanceCallbackData {
 public:
-        DistanceCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, std::vector<KinBodyConstPtr> vbodyexcluded = std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr> vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false)
+        DistanceCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded = std::vector<KinBodyConstPtr>(), const std::vector<LinkConstPtr>& vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false)
         {
-          _minDistance = std::numeric_limits<fcl::FCL_REAL>::max();
+            // TODO : Should we left minDistance to max when queried the distance between 2 attached objects ?
+            _minDistance = std::numeric_limits<fcl::FCL_REAL>::max();
 
             _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -177,16 +178,67 @@ public:
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
 
-    typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
+    class RayCollisionCallbackData {
+public:
+        RayCollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report,  Vector origin) : _pchecker(pchecker), _report(report), _bStopChecking(false), _bCollision(false)
+        {
+            _origin = origin;
+            _currentSquaredDistance = std::numeric_limits<dReal>::max();
+
+            _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
+            if( _bHasCallbacks && !_report ) {
+                _report.reset(new CollisionReport());
+            }
+
+            // We need to enable the contacts if we want to return the closest hit
+            if( !!report && !(_pchecker->GetCollisionOptions() & OpenRAVE::CO_RayAnyHit) ) {
+                _request.num_max_contacts = _pchecker->GetNumMaxContacts();
+                _request.enable_contact = true;
+            } else {
+                _request.enable_contact = false; // explicitly disable
+            }
+
+
+            // set the gjk solver (collision checking between convex bodies) so that we can use hints
+            _request.gjk_solver_type = fcl::GST_INDEP;
+
+            if( !!_report ) {
+                _report->Reset(_pchecker->GetCollisionOptions());
+            }
+        }
+
+        const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks() {
+            if( _bHasCallbacks &&( _listcallbacks.size() == 0) ) {
+                _pchecker->GetEnv()->GetRegisteredCollisionCallbacks(_listcallbacks);
+            }
+            return _listcallbacks;
+        }
+
+        boost::shared_ptr<FCLCollisionChecker> _pchecker;
+        fcl::CollisionRequest _request;
+        fcl::CollisionResult _result;
+        CollisionReportPtr _report;
+        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
+
+        Vector _origin;
+        dReal _currentSquaredDistance;
+
+        bool _bStopChecking;  ///< if true, then stop the collision checking loop
+        bool _bCollision;  ///< result of the collision
+
+        bool _bHasCallbacks; ///< true if there's callbacks registered in the environment
+        std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
+    };
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
-        : OpenRAVE::CollisionCheckerBase(penv), _bIsSelfCollisionChecker(true), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
+        : OpenRAVE::CollisionCheckerBase(penv), _bIsSelfCollisionChecker(true), _ray(CollisionGeometryPtr()), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
         _fclspace.reset(new FCLSpace(penv, _userdatakey));
         _options = 0;
         // TODO : Should we put a more reasonable arbitrary value ?
         _numMaxContacts = std::numeric_limits<int>::max();
+        _rayRadius = 1e-5; //std::numeric_limits<fcl::FCL_REAL>::epsilon();
         __description = ":Interface Author: Kenji Maillard\n\nFlexible Collision Library collision checker";
 
         SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId());
@@ -202,6 +254,7 @@ public:
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
         RegisterCommand("SetSpatialHashingBroadPhaseAlgorithm", boost::bind(&FCLCollisionChecker::SetSpatialHashingBroadPhaseAlgorithm, this, _1, _2), "sets the broadphase algorithm to spatial hashing with (cell size) (scene min x) (scene min y) (scene min z) (scene max x) (scene max y) (scene max z)");
 
+        RegisterCommand("PrepareRay", boost::bind(&FCLCollisionChecker::_DebugPrepareRay, this, _1, _2), "");
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
         std::string broadphasealg, bvhrepresentation;
@@ -241,6 +294,16 @@ public:
         }
         f.close();
 #endif
+    }
+
+    bool _DebugPrepareRay(ostream& sout, istream& sinput) {
+        RAY ray;
+        sinput >> ray.pos.x >> ray.pos.y >> ray.pos.z >> ray.dir.x >> ray.dir.y >> ray.dir.z;
+        PrepareRay(ray);
+
+        //sout << _ray.getAABB().min_ << _ray.getAABB().max_ << std::endl;
+        sout << TransformMatrix(Transform(ConvertQuaternionFromFCL(_ray.getQuatRotation()), ConvertVectorFromFCL(_ray.getTranslation())));
+        return true;
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -330,8 +393,11 @@ public:
     {
         _options = collision_options;
 
-        if( _options & OpenRAVE::CO_RayAnyHit ) {
-            return false;
+        // fcl does not support distance checking for non-spherical BV
+        // if distance checking is necessary, kIOS seems to give the best results for collision checking
+        if( !!(_options & OpenRAVE::CO_Distance) ) {
+            const std::string& bvhrepr = _fclspace->GetBVHRepresentation();
+            return ( bvhrepr == "RSS" || bvhrepr == "OBBRSS" || bvhrepr == "kIOS" );
         }
 
         return true;
@@ -494,16 +560,16 @@ public:
         BroadPhaseCollisionManagerPtr body1Manager = GetBodyManager(pbody1, _options & OpenRAVE::CO_ActiveDOFs), body2Manager = GetBodyManager(pbody2, false);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          body1Manager->distance(body2Manager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
+            DistanceCallbackData query(shared_checker(), report);
+            body1Manager->distance(body2Manager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
-          report->minDistance = (dReal)query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            report->minDistance = (dReal)query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
 
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
+            }
         }
 
         CollisionCallbackData query(shared_checker(), report);
@@ -536,21 +602,21 @@ public:
         CollisionObjectPtr pcollLink1 = GetLinkBV(plink1), pcollLink2 = GetLinkBV(plink2);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          query.bselfCollision = true;
-          CheckNarrowPhaseDistance(pcollLink1.get(), pcollLink2.get(), &query, query._minDistance);
+            DistanceCallbackData query(shared_checker(), report);
+            query.bselfCollision = true;
+            CheckNarrowPhaseDistance(pcollLink1.get(), pcollLink2.get(), &query, query._minDistance);
 
-          report->minDistance = (dReal)query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            report->minDistance = (dReal)query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
 
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
+            }
         }
 
         if( !pcollLink1->getAABB().overlap(pcollLink2->getAABB()) ) {
-          return false;
+            return false;
         }
         CollisionCallbackData query(shared_checker(), report);
         query.bselfCollision = true;
@@ -585,16 +651,16 @@ public:
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, false);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          bodyManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
+            DistanceCallbackData query(shared_checker(), report);
+            bodyManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
-          report->minDistance = (dReal) query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            report->minDistance = (dReal) query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
 
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
+            }
         }
 
 
@@ -621,38 +687,31 @@ public:
         plink->GetParent()->GetAttached(attachedBodies);
         BroadPhaseCollisionManagerPtr envManager = GetEnvManager(attachedBodies);
 
-        if( _options & OpenRAVE::CO_Distance ) {
-            return false;
-        } else {
-            CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
-            ADD_TIMING(_statistics);
-            envManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
-
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          envManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
+            DistanceCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+            envManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
-          // The unstable bodies are not contained in the envManager, we need to consider them separately
-          FOREACH(itbody, _fclspace->GetUnstableBodies()) {
-            if( query._bStopChecking ) {
-              break;
+            // The unstable bodies are not contained in the envManager, we need to consider them separately
+            FOREACH(itbody, _fclspace->GetUnstableBodies()) {
+                if( query._bStopChecking ) {
+                    break;
+                }
+
+                if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
+                    continue;
+                }
+                // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+                BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+                itbodyManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
             }
 
-            if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
-              continue;
+            report->minDistance = (dReal) query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
             }
-            // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-            BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
-            itbodyManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
-          }
-
-          report->minDistance = (dReal) query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
-
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
         }
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -661,16 +720,16 @@ public:
 
         // The unstable bodies are not contained in the envManager, we need to consider them separately
         FOREACH(itbody, _fclspace->GetUnstableBodies()) {
-          if( query._bStopChecking ) {
-            return query._bCollision;
-          }
+            if( query._bStopChecking ) {
+                return query._bCollision;
+            }
 
-          if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
-            continue;
-          }
-          // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-          BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
-          itbodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+            if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(plink->GetParent()) ) {
+                continue;
+            }
+            // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+            BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+            itbodyManager->collide(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
 
         }
 
@@ -695,30 +754,30 @@ public:
         BroadPhaseCollisionManagerPtr envManager = GetEnvManager(attachedBodies);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          envManager->distance(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
+            DistanceCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
+            envManager->distance(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
-          // The unstable bodies are not contained in the envManager, we need to consider them separately
-          FOREACH(itbody, _fclspace->GetUnstableBodies()) {
-            if( query._bStopChecking ) {
-              break;
+            // The unstable bodies are not contained in the envManager, we need to consider them separately
+            FOREACH(itbody, _fclspace->GetUnstableBodies()) {
+                if( query._bStopChecking ) {
+                    break;
+                }
+
+                if( !_fclspace->GetInfo(*itbody) || (pbody)->IsAttached(*itbody) ) {
+                    continue;
+                }
+                // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+                BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+                itbodyManager->distance(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
             }
 
-            if( !_fclspace->GetInfo(*itbody) || (pbody)->IsAttached(*itbody) ) {
-              continue;
+            report->minDistance = (dReal) query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
             }
-            // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-            BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
-            itbodyManager->distance(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
-          }
-
-          report->minDistance = (dReal) query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
-
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
         }
 
         CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
@@ -727,16 +786,16 @@ public:
 
         // The robots are not contained in the envManager, we need to consider them separately
         FOREACH(itbody, _fclspace->GetUnstableBodies()) {
-          if( query._bStopChecking ) {
-            return query._bCollision;
-          }
+            if( query._bStopChecking ) {
+                return query._bCollision;
+            }
 
-          if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(pbody) ) {
-            continue;
-          }
-          // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
-          BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
-          itbodyManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
+            if( !_fclspace->GetInfo(*itbody) || (*itbody)->IsAttached(pbody) ) {
+                continue;
+            }
+            // seems that activeDOFs are not considered in oderave : the check is done but it will always return true
+            BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+            itbodyManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
         }
 
         return query._bCollision;
@@ -744,20 +803,66 @@ public:
 
     virtual bool CheckCollision(RAY const &ray, LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr())
     {
-        RAVELOG_WARN("fcl doesn't support Ray collisions\n");
-        return false; //TODO
+
+        if( !!report ) {
+            report->Reset(_options);
+        }
+
+        if( !plink->IsEnabled() ) {
+            return false;
+        }
+
+        PrepareRay(ray);
+        RayCollisionCallbackData query(shared_checker(), report, ray.pos);
+        CheckNarrowPhaseRayCollision(GetLinkBV(plink).get(), &_ray, &query);
+        return query._bCollision;
     }
 
     virtual bool CheckCollision(RAY const &ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
     {
-        RAVELOG_WARN("fcl doesn't support Ray collisions\n");
-        return false; //TODO
+
+        if( !!report ) {
+            report->Reset(_options);
+        }
+
+        if( pbody->GetLinks().size() == 0 || !pbody->IsEnabled() ) {
+            return false;
+        }
+
+        PrepareRay(ray);
+        BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
+        RayCollisionCallbackData query(shared_checker(), report, ray.pos);
+        bodyManager->collide(&_ray, &query, &FCLCollisionChecker::CheckNarrowPhaseRayCollision);
+        return query._bCollision;
     }
 
     virtual bool CheckCollision(RAY const &ray, CollisionReportPtr report = CollisionReportPtr())
     {
-        RAVELOG_WARN("fcl doesn't support Ray collisions\n");
-        return false; //TODO
+        if( !!report ) {
+            report->Reset(_options);
+        }
+
+        PrepareRay(ray);
+        std::set<KinBodyConstPtr> empty;
+        BroadPhaseCollisionManagerPtr envManager = GetEnvManager(empty);
+        RayCollisionCallbackData query(shared_checker(), report, ray.pos);
+        envManager->collide(&_ray, &query, &FCLCollisionChecker::CheckNarrowPhaseRayCollision);
+
+        // The unstable bodies are not contained in the envManager, we need to consider them separately
+        FOREACH(itbody, _fclspace->GetUnstableBodies()) {
+            if( query._bStopChecking ) {
+                return query._bCollision;
+            }
+
+            if( !_fclspace->GetInfo(*itbody) || !(*itbody)->IsEnabled() ) {
+                continue;
+            }
+            BroadPhaseCollisionManagerPtr itbodyManager = GetBodyManager(*itbody, false);
+            itbodyManager->collide(&_ray, &query, &FCLCollisionChecker::CheckNarrowPhaseRayCollision);
+
+        }
+
+        return query._bCollision;
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
@@ -781,26 +886,26 @@ public:
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          query.bselfCollision = true;
-          KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-          FOREACH(itset, nonadjacent) {
-            size_t index1 = *itset&0xffff, index2 = *itset>>16;
-            // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
-            LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-            CheckNarrowPhaseDistance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), &query, query._minDistance);
-            if( query._bStopChecking ) {
-              break;
+            DistanceCallbackData query(shared_checker(), report);
+            query.bselfCollision = true;
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+            FOREACH(itset, nonadjacent) {
+                size_t index1 = *itset&0xffff, index2 = *itset>>16;
+                // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
+                LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+                CheckNarrowPhaseDistance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), &query, query._minDistance);
+                if( query._bStopChecking ) {
+                    break;
+                }
             }
-          }
 
-          report->minDistance = (dReal) query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            report->minDistance = (dReal) query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
 
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
+            }
         }
 
         CollisionCallbackData query(shared_checker(), report);
@@ -809,19 +914,19 @@ public:
 
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
         FOREACH(itset, nonadjacent) {
-          size_t index1 = *itset&0xffff, index2 = *itset>>16;
-          // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
-          LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-          _fclspace->SynchronizeGeometries(pbody->GetLinks()[index1], pLINK1);
-          _fclspace->SynchronizeGeometries(pbody->GetLinks()[index2], pLINK2);
-          FOREACH(itgeom1, pLINK1->vgeoms) {
-            FOREACH(itgeom2, pLINK2->vgeoms) {
-              CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
-              if( query._bStopChecking ) {
-                return query._bCollision;
-              }
+            size_t index1 = *itset&0xffff, index2 = *itset>>16;
+            // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
+            LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+            _fclspace->SynchronizeGeometries(pbody->GetLinks()[index1], pLINK1);
+            _fclspace->SynchronizeGeometries(pbody->GetLinks()[index2], pLINK2);
+            FOREACH(itgeom1, pLINK1->vgeoms) {
+                FOREACH(itgeom2, pLINK2->vgeoms) {
+                    CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
+                    if( query._bStopChecking ) {
+                        return query._bCollision;
+                    }
+                }
             }
-          }
         }
         return query._bCollision;
     }
@@ -849,29 +954,29 @@ public:
 
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
-          DistanceCallbackData query(shared_checker(), report);
-          query.bselfCollision = true;
-          KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-          FOREACH(itset, nonadjacent) {
-            size_t index1 = *itset&0xffff, index2 = *itset>>16;
-            if( plink->GetIndex() != index1 && plink->GetIndex() != index2 ) {
-              continue;
+            DistanceCallbackData query(shared_checker(), report);
+            query.bselfCollision = true;
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+            FOREACH(itset, nonadjacent) {
+                size_t index1 = *itset&0xffff, index2 = *itset>>16;
+                if( plink->GetIndex() != index1 && plink->GetIndex() != index2 ) {
+                    continue;
+                }
+                // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
+                LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+                CheckNarrowPhaseDistance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), &query, query._minDistance);
+                if( query._bStopChecking ) {
+                    break;
+                }
             }
-            // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
-            LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-            CheckNarrowPhaseDistance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), &query, query._minDistance);
-            if( query._bStopChecking ) {
-              break;
+
+            report->minDistance = (dReal) query._minDistance;
+            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+
+            // if there is no collision or no need to gather more data, just return
+            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+                return bCollision;
             }
-          }
-
-          report->minDistance = (dReal) query._minDistance;
-          bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
-
-          // if there is no collision or no need to gather more data, just return
-          if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
-            return bCollision;
-          }
         }
 
         CollisionCallbackData query(shared_checker(), report);
@@ -879,20 +984,20 @@ public:
         query.bselfCollision = true;
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
         FOREACH(itset, nonadjacent) {
-          int index1 = *itset&0xffff, index2 = *itset>>16;
-          if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
-            LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-            _fclspace->SynchronizeGeometries(pbody->GetLinks()[index1], pLINK1);
-            _fclspace->SynchronizeGeometries(pbody->GetLinks()[index2], pLINK2);
-            FOREACH(itgeom1, pLINK1->vgeoms) {
-              FOREACH(itgeom2, pLINK2->vgeoms) {
-                CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
-                if( query._bStopChecking ) {
-                  return query._bCollision;
+            int index1 = *itset&0xffff, index2 = *itset>>16;
+            if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
+                LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+                _fclspace->SynchronizeGeometries(pbody->GetLinks()[index1], pLINK1);
+                _fclspace->SynchronizeGeometries(pbody->GetLinks()[index2], pLINK2);
+                FOREACH(itgeom1, pLINK1->vgeoms) {
+                    FOREACH(itgeom2, pLINK2->vgeoms) {
+                        CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
+                        if( query._bStopChecking ) {
+                            return query._bCollision;
+                        }
+                    }
                 }
-              }
             }
-          }
         }
         return query._bCollision;
     }
@@ -1393,8 +1498,8 @@ private:
 
     static bool CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data, fcl::FCL_REAL& minDistance)
     {
-      DistanceCallbackData* pcb = static_cast<DistanceCallbackData*>(data);
-      return pcb->_pchecker->CheckNarrowPhaseDistance(o1, o2, pcb, minDistance);
+        DistanceCallbackData* pcb = static_cast<DistanceCallbackData*>(data);
+        return pcb->_pchecker->CheckNarrowPhaseDistance(o1, o2, pcb, minDistance);
     }
 
     bool CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, DistanceCallbackData* pcb, fcl::FCL_REAL& minDistance)
@@ -1426,12 +1531,10 @@ private:
 
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             FOREACH(itgeompair2, pLINK2->vgeoms) {
-                if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
-                    CheckNarrowPhaseGeomDistance(itgeompair1->second.get(), itgeompair2->second.get(), pcb);
-                    if( pcb->_bStopChecking ) {
-                      minDistance = pcb->_minDistance;
-                      return true;
-                    }
+                CheckNarrowPhaseGeomDistance(itgeompair1->second.get(), itgeompair2->second.get(), pcb);
+                if( pcb->_bStopChecking ) {
+                    minDistance = pcb->_minDistance;
+                    return true;
                 }
             }
         }
@@ -1442,24 +1545,80 @@ private:
 
 
     void CheckNarrowPhaseGeomDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2,DistanceCallbackData* pcb) {
-      pcb->_result.clear();
-      fcl::FCL_REAL dist = fcl::distance(o1, o2, pcb->_request, pcb->_result);
-      if( dist < pcb->_minDistance ) {
-        pcb->_minDistance = dist;
+        pcb->_result.clear();
+        fcl::FCL_REAL dist = fcl::distance(o1, o2, pcb->_request, pcb->_result);
+        if( dist < pcb->_minDistance ) {
+            pcb->_minDistance = dist;
 
-        pcb->_report->plink1 = GetCollisionLink(*o1);
-        pcb->_report->plink2 = GetCollisionLink(*o2);
+            pcb->_report->plink1 = GetCollisionLink(*o1);
+            pcb->_report->plink2 = GetCollisionLink(*o2);
 
-        //It would almost make sense to use the CONTACT structure to report nearest points but it not really hygenic...
-        //if( pcb->_report->_options & OpenRAVE::CO_Contacts ) {
-        //  CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
-        //}
+            //It would almost make sense to use the CONTACT structure to report nearest points but it not really hygenic...
+            //if( pcb->_report->_options & OpenRAVE::CO_Contacts ) {
+            //  CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
+            //}
 
-        if( dist <= std::numeric_limits<fcl::FCL_REAL>::epsilon() ) {
-          // Should we call the collision callbacks here ?
-          pcb->_bStopChecking = true;
+            if( dist <= std::numeric_limits<fcl::FCL_REAL>::epsilon() ) {
+                // Should we call the collision callbacks here ?
+                pcb->_bStopChecking = true;
+            }
         }
-      }
+    }
+
+
+    static bool CheckNarrowPhaseRayCollision(fcl::CollisionObject* o1, fcl::CollisionObject* ray, void* data) {
+        RayCollisionCallbackData* pcb = static_cast<RayCollisionCallbackData*>(data);
+        return pcb->_pchecker->CheckNarrowPhaseRayCollision(o1, ray, pcb);
+    }
+
+    bool CheckNarrowPhaseRayCollision(fcl::CollisionObject* o1, fcl::CollisionObject* ray, RayCollisionCallbackData* pcb) {
+        BOOST_ASSERT(ray == &_ray);
+
+        if( pcb->_bStopChecking ) {
+            return true;
+        }
+
+        LinkConstPtr plink = GetCollisionLink(*o1);
+
+        if( !plink || !plink->IsEnabled() ) {
+            return false;
+        }
+
+        LinkInfoPtr pLINK = GetLinkInfo(plink);
+
+        FOREACH(itgeompair, pLINK->vgeoms) {
+            if(itgeompair->second->getAABB().overlap(_ray.getAABB())) {
+                pcb->_result.clear();
+                std::size_t numContacts = fcl::collide(itgeompair->second.get(), ray, pcb->_request, pcb->_result);
+                if( numContacts > 0 ) {
+                    // TODO : Should I call the collision callbacks ?
+                    pcb->_bCollision = true;
+
+                    if( _options & OpenRAVE::CO_RayAnyHit ) {
+                        pcb->_bStopChecking = true;
+                        if( !!pcb->_report ) {
+                            pcb->_report->plink1 = plink;
+                        }
+                        return true;
+                    } else {
+                        for( size_t i = 0; i < numContacts; ++i) {
+                            const fcl::Contact& c = pcb->_result.getContact(i);
+                            dReal squaredDistance = (ConvertVectorFromFCL(c.pos) - pcb->_origin).lengthsqr3();
+                            if( squaredDistance < pcb->_currentSquaredDistance ) {
+                                pcb->_currentSquaredDistance = squaredDistance;
+                                if( !!pcb->_report ) {
+                                    pcb->_report->plink1 = plink;
+                                    pcb->_report->contacts.resize(1);
+                                    pcb->_report->contacts[0] = CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
 #ifdef NARROW_COLLISION_CACHING
@@ -1547,6 +1706,25 @@ private:
         }
     }
 
+    void PrepareRay(const RAY& ray) {
+        dReal dirNorm = MATH_SQRT(ray.dir.lengthsqr3());
+        _pRayGeometry = std::make_shared<fcl::Capsule>(_rayRadius, (fcl::FCL_REAL)dirNorm);
+        _ray = fcl::CollisionObject(_pRayGeometry);
+        _ray.setTranslation(ConvertVectorToFCL(ray.pos + 0.5f*ray.dir));
+
+        // If the ray is not aligned along the z-axis, we need to compute its rotation wrt the z-axis
+        if( MATH_FABS(ray.dir.x) > _rayRadius || MATH_FABS(ray.dir.y) > _rayRadius ) {
+            dReal epsilon = std::numeric_limits<dReal>::epsilon();
+            Vector dir = ray.dir, up(0,0,1);
+            if ( dirNorm < 1 - epsilon || dirNorm > 1 + epsilon ) {
+                dir = (1/dirNorm) * ray.dir;
+            }
+            Vector s = dir.cross(up).normalize3();
+            Vector upn = dir.cross(s).normalize3();
+            _ray.setRotation(fcl::Matrix3f(ConvertVectorToFCL(s), ConvertVectorToFCL(upn), ConvertVectorToFCL(dir)).transpose());
+        }
+        _ray.computeAABB();
+    }
 
 
 
@@ -1555,6 +1733,10 @@ private:
     int _numMaxContacts;
     std::string _userdatakey;
     bool _bIsSelfCollisionChecker; // Currently not used
+
+    fcl::FCL_REAL _rayRadius;
+    CollisionGeometryPtr _pRayGeometry;
+    fcl::CollisionObject _ray;
 
     std::string _broadPhaseCollisionManagerAlgorithm;
     boost::shared_ptr<SpatialHashData> _spatialHashData;
