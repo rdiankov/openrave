@@ -214,7 +214,6 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
             v = 0;
             tswitch1 = tswitch2 = pp.tswitch;
             ttotal = pp.ttotal;
-            // std::cout << "running IsValid in SolveMinAccel1D" << std::endl;
             if(IsValid()) return true;
         }
         a1 = a2 = v = 0;
@@ -236,7 +235,6 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
         return false;
     }
     PARABOLIC_RAMP_ASSERT(ttotal==endTime);
-    // std::cout << "running IsValid in SolveMinAccel1D" << std::endl;
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("Invalid min-accel!\n");
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
@@ -883,7 +881,6 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         tswitch2 = 0;
     }
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
-    // std::cout << "running IsValid in SolveMinTime" << std::endl;
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("Failure to find valid path!\n");
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
@@ -975,7 +972,6 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
         return false;
     }
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
-    // std::cout << "running IsValid in SolveMinTime2" << std::endl;
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("ParabolicRamp1D::SolveMinTime: Failure to find valid path!\n");
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
@@ -997,7 +993,6 @@ void ParabolicRamp1D::SolveBraking(Real amax)
     ttotal = Abs(dx0)/amax;
     x1 = x0 + dx0*ttotal + 0.5*Sqr(ttotal)*a2;
     dx1 = 0;
-    // std::cout << "running IsValid in SolveBraking1D" << std::endl;
     PARABOLIC_RAMP_ASSERT(IsValid());
 }
 
@@ -1089,7 +1084,6 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     //                     if( v >= -vmax && v <= vmax ) {
     //                         a2 = (a1*tswitch1 + dx0 - dx1)/(tswitch2 - endTime);
     //                         if( a2 >= -amax && a2 <= amax ) {
-    //                             // std::cout << "running IsValid in SolveFixedTime" << std::endl;
     //                             if(IsValid()) {
     //                                 return true;
     //                             }
@@ -1128,7 +1122,6 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     //     tswitch2 = 0;
     // }
     // //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
-    // // std::cout << "running IsValid in SolveFixedTime" << std::endl;
     // if(!IsValid()) {
     //     PARABOLIC_RAMP_PLOG("ParabolicRamp1D::SolveMinTime: Failure to find valid path!\n");
     //     PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
@@ -1184,7 +1177,6 @@ bool ParabolicRamp1D::SolveFixedSwitchTime(Real amax,Real vmax)
     if( tswitch2 < 0 && tswitch2 >= -EpsilonT ) {
         tswitch2 = 0;
     }
-    // std::cout << "running IsValid in SolveFixedSwitchTime" << std::endl;
     PARABOLIC_RAMP_ASSERT(IsValid());
     return true;
 }
@@ -1303,7 +1295,6 @@ bool ParabolicRamp1D::SolveFixedAccelSwitchTime(Real amax,Real vmax, Real deltas
     tswitch2 = deltaswitch1 + deltaswitch2;
     ttotal = tswitch2 + deltaswitch3;
 
-    // std::cout << "running IsValid in SolveFixedAccelSwitchTime" << std::endl;
     PARABOLIC_RAMP_ASSERT(IsValid());
     return true;
 }
@@ -1326,10 +1317,6 @@ void ParabolicRamp1D::TrimFront(Real tcut)
     if(tcut > ttotal) {
         PARABOLIC_RAMP_PLOG("Hmm... want to trim front of curve at time %.15e, end time %.15e\n",tcut,ttotal);
     }
-    PARABOLIC_RAMP_ASSERT(tcut <= ttotal);
-    if (!IsValid()) {
-        RAVELOG_WARN_FORMAT("Before trimming: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0%x1%dx0%dx1%a1%a1%v%tswitch1%tswitch2);
-    }
     x0 = Evaluate(tcut);
     dx0 = Derivative(tcut);
     ttotal -= tcut;
@@ -1337,10 +1324,6 @@ void ParabolicRamp1D::TrimFront(Real tcut)
     tswitch2 -= tcut;
     if(tswitch1 < 0) tswitch1=0;
     if(tswitch2 < 0) tswitch2=0;
-    // std::cout << "running IsValid in TrimFront" << std::endl;
-    if (!IsValid()) {
-        RAVELOG_WARN_FORMAT("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0%x1%dx0%dx1%a1%a1%v%tswitch1%tswitch2);
-    }
     PARABOLIC_RAMP_ASSERT(IsValid());
     // PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0, x1, dx0, dx1, a1, a1, v, tswitch1, tswitch2);
 
@@ -1354,7 +1337,6 @@ void ParabolicRamp1D::TrimBack(Real tcut)
     ttotal -= tcut;
     tswitch1 = Min(tswitch1,ttotal);
     tswitch2 = Min(tswitch2,ttotal);
-    // std::cout << "running IsValid in TrimBack" << std::endl;
     PARABOLIC_RAMP_ASSERT(IsValid());
 }
 
@@ -1383,19 +1365,16 @@ void ParabolicRamp1D::Bounds(Real ta,Real tb,Real& xmin,Real& xmax) const
     xmax = Evaluate(tb);
 
     if(xmin > xmax) Swap(xmin,xmax);
-    // PARABOLIC_RAMP_PLOG("current xmin = %.15e, xmax = %.15e", xmin, xmax);
 
     Real tflip1=0,tflip2=0;
     if(ta < tswitch1) {
         //x' = a1*t + v0 = 0 => t = -v0/a1
         tflip1 = -dx0/a1;
-        // PARABOLIC_RAMP_PLOG("a1 = %.15e, tswitch1 = %.15e, tflip1 = %.15e", a1, tswitch1, tflip1);
         if(tflip1 > tswitch1) tflip1 = 0;
     }
     if(tb > tswitch2) {
         //x' = a2*(T-t) + v1 = 0 => (T-t) = v1/a2
         tflip2 = ttotal-dx1/a2;
-        // PARABOLIC_RAMP_PLOG("a2 = %.15e, tswitch2 = %.15e, tflip2 = %.15e", a2, tswitch2, tflip2);
         if(tflip2 < tswitch2) tflip2 = 0;
     }
     if(ta < tflip1 && tb > tflip1) {
@@ -1408,10 +1387,6 @@ void ParabolicRamp1D::Bounds(Real ta,Real tb,Real& xmin,Real& xmax) const
         if(xflip < xmin) xmin = xflip;
         else if(xflip > xmax) xmax = xflip;
     }
-
-    // PARABOLIC_RAMP_PLOG("tflip1=%.15e, tflip2=%.15e", tflip1, tflip2);
-    // PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, v0=%.15e, v1=%.15e, tswitch1=%.15e, tswitch2=%.15e, ttotal=%.15e, a1=%.15e, a2=%.15e, v=%.15e\n",x0, x1, dx0, dx1, tswitch1, tswitch2, ttotal, a1, a2, v);
-
 }
 
 void ParabolicRamp1D::DerivBounds(Real& vmin,Real& vmax) const
@@ -1598,7 +1573,6 @@ bool ParabolicRampND::SolveMinTimeLinear(const Vector& amax,const Vector& vmax)
         ramps[i].tswitch2 = sramp.tswitch2;
         ramps[i].ttotal = endTime;
         if(1 ) { //gValidityCheckLevel >= 2) {
-            // std::cout << "running IsValid in SolveMinTimeLinear" << std::endl;
             if(!ramps[i].IsValid()) {
                 PARABOLIC_RAMP_PERROR("Warning, error in straight-line path formula\n");
                 for(size_t j=0; j<dx0.size(); j++)
