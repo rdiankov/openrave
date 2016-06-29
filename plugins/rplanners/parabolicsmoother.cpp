@@ -784,7 +784,7 @@ public:
                                 if( 0.9*_parameters->_vConfigVelocityLimit.at(idof) < 0.1*RaveFabs(newvel[idof]) ) {
                                     RAVELOG_WARN_FORMAT("new velocity for dof %d is too high %f > %f", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof));
                                 }
-                                RAVELOG_WARN_FORMAT("SEGMENT FEASIBLE2: retcode = 0x4; idof = %d; newvel[idof] = %.15e; vellimit = %.15e; g_fEpsilon = %.15e", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof)%g_fEpsilon);
+                                RAVELOG_VERBOSE_FORMAT("SEGMENT FEASIBLE2: retcode = 0x4; idof = %d; newvel[idof] = %.15e; vellimit = %.15e; g_fEpsilon = %.15e", idof%newvel[idof]%_parameters->_vConfigVelocityLimit.at(idof)%g_fEpsilon);
                                 return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_parameters->_vConfigVelocityLimit.at(idof)/RaveFabs(newvel[idof]));
                             }
                         }
@@ -831,7 +831,7 @@ public:
             try {
                 ParabolicRamp::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(outramps);
                 if( retmanip.retcode != 0 ) {
-                    RAVELOG_WARN_FORMAT("from CheckManipConstraints2: retcode = %d", retmanip.retcode);
+                    RAVELOG_VERBOSE_FORMAT("from CheckManipConstraints2: retcode = %d", retmanip.retcode);
                     return retmanip;
                 }
             }
