@@ -271,7 +271,7 @@ inline int solvequad(T a, T b, T c, T& r1, T& r2)
         r2 = -b/a;
         return 2;
     }
-    
+
     T d = b * b - (T)4 * c * a;
     if( d < 0 ) {
         if( d < -(T)1e-16) {
@@ -1246,6 +1246,100 @@ int Max(T* pts, int stride, int numPts)
     }
 
     return best;
+}
+
+template <typename IKReal>
+inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
+{
+    IKReal det = rawcoeffs[1]*rawcoeffs[1]-4*rawcoeffs[0]*rawcoeffs[2];
+    if( det < 0 ) {
+        numroots=0;
+    }
+    else if( det == 0 ) {
+        rawroots[0] = -0.5*rawcoeffs[1]/rawcoeffs[0];
+        numroots = 1;
+    }
+    else {
+        det = RaveSqrt(det);
+        rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
+        rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]); //rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
+        numroots = 2;
+    }
+}
+    
+/// \brief Durand-Kerner polynomial root finding method
+template <typename IKReal, int D>
+inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
+{
+    using std::complex;
+    BOOST_ASSERT(rawcoeffs[0] != 0);
+    const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
+    const IKReal tolsqrt = sqrt(std::numeric_limits<IKReal>::epsilon());
+    complex<IKReal> coeffs[D];
+    const int maxsteps = 110;
+    for(int i = 0; i < D; ++i) {
+        coeffs[i] = complex<IKReal>(rawcoeffs[i+1]/rawcoeffs[0]);
+    }
+    complex<IKReal> roots[D];
+    IKReal err[D];
+    roots[0] = complex<IKReal>(1,0);
+    roots[1] = complex<IKReal>(0.4,0.9); // any complex number not a root of unity works
+    err[0] = 1.0;
+    err[1] = 1.0;
+    for(int i = 2; i < D; ++i) {
+        roots[i] = roots[i-1]*roots[1];
+        err[i] = 1.0;
+    }
+    for(int step = 0; step < maxsteps; ++step) {
+        bool changed = false;
+        for(int i = 0; i < D; ++i) {
+            if ( err[i] >= tol ) {
+                changed = true;
+                // evaluate
+                complex<IKReal> x = roots[i] + coeffs[0];
+                for(int j = 1; j < D; ++j) {
+                    x = roots[i] * x + coeffs[j];
+                }
+                for(int j = 0; j < D; ++j) {
+                    if( i != j ) {
+                        if( roots[i] != roots[j] ) {
+                            x /= (roots[i] - roots[j]);
+                        }
+                    }
+                }
+                roots[i] -= x;
+                err[i] = abs(x);
+            }
+        }
+        if( !changed ) {
+            break;
+        }
+    }
+
+    numroots = 0;
+    bool visited[D] = {false};
+    for(int i = 0; i < D; ++i) {
+        if( !visited[i] ) {
+            // might be a multiple root, in which case it will have more error than the other roots
+            // find any neighboring roots, and take the average
+            complex<IKReal> newroot=roots[i];
+            int n = 1;
+            for(int j = i+1; j < D; ++j) {
+                if( abs(roots[i]-roots[j]) < 8*tolsqrt ) {
+                    newroot += roots[j];
+                    n += 1;
+                    visited[j] = true;
+                }
+            }
+            if( n > 1 ) {
+                newroot /= n;
+            }
+            // there are still cases where even the mean is not accurate enough, until a better multi-root algorithm is used, need to use the sqrt
+            if( RaveFabs(imag(newroot)) < tolsqrt ) {
+                rawroots[numroots++] = real(newroot);
+            }
+        }
+    }
 }
 
 } // end namespace mathextra
