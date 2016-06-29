@@ -30,8 +30,8 @@ public:
         envCaptureCount = 0;
         // don't want to allocate during the main loop
         _tmpbuffer.reserve(bufferSize);
-        FOREACH(itcaptureLine, vEnvCapture) {
-          itcaptureLine->reserve(bufferSize);
+        for(int i = 0; i < maxEnvCaptureCount ; ++i) {
+          vEnvCapture[i].reserve(bufferSize);
         }
     }
 
@@ -130,8 +130,8 @@ private:
         // empty the vEnvCapture buffer when it is full
         std::fstream f(envCaptureLogFile, std::fstream::out | std::fstream::app);
         for(int i = 0; i < maxEnvCaptureCount ; ++i) {
-          std::copy(vEnvCapture[i].begin(), vEnvCapture.end(), fstream);
-          fstream << std::endl;
+          std::copy(vEnvCapture[i].begin(), vEnvCapture[i].end(), std::ostream_iterator<int>(f, " "));
+          f << std::endl;
         }
         envCaptureCount = 0;
       }
@@ -144,7 +144,7 @@ private:
     std::map< std::string, std::vector< std::vector<time_point> > > timings;
 
     std::vector<int> _tmpbuffer;
-    const size_t maxEnvCaptureCount = 1000;
+    static const size_t maxEnvCaptureCount = 1000;
     size_t envCaptureCount;
     std::vector<int> vEnvCapture[maxEnvCaptureCount];
     std::string envCaptureLogFile;
