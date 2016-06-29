@@ -24,6 +24,15 @@ public:
         name = str(boost::format("%d;%s")%id%key);
         RAVELOG_WARN_FORMAT("FCL STATISTICS %s", name);
         currentTimings.reserve(64); // so that we don't allocate during the timing
+
+        const size_t bufferSize = 600; // ~200 objects * 2 int per objects * 1.5 margin
+        envCaptureLogFile = str(boost::format("envCapture-%d-%s.log")%id%key);
+        envCaptureCount = 0;
+        // don't want to allocate during the main loop
+        _tmpbuffer.reserve(bufferSize);
+        FOREACH(itcaptureLine, vEnvCapture) {
+          itcaptureLine->reserve(bufferSize);
+        }
     }
 
     ~FCLStatistics() {
@@ -105,10 +114,40 @@ private:
         return Timing(*this);
     }
 
+    void CaptureEnvState(const std::set<KinBodyConstPtr>& envbodies) {
+      _tmpbuffer.resize(0);
+      FOREACH(itbody, envbodies) {
+        _tmpbuffer.push_back((*itbody)->GetEnvironmentId());
+        BOOST_ASSERT( (*itbody)->GetLinks().size() <= sizeof(int));
+        int enabledLinksMask = 0;
+        FOREACH(itlink, (*itbody)->GetLinks()) {
+          if( (*itlink)->IsEnabled() ) {
+            enabledLinksMask |= 1 << (*itlink)->GetIndex();
+          }
+        }
+      }
+      if( envCaptureCount >= maxEnvCaptureCount ) {
+        // empty the vEnvCapture buffer when it is full
+        std::fstream f(envCaptureLogFile, std::fstream::out | std::fstream::app);
+        for(int i = 0; i < maxEnvCaptureCount ; ++i) {
+          std::copy(vEnvCapture[i].begin(), vEnvCapture.end(), fstream);
+          fstream << std::endl;
+        }
+        envCaptureCount = 0;
+      }
+      vEnvCapture[envCaptureCount].swap(_tmpbuffer);
+    }
+
     std::string name;
     std::string currentTimingLabel;
     std::vector<time_point> currentTimings;
     std::map< std::string, std::vector< std::vector<time_point> > > timings;
+
+    std::vector<int> _tmpbuffer;
+    const size_t maxEnvCaptureCount = 1000;
+    size_t envCaptureCount;
+    std::vector<int> vEnvCapture[maxEnvCaptureCount];
+    std::string envCaptureLogFile;
 };
 
 typedef boost::shared_ptr<FCLStatistics> FCLStatisticsPtr;

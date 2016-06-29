@@ -377,6 +377,7 @@ public:
     }
 
 
+    // TODO : body should have geometry group "a" after SetGeometryGroup("a") ; SetBodyGeometryGroup(body, "b") ; SetBodyGeometryGroup("a")
     void SetGeometryGroup(const std::string& groupname)
     {
         if(groupname != _geometrygroup) {
@@ -567,7 +568,7 @@ public:
             pinfo->_ResetBodyManagers();
         }
         _envManagerInstance.reset();
-        _cachedpinfo->clear();
+        _cachedpinfo.clear();
     }
 
     void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK) {

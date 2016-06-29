@@ -959,6 +959,9 @@ private:
     ///< \return an up to date and setup broadphase collision manager containing at least the collision object of the enviroment which are relevant
     BroadPhaseCollisionManagerPtr GetEnvManager(const std::set<KinBodyConstPtr>&sexcludedbodies) {
 
+#ifdef FCLUSESTATISTICS
+      _statistics->CaptureEnvState(_fclspace->GetEnvBodies());
+#endif // FCLUSESTATISTICS
         _fclspace->Synchronize();
 
         ManagerInstancePtr envManagerInstance = _fclspace->GetEnvManagerInstance();
