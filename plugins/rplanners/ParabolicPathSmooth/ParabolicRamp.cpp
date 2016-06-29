@@ -3620,7 +3620,7 @@ bool SolveAccelBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const
 ////////Puttichai
 bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real vmax, Real amax, Real& newEndTime) {
     Real d = x1 - x0;
-    Real T0, T1, T2, T3, temp1, temp2;
+    Real T0, T1, T2, T3;
 
     /*
        Let t be the total duration of the velocity profile, a1 and a2 be the accelerations of both
@@ -3662,25 +3662,30 @@ bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, 
        (the inequalities are derived using Sympy). Finally, we have two solutions (for the total
        time) from each inequality. Then we select the maximum one.
      */
-    temp1 = 2*(-Sqr(amax))*(2*amax*d - Sqr(v0) - Sqr(v1));
+
+    Real firstTerm = (v0 + v1)/amax;
+    
+    Real temp1 = 2*(-Sqr(amax))*(2*amax*d - Sqr(v0) - Sqr(v1));
+    Real secondTerm1 = Sqrt(temp1)/Sqr(amax);
     if (temp1 < 0) {
         T0 = -1;
         T1 = -1;
     }
     else {
-        T0 = (v0 + v1)/amax + Sqrt(temp1)/Sqr(amax);
-        T1 = (v0 + v1)/amax - Sqrt(temp1)/Sqr(amax);
+        T0 = firstTerm + secondTerm1;
+        T1 = firstTerm - secondTerm1;
     }
     T1 = Max(T0, T1);
 
-    temp2 = 2*(Sqr(amax))*(2*amax*d + Sqr(v0) + Sqr(v1));
+    Real temp2 = 2*(Sqr(amax))*(2*amax*d + Sqr(v0) + Sqr(v1));
+    Real secondTerm2 = Sqrt(temp2)/Sqr(amax);
     if (temp2 < 0) {
         T2 = -1;
         T3 = -1;
     }
     else {
-        T2 = -(v0 + v1)/amax + Sqrt(temp2)/Sqr(amax);
-        T3 = -(v0 + v1)/amax - Sqrt(temp2)/Sqr(amax);
+        T2 = -firstTerm + secondTerm2;
+        T3 = -firstTerm - secondTerm2;
     }
     T3 = Max(T2, T3);
 
