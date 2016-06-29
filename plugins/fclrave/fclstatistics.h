@@ -27,6 +27,8 @@ public:
 
         const size_t bufferSize = 600; // ~200 objects * 2 int per objects * 1.5 margin
         envCaptureLogFile = str(boost::format("envCapture-%d-%s.log")%id%key);
+        fstream f(envCaptureLogFile, std::fstream::trunc);
+        f.close();
         envCaptureCount = 0;
         // don't want to allocate during the main loop
         _tmpbuffer.reserve(bufferSize);
@@ -36,6 +38,7 @@ public:
     }
 
     ~FCLStatistics() {
+      FlushEnvCaptureBuffer();
 #ifndef FCL_STATISTICS_DISPLAY_CONTINUOUSLY
         Display();
 #endif
@@ -114,11 +117,23 @@ private:
         return Timing(*this);
     }
 
+    void FlushEnvCaptureBuffer() {
+      RAVELOG_DEBUG_FORMAT("Flushing env capture buffer in file %s", envCaptureLogFile);
+      std::fstream f(envCaptureLogFile, std::fstream::out | std::fstream::app);
+      for(int i = 0; i < envCaptureCount ; ++i) {
+        std::copy(vEnvCapture[i].begin(), vEnvCapture[i].end(), std::ostream_iterator<int>(f, " "));
+        f << std::endl;
+      }
+      f.close();
+      envCaptureCount = 0;
+    }
+
     void CaptureEnvState(const std::set<KinBodyConstPtr>& envbodies) {
+      RAVELOG_VERBOSE_FORMAT("Capturing env (count = %d, file = %s)", envCaptureCount%envCaptureLogFile);
       _tmpbuffer.resize(0);
       FOREACH(itbody, envbodies) {
         _tmpbuffer.push_back((*itbody)->GetEnvironmentId());
-        BOOST_ASSERT( (*itbody)->GetLinks().size() <= sizeof(int));
+        OPENRAVE_ASSERT_OP( (*itbody)->GetLinks().size(), <=, 8*sizeof(int));
         int enabledLinksMask = 0;
         FOREACH(itlink, (*itbody)->GetLinks()) {
           if( (*itlink)->IsEnabled() ) {
@@ -126,16 +141,13 @@ private:
           }
         }
       }
-      if( envCaptureCount >= maxEnvCaptureCount ) {
+      if( envCaptureCount == maxEnvCaptureCount ) {
         // empty the vEnvCapture buffer when it is full
-        std::fstream f(envCaptureLogFile, std::fstream::out | std::fstream::app);
-        for(int i = 0; i < maxEnvCaptureCount ; ++i) {
-          std::copy(vEnvCapture[i].begin(), vEnvCapture[i].end(), std::ostream_iterator<int>(f, " "));
-          f << std::endl;
-        }
+        FlushEnvCaptureBuffer();
         envCaptureCount = 0;
       }
       vEnvCapture[envCaptureCount].swap(_tmpbuffer);
+      envCaptureCount++;
     }
 
     std::string name;
