@@ -314,7 +314,10 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {
 
      */
 
-    PARABOLIC_RAMP_ASSERT(endTime > 0);
+    if (!(endTime > 0)) {
+        PARABOLIC_RAMP_PLOG("endTime is negative");
+        return false;
+    }
     Real d = x1 - x0; // displacement made by this profile
     Real A, B, C, D; // temporary variables for solving equations
 
@@ -459,8 +462,11 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {
         i4u = Min(i0u, i4u);
     }
 
-    PARABOLIC_RAMP_ASSERT(i4l <= i4u);
-    // PARABOLIC_RAMP_PLOG("interval4 = [%.15e, %.15e]", i4l, i4u);
+    if (i4l > i4u) {
+        PARABOLIC_RAMP_PLOG("interval 4 is empty but the algorithm cannot detect this.");
+        PARABOLIC_RAMP_PLOG("interval4 = [%.15e, %.15e]", i4l, i4u);
+        return false;
+    }
 
     /*
        Now we have already obtained a range of feasible values for tswitch1. We choose a value of
@@ -522,9 +528,12 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {
         Real vmaxNew = v > 0 ? vmax : -vmax;
 
         // a1 and a2 should not be zero if the velocity limit is violated. The first check is done
-        // at the line: PARABOLIC_RAMP_ASSERT(FuzzyEquals(v, dx1 - a2*dt)); above.
-        PARABOLIC_RAMP_ASSERT(!FuzzyZero(a1, EpsilonA));
-        PARABOLIC_RAMP_ASSERT(!FuzzyZero(a2, EpsilonA));
+        // at the line: FuzzyEquals(v, dx1 - a2*dt)above.
+        if ((FuzzyZero(a1, EpsilonA)) || (FuzzyZero(a2, EpsilonA))) {
+            PARABOLIC_RAMP_PLOG("Velocity limit is violated but at least one acceleration is zero: a1 = %.15e; a2 = %.15e", a1, a2);
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            return false;
+        }
         Real a1inv = 1/a1;
         Real a2inv = 1/a2;
 
@@ -628,15 +637,18 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime, Real vmax, Real amax) {
                     // a2 exceeds the bound, try making it stays at the bound.
                     a2 = a2 > 0 ? amax : -amax;
                     // Recalculate the related variable
-                    PARABOLIC_RAMP_ASSERT(!(C2*a2 - B2 == 0)); // this case means a1 == 0 which shuold have been catched from above
+                    if (C2*a2 - B2 == 0) {
+                        // this case means a1 == 0 which shuold have been catched from above
+                        PARABOLIC_RAMP_PLOG("(C2*a2 - B2 == 0) a1 shuold have been zero but a1 = %.15e", a1);
+                        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                        return false;
+                    }
                     a1 = A2*a2/(C2*a2 - B2);
 
                     // RAVELOG_DEBUG_FORMAT("case3: a1 = %.15e; a2 = %.15e", a1%a2);
                 }
             }
         }
-
-
         // RAVELOG_DEBUG_FORMAT("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0%x1%dx0%dx1%vmax%amax%endTime);
 
         // Final check on the accelerations
@@ -726,7 +738,15 @@ bool ParabolicRamp1D::SolveForTSwitch1(Real A, Real B, Real endTime, Real l, Rea
 
               dJ/dx = (2*A)*x^4 + (2*B - 4*A*t)*x^3 + (3*A*t^2 - 3*B*t)*x^2 + (A*t^3 + 3*t^2)*x + (B*t^3).
      */
-    PARABOLIC_RAMP_ASSERT(l >= 0);
+    if (l < 0) {
+        if (u < 0) {
+            PARABOLIC_RAMP_PLOG("The given interval is invalid: l = %.15e; u = %.15e", l, u);
+            return false;
+        }
+        PARABOLIC_RAMP_PLOG("Invalid lower bound is given: reset it to zero.");
+        l = 0;
+    }
+
     if ((Abs(A) < EpsilonA) && (Abs(B) < EpsilonA)) {
         if (l > 0) {
             return false;
@@ -3638,7 +3658,7 @@ bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, 
      */
 
     Real firstTerm = (v0 + v1)/amax;
-    
+
     Real temp1 = 2*(-Sqr(amax))*(2*amax*d - Sqr(v0) - Sqr(v1));
     Real secondTerm1 = Sqrt(temp1)/Sqr(amax);
     if (temp1 < 0) {
