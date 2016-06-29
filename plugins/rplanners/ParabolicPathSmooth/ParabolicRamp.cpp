@@ -1338,6 +1338,7 @@ void ParabolicRamp1D::TrimFront(Real tcut)
     if(tcut > ttotal) {
         PARABOLIC_RAMP_PLOG("Hmm... want to trim front of curve at time %.15e, end time %.15e\n",tcut,ttotal);
     }
+    PARABOLIC_RAMP_ASSERT(tcut <= ttotal);
     x0 = Evaluate(tcut);
     dx0 = Derivative(tcut);
     ttotal -= tcut;
@@ -2543,7 +2544,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
 }
 
 ////////Puttichai
-Real SolveMinTimeBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
+Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                           const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                           vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp)
 {
