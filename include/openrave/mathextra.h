@@ -1247,25 +1247,6 @@ int Max(T* pts, int stride, int numPts)
 
     return best;
 }
-
-template <typename IKReal>
-inline void polyroots2(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
-{
-    IKReal det = rawcoeffs[1]*rawcoeffs[1]-4*rawcoeffs[0]*rawcoeffs[2];
-    if( det < 0 ) {
-        numroots=0;
-    }
-    else if( det == 0 ) {
-        rawroots[0] = -0.5*rawcoeffs[1]/rawcoeffs[0];
-        numroots = 1;
-    }
-    else {
-        det = RaveSqrt(det);
-        rawroots[0] = (-rawcoeffs[1]+det)/(2*rawcoeffs[0]);
-        rawroots[1] = (-rawcoeffs[1]-det)/(2*rawcoeffs[0]); //rawcoeffs[2]/(rawcoeffs[0]*rawroots[0]);
-        numroots = 2;
-    }
-}
     
 /// \brief Durand-Kerner polynomial root finding method
 template <typename IKReal, int D>
