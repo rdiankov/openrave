@@ -446,10 +446,6 @@ public:
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
-                // std::cout << "================================================================================" << std::endl;
-                // std::cout << "NUMSHORTCUTS " << numshortcuts << std::endl;
-                // std::cout << "================================================================================" << std::endl;
-                    
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
                 }
@@ -550,9 +546,7 @@ public:
                                 tempramps1d.resize(0);
                                 // endTime *= mult;
                                 endTime += incr;
-                                int counterStart = 0;
-                                int counterEnd = 6;
-                                if( ParabolicRamp::SolveAccelBounded2(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, counterStart, counterEnd) ) {
+                                if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, 6) ) {
                                     temprampsnd.resize(0);
                                     CombineRamps(tempramps1d, temprampsnd);
 
@@ -576,9 +570,8 @@ public:
                                     if( !bHasBadRamp ) {
                                         if( bTrimmed ) {
                                             // have to retime the original ramp without trimming
-                                            counterStart = 0;
-                                            counterEnd = 6;
-                                            if( !ParabolicRamp::SolveAccelBounded2(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, counterStart, counterEnd) ) {
+                                            // keep in mind that new ramps might be slower than endTime
+                                            if( !ParabolicRamp::SolveAccelBounded(rampnd.x0, rampnd.dx0, rampnd.x1, rampnd.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, 6) ) {
                                                 break;
                                             }
                                             temprampsnd.resize(0);
@@ -587,7 +580,7 @@ public:
                                         bSuccess = true;
                                         break;
                                     }
-                                    // mult += 0.05;                                                   
+                                    // mult += 0.05;
                                 }
                             }
                             if( !bSuccess ) {
@@ -746,8 +739,6 @@ public:
             if( ret != 0 ) {
                 ParabolicRamp::CheckReturn checkret(ret);
                 if( ret == CFO_CheckTimeBasedConstraints ) {
-                    RAVELOG_WARN("from CHECKPATHALLCONSTRAINTS: retcode = 0x4");
-                                                    
                     checkret.fTimeBasedSurpassMult = 0.8; // don't have any other info, so just pick a multiple
                 }
                 return checkret;
@@ -1026,10 +1017,6 @@ protected:
 
     int _Shortcut(ParabolicRamp::DynamicPath& dynamicpath, int numIters, ParabolicRamp::RandomNumberGeneratorBase* rng, dReal mintimestep)
     {
-        // std::cout << "================================================================================" << std::endl;
-        // std::cout << "START SHORTCUT" << std::endl;
-        // std::cout << "================================================================================" << std::endl;
-                
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         int shortcuts = 0;
         vector<dReal> rampStartTime(ramps.size());
@@ -1131,18 +1118,16 @@ protected:
                 dReal fcurmult = fstarttimemult;
 
                 RAVELOG_VERBOSE_FORMAT("shortcutting from t1 = %.15e to t2 = %.15e", t1%t2);
-                    
+
                 for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
                     iIterProgress += 0x1000;
                     if(!res) {
-                        // std::cout << "    Shortcut failed" << std::endl;
                         break;
                     }
                     // check the new ramp time makes significant steps
                     dReal newramptime = intermediate.GetTotalTime();
                     if( newramptime+mintimestep > t2-t1 ) {
-                        // std::cout << "    Shortcut successful but did not make significant improvement" << std::endl;
                         // reject since it didn't make significant improvement
                         RAVELOG_VERBOSE_FORMAT("shortcut iter=%d rejected times [%f, %f]. final trajtime=%fs", iters%t1%t2%(endTime-(t2-t1)+newramptime));
                         break;

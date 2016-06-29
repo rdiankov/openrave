@@ -66,14 +66,12 @@ public:
     /// Solves for minimum acceleration given end time and velocity bounds
     bool SolveMinAccel(Real endTime,Real vmax);
 
-    /// Solves for minimum acceleration given end time and velocity bounds with a new method. \author Puttichai Lertkultanon
-    bool SolveMinAccel(Real endTime, Real vmax, Real amax); ////////Puttichai
     /// Solves for a value of tswitch1 (used in SolveMinAccel)
     bool SolveForTSwitch1(Real A, Real B, Real endTime, Real l, Real u); ////////Puttichai
 
     /// Solves for the minimum-time braking trajectory starting from x0,dx0
     void SolveBraking(Real amax);
-    /// Solves for the ramp given max the exact time
+    /// Solves for the ramp given max the exact time trying to use miminimum accel
     bool SolveFixedTime(Real amax,Real vmax,Real endTime);
     /// solves for the ramp given fixed switch times and end time
     bool SolveFixedSwitchTime(Real amax,Real vmax);
@@ -162,7 +160,7 @@ public:
 };
 
 /// Calculates the minimum total duration that a ramp has to be stretched to
-bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real vmax, Real amax, Real& newEndTime); ////////Puttichai
+bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real amax, Real vmax, Real& newEndTime); ////////Puttichai
 
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given
 /// acceleration, velocity, and x bounds.  Returns true if successful.
@@ -171,29 +169,24 @@ bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Re
 /// Computes a sequence of up to three ramps connecting (x0,v0) to (x1,v1)
 /// in minimum-acceleration fashion with a fixed end time, under the given
 /// velocity and x bounds.  Returns true if successful.
-bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
-
-bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real vmax, Real amax, Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps); ////////Puttichai
+bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real amax, Real vmax, Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps); ////////Puttichai
 
 bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime, Real amax, Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
 
 /// Vector version of above.
 /// Returns the time of the minimum time trajectory, or -1 on failure
 /// \param multidofinterp if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
-Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
-
-Real SolveMinTimeBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);////////Puttichai
+Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);////////Puttichai
 
 /// Vector version of above.
 /// Returns true if successful.
 bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
-bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& amax, const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);////////Puttichai
+bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax, const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);////////Puttichai
 
-/// if 0 - SolveMinAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
-bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
-
-bool SolveAccelBounded2(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real& endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp, int& counterStart, int& counterEnd);////////Puttichai
+/// \param endTime the goal end time to solve for acceleration.
+/// \param numDilationTries the number of times to try to dilation the time if cannot solve for correct ramps
+bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp, int numDilationTries=0);////////Puttichai
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
 //void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
