@@ -502,7 +502,7 @@ def _Stretch1D(curve, newDuration, vm, am):
             log.warn("Cannot fix acceleration bounds violation")
             return ParabolicCurve()        
 
-        log.debug("\a0 = {0}; \na0New = {1}; \na1 = {2}; \na1New = {3};".format(mp.nstr(a0, n=_prec), mp.nstr(a0New, n=_prec), mp.nstr(a1, n=_prec), mp.nstr(a1New, n=_prec)))
+        log.debug("\a0 = {0}; \na0new = {1}; \na1 = {2}; \na1new = {3};".format(mp.nstr(a0, n=_prec), mp.nstr(a0new, n=_prec), mp.nstr(a1, n=_prec), mp.nstr(a1new, n=_prec)))
         
         if (Abs(a0new) < epsilon) and (Abs(a1new) < epsilon):
             log.warn("Both accelerations are zero. Should we allow this case?")
