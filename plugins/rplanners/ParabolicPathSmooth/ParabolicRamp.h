@@ -213,6 +213,17 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
             tmax = tdofmax;
         }
     }
+    if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+        for(size_t idof = 0; idof < ramps.size(); ++idof) {
+            Real tdofmax = 0;
+            for(size_t iramp = 0; iramp < ramps[idof].size(); ++iramp) {
+                tdofmax += ramps[idof][iramp].ttotal;
+            }
+            if( fabs(tmax - tdofmax) > 1e-15 ) {
+                RAVELOG_VERBOSE_FORMAT("ramp %d time diff between max (%.15e) is %.15e", idof%tmax%(tmax-tdofmax));
+            }
+        }
+    }
 
     std::vector<Real> timeOffsets(ramps.size(),0);  //start time of current index
     Real t=0; // current time
@@ -230,7 +241,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
         }
         // have to clamp to the max
         if( tnext > tmax ) {
-            PARABOLIC_RAMP_PLOG("tnext is greater than the max, so truncating. diff = %.15f", (tnext-tmax));
+            PARABOLIC_RAMP_PLOG("tnext is greater than the max, so truncating. diff = %.15e", (tnext-tmax));
             tnext = tmax;
             if( tnext <= t ) {
                 // just finish, there's nothing more to do...
@@ -302,8 +313,8 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                 itramp->dx0[i] = iramp.dx0;
                 itramp->x1[i] = iramp.x1;
                 itramp->dx1[i] = iramp.dx1;
-                if(FuzzyEquals(tnext,timeOffsets[i]+indices[i]->ttotal,EpsilonT*0.1)) {
-                    timeOffsets[i] = tnext;
+                if( tnext >= timeOffsets[i]+indices[i]->ttotal ) {
+                    timeOffsets[i] += indices[i]->ttotal;
                     indices[i]++;
                 }
                 PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
@@ -372,16 +383,16 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
     }
     for(size_t i=0; i<ramps.size(); i++) {
         if(!FuzzyEquals(ramps[i].front().x0,ndramps.front().x0[i],EpsilonX)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().x0,ndramps.front().x0[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %.15e != %.15e\n",i,ramps[i].front().x0,ndramps.front().x0[i]);
         }
         if(!FuzzyEquals(ramps[i].front().dx0,ndramps.front().dx0[i],EpsilonV)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().dx0,ndramps.front().dx0[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %.15e != %.15e\n",i,ramps[i].front().dx0,ndramps.front().dx0[i]);
         }
         if(!FuzzyEquals(ramps[i].back().x1,ndramps.back().x1[i],EpsilonX)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().x1,ndramps.back().x1[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %.15e != %.15e\n",i,ramps[i].back().x1,ndramps.back().x1[i]);
         }
         if(!FuzzyEquals(ramps[i].back().dx1,ndramps.back().dx1[i],EpsilonV)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().dx1,ndramps.back().dx1[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %.15e != %.15e\n",i,ramps[i].back().dx1,ndramps.back().dx1[i]);
         }
         ndramps.front().x0[i] = ndramps.front().ramps[i].x0 = ramps[i].front().x0;
         ndramps.front().dx0[i] = ndramps.front().ramps[i].dx0 = ramps[i].front().dx0;
