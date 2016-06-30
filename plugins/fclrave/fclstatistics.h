@@ -5,6 +5,7 @@
 #ifdef FCLUSESTATISTICS
 
 #include "plugindefs.h"
+#include <sys/stat.h>
 #include <sstream>
 #include <fstream>
 
@@ -27,8 +28,11 @@ public:
 
         const size_t bufferSize = 600; // ~200 objects * 2 int per objects * 1.5 margin
         envCaptureLogFile = str(boost::format("envCapture-%d-%s.log")%id%key);
-        fstream f(envCaptureLogFile, std::fstream::trunc);
-        f.close();
+        struct stat buffer;
+        if( stat(envCaptureLogFile.c_str(), &buffer) == 0 ) {
+          fstream f(envCaptureLogFile, std::fstream::trunc);
+          f.close();
+        }
         envCaptureCount = 0;
         // don't want to allocate during the main loop
         _tmpbuffer.reserve(bufferSize);
@@ -38,7 +42,9 @@ public:
     }
 
     ~FCLStatistics() {
-      FlushEnvCaptureBuffer();
+      if( envCaptureCount > 0 ) {
+        FlushEnvCaptureBuffer();
+      }
 #ifndef FCL_STATISTICS_DISPLAY_CONTINUOUSLY
         Display();
 #endif
@@ -121,18 +127,34 @@ private:
       RAVELOG_DEBUG_FORMAT("Flushing env capture buffer in file %s", envCaptureLogFile);
       std::fstream f(envCaptureLogFile, std::fstream::out | std::fstream::app);
       for(int i = 0; i < envCaptureCount ; ++i) {
-        std::copy(vEnvCapture[i].begin(), vEnvCapture[i].end(), std::ostream_iterator<int>(f, " "));
-        f << std::endl;
+        if( vEnvCapture[i].size() == 0 ) {
+          continue;
+        }
+        f << "{";
+        std::copy(vEnvCapture[i].begin(), vEnvCapture[i].end() - 1, std::ostream_iterator<string>(f, ", "));
+        f << *--vEnvCapture[i].end() << "}" << std::endl;
       }
       f.close();
       envCaptureCount = 0;
     }
 
-    void CaptureEnvState(const std::set<KinBodyConstPtr>& envbodies) {
+    void NotifyGeometryGroupChanged(const std::string& groupname) {
+      _tmpbuffer.resize(0);
+      _tmpbuffer.push_back("\"GeometryGroupChanged\" : \""+ groupname + "\"");
+      if( envCaptureCount == maxEnvCaptureCount ) {
+        // empty the vEnvCapture buffer when it is full
+        FlushEnvCaptureBuffer();
+        envCaptureCount = 0;
+      }
+      vEnvCapture[envCaptureCount].swap(_tmpbuffer);
+      envCaptureCount++;
+    }
+
+    void CaptureEnvState(const std::set<KinBodyConstPtr>& envbodies, KinBodyConstPtr pbody, int linkindex) {
       RAVELOG_VERBOSE_FORMAT("Capturing env (count = %d, file = %s)", envCaptureCount%envCaptureLogFile);
       _tmpbuffer.resize(0);
+      _tmpbuffer.push_back(str(boost::format("\"CollisionQuery\" : { \"Body\" : \"%s\", \"Link\" : %d } ")%pbody->GetName()%linkindex));
       FOREACH(itbody, envbodies) {
-        _tmpbuffer.push_back((*itbody)->GetEnvironmentId());
         OPENRAVE_ASSERT_OP( (*itbody)->GetLinks().size(), <=, 8*sizeof(int));
         int enabledLinksMask = 0;
         FOREACH(itlink, (*itbody)->GetLinks()) {
@@ -140,6 +162,7 @@ private:
             enabledLinksMask |= 1 << (*itlink)->GetIndex();
           }
         }
+        _tmpbuffer.push_back(str(boost::format("\"%s\" : %d")%(*itbody)->GetName()%enabledLinksMask));
       }
       if( envCaptureCount == maxEnvCaptureCount ) {
         // empty the vEnvCapture buffer when it is full
@@ -155,10 +178,10 @@ private:
     std::vector<time_point> currentTimings;
     std::map< std::string, std::vector< std::vector<time_point> > > timings;
 
-    std::vector<int> _tmpbuffer;
+    std::vector<string> _tmpbuffer;
     static const size_t maxEnvCaptureCount = 1000;
     size_t envCaptureCount;
-    std::vector<int> vEnvCapture[maxEnvCaptureCount];
+    std::vector<string> vEnvCapture[maxEnvCaptureCount];
     std::string envCaptureLogFile;
 };
 

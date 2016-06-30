@@ -229,7 +229,13 @@ public:
 
     void SetGeometryGroup(const std::string& groupname)
     {
+#ifdef FCLUSESTATISTICS
+      if( _fclspace->SetGeometryGroup(groupname) ) {
+        _statistics->NotifyGeometryGroupChanged(groupname);
+      }
+#else
         _fclspace->SetGeometryGroup(groupname);
+#endif
     }
 
     const std::string& GetGeometryGroup() const
@@ -239,7 +245,13 @@ public:
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
+#ifdef FCLUSESTATISTICS
+      if( _fclspace->SetBodyGeometryGroup(pbody, groupname) ) {
+        _statistics->NotifyGeometryGroupChanged(groupname);
+      }
+#else
         _fclspace->SetBodyGeometryGroup(pbody, groupname);
+#endif
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
@@ -539,6 +551,11 @@ public:
             return false;
         }
 
+
+#ifdef FCLUSESTATISTICS
+        _statistics->CaptureEnvState(_fclspace->GetEnvBodies(), plink->GetParent(), plink->GetIndex());
+#endif // FCLUSESTATISTICS
+
         CollisionObjectPtr pcollLink = GetLinkBV(plink);
 
         std::set<KinBodyConstPtr> attachedBodies;
@@ -581,6 +598,9 @@ public:
             return false;
         }
 
+#ifdef FCLUSESTATISTICS
+        _statistics->CaptureEnvState(_fclspace->GetEnvBodies(), pbody, -1);
+#endif // FCLUSESTATISTICS
 
         BroadPhaseCollisionManagerPtr bodyManager = GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
 
@@ -959,9 +979,6 @@ private:
     ///< \return an up to date and setup broadphase collision manager containing at least the collision object of the enviroment which are relevant
     BroadPhaseCollisionManagerPtr GetEnvManager(const std::set<KinBodyConstPtr>&sexcludedbodies) {
 
-#ifdef FCLUSESTATISTICS
-      _statistics->CaptureEnvState(_fclspace->GetEnvBodies());
-#endif // FCLUSESTATISTICS
         _fclspace->Synchronize();
 
         ManagerInstancePtr envManagerInstance = _fclspace->GetEnvManagerInstance();
