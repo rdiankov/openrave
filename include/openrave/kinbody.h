@@ -1660,6 +1660,11 @@ private:
     /// \brief gets the enable states of all links
     virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
 
+    /// \brief gets a mask of the link enable states.
+    ///
+    /// If there are more than 64 links in the kinbody, then will give a warning. User should throw exception themselves.
+    virtual uint64_t GetLinkEnableStatesMask() const;
+
     /// queries the transfromation of the first link of the body
     virtual Transform GetTransform() const;
 

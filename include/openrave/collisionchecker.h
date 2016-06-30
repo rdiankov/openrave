@@ -123,7 +123,7 @@ public:
 
     /// \brief Sets the geometry group that the collision checker will prefer to use (if present)
     ///
-    /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
+    /// Will also set the default geometry groups used for any new bodies added to the scene. groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
     virtual void SetGeometryGroup(const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Gets the geometry group this collision checker is tracking.

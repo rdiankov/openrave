@@ -1,3 +1,4 @@
+// -*- coding: utf-8 -*-
 #ifndef OPENRAVE_FCL_STATISTICS
 #define OPENRAVE_FCL_STATISTICS
 

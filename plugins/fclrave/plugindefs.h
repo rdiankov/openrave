@@ -1,7 +1,6 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
 #include <openrave/utils.h>
 

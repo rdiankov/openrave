@@ -1255,6 +1255,18 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
     }
 }
 
+uint64_t KinBody::GetLinkEnableStatesMask() const
+{
+    if( _veclinks.size() > 64 ) {
+        RAVELOG_WARN_FORMAT("%s has too many links and will only return enable mask for first 64", _name);
+    }
+    uint64_t linkstate = 0;
+    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
+        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+    }
+    return linkstate;
+}
+
 KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
 {
     return _vecjoints.at(_vDOFIndices.at(dofindex));
