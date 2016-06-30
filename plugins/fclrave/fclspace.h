@@ -299,7 +299,7 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& { return itgeom->GetInfo(); };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& { return itgeom->GetInfo(); };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -380,7 +380,7 @@ public:
     // TODO : body should have geometry group "a" after SetGeometryGroup("a") ; SetBodyGeometryGroup(body, "b") ; SetBodyGeometryGroup("a")
     bool SetGeometryGroup(const std::string& groupname)
     {
-      bool bmodified = false;
+        bool bmodified = false;
         if(groupname != _geometrygroup) {
             _geometrygroup = groupname;
 

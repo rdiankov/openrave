@@ -230,9 +230,9 @@ public:
     void SetGeometryGroup(const std::string& groupname)
     {
 #ifdef FCLUSESTATISTICS
-      if( _fclspace->SetGeometryGroup(groupname) ) {
-        _statistics->NotifyGeometryGroupChanged(groupname);
-      }
+        if( _fclspace->SetGeometryGroup(groupname) ) {
+            _statistics->NotifyGeometryGroupChanged(groupname);
+        }
 #else
         _fclspace->SetGeometryGroup(groupname);
 #endif
@@ -246,9 +246,9 @@ public:
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
 #ifdef FCLUSESTATISTICS
-      if( _fclspace->SetBodyGeometryGroup(pbody, groupname) ) {
-        _statistics->NotifyGeometryGroupChanged(groupname);
-      }
+        if( _fclspace->SetBodyGeometryGroup(pbody, groupname) ) {
+            _statistics->NotifyGeometryGroupChanged(groupname);
+        }
 #else
         _fclspace->SetBodyGeometryGroup(pbody, groupname);
 #endif
