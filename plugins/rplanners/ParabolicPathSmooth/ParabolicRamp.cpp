@@ -2587,6 +2587,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     Real endTime = 0;
+    int maxTimeIndex = 0;
     ramps.resize(x0.size());
     for(size_t i=0; i<ramps.size(); i++) {
         ramps[i].resize(1);
@@ -2646,11 +2647,13 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         for(size_t j = 0; j < ramps[i].size(); ++j) {
             newtotal += ramps[i][j].ttotal;
         }
+        PARABOLIC_RAMP_PLOG("ramp %d total duration = %.15e", i, newtotal);
         if(newtotal > endTime) {
             endTime = newtotal;
+            maxTimeIndex = i;
         }
     }
-    PARABOLIC_RAMP_PLOG("Maximum duration = %.15f", endTime);
+    PARABOLIC_RAMP_PLOG("Maximum duration = %.15f from joint %d", endTime, maxTimeIndex);
     // std::cout << "endTime = " << endTime << std::endl;////////Puttichai
 
     //now we have a candidate end time -- repeat looking through solutions
@@ -2658,6 +2661,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
     std::vector<ParabolicRamp1D> tempramps;
     int numiters = 0;
     int maxiters=10;
+    bool endTimeUpdated = false;
     bool solved = true;
     while(numiters < maxiters) {
         ++numiters;
@@ -2678,7 +2682,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                 ttotal += ramps[i][j].ttotal;
             }
             // Don't do anything if this is the slowest ramp.
-            if(FuzzyEquals(ttotal,endTime,EpsilonT)) {
+            if ((i == maxTimeIndex) and (!endTimeUpdated)) {
                 PARABOLIC_RAMP_PLOG("joint %d is already the slowest, continue to the next DOF", i);
                 continue;
             }
@@ -2733,7 +2737,10 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                                 PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15f\n", k, newEndTime);
                             }
                             if (newEndTime > maxNewEndTime) {
+                                PARABOLIC_RAMP_PLOG("maxTimeIndex is updated to %d", k);
                                 maxNewEndTime = newEndTime;
+                                maxTimeIndex = k;
+                                endTimeUpdated = true; // the previous longest also has to be re-interpolated
                             }
                         }
                         if (maxNewEndTime < 0) {
