@@ -547,9 +547,11 @@ public:
                                 // endTime *= mult;
                                 endTime += incr;
                                 if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, 6) ) {
+                                    
                                     temprampsnd.resize(0);
                                     CombineRamps(tempramps1d, temprampsnd);
-
+                                    endTime = temprampsnd[0].endTime;
+                                    
                                     // not necessary to trim again!?
                                     //                                if( irampindex == 0 ) {
                                     //                                    temprampsnd[0].TrimFront(fTrimEdgesTime);

@@ -2672,6 +2672,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
             }
             // Don't do anything if this is the slowest ramp.
             if(FuzzyEquals(ttotal,endTime,EpsilonT)) {
+                PARABOLIC_RAMP_PLOG("joint %d is already the slowest, continue to the next DOF", i);
                 continue;
             }
 
@@ -2880,6 +2881,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
                        Real endTime,const Vector& amax, const Vector& vmax,const Vector& xmin,const Vector& xmax,
                        vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp, int numDilationTries)
 {
+    PARABOLIC_RAMP_PLOG("numDilationTries = %d", numDilationTries);
     PARABOLIC_RAMP_ASSERT(x0.size() == v0.size());
     PARABOLIC_RAMP_ASSERT(x1.size() == v1.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == x1.size());
@@ -2928,8 +2930,8 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
                         return false;
                     }
 
-                    if (newEndTime < endTime) {
-                        PARABOLICWARN("Calculated newEndTime is less than the current value. Logic has failed somewhere.");
+                    if (newEndTime <= endTime) {
+                        PARABOLICWARN("Calculated newEndTime not greater than the current value. Logic has failed somewhere.");
                         PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
                         endTime *= 1.05;
                     }
