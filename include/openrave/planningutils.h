@@ -280,7 +280,7 @@ OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastime
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory using a planner. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 

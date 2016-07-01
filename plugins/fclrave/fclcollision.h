@@ -429,8 +429,8 @@ public:
                 return false;
             }
             CollisionCallbackData query(shared_checker(), report);
-            query.bselfCollision = true;
             ADD_TIMING(_statistics);
+            query.bselfCollision = true;  // for ignoring attached information!
             CheckNarrowPhaseCollision(pcollLink1.get(), pcollLink2.get(), &query);
             return query._bCollision;
         }
@@ -457,6 +457,14 @@ public:
         }
 
         _fclspace->Synchronize(plink->GetParent());
+<<<<<<< HEAD
+=======
+        FOREACH(itbody, attachedBodies) {
+            if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                _fclspace->Synchronize(*itbody);
+            }
+        }
+>>>>>>> e34172716b6182935f11bd24dd6c55ac0965d0e7
 
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, false);
@@ -485,9 +493,49 @@ public:
         _fclspace->Synchronize();
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
+<<<<<<< HEAD
         std::set<KinBodyConstPtr> attachedBodies;
         plink->GetParent()->GetAttached(attachedBodies);
         BroadPhaseCollisionManagerPtr envManager = _GetEnvManager(attachedBodies);
+=======
+
+        // TODO : Document/comment
+        // TODO : refer to StateSaver/OptionsSaver
+        TemporaryManagerAgainstEnv tmpManagerLinkAgainstEnv(_fclspace);
+        tmpManagerLinkAgainstEnv.TransferRegistration(plink);
+
+        std::set<KinBodyPtr> excludedBodies;
+        // We exclude the attached bodies here since it would be excluded anyway in CheckNarrowPhaseCollision's step to reduce the number of objects in broad phase collision checking
+        KinBodyPtr plinkParent = plink->GetParent();
+        plinkParent->GetAttached(excludedBodies);
+
+        FOREACH(itbody, vbodyexcluded) {
+            if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                excludedBodies.insert(GetEnv()->GetBodyFromEnvironmentId((*itbody)->GetEnvironmentId()));
+            }
+        }
+
+        FOREACH(itbody, excludedBodies) {
+            // We must not exclude plink so we don't exclude its parent
+            if( *itbody != plinkParent ) {
+                tmpManagerLinkAgainstEnv.ExcludeFromEnv(*itbody);
+            }
+        }
+
+        // We exclude all the links of plink's parent but plink
+        for(size_t i = 0; i < plinkParent->GetLinks().size(); ++i) {
+            if( (int)i != plink->GetIndex() ) {
+                tmpManagerLinkAgainstEnv.ExcludeFromEnv(plinkParent->GetLinks()[i]);
+            }
+        }
+
+        FOREACH(itlink, vlinkexcluded) {
+            if( !excludedBodies.count((*itlink)->GetParent()) ) {
+                tmpManagerLinkAgainstEnv.ExcludeFromEnv(*itlink);
+            }
+        }
+
+>>>>>>> e34172716b6182935f11bd24dd6c55ac0965d0e7
 
         if( _options & OpenRAVE::CO_Distance ) {
             return false;
@@ -623,6 +671,7 @@ public:
             CollisionCallbackData query(shared_checker(), report);
             ADD_TIMING(_statistics);
             query.bselfCollision = true;
+<<<<<<< HEAD
             KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
             FOREACH(itset, nonadjacent) {
                 int index1 = *itset&0xffff, index2 = *itset>>16;
@@ -635,6 +684,113 @@ public:
                             CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
                             if( query._bStopChecking ) {
                                 return query._bCollision;
+=======
+            // TODO : consider using the link BV
+            linkManager->collide(bodyManager.get(), &query, &CheckNarrowPhaseGeomCollision);
+            return query._bCollision;
+        }
+    }
+
+private:
+    inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
+        return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
+    }
+
+
+//    boost::shared_ptr<CollisionCallbackData> SetupDistanceQuery(CollisionReportPtr report)
+//    {
+//        // TODO
+//        return boost::make_shared<CollisionCallbackData>(shared_checker(), report);
+//    }
+
+    /// \param pbody KinBody whose collision objects are collected
+    /// \param tmpManagerBodyAgainstEnv temporary manager to be filled with the collision objects
+    /// \param bactiveDOFs whether only activeDOFs should be checked
+    /// \param vbodyexcluded the bodies which should not take part in the collision checking
+    /// \param vlinkexcluded the link which should not take part in the collision checking
+    ///
+    /// Fill tmpManagerBodyAgainstEnv with the collision objects underlying pbody excluding the collision objects
+    /// from vbodyexcluded, vlinkexcluded and also the non-active links of pbody if bactiveDOFs is set
+    void FillTemporaryManagerAgainstEnvWithBody(KinBodyConstPtr pbody, TemporaryManagerAgainstEnv& tmpManagerBodyAgainstEnv, bool bactiveDOFs, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded)
+    {
+
+        bool bActiveLinksOnly = false;
+        if( bactiveDOFs && pbody->IsRobot() ) {
+
+            RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
+            bActiveLinksOnly = !probot->GetAffineDOF();
+
+            if( bActiveLinksOnly ) {
+                std::vector<int> vactiveLinks = std::vector<int>(probot->GetLinks().size(), false);
+                for(size_t i = 0; i < probot->GetLinks().size(); ++i) {
+                    bool isLinkActive = false;
+                    LinkConstPtr plink = pbody->GetLinks()[i];
+                    FOREACH(itindex, probot->GetActiveDOFIndices()) {
+                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), i) ) {
+                            isLinkActive = true;
+                            break;
+                        }
+                    }
+                    if( isLinkActive && find(vlinkexcluded.begin(), vlinkexcluded.end(), plink) == vlinkexcluded.end() ) {
+                        tmpManagerBodyAgainstEnv.TransferRegistration(plink);
+                    } else {
+                        tmpManagerBodyAgainstEnv.ExcludeFromEnv(plink);
+                    }
+                    vactiveLinks[i] = isLinkActive;
+                }
+
+                std::set<KinBodyPtr> attachedBodies;
+                pbody->GetAttached(attachedBodies);
+
+                FOREACH(itbody, attachedBodies) {
+                    if(*itbody == pbody) {
+                        continue;
+                    }
+                    if( (*itbody)->GetEnvironmentId() == 0 ) { // for now GetAttached can hold bodies that are not initialized
+                        continue;
+                    }
+                    if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
+                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
+                        if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
+                            if( vlinkexcluded.size() == 0 ) {
+                                tmpManagerBodyAgainstEnv.TransferRegistration(*itbody);
+                            } else {
+                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                                    if( find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end() ) {
+                                        tmpManagerBodyAgainstEnv.TransferRegistration(*itlink);
+                                    }
+                                }
+                            }
+                        } else {
+                            // TODO : Check if a body grabbed by a non-active link should be excluded or not
+                            tmpManagerBodyAgainstEnv.ExcludeFromEnv(*itbody);
+                        }
+                    }
+                }
+            }
+        }
+
+        if( !bActiveLinksOnly ) {
+            std::set<KinBodyPtr> attachedBodies;
+            pbody->GetAttached(attachedBodies);
+
+            if( vlinkexcluded.size() == 0 ) {
+                FOREACH(itbody, attachedBodies) {
+                    if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                        if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
+                            tmpManagerBodyAgainstEnv.TransferRegistration(*itbody);
+                        }
+                    }
+                }
+            } else {
+                FOREACH(itbody, attachedBodies) {
+                    if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                        if( find(vbodyexcluded.begin(), vbodyexcluded.end(), *itbody) == vbodyexcluded.end() ) {
+                            FOREACH(itlink, (*itbody)->GetLinks()) {
+                                if( find(vlinkexcluded.begin(), vlinkexcluded.end(), *itlink) == vlinkexcluded.end() ) {
+                                    tmpManagerBodyAgainstEnv.TransferRegistration(*itlink);
+                                }
+>>>>>>> e34172716b6182935f11bd24dd6c55ac0965d0e7
                             }
                         }
                     }
@@ -645,9 +801,70 @@ public:
     }
 
 
+<<<<<<< HEAD
 private:
     inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
         return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
+=======
+    /// \param pbody the KinBody whose collision objects are collected
+    /// \param tmpManager the temporary manager where these collision objects are gathered
+    /// \param bactiveDOFs whether only active links should be checked
+    /// \param first whether we are considering the first or the second object managed by tmpManager
+    ///
+    void FillTemporaryManagerWithBody(KinBodyConstPtr pbody, TemporaryManager& tmpManager, bool bactiveDOFs, bool first)
+    {
+
+        bool bActiveLinksOnly = false;
+        if( bactiveDOFs && pbody->IsRobot() ) {
+
+            RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
+            bActiveLinksOnly = !probot->GetAffineDOF();
+
+            if( bActiveLinksOnly ) {
+                std::vector<bool> vactiveLinks = std::vector<bool>(probot->GetLinks().size(), false);
+                for(size_t ilink = 0; ilink < probot->GetLinks().size(); ++ilink) {
+                    bool isLinkActive = false;
+                    LinkConstPtr plink = pbody->GetLinks()[ilink];
+                    FOREACH(itindex, probot->GetActiveDOFIndices()) {
+                        if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(), ilink) ) {
+                            isLinkActive = true;
+                            break;
+                        }
+                    }
+                    if( isLinkActive ) {
+                        tmpManager.Register(plink, first);
+                    }
+                    vactiveLinks[ilink] = isLinkActive;
+                }
+
+                std::set<KinBodyPtr> attachedBodies;
+                pbody->GetAttached(attachedBodies);
+
+                FOREACH(itbody, attachedBodies) {
+                    if(*itbody == pbody) {
+                        continue;
+                    }
+                    if( (*itbody)->GetEnvironmentId() == 0 ) { // for now GetAttached can hold bodies that are not initialized
+                        continue;
+                    }
+                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itbody);
+                    if( !!pgrabbinglink && vactiveLinks[pgrabbinglink->GetIndex()]) {
+                        tmpManager.Register(*itbody, first);
+                    }
+                }
+            }
+        }
+
+        if( !bActiveLinksOnly ) {
+            std::set<KinBodyPtr> attachedBodies;
+            pbody->GetAttached(attachedBodies);
+            FOREACH(itbody, attachedBodies) {
+                if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
+                    tmpManager.Register(*itbody, first);
+                }
+            }
+        }
+>>>>>>> e34172716b6182935f11bd24dd6c55ac0965d0e7
     }
 
 

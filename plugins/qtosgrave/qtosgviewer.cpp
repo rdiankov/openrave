@@ -968,21 +968,13 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     int height = centralWidget()->size().height();
     _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
 
+    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
         _focalDistance = ptrackball->getDistance();
     }
     else {
         _focalDistance = 0;
-    }
-
-    // before getting the camera transform, set the trackball distance to 0 so that the transform does not contain this information.
-    if( !!ptrackball ) {
-        ptrackball->setDistance(0);
-    }
-    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
-    if( !!ptrackball ) {
-        ptrackball->setDistance(_focalDistance);
     }
 
     if( fTimeElapsed > 0 ) {
@@ -1282,15 +1274,14 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 
 void QtOSGViewer::_SetCameraTransform()
 {
-    // before setting the camera transform, set the trackball distance to 0 because the transform should not contain this information.
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
-    if( !!ptrackball ) {
-        ptrackball->setDistance(0);
-    }
-    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
     if( !!ptrackball ) {
         ptrackball->setDistance(_focalDistance);
     }
+
+    // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
+    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+
     //osg::Vec3d eye, center, up;
     //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
     //_posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);

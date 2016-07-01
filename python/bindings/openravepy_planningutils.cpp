@@ -249,9 +249,9 @@ size_t pyExtendActiveDOFWaypoint(int index, object odofvalues, object odofveloci
     return OpenRAVE::planningutils::ExtendActiveDOFWaypoint(index, ExtractArray<dReal>(odofvalues), ExtractArray<dReal>(odofvelocities), openravepy::GetTrajectory(pytraj), openravepy::GetRobot(pyrobot), fmaxvelmult, fmaxaccelmult, plannername);
 }
 
-size_t pyInsertActiveDOFWaypointWithRetiming(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
+size_t pyInsertActiveDOFWaypointWithRetiming(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    return OpenRAVE::planningutils::InsertActiveDOFWaypointWithRetiming(index, ExtractArray<dReal>(odofvalues), ExtractArray<dReal>(odofvelocities), openravepy::GetTrajectory(pytraj), openravepy::GetRobot(pyrobot), fmaxvelmult, fmaxaccelmult, plannername);
+    return OpenRAVE::planningutils::InsertActiveDOFWaypointWithRetiming(index, ExtractArray<dReal>(odofvalues), ExtractArray<dReal>(odofvelocities), openravepy::GetTrajectory(pytraj), openravepy::GetRobot(pyrobot), fmaxvelmult, fmaxaccelmult, plannername, plannerparameters);
 }
 
 size_t pyInsertWaypointWithSmoothing(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
@@ -416,7 +416,7 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planninguti
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeTrajectory_overloads, planningutils::pyRetimeTrajectory, 1, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(ExtendActiveDOFWaypoint_overloads, planningutils::pyExtendActiveDOFWaypoint, 5, 8)
-BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 8)
+BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 9)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
@@ -456,7 +456,7 @@ void InitPlanningUtils()
                   .staticmethod("ExtendWaypoint")
                   .def("ExtendActiveDOFWaypoint",planningutils::pyExtendActiveDOFWaypoint, ExtendActiveDOFWaypoint_overloads(args("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername"),DOXY_FN1(ExtendActiveDOFWaypoint)))
                   .staticmethod("ExtendActiveDOFWaypoint")
-                  .def("InsertActiveDOFWaypointWithRetiming",planningutils::pyInsertActiveDOFWaypointWithRetiming, InsertActiveDOFWaypointWithRetiming_overloads(args("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername"),DOXY_FN1(InsertActiveDOFWaypointWithRetiming)))
+                  .def("InsertActiveDOFWaypointWithRetiming",planningutils::pyInsertActiveDOFWaypointWithRetiming, InsertActiveDOFWaypointWithRetiming_overloads(args("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername", "plannerparameters"),DOXY_FN1(InsertActiveDOFWaypointWithRetiming)))
                   .staticmethod("InsertActiveDOFWaypointWithRetiming")
                   .def("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing, InsertWaypointWithSmoothing_overloads(args("index","dofvalues","dofvelocities","trajectory","maxvelmult","maxaccelmult","plannername"),DOXY_FN1(InsertWaypointWithSmoothing)))
                   .staticmethod("InsertWaypointWithSmoothing")

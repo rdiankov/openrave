@@ -676,12 +676,15 @@ class GraspingModel(DatabaseGenerator):
                     except planning_error,e:
                         print 'bad grasp!',e
 
-    def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None):
+    def showgrasp(self,grasp,collisionfree=False,useik=False,delay=None,showfinal=False):
         with self.robot.CreateRobotStateSaver():
             with self.GripperVisibility(self.manip):
                 time.sleep(0.1) # wait sometime for viewer to process the visibility change
                 with self.env:
-                    self.setPreshape(grasp)
+                    if showfinal:
+                        self.setFinalFingerValues(grasp)
+                    else:
+                        self.setPreshape(grasp)
                     Tgrasp = self.getGlobalGraspTransform(grasp,collisionfree=collisionfree)
                     if useik and collisionfree:
                         sol = self.manip.FindIKSolution(Tgrasp,IkFilterOptions.CheckEnvCollisions)
@@ -777,6 +780,9 @@ class GraspingModel(DatabaseGenerator):
     def setPreshape(self,grasp):
         """sets the preshape on the robot, assumes environment is locked"""
         self.robot.SetDOFValues(grasp[self.graspindices['igrasppreshape']],self.manip.GetGripperIndices())
+    def setFinalFingerValues(self,grasp):
+        self.robot.SetDOFValues(grasp[self.graspindices['igraspfinalfingers']],self.manip.GetGripperIndices())
+    
     def getPreshape(self,grasp):
         """returns the preshape joint values"""
         return grasp[self.graspindices['igrasppreshape']]

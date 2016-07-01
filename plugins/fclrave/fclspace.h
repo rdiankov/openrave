@@ -233,7 +233,7 @@ public:
             }
 
             if( link->vgeoms.size() == 0 ) {
-                RAVELOG_ERROR("Found a link with 0 geometries, this may create some bugs...");
+                RAVELOG_ERROR_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
                 continue;
             }
 
