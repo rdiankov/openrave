@@ -1048,6 +1048,9 @@ protected:
             if(t1 > t2) {
                 ParabolicRamp::Swap(t1,t2);
             }
+            if( t2 - t1 < mintimestep ) {
+                continue;
+            }
             int i1 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t1)-rampStartTime.begin()-1;
             int i2 = std::upper_bound(rampStartTime.begin(),rampStartTime.end(),t2)-rampStartTime.begin()-1;
             // i1 can be equal to i2 and that is valid and should be rechecked again
