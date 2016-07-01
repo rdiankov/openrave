@@ -68,7 +68,7 @@ public:
 public:
         struct LINK
         {
-            LINK(KinBody::LinkPtr plink) : _plink(plink), nLastStamp(0) {
+            LINK(KinBody::LinkPtr plink) : _plink(plink) {
             }
 
             virtual ~LINK() {
@@ -76,6 +76,15 @@ public:
             }
 
             void Reset() {
+                if( !!linkBV.second ) {
+                    if( !!GetLink() ) {
+                        RAVELOG_VERBOSE_FORMAT("resetting link %s:%s col=0x%x", GetLink()->GetName()%GetLink()->GetParent()->GetName()%(uint64_t)linkBV.second.get());
+                    }
+                    else {
+                        RAVELOG_VERBOSE_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
+                    }
+                    linkBV.second->setUserData(nullptr); // reset the user data since someone can hold a ref to the collision object and continue using it
+                }
                 linkBV.second.reset();
 
                 FOREACH(itgeompair, vgeoms) {
@@ -91,13 +100,13 @@ public:
 
             KinBody::LinkWeakPtr _plink;
 
-            int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
+            //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
             TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
             std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
         };
 
-        KinBodyInfo() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0)
+        KinBodyInfo() : nLastStamp(0), nLinkUpdateStamp(0), nGeometryUpdateStamp(0), nAttachedBodiesUpdateStamp(0), nActiveDOFUpdateStamp(0)
         {
         }
 
@@ -254,7 +263,7 @@ public:
                 link->linkBV.second->setUserData(link.get());
             }
 
-            link->nLastStamp = pinfo->nLastStamp;
+            //link->nLastStamp = pinfo->nLastStamp;
             link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
             pinfo->vlinks.push_back(link);
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
@@ -439,23 +448,23 @@ public:
         }
     }
 
-    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK)
-    {
-        if( pLINK->nLastStamp != plink->GetParent()->GetUpdateStamp() ) {
-            pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
-            FOREACHC(itgeomcoll, pLINK->vgeoms) {
-                CollisionObjectPtr pcoll = (*itgeomcoll).second;
-                Transform pose = plink->GetTransform() * (*itgeomcoll).first;
-                fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-                fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
-
-                pcoll->setTranslation(newPosition);
-                pcoll->setQuatRotation(newOrientation);
-                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-                pcoll->computeAABB();
-            }
-        }
-    }
+//    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK)
+//    {
+//        if( pLINK->nLastStamp != plink->GetParent()->GetUpdateStamp() ) {
+//            pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
+//            FOREACHC(itgeomcoll, pLINK->vgeoms) {
+//                CollisionObjectPtr pcoll = (*itgeomcoll).second;
+//                Transform pose = plink->GetTransform() * (*itgeomcoll).first;
+//                fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+//                fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+//
+//                pcoll->setTranslation(newPosition);
+//                pcoll->setQuatRotation(newOrientation);
+//                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
+//                pcoll->computeAABB();
+//            }
+//        }
+//    }
 
 
     const std::set<KinBodyConstPtr>& GetEnvBodies() const {
@@ -608,7 +617,7 @@ private:
                 // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
                 pcoll->computeAABB();
 
-                pinfo->vlinks[i]->nLastStamp = pinfo->nLastStamp;
+                //pinfo->vlinks[i]->nLastStamp = pinfo->nLastStamp;
                 FOREACHC(itgeomcoll, pinfo->vlinks[i]->vgeoms) {
                     CollisionObjectPtr pcoll = (*itgeomcoll).second;
                     Transform pose = vtrans[i] * (*itgeomcoll).first;
@@ -632,7 +641,7 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        RAVELOG_DEBUG_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        //RAVELOG_VERBOSE_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
             pinfo->nGeometryUpdateStamp++;
             InitKinBody(pbody, pinfo);
@@ -644,7 +653,7 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        RAVELOG_DEBUG_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        //RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
             pinfo->nGeometryUpdateStamp++;
             InitKinBody(pbody, pinfo);
@@ -652,7 +661,7 @@ private:
         KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
         _cachedpinfo.erase(pbody->GetEnvironmentId());
         if( !!pinfoCurrentGeometry ) {
-            _cachedpinfo[pbody->GetEnvironmentId()][""] = pinfoCurrentGeometry;
+            _cachedpinfo[pbody->GetEnvironmentId()][std::string()] = pinfoCurrentGeometry;
         }
     }
 

@@ -31,6 +31,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nLastStamp = pinfo->nLastStamp;
             nLinkUpdateStamp = pinfo->nLinkUpdateStamp;
             nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
+            geometrygroup = pinfo->_geometrygroup;
             nAttachedBodiesUpdateStamp = pinfo->nAttachedBodiesUpdateStamp;
             nActiveDOFUpdateStamp = pinfo->nActiveDOFUpdateStamp;
             linkmask = pbody->GetLinkEnableStatesMask();
@@ -42,6 +43,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             nGeometryUpdateStamp = -1;
             nAttachedBodiesUpdateStamp = -1;
             nActiveDOFUpdateStamp = -1;
+            geometrygroup.resize(0);
         }
 
         KinBodyConstWeakPtr pwbody; ///< weak pointer to body
@@ -52,6 +54,8 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
         int nAttachedBodiesUpdateStamp; /// copied from FCLSpace::KinBodyInfo when attached bodies was last updated
         int nActiveDOFUpdateStamp; ///< update stamp when the active dof changed
         uint64_t linkmask; ///< links that are currently inside the manager
+        std::vector<CollisionObjectPtr> vcolobjs; ///< collision objects used for each link (use link index). have to hold pointers so that KinBodyInfo does not remove them!
+        std::string geometrygroup; ///< cached geometry group
     };
 
 public:
@@ -67,11 +71,12 @@ public:
         _ptrackingbody = pbody;
         std::set<KinBodyConstPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
-        _bTrackActiveDOF = bTrackActiveDOF;
+        _bTrackActiveDOF = false;
         if( bTrackActiveDOF && pbody->IsRobot() ) {
             RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
             if( !!probot ) {
                 _UpdateActiveLinks(probot);
+                _bTrackActiveDOF = true;
             }
         }
         pmanager->clear();
@@ -81,17 +86,20 @@ public:
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
             bool bsetUpdateStamp = false;
             uint64_t linkmask = 0;
+            std::vector<CollisionObjectPtr> vcolobjs((*itbody)->GetLinks().size());
             FOREACH(itlink, (*itbody)->GetLinks()) {
                 if( (*itlink)->IsEnabled() && (*itbody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
-                    //pinfo->vlinks.at((*itlink)->GetIndex()).listRegisteredManagers.push_back(shared_from_this());
-                    _tmpbuffer.push_back(_fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex()).get());
+                    CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
+                    vcolobjs[(*itlink)->GetIndex()] = pcol;
+                    _tmpbuffer.push_back(pcol.get());
                     bsetUpdateStamp = true;
-                    linkmask |= (1 << (uint64_t)(*itlink)->GetIndex());
+                    linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
                 }
             }
             if( bsetUpdateStamp ) {
                 mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
+                mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
             }
         }
         pmanager->registerObjects(_tmpbuffer); // bulk update
@@ -114,14 +122,18 @@ public:
     /// \brief makes sure that all the bodies are currently in the scene (if they are not explicitly excluded)
     void EnsureBodies(const std::set<KinBodyConstPtr>& vbodies)
     {
+        std::vector<CollisionObjectPtr> vcolobjs;
         FOREACH(itbody, vbodies) {
             int bodyid = (*itbody)->GetEnvironmentId();
             if( _setExcludeBodyIds.count(bodyid) == 0 ) {
                 std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(bodyid);
                 if( it == mapCachedBodies.end() ) {
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
-                    if( _AddBody(*itbody, pinfo, false) ) {
+                    uint64_t linkmask=0;
+                    if( _AddBody(*itbody, pinfo, vcolobjs, linkmask, false) ) {
                         mapCachedBodies[bodyid] = KinBodyCache(*itbody, pinfo);
+                        mapCachedBodies[bodyid].vcolobjs.swap(vcolobjs);
+                        mapCachedBodies[bodyid].linkmask = linkmask;
                     }
                 }
             }
@@ -133,9 +145,13 @@ public:
     {
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it == mapCachedBodies.end() ) {
+            std::vector<CollisionObjectPtr> vcolobjs;
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
-            if( _AddBody(pbody, pinfo, false) ) {
+            uint64_t linkmask=0;
+            if( _AddBody(pbody, pinfo, vcolobjs, linkmask, false) ) {
                 mapCachedBodies[(pbody)->GetEnvironmentId()] = KinBodyCache(pbody, pinfo);
+                mapCachedBodies[(pbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+                mapCachedBodies[(pbody)->GetEnvironmentId()].linkmask = linkmask;
             }
 
         }
@@ -180,9 +196,14 @@ public:
             FCLSpace::KinBodyInfoPtr pinfo = itcache->second.pwinfo.lock();
 
             if( !pbody || pbody->GetEnvironmentId() == 0 ) {
-                // should not happen
-                RAVELOG_WARN("manager contains invalid body, removing for now\n");
-                _RemoveBody(pbody);
+                // should happen when parts are removed
+                RAVELOG_VERBOSE_FORMAT("manager contains invalid body %s, removing for now", (!pbody?std::string():pbody->GetName()));
+                FOREACH(itcolobj, itcache->second.vcolobjs) {
+                    if( !!itcolobj->get() ) {
+                        pmanager->unregisterObject(itcolobj->get());
+                    }
+                }
+                itcache->second.vcolobjs.resize(0);
                 mapCachedBodies.erase(itcache++);
                 continue;
             }
@@ -190,39 +211,45 @@ public:
             FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(pbody); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
-                for(size_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
-                    bool bIsRegistered = !!(itcache->second.linkmask & (1<<(uint64_t)ilink));
-                    if( bIsRegistered ) {
-                        pmanager->unregisterObject(_fclspace.GetLinkBV(pinfo, ilink).get());
+                RAVELOG_VERBOSE_FORMAT("body %s entire KinBodyInfo changed", pbody->GetName());
+                FOREACH(itcolobj, itcache->second.vcolobjs) {
+                    if( !!itcolobj->get() ) {
+                        pmanager->unregisterObject(itcolobj->get());
                     }
                 }
-
-                _AddBody(pbody, pnewinfo, _bTrackActiveDOF&&pbody==ptrackingbody);
+                itcache->second.vcolobjs.resize(0);
+                _AddBody(pbody, pnewinfo, itcache->second.vcolobjs, itcache->second.linkmask, _bTrackActiveDOF&&pbody==ptrackingbody);
                 itcache->second.pwinfo = pnewinfo;
                 itcache->second.ResetStamps();
                 pinfo = pnewinfo;
             }
 
             if( pinfo->nLinkUpdateStamp != itcache->second.nLinkUpdateStamp ) {
+                RAVELOG_VERBOSE_FORMAT("body %s for cache changed link %d != %d", pbody->GetName()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
                 // links changed
                 uint64_t newlinkmask = pbody->GetLinkEnableStatesMask();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
                     for(size_t itestlink = 0; itestlink < _vTrackingActiveLinks.size(); ++itestlink) {
                         if( !_vTrackingActiveLinks[itestlink] ) {
-                            newlinkmask &= ~(1 << (uint64_t)itestlink);
+                            newlinkmask &= ~((uint64_t)1 << (uint64_t)itestlink);
                         }
                     }
                 }
 
                 uint64_t changed = itcache->second.linkmask ^ newlinkmask;
                 if( changed ) {
-                    for(uint64_t ilink = 0; ilink < 64; ++ilink) {
-                        if( changed & (1<<ilink) ) {
-                            if( newlinkmask & (1<<ilink) ) {
-                                pmanager->registerObject(_fclspace.GetLinkBV(pinfo, ilink).get());
+                    for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
+                        if( changed & ((uint64_t)1<<ilink) ) {
+                            if( newlinkmask & ((uint64_t)1<<ilink) ) {
+                                CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
+                                pmanager->registerObject(pcolobj.get());
+                                itcache->second.vcolobjs.at(ilink) = pcolobj;
                             }
                             else {
-                                pmanager->unregisterObject(_fclspace.GetLinkBV(pinfo, ilink).get());
+                                if( !!itcache->second.vcolobjs.at(ilink) ) {
+                                    pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                                    itcache->second.vcolobjs.at(ilink).reset();
+                                }
                             }
                         }
                     }
@@ -231,17 +258,38 @@ public:
                 itcache->second.linkmask = newlinkmask;
                 itcache->second.nLinkUpdateStamp = pinfo->nLinkUpdateStamp;
             }
-            if( pinfo->nLastStamp != itcache->second.nLastStamp || pinfo->nGeometryUpdateStamp != itcache->second.nGeometryUpdateStamp ) {
+            if( pinfo->nGeometryUpdateStamp != itcache->second.nGeometryUpdateStamp ) {
+
+                if( itcache->second.geometrygroup.size() == 0 || itcache->second.geometrygroup != pinfo->_geometrygroup ) {
+                    RAVELOG_VERBOSE_FORMAT("body %s for cache changed geometry %d != %d", pbody->GetName()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp);
+                    // vcolobjs most likely changed
+                    for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
+                        if( !!itcache->second.vcolobjs.at(ilink) ) {
+                            pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                            CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
+                            itcache->second.vcolobjs.at(ilink) = pcol;
+                            if( !!pcol ) {
+                                pmanager->registerObject(pcol.get());
+                            }
+                        }
+                    }
+                    itcache->second.geometrygroup = pinfo->_geometrygroup;
+                }
+                itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
+            }
+            if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
+                RAVELOG_VERBOSE_FORMAT("body %s for cache changed transform %d != %d", pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
                 // transform changed
-                for(uint64_t ilink = 0; ilink < 64; ++ilink) {
-                    if( itcache->second.linkmask & (1<<ilink) ) {
-                        pmanager->update(_fclspace.GetLinkBV(pinfo, ilink).get(), false);
-                        bcallsetup = true;
+                for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
+                    if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
+                        if( !!itcache->second.vcolobjs.at(ilink) ) {
+                            pmanager->update(itcache->second.vcolobjs.at(ilink).get(), false);
+                            bcallsetup = true;
+                        }
                     }
                 }
 
                 itcache->second.nLastStamp = pinfo->nLastStamp;
-                itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nAttachedBodiesUpdateStamp != itcache->second.nAttachedBodiesUpdateStamp ) {
                 // bodies changed!
@@ -265,8 +313,12 @@ public:
             FOREACH(itbody, attachedBodies) {
                 if( mapCachedBodies.find((*itbody)->GetEnvironmentId()) == mapCachedBodies.end() ) {
                     FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
-                    if( _AddBody(*itbody, pinfo, _bTrackActiveDOF&&(*itbody == ptrackingbody)) ) {
+                    std::vector<CollisionObjectPtr> vcolobjs;
+                    uint64_t linkmask = 0;
+                    if( _AddBody(*itbody, pinfo, vcolobjs, linkmask, _bTrackActiveDOF&&(*itbody == ptrackingbody)) ) {
                         mapCachedBodies[(*itbody)->GetEnvironmentId()] = KinBodyCache(*itbody, pinfo);
+                        mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+                        mapCachedBodies[(*itbody)->GetEnvironmentId()].linkmask = linkmask;
                         bcallsetup = true;
                     }
                 }
@@ -277,6 +329,12 @@ public:
             while(itcache != mapCachedBodies.end()) {
                 KinBodyConstPtr pbody = itcache->second.pwbody.lock();
                 if( !pbody ) {
+                    FOREACH(itcol, itcache->second.vcolobjs) {
+                        if( !!itcol->get() ) {
+                            pmanager->unregisterObject(itcol->get());
+                        }
+                    }
+                    itcache->second.vcolobjs.resize(0);
                     itcache = mapCachedBodies.erase(itcache++);
                 }
                 else if( attachedBodies.count(pbody) == 0 ) {
@@ -306,7 +364,7 @@ public:
         return _setExcludeBodyIds;
     }
 
-    void PrintStatus(int debuglevel)
+    void PrintStatus(uint32_t debuglevel)
     {
         if( IS_DEBUGLEVEL(debuglevel) ) {
             std::stringstream ss;
@@ -326,15 +384,23 @@ private:
     /// \brief adds a body to the manager, returns true if something was added
     ///
     /// should not add anything to mapCachedBodies!
-    bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, bool bTrackActiveDOF)
+    bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, std::vector<CollisionObjectPtr>& vcolobjs, uint64_t& linkmask, bool bTrackActiveDOF)
     {
+        vcolobjs.resize(0);
+        vcolobjs.resize(pbody->GetLinks().size());
         _tmpbuffer.resize(0);
         bool bsetUpdateStamp = false;
+        linkmask = 0;
         FOREACH(itlink, (pbody)->GetLinks()) {
             if( (*itlink)->IsEnabled() && (!bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
                 //pinfo->vlinks.at((*itlink)->GetIndex()).listRegisteredManagers.push_back(shared_from_this());
-                _tmpbuffer.push_back(_fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex()).get());
-                bsetUpdateStamp = true;
+                CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
+                if( !!pcol ) {
+                    _tmpbuffer.push_back(pcol.get());
+                    vcolobjs[(*itlink)->GetIndex()] = pcol;
+                    linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
+                    bsetUpdateStamp = true;
+                }
             }
         }
         if( bsetUpdateStamp ) {
@@ -348,17 +414,12 @@ private:
     {
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it != mapCachedBodies.end() ) {
-            // have to unregister
-            //KinBodyConstPtr pbody = it->second.pwbody.lock();
-            FCLSpace::KinBodyInfoPtr pinfo = it->second.pwinfo.lock();
-            if( !!pinfo ) {
-                for(size_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
-                    bool bIsRegistered = !!(it->second.linkmask & (1<<(uint64_t)ilink));
-                    if( bIsRegistered ) {
-                        pmanager->unregisterObject(_fclspace.GetLinkBV(pinfo, ilink).get());
-                    }
+            FOREACH(itcol, it->second.vcolobjs) {
+                if( !!itcol->get() ) {
+                    pmanager->unregisterObject(itcol->get());
                 }
             }
+            it->second.vcolobjs.resize(0);
             return true;
         }
 
