@@ -37,15 +37,6 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
             linkmask = pbody->GetLinkEnableStatesMask();
         }
 
-        void ResetStamps() {
-            nLastStamp = -1;
-            nLinkUpdateStamp = -1;
-            nGeometryUpdateStamp = -1;
-            nAttachedBodiesUpdateStamp = -1;
-            nActiveDOFUpdateStamp = -1;
-            geometrygroup.resize(0);
-        }
-
         KinBodyConstWeakPtr pwbody; ///< weak pointer to body
         FCLSpace::KinBodyInfoWeakPtr pwinfo; ///< weak pointer to info
         int nLastStamp; ///< copyied from FCLSpace::KinBodyInfo when body was last updated
@@ -102,7 +93,9 @@ public:
                 mapCachedBodies[(*itbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
             }
         }
-        pmanager->registerObjects(_tmpbuffer); // bulk update
+        if( _tmpbuffer.size() > 0 ) {
+            pmanager->registerObjects(_tmpbuffer); // bulk update
+        }
         pmanager->setup();
     }
 
@@ -122,6 +115,7 @@ public:
     /// \brief makes sure that all the bodies are currently in the scene (if they are not explicitly excluded)
     void EnsureBodies(const std::set<KinBodyConstPtr>& vbodies)
     {
+        _tmpbuffer.resize(0);
         std::vector<CollisionObjectPtr> vcolobjs;
         FOREACH(itbody, vbodies) {
             int bodyid = (*itbody)->GetEnvironmentId();
@@ -138,11 +132,15 @@ public:
                 }
             }
         }
+        if( _tmpbuffer.size() > 0 ) {
+            pmanager->registerObjects(_tmpbuffer); // bulk update
+        }
     }
 
     /// \brief ensures that pbody is being tracked inside the manager
     void EnsureBody(KinBodyConstPtr pbody)
     {
+        _tmpbuffer.resize(0);
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it == mapCachedBodies.end() ) {
             std::vector<CollisionObjectPtr> vcolobjs;
@@ -153,8 +151,11 @@ public:
                 mapCachedBodies[(pbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
                 mapCachedBodies[(pbody)->GetEnvironmentId()].linkmask = linkmask;
             }
-
         }
+        if( _tmpbuffer.size() > 0 ) {
+            pmanager->registerObjects(_tmpbuffer); // bulk update
+        }
+
     }
 
     /// \brief removes tracking of the body
@@ -168,6 +169,7 @@ public:
     /// \brief Synchronizes the element of the manager instance whose update stamps are outdated
     void Synchronize()
     {
+        _tmpbuffer.resize(0);
         _lastSyncTimeStamp = OpenRAVE::utils::GetMilliTime();
         bool bcallsetup = false;
         bool bAttachedBodiesChanged = false;
@@ -176,7 +178,7 @@ public:
         if( !!ptrackingbody && _bTrackActiveDOF ) {
             std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(ptrackingbody->GetEnvironmentId());
             if( it == mapCachedBodies.end() ) {
-                RAVELOG_WARN("tracking body not in current cached bodies\n");
+                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies", _lastSyncTimeStamp);
             }
             else {
                 FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(ptrackingbody); // necessary in case pinfos were swapped!
@@ -197,7 +199,7 @@ public:
 
             if( !pbody || pbody->GetEnvironmentId() == 0 ) {
                 // should happen when parts are removed
-                RAVELOG_VERBOSE_FORMAT("manager contains invalid body %s, removing for now", (!pbody?std::string():pbody->GetName()));
+                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now", _lastSyncTimeStamp%(!pbody?std::string():pbody->GetName()));
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -211,7 +213,7 @@ public:
             FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(pbody); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
-                RAVELOG_VERBOSE_FORMAT("body %s entire KinBodyInfo changed", pbody->GetName());
+                RAVELOG_VERBOSE_FORMAT("%u body %s entire KinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -220,12 +222,30 @@ public:
                 itcache->second.vcolobjs.resize(0);
                 _AddBody(pbody, pnewinfo, itcache->second.vcolobjs, itcache->second.linkmask, _bTrackActiveDOF&&pbody==ptrackingbody);
                 itcache->second.pwinfo = pnewinfo;
-                itcache->second.ResetStamps();
+                //itcache->second.ResetStamps();
+                // need to update the stamps here so that we do not try to unregisterObject below and get into an error
+                itcache->second.nLastStamp = -1;
+                itcache->second.nLinkUpdateStamp = -1;
+                itcache->second.nGeometryUpdateStamp = -1;
+                itcache->second.nAttachedBodiesUpdateStamp = -1;
+                itcache->second.nActiveDOFUpdateStamp = -1;
+                itcache->second.geometrygroup.resize(0);
+
+                itcache->second.nLastStamp = pnewinfo->nLastStamp;
+                itcache->second.nLinkUpdateStamp = pnewinfo->nLinkUpdateStamp;
+                itcache->second.nGeometryUpdateStamp = pnewinfo->nGeometryUpdateStamp;
+                itcache->second.nAttachedBodiesUpdateStamp = -1;//pnewinfo->nAttachedBodiesUpdateStamp;
+                itcache->second.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
+                itcache->second.geometrygroup = pnewinfo->_geometrygroup;
                 pinfo = pnewinfo;
+                if( _tmpbuffer.size() > 0 ) {
+                    pmanager->registerObjects(_tmpbuffer); // bulk update
+                    _tmpbuffer.resize(0);
+                }
             }
 
             if( pinfo->nLinkUpdateStamp != itcache->second.nLinkUpdateStamp ) {
-                RAVELOG_VERBOSE_FORMAT("body %s for cache changed link %d != %d", pbody->GetName()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
+                RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed link %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
                 // links changed
                 uint64_t newlinkmask = pbody->GetLinkEnableStatesMask();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
@@ -242,6 +262,7 @@ public:
                         if( changed & ((uint64_t)1<<ilink) ) {
                             if( newlinkmask & ((uint64_t)1<<ilink) ) {
                                 CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
+                                //_tmpbuffer.push_back(pcolobj.get());
                                 pmanager->registerObject(pcolobj.get());
                                 itcache->second.vcolobjs.at(ilink) = pcolobj;
                             }
@@ -261,7 +282,7 @@ public:
             if( pinfo->nGeometryUpdateStamp != itcache->second.nGeometryUpdateStamp ) {
 
                 if( itcache->second.geometrygroup.size() == 0 || itcache->second.geometrygroup != pinfo->_geometrygroup ) {
-                    RAVELOG_VERBOSE_FORMAT("body %s for cache changed geometry %d != %d", pbody->GetName()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp);
+                    RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed geometry %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp);
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
@@ -269,6 +290,7 @@ public:
                             CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
                             itcache->second.vcolobjs.at(ilink) = pcol;
                             if( !!pcol ) {
+                                //_tmpbuffer.push_back(pcol.get());
                                 pmanager->registerObject(pcol.get());
                             }
                         }
@@ -278,7 +300,7 @@ public:
                 itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
-                RAVELOG_VERBOSE_FORMAT("body %s for cache changed transform %d != %d", pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
+                //RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
@@ -307,7 +329,6 @@ public:
             // since tracking have to update all the bodies
             std::set<KinBodyConstPtr> attachedBodies;
             ptrackingbody->GetAttached(attachedBodies);
-            _tmpbuffer.resize(0);
 
             // add any new bodies
             FOREACH(itbody, attachedBodies) {
@@ -347,6 +368,9 @@ public:
                 }
             }
         }
+        if( _tmpbuffer.size() > 0 ) {
+            pmanager->registerObjects(_tmpbuffer); // bulk update
+        }
         if( bcallsetup ) {
             pmanager->setup();
         }
@@ -383,12 +407,11 @@ public:
 private:
     /// \brief adds a body to the manager, returns true if something was added
     ///
-    /// should not add anything to mapCachedBodies!
+    /// should not add anything to mapCachedBodies! append to _tmpbuffer
     bool _AddBody(KinBodyConstPtr pbody, FCLSpace::KinBodyInfoPtr pinfo, std::vector<CollisionObjectPtr>& vcolobjs, uint64_t& linkmask, bool bTrackActiveDOF)
     {
         vcolobjs.resize(0);
         vcolobjs.resize(pbody->GetLinks().size());
-        _tmpbuffer.resize(0);
         bool bsetUpdateStamp = false;
         linkmask = 0;
         FOREACH(itlink, (pbody)->GetLinks()) {
@@ -402,9 +425,6 @@ private:
                     bsetUpdateStamp = true;
                 }
             }
-        }
-        if( bsetUpdateStamp ) {
-            pmanager->registerObjects(_tmpbuffer); // bulk update
         }
         return bsetUpdateStamp;
     }

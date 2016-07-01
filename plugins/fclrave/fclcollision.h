@@ -588,7 +588,6 @@ public:
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
                 // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
                 LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-                _fclspace->Synchronize(pbody);//->GetLinks()[index2], pLINK2);
                 FOREACH(itgeom1, pLINK1->vgeoms) {
                     FOREACH(itgeom2, pLINK2->vgeoms) {
                         CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
