@@ -485,32 +485,39 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         tswitch1 = 0.5*(i4l + i4u);
     }
 
-    if (FuzzyZero(tswitch1, EpsilonT)) {
-        if (1) { //try this
-            tswitch1 = 0;
-        }
-        a1 = 0;
+    // Here we divide tswitch1 calculation into three cases. For the cases that tswitch1 has been
+    // rounded, we need to go back to the original formulae to calculate other related values such
+    // as a2.
+    if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
+        tswitch1 = 0.5*endTime;
+        a1 = A;
+        a2 = A;
+        v = 0.5*(dx0 + dx1);
     }
+    // if (FuzzyZero(tswitch1, EpsilonT)) {
+    //     tswitch1 = 0;
+    //     a1 = 0;
+    //     a2 = A;
+    //     v = dx0; // peak velocity
+    // }
+    // else if (FuzzyEquals(tswitch1, endTime, EpsilonT)) {
+    //     tswitch1 = endTime;
+    //     a1 = A;
+    //     a2 = 0;
+    //     v = dx1; // peak velocity
+    // }
     else {
-        a1 = A + (B/tswitch1);
+        // The calculated tswitch1 works just fine.
+        a1 = A + B/tswitch1;
+        a2 = A - B/(endTime - tswitch1);
+        v = dx0 + (a1*tswitch1); // peak velocity
     }
 
-    Real dt = endTime - tswitch1;
-    if (FuzzyZero(dt, EpsilonT)) {
-        if (1) { // try this
-            tswitch1 = endTime;
-            a1 = A + (B/tswitch1);
-        }
-        a2 = 0;
-    }
-    else {
-        a2 = A - (B/dt);
-    }
-
-    v = dx0 + (a1*tswitch1); // peak velocity
-    if (!FuzzyEquals(v, dx1 - a2*dt, EpsilonV)) {
-        PARABOLIC_RAMP_PLOG("Verification failed: vpeak != dx1 - a2*dt");
-        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+    // Consistency checking
+    if (!FuzzyEquals(v, dx1 - a2*(endTime - tswitch1), EpsilonV)) {
+        PARABOLIC_RAMP_PLOG("Verification failed (vpeak != dx1 - a2*dt): %.15e != %.15e", v, dx1 - a2*(endTime - tswitch1));
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        PARABOLIC_RAMP_PLOG("Calculated values: A = %.15e; B = %.15e; tswitch1 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", A, B, tswitch1, a1, a2, v);
         return false;
     }
 
@@ -526,7 +533,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         else {
             PARABOLIC_RAMP_PLOG("Finished stretching but the profile does not pass IsValid test.");
             PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
-            PARABOLIC_RAMP_PLOG("Calculated values: tswitch1 = %.15e, tswitch2 = %.15e, a1 = %.15e, a2 = %.15e, v = %.15e", tswitch1, tswitch2, a1, a2, v);
+            PARABOLIC_RAMP_PLOG("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", tswitch1, tswitch2, a1, a2, v);
             return false;
         }
     }
