@@ -442,7 +442,25 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     }
 
     // Find the intersection between interval 2 and interval 4, store it in interval 4.
-    if ((i2l > i4u) || (i2u < i4l)) {
+    if (FuzzyEquals(i2l, i4u, EpsilonT) || FuzzyEquals(i2u, i4l, EpsilonT)) {
+        PARABOLIC_RAMP_PLOG("interval2 and interval4 intersect at a point, most likely because the given endTime is actually its minimum time.");
+        // Make sure that the above statement is true.
+        if (!SolveMinTime(amax, vmax)) {
+            return false; // what ?
+        }
+        else {
+            if (FuzzyEquals(ttotal, endTime, EpsilonT)) {
+                PARABOLIC_RAMP_PLOG("The hypothesis is correct.");
+                return true;
+            }
+            else {
+                PARABOLIC_RAMP_PLOG("The hypothesis is wrong. Something else just happened");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false; // what ?
+            }
+        }
+    }
+    else if ((i2l > i4u) || (i2u < i4l)) {
         PARABOLIC_RAMP_PLOG("interval2 and interval4 do not have any intersection");
         PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
         return false;
@@ -490,6 +508,10 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     // as a2.
     if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
         tswitch1 = 0.5*endTime;
+        if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
+            PARABOLIC_RAMP_PLOG("endTime is too short.");
+            return false;
+        }
         a1 = A;
         a2 = A;
         v = 0.5*(dx0 + dx1);
@@ -716,6 +738,21 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
             }
             else {
                 tswitch2 = endTime - tLastRamp;
+                if (FuzzyEquals(tswitch2, tswitch1, EpsilonT)) {
+                    PARABOLIC_RAMP_PLOG("(final fix) three-ramp works but having too short middle ramp");
+                    // if we leave it like this, this case might cause an error later on when we extract switch times.
+                    tswitch1 = (2*d - (dx1 + vmaxNew)*endTime)/(dx0 - dx1);
+                    tswitch2 = tswitch1;
+                    v = vmaxNew;
+                    a1 = (vmaxNew - dx0)/tswitch1;
+                    a2 = (dx1 - vmaxNew)/(endTime - tswitch1);
+                    if (Abs(a1) > amax + EpsilonA || Abs(a2) > amax + EpsilonA) {
+                        PARABOLIC_RAMP_PLOG("cannot merge into two-ramp because of acceleration limits");
+                        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                        PARABOLIC_RAMP_PLOG("Calculated values: tswitch1 = %.15e, tswitch2 = %.15e, a1 = %.15e, a2 = %.15e, v = %.15e", tswitch1, tswitch2, a1, a2, v);
+                        return false;
+                    }
+                }
             }
             ttotal = endTime;
         }
@@ -1414,13 +1451,11 @@ void ParabolicRamp1D::Bounds(Real ta,Real tb,Real& xmin,Real& xmax) const
         if(tflip2 < tswitch2) tflip2 = 0;
     }
     if(ta < tflip1 && tb > tflip1) {
-        PARABOLIC_RAMP_PLOG("tflip1 = %.15e", tflip1);
         Real xflip = Evaluate(tflip1);
         if(xflip < xmin) xmin = xflip;
         else if(xflip > xmax) xmax = xflip;
     }
     if(ta < tflip2 && tb > tflip2) {
-        PARABOLIC_RAMP_PLOG("tflip2 = %.15e", tflip2);
         Real xflip = Evaluate(tflip2);
         if(xflip < xmin) xmin = xflip;
         else if(xflip > xmax) xmax = xflip;
@@ -2665,6 +2700,10 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         if(!ramps[i][0].SolveMinTime(amax[i],vmax[i])) {
             return -1;
         }
+        if (1) {
+            PARABOLIC_RAMP_PLOG("SolveMinTime for joint %d successful with duration = %.15e", i, ramps[i][0].ttotal);
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e", ramps[i][0].x0, ramps[i][0].x1, ramps[i][0].dx0, ramps[i][0].dx1, vmax[i], amax[i]);
+        }
         Real bmin,bmax;
         ramps[i][0].Bounds(bmin,bmax);
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) {
@@ -2701,7 +2740,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         for(size_t j = 0; j < ramps[i].size(); ++j) {
             newtotal += ramps[i][j].ttotal;
         }
-        PARABOLIC_RAMP_PLOG("ramp %d total duration = %.15e", i, newtotal);
+        PARABOLIC_RAMP_PLOG("ramp %d total duration = %.15e\n", i, newtotal);
         if(newtotal > endTime) {
             endTime = newtotal;
             maxTimeIndex = i;
@@ -2788,7 +2827,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                             }
                             else {
                                 // The calculated value is ok.
-                                PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15f\n", k, newEndTime);
+                                PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15e\n", k, newEndTime);
                             }
                             if (newEndTime > maxNewEndTime) {
                                 PARABOLIC_RAMP_PLOG("maxTimeIndex is updated to %d", k);
@@ -2808,7 +2847,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                     }
                     break;
                 }
-                PARABOLIC_RAMP_PLOG("Successfully solving bounded min accel for joint %d (endTime = %.15f)\n",i, endTime);
+                PARABOLIC_RAMP_PLOG("Successfully solving bounded min accel for joint %d (endTime = %.15e)\n",i, endTime);
                 PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
                 if ( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     for (size_t k = 0; k < tempramps.size(); ++k) {
