@@ -126,11 +126,12 @@ public:
         int nLinkUpdateStamp; ///< update stamp for link enable state (increases every time link enables change)
         int nGeometryUpdateStamp; ///< update stamp for geometry update state (increases every time geometry enables change)
         int nAttachedBodiesUpdateStamp; ///< update stamp for when attached bodies change of this body
+        int nActiveDOFUpdateStamp; ///< update stamp for when active dofs change of this body
 
         vector< boost::shared_ptr<LINK> > vlinks; ///< info for every link of the kinbody
 
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
-        //OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
+        OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
         std::list<OpenRAVE::UserDataPtr> _linkEnabledCallbacks;
 
         OpenRAVE::UserDataPtr _geometrycallback; ///< handle for the callback called when the current geometry of the kinbody changed ( Prop_LinkGeometry )
@@ -264,9 +265,7 @@ public:
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBodyInfo>(pinfo)));
         pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<KinBodyInfo>(pinfo)));
         pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
-
-        //pinfo->_activeDOFsCallback = probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBody const>(pbody)));
-        //const boost::function<void()> activeDOFsChangeCallback = boost::bind(&FCLSpace::KinBodyInfo::_ChangeActiveDOFsFlag,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace::KinBodyInfo>, boost::weak_ptr<FCLSpace::KinBodyInfo>(pinfo)));
+        pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
 
         // if the attachedBodies callback is not set, we set it
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
@@ -664,6 +663,13 @@ private:
         }
     }
 
+    void _ResetActiveDOFsCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
+        KinBodyInfoPtr pinfo = _pinfo.lock();
+        if( !!pinfo ) {
+            pinfo->nActiveDOFUpdateStamp++;
+        }
+    }
+    
     void _ResetAttachedBodyCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {

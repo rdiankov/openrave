@@ -109,13 +109,14 @@ public:
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
-        : OpenRAVE::CollisionCheckerBase(penv), _bIsSelfCollisionChecker(true), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2") // DynamicAABBTree2 should be slightly faster than Naive
+        : OpenRAVE::CollisionCheckerBase(penv), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2"), _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
         _fclspace.reset(new FCLSpace(penv, _userdatakey));
         _options = 0;
         // TODO : Should we put a more reasonable arbitrary value ?
         _numMaxContacts = std::numeric_limits<int>::max();
+        _nGetEnvManagerCacheClearCount = 100000;
         __description = ":Interface Author: Kenji Maillard\n\nFlexible Collision Library collision checker";
 
         SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId());
@@ -378,6 +379,9 @@ public:
             return false;
         }
 
+        _fclspace->Synchronize(pbody1);
+        _fclspace->Synchronize(pbody2);
+        
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
         BroadPhaseCollisionManagerPtr body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs)), body2Manager = _GetBodyManager(pbody2, false);
@@ -478,6 +482,7 @@ public:
             return false;
         }
 
+        _fclspace->Synchronize();
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         std::set<KinBodyConstPtr> attachedBodies;
@@ -505,7 +510,7 @@ public:
             return false;
         }
 
-
+        _fclspace->Synchronize();
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
         std::set<KinBodyConstPtr> attachedBodies;
@@ -678,6 +683,7 @@ private:
 
         LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1), pLINK2 = _fclspace->GetLinkInfo(plink2);
 
+        //RAVELOG_INFO_FORMAT("link %s:%s with %s:%s", plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             FOREACH(itgeompair2, pLINK2->vgeoms) {
                 if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
@@ -844,25 +850,45 @@ private:
         BODYMANAGERSMAP::iterator it = _bodymanagers.find(std::make_pair(pbody, (int)bactiveDOFs));
         if( it == _bodymanagers.end() ) {
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
-            p->InitBodyManager(pbody);
+            p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody, (int)bactiveDOFs), p)).first;
         }
 
         it->second->Synchronize();
+        //it->second->PrintStatus(OpenRAVE::Level_Info);
         return it->second->GetManager();
     }
 
-    BroadPhaseCollisionManagerPtr _GetEnvManager(const std::set<KinBodyConstPtr>& attachedBodies)
+    BroadPhaseCollisionManagerPtr _GetEnvManager(const std::set<KinBodyConstPtr>& excludedbodies)
     {
-        int key = 0;
-        std::map<int, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(key);
+        std::set<int> setExcludeBodyIds; ///< any
+        FOREACH(itbody, excludedbodies) {
+            setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
+        }
+        
+        if( --_nGetEnvManagerCacheClearCount < 0 ) {
+            uint32_t curtime = OpenRAVE::utils::GetMilliTime();
+            _nGetEnvManagerCacheClearCount = 100000;
+            std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
+            while(it != _envmanagers.end()) {
+                if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
+                    _envmanagers.erase(it++);
+                }
+                else {
+                    ++it;
+                }
+            }
+        }
+        
+        std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(setExcludeBodyIds);
         if( it == _envmanagers.end() ) {
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
-            p->InitEnvironment();
-            it = _envmanagers.insert(std::map<int, FCLCollisionManagerInstancePtr>::value_type(key, p)).first;
+            p->InitEnvironment(excludedbodies);
+            it = _envmanagers.insert(std::map<std::set<int>, FCLCollisionManagerInstancePtr>::value_type(setExcludeBodyIds, p)).first;
         }
-        // TODO should add all bodies besides the excluded...
+        it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
+        //it->second->PrintStatus(OpenRAVE::Level_Info);
         return it->second->GetManager();
     }
     
@@ -870,14 +896,14 @@ private:
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
     std::string _userdatakey;
-    bool _bIsSelfCollisionChecker; // Currently not used
     std::string _broadPhaseCollisionManagerAlgorithm; ///< broadphase algorithm to use to create a manager. tested: Naive, DynamicAABBTree2
 
     typedef std::map< std::pair<KinBodyConstPtr, int> , FCLCollisionManagerInstancePtr> BODYMANAGERSMAP;
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager.
     //std::map<KinBodyPtr, FCLCollisionManagerInstancePtr> _activedofbodymanagers; ///< managers for each of the individual bodies specifically when active DOF is used. each manager should be called with InitBodyManager
-    std::map<int, FCLCollisionManagerInstancePtr> _envmanagers;
-
+    std::map< std::set<int>, FCLCollisionManagerInstancePtr> _envmanagers;
+    int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
+    
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
     std::map<fcl::CollisionObject*, int> _currentlyused;
     std::map<fcl::CollisionObject*, std::map<int, int> > _usestatistics;
@@ -894,6 +920,8 @@ private:
     // In order to reduce allocations during collision checking
 
     CollisionReport _reportcache;
+
+    bool _bIsSelfCollisionChecker; // Currently not used
 };
 
 } // fclrave
