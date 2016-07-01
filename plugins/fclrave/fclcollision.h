@@ -381,7 +381,7 @@ public:
 
         _fclspace->Synchronize(pbody1);
         _fclspace->Synchronize(pbody2);
-        
+
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
         BroadPhaseCollisionManagerPtr body1Manager = _GetBodyManager(pbody1, !!(_options & OpenRAVE::CO_ActiveDOFs)), body2Manager = _GetBodyManager(pbody2, false);
@@ -573,6 +573,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
+        _fclspace->Synchronize(pbody);//->GetLinks()[index1], pLINK1);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -587,7 +588,6 @@ public:
                 size_t index1 = *itset&0xffff, index2 = *itset>>16;
                 // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
                 LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-                _fclspace->Synchronize(pbody);//->GetLinks()[index1], pLINK1);
                 _fclspace->Synchronize(pbody);//->GetLinks()[index2], pLINK2);
                 FOREACH(itgeom1, pLINK1->vgeoms) {
                     FOREACH(itgeom2, pLINK2->vgeoms) {
@@ -622,7 +622,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-
+        _fclspace->Synchronize(pbody);//->GetLinks()[index2], pLINK2);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -636,8 +636,6 @@ public:
                 int index1 = *itset&0xffff, index2 = *itset>>16;
                 if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
                     LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-                    _fclspace->Synchronize(pbody);//->GetLinks()[index1], pLINK1);
-                    _fclspace->Synchronize(pbody);//->GetLinks()[index2], pLINK2);
                     FOREACH(itgeom1, pLINK1->vgeoms) {
                         FOREACH(itgeom2, pLINK2->vgeoms) {
                             CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
