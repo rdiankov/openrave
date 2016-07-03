@@ -417,7 +417,9 @@ public:
         }
 
         _fclspace->Synchronize(plink1->GetParent());
-        _fclspace->Synchronize(plink2->GetParent());
+        if( plink1->GetParent() != plink2->GetParent() ) {
+            _fclspace->Synchronize(plink2->GetParent());
+        }
 
         CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
 
@@ -869,7 +871,8 @@ private:
         FOREACH(itbody, excludedbodies) {
             setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
         }
-        
+
+        // check the cache and cleanup any unused environments
         if( --_nGetEnvManagerCacheClearCount < 0 ) {
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
