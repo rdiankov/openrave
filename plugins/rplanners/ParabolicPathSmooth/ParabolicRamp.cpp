@@ -319,6 +319,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         PARABOLIC_RAMP_PLOG("endTime is negative");
         return false;
     }
+
     Real d = x1 - x0; // displacement made by this profile
     Real A, B, C, D; // temporary variables for solving equations
 
@@ -507,6 +508,8 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     // rounded, we need to go back to the original formulae to calculate other related values such
     // as a2.
     if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
+        // Setting tswitch1 to either 0 or endTime causes some problems, most likely related to
+        // switchtime extraction.
         tswitch1 = 0.5*endTime;
         if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
             PARABOLIC_RAMP_PLOG("endTime is too short.");
@@ -2122,7 +2125,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
     ramp.x1 = x1;
     ramp.dx1 = v1;
     if(!ramp.SolveFixedTime(amax,vmax,endTime)) {////////Puttichai
-        PARABOLIC_RAMP_PLOG("SolveMinAccel failed: x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; newDuration=%.15f; vm=%.15f; am=%.15f", x0, x1, v0, v1, endTime, vmax, amax);
+        PARABOLIC_RAMP_PLOG("SolveMinAccel failed: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; newDuration=%.15e; vm=%.15e; am=%.15e", x0, x1, v0, v1, endTime, vmax, amax);
         return false;
     }
     Real bmin,bmax;
@@ -2133,8 +2136,8 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
         ramps[0] = ramp;
         return true;
     }
-    PARABOLIC_RAMP_PLOG("SolveMinAccel passed but x bounds violated: xmin=%.15f; bmin=%.15f; xmax=%.15f; bmax=%.15f", xmin, bmin, xmax, bmax);
-    PARABOLIC_RAMP_PLOG("x0=%.15f; x1=%.15f; v0=%.15f; v1=%.15f; newDuration=%.15f; vm=%.15f; am=%.15f", x0, x1, v0, v1, endTime, vmax, amax);
+    PARABOLIC_RAMP_PLOG("SolveMinAccel passed but x bounds violated: xmin=%.15e; bmin=%.15e; xmax=%.15e; bmax=%.15e", xmin, bmin, xmax, bmax);
+    PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; newDuration=%.15e; vm=%.15e; am=%.15e", x0, x1, v0, v1, endTime, vmax, amax);
 
     //not within bounds, do the more complex procedure
     ramps.resize(0);
@@ -2746,7 +2749,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
             maxTimeIndex = i;
         }
     }
-    PARABOLIC_RAMP_PLOG("Maximum duration = %.15f from joint %d", endTime, maxTimeIndex);
+    PARABOLIC_RAMP_PLOG("Maximum duration = %.15e from joint %d", endTime, maxTimeIndex);
     // std::cout << "endTime = " << endTime << std::endl;////////Puttichai
 
     //now we have a candidate end time -- repeat looking through solutions
@@ -2801,7 +2804,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
             }
             else {
                 if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],tempramps)) {////////Puttichai
-                    PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d with endTime = %.15f\n",i,endTime);
+                    PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d with endTime = %.15e\n",i,endTime);
                     solved = false;
                     if( 1 ) { // disable to avoid changing time
                         PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
@@ -3075,7 +3078,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
                         }
                         else {
                             // The calculated value is ok.
-                            PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15f\n", k, newEndTime);
+                            PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15e\n", k, newEndTime);
                         }
                         if (newEndTime > maxNewEndTime) {
                             maxNewEndTime = newEndTime;
@@ -3240,7 +3243,7 @@ bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, 
         return true;
     }
     else {
-        PARABOLIC_RAMP_PLOG("Unable to calculate the least upper bound: T0=%.15f, T1 = %.15f, T2 = %.15f, T3 = %.15f", T0, T1, T2, T3);
+        PARABOLIC_RAMP_PLOG("Unable to calculate the least upper bound: T0=%.15e, T1 = %.15e, T2 = %.15e, T3 = %.15e", T0, T1, T2, T3);
         return false;
     }
 }
