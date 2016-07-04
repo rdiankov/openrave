@@ -97,9 +97,12 @@ using OpenRAVE::RobotBasePtr;
 using OpenRAVE::TrajectoryBaseConstPtr;
 using OpenRAVE::ControllerBase;
 using OpenRAVE::AttributesList;
-
+using OpenRAVE::dReal;
+using OpenRAVE::geometry::MATH_SQRT;
+using OpenRAVE::geometry::MATH_FABS;
 
 #include <fcl/collision.h>
+#include <fcl/distance.h>
 #include <fcl/BVH/BVH_model.h>
 #include <fcl/broadphase/broadphase.h>
 #include <fcl/shape/geometric_shapes.h>

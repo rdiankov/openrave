@@ -303,13 +303,16 @@ public:
     }
 
 
-    void SetGeometryGroup(const std::string& groupname)
+    // TODO : body should have geometry group "a" after SetGeometryGroup("a") ; SetBodyGeometryGroup(body, "b") ; SetBodyGeometryGroup("a")
+    bool SetGeometryGroup(const std::string& groupname)
     {
+        bool bmodified = false;
         // should always do this since bodies can have different geometry groups set
         _geometrygroup = groupname;
         FOREACHC(itbody, _setInitializedBodies) {
-            SetBodyGeometryGroup(*itbody, groupname);
+            bmodified |= SetBodyGeometryGroup(*itbody, groupname);
         }
+        return bmodified;
     }
 
     const std::string& GetGeometryGroup() const
@@ -318,12 +321,12 @@ public:
     }
 
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
         if( HasNamedGeometry(pbody, groupname) ) {
             // Save the already existing KinBodyInfoPtr for the old geometry group
             KinBodyInfoPtr poldinfo = GetInfo(pbody);
             if( poldinfo->_geometrygroup == groupname ) {
-                return;
+                return false;
             }
 
             poldinfo->nGeometryUpdateStamp += 1;
@@ -344,7 +347,9 @@ public:
                 // Revoke the information inside the cache so that a potentially outdated object does not survive
                 _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
             }
+            return true;
         }
+        return false;
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
