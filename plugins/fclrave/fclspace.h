@@ -186,6 +186,7 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
+      // Which operation needs the lock in this function ?
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         if( !pinfo ) {
@@ -356,7 +357,8 @@ public:
         }
     }
 
-    // Already existing geometry not updated !
+    // TODO : Already existing geometry not updated !
+    // This will certainly be a problem if we change it in the middle of a program (i.e. when doing distance checking)
     // Is that the behaviour we want ?
     void SetBVHRepresentation(std::string const &type)
     {
@@ -631,6 +633,7 @@ private:
                 }
             }
 
+            // Does this have any use ?
             if( !!_synccallback ) {
                 _synccallback(pinfo);
             }
@@ -678,7 +681,7 @@ private:
             pinfo->nActiveDOFUpdateStamp++;
         }
     }
-    
+
     void _ResetAttachedBodyCallback(boost::weak_ptr<KinBodyInfo> _pinfo) {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {

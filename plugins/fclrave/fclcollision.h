@@ -246,6 +246,7 @@ public:
             return;
         }
         _broadPhaseCollisionManagerAlgorithm = algorithm;
+        // TODO : This is broken, the managers should be cleared
         // clear all the current managers
     }
 
@@ -681,7 +682,10 @@ private:
             return false;
         }
 
-        if( IsIn<KinBodyConstPtr>(plink1->GetParent(), pcb->_vbodyexcluded) || IsIn<KinBodyConstPtr>(plink2->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink1, pcb->_vlinkexcluded) || IsIn<LinkConstPtr>(plink2, pcb->_vlinkexcluded) ) {
+        if( IsIn<KinBodyConstPtr>(plink1->GetParent(), pcb->_vbodyexcluded) ||
+            IsIn<KinBodyConstPtr>(plink2->GetParent(), pcb->_vbodyexcluded) ||
+            IsIn<LinkConstPtr>(plink1, pcb->_vlinkexcluded) ||
+            IsIn<LinkConstPtr>(plink2, pcb->_vlinkexcluded) ) {
             return false;
         }
 
@@ -869,7 +873,7 @@ private:
         FOREACH(itbody, excludedbodies) {
             setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
         }
-        
+
         if( --_nGetEnvManagerCacheClearCount < 0 ) {
             uint32_t curtime = OpenRAVE::utils::GetMilliTime();
             _nGetEnvManagerCacheClearCount = 100000;
@@ -883,7 +887,7 @@ private:
                 }
             }
         }
-        
+
         std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(setExcludeBodyIds);
         if( it == _envmanagers.end() ) {
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
@@ -895,19 +899,19 @@ private:
         //it->second->PrintStatus(OpenRAVE::Level_Info);
         return it->second->GetManager();
     }
-    
+
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
     std::string _userdatakey;
     std::string _broadPhaseCollisionManagerAlgorithm; ///< broadphase algorithm to use to create a manager. tested: Naive, DynamicAABBTree2
 
-    typedef std::map< std::pair<KinBodyConstPtr, int> , FCLCollisionManagerInstancePtr> BODYMANAGERSMAP;
+    typedef std::map< std::pair<KinBodyConstPtr, int> , FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager.
     //std::map<KinBodyPtr, FCLCollisionManagerInstancePtr> _activedofbodymanagers; ///< managers for each of the individual bodies specifically when active DOF is used. each manager should be called with InitBodyManager
     std::map< std::set<int>, FCLCollisionManagerInstancePtr> _envmanagers;
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
-    
+
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
     std::map<fcl::CollisionObject*, int> _currentlyused;
     std::map<fcl::CollisionObject*, std::map<int, int> > _usestatistics;
