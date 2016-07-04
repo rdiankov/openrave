@@ -838,7 +838,7 @@ private:
 
     LinkConstPtr GetCollisionLink(const fcl::CollisionObject &collObj) {
         FCLSpace::KinBodyInfo::LINK *link_raw = static_cast<FCLSpace::KinBodyInfo::LINK *>(collObj.getUserData());
-        if( link_raw != NULL ) {
+        if( !!link_raw ) {
             LinkConstPtr plink = link_raw->GetLink();
             if( !plink ) {
                 RAVELOG_WARN_FORMAT("The link %s was lost from fclspace", link_raw->bodylinkname);

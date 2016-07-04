@@ -286,13 +286,14 @@ public:
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
-                            pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                             CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
-                            itcache->second.vcolobjs.at(ilink) = pcol;
                             if( !!pcol ) {
-                                //_tmpbuffer.push_back(pcol.get());
-                                pmanager->registerObject(pcol.get());
+                              pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
+                              bcallsetup = true;
+                            } else {
+                                pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                             }
+                            itcache->second.vcolobjs.at(ilink) = pcol;
                         }
                     }
                     itcache->second.geometrygroup = pinfo->_geometrygroup;
