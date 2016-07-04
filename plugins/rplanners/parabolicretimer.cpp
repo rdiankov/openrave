@@ -250,20 +250,18 @@ protected:
                 RAVELOG_WARN(str(boost::format("delta time is really ill-conditioned: %e")%deltatime));
             }
             
-            // bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp, 6);
             bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
             if( !success ) {
 #ifdef _DEBUG
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     // for debugging
-                    // success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp, 6);
                     success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, info->_vConfigAccelerationLimit, info->_vConfigVelocityLimit, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
                 }
 #endif
-                PARABOLICWARN("SOLVEACCELBOUNDED in _WRITEJOINTVALUES FAILED");
+                // PARABOLICWARN("SOLVEACCELBOUNDED in _WRITEJOINTVALUES FAILED");
                 return false;
             }
-            PARABOLICWARN("SOLVEACCELBOUNDED in _WRITEJOINTVALUE SUCCEEDED");
+            // PARABOLICWARN("SOLVEACCELBOUNDED in _WRITEJOINTVALUES SUCCEEDED");
 
             vector<dReal> vswitchtimes;
             if( info->ptraj->GetNumWaypoints() == 0 ) {
@@ -727,11 +725,11 @@ protected:
                 vupper[i] = 1000+RaveFabs(_v1pos[i]);
             }
             
-            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp, 6);
+            bool success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
             if( !success ) {
 #ifdef _DEBUG
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp, 6);
+                    success = ParabolicRamp::SolveAccelBounded(_v0pos, _v0vel, _v1pos, _v1vel, deltatime, vmaxaccel, vmaxvel, vlower, vupper, _ramps,_parameters->_multidofinterp);
                 }
 #endif
                 return false;

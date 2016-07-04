@@ -2647,10 +2647,6 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                          const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                          vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp)
 {
-    // std::cout << "================================================================================" << std::endl;
-    // std::cout << "START SOLVEMINTIMEBOUNDED2 (PUTTICHAI)" << std::endl;
-    // std::cout << "================================================================================" << std::endl;
-
     //PARABOLIC_RAMP_PLOG("Size x0 %d\n",(int)x0.size());
     //PARABOLIC_RAMP_PLOG("Size amax %d\n",(int)amax.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == v0.size());
