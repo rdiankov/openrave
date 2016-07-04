@@ -299,7 +299,7 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& { return itgeom->GetInfo(); };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& { return itgeom->GetInfo(); };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -377,15 +377,18 @@ public:
     }
 
 
-    void SetGeometryGroup(const std::string& groupname)
+    // TODO : body should have geometry group "a" after SetGeometryGroup("a") ; SetBodyGeometryGroup(body, "b") ; SetBodyGeometryGroup("a")
+    bool SetGeometryGroup(const std::string& groupname)
     {
+        bool bmodified = false;
         if(groupname != _geometrygroup) {
             _geometrygroup = groupname;
 
             FOREACHC(itbody, _setInitializedBodies) {
-                SetBodyGeometryGroup(*itbody, groupname);
+                bmodified |= SetBodyGeometryGroup(*itbody, groupname);
             }
         }
+        return bmodified;
     }
 
     const std::string& GetGeometryGroup() const
@@ -394,12 +397,12 @@ public:
     }
 
 
-    void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
         if( HasNamedGeometry(pbody, groupname) ) {
             // Save the already existing KinBodyInfoPtr for the old geometry group
             KinBodyInfoPtr poldinfo = GetInfo(pbody);
             if( poldinfo->_geometrygroup == groupname ) {
-                return;
+                return false;
             }
 
             if( !!_envManagerInstance ) {
@@ -431,7 +434,9 @@ public:
             }
             // Notify to the environment manager that this kinbody must be added
             _ExcludeBodyFromEnv(pbody);
+            return true;
         }
+        return false;
     }
 
     const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
