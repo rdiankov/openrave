@@ -10,6 +10,7 @@ mp.dps = _prec
 iv.dps = _prec
 pointfive = mp.mpf('0.5')
 zero = mp.mpf('0')
+inf = mp.inf
 
 """
 ramp.py
@@ -71,7 +72,7 @@ class Ramp(object):
     def __init__(self, v0, a, dur, x0=zero):
         if type(dur) is not mp.mpf:
             dur = mp.mpf("{:.15e}".format(dur))
-        assert(dur > -epsilon)
+        assert(dur >= -epsilon)
 
         # Check types
         if type(x0) is not mp.mpf:
@@ -93,7 +94,7 @@ class Ramp(object):
     def UpdateDuration(self, newDur):
         if type(newDur) is not mp.mpf:
             newDur = mp.mpf("{:.15e}".format(newDur))
-        assert(newDur > -epsilon)
+        assert(newDur >= -epsilon)
 
         self.duration = newDur
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
@@ -103,8 +104,8 @@ class Ramp(object):
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)        
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)        
 
         d_incr = Mul(t, Add(self.v0, Prod([pointfive, t, self.a])))
         return Add(self.x0, d_incr)
@@ -126,6 +127,31 @@ class Ramp(object):
         assert(t < self.duration + epsilon)
 
         return self.a
+
+    def GetPeaks(self):
+        if (FuzzyZero(self.a, epsilon)):
+            if self.v0 > 0:
+                xmin = self.x0
+                xmax = self.EvalPos(self.duration)
+            else:
+                xmin = self.EvalPos(self.duration)
+                xmax = self.x0
+            return [xmin, xmax]
+        elif (self.a > 0):
+            xmin = self.x0
+            xmax = self.EvalPos(self.duration)
+        else:
+            xmin = self.EvalPos(self.duration)
+            xmax = self.x0            
+            
+        tDeflection = Neg(mp.fdiv(self.v0, self.a))
+        if (tDeflection <= 0) or (tDeflection >= self.duration):
+            return [xmin, xmax]
+        
+        xDeflection = self.EvalPos(tDeflection)
+        xmax = max(xmax, xDeflection)
+        xmin = min(xmin, xDeflection)
+        return [xmin, xmax]
 
 
     def PlotVel(self, t0=0, fignum=None, **kwargs):
@@ -290,6 +316,22 @@ class ParabolicCurve(object):
 
         i, remainder = self._FindRampIndex(t)
         return self.ramps[i].EvalAcc(remainder)
+
+
+    def GetPeaks(self):
+        xmin = inf
+        xmax = -inf
+
+        for ramp in self.ramps:
+            [bmin, bmax] = ramp.GetPeaks()
+            if bmin < xmin:
+                xmin = bmin
+            if bmax > xmax:
+                xmax = bmax
+
+        assert(xmin < inf)
+        assert(xmax > -inf)
+        return [xmin, xmax]
 
 
     def SetInitialValue(self, x0):
@@ -499,6 +541,14 @@ class ParabolicCurvesND(object):
         aVect = [curve.EvalAcc(t) for curve in self.curves]
         return np.asarray(aVect)
 
+
+    def GetPeaks(self):
+        xmin = np.zeros(self.ndof)
+        xmax = np.zeros(self.ndof)
+        for i in xrange(self.ndof):
+            xmin[i], xmax[i] = self.curves[i].GetPeaks()
+        return [xmin, xmax]
+        
 
     # Visualization
     def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005):
