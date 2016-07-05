@@ -381,8 +381,10 @@ public:
             return;
         }
         _broadPhaseCollisionManagerAlgorithm = algorithm;
-        // TODO : This is broken, the managers should be cleared
-        // clear all the current managers
+
+        // clear all the current cached managers
+        _bodymanagers.clear();
+        _envmanagers.clear();
     }
 
     const std::string & GetBroadphaseAlgorithm() const {
@@ -471,6 +473,7 @@ public:
 
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
@@ -792,7 +795,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        _fclspace->Synchronize(pbody); //->GetLinks()[index1], pLINK1);
+        _fclspace->Synchronize(pbody);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
             DistanceCallbackData query(shared_checker(), report);
@@ -858,7 +861,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody); //->GetLinks()[index2], pLINK2);
+        _fclspace->Synchronize(pbody);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
             DistanceCallbackData query(shared_checker(), report);

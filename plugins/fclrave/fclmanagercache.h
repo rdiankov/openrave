@@ -234,7 +234,7 @@ public:
                 itcache->second.nLastStamp = pnewinfo->nLastStamp;
                 itcache->second.nLinkUpdateStamp = pnewinfo->nLinkUpdateStamp;
                 itcache->second.nGeometryUpdateStamp = pnewinfo->nGeometryUpdateStamp;
-                itcache->second.nAttachedBodiesUpdateStamp = -1; //pnewinfo->nAttachedBodiesUpdateStamp;
+                itcache->second.nAttachedBodiesUpdateStamp = -1;
                 itcache->second.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
                 itcache->second.geometrygroup = pnewinfo->_geometrygroup;
                 pinfo = pnewinfo;
@@ -262,7 +262,6 @@ public:
                         if( changed & ((uint64_t)1<<ilink) ) {
                             if( newlinkmask & ((uint64_t)1<<ilink) ) {
                                 CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
-                                //_tmpbuffer.push_back(pcolobj.get());
                                 pmanager->registerObject(pcolobj.get());
                                 itcache->second.vcolobjs.at(ilink) = pcolobj;
                             }

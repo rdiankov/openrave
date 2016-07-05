@@ -186,8 +186,6 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
-        // Which operation needs the lock in this function ?
-        EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         if( !pinfo ) {
             pinfo.reset(new KinBodyInfo());
@@ -362,11 +360,13 @@ public:
         }
     }
 
-    // TODO : Already existing geometry not updated !
-    // This will certainly be a problem if we change it in the middle of a program (i.e. when doing distance checking)
-    // Is that the behaviour we want ?
+    // Set the current bvhRepresentation and reinitializes all the KinbodyInfo if needed
     void SetBVHRepresentation(std::string const &type)
     {
+        if( type == _bvhRepresentation ) {
+            return;
+        }
+
         if (type == "AABB") {
             _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::AABB>;
@@ -392,8 +392,18 @@ public:
             _bvhRepresentation = type;
             _meshFactory = &ConvertMeshToFCL<fcl::kIOS>;
         } else {
-            RAVELOG_WARN(str(boost::format("Unknown BVH representation '%s'.") % type));
+            RAVELOG_WARN(str(boost::format("Unknown BVH representation '%s', keeping '%s' representation") % type % _bvhRepresentation));
+            return;
         }
+
+        // reinitialize all the KinBodyInfo
+
+        FOREACH(itbody, _setInitializedBodies) {
+            KinBodyInfoPtr pinfo = GetInfo(*itbody);
+            pinfo->nGeometryUpdateStamp++;
+            InitKinBody(*itbody, pinfo);
+        }
+        _cachedpinfo.clear();
     }
 
     std::string const& GetBVHRepresentation() const {
@@ -428,16 +438,6 @@ public:
         return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }
 
-    std::pair<KinBodyInfoPtr, bool> GetCreateInfo(KinBodyConstPtr pbody)
-    {
-        KinBodyInfoPtr pinfo = this->GetInfo(pbody);
-        bool bcreated = false;
-        if( !pinfo ) {
-            pinfo = InitKinBody(pbody, KinBodyInfoPtr());
-            bcreated = true;
-        }
-        return std::make_pair(pinfo, bcreated);
-    }
 
     void RemoveUserData(KinBodyConstPtr pbody) {
         if( !!pbody ) {
