@@ -10,6 +10,7 @@ mp.dps = _prec
 iv.dps = _prec
 pointfive = mp.mpf('0.5')
 zero = mp.mpf('0')
+inf = mp.inf
 
 """
 ramp.py
@@ -27,7 +28,7 @@ def Add(a, b):
 def IsEqual(a, b):
     # It is better to check equality using this function than using == when a or b or both are a
     # product of some operations involving division.    
-    return Abs(Sub(a, b)) < epsilon
+    return Abs(Sub(a, b)) <= epsilon
 
 def Mul(a, b):
     return mp.fmul(a, b, exact=True)
@@ -71,7 +72,7 @@ class Ramp(object):
     def __init__(self, v0, a, dur, x0=zero):
         if type(dur) is not mp.mpf:
             dur = mp.mpf("{:.15e}".format(dur))
-        assert(dur > -epsilon)
+        assert(dur >= -epsilon)
 
         # Check types
         if type(x0) is not mp.mpf:
@@ -93,7 +94,7 @@ class Ramp(object):
     def UpdateDuration(self, newDur):
         if type(newDur) is not mp.mpf:
             newDur = mp.mpf("{:.15e}".format(newDur))
-        assert(newDur > -epsilon)
+        assert(newDur >= -epsilon)
 
         self.duration = newDur
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
@@ -103,8 +104,8 @@ class Ramp(object):
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)        
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)        
 
         d_incr = Mul(t, Add(self.v0, Prod([pointfive, t, self.a])))
         return Add(self.x0, d_incr)
@@ -113,8 +114,8 @@ class Ramp(object):
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
         
         return Add(self.v0, Mul(self.a, t))
         
@@ -122,10 +123,35 @@ class Ramp(object):
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
 
         return self.a
+
+    def GetPeaks(self):
+        if (FuzzyZero(self.a, epsilon)):
+            if self.v0 > 0:
+                xmin = self.x0
+                xmax = self.EvalPos(self.duration)
+            else:
+                xmin = self.EvalPos(self.duration)
+                xmax = self.x0
+            return [xmin, xmax]
+        elif (self.a > 0):
+            xmin = self.x0
+            xmax = self.EvalPos(self.duration)
+        else:
+            xmin = self.EvalPos(self.duration)
+            xmax = self.x0            
+            
+        tDeflection = Neg(mp.fdiv(self.v0, self.a))
+        if (tDeflection <= 0) or (tDeflection >= self.duration):
+            return [xmin, xmax]
+        
+        xDeflection = self.EvalPos(tDeflection)
+        xmax = max(xmax, xDeflection)
+        xmin = min(xmin, xDeflection)
+        return [xmin, xmax]
 
 
     def PlotVel(self, t0=0, fignum=None, **kwargs):
@@ -144,6 +170,14 @@ class Ramp(object):
         line = plt.plot([t0, t0 + self.duration], [self.a, self.a], **kwargs)[0]
         plt.show(False)
         return line
+
+
+    def __repr__(self):
+        bmin, bmax = self.GetPeaks()
+        return "x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; a = {4}; duration = {5}; bmin = {6}; bmax = {7}".\
+            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.EvalPos(curve.duration), n=_prec),
+                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.duration, n=_prec),
+                   mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
 # end class Ramp
 
 
@@ -265,8 +299,8 @@ class ParabolicCurve(object):
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
 
         i, remainder = self._FindRampIndex(t)
         return self.ramps[i].EvalPos(remainder)
@@ -275,8 +309,8 @@ class ParabolicCurve(object):
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
 
         i, remainder = self._FindRampIndex(t)
         return self.ramps[i].EvalVel(remainder)
@@ -285,11 +319,27 @@ class ParabolicCurve(object):
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
 
         i, remainder = self._FindRampIndex(t)
         return self.ramps[i].EvalAcc(remainder)
+
+
+    def GetPeaks(self):
+        xmin = inf
+        xmax = -inf
+
+        for ramp in self.ramps:
+            [bmin, bmax] = ramp.GetPeaks()
+            if bmin < xmin:
+                xmin = bmin
+            if bmax > xmax:
+                xmax = bmax
+
+        assert(xmin < inf)
+        assert(xmax > -inf)
+        return [xmin, xmax]
 
 
     def SetInitialValue(self, x0):
@@ -473,8 +523,8 @@ class ParabolicCurvesND(object):
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
         
         xVect = [curve.EvalPos(t) for curve in self.curves]
         return np.asarray(xVect)
@@ -483,8 +533,8 @@ class ParabolicCurvesND(object):
     def EvalVel(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
         
         vVect = [curve.EvalVel(t) for curve in self.curves]
         return np.asarray(vVect)
@@ -493,12 +543,20 @@ class ParabolicCurvesND(object):
     def EvalAcc(self, t):
         if type(t) is not mp.mpf:
             t = mp.mpf("{:.15e}".format(t))
-        assert(t > -epsilon)
-        assert(t < self.duration + epsilon)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
         
         aVect = [curve.EvalAcc(t) for curve in self.curves]
         return np.asarray(aVect)
 
+
+    def GetPeaks(self):
+        xmin = np.zeros(self.ndof)
+        xmax = np.zeros(self.ndof)
+        for i in xrange(self.ndof):
+            xmin[i], xmax[i] = self.curves[i].GetPeaks()
+        return [xmin, xmax]
+        
 
     # Visualization
     def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005):
@@ -554,6 +612,16 @@ class ParabolicCurvesND(object):
     
 ################################################################################
 # Utilities (for checking)
+def VectToString(A):
+    A_ = ConvertFloatArrayToMPF(A)
+    separator = ""
+    s = "["
+    for a in A_:
+        s += separator
+        s += mp.nstr(a, n=_prec)
+        separator = ", "
+    return s
+
 _printInfo = False#True
 def FuzzyEquals(a, b, eps):
     return Abs(Sub(a, b)) < eps
@@ -564,54 +632,66 @@ def FuzzyZero(a, eps):
 class ParabolicCheckReturn:
     Normal = 0
     NegativeDuration = 1
-    VBoundViolated = 2
-    ABoundViolated = 3
-    VDiscontinuous = 4
-    XDiscrepancy = 5
-    VDiscrepancy = 6
-    DurationDiscrepancy = 7
+    XBoundViolated = 2
+    VBoundViolated = 3
+    ABoundViolated = 4
+    VDiscontinuous = 5
+    XDiscrepancy = 6
+    VDiscrepancy = 7
+    DurationDiscrepancy = 8
 
 
-def CheckRamp(ramp, vm, am):
+def CheckRamp(ramp, xmin, xmax, vm, am):
+    xmin = ConvertFloatToMPF(xmin)
+    xmax = ConvertFloatToMPF(xmax)
     vm = ConvertFloatToMPF(vm)
     am = ConvertFloatToMPF(am)
-    if (ramp.duration < Neg(epsilon)):
-        return ParabolicCheckReturn.NegativeDuration
+
+    bmin, bmax = ramp.GetPeaks()
+    if (bmin < Sub(xmin, epsilon)) or (bmax > Add(xmax, epsilon)):
+        return ParabolicCheckReturn.XBoundViolated
+
     if (Abs(ramp.v0) > Add(vm, epsilon)) or (Abs(ramp.v1) > Add(vm, epsilon)):
         return ParabolicCheckReturn.VBoundViolated
+    
     if (Abs(ramp.a) > Add(am, epsilon)):
         return ParabolicCheckReturn.ABoundViolated
+    
     return ParabolicCheckReturn.Normal
 
 
-def CheckRamps(rampsVect, vm, am):
-    ret = CheckRamp(rampsVect[0], vm, am)
-    if not (ret == ParabolicCheckReturn.Normal):
-        return ret
+def CheckRamps(rampsVect, xmin, xmax, vm, am):
+    xmin = ConvertFloatToMPF(xmin)
+    xmax = ConvertFloatToMPF(xmax)
     vm = ConvertFloatToMPF(vm)
     am = ConvertFloatToMPF(am)
+    
+    ret = CheckRamp(rampsVect[0], xmin, xmax, vm, am)
+    if not (ret == ParabolicCheckReturn.Normal):
+        return ret
     
     for i in xrange(1, len(rampsVect)):
         if not FuzzyEquals(rampsVect[i - 1].v1, rampsVect[i].v0, epsilon):
             return ParabolicCheckReturn.VDiscrepancy
-        ret = CheckRamp(rampsVect[i], vm, am)
+        ret = CheckRamp(rampsVect[i], xmin, xmax, vm, am)
         if not (ret == ParabolicCheckReturn.Normal):
             return ret
     return ParabolicCheckReturn.Normal
 
 
-def CheckParabolicCurve(curve, vm, am, v0, v1, x0, x1):
-    ret = CheckRamps(curve.ramps, vm, am)
-    if not (ret == ParabolicCheckReturn.Normal):
-        return ret
-    # Check boundary conditions
+def CheckParabolicCurve(curve, xmin, xmax, vm, am, x0, x1, v0, v1):
     vm = ConvertFloatToMPF(vm)
     am = ConvertFloatToMPF(am)
     v0 = ConvertFloatToMPF(v0)
     v1 = ConvertFloatToMPF(v1)
     x0 = ConvertFloatToMPF(x0)
     x1 = ConvertFloatToMPF(x1)
-
+    
+    ret = CheckRamps(curve.ramps, xmin, xmax, vm, am)
+    if not (ret == ParabolicCheckReturn.Normal):
+        return ret
+    
+    # Check boundary conditions
     if not FuzzyEquals(curve.v0, curve.ramps[0].v0, epsilon):
         return ParabolicCheckReturn.VDiscrepancy
     if not FuzzyEquals(curve.v0, v0, epsilon):
@@ -631,7 +711,9 @@ def CheckParabolicCurve(curve, vm, am, v0, v1, x0, x1):
     return ParabolicCheckReturn.Normal
 
 
-def CheckParabolicCurvesND(curvesnd, vmVect, amVect, v0Vect, v1Vect, x0Vect, x1Vect):
+def CheckParabolicCurvesND(curvesnd, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect):
+    xminVect_ = ConvertFloatArrayToMPF(xminVect)
+    xmaxVect_ = ConvertFloatArrayToMPF(xmaxVect)
     vmVect_ = ConvertFloatArrayToMPF(vmVect)
     amVect_ = ConvertFloatArrayToMPF(amVect)
     v0Vect_ = ConvertFloatArrayToMPF(v0Vect)
@@ -639,7 +721,7 @@ def CheckParabolicCurvesND(curvesnd, vmVect, amVect, v0Vect, v1Vect, x0Vect, x1V
     x0Vect_ = ConvertFloatArrayToMPF(x0Vect)
     x1Vect_ = ConvertFloatArrayToMPF(x1Vect)
     for i in xrange(curvesnd.ndof):
-        ret = CheckParabolicCurve(curvesnd.curves[i], vmVect_[i], amVect_[i], v0Vect_[i], v1Vect_[i], x0Vect_[i], x1Vect_[i])
+        ret = CheckParabolicCurve(curvesnd.curves[i], xminVect_[i], xmaxVect_[i], vmVect_[i], amVect_[i], x0Vect_[i], x1Vect_[i], v0Vect_[i], v1Vect_[i])
         if not (ret == ParabolicCheckReturn.Normal):
             return ret
         if not FuzzyEquals(curvesnd.duration, curvesnd.curves[i].duration, epsilon):
