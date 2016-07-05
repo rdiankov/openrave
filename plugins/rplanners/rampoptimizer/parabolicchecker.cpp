@@ -75,7 +75,7 @@ ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, Real xmin, Real 
 ParabolicCheckReturn CheckParabolicCurvesND(ParabolicCurvesND& curvesnd, std::vector<Real>& xminVect, std::vector<Real>& xmaxVect, std::vector<Real>& vmVect, std::vector<Real>& amVect,
                                             std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, std::vector<Real>& v0Vect, std::vector<Real>& v1Vect) {
     ParabolicCheckReturn ret;
-    for (int i = 0; i < ndof; ++i) {
+    for (int i = 0; i < curvesnd.ndof; ++i) {
         ret = CheckParabolicCurve(curvesnd.curves[i], xminVect[i], xmaxVect[i], vmVect[i], amVect[i], x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i]);
         if (ret != PCR_Normal) {
             return ret;
@@ -88,4 +88,4 @@ ParabolicCheckReturn CheckParabolicCurvesND(ParabolicCurvesND& curvesnd, std::ve
 }
 
 
-}
+} // end namespace RampOptimizerInternal

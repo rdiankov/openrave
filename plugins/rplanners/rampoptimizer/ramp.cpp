@@ -206,10 +206,12 @@ void ParabolicCurve::FindRampIndex(Real t, int& index, Real& remainder) const {
 }
 
 void ParabolicCurve::Initialize(std::vector<Ramp> rampsIn) {
-    BOOST_ASSERT(!rampsIn.empty());
-
+    ramps.resize(0);
     ramps.reserve(rampsIn.size());
+    
+    switchpointsList.resize(0);
     switchpointsList.reserve(rampsIn.size() + 1);
+    
     d = 0.0;
     duration = 0.0;
     switchpointsList.push_back(duration);
@@ -383,8 +385,6 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
 }
 
 void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
-    BOOST_ASSERT(!curvesIn.empty());
-
     ndof = curvesIn.size();
     // Here we need to check whether every curve has (roughly) the same duration
     ///////////////////

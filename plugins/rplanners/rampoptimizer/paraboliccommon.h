@@ -81,6 +81,34 @@ inline void Swap(Real& x,Real& y) {
     Real temp = x; x = y; y = temp;
 }
 
+inline void LinearCombination(Real a, std::vector<Real>& v1, Real b, std::vector<Real>& v2, std::vector<Real>& v3) {
+    size_t v1size = v1.size();
+    RAMP_OPTIM_ASSERT(v1size == v2.size());
+    if (v3.size() != v1size) {
+        v3.resize(v1size);
+    }
+    if ((a == 1) && (b == 1)) {
+        for (size_t i = 0; i < v1size; ++i) {
+            v3[i] = v1[i] + v2[i];
+        }
+    }
+    else if ((a == 1) && (b == -1)) {
+        for (size_t i = 0; i < v1size; ++i) {
+            v3[i] = v1[i] - v2[i];
+        }
+    }
+    else if ((a == -1) && (b == 1)) {
+        for (size_t i = 0; i < v1size; ++i) {
+            v3[i] = v2[i] - v1[i];
+        }
+    }
+    else {
+        for (size_t i = 0; i < v1size; ++i) {
+            v3[i] = a*v1[i] + b*v2[i];
+        }
+    }
+}
+
 //solves the quadratic formula and returns the number of roots found
 inline int SolveQuadratic(Real a, Real b, Real c, Real& x1, Real& x2)
 {
