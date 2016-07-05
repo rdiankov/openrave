@@ -427,8 +427,8 @@ public:
     ///
     /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
     virtual void SetTorqueLimitMode(int torquelimitmode);
-    
-    /// \brief set user check fucntions
+
+    /// \brief set user check functions
     ///
     /// Two functions can be set, one to be called before check collision and one after.
     /// \param bCallAfterCheckCollision if set, function will be called after check collision functions.

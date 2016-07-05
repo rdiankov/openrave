@@ -199,7 +199,7 @@ public:
 
             if( !pbody || pbody->GetEnvironmentId() == 0 ) {
                 // should happen when parts are removed
-                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now", _lastSyncTimeStamp%(!pbody?std::string():pbody->GetName()));
+                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName()));
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -234,7 +234,7 @@ public:
                 itcache->second.nLastStamp = pnewinfo->nLastStamp;
                 itcache->second.nLinkUpdateStamp = pnewinfo->nLinkUpdateStamp;
                 itcache->second.nGeometryUpdateStamp = pnewinfo->nGeometryUpdateStamp;
-                itcache->second.nAttachedBodiesUpdateStamp = -1;//pnewinfo->nAttachedBodiesUpdateStamp;
+                itcache->second.nAttachedBodiesUpdateStamp = -1; //pnewinfo->nAttachedBodiesUpdateStamp;
                 itcache->second.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
                 itcache->second.geometrygroup = pnewinfo->_geometrygroup;
                 pinfo = pnewinfo;
@@ -288,8 +288,8 @@ public:
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
                             CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
                             if( !!pcol ) {
-                              pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
-                              bcallsetup = true;
+                                pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
+                                bcallsetup = true;
                             } else {
                                 pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                             }
@@ -436,7 +436,7 @@ private:
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it != mapCachedBodies.end() ) {
             FOREACH(itcol, it->second.vcolobjs) {
-                if( !!itcol->get() ) {
+                if( !!itcol->get() && (*itcol)->getUserData() ) {
                     pmanager->unregisterObject(itcol->get());
                 }
             }

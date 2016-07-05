@@ -17,6 +17,11 @@ namespace fclrave {
 #define START_TIMING_OPT(statistics, label, options, isRobot);           \
     START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
 
+#ifndef FCLUSESTATISTICS
+// Disable Env statistics when statistics are disabled
+#undef FCLUSEENVSTATISTICS
+#endif // FCLUSESTATISTICS
+
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
 static EnvironmentMutex log_collision_use_mutex;
 #endif // FCLRAVE_COLLISION_OBJECTS_STATISTIC
@@ -216,7 +221,7 @@ public:
     };
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
-      : OpenRAVE::CollisionCheckerBase(penv), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2"), _ray(CollisionGeometryPtr()), _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
+        : OpenRAVE::CollisionCheckerBase(penv), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2"), _ray(CollisionGeometryPtr()), _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
         _fclspace.reset(new FCLSpace(penv, _userdatakey));
@@ -262,7 +267,8 @@ public:
         FOREACH(itpair, _usestatistics) {
             f << GetEnv()->GetId() << "|" << _userdatakey << "|" << itpair->first;
             FOREACH(itintpair, itpair->second) {
-                f << "|" << itintpair->first << ";" << itintpair->second;            }
+                f << "|" << itintpair->first << ";" << itintpair->second;
+            }
             f << std::endl;
         }
         f.close();
@@ -304,7 +310,7 @@ public:
 
     void SetGeometryGroup(const std::string& groupname)
     {
-#ifdef FCLUSESTATISTICS
+#ifdef FCLUSEENVSTATISTICS
         if( _fclspace->SetGeometryGroup(groupname) ) {
             _statistics->NotifyGeometryGroupChanged(groupname);
         }
@@ -320,7 +326,7 @@ public:
 
     void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
     {
-#ifdef FCLUSESTATISTICS
+#ifdef FCLUSEENVSTATISTICS
         if( _fclspace->SetBodyGeometryGroup(pbody, groupname) ) {
             _statistics->NotifyGeometryGroupChanged(groupname);
         }
@@ -647,9 +653,9 @@ public:
             return false;
         }
 
-#ifdef FCLUSESTATISTICS
+#ifdef FCLUSEENVSTATISTICS
         _statistics->CaptureEnvState(_fclspace->GetEnvBodies(), plink->GetParent(), plink->GetIndex());
-#endif // FCLUSESTATISTICS
+#endif // FCLUSEENVSTATISTICS
 
         _fclspace->Synchronize();
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
@@ -688,9 +694,9 @@ public:
             return false;
         }
 
-#ifdef FCLUSESTATISTICS
+#ifdef FCLUSEENVSTATISTICS
         _statistics->CaptureEnvState(_fclspace->GetEnvBodies(), pbody, -1);
-#endif // FCLUSESTATISTICS
+#endif // FCLUSEENVSTATISTICS
 
         _fclspace->Synchronize();
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, _options & OpenRAVE::CO_ActiveDOFs);
@@ -786,7 +792,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        _fclspace->Synchronize(pbody);//->GetLinks()[index1], pLINK1);
+        _fclspace->Synchronize(pbody); //->GetLinks()[index1], pLINK1);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
             DistanceCallbackData query(shared_checker(), report);
@@ -821,12 +827,12 @@ public:
             // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
             LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
             FOREACH(itgeom1, pLINK1->vgeoms) {
-              FOREACH(itgeom2, pLINK2->vgeoms) {
-                CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
-                if( query._bStopChecking ) {
-                  return query._bCollision;
+                FOREACH(itgeom2, pLINK2->vgeoms) {
+                    CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
+                    if( query._bStopChecking ) {
+                        return query._bCollision;
+                    }
                 }
-              }
             }
         }
         return query._bCollision;
@@ -852,7 +858,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);//->GetLinks()[index2], pLINK2);
+        _fclspace->Synchronize(pbody); //->GetLinks()[index2], pLINK2);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
             DistanceCallbackData query(shared_checker(), report);
@@ -885,18 +891,18 @@ public:
         query.bselfCollision = true;
         KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
         FOREACH(itset, nonadjacent) {
-          int index1 = *itset&0xffff, index2 = *itset>>16;
-          if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
-            LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
-            FOREACH(itgeom1, pLINK1->vgeoms) {
-              FOREACH(itgeom2, pLINK2->vgeoms) {
-                CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
-                if( query._bStopChecking ) {
-                  return query._bCollision;
+            int index1 = *itset&0xffff, index2 = *itset>>16;
+            if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
+                LinkInfoPtr pLINK1 = pinfo->vlinks[index1], pLINK2 = pinfo->vlinks[index2];
+                FOREACH(itgeom1, pLINK1->vgeoms) {
+                    FOREACH(itgeom2, pLINK2->vgeoms) {
+                        CheckNarrowPhaseGeomCollision((*itgeom1).second.get(), (*itgeom2).second.get(), &query);
+                        if( query._bStopChecking ) {
+                            return query._bCollision;
+                        }
+                    }
                 }
-              }
             }
-          }
         }
         return query._bCollision;
     }
@@ -1300,7 +1306,7 @@ private:
     std::string _userdatakey;
     std::string _broadPhaseCollisionManagerAlgorithm; ///< broadphase algorithm to use to create a manager. tested: Naive, DynamicAABBTree2
 
-    typedef std::map< std::pair<KinBodyConstPtr, int> , FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
+    typedef std::map< std::pair<KinBodyConstPtr, int>, FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager.
     //std::map<KinBodyPtr, FCLCollisionManagerInstancePtr> _activedofbodymanagers; ///< managers for each of the individual bodies specifically when active DOF is used. each manager should be called with InitBodyManager
     std::map< std::set<int>, FCLCollisionManagerInstancePtr> _envmanagers;

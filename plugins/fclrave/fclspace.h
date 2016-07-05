@@ -186,7 +186,7 @@ public:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr())
     {
-      // Which operation needs the lock in this function ?
+        // Which operation needs the lock in this function ?
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
 
         if( !pinfo ) {
