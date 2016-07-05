@@ -31,7 +31,7 @@ public:
     Real EvalPos(Real t) const;
     Real EvalVel(Real t) const;
     Real EvalAcc(Real t) const;
-
+    void GetPeaks(Real& bmin, Real& bmax) const;
     void Initialize(Real v0, Real a, Real dur, Real x0=0);
     void PrintInfo(std::string name) const;
     void PrintInfo() const {
@@ -58,12 +58,12 @@ public:
     }
 
     // Functions
+    void Append(ParabolicCurve curve);
     Real EvalPos(Real t) const;
     Real EvalVel(Real t) const;
     Real EvalAcc(Real t) const;
-
-    void Append(ParabolicCurve curve);
     void FindRampIndex(Real t, int& i, Real& rem) const;
+    void GetPeaks(Real& bmin, Real& bmax) const;
     void Initialize(std::vector<Ramp> ramps);
     bool IsEmpty() const {
         return ramps.size() == 0;
@@ -101,6 +101,7 @@ public:
     std::vector<Real> EvalAcc(Real t) const;
 
     void Append(ParabolicCurvesND curvesnd);
+    void GetPeaks(std::vector<Real>& bminVect, std::vector<Real>& bmaxVect) const;
     void Initialize(std::vector<ParabolicCurve> curves);
     bool IsEmpty() const {
         return curves.size() == 0;

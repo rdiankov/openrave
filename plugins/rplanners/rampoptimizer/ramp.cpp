@@ -50,6 +50,38 @@ Real Ramp::EvalAcc(Real t) const {
     return a;
 }
 
+void Ramp::GetPeaks(Real& bmin, Real& bmax) const {
+    if (FuzzyZero(a, epsilon)) {
+        if (v0 > 0) {
+            bmin = x0;
+            bmax = EvalPos(duration);
+        }
+        else {
+            bmin = EvalPos(duration);
+            bmax = x0;
+        }
+        return;
+    }
+    else if (a > 0) {
+        bmin = x0;
+        bmax = EvalPos(duration);
+    }
+    else {
+        bmin = EvalPos(duration);
+        bmax = x0;
+    }
+
+    Real tDeflection = -v0/a;
+    if ((tDeflection <= 0) || (tDeflection >= duration)) {
+        return;
+    }
+
+    Real xDeflection = EvalPos(tDeflection);
+    bmin = Min(bmin, xDeflection);
+    bmax = Max(bmax, xDeflection);
+    return;
+}
+
 void Ramp::Initialize(Real v0_, Real a_, Real dur_, Real x0_) {
     BOOST_ASSERT(dur_ >= -epsilon);
 
@@ -253,8 +285,26 @@ Real ParabolicCurve::EvalAcc(Real t) const {
     return ramps[index].a;
 }
 
+void ParabolicCurve::GetPeaks(Real& bmin, Real& bmax) const {
+    bmin = inf;
+    bmax = -inf;
+    Real temp1, temp2;
+    for (std::vector<Ramp>::const_iterator it = ramps.begin(); it != ramps.end(); ++it) {
+        it->GetPeaks(temp1, temp2);
+        if (temp1 < bmin) {
+            bmin = temp1;
+        }
+        if (temp2 > bmax) {
+            bmax = temp2;
+        }
+    }
+    RAMP_OPTIM_ASSERT(bmin < inf);
+    RAMP_OPTIM_ASSERT(bmax > -inf);
+    return;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
-// ParabolicCurvesND
+// paraboliccurvesnd
 ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     BOOST_ASSERT(!curvesIn.empty());
 
@@ -438,6 +488,15 @@ std::vector<Real> ParabolicCurvesND::EvalAcc(Real t) const {
         aVect[i] = curves[i].EvalAcc(t);
     }
     return aVect;
+}
+
+void ParabolicCurvesND::GetPeaks(std::vector<Real>& bminVect, std::vector<Real>& bmaxVect) const {
+    bminVect.resize(ndof);
+    bminVect.resize(ndof);
+    for (size_t i = 0; i < ndof; ++i) {
+        curves[i].GetPeaks(bminVect[i], bmaxVect[i]);
+    }
+    return;
 }
 
 std::string GenerateStringFromVector(const std::vector<Real>& vect) {
