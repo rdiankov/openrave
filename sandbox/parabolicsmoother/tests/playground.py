@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 sys.path.append('../')
+import IPython
 
 import ramp
 from ramp import ParabolicCheckReturn as PCR
@@ -142,7 +143,7 @@ print "Easy bounds : interpolation with fixed duration successful instance = {0}
 
 ################################################################################
 # Check interpolation with fixed duration (bounds from a real robot)
-xMin = np.array([-2.96705972839036, -2.094395102393195, 2.181661564992912,
+xMin = np.array([-2.96705972839036, -2.094395102393195, -2.181661564992912,
                  -4.71238898038469, -2.094395102393195, -6.283185307179586])
 xMax = np.array([ 2.96705972839036, 2.094395102393195, 2.705260340591211,
                   4.71238898038469, 2.094395102393195, 6.283185307179586])
@@ -159,6 +160,7 @@ aMin = -1.0 * aMax
 nTrials = 1000
 nSuccess = 0
 vboundfailed = 0
+xboundfailed = 0
 interpfailed = 0
 for it in xrange(nTrials):
     print "iteration {0}/{1}".format(it + 1, nTrials)
@@ -167,9 +169,9 @@ for it in xrange(nTrials):
     v0Vect = RandVect2(vMin, vMax)
     v1Vect = RandVect2(vMin, vMax)
 
-    curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vMax, aMax, tryHarder=True)
+    curvesnd = InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xMin, xMax, vMax, aMax, tryHarder=True)
     if not curvesnd.isEmpty:
-        ret = ramp.CheckParabolicCurvesND(curvesnd, vMax, aMax, v0Vect, v1Vect, x0Vect, x1Vect)
+        ret = ramp.CheckParabolicCurvesND(curvesnd, xMin, xMax, vMax, aMax, x0Vect, x1Vect, v0Vect, v1Vect)
         # print ret
         # raw_input()
         if ret == PCR.Normal:
@@ -177,6 +179,9 @@ for it in xrange(nTrials):
         elif ret == PCR.VBoundViolated:
             vboundfailed += 1
             break
+        elif ret == PCR.XBoundViolated:
+            xboundfailed += 1
+            IPython.embed()
         else:
             print ret
             raw_input()
@@ -185,6 +190,8 @@ for it in xrange(nTrials):
         #     break
     else:
         interpfailed += 1
+        IPython.embed()
 print "Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials)
 print "Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials)
-print "Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed, nTrials)
+print "Real bounds : x-bound failed = {0}/{1}".format(xboundfailed, nTrials)
+print "Real bounds : other failures = {0}/{1}".format(nTrials - nSuccess - interpfailed - xboundfailed, nTrials)

@@ -75,7 +75,7 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
     return curvesnd
 
 
-def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, delta=zero, tryHarder=False):
+def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xminVect, xmaxVect, vmVect, amVect, delta=zero, tryHarder=False):
     """Interpolate a trajectory connecting two waypoints, (x0Vect, v0Vect) and (x1Vect, v1Vect).
 
     """
@@ -89,6 +89,8 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
     x1Vect_ = ConvertFloatArrayToMPF(x1Vect)
     v0Vect_ = ConvertFloatArrayToMPF(v0Vect)
     v1Vect_ = ConvertFloatArrayToMPF(v1Vect)
+    xminVect_ = ConvertFloatArrayToMPF(xminVect)
+    xmaxVect_ = ConvertFloatArrayToMPF(xmaxVect)
     vmVect_ = ConvertFloatArrayToMPF(vmVect)
     amVect_ = ConvertFloatArrayToMPF(amVect)
     
@@ -114,7 +116,15 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, vmVect, amVect, de
     ## TEMPORARY
     # print "maxIndex = {0}".format(maxIndex)
     curvesnd = ReinterpolateNDFixedDuration(curves, vmVect_, amVect_, maxIndex, delta, tryHarder)
-    return curvesnd
+
+    newCurves = []
+    for (i, curve) in enumerate(curvesnd.curves):
+        newCurve = _ImposeJointLimitFixedDuration(curve, xminVect_[i], xmaxVect_[i], vmVect_[i], amVect_[i])
+        if newCurve.isEmpty:
+            return ParabolicCurvesND()
+        newCurves.append(newCurve)
+    
+    return ParabolicCurvesND(newCurves)
 
 
 def ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta=zero, tryHarder=False):
@@ -325,6 +335,202 @@ def _ImposeVelocityLimit(curve, vm):
     return ParabolicCurve(ramps)
 
 
+####################################################################################################
+"""The following procedure for fixing x-bound violation is copied from OpenRAVE's
+ParabolicPathSmooth library.
+"""
+
+def _SolveAXMB(a, b, eps, xmin, xmax):
+    """
+    This function 'safely' solves for a value x \in [xmin, xmax] such that  |a*x - b| <= eps*max(|a|, |b|).
+    Assume xmin <= 0 <= xmax.
+
+    This function returns [result, x].
+    """
+    if (a < 0):
+        return _SolveAXMB(-a, -b, eps, xmin, xmax)
+
+    epsScaled = eps*max(a, Abs(b)) # we already know that a > 0
+
+    # Infinite range
+    if ((xmin == -inf) and (xmax == inf)):
+        if (a == zero):
+            x = zero
+            result = Abs(b) <= epsScaled
+            return [result, x]
+
+        x = mp.fdiv(b, a)
+        return [True, x]
+
+    axmin = Mul(a, xmin)
+    axmax = Mul(a, xmax)
+
+    if not ((Add(b, epsScaled) >= axmin) and (Sub(b, epsScaled) <= axmax)):
+        # Ranges do not intersect
+        return [False, zero]
+
+    if not (a == zero):
+        x = mp.fdiv(b, a)
+        if (xmin <= x) and (x <= xmax):
+            return [True, x]
+
+    if (Abs(Sub(Mul(pointfive, Add(axmin, axmax)), b)) <= epsScaled):
+        x = Mul(pointfive, Add(xmin, xmax))
+        return [True, x]
+
+    if (Abs(Sub(axmax, b)) <= epsScaled):
+        x = xmax
+        return [True, x]
+
+    assert(Abs(Sub(axmin, b)) <= epsScaled)
+    x = xmin
+    return [True, x]
+            
+
+def _BrakeTime(x, v, xbound):
+    [result, t] = _SolveAXMB(v, Mul(number('2'), Sub(xbound, x)), epsilon, 0, inf)
+    if not result:
+        log.debug("Cannot solve for braking time from the equation {0}*t - {1} = 0".\
+                  format(mp.nstr(v, n=_prec), mp.nstr(Mul(number('2'), Sub(xbound, x)), n=_prec)))
+        return 0
+    return t
+
+
+def _BrakeAccel(x, v, xbound):
+    coeff0 = Mul(number('2'), Sub(xbound, x))
+    coeff1 = Sqr(v)
+    [result, a] = _SolveAXMB(coeff0, Neg(coeff1), epsilon, -inf, inf)
+    if not result:
+        log.debug("Cannot solve for braking acceleration from the equation {0}*a + {1} = 0".\
+                  format(mp.nstr(coeff0, n=_prec), mp.nstr(coeff1, n=_prec)))
+        return 0
+    return a
+    
+
+def _ImposeJointLimitFixedDuration(curve, xmin, xmax, vm, am):
+    bmin, bmax = curve.GetPeaks()
+    if (bmin >= Sub(xmin, epsilon)) and (bmax <= Add(xmax, epsilon)):
+        # Joint limits are not violated
+        return curve
+    
+    duration = curve.duration
+    x0 = curve.x0
+    x1 = curve.EvalPos(duration)
+    v0 = curve.v0
+    v1 = curve.v1
+
+    bt0 = inf
+    bt1 = inf
+    ba0 = inf
+    ba1 = inf
+    bx0 = inf
+    bx1 = inf
+    if (v0 > zero):
+        bt0 = _BrakeTime(x0, v0, xmax)
+        bx0 = xmax
+        ba0 = _BrakeAccel(x0, v0, xmax)
+    elif (v0 < zero):
+        bt0 = _BrakeTime(x0, v0, xmin)
+        bx0 = xmin
+        ba0 = _BrakeAccel(x0, v0, xmin)
+
+    if (v1 < zero):
+        bt1 = _BrakeTime(x1, -v1, xmax)
+        bx1 = xmax
+        ba1 = _BrakeAccel(x1, -v1, xmax)
+    elif (v1 > zero):
+        bt1 = _BrakeTime(x1, -v1, xmin)
+        bx1 = xmin
+        ba1 = _BrakeAccel(x1, -v1, xmin)
+
+    # import IPython; IPython.embed()
+        
+    newCurve = ParabolicCurve()
+    if ((bt0 < duration) and (Abs(ba0) < Add(am, epsilon))):
+        # Case IIa
+        log.debug("Case IIa")
+        firstRamp = Ramp(v0, ba0, bt0, x0)
+        if (Abs(Sub(x1, bx0)) < Mul(Sub(duration, bt0), vm)):
+            tempCurve1 = Interpolate1D(bx0, x1, zero, v1, vm, am)
+            if not tempCurve1.isEmpty:
+                if (Sub(duration, bt0) >= tempCurve1.duration):
+                    tempCurve2 = _Stretch1D(tempCurve1, Sub(duration, bt0), vm, am)
+                    if not tempCurve2.isEmpty:
+                        tempbmin, tempbmax = tempCurve2.GetPeaks()
+                        if not ((tempbmin < Sub(xmin, epsilon)) or (tempbmax > Add(xmax, epsilon))):
+                            log.debug("Case IIa successful")
+                            newCurve = ParabolicCurve([firstRamp] + tempCurve2.ramps)
+                                        
+
+    if ((bt1 < duration) and (Abs(ba1) < Add(am, epsilon))):
+        # Case IIb
+        log.debug("Case IIb")
+        lastRamp = Ramp(0, ba1, bt1, bx1)
+        if (Abs(Sub(x0, bx1)) < Mul(Sub(duration, bt1), vm)):
+            tempCurve1 = Interpolate1D(x0, bx1, v0, zero, vm, am)
+            if not tempCurve1.isEmpty:
+                if (Sub(duration, bt1) >= tempCurve1.duration):
+                    tempCurve2 = _Stretch1D(tempCurve1, Sub(duration, bt1), vm, am)
+                    if not tempCurve2.isEmpty:
+                        tempbmin, tempbmax = tempCurve2.GetPeaks()
+                        if not ((tempbmin < Sub(xmin, epsilon)) or (tempbmax > Add(xmax, epsilon))):
+                            log.debug("Case IIb successful")
+                            newCurve = ParabolicCurve(tempCurve2.ramps + [lastRamp])          
+        
+
+    if (bx0 == bx1):
+        # Case III
+        if (Add(bt0, bt1) < duration) and (max(Abs(ba0), Abs(ba1)) < Add(am, epsilon)):
+            log.debug("Case III")
+            ramp0 = Ramp(v0, ba0, bt0, x0)
+            ramp1 = Ramp(zero, zero, Sub(duration, Add(bt0, bt1)))
+            ramp2 = Ramp(zero, ba1, bt1)
+            newCurve = ParabolicCurve([ramp0, ramp1, ramp2])
+    else:
+        # Case IV
+        if (Add(bt0, bt1) < duration) and (max(Abs(ba0), Abs(ba1)) < Add(am, epsilon)):
+            log.debug("Case IV")
+            firstRamp = Ramp(v0, ba0, bt0, x0)
+            lastRamp = Ramp(zero, ba1, bt1)
+            if (Abs(Sub(bx0, bx1)) < Mul(Sub(duration, Add(bt0, bt1)), vm)):
+                tempCurve1 = Interpolate1D(bx0, bx1, zero, zero, vm, am)
+                if not tempCurve1.isEmpty:
+                    if (Sub(duration, Add(bt0, bt1)) >= tempCurve1.duration):
+                        tempCurve2 = _Stretch1D(tempCurve1, Sub(duration, Add(bt0, bt1)), vm, am)
+                        if not tempCurve2.isEmpty:
+                            tempbmin, tempbmax = tempCurve2.GetPeaks()
+                            if not ((tempbmin < Sub(xmin, epsilon)) or (tempbmax > Add(xmax, epsilon))):
+                                log.debug("Case IV successful")
+                                newCurve = ParabolicCurve([firstRamp] + tempCurve2.ramps + [lastRamp])
+        
+
+    if (newCurve.isEmpty):
+        log.warn("Cannot solve for a bounded trajectory")
+        log.warn("x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; xmin = {4}; xmax = {5}; vm = {6}; am = {7}; duration = {8}".\
+                 format(mp.nstr(curve.x0, n=_prec), mp.nstr(curve.EvalPos(curve.duration), n=_prec),
+                        mp.nstr(curve.v0, n=_prec), mp.nstr(curve.EvalVel(curve.duration), n=_prec),
+                        mp.nstr(xmin, n=_prec), mp.nstr(xmax, n=_prec),
+                        mp.nstr(vm, n=_prec), mp.nstr(am, n=_prec), mp.nstr(duration, n=_prec)))
+        return newCurve
+
+    newbmin, newbmax = newCurve.GetPeaks()
+    if (newbmin < Sub(xmin, epsilon)) or (newbmax > Add(xmax, epsilon)):
+        log.warn("Solving finished but the trajectory still violates the bounds")
+        import IPython; IPython.embed()
+        log.warn("x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; xmin = {4}; xmax = {5}; vm = {6}; am = {7}; duration = {8}".\
+                 format(mp.nstr(curve.x0, n=_prec), mp.nstr(curve.EvalPos(curve.duration), n=_prec),
+                        mp.nstr(curve.v0, n=_prec), mp.nstr(curve.EvalVel(curve.duration), n=_prec),
+                        mp.nstr(xmin, n=_prec), mp.nstr(xmax, n=_prec),
+                        mp.nstr(vm, n=_prec), mp.nstr(am, n=_prec), mp.nstr(duration, n=_prec)))
+        return ParabolicCurve()
+
+    log.debug("Successfully fixed x-bound violation")
+    return newCurve
+    
+    
+####################################################################################################
+    
+
 def _Stretch1D(curve, newDuration, vm, am):
 
     log.debug("\nx0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; vm = {4}; am = {5}; prevDuration = {6}; newDuration = {7}".\
@@ -460,9 +666,9 @@ def _Stretch1D(curve, newDuration, vm, am):
         vmnew = Mul(mp.sign(vp), vm)
         D2 = Prod([pointfive, Sqr(Sub(vp, vmnew)), Sub(mp.fdiv(one, a0), mp.fdiv(one, a1))])
         # print "D2",
-        # mp.nprint(D2, n=15)
+        # mp.nprint(D2, n=_prec)
         # print "vmnew",
-        # mp.nprint(vmnew, n=15)
+        # mp.nprint(vmnew, n=_prec)
         A2 = Sqr(Sub(vmnew, v0))
         B2 = Neg(Sqr(Sub(vmnew, v1)))
         t0trimmed = mp.fdiv(Sub(vmnew, v0), a0)
@@ -502,7 +708,7 @@ def _Stretch1D(curve, newDuration, vm, am):
             log.warn("Cannot fix acceleration bounds violation")
             return ParabolicCurve()        
 
-        log.debug("\a0 = {0}; \na0new = {1}; \na1 = {2}; \na1new = {3};".format(mp.nstr(a0, n=_prec), mp.nstr(a0new, n=_prec), mp.nstr(a1, n=_prec), mp.nstr(a1new, n=_prec)))
+        log.debug("\na0 = {0}; \na0new = {1}; \na1 = {2}; \na1new = {3};".format(mp.nstr(a0, n=_prec), mp.nstr(a0new, n=_prec), mp.nstr(a1, n=_prec), mp.nstr(a1new, n=_prec)))
         
         if (Abs(a0new) < epsilon) and (Abs(a1new) < epsilon):
             log.warn("Both accelerations are zero. Should we allow this case?")
@@ -561,20 +767,20 @@ def _Stretch1D(curve, newDuration, vm, am):
                 # assert(t1new > 0)
                 ramp3 = Ramp(ramp1.v1, a1new, t1new)
                 # print "a1",
-                # mp.nprint(a1, n=15)
+                # mp.nprint(a1, n=_prec)
                 # print "a1new",
-                # mp.nprint(a1new, n=15)
+                # mp.nprint(a1new, n=_prec)
                 
                 # print "t0trimmed",
-                # mp.nprint(t0trimmed, n=15)
+                # mp.nprint(t0trimmed, n=_prec)
                 # print "t0new",
-                # mp.nprint(t0new, n=15)
+                # mp.nprint(t0new, n=_prec)
                 # print "t1trimmed", 
-                # mp.nprint(t1trimmed, n=15)
+                # mp.nprint(t1trimmed, n=_prec)
                 # print "t1new", 
-                # mp.nprint(t1new, n=15)
+                # mp.nprint(t1new, n=_prec)
                 # print "T", 
-                # mp.nprint(newDuration, n=15)
+                # mp.nprint(newDuration, n=_prec)
                 
                 ramp2 = Ramp(ramp1.v1, zero, Sub(newDuration, Add(t0new , t1new)))
                 newCurve = ParabolicCurve([ramp1, ramp2, ramp3])
