@@ -153,7 +153,8 @@ public:
         FOREACH(itpair, _usestatistics) {
             f << GetEnv()->GetId() << "|" << _userdatakey << "|" << itpair->first;
             FOREACH(itintpair, itpair->second) {
-                f << "|" << itintpair->first << ";" << itintpair->second;            }
+                f << "|" << itintpair->first << ";" << itintpair->second;
+            }
             f << std::endl;
         }
         f.close();
@@ -246,8 +247,10 @@ public:
             return;
         }
         _broadPhaseCollisionManagerAlgorithm = algorithm;
-        // TODO : This is broken, the managers should be cleared
-        // clear all the current managers
+
+        // clear all the current cached managers
+        _bodymanagers.clear();
+        _envmanagers.clear();
     }
 
     const std::string & GetBroadphaseAlgorithm() const {
@@ -336,6 +339,7 @@ public:
 
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
@@ -576,7 +580,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        _fclspace->Synchronize(pbody);//->GetLinks()[index1], pLINK1);
+        _fclspace->Synchronize(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -624,7 +628,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);//->GetLinks()[index2], pLINK2);
+        _fclspace->Synchronize(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -909,7 +913,7 @@ private:
     std::string _userdatakey;
     std::string _broadPhaseCollisionManagerAlgorithm; ///< broadphase algorithm to use to create a manager. tested: Naive, DynamicAABBTree2
 
-    typedef std::map< std::pair<KinBodyConstPtr, int> , FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
+    typedef std::map< std::pair<KinBodyConstPtr, int>, FCLCollisionManagerInstancePtr> BODYMANAGERSMAP; ///< Maps pairs of (body, bactiveDOFs) to oits manager
     BODYMANAGERSMAP _bodymanagers; ///< managers for each of the individual bodies. each manager should be called with InitBodyManager.
     //std::map<KinBodyPtr, FCLCollisionManagerInstancePtr> _activedofbodymanagers; ///< managers for each of the individual bodies specifically when active DOF is used. each manager should be called with InitBodyManager
     std::map< std::set<int>, FCLCollisionManagerInstancePtr> _envmanagers;

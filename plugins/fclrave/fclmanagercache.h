@@ -199,7 +199,7 @@ public:
 
             if( !pbody || pbody->GetEnvironmentId() == 0 ) {
                 // should happen when parts are removed
-                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now", _lastSyncTimeStamp%(!pbody?std::string():pbody->GetName()));
+                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName()));
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -234,7 +234,7 @@ public:
                 itcache->second.nLastStamp = pnewinfo->nLastStamp;
                 itcache->second.nLinkUpdateStamp = pnewinfo->nLinkUpdateStamp;
                 itcache->second.nGeometryUpdateStamp = pnewinfo->nGeometryUpdateStamp;
-                itcache->second.nAttachedBodiesUpdateStamp = -1;//pnewinfo->nAttachedBodiesUpdateStamp;
+                itcache->second.nAttachedBodiesUpdateStamp = -1;
                 itcache->second.nActiveDOFUpdateStamp = pnewinfo->nActiveDOFUpdateStamp;
                 itcache->second.geometrygroup = pnewinfo->_geometrygroup;
                 pinfo = pnewinfo;
@@ -262,7 +262,6 @@ public:
                         if( changed & ((uint64_t)1<<ilink) ) {
                             if( newlinkmask & ((uint64_t)1<<ilink) ) {
                                 CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
-                                //_tmpbuffer.push_back(pcolobj.get());
                                 pmanager->registerObject(pcolobj.get());
                                 itcache->second.vcolobjs.at(ilink) = pcolobj;
                             }
@@ -288,8 +287,8 @@ public:
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
                             CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
                             if( !!pcol ) {
-                              pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
-                              bcallsetup = true;
+                                pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
+                                bcallsetup = true;
                             } else {
                                 pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
                             }
