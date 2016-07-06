@@ -1,5 +1,6 @@
 #include "ramp.h"
 #include "interpolation.h"
+#include "parabolicchecker.h"
 #include <iostream>
 #include <openrave/openrave.h>
 
@@ -130,7 +131,7 @@ int main() {
 
         // Three-ramp: when the middle ramp is too short
         ParabolicCurve curve12, curve13;
-        
+        // no data yet
         
         // Three-ramp: normal case
         ParabolicCurve curve14, curve15;
@@ -145,14 +146,47 @@ int main() {
     }
     
     if (1) { // Test ImposeJointLimitFixedDuration
+        Real bmin, bmax;
+        
         // Case IIa
-
+        ParabolicCurve curve0, curve1, curve2;
+        res = Interpolate1D(-0.81007376879395065, 2.6736076723274822, -3.2714098084114029, 0.76559314850470006, 3.2714098084114029, 19.416054628593248, curve0);
+        assert(res);
+        res = Stretch1D(curve0, 5.2022838765206281, 3.2714098084114029, 19.416054628593248, curve1);
+        assert(res);
+        res = ImposeJointLimitFixedDuration(curve1, -3.1415926535897931, 3.1415926535897931, 3.2714098084114029, 19.416054628593248, curve2);
+        assert(res);
+        assert(FuzzyEquals(curve2.duration, 5.2022838765206281, epsilon));
+        assert(CheckParabolicCurve(curve2, -3.1415926535897931, 3.1415926535897931, 3.2714098084114029, 19.416054628593248, -0.81007376879395065, 2.6736076723274822, -3.2714098084114029, 0.76559314850470006) == PCR_Normal);
+        std::cout << "[ImposeJointLimitFixedDuration] Case IIa: done" << std::endl;
 
         // Case IIb
-
+        ParabolicCurve curve3, curve4, curve5;
+        res = Interpolate1D(8.248687213483290e-01, 3.555999129105513e-01, -1.152577965038155e-01, 1.294522296060340e+00, 1.294522296060340e+00, 5.710604302527424e+00, curve3);
+        assert(res);
+        res = Stretch1D(curve3, 4.9660291025029508, 1.294522296060340e+00, 5.710604302527424e+00, curve4);
+        assert(res);
+        res = ImposeJointLimitFixedDuration(curve4, -5.235987755982988e-01, 2.356194490192345e+00, 1.294522296060340e+00, 5.710604302527424e+00, curve5);
+        assert(res);
+        assert(FuzzyEquals(curve5.duration, 4.9660291025029508, epsilon));
+        std::cout << curve5.x0 << " " << curve5.EvalPos(curve5.duration) << " " << curve5.d << std::endl;
+        assert(CheckParabolicCurve(curve5, -5.235987755982988e-01, 2.356194490192345e+00, 1.294522296060340e+00, 5.710604302527424e+00, 8.248687213483290e-01, 3.555999129105513e-01, -1.152577965038155e-01, 1.294522296060340e+00) == PCR_Normal);
+        std::cout << "[ImposeJointLimitFixedDuration] Case IIb: done" << std::endl;
 
         // Case III
+        ParabolicCurve curve6, curve7, curve8;
+        res = Interpolate1D(1.3827399943007779, 1.6658934694933463, -0.82634486709856392, 0.58081164411628128, 0.82634486709856392, 0.24691765704131668, curve6);
+        assert(res);
+        res = Stretch1D(curve6, 9.7446039741066297, 0.82634486709856392, 0.24691765704131668, curve7);
+        assert(res);
+        res = ImposeJointLimitFixedDuration(curve7, 0, 2.6703537555513241, 0.82634486709856392, 0.24691765704131668, curve8);
+        assert(res);
+        assert(FuzzyEquals(curve8.duration, 9.7446039741066297, epsilon));
+        assert(CheckParabolicCurve(curve8, 0, 2.6703537555513241, 0.82634486709856392, 0.24691765704131668, 1.3827399943007779, 1.6658934694933463, -0.82634486709856392, 0.58081164411628128) == PCR_Normal);
+        std::cout << "[ImposeJointLimitFixedDuration] Case III: done" << std::endl;
 
+        // Case IV
+        // no data yet
     }
 
     ////////////////////////////////////////////////////////////////////////////////

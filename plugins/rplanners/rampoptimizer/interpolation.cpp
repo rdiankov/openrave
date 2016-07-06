@@ -412,13 +412,13 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
         Ramp lastRamp(0, ba1, bt1, bx1);
         if (Abs(x0 - bx1) < (duration - bt1)*vm) {
             ParabolicCurve tempCurve1;
-            if (Interpolate1D(x0, bt1, v0, 0, vm, am, tempCurve1)) {
+            if (Interpolate1D(x0, bx1, v0, 0, vm, am, tempCurve1)) {
                 if ((duration - bt1) >= tempCurve1.duration) {
                     ParabolicCurve tempCurve2;
                     if (Stretch1D(tempCurve1, duration - bt1, vm, am, tempCurve2)) {
                         tempCurve2.GetPeaks(tempbmin, tempbmax);
                         if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
-                            RAMP_OPTIM_PLOG("Case IIa: successful");
+                            RAMP_OPTIM_PLOG("Case IIb: successful");
                             if (newRamps.size() > 0) {
                                 newRamps.resize(0);
                             }
