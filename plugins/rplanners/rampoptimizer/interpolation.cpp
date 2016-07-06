@@ -257,8 +257,9 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
     Real sigma = d - dStraight > 0 ? 1 : -1;
     Real a0 = sigma*am;
     Real vp = sigma*Sqrt((0.5*sumVSqr) + (a0*d));
-    Real t0 = (vp - v0)/a0;
-    Real t1 = (vp - v1)/a0;
+    Real a0inv = 1/a0;
+    Real t0 = (vp - v0)*a0inv;
+    Real t1 = (vp - v1)*a0inv;
 
     Ramp ramp0(v0, a0, t0, x0);
     Ramp ramp1(ramp0.v1, -a0, t1);
@@ -270,10 +271,11 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
 
     ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf,  inf, inf, am, x0, x1, v0, v1);
     if (ret == PCR_Normal) {
+        RAMP_OPTIM_PLOG("Interpolate1D with no velocity bound successful");
         return true;
     }
     else {
-        RAMP_OPTIM_PLOG("CheckParabolicCurve returns %d", ret);
+        RAMP_OPTIM_PLOG("Interpolate1D with no velocity bound failed: CheckParabolicCurve returns %d", ret);
         return false;
     }
 }
@@ -312,7 +314,7 @@ bool ImposeVelocityLimit(ParabolicCurve& curve, Real vm) {
     Ramp newRamp1(newVp, 0, 2*t + (nom/denom));
     ramps[1] = newRamp1;
 
-    Ramp newRamp2(newVp, curve.ramps[2].a, curve.ramps[2].duration - t);
+    Ramp newRamp2(newVp, curve.ramps[1].a, curve.ramps[1].duration - t);
     ramps[2] = newRamp2;
 
     curve.Initialize(ramps);

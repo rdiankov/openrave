@@ -27,7 +27,7 @@ ParabolicCheckReturn CheckRamps(std::vector<Ramp>& rampsVector, Real xmin, Real 
     }
 
     size_t rampsSize = rampsVector.size();
-    for (size_t i = 0; i < rampsSize; ++i) {
+    for (size_t i = 1; i < rampsSize; ++i) {
         if (!(FuzzyEquals(rampsVector[i - 1].v1, rampsVector[i].v0, epsilon))) {
             return PCR_VDiscontinuous;
         }
@@ -44,7 +44,6 @@ ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, Real xmin, Real 
     if (ret != PCR_Normal) {
         return ret;
     }
-
     if (!(FuzzyEquals(curve.v0, curve.ramps[0].v0, epsilon))) {
         return PCR_VDiscrepancy;
     }
