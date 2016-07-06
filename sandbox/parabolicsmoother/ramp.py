@@ -175,9 +175,9 @@ class Ramp(object):
     def __repr__(self):
         bmin, bmax = self.GetPeaks()
         return "x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; a = {4}; duration = {5}; bmin = {6}; bmax = {7}".\
-            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.EvalPos(curve.duration), n=_prec),
-                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.duration, n=_prec),
-                   mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
+            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.EvalPos(self.duration), n=_prec),
+                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.a, n=_prec),
+                   mp.nstr(self.duration, n=_prec), mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
 # end class Ramp
 
 

@@ -870,6 +870,11 @@ def _SolveForT0(A, B, t, tInterval):
     realSols = [sol for sol in sols if type(sol) is mp.mpf and sol in tInterval]
     if len(realSols) > 1:
         # I think this should not happen. We should either have one or no solution.
+        # Or this may be the case of repetitive root.
+        if len(realSols) == 2:
+            if FuzzyEquals(realSols[0], realSols[1], epsilon):
+                return realSols[0]
+            
         raise NotImplementedError
     elif len(realSols) == 0:
         return None

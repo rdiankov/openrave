@@ -181,7 +181,7 @@ for it in xrange(nTrials):
             break
         elif ret == PCR.XBoundViolated:
             xboundfailed += 1
-            IPython.embed()
+            # IPython.embed()
         else:
             print ret
             raw_input()
@@ -190,7 +190,7 @@ for it in xrange(nTrials):
         #     break
     else:
         interpfailed += 1
-        IPython.embed()
+        # IPython.embed()
 print "Real bounds : interpolation with fixed duration successful instances = {0}/{1}".format(nSuccess, nTrials)
 print "Real bounds : interpolation failed = {0}/{1}".format(interpfailed, nTrials)
 print "Real bounds : x-bound failed = {0}/{1}".format(xboundfailed, nTrials)
