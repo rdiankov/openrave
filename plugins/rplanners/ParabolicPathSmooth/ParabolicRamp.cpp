@@ -956,6 +956,9 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         tswitch2 = 0;
     }
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
+
+    v = dx0 + a1*tswitch1;
+    
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("Failure to find valid path!\n");
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
@@ -1400,6 +1403,7 @@ void ParabolicRamp1D::TrimFront(Real tcut)
     tswitch2 -= tcut;
     if(tswitch1 < 0) tswitch1=0;
     if(tswitch2 < 0) tswitch2=0;
+    v = dx0 + a1*tswitch1;//////// Puttichai
     PARABOLIC_RAMP_ASSERT(IsValid());
     // PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0, x1, dx0, dx1, a1, a1, v, tswitch1, tswitch2);
 
@@ -1413,6 +1417,7 @@ void ParabolicRamp1D::TrimBack(Real tcut)
     ttotal -= tcut;
     tswitch1 = Min(tswitch1,ttotal);
     tswitch2 = Min(tswitch2,ttotal);
+    v = dx0 + a1*tswitch1;//////// Puttichai
     PARABOLIC_RAMP_ASSERT(IsValid());
 }
 
@@ -1516,16 +1521,16 @@ bool ParabolicRamp1D::IsValid() const
 
     // increate the epsilons just a little here
     Real t2mT = tswitch2 - ttotal;
-    if(tswitch1 != tswitch2) {
-        if(!FuzzyEquals(a1*tswitch1 + dx0,v,2*EpsilonV)) {
-            PARABOLICWARN("Ramp has incorrect switch 1 speed: %.15e vs %.15e\n",a1*tswitch1 + dx0,v);
-            return false;
-        }
-        if(!FuzzyEquals(a2*t2mT + dx1,v,2*EpsilonV)) {
-            PARABOLICWARN("Ramp has incorrect switch 2 speed: %.15e vs %.15e\n",a2*t2mT + dx1,v);
-            return false;
-        }
+    
+    if(!FuzzyEquals(a1*tswitch1 + dx0,v,2*EpsilonV)) {
+        PARABOLICWARN("Ramp has incorrect switch 1 speed: %.15e vs %.15e\n",a1*tswitch1 + dx0,v);
+        return false;
     }
+    if(!FuzzyEquals(a2*t2mT + dx1,v,2*EpsilonV)) {
+        PARABOLICWARN("Ramp has incorrect switch 2 speed: %.15e vs %.15e\n",a2*t2mT + dx1,v);
+        return false;
+    }
+    
     //check switch2
     Real xswitch = x0 + 0.5*a1*Sqr(tswitch1) + dx0*tswitch1;
     Real xswitch2 = xswitch + (tswitch2-tswitch1)*v;
