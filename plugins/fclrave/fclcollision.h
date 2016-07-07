@@ -138,7 +138,13 @@ public:
             //_request.abs_err
 
             // set the gjk solver (collision checking between convex bodies) so that we can use hints
-            _request.gjk_solver_type = fcl::GST_INDEP;
+            //  _request.gjk_solver_type = fcl::GST_INDEP;
+
+            if( _pchecker->GetDistanceApproximation() >= 0.0 ) {
+              _request.enable_approx_dist = true;
+              // objects at distance less than _distApprox are considered as colliding
+              _request.approx_dist = (fcl::FCL_REAL)_pchecker->GetDistanceApproximation();
+            }
 
             if( !!_report ) {
                 _report->Reset(_pchecker->GetCollisionOptions());
@@ -228,6 +234,7 @@ public:
         _options = 0;
         // TODO : Should we put a more reasonable arbitrary value ?
         _numMaxContacts = std::numeric_limits<int>::max();
+        _approxDist = -1.0; // by default we do not use approximation
         _nGetEnvManagerCacheClearCount = 100000;
         _rayRadius = 1e-5; //std::numeric_limits<fcl::FCL_REAL>::epsilon();
         __description = ":Interface Author: Kenji Maillard\n\nFlexible Collision Library collision checker";
@@ -237,7 +244,11 @@ public:
         // TODO : Consider removing these which could be more harmful than anything else
         RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::SetBroadphaseAlgorithmCommand, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
+        RegisterCommand("SetDistanceApproximation", boost::bind(&FCLCollisionChecker::_SetDistanceApproximation, this, _1, _2), "sets the ditance under which two bodies are considered in collision, a negative value desactivate the approximate evaluation");
 
+        RegisterCommand("GetBVAABB", boost::bind(&FCLCollisionChecker::_GetBVAABB, this, _1,_2), "");
+
+          // debug command
         RegisterCommand("PrepareRay", boost::bind(&FCLCollisionChecker::_DebugPrepareRay, this, _1, _2), "");
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
@@ -448,8 +459,47 @@ public:
         return !!sinput;
     }
 
-    std::string const& GetBVHRepresentation() const {
+    std::string const& GetBVHRepresentation() const
+    {
         return _fclspace->GetBVHRepresentation();
+    }
+
+    bool _SetDistanceApproximation(ostream& sout, istream& sinput)
+    {
+        sinput >> _approxDist;
+        return true;
+    }
+
+    OpenRAVE::dReal GetDistanceApproximation() const
+    {
+        return _approxDist;
+    }
+
+    static inline void DisplayVec(ostream& sout, const fcl::Vec3f& v) {
+      sout << "["<< v[0] << ',' << v[1] << ',' << v[2] <<"]";
+    }
+
+    bool _GetBVAABB(ostream& sout, istream& sinput)
+    {
+      int bodyid;
+      sinput >> bodyid;
+      KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(bodyid);
+      if( !!pbody ) {
+        KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+        if( !!pinfo ) {
+          sout << "[";
+          FOREACH(itLINK, pinfo->vlinks) {
+            fcl::AABB aabb = (*itLINK)->linkBV.second->getAABB();
+            DisplayVec(sout, aabb.min_);
+            sout << ",";
+            DisplayVec(sout, aabb.max_);
+            sout << ",";
+          }
+          sout << "[0,0,0]]";
+          return true;
+        }
+      }
+      return false;
     }
 
 
@@ -530,7 +580,7 @@ public:
             body1Manager->distance(body2Manager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
             report->minDistance = (dReal)query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -575,7 +625,7 @@ public:
             CheckNarrowPhaseDistance(pcollLink1.get(), pcollLink2.get(), &query, query._minDistance);
 
             report->minDistance = (dReal)query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -631,7 +681,7 @@ public:
             bodyManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
             report->minDistance = (dReal) query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -672,7 +722,7 @@ public:
             envManager->distance(pcollLink.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
             report->minDistance = (dReal) query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -713,7 +763,7 @@ public:
             envManager->distance(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseDistance);
 
             report->minDistance = (dReal) query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -812,7 +862,7 @@ public:
             }
 
             report->minDistance = (dReal) query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -881,7 +931,7 @@ public:
             }
 
             report->minDistance = (dReal) query._minDistance;
-            bool bCollision = report->minDistance <= std::numeric_limits<dReal>::epsilon();
+            bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
             if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
@@ -1105,6 +1155,18 @@ private:
         }
 
         LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1), pLINK2 = _fclspace->GetLinkInfo(plink2);
+        if( _approxDist >= 0.0 ) {
+          pcb->_result.clear();
+          pcb->_result.min_distance = pcb->_minDistance;
+          dReal distBV = fcl::distance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), pcb->_request, pcb->_result);
+          if( distBV > _approxDist ) {
+              pcb->_minDistance = distBV;
+              minDistance = distBV;
+              pcb->_report->plink1 = plink1;
+              pcb->_report->plink2 = plink2;
+              return false;
+          }
+        }
 
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             FOREACH(itgeompair2, pLINK2->vgeoms) {
@@ -1123,6 +1185,7 @@ private:
 
     void CheckNarrowPhaseGeomDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2,DistanceCallbackData* pcb) {
         pcb->_result.clear();
+        pcb->_result.min_distance = pcb->_minDistance;
         fcl::FCL_REAL dist = fcl::distance(o1, o2, pcb->_request, pcb->_result);
         if( dist < pcb->_minDistance ) {
             pcb->_minDistance = dist;
@@ -1135,7 +1198,7 @@ private:
             //  CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
             //}
 
-            if( dist <= std::numeric_limits<fcl::FCL_REAL>::epsilon() ) {
+            if( pcb->_request.isSatisfied(pcb->_result) ) {
                 // Should we call the collision callbacks here ?
                 pcb->_bStopChecking = true;
             }
@@ -1306,6 +1369,7 @@ private:
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
+    dReal _approxDist;
     std::string _userdatakey;
     std::string _broadPhaseCollisionManagerAlgorithm; ///< broadphase algorithm to use to create a manager. tested: Naive, DynamicAABBTree2
 
