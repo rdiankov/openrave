@@ -489,22 +489,6 @@ public:
         return pinfo->vlinks.at(index)->linkBV.second;
     }
 
-    /// \brief add enabled links to group.
-    ///
-    /// \return true if at least one link was added
-    bool CollectEnabledLinkBVs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo, CollisionGroup& group) {
-        // not necessary at the moment
-        // group.reserve(group.size() + pbody->GetLinks().size());
-        bool badded = false;
-        FOREACH(itlink, pbody->GetLinks()) {
-            if( ((*itlink)->IsEnabled()) ) {
-                // not a very good idea to access it directly for code maintenance
-                group.push_back(GetLinkBV(pinfo, (*itlink)->GetIndex()).get());
-                badded = true;
-            }
-        }
-        return badded;
-    }
 
     inline LinkInfoPtr GetLinkInfo(LinkConstPtr plink) {
         return GetInfo(plink->GetParent())->vlinks.at(plink->GetIndex());
