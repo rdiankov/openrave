@@ -418,6 +418,8 @@ public:
                 _DumpTrajectory(ptraj, Level_Debug);
                 return PS_Failed;
             }
+            RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
+            DumpDynamicPath(dynamicpath);
         }
 
         // if ramp is not perfectly modeled, then have to verify!
@@ -445,6 +447,7 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
+                DumpDynamicPath(dynamicpath);
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
@@ -675,6 +678,7 @@ public:
             // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
+            DumpDynamicPath(dynamicpath);            
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -683,6 +687,21 @@ public:
             return PS_Failed;
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        //====================================================================================================
+        RAVELOG_DEBUG("start sampling the trajectory (verification purpose) after shortcutting");
+        // Actually _VerifySampling() gets called every time we sample a trajectory. The function
+        // already checks _Validate* at every traj point. Therefore, in order to just verify, we
+        // need to call ptraj->Sample just once.
+        // RAVELOG_DEBUG_FORMAT("_timoffset = %d", ptraj->_timeoffset);
+        try {
+            ptraj->Sample(dummy, 0);
+            RAVELOG_DEBUG("sampling for verification successful");
+        }
+        catch (const std::exception& ex) {
+            RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
+            _DumpTrajectory(ptraj, Level_Debug);
+        }
+        //====================================================================================================
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
@@ -1014,7 +1033,6 @@ protected:
             // couldn't find anything...
             return false;
         }
-
         return true;
     }
 
@@ -1295,6 +1313,7 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 RAVELOG_VERBOSE_FORMAT("shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
+                DumpDynamicPath(dynamicpath);
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, exception happened during shortcut iteration progress=0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
@@ -1303,6 +1322,7 @@ protected:
         }
 
         RAVELOG_VERBOSE_FORMAT("finished at shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
+        DumpDynamicPath(dynamicpath);
         return shortcuts;
     }
 
@@ -1369,6 +1389,23 @@ protected:
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         traj->serialize(f);
         return filename;
+    }
+
+    void DumpDynamicPath(ParabolicRamp::DynamicPath& path) const {
+        uint32_t randnum;
+        if( !!_logginguniformsampler ) {
+            randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            randnum = RaveRandomInt();
+        }
+        string filename = str(boost::format("%s/dynamicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
+        path.Save(filename);
+        dReal duration = 0;
+        for (std::vector<ParabolicRamp::ParabolicRampND>::const_iterator it = path.ramps.begin(); it != path.ramps.end(); ++it) {
+            duration += it->endTime;
+        }
+        RAVELOG_DEBUG_FORMAT("Wrote a dynamic path to %s (duration = %.15e)", filename%duration);
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
