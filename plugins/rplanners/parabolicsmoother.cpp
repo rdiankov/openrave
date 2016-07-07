@@ -419,7 +419,7 @@ public:
                 return PS_Failed;
             }
             RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
-            DumpDynamicPath(dynamicpath);
+            //DumpDynamicPath(dynamicpath);
         }
 
         // if ramp is not perfectly modeled, then have to verify!
@@ -447,7 +447,7 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
-                DumpDynamicPath(dynamicpath);
+                //DumpDynamicPath(dynamicpath);
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
@@ -678,7 +678,7 @@ public:
             // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
-            DumpDynamicPath(dynamicpath);            
+            //DumpDynamicPath(dynamicpath);            
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -1316,7 +1316,7 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 RAVELOG_VERBOSE_FORMAT("shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
-                DumpDynamicPath(dynamicpath);
+                //DumpDynamicPath(dynamicpath);
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, exception happened during shortcut iteration progress=0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
@@ -1325,7 +1325,7 @@ protected:
         }
 
         RAVELOG_VERBOSE_FORMAT("finished at shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
-        DumpDynamicPath(dynamicpath);
+        //DumpDynamicPath(dynamicpath);
         return shortcuts;
     }
 
