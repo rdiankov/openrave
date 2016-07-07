@@ -230,6 +230,7 @@ void KinBody::Destroy()
     _pManageData.reset();
 
     _ResetInternalCollisionCache();
+    _selfcollisionchecker.reset();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -415,6 +416,18 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     }
     // have to reset the adjacency cache
     _ResetInternalCollisionCache();
+}
+
+void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries) {
+    BOOST_ASSERT( linkgeometries.size() == _veclinks.size() );
+
+    FOREACH(itlink, _veclinks) {
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[(*itlink)->GetIndex()];
+        it->second.resize(geometries.size());
+        std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    }
+    _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
@@ -1252,6 +1265,18 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
         enablestates[ilink] = _veclinks[ilink]->IsEnabled();
     }
+}
+
+uint64_t KinBody::GetLinkEnableStatesMask() const
+{
+    if( _veclinks.size() > 64 ) {
+        RAVELOG_WARN_FORMAT("%s has too many links and will only return enable mask for first 64", _name);
+    }
+    uint64_t linkstate = 0;
+    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
+        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+    }
+    return linkstate;
 }
 
 KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
@@ -4155,6 +4180,17 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyPtr pattached = itbody->lock();
+        if( !!pattached && setAttached.insert(pattached).second ) {
+            pattached->GetAttached(setAttached);
+        }
+    }
+}
+
+void KinBody::GetAttached(std::set<KinBodyConstPtr>&setAttached) const
+{
+    setAttached.insert(shared_kinbody_const());
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyConstPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second ) {
             pattached->GetAttached(setAttached);
         }

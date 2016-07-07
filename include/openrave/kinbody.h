@@ -89,13 +89,13 @@ public:
 
         Prop_Name=0x20,     ///< name changed
         Prop_LinkDraw=0x40,     ///< toggle link geometries rendering
-        Prop_LinkGeometry=0x80,     ///< the geometry of the link changed
+        Prop_LinkGeometry=0x80,     ///< the current geometry of the link changed
         Prop_LinkTransforms=0x100, ///< if any of the link transforms changed, this implies the DOF values of the robot changed
-        // 0x200
+        Prop_LinkGeometryGroup=0x200, ///< the geometry informations of some geometry group changed
         Prop_LinkStatic=0x400,     ///< static property of link changed
         Prop_LinkEnable=0x800,     ///< enable property of link changed
         Prop_LinkDynamics=0x1000,     ///< mass/inertia properties of link changed
-        Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
+        Prop_Links=Prop_LinkDraw|Prop_LinkGeometry|Prop_LinkStatic|Prop_LinkGeometryGroup|Prop_LinkEnable|Prop_LinkDynamics,     ///< all properties of all links
         Prop_JointCustomParameters = 0x2000, ///< when Joint::SetFloatParameters(), Joint::SetIntParameters(), and Joint::SetStringParameters() are called
         Prop_LinkCustomParameters = 0x4000, ///< when Link::SetFloatParameters(), Link::SetIntParameters(), Link::SetStringParameters() are called
         Prop_BodyAttached=0x8000, ///< if attached bodies changed
@@ -1445,6 +1445,14 @@ private:
     /// \throw If any links do not have the particular geometry, an exception will be raised.
     virtual void SetLinkGeometriesFromGroup(const std::string& name);
 
+    /// \brief Stores geometries for later retrieval for all the links at the same time.
+    ///
+    /// \param name The name of the extra geometries group to be stored in each link.
+    /// \param linkgeometries a vector containing a collection of geometry infos ptr for each links
+    /// Note that the pointers are copied and not the data, so be careful not to modify the geometries afterwards
+    /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
+    virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
+
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
         return _name;
@@ -1659,6 +1667,11 @@ private:
 
     /// \brief gets the enable states of all links
     virtual void GetLinkEnableStates(std::vector<uint8_t>& enablestates) const;
+
+    /// \brief gets a mask of the link enable states.
+    ///
+    /// If there are more than 64 links in the kinbody, then will give a warning. User should throw exception themselves.
+    virtual uint64_t GetLinkEnableStatesMask() const;
 
     /// queries the transfromation of the first link of the body
     virtual Transform GetTransform() const;
@@ -1937,6 +1950,7 @@ private:
     ///
     /// \param setAttached fills with the attached bodies. If any bodies are already in setAttached, then ignores recursing on their attached bodies.
     virtual void GetAttached(std::set<KinBodyPtr>& setAttached) const;
+    virtual void GetAttached(std::set<KinBodyConstPtr>& setAttached) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     virtual bool HasAttached() const;
