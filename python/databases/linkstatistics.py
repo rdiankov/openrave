@@ -77,6 +77,7 @@ import os.path
 from optparse import OptionParser
 from itertools import izip
 from os import makedirs
+from operator import and_
 
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
@@ -241,7 +242,72 @@ class LinkStatisticsModel(DatabaseGenerator):
             # go through all the spheres and get the max radius
             jointspheres[j.GetJointIndex()] = (newspherepos, newsphereradius)
         return jointspheres
-    
+
+
+    def _ComputeLinksLength(mimicjointsData):
+        linksLengths = {}
+        jointDistances = {}
+        alljoints = self.robot.GetJoints()
+
+        def ComputeOrderedNonStaticJoints():
+            graph = {}
+            roots = alljoints
+            for j in alljoints:
+                parentlinks = joint.GetHierarchyParentLink().GetAttachedRigidly()
+                parentjoints = [testj for testj in alljoints if testj.GetHierarchyChildLink() in parentlinks ]
+                roots = [ j for j in roots if j not in parentjoints ]
+                graph.update({ j : parentjoints })
+            tovisit = roots
+            orderedjoints = []
+            while tovisit != []:
+                j = tovisit.pop()
+                if j not in orderedjoints:
+                    orderedjoints.append(j)
+                    tovisit = graph[j] + tovisit
+            return orderedjoints
+
+        orderedjoints = ComputeOrderedNonStaticJoints()
+        for j in self.robot.GetJoints():
+            isPrismatic = reduce(or_, map(j.IsPrismatic, range(0, j.GetDOF())))
+            allMimic = ( j.IsMimic() and reduce(and_, map(j.IsMimic, range(0, j.GetDOF()))) )
+            isRevolute = reduce(and_, [j.IsRevolute(i) for i in range(0,j.GetDOF())])
+            isjointvalid = (not j.IsMimic() or allMimic) and (j.IsMimic() or ((not isPrismatic or j.GetDOF() == 1) and isRevolute))
+            if not isjointvalid:
+                RaveLogError("Do not support prismatic joints with more than 1 degree of freedom")
+                continue
+
+            extensiondist = 0
+            if isPrismatic:
+                if isMimic:
+                    if j in mimicjointsData and 'limit' in mimicjointsData[j]:
+                        extensiondist = mimicjointsData[j]['limit']
+                    else:
+                        RaveLogError("Limit must be given for prismatic mimic joint %s")
+                else:
+                    (inflimits, suplimits) = j.GetLimits()
+                    extensiondist = max(abs(inflimits[0]), abs(suplimits[0]))
+
+            linksLengths.update( { j.GetIndex() : zeros(len(self.robot.GetLinks())) })
+            childlinks = j.GetHierarchyChildLink().GetRigidlyAttachedLinks()
+            for childlink in childlinks:
+                aabb = childLink.ComputeAABB()
+                anchoraabbdiff = aabb.pos() - j.GetAnchor()
+                corners = product([1,-1], [1,-1], [1,-1])
+                linksLength[j][childlink.GetIndex()] = max([ extensiondist + linalg.norm(anchoraabbdiff + array(v) * aabb.extents()) for v in corners ])
+
+
+            childjoints = [testj for testj in alljoints if tesj.GetHierarchyParentLink() in childlinks]
+            jointDistances.update({ j : {} })
+            for childjoint in childjoints:
+                childdist = linalg.norm(childjoint.GetAnchor() - j.GetAnchor())
+                jointsDistances[j].update({ childjoint : childdist })
+                for descendantjoint in jointsDistances[childjoint]:
+                    if descendantjoint is not in jointDistances[j]:
+                        jointDistances[j].update({ descendantjoint : childdist + jointDistances[childjoint][descendantjoint] })
+
+    def _ComputeDistanceBound()
+
+
     def show(self,options=None):
         pass
     
