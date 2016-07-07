@@ -1434,6 +1434,23 @@ void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     _pbody->SetLinkGeometriesFromGroup(geomname);
 }
 
+void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olinkgeometryinfos)
+{
+    std::vector< std::vector<KinBody::GeometryInfoPtr> > linkgeometries(len(olinkgeometryinfos));
+    for(size_t i = 0; i < linkgeometries.size(); ++i) {
+        std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i];
+        geometries.resize(len(olinkgeometryinfos[i]));
+        for(size_t j = 0; j < geometries.size(); ++j) {
+            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(olinkgeometryinfos[i][j]);
+            if( !pygeom ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
+            }
+            geometries[j] = pygeom->GetGeometryInfo();
+        }
+    }
+    _pbody->SetLinkGroupGeometries(geomname, linkgeometries);
+}
+
 void PyKinBody::_ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfoConstPtr>& vlinkinfos)
 {
     vlinkinfos.resize(len(olinkinfos));
@@ -2941,6 +2958,7 @@ void init_openravepy_kinbody()
                         .def("InitFromGeometries",&PyKinBody::InitFromGeometries,InitFromGeometries_overloads(args("geometries", "uri"), DOXY_FN(KinBody,InitFromGeometries)))
                         .def("Init",&PyKinBody::Init,Init_overloads(args("linkinfos","jointinfos","uri"), DOXY_FN(KinBody,Init)))
                         .def("SetLinkGeometriesFromGroup",&PyKinBody::SetLinkGeometriesFromGroup, args("name"), DOXY_FN(KinBody,SetLinkGeometriesFromGroup))
+                        .def("SetLinkGroupGeometries", &PyKinBody::SetLinkGroupGeometries, args("name", "linkgeometries"), DOXY_FN(KinBody, SetLinkGroupGeometries))
                         .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
                         .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
