@@ -418,12 +418,13 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     _ResetInternalCollisionCache();
 }
 
-void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries) {
-    BOOST_ASSERT( linkgeometries.size() == _veclinks.size() );
-
+void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
+{
+    OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
     FOREACH(itlink, _veclinks) {
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
-        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[(*itlink)->GetIndex()];
+        Link& link = **itlink;
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
         it->second.resize(geometries.size());
         std::copy(geometries.begin(),geometries.end(),it->second.begin());
     }
