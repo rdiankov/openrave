@@ -2675,7 +2675,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     Real endTime = 0;
-    int maxTimeIndex = 0;
+    size_t maxTimeIndex = 0;
     ramps.resize(x0.size());
     for(size_t i=0; i<ramps.size(); i++) {
         ramps[i].resize(1);
@@ -3243,5 +3243,21 @@ bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, 
         return false;
     }
 }
+
+void ParabolicRamp1D::ToString(std::string& s) const {
+    // order of variables: x0 dx0 x1 dx1 a1 v a2 tswitch1 tswith2 ttotal
+    s = str(boost::format("%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n")%x0%dx0%x1%dx1%a1%v%a2%tswitch1%tswitch2%ttotal);
+}
+
+void ParabolicRampND::ToString(std::string& s) const {
+    int ndof = (int) ramps.size();
+    s = str(boost::format("%d\n%.15e\n")%ndof%endTime);
+    std::string dummy;
+    for (int i = 0; i < ndof; ++i) {
+        ramps[i].ToString(dummy);
+        s = s + dummy;
+    }
+}
+
 
 } //namespace ParabolicRamp

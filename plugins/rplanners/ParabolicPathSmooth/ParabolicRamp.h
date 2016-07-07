@@ -104,6 +104,8 @@ public:
     /// Sanity check
     bool IsValid() const;
 
+    void ToString(std::string& s) const;
+    
     /// Input
     Real x0,dx0;
     Real x1,dx1;
@@ -145,6 +147,7 @@ public:
     void DerivBounds(Vector& vmin,Vector& vmax) const;
     void DerivBounds(Real ta,Real tb,Vector& vmin,Vector& vmax) const;
     bool IsValid() const;
+    void ToString(std::string& s) const;
 
     /// Input
     Vector x0,dx0;
