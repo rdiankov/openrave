@@ -688,18 +688,21 @@ public:
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
         //====================================================================================================
-        RAVELOG_DEBUG("start sampling the trajectory (verification purpose) after shortcutting");
-        // Actually _VerifySampling() gets called every time we sample a trajectory. The function
-        // already checks _Validate* at every traj point. Therefore, in order to just verify, we
-        // need to call ptraj->Sample just once.
-        // RAVELOG_DEBUG_FORMAT("_timoffset = %d", ptraj->_timeoffset);
-        try {
-            ptraj->Sample(dummy, 0);
-            RAVELOG_DEBUG("sampling for verification successful");
-        }
-        catch (const std::exception& ex) {
-            RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
-            _DumpTrajectory(ptraj, Level_Debug);
+        if (IS_DEBUGLEVEL(Level_Debug)) {
+            RAVELOG_DEBUG("start sampling the trajectory (verification purpose) after shortcutting");
+            // Actually _VerifySampling() gets called every time we sample a trajectory. The function
+            // already checks _Validate* at every traj point. Therefore, in order to just verify, we
+            // need to call ptraj->Sample just once.
+            // RAVELOG_DEBUG_FORMAT("_timoffset = %d", ptraj->_timeoffset);
+            std::vector<dReal> dummy;
+            try {
+                ptraj->Sample(dummy, 0);
+                RAVELOG_DEBUG("sampling for verification successful");
+            }
+            catch (const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
+                _DumpTrajectory(ptraj, Level_Debug);
+            }
         }
         //====================================================================================================
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
