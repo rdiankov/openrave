@@ -1642,11 +1642,11 @@ bool ParabolicRampND::SolveMinTimeLinear(const Vector& amax,const Vector& vmax)
 
     endTime = sramp.ttotal;
     for(size_t i=0; i<ramps.size(); i++) {
-        ramps[i].v = svmax * (x1[i]-x0[i]);
         ramps[i].a1 = samax * (x1[i]-x0[i]);
         ramps[i].a2 = -samax * (x1[i]-x0[i]);
         ramps[i].tswitch1 = sramp.tswitch1;
         ramps[i].tswitch2 = sramp.tswitch2;
+        ramps[i].v = ramps[i].a1*ramps[i].tswitch1;
         ramps[i].ttotal = endTime;
         if(1 ) { //gValidityCheckLevel >= 2) {
             if(!ramps[i].IsValid()) {
