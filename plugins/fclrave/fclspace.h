@@ -241,11 +241,9 @@ public:
             }
 
             if( link->vgeoms.size() == 0 ) {
-                RAVELOG_ERROR_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
-                continue;
+                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
             }
-
-            if( link->vgeoms.size() == 1) {
+            else if( link->vgeoms.size() == 1) {
                 // set the unique geometry as its own bounding volume
                 link->linkBV = link->vgeoms[0];
             } else {
@@ -610,6 +608,9 @@ private:
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
                 CollisionObjectPtr pcoll = pinfo->vlinks[i]->linkBV.second;
+                if( !pcoll ) {
+                    continue;
+                }
                 Transform pose = vtrans[i] * pinfo->vlinks[i]->linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);

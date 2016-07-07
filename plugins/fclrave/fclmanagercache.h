@@ -82,7 +82,9 @@ public:
                 if( (*itlink)->IsEnabled() && (*itbody != pbody || !_bTrackActiveDOF || _vTrackingActiveLinks.at((*itlink)->GetIndex())) ) {
                     CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, (*itlink)->GetIndex());
                     vcolobjs[(*itlink)->GetIndex()] = pcol;
-                    _tmpbuffer.push_back(pcol.get());
+                    if( !!pcol ) {
+                        _tmpbuffer.push_back(pcol.get());
+                    }
                     bsetUpdateStamp = true;
                     linkmask |= ((uint64_t)1 << (uint64_t)(*itlink)->GetIndex());
                 }
@@ -262,7 +264,9 @@ public:
                         if( changed & ((uint64_t)1<<ilink) ) {
                             if( newlinkmask & ((uint64_t)1<<ilink) ) {
                                 CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
-                                pmanager->registerObject(pcolobj.get());
+                                if( !!pcolobj ) {
+                                    pmanager->registerObject(pcolobj.get());
+                                }
                                 itcache->second.vcolobjs.at(ilink) = pcolobj;
                             }
                             else {
