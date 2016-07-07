@@ -1036,7 +1036,8 @@ protected:
         std::vector<ParabolicRamp::ParabolicRampND>& accumoutramps=_cacheaccumoutramps, &outramps=_cacheoutramps;
 
         int numslowdowns = 0; // total number of times a ramp has been slowed down.
-
+        bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1+g_fEpsilonLinear;
+        
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // for slowing down when timing constraints
         dReal fstarttimemult = 1.0; // the start velocity/accel multiplier for the velocity and acceleration computations. If manip speed/accel or dynamics constraints are used, then this will track the last successful multipler. Basically if the last successful one is 0.1, it's very unlikely than a muliplier of 0.8 will meet the constraints the next time.
         int iters=0;
@@ -1168,7 +1169,22 @@ protected:
                         if( retcheck.retcode != 0) {
                             break;
                         }
-                        //check for consistency
+
+                        // if SegmentFeasible2 is modifying the original ramps due to jacobian project constraints inside of CheckPathAllConstraints, then have to reset the velocity and accel limits so that they are above the waypoints of the intermediate ramps.
+                        if( bExpectModifiedConfigurations ) {
+                            for(size_t i=0; i+1<outramps.size(); i++) {
+                                for(size_t j = 0; j < outramps[i].x1.size(); ++j) {
+                                    // have to watch out that velocities don't drop under dx0 & dx1!
+                                    dReal fminvel = max(RaveFabs(outramps[i].dx0[j]), RaveFabs(outramps[i].dx1[j]));
+                                    if( vellimits[j] < fminvel ) {
+                                        vellimits[j] = fminvel;
+                                    }
+
+                                    // maybe do accel limits depending on (dx1-dx0)/elapsedtime?
+                                }
+                            }
+                        }
+                        
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             for(size_t i=0; i+1<outramps.size(); i++) {
                                 for(size_t j = 0; j < outramps[i].x1.size(); ++j) {
