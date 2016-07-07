@@ -1342,14 +1342,9 @@ protected:
         FOREACHC(itramp,rampnd.ramps) {
             vector<dReal>::iterator it;
             if( itramp->tswitch1 != 0 ) {
-                if( RaveFabs(itramp->a1 - itramp->a2) <= ParabolicRamp::EpsilonA ) {
-                    // do nothing. There are some cases that we set fake switchpoints while actually there is no switch point
-                }
-                else {                
-                    it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                    if( it != vswitchtimes.end() && RaveFabs(*it - itramp->tswitch1) > ParabolicRamp::EpsilonT ) {
-                        vswitchtimes.insert(it,itramp->tswitch1);
-                    }
+                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                if( it != vswitchtimes.end() && RaveFabs(*it - itramp->tswitch1) > ParabolicRamp::EpsilonT ) {
+                    vswitchtimes.insert(it,itramp->tswitch1);
                 }
             }
             if( RaveFabs(itramp->tswitch1 - itramp->tswitch2) > ParabolicRamp::EpsilonT && RaveFabs(itramp->tswitch2) > ParabolicRamp::EpsilonT ) {

@@ -357,8 +357,9 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         }
     }
     else if (sum1 > 0) {
-        // i1 = (-Inf, C]
-        i1u = C;
+        PARABOLIC_RAMP_PLOG("sum1 > 0. This implies that endTime is too short");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
     }
     else {
         // i1 = [C, Inf)
@@ -379,8 +380,9 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         i2l = D;
     }
     else {
-        // i2 = (-Inf, D]
-        i2u = D;
+        PARABOLIC_RAMP_PLOG("sum2 < 0. This implies that endTime is too short");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
     }
 
     // Find the intersection between interval 1 and interval 2, store it in interval 2.
@@ -419,7 +421,7 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
             // tswitch1 can be anything
         }
         else {
-            i2l = Inf;
+            i4l = Inf;
         }
     }
     else if (sum2 > 0) {
@@ -504,33 +506,18 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         tswitch1 = 0.5*(i4l + i4u);
     }
 
-    // Here we divide tswitch1 calculation into three cases. For the cases that tswitch1 has been
-    // rounded, we need to go back to the original formulae to calculate other related values such
-    // as a2.
-    if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
-        // Setting tswitch1 to either 0 or endTime causes some problems, most likely related to
-        // switchtime extraction.
-        tswitch1 = 0.5*endTime;
-        if ((FuzzyZero(tswitch1, EpsilonT)) || (FuzzyEquals(tswitch1, endTime, EpsilonT))) {
-            PARABOLIC_RAMP_PLOG("endTime is too short.");
-            return false;
-        }
-        a1 = A;
+    if (FuzzyZero(tswitch1, EpsilonT)) {
+        tswitch1 = 0;
+        a1 = 0;
         a2 = A;
-        v = 0.5*(dx0 + dx1);
+        v = dx0; // peak velocity
     }
-    // if (FuzzyZero(tswitch1, EpsilonT)) {
-    //     tswitch1 = 0;
-    //     a1 = 0;
-    //     a2 = A;
-    //     v = dx0; // peak velocity
-    // }
-    // else if (FuzzyEquals(tswitch1, endTime, EpsilonT)) {
-    //     tswitch1 = endTime;
-    //     a1 = A;
-    //     a2 = 0;
-    //     v = dx1; // peak velocity
-    // }
+    else if (FuzzyEquals(tswitch1, endTime, EpsilonT)) {
+        tswitch1 = endTime;
+        a1 = A;
+        a2 = 0;
+        v = dx1; // peak velocity
+    }
     else {
         // The calculated tswitch1 works just fine.
         a1 = A + B/tswitch1;
@@ -2199,32 +2186,42 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
         gMinAccelQuiet = true;
         //first check is a quick reject
         if(Abs(x1-bx0) < (endTime-bt0)*vmax) {
-            if (temp[1].SolveMinTime(amax, vmax)) {
-                // We need to ensure that the new end time is greater than its minimum time,
-                // otherwise the stretching (in SolveFixedTime) just does not make sense.
-                if (endTime - bt0 > temp[1].ttotal) {
-                    if (temp[1].SolveFixedTime(amax, vmax, endTime - bt0)) {
-                        if (Max(Abs(temp[1].a1), Abs(temp[1].a2)) < amax) {
-                            temp[1].Bounds(bmin, bmax);
-                            if (bmin >= xmin - EpsilonX && bmax <= xmax + EpsilonX) {
-                                // successful
-                                ramps = temp;
-                                amax = Max(Abs(ba0), Max(Abs(temp[1].a1), Abs(temp[1].a2)));
-                            }
-                        }
-                    }
-                }
-            }
-            // if(temp[1].SolveFixedTime(amax,vmax,endTime-bt0)) {////////Puttichai
-            //     if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
-            //         temp[1].Bounds(bmin,bmax);
-            //         if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
-            //             //got a better path
-            //             ramps = temp;
-            //             amax = Max(Abs(ba0),Max(Abs(temp[1].a1),Abs(temp[1].a2)));
+            // if (temp[1].SolveMinTime(amax, vmax)) {
+            //     // We need to ensure that the new end time is greater than its minimum time,
+            //     // otherwise the stretching (in SolveFixedTime) just does not make sense.
+            //     if (endTime - bt0 > temp[1].ttotal) {
+            //         if (temp[1].SolveFixedTime(amax, vmax, endTime - bt0)) {
+            //             if (Max(Abs(temp[1].a1), Abs(temp[1].a2)) < amax) {
+            //                 temp[1].Bounds(bmin, bmax);
+            //                 if (bmin >= xmin - EpsilonX && bmax <= xmax + EpsilonX) {
+            //                     // successful
+            //                     ramps = temp;
+            //                     amax = Max(Abs(ba0), Max(Abs(temp[1].a1), Abs(temp[1].a2)));
+            //                 }
+            //             }
+            //         }
+            //     }
+            //     else {
+            //         Real mintime = temp[1].ttotal;
+            //         bool result = temp[1].SolveFixedTime(amax, vmax, endTime - bt0);
+            //         if (result) {
+            //             PARABOLICWARN("giving endTime less than its minimum time but SolveFixedTime did not fail");
+            //             PARABOLICWARN("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e; minDuration = %.15e", temp[1].x0, temp[1].x1, temp[1].dx0, temp[1].dx1, vmax, amax, endTime - bt0, mintime);
+            //             PARABOLICWARN("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; ttotal = %.15e; a1 = %.15e; v = %.15e; a2 = %.15e", temp[1].tswitch1, temp[1].tswitch2, temp[1].ttotal, temp[1].a1, temp[1].v, temp[1].a2);
             //         }
             //     }
             // }
+            
+            if(temp[1].SolveFixedTime(amax,vmax,endTime-bt0)) {////////Puttichai
+                if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
+                    temp[1].Bounds(bmin,bmax);
+                    if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
+                        //got a better path
+                        ramps = temp;
+                        amax = Max(Abs(ba0),Max(Abs(temp[1].a1),Abs(temp[1].a2)));
+                    }
+                }
+            }
         }
         gMinAccelQuiet = false;
     }
@@ -2250,32 +2247,42 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
         gMinAccelQuiet = true;
         //first perform a quick reject
         if(Abs(x0-bx1) < (endTime-bt1)*vmax) {
-            if (temp[0].SolveMinTime(amax, vmax)) {
-                // We need to ensure that the new end time is greater than its minimum time,
-                // otherwise the stretching (in SolveFixedTime) just does not make sense.
-                if (endTime - bt1 > temp[0].ttotal) {
-                    if (temp[0].SolveFixedTime(amax, vmax, endTime - bt1)) {
-                        if (Max(Abs(temp[0].a1), Abs(temp[0].a2)) < amax) {
-                            temp[0].Bounds(bmin, bmax);
-                            if (bmin >= xmin && bmax <= xmax) {
-                                // successful
-                                ramps = temp;
-                                amax = Max(Abs(ba1), Max(Abs(temp[0].a1), Abs(temp[0].a2)));
-                            }
-                        }
-                    }
-                }
-            }
-            // if(temp[0].SolveFixedTime(amax,vmax,endTime-bt1)) {////////Puttichai
-            //     if(Max(Abs(temp[0].a1),Abs(temp[0].a2)) < amax) {
-            //         temp[0].Bounds(bmin,bmax);
-            //         if(bmin >= xmin && bmax <= xmax) {
-            //             //got a better path
-            //             ramps = temp;
-            //             amax = Max(Abs(ba1),Max(Abs(temp[0].a1),Abs(temp[0].a2)));
+            // if (temp[0].SolveMinTime(amax, vmax)) {
+            //     // We need to ensure that the new end time is greater than its minimum time,
+            //     // otherwise the stretching (in SolveFixedTime) just does not make sense.
+            //     if (endTime - bt1 > temp[0].ttotal) {
+            //         if (temp[0].SolveFixedTime(amax, vmax, endTime - bt1)) {
+            //             if (Max(Abs(temp[0].a1), Abs(temp[0].a2)) < amax) {
+            //                 temp[0].Bounds(bmin, bmax);
+            //                 if (bmin >= xmin && bmax <= xmax) {
+            //                     // successful
+            //                     ramps = temp;
+            //                     amax = Max(Abs(ba1), Max(Abs(temp[0].a1), Abs(temp[0].a2)));
+            //                 }
+            //             }
+            //         }
+            //     }
+            //     else {
+            //         Real mintime = temp[0].ttotal;
+            //         bool result = temp[0].SolveFixedTime(amax, vmax, endTime - bt1);
+            //         if (result) {
+            //             PARABOLICWARN("giving endTime less than its minimum time but SolveFixedTime did not fail");
+            //             PARABOLICWARN("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e; minDuration = %.15e", temp[0].x0, temp[0].x1, temp[0].dx0, temp[0].dx1, vmax, amax, endTime - bt1, mintime);
+            //             PARABOLICWARN("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; ttotal = %.15e; a1 = %.15e; v = %.15e; a2 = %.15e", temp[0].tswitch1, temp[0].tswitch2, temp[0].ttotal, temp[0].a1, temp[0].v, temp[0].a2);
             //         }
             //     }
             // }
+            
+            if(temp[0].SolveFixedTime(amax,vmax,endTime-bt1)) {////////Puttichai
+                if(Max(Abs(temp[0].a1),Abs(temp[0].a2)) < amax) {
+                    temp[0].Bounds(bmin,bmax);
+                    if(bmin >= xmin && bmax <= xmax) {
+                        //got a better path
+                        ramps = temp;
+                        amax = Max(Abs(ba1),Max(Abs(temp[0].a1),Abs(temp[0].a2)));
+                    }
+                }
+            }
         }
         gMinAccelQuiet = false;
     }
@@ -2332,27 +2339,37 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
             temp[1].dx1 = 0;
             gMinAccelQuiet = true;
             if(Abs(bx0-bx1) < (endTime-bt0-bt1)*vmax) {
-                if (temp[1].SolveMinTime(amax, vmax)) {
-                    if (endTime - bt0 - bt1 > temp[1].ttotal) {
-                        if (temp[1].SolveFixedTime(amax, vmax, endTime - bt0 - bt1)) {
-                            temp[1].Bounds(bmin, bmax);
-                            PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
-                            if (Max(Abs(temp[1].a1), Abs(temp[1].a2)) < amax) {
-                                // successful
-                                ramps = temp;
-                                amax = Max(Max(Abs(temp[1].a1), Abs(temp[1].a2)), Max(Abs(ba0), Abs(ba1)));
-                            }
-                        }
-                    }
-                }
-                // if(temp[1].SolveFixedTime(amax,vmax,endTime - bt0 - bt1)) {////////Puttichai
-                //     temp[1].Bounds(bmin,bmax);
-                //     PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
-                //     if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
-                //         ramps = temp;
-                //         amax = Max(Max(Abs(temp[1].a1),Abs(temp[1].a2)),Max(Abs(ba0),Abs(ba1)));
+                // if (temp[1].SolveMinTime(amax, vmax)) {
+                //     if (endTime - bt0 - bt1 > temp[1].ttotal) {
+                //         if (temp[1].SolveFixedTime(amax, vmax, endTime - bt0 - bt1)) {
+                //             temp[1].Bounds(bmin, bmax);
+                //             PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
+                //             if (Max(Abs(temp[1].a1), Abs(temp[1].a2)) < amax) {
+                //                 // successful
+                //                 ramps = temp;
+                //                 amax = Max(Max(Abs(temp[1].a1), Abs(temp[1].a2)), Max(Abs(ba0), Abs(ba1)));
+                //             }
+                //         }
+                //     }
+                //     else {
+                //         Real mintime = temp[1].ttotal;
+                //             bool result = temp[1].SolveFixedTime(amax, vmax, endTime - bt0 - bt1);
+                //             if (result) {
+                //                 PARABOLICWARN("giving endTime less than its minimum time but SolveFixedTime did not fail");
+                //                 PARABOLICWARN("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e; minDuration = %.15e", temp[1].x0, temp[1].x1, temp[1].dx0, temp[1].dx1, vmax, amax, endTime - bt0 - bt1, mintime);
+                //                 PARABOLICWARN("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; ttotal = %.15e; a1 = %.15e; v = %.15e; a2 = %.15e", temp[1].tswitch1, temp[1].tswitch2, temp[1].ttotal, temp[1].a1, temp[1].v, temp[1].a2);
+                //             }
                 //     }
                 // }
+                
+                if(temp[1].SolveFixedTime(amax,vmax,endTime - bt0 - bt1)) {////////Puttichai
+                    temp[1].Bounds(bmin,bmax);
+                    PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
+                    if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
+                        ramps = temp;
+                        amax = Max(Max(Abs(temp[1].a1),Abs(temp[1].a2)),Max(Abs(ba0),Abs(ba1)));
+                    }
+                }
             }
             gMinAccelQuiet = false;
         }
