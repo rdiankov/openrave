@@ -1445,6 +1445,14 @@ private:
     /// \throw If any links do not have the particular geometry, an exception will be raised.
     virtual void SetLinkGeometriesFromGroup(const std::string& name);
 
+    /// \brief Stores geometries for later retrieval for all the links at the same time.
+    ///
+    /// \param name The name of the extra geometries group to be stored in each link.
+    /// \param linkgeometries a vector containing a collection of geometry infos ptr for each links
+    /// Note that the pointers are copied and not the data, so be careful not to modify the geometries afterwards
+    /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
+    virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
+
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
         return _name;

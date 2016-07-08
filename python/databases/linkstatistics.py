@@ -220,7 +220,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 extensiondist = linalg.norm(j.GetAnchor() - spherepos)
                 linkradius = linalg.norm(localaabb.extents())
                 sphereradius = max(sphereradius, linkradius+extensiondist)
-
+            
             # process any child joints
             minpos = spherepos - sphereradius*ones([1,1,1])
             maxpos = spherepos + sphereradius*ones([1,1,1])
@@ -231,7 +231,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                     childpos, childradius = jointspheres[childjoint.GetJointIndex()]
                     minpos = numpy.minimum(minpos, childpos - sphereradius*ones([1,1,1]))
                     maxpos = numpy.maximum(maxpos, childpos + sphereradius*ones([1,1,1]))
-
+            
             newspherepos = 0.5*(minpos + maxpos)
             newsphereradius = linalg.norm(newspherepos - spherepos) + sphereradius
             for childjoint in childjoints:
