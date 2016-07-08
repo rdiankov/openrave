@@ -315,11 +315,35 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
 
      */
 
-    if (!(endTime > 0)) {
+    if (endTime < -EpsilonT) {
         PARABOLIC_RAMP_PLOG("endTime is negative");
         return false;
     }
-
+    if (endTime <= EpsilonT) {
+        // Check if this is a stationary trajectory
+        if ((FuzzyEquals(x0, x1, EpsilonX)) && (FuzzyEquals(dx0, dx1, EpsilonV))) {
+            // This is actually a stationary trajectory
+            tswitch1 = 0;
+            tswitch2 = 0;
+            ttotal = 0;
+            a1 = 0;
+            a2 = 0;
+            v = dx0;
+            if (IsValid()) {
+                return true;
+            }
+            else {
+                PARABOLIC_RAMP_PLOG("(stationary trajectory) Finished stretching but the profile does not pass IsValid test.");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false;
+            }
+        }
+        else {
+            // The given endTime is too short for any movement to be made.
+            return false;
+        }
+    }
+    
     Real d = x1 - x0; // displacement made by this profile
     Real A, B, C, D; // temporary variables for solving equations
 
@@ -332,9 +356,11 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     D = B/sum2;
 
     // PARABOLIC_RAMP_PLOG("A = %.15e; B = %.15e, C = %.15e, D = %.15e; sum1 = %.15e; sum2 = %.15e", A, B, C, D, sum1, sum2);
-    if ((Abs(A) < EpsilonA) && (Abs(B) < EpsilonA)) {
-        PARABOLIC_RAMP_PLOG("A and B are zero");
-        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+    if (IS_DEBUGLEVEL(OpenRAVE::Level_Verbose)) {
+        if ((Abs(A) <= EpsilonA) && (Abs(B) <= EpsilonA)) {
+            PARABOLIC_RAMP_PLOG("A and B are zero");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        }
     }
 
     // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
