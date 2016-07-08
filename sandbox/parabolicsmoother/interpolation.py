@@ -516,7 +516,7 @@ def _ImposeJointLimitFixedDuration(curve, xmin, xmax, vm, am):
     newbmin, newbmax = newCurve.GetPeaks()
     if (newbmin < Sub(xmin, epsilon)) or (newbmax > Add(xmax, epsilon)):
         log.warn("Solving finished but the trajectory still violates the bounds")
-        import IPython; IPython.embed()
+        # import IPython; IPython.embed()
         log.warn("x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; xmin = {4}; xmax = {5}; vm = {6}; am = {7}; duration = {8}".\
                  format(mp.nstr(curve.x0, n=_prec), mp.nstr(curve.EvalPos(curve.duration), n=_prec),
                         mp.nstr(curve.v0, n=_prec), mp.nstr(curve.EvalVel(curve.duration), n=_prec),
@@ -552,6 +552,18 @@ def _Stretch1D(curve, newDuration, vm, am):
     assert(vm > zero)
     assert(am > zero)
 
+    if (newDuration < -epsilon):
+        return ParabolicCurve()
+    if (newDuration <= epsilon):
+        # Check if this is a stationary trajectory
+        if (FuzzyEquals(curve.x0, curve.EvalPos(x1), epsilon) and FuzzyEquals(curve.v0, curve.v1, epsilon)):
+            ramp0 = Ramp(curve.v0, 0, 0, curve.x0)
+            newCurve = ParabolicCurve(ramp0)
+            return newCurve
+        else:
+            # newDuration is too short to any movement to be made
+            return ParabolicCurve()
+
     v0 = curve[0].v0
     v1 = curve[-1].v1
     d = curve.d
@@ -585,7 +597,8 @@ def _Stretch1D(curve, newDuration, vm, am):
     if IsEqual(sum1, zero):
         raise NotImplementedError # not yet considered
     elif sum1 > epsilon:
-        interval1 = iv.mpf([Neg(inf), C])
+        log.debug("sum1 > 0. This implies that newDuration is too short.")
+        return ParabolicCurve()
     else:
         interval1 = iv.mpf([C, inf])
         
@@ -594,7 +607,8 @@ def _Stretch1D(curve, newDuration, vm, am):
     elif sum2 > epsilon:
         interval2 = iv.mpf([D, inf])
     else:
-        interval2 = iv.mpf([Neg(inf), D])
+        log.debug("sum2 < 0. This implies that newDuration is too short.")
+        return ParabolicCurve()
         
     if Sub(interval2.a, interval1.b) > epsilon or Sub(interval1.a, interval2.b) > epsilon:
         # interval1 and interval2 do not intersect each other
@@ -606,7 +620,8 @@ def _Stretch1D(curve, newDuration, vm, am):
     if IsEqual(sum1, zero):
         raise NotImplementedError # not yet considered
     elif sum1 > epsilon:
-        interval4 = iv.mpf([Add(C, newDuration), inf])
+        log.debug("sum1 > 0. This implies that newDuration is too short.")
+        return ParabolicCurve()
     else:
         interval4 = iv.mpf([Neg(inf), Add(C, newDuration)])
         
@@ -615,7 +630,8 @@ def _Stretch1D(curve, newDuration, vm, am):
     elif sum2 > epsilon:
         interval5 = iv.mpf([Neg(inf), Add(D, newDuration)])
     else:
-        interval5 = iv.mpf([Add(D, newDuration), inf])
+        log.debug("sum2 < 0. This implies that newDuration is too short.")
+        return ParabolicCurve()
 
     if Sub(interval5.a, interval4.b) > epsilon or Sub(interval4.a, interval5.b) > epsilon:
         # interval4 and interval5 do not intersect each other
@@ -696,7 +712,7 @@ def _Stretch1D(curve, newDuration, vm, am):
 
         else:
             if FuzzyZero(Sub(Mul(C2, a0new), A2), epsilon):
-                import IPython; IPython.embed()
+                # import IPython; IPython.embed()
                 a1new = 0
             else:
                 a1new = Mul(mp.fdiv(B2, C2), Add(one, mp.fdiv(A2, Sub(Mul(C2, a0new), A2))))
