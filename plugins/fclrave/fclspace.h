@@ -245,14 +245,8 @@ public:
             }
 
             if( link->vgeoms.size() == 0 ) {
-                RAVELOG_ERROR_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
-                continue;
-            }
-
-//            if( link->vgeoms.size() == 1) {
-//                // set the unique geometry as its own bounding volume
-//                link->linkBV = link->vgeoms[0];
-//            } else {
+                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
+            } else {
                 // create the bounding volume for the link
                 KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
                 fcl::AABB enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
@@ -265,7 +259,7 @@ public:
                 Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
                 pfclcollBV->setUserData(link.get());
                 link->linkBV = std::make_pair(trans, pfclcollBV);
-//            }
+            }
 
             //link->nLastStamp = pinfo->nLastStamp;
             link->bodylinkname = pbody->GetName() + "/" + (*itlink)->GetName();
@@ -501,22 +495,6 @@ public:
         return pinfo->vlinks.at(index)->linkBV.second;
     }
 
-    /// \brief add enabled links to group.
-    ///
-    /// \return true if at least one link was added
-    bool CollectEnabledLinkBVs(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo, CollisionGroup& group) {
-        // not necessary at the moment
-        // group.reserve(group.size() + pbody->GetLinks().size());
-        bool badded = false;
-        FOREACH(itlink, pbody->GetLinks()) {
-            if( ((*itlink)->IsEnabled()) ) {
-                // not a very good idea to access it directly for code maintenance
-                group.push_back(GetLinkBV(pinfo, (*itlink)->GetIndex()).get());
-                badded = true;
-            }
-        }
-        return badded;
-    }
 
     inline LinkInfoPtr GetLinkInfo(LinkConstPtr plink) {
         return GetInfo(plink->GetParent())->vlinks.at(plink->GetIndex());
@@ -620,6 +598,9 @@ private:
             BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
             for(size_t i = 0; i < vtrans.size(); ++i) {
                 CollisionObjectPtr pcoll = pinfo->vlinks[i]->linkBV.second;
+                if( !pcoll ) {
+                    continue;
+                }
                 Transform pose = vtrans[i] * pinfo->vlinks[i]->linkBV.first;
                 fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
                 fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);

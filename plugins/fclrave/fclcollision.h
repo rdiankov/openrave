@@ -619,6 +619,10 @@ public:
 
         CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
 
+        if( !pcollLink1 || !pcollLink2 ) {
+          return false;
+        }
+
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
             DistanceCallbackData query(shared_checker(), report);
             query.bselfCollision = true;
@@ -674,6 +678,11 @@ public:
         }
 
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
+
+        if( !pcollLink ) {
+          return false;
+        }
+
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, false);
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
@@ -712,6 +721,10 @@ public:
 
         _fclspace->Synchronize();
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
+
+        if( !pcollLink ) {
+          return false;
+        }
 
         std::set<KinBodyConstPtr> attachedBodies;
         plink->GetParent()->GetAttached(attachedBodies);
