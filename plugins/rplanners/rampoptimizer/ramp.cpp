@@ -131,6 +131,11 @@ void Ramp::UpdateDuration(Real newDuration) {
     x1 = x0 + d;
 }
 
+void Ramp::SetInitialValue(Real newx0) {
+    x0 = newx0;
+    x1 = x0 + d;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // ParabolicCurve
 ParabolicCurve::ParabolicCurve(std::vector<Ramp> rampsIn) {
@@ -194,8 +199,8 @@ void ParabolicCurve::SetInitialValue(Real newx0) {
     x0 = newx0;
     size_t nRamps = ramps.size();
     for (size_t i = 0; i < nRamps; ++i) {
-        ramps[i].x0 = newx0;
-        newx0 = newx0 + ramps[i].d;
+        ramps[i].SetInitialValue(newx0);
+        newx0 = ramps[i].x1;
     }
     x1 = x0 + d;
 }

@@ -47,6 +47,7 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
+    void SetInitialValue(Real newx0);
     void UpdateDuration(Real newDuration);
 
     // Members
