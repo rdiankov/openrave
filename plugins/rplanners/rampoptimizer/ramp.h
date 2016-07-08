@@ -1,6 +1,18 @@
-//-*- coding: utf-8 -*-
-#ifndef PARABOLIC_RAMP_H
-#define PARABOLIC_RAMP_H
+// -*- coding: utf-8 -*-
+// Copyright (C) 2016 Puttichai Lertkultanon <L.Puttichai@gmail.com>
+//
+// This program is free software: you can redistribute it and/or modify it under the terms of the
+// GNU Lesser General Public License as published by the Free Software Foundation, either version 3
+// of the License, or at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+// even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License along with this program.
+// If not, see <http://www.gnu.org/licenses/>.
+#ifndef RAMP_OPTIM_RAMP_H
+#define RAMP_OPTIM_RAMP_H
 
 #include <vector>
 #include <cassert>
@@ -72,6 +84,7 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
+    void Reset();
     // Set initial value of the Curve. Also the initial value of each ramp accordingly. Note that d
     // will not be modified here.
     void SetInitialValue(Real newx0);
@@ -89,16 +102,16 @@ public:
 
 class ParabolicCurvesND {
 public:
-    ParabolicCurvesND() {
+    ParabolicCurvesND() : constraintchecked(0), modified(0) {
     }
     ParabolicCurvesND(std::vector<ParabolicCurve> curves);
     ~ParabolicCurvesND() {
     }
 
     // Functions
-    std::vector<Real> EvalPos(Real t) const;
-    std::vector<Real> EvalVel(Real t) const;
-    std::vector<Real> EvalAcc(Real t) const;
+    void EvalPos(Real t, std::vector<Real>& xVect) const;
+    void EvalVel(Real t, std::vector<Real>& vVect) const;
+    void EvalAcc(Real t, std::vector<Real>& aVect) const;
 
     void Append(ParabolicCurvesND curvesnd);
     void GetPeaks(std::vector<Real>& bminVect, std::vector<Real>& bmaxVect) const;
@@ -110,15 +123,20 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
-
+    void Reset();
+    
     int ndof;
     Real duration;
     std::vector<Real> x0Vect;
+    std::vector<Real> x1Vect;
     std::vector<Real> dVect;
     std::vector<Real> v0Vect;
     std::vector<Real> v1Vect;
     std::vector<Real> switchpointsList;
     std::vector<ParabolicCurve> curves;
+
+    mutable int constraintchecked;
+    mutable int modified;
 
 }; // end class ParabolicCurversND
 

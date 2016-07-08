@@ -1,6 +1,6 @@
 // -*- coding: utf-8 -*-
-#ifndef PARABOLIC_RAMP_COMMON_H
-#define PARABOLIC_RAMP_COMMON_H
+#ifndef RAMP_OPTIM_PARABOLIC_COMMON_H
+#define RAMP_OPTIM_PARABOLIC_COMMON_H
 
 #include <openrave/openrave.h>
 
