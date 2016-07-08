@@ -119,11 +119,5 @@ inline int SolveQuadratic(Real a, Real b, Real c, Real& x1, Real& x2)
 //for ill posed problems choose x=0
 bool SafeEqSolve(Real a, Real b, Real epsilon, Real xmin, Real xmax, Real& x);
 
-bool SaveRamp(const char* fn, Real x0, Real dx0, Real x1, Real dx1, Real a, Real v, Real t);
-
-bool LoadRamp(FILE* f, Real& x0, Real& dx0, Real& x1, Real& dx1, Real& a, Real& v, Real& t);
-bool LoadRamp(const char* fn, Real& x0, Real& dx0, Real& x1, Real& dx1, Real& a, Real& v, Real& t);
-
-}
-
+} // end namespace RampOptimizerInternal
 #endif
