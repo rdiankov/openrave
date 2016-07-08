@@ -141,7 +141,7 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
             }
 
             ParabolicCurve tempCurve;
-            bool result = Stretch1D(curvesVectIn[i], newDuration, vmVect[i], amVect[i], tempCurve);
+            bool result = Stretch1D(curvesVectIn[i], vmVect[i], amVect[i], newDuration, tempCurve);
             if (!result) {
                 return false;
             }
@@ -182,7 +182,7 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
             }
 
             ParabolicCurve tempCurve;
-            bool result = Stretch1D(curvesVectIn[i], newDuration, vmVect[i], amVect[i], tempCurve);
+            bool result = Stretch1D(curvesVectIn[i], vmVect[i], amVect[i], newDuration, tempCurve);
             if (!result) {
                 return false;
             }
@@ -289,6 +289,7 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
     }
     else {
         RAMP_OPTIM_PLOG("Interpolate1D with no velocity bound failed: CheckParabolicCurve returns %d", ret);
+        RAMP_OPTIM_PLOG("Boundary conditions: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; am = %.15e; (computed) duration = %.15e", x0, x1, v0, v1, am, curveOut.duration);
         return false;
     }
 }
@@ -400,20 +401,15 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
         RAMP_OPTIM_PLOG("Case IIa: checking");
         Ramp firstRamp(v0, ba0, bt0, x0);
         if (Abs(x1 - bx0) < (duration - bt0)*vm) {
-            ParabolicCurve tempCurve1;
-            if (Interpolate1D(bx0, x1, 0, v1, vm, am, tempCurve1)) {
-                if ((duration - bt0) >= tempCurve1.duration) {
-                    ParabolicCurve tempCurve2;
-                    if (Stretch1D(tempCurve1, duration - bt0, vm, am, tempCurve2)) {
-                        tempCurve2.GetPeaks(tempbmin, tempbmax);
-                        if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
-                            RAMP_OPTIM_PLOG("Case IIa: successful");
-                            newRamps.reserve(1 + tempCurve2.ramps.size());
-                            newRamps.push_back(firstRamp);
-                            for (size_t i = 0; i < tempCurve2.ramps.size(); ++i) {
-                                newRamps.push_back(tempCurve2.ramps[i]);
-                            }
-                        }
+            ParabolicCurve tempCurve;
+            if (Interpolate1DFixedDuration(bx0, x1, 0, v1, vm, am, duration - bt0, tempCurve)) {
+                tempCurve.GetPeaks(tempbmin, tempbmax);
+                if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
+                    RAMP_OPTIM_PLOG("Case IIa: successful");
+                    newRamps.reserve(1 + tempCurve.ramps.size());
+                    newRamps.push_back(firstRamp);
+                    for (size_t i = 0; i < tempCurve.ramps.size(); ++i) {
+                        newRamps.push_back(tempCurve.ramps[i]);
                     }
                 }
             }
@@ -424,24 +420,19 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
         RAMP_OPTIM_PLOG("Case IIb: checking");
         Ramp lastRamp(0, ba1, bt1, bx1);
         if (Abs(x0 - bx1) < (duration - bt1)*vm) {
-            ParabolicCurve tempCurve1;
-            if (Interpolate1D(x0, bx1, v0, 0, vm, am, tempCurve1)) {
-                if ((duration - bt1) >= tempCurve1.duration) {
-                    ParabolicCurve tempCurve2;
-                    if (Stretch1D(tempCurve1, duration - bt1, vm, am, tempCurve2)) {
-                        tempCurve2.GetPeaks(tempbmin, tempbmax);
-                        if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
-                            RAMP_OPTIM_PLOG("Case IIb: successful");
-                            if (newRamps.size() > 0) {
-                                newRamps.resize(0);
-                            }
-                            newRamps.reserve(1 + tempCurve2.ramps.size());
-                            for (size_t i = 0; i < tempCurve2.ramps.size(); ++i) {
-                                newRamps.push_back(tempCurve2.ramps[i]);
-                            }
-                            newRamps.push_back(lastRamp);
-                        }
+            ParabolicCurve tempCurve;
+            if (Interpolate1DFixedDuration(x0, bx1, v0, 0, vm, am, duration - bt1, tempCurve)) {
+                tempCurve.GetPeaks(tempbmin, tempbmax);
+                if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
+                    RAMP_OPTIM_PLOG("Case IIb: successful");
+                    if (newRamps.size() > 0) {
+                        newRamps.resize(0);
                     }
+                    newRamps.reserve(1 + tempCurve.ramps.size());
+                    for (size_t i = 0; i < tempCurve.ramps.size(); ++i) {
+                        newRamps.push_back(tempCurve.ramps[i]);
+                    }
+                    newRamps.push_back(lastRamp);
                 }
             }
         }
@@ -468,25 +459,20 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
             Ramp firstRamp(v0, ba0, bt0, x0);
             Ramp lastRamp(0, ba1, bt1);
             if (Abs(bx0 - bx1) < (duration - (bt0 + bt1))*vm) {
-                ParabolicCurve tempCurve1;
-                if (Interpolate1D(bx0, bx1, 0, 0, vm, am, tempCurve1)) {
-                    if ((duration - (bt0 + bt1)) >= tempCurve1.duration) {
-                        ParabolicCurve tempCurve2;
-                        if (Stretch1D(tempCurve1, duration - (bt0 + bt1), vm, am, tempCurve2)) {
-                            tempCurve2.GetPeaks(tempbmin, tempbmax);
-                            if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
-                                RAMP_OPTIM_PLOG("Case IV: successful");
-                                if (newRamps.size() > 0) {
-                                    newRamps.resize(0);
-                                }
-                                newRamps.reserve(2 + tempCurve2.ramps.size());
-                                newRamps.push_back(firstRamp);
-                                for (size_t i = 0; i < tempCurve2.ramps.size(); ++i) {
-                                    newRamps.push_back(tempCurve2.ramps[i]);
-                                }
-                                newRamps.push_back(lastRamp);
-                            }
+                ParabolicCurve tempCurve;
+                if (Interpolate1DFixedDuration(bx0, bx1, 0, 0, vm, am, duration - (bt0 + bt1), tempCurve)) {
+                    tempCurve.GetPeaks(tempbmin, tempbmax);
+                    if ((tempbmin >= xmin - epsilon) && (tempbmax <= xmax + epsilon)) {
+                        RAMP_OPTIM_PLOG("Case IV: successful");
+                        if (newRamps.size() > 0) {
+                            newRamps.resize(0);
                         }
+                        newRamps.reserve(2 + tempCurve.ramps.size());
+                        newRamps.push_back(firstRamp);
+                        for (size_t i = 0; i < tempCurve.ramps.size(); ++i) {
+                            newRamps.push_back(tempCurve.ramps[i]);
+                        }
+                        newRamps.push_back(lastRamp);
                     }
                 }
             }
@@ -495,7 +481,7 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
 
     if (newRamps.empty()) {
         RAMP_OPTIM_WARN("Cannot solve for a bounded trajectory");
-        RAMP_OPTIM_WARN("Curve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, vm);
+        RAMP_OPTIM_WARN("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, vm);
         return false;
     }
 
@@ -505,13 +491,19 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
         return true;
     }
     else {
-        RAMP_OPTIM_PLOG("CheckParabolicCurve returns %d", ret);
+        RAMP_OPTIM_PLOG("Finished fixing joint limit violation but CheckParabolicCurve returns %d", ret);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, vm);
         return false;
     }
 }
 
 
-bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, ParabolicCurve& curveOut) {
+bool Stretch1D(ParabolicCurve& curveIn, Real vm, Real am, Real newDuration, ParabolicCurve& curveOut) {
+    return Interpolate1DFixedDuration(curveIn.x0, curveIn.x1, curveIn.v0, curveIn.v1, vm, am, newDuration, curveOut);
+}
+    
+
+bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, Real duration, ParabolicCurve& curveOut) {
     /*
        We want to 'stretch' this velocity profile to have a new duration of endTime. First, try
        re-interpolating this profile to have two ramps. If that doesn't work, try modifying the
@@ -524,7 +516,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
 
               d = (v0*t0 + 0.5*a0*(t0*t0)) + ((v0 + a0*t0)*t1 + 0.5*a1*(t1*t1)),
 
-       where d is the displacement done by this trajectory, t1 = newDuration - t0, i.e., the
+       where d is the displacement done by this trajectory, t1 = duration - t0, i.e., the
        duration of the second ramp.  Then we can write a0 and a1 in terms of t0 as
 
               a0 = A + B/t0
@@ -566,38 +558,57 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
        intersection of two intervals gives either an interval or an empty set.)
 
      */
-    if (!(newDuration > 0)) {
-        RAMP_OPTIM_PLOG("newDuration is negative");
+    if (duration < -epsilon) {
+        RAMP_OPTIM_PLOG("duration = %.15e is negative", duration);
         return false;
     }
-
-    Real x0 = curveIn.x0;
-    Real x1 = curveIn.EvalPos(curveIn.duration);
-    Real v0 = curveIn.v0;
-    Real v1 = curveIn.v1;
+    if (duration <= epsilon) {
+        // Check if this is a stationary trajectory
+        if (FuzzyEquals(x0, x1, epsilon) & FuzzyEquals(v0, v1, epsilon)) {
+            // This is actually a stationary trajectory
+            Ramp ramp0(v0, 0, 0, x0);
+            std::vector<Ramp> ramps(1);
+            ramps[0] = ramp0;
+            curveOut.Initialize(ramps);
+            ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
+            if (ret == PCR_Normal) {
+                return true;
+            }
+            else {
+                RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+                return false;
+            }
+        }
+        else {
+            RAMP_OPTIM_PLOG("The given duration is too short for any movement to be made.");
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+            return false;
+        }
+    }
 
     Real d = x1 - x0; // displacement made by this profile
     Real t0, t1, vp, a0, a1;
     Real A, B, C, D; // temporary variables for solving equations
 
-    Real newDurInverse = 1/newDuration;
-    A = (v1 - v0)*newDurInverse;
-    B = (2*d)*newDurInverse - (v0 + v1);
+    Real durInverse = 1/duration;
+    A = (v1 - v0)*durInverse;
+    B = (2*d)*durInverse - (v0 + v1);
     Real sum1 = -am - A;
     Real sum2 = am - A;
     C = B/sum1;
     D = B/sum2;
 
     // RAMP_OPTIM_PLOG("A = %.15e; B = %.15e, C = %.15e, D = %.15e; sum1 = %.15e; sum2 = %.15e", A, B, C, D, sum1, sum2);
-    if ((Abs(A) < epsilon) && (Abs(B) < epsilon)) {
+    if ((Abs(A) <= epsilon) && (Abs(B) <= epsilon)) {
         RAMP_OPTIM_PLOG("A and B are zero");
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
     }
 
     // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
     // acceleration. Instead of having a class representing an interval, we use the interval bounds
     // directly. Naming convention: iXl = lower bound of interval X, iXu = upper bound of interval X.
-    Real i0l = 0, i0u = newDuration;
+    Real i0l = 0, i0u = duration;
     Real i1l = -Inf, i1u = Inf;
     Real i2l = -Inf, i2u = Inf;
     Real i3l = -Inf, i3u = Inf;
@@ -614,8 +625,9 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         }
     }
     else if (sum1 > 0) {
-        // i1 = (-Inf, C]
-        i1u = C;
+        RAMP_OPTIM_PLOG("sum1 > 0. This implies that duration is too short");
+        RAMP_OPTIM_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+        return false;
     }
     else {
         // i1 = [C, Inf)
@@ -636,14 +648,15 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         i2l = D;
     }
     else {
-        // i2 = (-Inf, D]
-        i2u = D;
+        RAMP_OPTIM_PLOG("sum2 < 0. This implies that duration is too short");
+        RAMP_OPTIM_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+        return false;
     }
 
     // Find the intersection between interval 1 and interval 2, store it in interval 2.
     if ((i1l > i2u) || (i1u < i2l)) {
         RAMP_OPTIM_PLOG("interval 1 and interval 2 do not have any intersection");
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
         return false;
     }
     else {
@@ -662,12 +675,13 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         }
     }
     else if (sum1 > 0) {
-        // i3 = [t + C, Inf)
-        i3l = newDuration + C;
+        RAMP_OPTIM_PLOG("sum1 > 0. This implies that duration is too short");
+        RAMP_OPTIM_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+        return false;
     }
     else {
         // i3 = (-Inf, t + C]
-        i3u = newDuration + C;
+        i3u = duration + C;
     }
 
     // IV)
@@ -676,22 +690,23 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
             // t0 can be anything
         }
         else {
-            i2l = Inf;
+            i4l = Inf;
         }
     }
     else if (sum2 > 0) {
         // i4 = (-Inf, t + D]
-        i4u = newDuration + D;
+        i4u = duration + D;
     }
     else {
-        // i4 = [t + D, INf)
-        i4l = newDuration + D;
+        RAMP_OPTIM_PLOG("sum2 < 0. This implies that duration is too short");
+        RAMP_OPTIM_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+        return false;
     }
 
     // Find the intersection between interval 3 and interval 4, store it in interval 4.
     if ((i3l > i4u) || (i3u < i4l)) {
         RAMP_OPTIM_PLOG("interval 3 and interval 4 do not have any intersection");
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
         return false;
     }
     else {
@@ -700,7 +715,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
     }
 
     // Find the intersection between interval 2 and interval 4, store it in interval 4. This is a
-    // bit tricky because if the given newDuration is actually the minimum time that this trajectory
+    // bit tricky because if the given duration is actually the minimum time that this trajectory
     // can get, the two intervals will theoretically intersect at only one point.
     if (FuzzyEquals(i2l, i4u, epsilon) || FuzzyEquals(i2u, i4l, epsilon)) {
         RAMP_OPTIM_PLOG("interval 2 and interval 4 intersect at a point, most likely because the given endTime is actually its minimum time.");
@@ -709,20 +724,21 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
             return false; // what ?
         }
         else {
-            if (FuzzyEquals(curveOut.duration, newDuration, epsilon)) {
+            if (FuzzyEquals(curveOut.duration, duration, epsilon)) {
                 RAMP_OPTIM_PLOG("The hypothesis is correct.");
+                // The curve has already been validated in Interpolate1D
                 return true;
             }
             else {
                 RAMP_OPTIM_PLOG("The hypothesis is wrong. Something else just happened");
-                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                 return false; // what ?
             }
         }
     }
     else if ((i2l > i4u) || (i2u < i4l)) {
         RAMP_OPTIM_PLOG("interval 2 and interval 4 do not have any intersection");
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
         return false;
     }
     else {
@@ -733,12 +749,18 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
     // Find the intersection between interval 0 and interval 4, store it in interval 4.
     if ((i0l > i4u) || (i0u < i4l)) {
         RAMP_OPTIM_PLOG("interval 0 and interval 4 do not have any intersection");
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
         return false;
     }
     else {
         i4l = Max(i0l, i4l);
         i4u = Min(i0u, i4u);
+    }
+
+    if (i4l > i4u) {
+        RAMP_OPTIM_PLOG("interval 4 is empty but the algorithm cannot detect this.");
+        RAMP_OPTIM_PLOG("interval4 = [%.15e, %.15e]", i4l, i4u);
+        return false;
     }
 
     /*
@@ -751,7 +773,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
 
        Then we find x which minimizes J(x) by examining the roots of dJ/dx.
      */
-    bool res = SolveForT0(A, B, newDuration, i4l, i4u, t0);
+    bool res = SolveForT0(A, B, duration, i4l, i4u, t0);
     if (!res) {
         // Solving dJ/dx = 0 somehow failed. We just choose the midpoint of the feasible interval.
         t0 = 0.5*(i4l + i4u);
@@ -760,17 +782,25 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
     // Here we need to take care of the cases when t0 has been rounded. In particular, we need to go
     // back to the original formulae to calculated other related values (such as a1). Otherwise, it
     // may cause discrepancies.
-    if (FuzzyZero(t0, epsilon) || FuzzyEquals(t0, newDuration, epsilon)) {
-        // t0 is either 0 or newDuration. This means the new trajectory will consist of only one
+    if (FuzzyZero(t0, epsilon) || FuzzyEquals(t0, duration, epsilon)) {
+        // t0 is either 0 or duration. This means the new trajectory will consist of only one
         // Ramp. Since v0 and v1 are withint the limits, we are safe.
-        Ramp ramp0(v0, A, newDuration, x0);
+        Ramp ramp0(v0, A, duration, x0);
         std::vector<Ramp> ramps(1);
         ramps[0] = ramp0;
         curveOut.Initialize(ramps);
-        return true;
+        ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
+        if (ret == PCR_Normal) {
+            return true;
+        }
+        else {
+            RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+            return false;
+        }
     }
 
-    t1 = newDuration - t0;
+    t1 = duration - t0;
     a0 = A + B/t0;
     a1 = A - B/t1;
     vp = v0 + (a0*t0);
@@ -778,7 +808,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
     // Consistency checking
     if (!FuzzyEquals(vp, v1 - (a1*t1), epsilon)) {
         RAMP_OPTIM_PLOG("Verification failed (vp != v1 - a1*d1): %.15e != %.15e", vp, v1 - (a1*t1));
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
         RAMP_OPTIM_PLOG("Calculated values: A = %.15e; B = %.15e; t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", A, B, t0, t1, vp, a0, a1);
         return false;
     }
@@ -792,13 +822,14 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         ramps[0] = ramp0;
         ramps[1] = ramp1;
         curveOut.Initialize(ramps);
+        // Check the curve without joint limits
         ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
         if (ret == PCR_Normal) {
             return true;
         }
         else {
             RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
-            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             RAMP_OPTIM_PLOG("Calculated values: A = %.15e; B = %.15e; t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", A, B, t0, t1, vp, a0, a1);
             return false;
         }
@@ -812,7 +843,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         // at the line: FuzzyEquals(vp, v1 - (a1*t1)) above.
         if ((FuzzyZero(a0, epsilon)) || (FuzzyZero(a1, epsilon))) {
             RAMP_OPTIM_PLOG("Velocity limit is violated but at least one acceleration is zero: a0 = %.15e; a1 = %.15e", a0, a1);
-            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             return false;
         }
         Real a0inv = 1/a0;
@@ -867,7 +898,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
 
         Real A2 = dv2*dv2;
         Real B2 = -dv3*dv3;
-        Real D2 = 0.5*dv1*(newDuration - t0Trimmed - t1Trimmed); // area of the velocity profile above the velocity limit.
+        Real D2 = 0.5*dv1*(duration - t0Trimmed - t1Trimmed); // area of the velocity profile above the velocity limit.
         Real C2 = t0Trimmed*dv2 + t1Trimmed*dv3 - 2*D2;
 
         Real root = cbrt(A2*B2*B2); // from math.h
@@ -877,7 +908,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
             // of the original velocity profile, the whole profile becomes one-ramp with a = 0 and v
             // = vmNew.
             RAMP_OPTIM_PLOG("C2 == 0. Unable to fix this case.");
-            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             return false;
         }
 
@@ -885,7 +916,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         a0 = (A2 + root)*C2inv;
         if (Abs(a0) > am) {
             // a0 exceeds the bound, try making it stays at the bound.
-            a0 = a0 > 0 ? am: -am;
+            a0 = a0 > 0 ? am : -am;
             // Recalculate the related variable
             root = C2*a0 - A2;
         }
@@ -917,7 +948,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
                     if (C2*a1 - B2 == 0) {
                         // this case means a0 == 0 which shuold have been catched from above
                         RAMP_OPTIM_PLOG("(C2*a1 - B2 == 0) a0 shuold have been zero but a0 = %.15e", a0);
-                        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+                        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                         return false;
                     }
                     a0 = A2*a1/(C2*a1 - B2);
@@ -929,22 +960,22 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         // Final check on the accelerations
         if ((Abs(a0) > am) || (Abs(a1) > am)) {
             RAMP_OPTIM_PLOG("Cannot fix accelration bounds violation");
-            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             return false;
         }
 
         if ((Abs(a0) <= epsilon) && (Abs(a1) <= epsilon)) {
             RAMP_OPTIM_PLOG("Both accelerations are zero.");
-            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             RAMP_OPTIM_PLOG("A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", A2, B2, C2, D2);
             return false;
         }
 
         if (Abs(a0) <= epsilon) {
-            t0 = newDuration + dv3/a1;
-            t1 = newDuration - t0;
+            t0 = duration + dv3/a1;
+            t1 = duration - t0;
             vp = vmNew;
-            
+
             Ramp ramp0(v0, a0, t0, x0);
             Ramp ramp1(vp, a1, t1);
             std::vector<Ramp> ramps(2);
@@ -954,7 +985,7 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
         }
         else if (Abs(a1) <= epsilon) {
             t0 = dv2/a0;
-            t1 = newDuration - t0;
+            t1 = duration - t0;
             vp = vmNew;
 
             Ramp ramp0(v0, a0, t0, x0);
@@ -968,20 +999,20 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
             t0 = dv2/a0;
             vp = vmNew;
             Real tLastRamp = -dv3/a1;
-            if (t0 + tLastRamp > newDuration) {
+            if (t0 + tLastRamp > duration) {
                 // Final fix
                 if (A == 0) {
                     RAMP_OPTIM_PLOG("(final fix) A = 0. Don't know how to deal with this case.");
-                    RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+                    RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                     return false;
                 }
                 t0 = (dv2 - B)/A; // note that we use A and B, not A2 and B2.
                 if (t0 < 0) {
                     RAMP_OPTIM_PLOG("(final fix) t0 < 0. Don't know how to deal with this case.");
-                    RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+                    RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                     return false;
                 }
-                t1 = newDuration - t0;
+                t1 = duration - t0;
                 a0 = A + (B/t0);
                 a1 = A - (B/t1);
 
@@ -993,18 +1024,18 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
                 curveOut.Initialize(ramps);
             }
             else {
-                Real tMiddle = newDuration - (t0 + tLastRamp);
+                Real tMiddle = duration - (t0 + tLastRamp);
                 if (FuzzyZero(tMiddle, epsilon)) {
                     RAMP_OPTIM_PLOG("Three-ramp profile works but having too short middle ramp.");
                     // If we leave it like this, it may cause errors later on.
-                    t0 = (2*d - (v1 + vmNew)*newDuration)/(v0 - v1);
-                    t1 = newDuration - t0;
+                    t0 = (2*d - (v1 + vmNew)*duration)/(v0 - v1);
+                    t1 = duration - t0;
                     vp = vmNew;
                     a0 = dv2/t0;
                     a1 = -dv3/t1;
                     if ((Abs(a0) > am + epsilon) || (Abs(a1) > am + epsilon)) {
                         RAMP_OPTIM_PLOG("Cannot merge into two-ramp because of acceleration limits");
-                        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+                        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                         RAMP_OPTIM_PLOG("Calculated values: t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", t0, t1, vp, a0, a1);
                         return false;
                     }
@@ -1027,16 +1058,16 @@ bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, Para
                     ramps[2] = ramp2;
                     curveOut.Initialize(ramps);
                 }
-            }   
+            }
         }
-
+        // Check the curve without joint limits
         ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
         if (ret == PCR_Normal) {
             return true;
         }
         else {
             RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
-            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, v0, v1, vm, am, newDuration);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             return false;
         }
     }

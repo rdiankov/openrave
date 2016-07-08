@@ -45,19 +45,15 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
 /// is violated, the modified trajectory will have a longer duration.
 bool ImposeVelocityLimit(ParabolicCurve& curve, Real vm);
 
-// /// Solve for a time to brake from the given velocity to zero such that the ramp finishes at xbound.
-// Real SolveBrakeTime(Real x, Real v, Real xbound);
-
-// /// Solve for an acceleration to brake from the given velocity to zero such that the ramp
-// /// finishes at xbound.
-// Real SolveBrakeAccel(Real x, Real v, Real xbound);
-
 /// Given a (not necessarily minimum-time) 1D trajectory, impose the given joint limits on it
 /// while constraining the duration to be the same.
 bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax, Real vm, Real am, ParabolicCurve& curveOut);
 
-/// Stretch the given trajectory such that it ends at the given duration
-bool Stretch1D(ParabolicCurve& curveIn, Real newDuration, Real vm, Real am, ParabolicCurve& curveOut);
+/// Stretch the given trajectory such that it ends at the given duration. It internally calls Interpolate1DFixedDuration.
+bool Stretch1D(ParabolicCurve& curveIn, Real vm, Real am, Real newDuration, ParabolicCurve& curveOut);
+
+/// Interpolate a minimum-acceleration trajectory with the specified duration connecting (x0, v0) and (x1, v1).
+bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, Real duration, ParabolicCurve& curveOut);
 
 /*
    Utilities

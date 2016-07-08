@@ -65,7 +65,7 @@ int main() {
         ParabolicCurve curve0, curve1;
         res = Interpolate1D(1.334850288597095, 1.3345299669274491, 0, 0, 4.3943027242087229, 24.033183799961918, curve0);
         assert(res);
-        res = Stretch1D(curve0, 0.11880652979425915, 4.3943027242087229, 24.033183799961918, curve1);
+        res = Stretch1D(curve0, 4.3943027242087229, 24.033183799961918, 0.11880652979425915, curve1);
         assert(res);
         assert(FuzzyEquals(curve1.duration, 0.11880652979425915, epsilon));
         assert(FuzzyEquals(curve1.ramps[0].a, -0.09077488120406535, epsilon));
@@ -76,7 +76,7 @@ int main() {
         ParabolicCurve curve2, curve3;
         res = Interpolate1D(0.16383770895191763, 0.15318984750484704, -0.81134691912168311, -0.79944445258593466, 1.4940718558591721, 7.5136307267887785, curve2);
         assert(res);
-        res = Stretch1D(curve2, 0.01322065865771640, 1.4940718558591721, 7.5136307267887785, curve3);
+        res = Stretch1D(curve2, 1.4940718558591721, 7.5136307267887785, 0.01322065865771640, curve3);
         assert(curve3.ramps.size() == 1); // caution: this may raise assertion failure if epsilon is not 1e-10 (eg., smaller than that)
         assert(FuzzyEquals(curve3.ramps[0].a, 0.9002930068693192, epsilon));
         std::cout << "[Stretch1D] case: the stretched profile has one ramp: done" << std::endl;
@@ -85,7 +85,7 @@ int main() {
         ParabolicCurve curve4, curve5;
         res = Interpolate1D(1.032791860941638, 1.0597145622491539, 1.0655552189873183, 0.042986108496728709, 3.8975383858598369, 18.378317023500291, curve4);
         assert(res);
-        res = Stretch1D(curve4, 0.08988795330297148, 3.8975383858598369, 18.378317023500291, curve5);
+        res = Stretch1D(curve4, 3.8975383858598369, 18.378317023500291, 0.08988795330297148, curve5);
         assert(res);
         assert(FuzzyEquals(curve5.duration, 0.08988795330297148, epsilon));
         assert(FuzzyEquals(curve5.ramps[0].a, -18.378317023500291, epsilon));
@@ -98,7 +98,7 @@ int main() {
         ParabolicCurve curve6, curve7;
         res = Interpolate1D(0.82531750296556994, 0.79009174178799435, -0.19471127141398498, -0.086230085825425309, 0.19471127141398498, 9.4898798419620984, curve6);
         assert(res);
-        res = Stretch1D(curve6, 0.18754320583325224, 0.19471127141398498, 9.4898798419620984, curve7);
+        res = Stretch1D(curve6, 0.19471127141398498, 9.4898798419620984, 0.18754320583325224, curve7);
         assert(res);
         assert(FuzzyEquals(curve7.duration, 0.18754320583325224, epsilon));
         assert(curve7.ramps[0].a == 0);
@@ -109,7 +109,7 @@ int main() {
         ParabolicCurve curve8, curve9;
         res = Interpolate1D(1.8135831340945454, 1.6863191822455341, 0.034600795245669787, -0.72568556018283259, 0.72568556018283259, 6.9421294516922218, curve8);
         assert(res);
-        res = Stretch1D(curve8, 0.24859854263193015, 0.72568556018283259, 6.9421294516922218, curve9);
+        res = Stretch1D(curve8, 0.72568556018283259, 6.9421294516922218, 0.24859854263193015, curve9);
         assert(res);
         assert(FuzzyEquals(curve9.duration, 0.24859854263193015, epsilon));
         assert(curve9.ramps[1].a == 0);
@@ -120,7 +120,7 @@ int main() {
         ParabolicCurve curve10, curve11;
         res = Interpolate1D(1.3357629018636366, 0.44226482173150211, -0.44939431909168071, 9.3540921260636072, 9.3540921260636072, 62.486277879901003, curve10);
         assert(res);
-        res = Stretch1D(curve10, 0.48901336113233929, 9.3540921260636072, 62.486277879901003, curve11);
+        res = Stretch1D(curve10, 9.3540921260636072, 62.486277879901003, 0.48901336113233929, curve11);
         assert(res);
         assert(FuzzyEquals(curve11.duration, 0.48901336113233929, epsilon));
         assert(curve11.ramps.size() == 2);
@@ -137,7 +137,7 @@ int main() {
         ParabolicCurve curve14, curve15;
         res = Interpolate1D(-0.35192871321859048, 1.334850288597095, 0, 0, 4.3943027242087229, 24.033183799961918, curve14);
         assert(res);
-        res = Stretch1D(curve14, 0.568, 4.3943027242087229, 24.033183799961918, curve15);
+        res = Stretch1D(curve14, 4.3943027242087229, 24.033183799961918, 0.568, curve15);
         assert(res);
         assert(curve15.ramps.size() == 3);
         assert(FuzzyEquals(curve15.duration, 0.568, epsilon));
@@ -152,7 +152,7 @@ int main() {
         ParabolicCurve curve0, curve1, curve2;
         res = Interpolate1D(-0.81007376879395065, 2.6736076723274822, -3.2714098084114029, 0.76559314850470006, 3.2714098084114029, 19.416054628593248, curve0);
         assert(res);
-        res = Stretch1D(curve0, 5.2022838765206281, 3.2714098084114029, 19.416054628593248, curve1);
+        res = Stretch1D(curve0, 3.2714098084114029, 19.416054628593248, 5.2022838765206281, curve1);
         assert(res);
         res = ImposeJointLimitFixedDuration(curve1, -3.1415926535897931, 3.1415926535897931, 3.2714098084114029, 19.416054628593248, curve2);
         assert(res);
@@ -164,7 +164,7 @@ int main() {
         ParabolicCurve curve3, curve4, curve5;
         res = Interpolate1D(8.248687213483290e-01, 3.555999129105513e-01, -1.152577965038155e-01, 1.294522296060340e+00, 1.294522296060340e+00, 5.710604302527424e+00, curve3);
         assert(res);
-        res = Stretch1D(curve3, 4.9660291025029508, 1.294522296060340e+00, 5.710604302527424e+00, curve4);
+        res = Stretch1D(curve3, 1.294522296060340e+00, 5.710604302527424e+00, 4.9660291025029508, curve4);
         assert(res);
         res = ImposeJointLimitFixedDuration(curve4, -5.235987755982988e-01, 2.356194490192345e+00, 1.294522296060340e+00, 5.710604302527424e+00, curve5);
         assert(res);
@@ -177,7 +177,7 @@ int main() {
         ParabolicCurve curve6, curve7, curve8;
         res = Interpolate1D(1.3827399943007779, 1.6658934694933463, -0.82634486709856392, 0.58081164411628128, 0.82634486709856392, 0.24691765704131668, curve6);
         assert(res);
-        res = Stretch1D(curve6, 9.7446039741066297, 0.82634486709856392, 0.24691765704131668, curve7);
+        res = Stretch1D(curve6, 0.82634486709856392, 0.24691765704131668, 9.7446039741066297, curve7);
         assert(res);
         res = ImposeJointLimitFixedDuration(curve7, 0, 2.6703537555513241, 0.82634486709856392, 0.24691765704131668, curve8);
         assert(res);

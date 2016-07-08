@@ -12,6 +12,7 @@ int main() {
         // Simple test: initialization and evaluation
         Ramp ramp0(0.0, 1.1, 2.2, 3.3);
         assert(FuzzyEquals(ramp0.x0, 3.3, epsilon));
+        assert(FuzzyEquals(ramp0.x1, 5.962, epsilon));
         assert(FuzzyEquals(ramp0.d, 2.662, epsilon));
 
         assert(FuzzyEquals(ramp0.EvalPos(0), 3.3, epsilon));
@@ -25,6 +26,7 @@ int main() {
         Ramp ramp1;
         ramp1.Initialize(0.0, 1.1, 2.2, 3.3);
         assert(FuzzyEquals(ramp1.x0, 3.3, epsilon));
+        assert(FuzzyEquals(ramp1.x1, 5.962, epsilon));
         assert(FuzzyEquals(ramp1.d, 2.662, epsilon));
 
         assert(FuzzyEquals(ramp1.EvalPos(0), 3.3, epsilon));
@@ -63,6 +65,7 @@ int main() {
         ParabolicCurve curve0(ramps0);
 
         assert(FuzzyEquals(curve0.x0, 0.04, epsilon));
+        assert(FuzzyEquals(curve0.x1, 4.010524, epsilon));
         assert(FuzzyEquals(curve0.d, 3.970524, epsilon));
 
         assert(FuzzyEquals(curve0.EvalPos(0), 0.04, epsilon));
