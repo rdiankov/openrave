@@ -285,14 +285,9 @@ protected:
                     dReal tswitch2 = curtime+ramp[j].tswitch2;
                     dReal ttotal = curtime+ramp[j].ttotal;
                     if( tswitch1 != 0 ) {
-                        if( RaveFabs(ramp[j].a1 - ramp[j].a2) <= ParabolicRamp::EpsilonA ) {
-                            // do nothing. There are some cases that we set fake switchpoints while actually there is no switch point
-                        }
-                        else {
-                            it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch1);
-                            if( it != vswitchtimes.end() && RaveFabs(*it - tswitch1) > ParabolicRamp::EpsilonT ) {//*it != tswitch1) {
-                                vswitchtimes.insert(it,tswitch1);
-                            }
+                        it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),tswitch1);
+                        if( it != vswitchtimes.end() && RaveFabs(*it - tswitch1) > ParabolicRamp::EpsilonT ) {//*it != tswitch1) {
+                            vswitchtimes.insert(it,tswitch1);
                         }
                     }
                     if( RaveFabs(tswitch1 - tswitch2) > ParabolicRamp::EpsilonT && RaveFabs(tswitch2) > ParabolicRamp::EpsilonT ) {//( tswitch1 != tswitch2 && tswitch2 != 0 ) {

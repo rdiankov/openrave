@@ -8,10 +8,30 @@ else()
   message("PackageConfig is supposed to be installed...")
 endif()
 
+if(NARROW_COLLISION_CACHING)
+  add_definitions(-DNARROW_COLLISION_CACHING)
+endif()
+
+
+if(FCL_USE_STATISTICS)
+  add_definitions(-DFCLUSESTATISTICS)
+  if(FCL_STATISTICS_DISPLAY_CONTINUOUSLY)
+    add_definitions(-DFCL_STATISTICS_DISPLAY_CONTINUOUSLY)
+  endif()
+endif()
+
+if(FCLRAVE_USE_COLLISION_STATISTICS)
+  add_definitions(-DFCLRAVE_COLLISION_OBJECTS_STATISTICS)
+endif()
+
+if(FCLRAVE_PERMANENT_UNSTABLE)
+  add_definitions(-DFCLRAVE_PERMANENT_UNSTABLE)
+endif()
+
 if(FCL_FOUND)
   link_directories(${OPENRAVE_LINK_DIRS} ${FCL_LIBRARY_DIRS})
   include_directories(${FCL_INCLUDE_DIRS} ${FCL_INCLUDEDIR})
-  add_library(fclrave SHARED fclrave.cpp fclcollision.h fclspace.h plugindefs.h)
+  add_library(fclrave SHARED fclrave.cpp fclcollision.h fclstatistics.h fclspace.h plugindefs.h)
   target_link_libraries(fclrave libopenrave ${FCL_LIBRARIES})
   if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
     add_definitions("-std=c++11")

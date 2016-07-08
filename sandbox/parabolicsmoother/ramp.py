@@ -728,3 +728,34 @@ def CheckParabolicCurvesND(curvesnd, xminVect, xmaxVect, vmVect, amVect, x0Vect,
             return ParabolicCheckReturn.DurationDiscrepancy
     return ParabolicCheckReturn.Normal
     
+
+def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
+    dynamicpathstring = dynamicpathstring.strip()
+    data = dynamicpathstring.split("\n")
+    ndof = int(data[0])
+    nlines = ndof + 2 # the number of lines containing the data for 1 ParabolicRampND
+
+    curves = [ParabolicCurve() for _ in xrange(ndof)]
+    nParabolicRampND = len(data)/(nlines)
+
+    for iramp in xrange(nParabolicRampND):
+        curoffset = iramp*nlines
+        for idof in xrange(ndof):
+            ramp1ddata = data[curoffset + 2 + idof]
+            x0, v0, x1, v1, a1, v, a2, tswitch1, tswitch2, ttotal = [mp.mpf(x) for x in ramp1ddata.split(" ")]
+            ramps = []
+            ramp0 = Ramp(v0, a1, tswitch1, x0)
+            if ramp0.duration > epsilon:
+                ramps.append(ramp0)
+            ramp1 = Ramp(v, 0, tswitch2 - tswitch1)
+            if ramp1.duration > epsilon:
+                ramps.append(ramp1)
+            ramp2 = Ramp(v, a2, ttotal - tswitch2)
+            if ramp2.duration > epsilon:
+                ramps.append(ramp2)
+            assert(len(ramps) > 0)
+            curve = ParabolicCurve(ramps)
+            
+            curves[idof].Append(curve)
+
+    return ParabolicCurvesND(curves)

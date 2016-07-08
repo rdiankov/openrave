@@ -49,15 +49,14 @@ public:
     JacobianInverseSolver() {
         _errorthresh2 = 1e-12;
         _lastiter = -1;
-        _nMaxIterations = 20;
+        _nMaxIterations = 100;
     }
 
     /// \brief initializes with the manipulator, but doesn't store it!
     ///
     /// \param errorthresh the threshold of the error on the constraints
-    void Init(const RobotBase::Manipulator& manip, T errorthresh=1e-5)
+    void Init(const RobotBase::Manipulator& manip)
     {
-        _errorthresh2 = errorthresh*errorthresh;
         RobotBasePtr probot = manip.GetRobot();
 
         _J.resize(6,probot->GetActiveDOF());
@@ -80,6 +79,11 @@ public:
         _errorthresh2 = errorthresh*errorthresh;
     }
     
+    void SetMaxIterations(int nMaxIterations)
+    {
+        _nMaxIterations = nMaxIterations;
+    }
+
     /// \brief computes the jacobian inverse solution.
     ///
     /// robot is at the starting solution and solution should already be very close to the goal.
@@ -106,7 +110,7 @@ public:
             return -1;
         }
         
-        const T lambda2 = 1e-8;         // normalization constant
+        const T lambda2 = 1e-16;         // normalization constant
         using namespace boost::numeric::ublas;
 
         T firsterror2 = totalerror2;
@@ -121,7 +125,7 @@ public:
             Transform tmanip = manip.GetTransform();
             T totalerror2 = _ComputeConstraintError(tmanip, _error, _nMaxIterations-iter);
             dReal ratio = totalerror2/_lasterror2;
-            RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(ratio));
+            //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(ratio));
             if( totalerror2 <= _errorthresh2 ) {
                 bSuccess = true;
                 break;
@@ -136,7 +140,7 @@ public:
                 // last adjustment was greater than total distance (jacobian was close to being singular)
                 iter = -1;
                 RAVELOG_VERBOSE_FORMAT("last adjustment was greater than total distance (jacobian was close to being singular?): %.15e > %.15e", totalerror2%_lasterror2);//%fdistcur2%fdistprev2);
-                return 0;
+                break;
             }
             _lasterror2 = totalerror2;
 
@@ -165,31 +169,37 @@ public:
                 if( !_InvertMatrix(_invJJt,_invJJt) ) {
                     RAVELOG_VERBOSE("failed to invert matrix\n");
                     iter = -1;
-                    return 0;
+                    break;
                 }
             }
             catch(const std::exception& ex) {
                 RAVELOG_VERBOSE_FORMAT("got exception during constraining, perhaps matix is singular: %s", ex.what());
                 iter = -1;
-                return 0;
+                break;
             }
             catch(...) {
                 RAVELOG_WARN("got unknown exception during constraining\n");
                 iter = -1;
-                return 0;
+                break;
             }
             _invJ = prod(_Jt,_invJJt);
             _qdelta = prod(_invJ,_error);
-            dReal fmindeltascale = 0.5; // depending on
+            dReal fmindeltascale = 0.6; // depending on
+            bool baddelta = false;
             for(size_t i = 0; i < vnew.size(); ++i) {
                 if(!isfinite(_qdelta(i,0))) { // don't assert since it is frequent and could destroy the entire plan
                     RAVELOG_WARN_FORMAT("inverse matrix produced a non-finite value: %e", _qdelta(i,0));
-                    return 0;
+                    baddelta = true;
+                    break;
                 }
 
                 dReal f = _qdelta(i,0)*_viweights.at(i);
                 _qdelta(i,0) = f;
             }
+            if( baddelta ) {
+                break;
+            }
+            
             if( fmindeltascale < 1 ) {
                 for(size_t i = 0; i < vnew.size(); ++i) {
                     vnew.at(i) += _qdelta(i,0)*fmindeltascale;
@@ -218,7 +228,7 @@ public:
                 retcode = 2;
             }
         }
-        else {
+        else if( iter >= _nMaxIterations ) {
             iter = -1;
             RAVELOG_VERBOSE_FORMAT("constraint function exceeded %d iterations, first error^2 is %.15e, final error^2 is %.15e > %.15e", _nMaxIterations%firsterror2%_lasterror2%_errorthresh2);
         }
@@ -269,7 +279,7 @@ public:
 
         inverse.assign(identity_matrix<T>(A.size1()));         // create identity matrix of "inverse"
         for(size_t i = 0; i < A.size1(); ++i) {
-            if( RaveFabs(A(i,i)) < 1e-4 ) {
+            if( RaveFabs(A(i,i)) < 1e-8 ) {
                 // most likely matrix is singular, so fail!
                 return false;
             }

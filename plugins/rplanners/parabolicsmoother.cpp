@@ -418,6 +418,8 @@ public:
                 _DumpTrajectory(ptraj, Level_Debug);
                 return PS_Failed;
             }
+            RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
+            //DumpDynamicPath(dynamicpath);
         }
 
         // if ramp is not perfectly modeled, then have to verify!
@@ -445,6 +447,7 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
+                //DumpDynamicPath(dynamicpath);
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
@@ -675,6 +678,7 @@ public:
             // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
+            //DumpDynamicPath(dynamicpath);            
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -683,6 +687,24 @@ public:
             return PS_Failed;
         }
         RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time=%fs", GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        //====================================================================================================
+        if (IS_DEBUGLEVEL(Level_Debug)) {
+            RAVELOG_DEBUG("start sampling the trajectory (verification purpose) after shortcutting");
+            // Actually _VerifySampling() gets called every time we sample a trajectory. The function
+            // already checks _Validate* at every traj point. Therefore, in order to just verify, we
+            // need to call ptraj->Sample just once.
+            // RAVELOG_DEBUG_FORMAT("_timoffset = %d", ptraj->_timeoffset);
+            std::vector<dReal> dummy;
+            try {
+                ptraj->Sample(dummy, 0);
+                RAVELOG_DEBUG("sampling for verification successful");
+            }
+            catch (const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
+                _DumpTrajectory(ptraj, Level_Debug);
+            }
+        }
+        //====================================================================================================
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
@@ -1014,7 +1036,6 @@ protected:
             // couldn't find anything...
             return false;
         }
-
         return true;
     }
 
@@ -1036,7 +1057,8 @@ protected:
         std::vector<ParabolicRamp::ParabolicRampND>& accumoutramps=_cacheaccumoutramps, &outramps=_cacheoutramps;
 
         int numslowdowns = 0; // total number of times a ramp has been slowed down.
-
+        bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1+g_fEpsilonLinear;
+        
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // for slowing down when timing constraints
         dReal fstarttimemult = 1.0; // the start velocity/accel multiplier for the velocity and acceleration computations. If manip speed/accel or dynamics constraints are used, then this will track the last successful multipler. Basically if the last successful one is 0.1, it's very unlikely than a muliplier of 0.8 will meet the constraints the next time.
         int iters=0;
@@ -1168,7 +1190,22 @@ protected:
                         if( retcheck.retcode != 0) {
                             break;
                         }
-                        //check for consistency
+
+                        // if SegmentFeasible2 is modifying the original ramps due to jacobian project constraints inside of CheckPathAllConstraints, then have to reset the velocity and accel limits so that they are above the waypoints of the intermediate ramps.
+                        if( bExpectModifiedConfigurations ) {
+                            for(size_t i=0; i+1<outramps.size(); i++) {
+                                for(size_t j = 0; j < outramps[i].x1.size(); ++j) {
+                                    // have to watch out that velocities don't drop under dx0 & dx1!
+                                    dReal fminvel = max(RaveFabs(outramps[i].dx0[j]), RaveFabs(outramps[i].dx1[j]));
+                                    if( vellimits[j] < fminvel ) {
+                                        vellimits[j] = fminvel;
+                                    }
+
+                                    // maybe do accel limits depending on (dx1-dx0)/elapsedtime?
+                                }
+                            }
+                        }
+                        
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             for(size_t i=0; i+1<outramps.size(); i++) {
                                 for(size_t j = 0; j < outramps[i].x1.size(); ++j) {
@@ -1279,6 +1316,7 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 RAVELOG_VERBOSE_FORMAT("shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
+                //DumpDynamicPath(dynamicpath);
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, exception happened during shortcut iteration progress=0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
@@ -1287,6 +1325,7 @@ protected:
         }
 
         RAVELOG_VERBOSE_FORMAT("finished at shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
+        //DumpDynamicPath(dynamicpath);
         return shortcuts;
     }
 
@@ -1303,14 +1342,9 @@ protected:
         FOREACHC(itramp,rampnd.ramps) {
             vector<dReal>::iterator it;
             if( itramp->tswitch1 != 0 ) {
-                if( RaveFabs(itramp->a1 - itramp->a2) <= ParabolicRamp::EpsilonA ) {
-                    // do nothing. There are some cases that we set fake switchpoints while actually there is no switch point
-                }
-                else {                
-                    it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
-                    if( it != vswitchtimes.end() && RaveFabs(*it - itramp->tswitch1) > ParabolicRamp::EpsilonT ) {
-                        vswitchtimes.insert(it,itramp->tswitch1);
-                    }
+                it = lower_bound(vswitchtimes.begin(),vswitchtimes.end(),itramp->tswitch1);
+                if( it != vswitchtimes.end() && RaveFabs(*it - itramp->tswitch1) > ParabolicRamp::EpsilonT ) {
+                    vswitchtimes.insert(it,itramp->tswitch1);
                 }
             }
             if( RaveFabs(itramp->tswitch1 - itramp->tswitch2) > ParabolicRamp::EpsilonT && RaveFabs(itramp->tswitch2) > ParabolicRamp::EpsilonT ) {
@@ -1353,6 +1387,23 @@ protected:
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         traj->serialize(f);
         return filename;
+    }
+
+    void DumpDynamicPath(ParabolicRamp::DynamicPath& path) const {
+        uint32_t randnum;
+        if( !!_logginguniformsampler ) {
+            randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            randnum = RaveRandomInt();
+        }
+        string filename = str(boost::format("%s/dynamicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
+        path.Save(filename);
+        dReal duration = 0;
+        for (std::vector<ParabolicRamp::ParabolicRampND>::const_iterator it = path.ramps.begin(); it != path.ramps.end(); ++it) {
+            duration += it->endTime;
+        }
+        RAVELOG_DEBUG_FORMAT("Wrote a dynamic path to %s (duration = %.15e)", filename%duration);
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
