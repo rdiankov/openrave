@@ -93,7 +93,8 @@ void ParabolicRamp1D::SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t
     x1 = _x1;
     dx1 = _dx1;
     a1 = (dx1-dx0)/t;
-    v = a2 = 0;
+    a2 = 0;
+    v = dx1;
     tswitch1 = t;
     tswitch2 = t;
     ttotal = t;
