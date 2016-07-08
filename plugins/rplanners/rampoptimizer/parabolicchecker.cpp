@@ -75,7 +75,10 @@ ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, Real xmin, Real 
     if (!(FuzzyEquals(curve.x0, x0, epsilon))) {
         return PCR_XDiscrepancy;
     }
-    if (!(FuzzyEquals(curve.EvalPos(curve.duration), x1, epsilon))) {
+    if (!(FuzzyEquals(curve.x1, curve.ramps[curve.ramps.size() - 1].x1, epsilon))) {
+        return PCR_XDiscrepancy;
+    }
+    if (!(FuzzyEquals(curve.x1, x1, epsilon))) {
         return PCR_XDiscrepancy;
     }
     if (!(FuzzyEquals(curve.d, x1 - x0, epsilon))) {
