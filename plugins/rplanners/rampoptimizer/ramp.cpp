@@ -28,6 +28,7 @@ Ramp::Ramp(Real v0_, Real a_, Real dur_, Real x0_)  {
 
     v1 = v0 + (a*duration);
     d = duration*(v0 + 0.5*a*duration);
+    x1 = x0 + d;
 }
 
 Real Ramp::EvalPos(Real t) const {
@@ -37,7 +38,7 @@ Real Ramp::EvalPos(Real t) const {
         return x0;
     }
     else if (t >= duration) {
-        return x0 + d;
+        return x1;
     }
 
     return t*(v0 + 0.5*a*t) + x0;
@@ -66,20 +67,20 @@ void Ramp::GetPeaks(Real& bmin, Real& bmax) const {
     if (FuzzyZero(a, epsilon)) {
         if (v0 > 0) {
             bmin = x0;
-            bmax = EvalPos(duration);
+            bmax = x1;
         }
         else {
-            bmin = EvalPos(duration);
+            bmin = x1;
             bmax = x0;
         }
         return;
     }
     else if (a > 0) {
         bmin = x0;
-        bmax = EvalPos(duration);
+        bmax = x1;
     }
     else {
-        bmin = EvalPos(duration);
+        bmin = x1;
         bmax = x0;
     }
 
@@ -104,6 +105,7 @@ void Ramp::Initialize(Real v0_, Real a_, Real dur_, Real x0_) {
 
     v1 = v0 + (a*duration);
     d = duration*(v0 + 0.5*a*duration);
+    x1 = x0 + d;
 }
 
 void Ramp::PrintInfo(std::string name) const {
@@ -114,6 +116,7 @@ void Ramp::PrintInfo(std::string name) const {
     std::cout << str(boost::format("  x0 = %.15e")%x0) << std::endl;
     std::cout << str(boost::format("  v1 = %.15e")%v1) << std::endl;
     std::cout << str(boost::format("   d = %.15e")%d) << std::endl;
+    std::cout << str(boost::format("  x1 = %.15e")%x1) << std::endl;
 }
 
 void Ramp::UpdateDuration(Real newDuration) {
@@ -121,10 +124,11 @@ void Ramp::UpdateDuration(Real newDuration) {
     if (newDuration < 0) {
         newDuration = 0;
     }
-
+    // Update the members accordinly
     duration = newDuration;
     v1 = v0 + (a*duration);
     d = duration*(v0 + 0.5*a*duration);
+    x1 = x0 + d;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -177,6 +181,7 @@ void ParabolicCurve::Append(ParabolicCurve curve) {
 
 void ParabolicCurve::Reset() {
     x0 = 0;
+    x1 = 0;
     duration = 0;
     d = 0;
     v0 = 0;
@@ -192,6 +197,7 @@ void ParabolicCurve::SetInitialValue(Real newx0) {
         ramps[i].x0 = newx0;
         newx0 = newx0 + ramps[i].d;
     }
+    x1 = x0 + d;
 }
 
 void ParabolicCurve::FindRampIndex(Real t, int& index, Real& remainder) const {
@@ -216,13 +222,6 @@ void ParabolicCurve::FindRampIndex(Real t, int& index, Real& remainder) const {
         BOOST_ASSERT(index < (int)switchpointsList.size());
         index = index - 1;
         remainder = t - *(it - 1);
-        // std::vector<Real>::const_iterator it = switchpointsList.begin();
-        // while (it != switchpointsList.end() && t < *it) {
-        //     index++;
-        //     it++;
-        // }
-        // BOOST_ASSERT(index < (int)switchpointsList.size() - 1);
-        // remainder = t - *it;
     }
     return;
 }
@@ -255,6 +254,7 @@ void ParabolicCurve::PrintInfo(std::string name) const {
     std::cout << str(boost::format("  v0 = %.15e")%(ramps[0].v0)) << std::endl;
     std::cout << str(boost::format("   t = %.15e")%duration) << std::endl;
     std::cout << str(boost::format("  x0 = %.15e")%x0) << std::endl;
+    std::cout << str(boost::format("  x1 = %.15e")%x1) << std::endl;
     std::cout << str(boost::format("   d = %.15e")%d) << std::endl;
     std::string swList = GenerateStringFromVector(switchpointsList);
     swList = "  Switch points = " + swList;
@@ -268,7 +268,7 @@ Real ParabolicCurve::EvalPos(Real t) const {
         return x0;
     }
     else if (t >= duration) {
-        return x0 + d;
+        return x1;
     }
 
     int index;
@@ -354,7 +354,7 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     v1Vect.reserve(ndof);
     for (int i = 0; i < ndof; ++i) {
         x0Vect.push_back(curves[i].x0);
-        x1Vect.push_back(curves[i].EvalPos(curves[i].duration));
+        x1Vect.push_back(curves[i].x1);
         v0Vect.push_back(curves[i].v0);
         v1Vect.push_back(curves[i].v1);
         dVect.push_back(curves[i].d);
@@ -398,7 +398,7 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
         for (int i = 0; i < ndof; i++) {
             curves[i].Append(curvesnd.curves[i]);
             v1Vect[i] = curvesnd.curves[i].v1;
-            x1Vect[i] = curves[i].EvalPos(curves[i].duration);
+            x1Vect[i] = curves[i].x1;
             dVect[i] = dVect[i] + curvesnd.curves[i].d;
         }
         std::vector<Real> tempSwitchpointsList = curvesnd.switchpointsList;
@@ -436,7 +436,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     v1Vect.reserve(ndof);
     for (int i = 0; i < ndof; ++i) {
         x0Vect.push_back(curves[i].x0);
-        x1Vect.push_back(curves[i].EvalPos(curves[i].duration));
+        x1Vect.push_back(curves[i].x1);
         v0Vect.push_back(curves[i].v0);
         v1Vect.push_back(curves[i].v1);
         dVect.push_back(curves[i].d);
@@ -467,6 +467,9 @@ void ParabolicCurvesND::PrintInfo(std::string name) const {
     std::string x0VectString = GenerateStringFromVector(x0Vect);
     x0VectString = "  x0Vect = " + x0VectString;
     std::cout << x0VectString << std::endl;
+    std::string x1VectString = GenerateStringFromVector(x1Vect);
+    x0VectString = "  x1Vect = " + x1VectString;
+    std::cout << x1VectString << std::endl;
     std::string swList = GenerateStringFromVector(switchpointsList);
     swList = "  Switch points = " + swList;
     std::cout << swList << std::endl;

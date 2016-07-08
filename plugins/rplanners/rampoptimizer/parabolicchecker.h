@@ -32,7 +32,8 @@ enum ParabolicCheckReturn {
 };
 
 /*
-   Checking function input order: the object to be checked, the bounds, and the boundary conditions
+   Checking function input order: the object to be checked, the bounds, and the boundary
+   conditions. Every thing starts from the lowest order first, i.e., position.
  */
 
 // Check if the Ramp violates the velocity and acceleration bounds. (Also check for non-negative

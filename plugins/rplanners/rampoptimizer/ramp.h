@@ -26,8 +26,6 @@
 
 namespace RampOptimizerInternal {
 
-// #define OpenRAVE::dReal Real
-// typedef double Real;
 const static Real epsilon = 1e-10;//1e-8;
 const static Real inf = 1e300;
 
@@ -56,7 +54,7 @@ public:
     Real a;        // acceleration
     Real duration; // total duration
     Real x0;       // initial displacement
-
+    Real x1;       // final displacement
     Real v1;       // final velocity
     Real d;        // total displacement 'done' by this Ramp. For example, EvalPos(duration) = x0 + d = x1.
 }; // end class Ramp
@@ -84,6 +82,7 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
+    // Resize all vectors to zero and reset all Real values to zero.
     void Reset();
     // Set initial value of the Curve. Also the initial value of each ramp accordingly. Note that d
     // will not be modified here.
@@ -91,6 +90,7 @@ public:
 
     // Members
     Real x0;
+    Real x1;
     Real duration;
     Real d;        // total displacement 'done' by this Curve. For example, EvalPos(duration) = x0 + d = x1.
     Real v0;
@@ -123,6 +123,7 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
+    // Resize all vectors to zero.
     void Reset();
     
     int ndof;
