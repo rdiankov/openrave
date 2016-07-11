@@ -22,10 +22,10 @@ namespace RampOptimizerInternal {
    Multi DOF interpolation
  */
 bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, std::vector<Real>& vmVect, std::vector<Real>& amVect, ParabolicCurvesND& curvesndOut) {
-    int ndof = x0Vect.size();
-    BOOST_ASSERT(ndof == (int) x1Vect.size());
-    BOOST_ASSERT(ndof == (int) vmVect.size());
-    BOOST_ASSERT(ndof == (int) amVect.size());
+    size_t ndof = x0Vect.size();
+    BOOST_ASSERT(ndof == x1Vect.size());
+    BOOST_ASSERT(ndof == vmVect.size());
+    BOOST_ASSERT(ndof == amVect.size());
 
     std::vector<Real> dVect(ndof);
     LinearCombination(1, x1Vect, -1, x0Vect, dVect);
@@ -33,7 +33,7 @@ bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, 
     // Calculate sdMax (vMin) and sddMax (aMin)
     Real vMin = inf;
     Real aMin = inf;
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         if (!FuzzyZero(dVect[i], epsilon)) {
             vMin = Min(vMin, vmVect[i]/Abs(dVect[i]));
             aMin = Min(aMin, amVect[i]/Abs(dVect[i]));
@@ -54,7 +54,7 @@ bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, 
     for (std::vector<Ramp>::const_iterator itRamp = sdProfile.ramps.begin(); itRamp != sdProfile.ramps.end(); ++itRamp) {
         Real sd0, sdd;
         Real dur = itRamp->duration;
-        for (int i = 0; i < ndof; ++i) {
+        for (size_t i = 0; i < ndof; ++i) {
             sd0 = dVect[i] * (itRamp->v0);
             sdd = dVect[i] * (itRamp->a);
             Ramp ramp(sd0, sdd, dur);
@@ -65,7 +65,7 @@ bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, 
         }
     }
 
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         curves[i].SetInitialValue(x0Vect[i]);
     }
     curvesndOut.Initialize(curves);
@@ -74,12 +74,12 @@ bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, 
 
 
 bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, std::vector<Real>& v0Vect, std::vector<Real>& v1Vect, std::vector<Real>& xminVect, std::vector<Real>& xmaxVect, std::vector<Real>& vmVect, std::vector<Real>& amVect, ParabolicCurvesND& curvesndOut, bool tryHarder) {
-    int ndof = x0Vect.size();
-    BOOST_ASSERT(ndof == (int) x1Vect.size());
-    BOOST_ASSERT(ndof == (int) v0Vect.size());
-    BOOST_ASSERT(ndof == (int) v1Vect.size());
-    BOOST_ASSERT(ndof == (int) vmVect.size());
-    BOOST_ASSERT(ndof == (int) amVect.size());
+    size_t ndof = x0Vect.size();
+    BOOST_ASSERT(ndof == x1Vect.size());
+    BOOST_ASSERT(ndof == v0Vect.size());
+    BOOST_ASSERT(ndof == v1Vect.size());
+    BOOST_ASSERT(ndof == vmVect.size());
+    BOOST_ASSERT(ndof == amVect.size());
 
     std::vector<Real> dVect(ndof);
     LinearCombination(1, x1Vect, -1, x0Vect, dVect);
@@ -89,7 +89,7 @@ bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1V
     Real maxDuration = 0;
     size_t maxIndex;
     bool result;
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         result = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i], curves[i]);
         if (!result) {
             return false;
@@ -112,7 +112,7 @@ bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1V
     }
 
     std::vector<ParabolicCurve> newCurves(ndof);
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         result = ImposeJointLimitFixedDuration(tempcurvesnd.curves[i], xminVect[i], xmaxVect[i], vmVect[i], amVect[i], newCurves[i]);
         if (!result) {
             return false;
@@ -125,15 +125,15 @@ bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1V
 
 
 bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std::vector<Real>& vmVect, std::vector<Real>& amVect, int maxIndex, ParabolicCurvesND& curvesndOut, bool tryHarder) {
-    int ndof = curvesVectIn.size();
-    RAMP_OPTIM_ASSERT(ndof == (int) vmVect.size());
-    RAMP_OPTIM_ASSERT(ndof == (int) amVect.size());
+    size_t ndof = curvesVectIn.size();
+    RAMP_OPTIM_ASSERT(ndof == vmVect.size());
+    RAMP_OPTIM_ASSERT(ndof == amVect.size());
     RAMP_OPTIM_ASSERT(maxIndex < ndof);
 
     std::vector<ParabolicCurve> newCurves(ndof);
     if (!tryHarder) {
         Real newDuration = curvesVectIn[maxIndex].duration;
-        for (int i = 0; i < ndof; ++i) {
+        for (size_t i = 0; i < ndof; ++i) {
             if (i == maxIndex) {
                 RAMP_OPTIM_PLOG("joint %d is already the slowest DOF, continue to the next DOF", i);
                 newCurves[i] = curvesVectIn[i];
@@ -157,7 +157,7 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
         bool result;
         Real newDuration = 0;
 
-        for (int i = 0; i < ndof; ++i) {
+        for (size_t i = 0; i < ndof; ++i) {
             Real t;
             result = CalculateLeastUpperBoundInoperativeInterval(curvesVectIn[i].x0, curvesVectIn[i].EvalPos(curvesVectIn[i].duration), curvesVectIn[i].v0, curvesVectIn[i].v1, vmVect[i], amVect[i], t);
             if (!result) {
@@ -174,7 +174,7 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
             isPrevDurationSafe = true;
         }
 
-        for (int i = 0; i < ndof; ++i) {
+        for (size_t i = 0; i < ndof; ++i) {
             if (isPrevDurationSafe && (i == maxIndex)) {
                 RAMP_OPTIM_PLOG("joint %d is already the slowest DOF, continue to the next DOF", i);
                 newCurves[i] = curvesVectIn[i];

@@ -159,7 +159,7 @@ ParabolicCurve::ParabolicCurve(std::vector<Ramp> rampsIn) {
 }
 
 void ParabolicCurve::Append(ParabolicCurve curve) {
-    BOOST_ASSERT(!curve.IsEmpty());
+    // BOOST_ASSERT(!curve.IsEmpty());
     // Users need to make sure that the displacement and velocity are continuous
 
     std::size_t prevLength = 0;
@@ -339,7 +339,7 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     constraintchecked = 0;
     modified = 0;
 
-    ndof = (int) curvesIn.size();
+    ndof = curvesIn.size();
     // Here we need to check whether every curve has (roughly) the same duration
     ///////////////////
     Real minDur = curvesIn[0].duration;
@@ -357,7 +357,7 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     dVect.reserve(ndof);
     v0Vect.reserve(ndof);
     v1Vect.reserve(ndof);
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         x0Vect.push_back(curves[i].x0);
         x1Vect.push_back(curves[i].x1);
         v0Vect.push_back(curves[i].v0);
@@ -368,8 +368,8 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     // Manage switch points (later I will merge this for loop with the one above)
     switchpointsList = curves[0].switchpointsList;
     std::vector<Real>::iterator it;
-    for (int i = 0; i < ndof; i++) {
-        for (std::size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
+    for (size_t i = 0; i < ndof; i++) {
+        for (size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
             // Iterate from the second element to the second last element (the first and the last
             // switch points should be the same for every DOF)
             it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
@@ -400,7 +400,7 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
         BOOST_ASSERT(curvesnd.ndof == ndof);
         Real originalDur = duration;
         duration = duration + curvesnd.duration;
-        for (int i = 0; i < ndof; i++) {
+        for (size_t i = 0; i < ndof; i++) {
             curves[i].Append(curvesnd.curves[i]);
             v1Vect[i] = curvesnd.curves[i].v1;
             x1Vect[i] = curves[i].x1;
@@ -439,7 +439,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     dVect.reserve(ndof);
     v0Vect.reserve(ndof);
     v1Vect.reserve(ndof);
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         x0Vect.push_back(curves[i].x0);
         x1Vect.push_back(curves[i].x1);
         v0Vect.push_back(curves[i].v0);
@@ -450,7 +450,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     // Manage switch points (later I will merge this for loop with the one above)
     switchpointsList = curves[0].switchpointsList;
     std::vector<Real>::iterator it;
-    for (int i = 0; i < ndof; i++) {
+    for (size_t i = 0; i < ndof; i++) {
         for (std::size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
             // Iterate from the second element to the second last element (the first and the last
             // switch points should be the same for every DOF)
@@ -493,7 +493,7 @@ void ParabolicCurvesND::EvalPos(Real t, std::vector<Real>& xVect) const {
     }
 
     xVect.resize(ndof);
-    for (int i = 0; i < ndof; i++) {
+    for (size_t i = 0; i < ndof; i++) {
         xVect[i] = curves[i].EvalPos(t);
     }
     return;
@@ -512,7 +512,7 @@ void ParabolicCurvesND::EvalVel(Real t, std::vector<Real>& vVect) const {
     }
 
     vVect.resize(ndof);
-    for (int i = 0; i < ndof; i++) {
+    for (size_t i = 0; i < ndof; i++) {
         vVect[i] = curves[i].EvalVel(t);
     }
     return;
@@ -529,7 +529,7 @@ void ParabolicCurvesND::EvalAcc(Real t, std::vector<Real>& aVect) const {
     }
 
     aVect.resize(ndof);
-    for (int i = 0; i < ndof; i++) {
+    for (size_t i = 0; i < ndof; i++) {
         aVect[i] = curves[i].EvalAcc(t);
     }
     return;
@@ -538,7 +538,7 @@ void ParabolicCurvesND::EvalAcc(Real t, std::vector<Real>& aVect) const {
 void ParabolicCurvesND::GetPeaks(std::vector<Real>& bminVect, std::vector<Real>& bmaxVect) const {
     bminVect.resize(ndof);
     bminVect.resize(ndof);
-    for (int i = 0; i < ndof; ++i) {
+    for (size_t i = 0; i < ndof; ++i) {
         curves[i].GetPeaks(bminVect[i], bmaxVect[i]);
     }
     return;

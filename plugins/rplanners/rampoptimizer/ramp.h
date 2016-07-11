@@ -127,7 +127,7 @@ public:
     // Resize all vectors to zero.
     void Reset();
     
-    int ndof;
+    size_t ndof;
     Real duration;
     std::vector<Real> x0Vect;
     std::vector<Real> x1Vect;
