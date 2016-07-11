@@ -141,9 +141,9 @@ public:
             //  _request.gjk_solver_type = fcl::GST_INDEP;
 
             if( _pchecker->GetDistanceApproximation() >= 0.0 ) {
-              _request.enable_approx_dist = true;
-              // objects at distance less than _distApprox are considered as colliding
-              _request.approx_dist = (fcl::FCL_REAL)_pchecker->GetDistanceApproximation();
+                _request.enable_approx_dist = true;
+                // objects at distance less than _distApprox are considered as colliding
+                _request.approx_dist = (fcl::FCL_REAL)_pchecker->GetDistanceApproximation();
             }
 
             if( !!_report ) {
@@ -248,7 +248,7 @@ public:
 
         RegisterCommand("GetBVAABB", boost::bind(&FCLCollisionChecker::_GetBVAABB, this, _1,_2), "");
 
-          // debug command
+        // debug command
         RegisterCommand("PrepareRay", boost::bind(&FCLCollisionChecker::_DebugPrepareRay, this, _1, _2), "");
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
@@ -476,30 +476,30 @@ public:
     }
 
     static inline void DisplayVec(ostream& sout, const fcl::Vec3f& v) {
-      sout << "["<< v[0] << ',' << v[1] << ',' << v[2] <<"]";
+        sout << "["<< v[0] << ',' << v[1] << ',' << v[2] <<"]";
     }
 
     bool _GetBVAABB(ostream& sout, istream& sinput)
     {
-      int bodyid;
-      sinput >> bodyid;
-      KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(bodyid);
-      if( !!pbody ) {
-        KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
-        if( !!pinfo ) {
-          sout << "[";
-          FOREACH(itLINK, pinfo->vlinks) {
-            fcl::AABB aabb = (*itLINK)->linkBV.second->getAABB();
-            DisplayVec(sout, aabb.min_);
-            sout << ",";
-            DisplayVec(sout, aabb.max_);
-            sout << ",";
-          }
-          sout << "[0,0,0]]";
-          return true;
+        int bodyid;
+        sinput >> bodyid;
+        KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(bodyid);
+        if( !!pbody ) {
+            KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
+            if( !!pinfo ) {
+                sout << "[";
+                FOREACH(itLINK, pinfo->vlinks) {
+                    fcl::AABB aabb = (*itLINK)->linkBV.second->getAABB();
+                    DisplayVec(sout, aabb.min_);
+                    sout << ",";
+                    DisplayVec(sout, aabb.max_);
+                    sout << ",";
+                }
+                sout << "[0,0,0]]";
+                return true;
+            }
         }
-      }
-      return false;
+        return false;
     }
 
 
@@ -620,7 +620,7 @@ public:
         CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
 
         if( !pcollLink1 || !pcollLink2 ) {
-          return false;
+            return false;
         }
 
         if( !!report && (_options & OpenRAVE::CO_Distance) ) {
@@ -680,7 +680,7 @@ public:
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         if( !pcollLink ) {
-          return false;
+            return false;
         }
 
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, false);
@@ -723,7 +723,7 @@ public:
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         if( !pcollLink ) {
-          return false;
+            return false;
         }
 
         std::set<KinBodyConstPtr> attachedBodies;
@@ -1169,16 +1169,16 @@ private:
 
         LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1), pLINK2 = _fclspace->GetLinkInfo(plink2);
         if( _approxDist >= 0.0 ) {
-          pcb->_result.clear();
-          pcb->_result.min_distance = pcb->_minDistance;
-          dReal distBV = fcl::distance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), pcb->_request, pcb->_result);
-          if( distBV > _approxDist ) {
-              pcb->_minDistance = distBV;
-              minDistance = distBV;
-              pcb->_report->plink1 = plink1;
-              pcb->_report->plink2 = plink2;
-              return false;
-          }
+            pcb->_result.clear();
+            pcb->_result.min_distance = pcb->_minDistance;
+            dReal distBV = fcl::distance(pLINK1->linkBV.second.get(), pLINK2->linkBV.second.get(), pcb->_request, pcb->_result);
+            if( distBV > _approxDist ) {
+                pcb->_minDistance = distBV;
+                minDistance = distBV;
+                pcb->_report->plink1 = plink1;
+                pcb->_report->plink2 = plink2;
+                return false;
+            }
         }
 
         FOREACH(itgeompair1, pLINK1->vgeoms) {

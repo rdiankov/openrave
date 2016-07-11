@@ -106,5 +106,6 @@ using OpenRAVE::geometry::MATH_FABS;
 #include <fcl/BVH/BVH_model.h>
 #include <fcl/broadphase/broadphase.h>
 #include <fcl/shape/geometric_shapes.h>
+#include <fcl/container.h>
 
 #endif

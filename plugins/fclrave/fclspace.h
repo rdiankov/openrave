@@ -43,7 +43,7 @@ Vector ConvertQuaternionFromFCL(fcl::Quaternion3f const &v) {
 }
 
 fcl::AABB ConvertAABBToFcl(const OpenRAVE::AABB& bv) {
-  return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
+    return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
 }
 
 template <class T>
@@ -223,9 +223,9 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
-                                   return itgeom->GetInfo();
-                               };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& {
+                    return itgeom->GetInfo();
+                };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -546,15 +546,31 @@ private:
             return CollisionGeometryPtr();
 
         case OpenRAVE::GT_Box:
-            return make_shared<fcl::Box>(info._vGeomData.x*2.0f,info._vGeomData.y*2.0f,info._vGeomData.z*2.0f);
+            return std::make_shared<fcl::Box>(info._vGeomData.x*2.0f,info._vGeomData.y*2.0f,info._vGeomData.z*2.0f);
 
         case OpenRAVE::GT_Sphere:
-            return make_shared<fcl::Sphere>(info._vGeomData.x);
+            return std::make_shared<fcl::Sphere>(info._vGeomData.x);
 
         case OpenRAVE::GT_Cylinder:
-            return make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
+            return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
         case OpenRAVE::GT_Container:
+            typedef std::make_shared<fcl::Box> BoxPtr;
+            BoxPtr xfrontBox = std::make_shared(info._vGeomData.x - info._vGeomData2.x, info._vGeomData.y*2.0f, info._vGeomData.z*2.0f);
+            BoxPtr xbackBox = std::make_shared(info._vGeomData.x - info._vGeomData2.x, info._vGeomData.y*2.0f, info._vGeomData.z*2.0f);
+            BoxPtr yfrontBox = std::make_shared(info._vGeomData.x*2.0f, info._vGeomData.y - info._vGeomData2.y, info._vGeomData.z*2.0f);
+            BoxPtr ybackBox = std::make_shared(info._vGeomData.x*2.0f, info._vGeomData.y - info._vGeomData2.y, info._vGeomData.z*2.0f);
+            BoxPtr zbackBox = std::make_shared(info._vGeomData.x*2.0f, info._vGeomData.y*2.0f, info._vGeomData.z - info._vGeomData2.z);
+
+            std::vector< std::shared_ptr<CollisionObject> > boxFaces;
+            boxFaces.push_back(std::make_shared<CollisionObject>(xfrontBox, fcl::Transform3f(fcl::Vec3f(0.5f * (info._vGeomData.x + info._vGeomData2.x), 0.0f, 0.0f))));
+            boxFaces.push_back(std::make_shared<CollisionObject>(xbackBox, fcl::Transform3f(fcl::Vec3f(-0.5f * (info._vGeomData.x + info._vGeomData2.x), 0.0f, 0.0f))));
+            boxFaces.push_back(std::make_shared<CollisionObject>(yfrontBox, fcl::Transform3f(fcl::Vec3f(0.0f, 0.5f * (info._vGeomData.y + info._vGeomData2.y), 0.0f))));
+            boxFaces.push_back(std::make_shared<CollisionObject>(ybackBox, fcl::Transform3f(fcl::Vec3f(0.0f, -0.5f * (info._vGeomData.y + info._vGeomData2.y), 0.0f))));
+            boxFaces.push_back(std::make_shared<CollisionObject>(zbackBox, fcl::Transform3f(fcl::Vec3f(0.0f, 0.0f, -0.5f * (info._vGeomData.z + info._vGeomData2.z)))));
+
+            return std::make_shared<Container>(boxFaces);
+
         case OpenRAVE::GT_TriMesh:
         {
             const OpenRAVE::TriMesh& mesh = info._meshcollision;
