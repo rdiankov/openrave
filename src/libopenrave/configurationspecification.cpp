@@ -1772,6 +1772,70 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     }
 }
 
+ConfigurationSpecification::JSONReader::JSONReader(ConfigurationSpecification& spec) : _spec(spec)
+{
+    _spec = ConfigurationSpecification(); // reset
+}
+
+BaseJSONReader::ProcessElement ConfigurationSpecification::JSONReader::startElement(const std::string& name, const AttributesList &atts)
+{
+    if( !!_preader ) {
+        if( _preader->startElement(name, atts) == PE_Support )
+            return PE_Support;
+        return PE_Ignore;
+    }
+    _ss.str(""); // have to clear the string
+    if( name == "group" ) {
+        _spec._vgroups.resize(_spec._vgroups.size()+1);
+        ConfigurationSpecification::Group& g = _spec._vgroups.back();
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "name" ) {
+                g.name = itatt->second;
+            }
+            else if( itatt->first == "interpolation" ) {
+                g.interpolation = itatt->second;
+            }
+            else if( itatt->first == "offset" ) {
+                g.offset = boost::lexical_cast<int>(itatt->second);
+            }
+            else if( itatt->first == "dof" ) {
+                g.dof = boost::lexical_cast<int>(itatt->second);
+            }
+        }
+        return PE_Support;
+    }
+    else if( name == "configuration" ) {
+        _preader.reset(new ConfigurationSpecification::JSONReader(_spec));
+        return PE_Support;
+    }
+    return PE_Pass;
+}
+
+bool ConfigurationSpecification::JSONReader::endElement(const std::string& name)
+{
+    if( !!_preader ) {
+        if( _preader->endElement(name) ) {
+            _preader.reset();
+        }
+        return false;
+    }
+    if( name == "configuration" ) {
+        return true;
+    }
+    return false;
+}
+
+void ConfigurationSpecification::JSONReader::characters(const std::string& ch)
+{
+    if( !_preader ) {
+        _ss.clear();
+        _ss << ch;
+    }
+    else {
+        _preader->characters(ch);
+    }
+}
+
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
     O << "<configuration>" << endl;

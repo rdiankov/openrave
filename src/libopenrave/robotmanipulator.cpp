@@ -1198,6 +1198,77 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     }
 }
 
+void RobotBase::Manipulator::SerializeJSON(std::ostream& o, int options, IkParameterizationType iktype) const
+{
+    if( options & SO_RobotManipulators ) {
+        o << (!__pBase ? -1 : __pBase->GetIndex()) << " " << (!__pEffector ? -1 : __pEffector->GetIndex()) << " ";
+        // don't include __varmdofindices and __vgripperdofindices since they are generated from the data
+        o << _info._vGripperJointNames.size() << " ";
+        FOREACHC(it,_info._vGripperJointNames) {
+            o << *it << " ";
+        }
+        FOREACHC(it,_info._vChuckingDirection) {
+            SerializeRound(o,*it);
+        }
+        SerializeRound(o,_info._tLocalTool);
+    }
+    if( options & (SO_Kinematics|SO_InverseKinematics) ) {
+        RobotBasePtr probot(__probot);
+        Transform tcur;
+        std::vector<JointPtr> vjoints;
+        if( probot->GetChain(__pBase->GetIndex(),__pEffector->GetIndex(), vjoints) ) {
+            // due to back compat issues, have to compute the end effector transform first
+            FOREACH(itjoint, vjoints) {
+                tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+            }
+            tcur = tcur;
+            // if 6D transform IK, then don't inlucde the local tool transform!
+            if( !!(options & SO_Kinematics) || iktype != IKP_Transform6D ) {
+                tcur *= _info._tLocalTool;
+            }
+            SerializeRound(o,tcur);
+            o << __varmdofindices.size() << " ";
+
+            tcur = Transform();
+            int index = 0;
+            FOREACH(itjoint, vjoints) {
+                if( !(*itjoint)->IsStatic() ) {
+                    o << (*itjoint)->GetType() << " ";
+                }
+
+                if( (*itjoint)->GetDOFIndex() >= 0 && find(__varmdofindices.begin(),__varmdofindices.end(),(*itjoint)->GetDOFIndex()) != __varmdofindices.end() ) {
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform();
+                    for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                        SerializeRound3(o,tcur.trans);
+                        SerializeRound3(o,tcur.rotate((*itjoint)->GetInternalHierarchyAxis(idof)));
+                    }
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyRightTransform();
+                }
+                else {
+                    // not sure if this is correct for a mimic joint...
+                    tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
+                    if( (*itjoint)->IsMimic() ) {
+                        for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
+                            if( (*itjoint)->IsMimic(idof) ) {
+                                o << "mimic " << index << " ";
+                                for(int ieq = 0; ieq < 3; ++ieq) {
+                                    o << (*itjoint)->GetMimicEquation(idof,ieq) << " ";
+                                }
+                            }
+                        }
+                    }
+                }
+                index += 1;
+            }
+        }
+    }
+
+    // output direction if SO_Kinematics|SO_RobotManipulators. if IK hash, then output only on certain ik types.
+    if( !!(options & (SO_Kinematics|SO_RobotManipulators)) || (!!(options&SO_InverseKinematics) && (iktype == IKP_TranslationDirection5D || iktype == IKP_Direction3D || iktype == IKP_Ray4D)) ) {
+        SerializeRound3(o,_info._vdirection);
+    }
+}
+
 ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecification(const std::string& interpolation) const
 {
     if( interpolation.size() == 0 ) {

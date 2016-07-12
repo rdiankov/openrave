@@ -2062,6 +2062,18 @@ void TriMesh::serialize(std::ostream& o, int options) const
     }
 }
 
+void TriMesh::SerializeJSON(std::ostream& o, int options) const
+{
+    o << vertices.size() << " ";
+    FOREACHC(it,vertices) {
+        SerializeRound3(o, *it);
+    }
+    o << indices.size() << " ";
+    FOREACHC(it,indices) {
+        o << *it << " ";
+    }
+}
+
 
 void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 {
@@ -2233,6 +2245,67 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
+// Dummy Reader
+DummyJSONReader::DummyJSONReader(const std::string& fieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord) : _fieldname(fieldname), _osrecord(osrecord)
+{
+    _parentname = pparentname;
+    _parentname += ":";
+    _parentname += _fieldname;
+}
+
+BaseJSONReader::ProcessElement DummyJSONReader::startElement(const std::string& name, const AttributesList &atts)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->startElement(name, atts) == PE_Support ) {
+            return PE_Support;
+        }
+        return PE_Ignore;
+    }
+
+    if( !!_osrecord ) {
+        *_osrecord << "<" << name << " ";
+        FOREACHC(itatt, atts) {
+            *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
+        }
+        *_osrecord << ">" << endl;
+    }
+
+    // create a new parser
+    _pcurreader.reset(new DummyJSONReader(name, _parentname,_osrecord));
+    return PE_Support;
+}
+
+bool DummyJSONReader::endElement(const std::string& name)
+{
+    if( !!_pcurreader ) {
+        if( _pcurreader->endElement(name) ) {
+            _pcurreader.reset();
+            if( !!_osrecord ) {
+                *_osrecord << "</" << name << ">" << endl;
+            }
+        }
+        return false;
+    }
+
+    if( name == _fieldname ) {
+        return true;
+    }
+    RAVELOG_ERROR(str(boost::format("invalid xml tag %s\n")%name));
+    return false;
+}
+
+void DummyJSONReader::characters(const std::string& ch)
+{
+    if( !_pcurreader ) {
+        if( !!_osrecord ) {
+            *_osrecord << ch;
+        }
+    }
+    else {
+        _pcurreader->characters(ch);
+    }
+}
+
 EnvironmentBase::EnvironmentBase()
 {
     if( !RaveGlobalState() ) {
@@ -2254,9 +2327,21 @@ bool SensorBase::SensorData::serialize(std::ostream& O) const
     return true;
 }
 
+bool SensorBase::SensorData::SerializeJSON(std::ostream& O) const
+{
+    RAVELOG_WARN("SensorData JSON serialization not implemented\n");
+    return true;
+}
+
 bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
 {
     RAVELOG_WARN("LaserSensorData XML serialization not implemented\n");
+    return true;
+}
+
+bool SensorBase::LaserSensorData::SerializeJSON(std::ostream& O) const
+{
+    RAVELOG_WARN("LaserSensorData JSON serialization not implemented\n");
     return true;
 }
 
@@ -2266,7 +2351,21 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
+bool SensorBase::CameraSensorData::SerializeJSON(std::ostream& O) const
+{
+    RAVELOG_WARN("CameraSensorData JSON serialization not implemented\n");
+    return true;
+}
+
 void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    AttributesList atts;
+    if( hardware_id.size() > 0 ) {
+        writer->AddChild("hardware_id",atts)->SetCharData(hardware_id);
+    }
+}
+
+void SensorBase::SensorGeometry::Serialize(BaseJSONWriterPtr writer, int options) const
 {
     AttributesList atts;
     if( hardware_id.size() > 0 ) {
@@ -2312,7 +2411,50 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
+void SensorBase::CameraGeomData::Serialize(BaseJSONWriterPtr writer, int options) const
+{
+    SensorGeometry::Serialize(writer, options);
+    AttributesList atts;
+    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+    ss << KK.fx << " 0 " << KK.cx << " 0 " << KK.fy << " " << KK.cy;
+    writer->AddChild("intrinsic",atts)->SetCharData(ss.str());
+    ss.str("");
+    ss << KK.focal_length;
+    writer->AddChild("focal_length",atts)->SetCharData(ss.str());
+    if( KK.distortion_model.size() > 0 ) {
+        writer->AddChild("distortion_model",atts)->SetCharData(KK.distortion_model);
+        if( KK.distortion_coeffs.size() > 0 ) {
+            ss.str("");
+            FOREACHC(it, KK.distortion_coeffs) {
+                ss << *it << " ";
+            }
+            writer->AddChild("distortion_coeffs",atts)->SetCharData(ss.str());
+        }
+    }
+    ss.str("");
+    ss << width << " " << height; // _numchannels=3
+    writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
+    writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
+    writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
+    //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+    if( sensor_reference.size() > 0 ) {
+        atts.push_back(std::make_pair("url", sensor_reference));
+        writer->AddChild("sensor_reference",atts);
+        atts.clear();
+    }
+    if( target_region.size() > 0 ) {
+        atts.push_back(std::make_pair("url", target_region));
+        writer->AddChild("target_region",atts);
+        atts.clear();
+    }
+}
+
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
+{
+    RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
+}
+
+void SensorBase::Serialize(BaseJSONWriterPtr writer, int options) const
 {
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }

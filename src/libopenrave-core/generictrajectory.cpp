@@ -18,6 +18,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/xmlreaders.h>
+#include <openrave/jsonreaders.h>
 
 namespace OpenRAVE {
 
@@ -312,6 +313,28 @@ public:
             xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
             FOREACHC(it, GetReadableInterfaces()) {
                 BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+                it->second->Serialize(newwriter,options);
+            }
+            writer->Serialize(O);
+        }
+        O << "</trajectory>" << endl;
+    }
+
+    void SerializeJSON(std::ostream& O, int options) const
+    {
+        O << "<trajectory>" << endl << _spec;
+        O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
+        FOREACHC(it,_vtrajdata) {
+            O << *it << " ";
+        }
+        O << "</data>" << endl;
+        if( GetDescription().size() > 0 ) {
+            O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+        }
+        if( GetReadableInterfaces().size() > 0 ) {
+            jsonreaders::StreamJSONWriterPtr writer(new jsonreaders::StreamJSONWriter("readable"));
+            FOREACHC(it, GetReadableInterfaces()) {
+                BaseJSONWriterPtr newwriter = writer->AddChild(it->first);
                 it->second->Serialize(newwriter,options);
             }
             writer->Serialize(O);

@@ -18,6 +18,7 @@
 #include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
 #include <openrave/xmlreaders.h>
+#include <openrave/jsonreaders.h>
 
 namespace OpenRAVE {
 
@@ -42,6 +43,30 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
         xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
         FOREACHC(it, GetReadableInterfaces()) {
             BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
+            it->second->Serialize(newwriter,options);
+        }
+        writer->Serialize(O);
+    }
+    O << "</trajectory>" << endl;
+}
+
+void TrajectoryBase::SerializeJSON(std::ostream& O, int options) const
+{
+    O << "<trajectory type=\"" << GetXMLId() << "\">" << endl << GetConfigurationSpecification();
+    O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
+    std::vector<dReal> data;
+    GetWaypoints(0,GetNumWaypoints(),data);
+    FOREACHC(it,data){
+        O << *it << " ";
+    }
+    O << "</data>" << endl;
+    if( GetDescription().size() > 0 ) {
+        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+    }
+    if( GetReadableInterfaces().size() > 0 ) {
+        jsonreaders::StreamJSONWriterPtr writer(new jsonreaders::StreamJSONWriter("readable"));
+        FOREACHC(it, GetReadableInterfaces()) {
+            BaseJSONWriterPtr newwriter = writer->AddChild(it->first);
             it->second->Serialize(newwriter,options);
         }
         writer->Serialize(O);

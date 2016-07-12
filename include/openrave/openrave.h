@@ -381,9 +381,15 @@ typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
+class BaseJSONReader;
+typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
+typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
 class BaseXMLWriter;
 typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
 typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
+class BaseJSONWriter;
+typedef boost::shared_ptr<BaseJSONWriter> BaseJSONWriterPtr;
+typedef boost::shared_ptr<BaseJSONWriter const> BaseJSONWriterConstPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
@@ -397,12 +403,12 @@ enum CloningOptions {
 };
 
 /// base class for readable interfaces
-class OPENRAVE_API XMLReadable : public UserData
+class OPENRAVE_API Readable : public UserData
 {
 public:
-    XMLReadable(const std::string& xmlid) : __xmlid(xmlid) {
+    Readable(const std::string& xmlid) : __xmlid(xmlid) {
     }
-    virtual ~XMLReadable() {
+    virtual ~Readable() {
     }
     virtual const std::string& GetXMLId() const {
         return __xmlid;
@@ -410,12 +416,20 @@ public:
     /// \brief serializes the interface
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
     }
+
+    /// \brief serializes the interface
+    virtual void Serialize(BaseJSONWriterPtr writer, int options=0) const {
+    }
 private:
     std::string __xmlid;
 };
 
+typedef Readable XMLReadable;
 typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
 typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
+typedef boost::shared_ptr<Readable> ReadablePtr;
+typedef boost::shared_ptr<Readable const> ReadableConstPtr;
+
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
@@ -464,6 +478,50 @@ public:
 
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
 
+/// \brief base class for all json readers. JSONReaders are used to process data from json files.
+///
+/// Custom readers can be registered through \ref RaveRegisterJSONReader.
+class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJSONReader>
+{
+public:
+    enum ProcessElement
+    {
+        PE_Pass=0,     ///< current tag was not supported, so pass onto another class
+        PE_Support=1,     ///< current tag will be processed by this class
+        PE_Ignore=2,     ///< current tag and all its children should be ignored
+    };
+    BaseJSONReader() {
+    }
+    virtual ~BaseJSONReader() {
+    }
+
+    /// a readable interface that stores the information processsed for the current tag
+    /// This pointer is used to the InterfaceBase class registered readers
+    virtual ReadablePtr GetReadable() {
+        return ReadablePtr();
+    }
+
+    /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
+    /// \param name of the tag, will be always lower case
+    /// \param atts string of attributes where the first std::string is the attribute name and second is the value
+    /// \return true if tag is accepted and this class will process it, otherwise false
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) = 0;
+
+    /// Gets called at the end of each "</type>" expression. In this case, name is "type"
+    /// \param name of the tag, will be always lower case
+    /// \return true if JSONReader has finished parsing (one condition is that name==_fieldname) , otherwise false
+    virtual bool endElement(const std::string& name) = 0;
+
+    /// gets called for all data in between tags.
+    /// \param ch a string to the data
+    virtual void characters(const std::string& ch) = 0;
+
+    /// JSON filename/resource used for this class (can be empty)
+    std::string _filename;
+};
+
+typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
+
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
@@ -483,6 +541,27 @@ private:
     std::string _fieldname;
     boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
     boost::shared_ptr<BaseXMLReader> _pcurreader;
+};
+
+/// \brief reads until the tag ends
+class OPENRAVE_API DummyJSONReader : public BaseJSONReader
+{
+public:
+    DummyJSONReader(const std::string& fieldname, const std::string& parentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+    virtual bool endElement(const std::string& name);
+    virtual void characters(const std::string& ch);
+    const std::string& GetFieldName() const {
+        return _fieldname;
+    }
+    virtual boost::shared_ptr<std::ostream> GetStream() const {
+        return _osrecord;
+    }
+private:
+    std::string _parentname;     /// JSON filename
+    std::string _fieldname;
+    boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
+    boost::shared_ptr<BaseJSONReader> _pcurreader;
 };
 
 /// \brief base class for writing to XML files.
@@ -505,6 +584,28 @@ public:
 
     /// \brief returns a writer for child elements
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
+};
+
+/// \brief base class for writing to JSON files.
+///
+/// OpenRAVE Interfaces accept a BaseJSONWriter instance and call its write methods to write the data.
+class OPENRAVE_API BaseJSONWriter : public boost::enable_shared_from_this<BaseJSONWriter>
+{
+public:
+    virtual ~BaseJSONWriter() {
+    }
+    /// \brief return the format for the data writing, should be all lower capitals.
+    ///
+    /// Samples formats are 'json'
+    virtual const std::string& GetFormat() const = 0;
+
+    /// \brief saves character data to the child. Special characters like '<' are automatically converted to fit inside JSON.
+    ///
+    /// \throw openrave_exception throws if this element cannot have character data or the character data was not written
+    virtual void SetCharData(const std::string& data) = 0;
+
+    /// \brief returns a writer for child elements
+    virtual BaseJSONWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
 
 } // end namespace OpenRAVE
@@ -714,6 +815,19 @@ protected:
         ConfigurationSpecification& _spec;
         std::stringstream _ss;
         BaseXMLReaderPtr _preader;
+    };
+
+    class JSONReader : public BaseJSONReader
+    {
+public:
+        JSONReader(ConfigurationSpecification& spec);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
+        virtual bool endElement(const std::string& name);
+        virtual void characters(const std::string& ch);
+protected:
+        ConfigurationSpecification& _spec;
+        std::stringstream _ss;
+        BaseJSONReaderPtr _preader;
     };
 
     ConfigurationSpecification();
@@ -2125,6 +2239,7 @@ public:
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
+    void SerializeJSON(std::ostream& o, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
@@ -2635,6 +2750,7 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::XMLReadable)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLReader)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLWriter)
+BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseJSONWriter)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::EnvironmentBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::EnvironmentBase::BODYSTATE)

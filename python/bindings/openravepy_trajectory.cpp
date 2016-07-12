@@ -203,6 +203,14 @@ public:
         return object(ss.str());
     }
 
+    object SerializeJSON(object ooptions=object())
+    {
+        std::stringstream ss;
+        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        _ptrajectory->SerializeJSON(ss,pyGetIntFromPy(ooptions,0));
+        return object(ss.str());
+    }
+
     bool Read(const string& s, object probot) {
         RAVELOG_WARN("Trajectory.Read deprecated please use Trajerctory.deserialize\n");
         deserialize(s);
@@ -262,6 +270,7 @@ PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(serialize_overloads, serialize, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
 
 void init_openravepy_trajectory()
 {
@@ -305,6 +314,7 @@ void init_openravepy_trajectory()
     .def("GetFirstWaypointIndexAfterTime",&PyTrajectoryBase::GetFirstWaypointIndexAfterTime, DOXY_FN(TrajectoryBase, GetFirstWaypointIndexAfterTime))
     .def("GetDuration",&PyTrajectoryBase::GetDuration,DOXY_FN(TrajectoryBase, GetDuration))
     .def("serialize",&PyTrajectoryBase::serialize,serialize_overloads(args("options"),DOXY_FN(TrajectoryBase,serialize)))
+    .def("SerializeJSON",&PyTrajectoryBase::SerializeJSON,SerializeJSON_overloads(args("options"),DOXY_FN(TrajectoryBase,SerializeJSON)))
     .def("deserialize",&PyTrajectoryBase::deserialize,args("data"),DOXY_FN(TrajectoryBase,deserialize))
     .def("Write",&PyTrajectoryBase::Write,args("options"),DOXY_FN(TrajectoryBase,Write))
     .def("Read",&PyTrajectoryBase::Read,args("data","robot"),DOXY_FN(TrajectoryBase,Read))

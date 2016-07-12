@@ -158,6 +158,9 @@ public:
     /// \brief output the trajectory in XML format
     virtual void serialize(std::ostream& O, int options=0) const;
 
+    /// \brief output the trajectory in JSON format
+    virtual void SerializeJSON(std::ostream& O, int options=0) const;
+
     /// \brief initialize the trajectory
     virtual InterfaceBasePtr deserialize(std::istream& I);
 

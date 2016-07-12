@@ -262,6 +262,66 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
     return !!O;
 }
 
+bool PlannerBase::PlannerParameters::SerializeJSON(std::ostream& O, int options) const
+{
+    O << _configurationspecification << endl;
+    O << "<_vinitialconfig>";
+    FOREACHC(it, vinitialconfig) {
+        O << *it << " ";
+    }
+    O << "</_vinitialconfig>" << endl;
+    O << "<_vinitialconfigvelocities>";
+    FOREACHC(it, _vInitialConfigVelocities) {
+        O << *it << " ";
+    }
+    O << "</_vinitialconfigvelocities>" << endl;
+    O << "<_vgoalconfig>";
+    FOREACHC(it, vgoalconfig) {
+        O << *it << " ";
+    }
+    O << "</_vgoalconfig>" << endl;
+    O << "<_vgoalconfigvelocities>";
+    FOREACHC(it, _vGoalConfigVelocities) {
+        O << *it << " ";
+    }
+    O << "</_vgoalconfigvelocities>" << endl;
+    O << "<_vconfiglowerlimit>";
+    FOREACHC(it, _vConfigLowerLimit) {
+        O << *it << " ";
+    }
+    O << "</_vconfiglowerlimit>" << endl;
+    O << "<_vconfigupperlimit>";
+    FOREACHC(it, _vConfigUpperLimit) {
+        O << *it << " ";
+    }
+    O << "</_vconfigupperlimit>" << endl;
+    O << "<_vconfigvelocitylimit>";
+    FOREACHC(it, _vConfigVelocityLimit) {
+        O << *it << " ";
+    }
+    O << "</_vconfigvelocitylimit>" << endl;
+    O << "<_vconfigaccelerationlimit>";
+    FOREACHC(it, _vConfigAccelerationLimit) {
+        O << *it << " ";
+    }
+    O << "</_vconfigaccelerationlimit>" << endl;
+    O << "<_vconfigresolution>";
+    FOREACHC(it, _vConfigResolution) {
+        O << *it << " ";
+    }
+    O << "</_vconfigresolution>" << endl;
+
+    O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
+    O << "<_nmaxplanningtime>" << _nMaxPlanningTime << "</_nmaxplanningtime>" << endl;
+    O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
+    O << "<_nrandomgeneratorseed>" << _nRandomGeneratorSeed << "</_nrandomgeneratorseed>" << endl;
+    O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << endl;
+    if( !(options & 1) ) {
+        O << _sExtraParameters << endl;
+    }
+    return !!O;
+}
+
 BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
 {
     _ss.str(""); // have to clear the string

@@ -332,6 +332,7 @@ public:
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
             virtual void serialize(std::ostream& o, int options) const;
+            virtual void SerializeJSON(std::ostream& o, int options) const;
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
             virtual void SetCollisionMesh(const TriMesh& mesh);
@@ -594,6 +595,7 @@ protected:
         virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
 
         virtual void serialize(std::ostream& o, int options) const;
+        virtual void SerializeJSON(std::ostream& o, int options) const;
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
@@ -1067,6 +1069,7 @@ public:
         virtual void SetWrapOffset(dReal offset, int iaxis=0);
 
         virtual void serialize(std::ostream& o, int options) const;
+        virtual void SerializeJSON(std::ostream& o, int options) const;
 
         /// @name Internal Hierarchy Methods
         //@{
@@ -2039,6 +2042,8 @@ private:
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
+    void Serialize(BaseJSONWriterPtr writer, int options=0) const;
+
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
     /// This 32 byte string can be used to check if two bodies have the same kinematic structure and can be used
@@ -2084,6 +2089,7 @@ private:
 
     /// only used for hashes...
     virtual void serialize(std::ostream& o, int options) const;
+    virtual void SerializeJSON(std::ostream& o, int options) const;
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies

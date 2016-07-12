@@ -367,6 +367,9 @@ public:
         /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
         virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
+        /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
+        virtual void SerializeJSON(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
+
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
 
@@ -475,6 +478,8 @@ public:
         virtual void SetRelativeTransform(const Transform& t);
 
         virtual void serialize(std::ostream& o, int options) const;
+
+        virtual void SerializeJSON(std::ostream& o, int options) const;
 
         /// \brief return hash of the sensor definition
         virtual const std::string& GetStructureHash() const;
@@ -980,6 +985,8 @@ private:
     }
 
     virtual void serialize(std::ostream& o, int options) const;
+
+    virtual void SerializeJSON(std::ostream& o, int options) const;
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)

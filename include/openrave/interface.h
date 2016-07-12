@@ -171,6 +171,16 @@ public:
      */
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
+    /** \brief serializes the interface
+
+        The readable interfaces are also serialized within the tag, for example:
+
+        \code{.json}
+        TODO: add example
+        \endcode
+     */
+    virtual void Serialize(BaseJSONWriterPtr writer, int options=0) const;
+
 protected:
     /// \brief The function to be executed for every command.
     ///

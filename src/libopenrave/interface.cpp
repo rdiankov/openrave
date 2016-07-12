@@ -125,6 +125,13 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
     }
 }
 
+void InterfaceBase::Serialize(BaseJSONWriterPtr writer, int options) const
+{
+    FOREACHC(it, __mapReadableInterfaces) {
+        it->second->Serialize(writer,options);
+    }
+}
+
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);

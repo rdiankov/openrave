@@ -154,6 +154,20 @@ protected:
             return !!O;
         }
 
+        virtual bool SerializeJSON(std::ostream& O) const
+        {
+            if( !PlannerParameters::SerializeJSON(O) )
+                return false;
+
+            O << "<radius>" << fRadius << "</radius>" << endl;
+            O << "<distthresh>" << fDistThresh << "</distthresh>" << endl;
+            O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << endl;
+            O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << endl;
+            O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << endl;
+
+            return !!O;
+        }
+
         ProcessElement startElement(const std::string& name, const AttributesList& atts)
         {
             if( _bProcessingRA )

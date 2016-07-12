@@ -18,6 +18,7 @@
 #include "openravepy_int.h"
 
 #include <openrave/xmlreaders.h>
+#include <openrave/jsonreaders.h>
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -60,6 +61,16 @@ public:
         std::string xmlid;
         OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
         _xmlreadable->Serialize(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options);
+        std::stringstream ss;
+        writer.Serialize(ss);
+        return ConvertStringToUnicode(ss.str());
+    }
+
+    object SerializeJSON(int options=0)
+    {
+        std::string xmlid;
+        OpenRAVE::jsonreaders::StreamJSONWriter writer(xmlid);
+        _xmlreadable->Serialize(OpenRAVE::jsonreaders::StreamJSONWriterPtr(&writer,utils::null_deleter()),options);
         std::stringstream ss;
         writer.Serialize(ss);
         return ConvertStringToUnicode(ss.str());

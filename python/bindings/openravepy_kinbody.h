@@ -206,6 +206,7 @@ public:
     object GetManageData() const;
     int GetUpdateStamp() const;
     string serialize(int options) const;
+    string SerializeJSON(int options) const;
     string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object());
     virtual string __repr__();

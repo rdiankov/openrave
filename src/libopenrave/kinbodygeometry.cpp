@@ -377,6 +377,19 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     }
 }
 
+void KinBody::Link::Geometry::SerializeJSON(std::ostream& o, int options) const
+{
+    SerializeRound(o,_info._t);
+    o << _info._type << " ";
+    SerializeRound3(o,_info._vRenderScale);
+    if( _info._type == GT_TriMesh ) {
+        _info._meshcollision.SerializeJSON(o,options);
+    }
+    else {
+        SerializeRound3(o,_info._vGeomData);
+    }
+}
+
 void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
 {
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
