@@ -16,23 +16,25 @@
 #include <math.h>
 #include <openrave/mathextra.h>
 
+namespace OpenRAVE {
+
 namespace RampOptimizerInternal {
 
 /*
    Multi DOF interpolation
  */
-bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, std::vector<Real>& vmVect, std::vector<Real>& amVect, ParabolicCurvesND& curvesndOut) {
+bool InterpolateZeroVelND(std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut) {
     size_t ndof = x0Vect.size();
     BOOST_ASSERT(ndof == x1Vect.size());
     BOOST_ASSERT(ndof == vmVect.size());
     BOOST_ASSERT(ndof == amVect.size());
 
-    std::vector<Real> dVect(ndof);
+    std::vector<dReal> dVect(ndof);
     LinearCombination(1, x1Vect, -1, x0Vect, dVect);
 
     // Calculate sdMax (vMin) and sddMax (aMin)
-    Real vMin = inf;
-    Real aMin = inf;
+    dReal vMin = inf;
+    dReal aMin = inf;
     for (size_t i = 0; i < ndof; ++i) {
         if (!FuzzyZero(dVect[i], epsilon)) {
             vMin = Min(vMin, vmVect[i]/Abs(dVect[i]));
@@ -52,8 +54,8 @@ bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, 
 
     // Scale each input dof according to the obtained sd-profile
     for (std::vector<Ramp>::const_iterator itRamp = sdProfile.ramps.begin(); itRamp != sdProfile.ramps.end(); ++itRamp) {
-        Real sd0, sdd;
-        Real dur = itRamp->duration;
+        dReal sd0, sdd;
+        dReal dur = itRamp->duration;
         for (size_t i = 0; i < ndof; ++i) {
             sd0 = dVect[i] * (itRamp->v0);
             sdd = dVect[i] * (itRamp->a);
@@ -73,7 +75,7 @@ bool InterpolateZeroVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, 
 }
 
 
-bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, std::vector<Real>& v0Vect, std::vector<Real>& v1Vect, std::vector<Real>& xminVect, std::vector<Real>& xmaxVect, std::vector<Real>& vmVect, std::vector<Real>& amVect, ParabolicCurvesND& curvesndOut, bool tryHarder) {
+bool InterpolateArbitraryVelND(std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect, std::vector<dReal>& xminVect, std::vector<dReal>& xmaxVect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut, bool tryHarder) {
     size_t ndof = x0Vect.size();
     BOOST_ASSERT(ndof == x1Vect.size());
     BOOST_ASSERT(ndof == v0Vect.size());
@@ -81,12 +83,12 @@ bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1V
     BOOST_ASSERT(ndof == vmVect.size());
     BOOST_ASSERT(ndof == amVect.size());
 
-    std::vector<Real> dVect(ndof);
+    std::vector<dReal> dVect(ndof);
     LinearCombination(1, x1Vect, -1, x0Vect, dVect);
 
     // First independently interpolate each DOF to find the slowest DOF
     std::vector<ParabolicCurve> curves(ndof);
-    Real maxDuration = 0;
+    dReal maxDuration = 0;
     size_t maxIndex;
     bool result;
     for (size_t i = 0; i < ndof; ++i) {
@@ -124,7 +126,7 @@ bool InterpolateArbitraryVelND(std::vector<Real>& x0Vect, std::vector<Real>& x1V
 }
 
 
-bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std::vector<Real>& vmVect, std::vector<Real>& amVect, int maxIndex, ParabolicCurvesND& curvesndOut, bool tryHarder) {
+bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, size_t maxIndex, ParabolicCurvesND& curvesndOut, bool tryHarder) {
     size_t ndof = curvesVectIn.size();
     RAMP_OPTIM_ASSERT(ndof == vmVect.size());
     RAMP_OPTIM_ASSERT(ndof == amVect.size());
@@ -132,7 +134,7 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
 
     std::vector<ParabolicCurve> newCurves(ndof);
     if (!tryHarder) {
-        Real newDuration = curvesVectIn[maxIndex].duration;
+        dReal newDuration = curvesVectIn[maxIndex].duration;
         for (size_t i = 0; i < ndof; ++i) {
             if (i == maxIndex) {
                 RAMP_OPTIM_PLOG("joint %d is already the slowest DOF, continue to the next DOF", i);
@@ -155,10 +157,10 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
     else {
         bool isPrevDurationSafe = false;
         bool result;
-        Real newDuration = 0;
+        dReal newDuration = 0;
 
         for (size_t i = 0; i < ndof; ++i) {
-            Real t;
+            dReal t;
             result = CalculateLeastUpperBoundInoperativeInterval(curvesVectIn[i].x0, curvesVectIn[i].EvalPos(curvesVectIn[i].duration), curvesVectIn[i].v0, curvesVectIn[i].v1, vmVect[i], amVect[i], t);
             if (!result) {
                 RAMP_OPTIM_PLOG("Calculating the least upper bound of inoperative intervals failed.");
@@ -198,7 +200,7 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std
 /*
    Single DOF interpolation
  */
-bool Interpolate1D(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, ParabolicCurve& curveOut) {
+bool Interpolate1D(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, ParabolicCurve& curveOut) {
     RAMP_OPTIM_ASSERT(vm > 0);
     RAMP_OPTIM_ASSERT(am > 0);
     RAMP_OPTIM_ASSERT(Abs(v0) <= vm + epsilon);
@@ -225,16 +227,16 @@ bool Interpolate1D(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, Parabol
 }
 
 
-bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, ParabolicCurve& curveOut) {
+bool Interpolate1DNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut) {
     RAMP_OPTIM_ASSERT(am > 0);
 
-    Real d = x1 - x0;
-    Real dv = v1 - v0;
-    Real v0sqr = v0*v0;
-    Real v1sqr = v1*v1;
-    Real difVSqr = v1sqr - v0sqr;
+    dReal d = x1 - x0;
+    dReal dv = v1 - v0;
+    dReal v0sqr = v0*v0;
+    dReal v1sqr = v1*v1;
+    dReal difVSqr = v1sqr - v0sqr;
 
-    Real dStraight; // displacement obtained when maximally accelerate/decelerate from v0 to v1
+    dReal dStraight; // displacement obtained when maximally accelerate/decelerate from v0 to v1
     if (Abs(dv) == 0) {
         if (Abs(d) == 0) {
             Ramp ramp0(0, 0, 0, x0);
@@ -258,7 +260,7 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
 
     if (FuzzyEquals(d, dStraight, epsilon)) {
         // We can maximally accelerate/decelerate from v0 to v1.
-        Real a0 = dv > 0 ? am : -am;
+        dReal a0 = dv > 0 ? am : -am;
         Ramp ramp0(v0, a0, dv/a0, x0);
         std::vector<Ramp> ramps(1);
         ramps[0] = ramp0;
@@ -266,13 +268,13 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
         return true;
     }
 
-    Real sumVSqr = v0sqr + v1sqr;
-    Real sigma = d - dStraight > 0 ? 1 : -1;
-    Real a0 = sigma*am;
-    Real vp = sigma*Sqrt((0.5*sumVSqr) + (a0*d));
-    Real a0inv = 1/a0;
-    Real t0 = (vp - v0)*a0inv;
-    Real t1 = (vp - v1)*a0inv;
+    dReal sumVSqr = v0sqr + v1sqr;
+    dReal sigma = d - dStraight > 0 ? 1 : -1;
+    dReal a0 = sigma*am;
+    dReal vp = sigma*Sqrt((0.5*sumVSqr) + (a0*d));
+    dReal a0inv = 1/a0;
+    dReal t0 = (vp - v0)*a0inv;
+    dReal t1 = (vp - v1)*a0inv;
 
     Ramp ramp0(v0, a0, t0, x0);
     Ramp ramp1(ramp0.v1, -a0, t1);
@@ -295,7 +297,7 @@ bool Interpolate1DNoVelocityLimit(Real x0, Real x1, Real v0, Real v1, Real am, P
 }
 
 
-bool ImposeVelocityLimit(ParabolicCurve& curve, Real vm) {
+bool ImposeVelocityLimit(ParabolicCurve& curve, dReal vm) {
     RAMP_OPTIM_ASSERT(vm > 0);
     RAMP_OPTIM_ASSERT(curve.ramps.size() == 2);
 
@@ -308,23 +310,23 @@ bool ImposeVelocityLimit(ParabolicCurve& curve, Real vm) {
         return false;
     }
 
-    Real vp = curve.ramps[0].v1;
+    dReal vp = curve.ramps[0].v1;
     if (Abs(vp) <= vm + epsilon) {
         // The initial curve does not violate the constraint
         return true;
     }
 
-    Real a0 = curve.ramps[0].a;
-    Real h = Abs(vp) - vm;
-    Real t = h/Abs(a0); // we are sure that a0 is non-zero
+    dReal a0 = curve.ramps[0].a;
+    dReal h = Abs(vp) - vm;
+    dReal t = h/Abs(a0); // we are sure that a0 is non-zero
 
     std::vector<Ramp> ramps(3);
     Ramp newRamp0(curve.ramps[0].v0, curve.ramps[0].a, curve.ramps[0].duration - t, curve.ramps[0].x0);
     ramps[0] = newRamp0;
 
-    Real nom = h*h;
-    Real denom = Abs(a0)*vm;
-    Real newVp = Sign(vp)*vm;
+    dReal nom = h*h;
+    dReal denom = Abs(a0)*vm;
+    dReal newVp = Sign(vp)*vm;
     Ramp newRamp1(newVp, 0, 2*t + (nom/denom));
     ramps[1] = newRamp1;
 
@@ -336,8 +338,8 @@ bool ImposeVelocityLimit(ParabolicCurve& curve, Real vm) {
 }
 
 
-inline Real SolveBrakeTime(Real x, Real v, Real xbound) {
-    Real bt;
+inline dReal SolveBrakeTime(dReal x, dReal v, dReal xbound) {
+    dReal bt;
     bool res = SafeEqSolve(v, 2*(xbound - x), epsilon, 0, inf, bt);
     if (!res) {
         RAMP_OPTIM_WARN("Cannot solve the brake time equation: %.15e*t - %.15e = 0 with t being in [0, inf)", v, 2*(xbound - x));
@@ -347,10 +349,10 @@ inline Real SolveBrakeTime(Real x, Real v, Real xbound) {
 }
 
 
-inline Real SolveBrakeAccel(Real x, Real v, Real xbound) {
-    Real ba;
-    Real coeff0 = 2*(xbound - x);
-    Real coeff1 = v*v;
+inline dReal SolveBrakeAccel(dReal x, dReal v, dReal xbound) {
+    dReal ba;
+    dReal coeff0 = 2*(xbound - x);
+    dReal coeff1 = v*v;
     bool res = SafeEqSolve(coeff0, -coeff1, epsilon, -inf, inf, ba);
     if (!res) {
         RAMP_OPTIM_WARN("Cannot solve the brake acceleration equation: %.15e*a + %.15e = 0 with a being in (-inf, inf)", coeff0, coeff1);
@@ -360,18 +362,18 @@ inline Real SolveBrakeAccel(Real x, Real v, Real xbound) {
 }
 
 
-bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax, Real vm, Real am, ParabolicCurve& curveOut) {
+bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, dReal xmin, dReal xmax, dReal vm, dReal am, ParabolicCurve& curveOut) {
     /*
        This function for fixing x-bound violation is taken from OpenRAVE ParabolicPathSmooth library.
      */
-    Real duration = curveIn.duration;
-    Real x0 = curveIn.x0;
-    Real x1 = curveIn.EvalPos(duration);
-    Real v0 = curveIn.v0;
-    Real v1 = curveIn.v1;
+    dReal duration = curveIn.duration;
+    dReal x0 = curveIn.x0;
+    dReal x1 = curveIn.EvalPos(duration);
+    dReal v0 = curveIn.v0;
+    dReal v1 = curveIn.v1;
 
-    Real bt0 = inf, ba0 = inf, bx0 = inf;
-    Real bt1 = inf, ba1 = inf, bx1 = inf;
+    dReal bt0 = inf, ba0 = inf, bx0 = inf;
+    dReal bt1 = inf, ba1 = inf, bx1 = inf;
     if (v0 > 0) {
         bt0 = SolveBrakeTime(x0, v0, xmax);
         bx0 = xmax;
@@ -395,7 +397,7 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
     }
 
     std::vector<Ramp> newRamps(0);
-    Real tempbmin, tempbmax;
+    dReal tempbmin, tempbmax;
 
     if ((bt0 < duration) && (Abs(ba0) <= am + epsilon)) {
         RAMP_OPTIM_PLOG("Case IIa: checking");
@@ -498,12 +500,12 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, Real xmin, Real xmax
 }
 
 
-bool Stretch1D(ParabolicCurve& curveIn, Real vm, Real am, Real newDuration, ParabolicCurve& curveOut) {
+bool Stretch1D(ParabolicCurve& curveIn, dReal vm, dReal am, dReal newDuration, ParabolicCurve& curveOut) {
     return Interpolate1DFixedDuration(curveIn.x0, curveIn.x1, curveIn.v0, curveIn.v1, vm, am, newDuration, curveOut);
 }
-    
 
-bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, Real duration, ParabolicCurve& curveOut) {
+
+bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal duration, ParabolicCurve& curveOut) {
     /*
        We want to 'stretch' this velocity profile to have a new duration of endTime. First, try
        re-interpolating this profile to have two ramps. If that doesn't work, try modifying the
@@ -587,15 +589,15 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
         }
     }
 
-    Real d = x1 - x0; // displacement made by this profile
-    Real t0, t1, vp, a0, a1;
-    Real A, B, C, D; // temporary variables for solving equations
+    dReal d = x1 - x0; // displacement made by this profile
+    dReal t0, t1, vp, a0, a1;
+    dReal A, B, C, D; // temporary variables for solving equations
 
-    Real durInverse = 1/duration;
+    dReal durInverse = 1/duration;
     A = (v1 - v0)*durInverse;
     B = (2*d)*durInverse - (v0 + v1);
-    Real sum1 = -am - A;
-    Real sum2 = am - A;
+    dReal sum1 = -am - A;
+    dReal sum2 = am - A;
     C = B/sum1;
     D = B/sum2;
 
@@ -608,11 +610,11 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
     // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
     // acceleration. Instead of having a class representing an interval, we use the interval bounds
     // directly. Naming convention: iXl = lower bound of interval X, iXu = upper bound of interval X.
-    Real i0l = 0, i0u = duration;
-    Real i1l = -Inf, i1u = Inf;
-    Real i2l = -Inf, i2u = Inf;
-    Real i3l = -Inf, i3u = Inf;
-    Real i4l = -Inf, i4u = Inf;
+    dReal i0l = 0, i0u = duration;
+    dReal i1l = -Inf, i1u = Inf;
+    dReal i2l = -Inf, i2u = Inf;
+    dReal i3l = -Inf, i3u = Inf;
+    dReal i4l = -Inf, i4u = Inf;
 
     // Intervals 1 and 2 are derived from constraints on a0 (the acceleration of the first ramp)
     // I) sum1 <= B/t0
@@ -837,7 +839,7 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
     else {
         // The two-ramp profile does not work because it violates the velocity bounds. Modify it
         // accordingly.
-        Real vmNew = vp > 0 ? vm : -vm;
+        dReal vmNew = vp > 0 ? vm : -vm;
 
         // a0 and a1 should not be zero if the velocity limit is violated. The first check is done
         // at the line: FuzzyEquals(vp, v1 - (a1*t1)) above.
@@ -846,14 +848,14 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
             RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             return false;
         }
-        Real a0inv = 1/a0;
-        Real a1inv = 1/a1;
+        dReal a0inv = 1/a0;
+        dReal a1inv = 1/a1;
 
-        Real dv1 = vp - vmNew;
-        Real dv2 = vmNew - v0;
-        Real dv3 = vmNew - v1;
-        Real t0Trimmed = dv2*a0inv; // vmaxNew = dx0 + a0*t0Trimmed
-        Real t1Trimmed = -dv3*a1inv; // dx1 = vmaxNew + a1*t1Trimmed
+        dReal dv1 = vp - vmNew;
+        dReal dv2 = vmNew - v0;
+        dReal dv3 = vmNew - v1;
+        dReal t0Trimmed = dv2*a0inv; // vmaxNew = dx0 + a0*t0Trimmed
+        dReal t1Trimmed = -dv3*a1inv; // dx1 = vmaxNew + a1*t1Trimmed
 
         /*
            Idea: we cut the excessive area above the velocity limit and paste that on both sides of
@@ -896,12 +898,12 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
                   x0 = (A2 + (A2*B2*B2)^(1/3))/C2.
          */
 
-        Real A2 = dv2*dv2;
-        Real B2 = -dv3*dv3;
-        Real D2 = 0.5*dv1*(duration - t0Trimmed - t1Trimmed); // area of the velocity profile above the velocity limit.
-        Real C2 = t0Trimmed*dv2 + t1Trimmed*dv3 - 2*D2;
+        dReal A2 = dv2*dv2;
+        dReal B2 = -dv3*dv3;
+        dReal D2 = 0.5*dv1*(duration - t0Trimmed - t1Trimmed); // area of the velocity profile above the velocity limit.
+        dReal C2 = t0Trimmed*dv2 + t1Trimmed*dv3 - 2*D2;
 
-        Real root = cbrt(A2*B2*B2); // from math.h
+        dReal root = cbrt(A2*B2*B2); // from math.h
 
         if (FuzzyZero(C2, epsilon)) {
             // This means the excessive area is too large such that after we paste it on both sides
@@ -912,7 +914,7 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
             return false;
         }
 
-        Real C2inv = 1/C2;
+        dReal C2inv = 1/C2;
         a0 = (A2 + root)*C2inv;
         if (Abs(a0) > am) {
             // a0 exceeds the bound, try making it stays at the bound.
@@ -998,7 +1000,7 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
         else {
             t0 = dv2/a0;
             vp = vmNew;
-            Real tLastRamp = -dv3/a1;
+            dReal tLastRamp = -dv3/a1;
             if (t0 + tLastRamp > duration) {
                 // Final fix
                 if (A == 0) {
@@ -1024,7 +1026,7 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
                 curveOut.Initialize(ramps);
             }
             else {
-                Real tMiddle = duration - (t0 + tLastRamp);
+                dReal tMiddle = duration - (t0 + tLastRamp);
                 if (FuzzyZero(tMiddle, epsilon)) {
                     RAMP_OPTIM_PLOG("Three-ramp profile works but having too short middle ramp.");
                     // If we leave it like this, it may cause errors later on.
@@ -1076,9 +1078,9 @@ bool Interpolate1DFixedDuration(Real x0, Real x1, Real v0, Real v1, Real vm, Rea
 /*
    Utilities
  */
-bool CalculateLeastUpperBoundInoperativeInterval(Real x0, Real x1, Real v0, Real v1, Real vm, Real am, Real& t) {
-    Real d = x1 - x0;
-    Real T0, T1, T2, T3;
+bool CalculateLeastUpperBoundInoperativeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t) {
+    dReal d = x1 - x0;
+    dReal T0, T1, T2, T3;
 
     /*
        Let t be the total duration of the velocity profile, a0 and a1 be the accelerations of both
@@ -1123,10 +1125,10 @@ bool CalculateLeastUpperBoundInoperativeInterval(Real x0, Real x1, Real v0, Real
        time) from each inequality. Then we select the maximum one.
      */
 
-    Real firstTerm = (v0 + v1)/am;
+    dReal firstTerm = (v0 + v1)/am;
 
-    Real temp1 = 2*(-Sqr(am))*(2*am*d - Sqr(v0) - Sqr(v1));
-    Real secondTerm1 = Sqrt(temp1)/Sqr(am);
+    dReal temp1 = 2*(-Sqr(am))*(2*am*d - Sqr(v0) - Sqr(v1));
+    dReal secondTerm1 = Sqrt(temp1)/Sqr(am);
     if (temp1 < 0) {
         T0 = -1;
         T1 = -1;
@@ -1137,8 +1139,8 @@ bool CalculateLeastUpperBoundInoperativeInterval(Real x0, Real x1, Real v0, Real
     }
     T1 = Max(T0, T1);
 
-    Real temp2 = 2*(Sqr(am))*(2*am*d + Sqr(v0) + Sqr(v1));
-    Real secondTerm2 = Sqrt(temp2)/Sqr(am);
+    dReal temp2 = 2*(Sqr(am))*(2*am*d + Sqr(v0) + Sqr(v1));
+    dReal secondTerm2 = Sqrt(temp2)/Sqr(am);
     if (temp2 < 0) {
         T2 = -1;
         T3 = -1;
@@ -1156,14 +1158,14 @@ bool CalculateLeastUpperBoundInoperativeInterval(Real x0, Real x1, Real v0, Real
         // dStraight is the displacement produced if we were to travel with only one acceleration
         // from v0 to v1 in t. It is used to determine which direction we should aceelerate
         // first (posititve or negative acceleration).
-        Real dStraight = 0.5*(v0 + v1)*t;
-        Real amNew = d - dStraight > 0 ? am : -am;
-        Real vmNew = d - dStraight > 0 ? vm : -vm;
+        dReal dStraight = 0.5*(v0 + v1)*t;
+        dReal amNew = d - dStraight > 0 ? am : -am;
+        dReal vmNew = d - dStraight > 0 ? vm : -vm;
 
-        Real vp = 0.5*(amNew*t + v0 + v1); // the peak velocity
+        dReal vp = 0.5*(amNew*t + v0 + v1); // the peak velocity
         if (Abs(vp) > vm) {
-            Real dExcess = (vp - vmNew)*(vp - vmNew)/am;
-            Real deltaTime = dExcess/vm;
+            dReal dExcess = (vp - vmNew)*(vp - vmNew)/am;
+            dReal deltaTime = dExcess/vm;
             t += deltaTime; // the time increased from correcting the velocity bound violation
         }
         // Should be no problem now.
@@ -1177,7 +1179,7 @@ bool CalculateLeastUpperBoundInoperativeInterval(Real x0, Real x1, Real v0, Real
 }
 
 
-bool SolveForT0(Real A, Real B, Real t, Real l, Real u, Real& t0) {
+bool SolveForT0(dReal A, dReal B, dReal t, dReal l, dReal u, dReal& t0) {
     /*
        Let x = t0 for convenience. The two accelerations can be written in terms of x as
 
@@ -1215,18 +1217,18 @@ bool SolveForT0(Real A, Real B, Real t, Real l, Real u, Real& t0) {
         }
     }
 
-    Real rawRoots[4];
+    dReal rawRoots[4];
     int numRoots;
     double tSqr = t*t;
     double tCube = tSqr*t;
 
     if (Abs(A) < epsilon) {
-        Real coeffs[4] = {2*B, -3*B*t, 3*B*tSqr, -B*tCube};
-        OpenRAVE::mathextra::polyroots<Real, 3>(&coeffs[0], &rawRoots[0], numRoots);
+        dReal coeffs[4] = {2*B, -3*B*t, 3*B*tSqr, -B*tCube};
+        OpenRAVE::mathextra::polyroots<dReal, 3>(&coeffs[0], &rawRoots[0], numRoots);
     }
     else {
-        Real coeffs[5] = {2*A, -4*A*t + 2*B, 3*A*tSqr - 3*B*t, -A*tCube + 3*B*tSqr, -B*tCube};
-        OpenRAVE::mathextra::polyroots<Real, 4>(&coeffs[0], &rawRoots[0], numRoots);
+        dReal coeffs[5] = {2*A, -4*A*t + 2*B, 3*A*tSqr - 3*B*t, -A*tCube + 3*B*tSqr, -B*tCube};
+        OpenRAVE::mathextra::polyroots<dReal, 4>(&coeffs[0], &rawRoots[0], numRoots);
     }
 
     if (numRoots == 0) {
@@ -1234,12 +1236,12 @@ bool SolveForT0(Real A, Real B, Real t, Real l, Real u, Real& t0) {
     }
 
     // Among all the solutions, find the one that minimizes the objective function.
-    Real J = Inf;
-    Real bestT = -1;
+    dReal J = Inf;
+    dReal bestT = -1;
     for (int i = 0; i < numRoots; ++i) {
         if ((rawRoots[i] <= u) && (rawRoots[i] >= l)) {
-            Real root = rawRoots[i];
-            Real firstTerm, secondTerm;
+            dReal root = rawRoots[i];
+            dReal firstTerm, secondTerm;
             if (Abs(root) < epsilon) {
                 firstTerm = 0;
             }
@@ -1253,7 +1255,7 @@ bool SolveForT0(Real A, Real B, Real t, Real l, Real u, Real& t0) {
             else {
                 secondTerm = A - (B/(t - root));
             }
-            Real curObj = firstTerm*firstTerm + secondTerm*secondTerm;
+            dReal curObj = firstTerm*firstTerm + secondTerm*secondTerm;
             if (curObj < J) {
                 J = curObj;
                 bestT = root;
@@ -1271,3 +1273,5 @@ bool SolveForT0(Real A, Real B, Real t, Real l, Real u, Real& t0) {
 
 
 } // end namespace RampOptimizerInternal
+
+} // end namespace OpenRAVE

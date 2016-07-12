@@ -30,6 +30,8 @@
 
 #include "paraboliccommon.h"
 
+namespace OpenRAVE {
+
 namespace RampOptimizerInternal {
 
 //a flag used during testing of failed ramps
@@ -43,14 +45,14 @@ bool gMinTime2Quiet = false;
 
 //return a value x in [xmin,xmax] such that |a*x - b| <= epsilon*max(|a||b|)
 //for ill posed problems choose x=0
-bool SafeEqSolve(Real a,Real b,Real epsilon,Real xmin,Real xmax,Real& x)
+bool SafeEqSolve(dReal a,dReal b,dReal epsilon,dReal xmin,dReal xmax,dReal& x)
 {
     if(a < 0) {
         return SafeEqSolve(-a,-b,epsilon,xmin,xmax,x);
     }
 
     //now we know a>=0
-    Real epsScaled = epsilon*Max(a,Abs(b));
+    dReal epsScaled = epsilon*Max(a,Abs(b));
 
     //infinte range
     if(IsInf(xmin)==-1 && IsInf(xmax)==1) {
@@ -62,7 +64,7 @@ bool SafeEqSolve(Real a,Real b,Real epsilon,Real xmin,Real xmax,Real& x)
         return true;
     }
 
-    Real axmin=a*xmin,axmax=a*xmax;
+    dReal axmin=a*xmin,axmax=a*xmax;
     if(!(b + epsScaled >= axmin  && b - epsScaled <= axmax)) { //ranges don't intersect
         return false;
     }
@@ -87,3 +89,5 @@ bool SafeEqSolve(Real a,Real b,Real epsilon,Real xmin,Real xmax,Real& x)
 }
 
 } // end namespace RampOptimizerInternal
+
+} // end namespace OpenRAVE

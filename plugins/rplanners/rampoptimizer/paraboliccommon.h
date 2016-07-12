@@ -4,10 +4,9 @@
 
 #include <openrave/openrave.h>
 
-namespace RampOptimizerInternal {
+namespace OpenRAVE {
 
-typedef OpenRAVE::dReal Real;
-typedef std::vector<Real> Vector;
+namespace RampOptimizerInternal {
 
 #define RAMP_OPTIM_PLOG RAVELOG_VERBOSE
 #define RAMP_OPTIM_PERROR RAVELOG_ERROR
@@ -15,26 +14,26 @@ typedef std::vector<Real> Vector;
 #define RAMP_OPTIM_ASSERT BOOST_ASSERT
 
 //tolerance for time
-const static Real EpsilonT = 1e-8;
+const static dReal EpsilonT = 1e-8;
 //tolerance for position
-const static Real EpsilonX = 1e-8;
+const static dReal EpsilonX = 1e-8;
 //tolerance for velocity
-const static Real EpsilonV = 1e-8;
+const static dReal EpsilonV = 1e-8;
 //tolerance for acceleration, should be smaller since any checks involving it do not acrue much error...
-const static Real EpsilonA = 1e-9;
+const static dReal EpsilonA = 1e-9;
 
 //can replace this with your favorite representation/tests of infinity
-const static Real Inf = 1e300;
+const static dReal Inf = 1e300;
 
 inline std::string GetDumpDirectory() {
-    return OpenRAVE::RaveGetHomeDirectory();
+    return RaveGetHomeDirectory();
 }
 
-inline Real Rand() {
-    return OpenRAVE::RaveRandomFloat();
+inline dReal Rand() {
+    return RaveRandomFloat();
 }
 
-inline int IsInf(Real x) {
+inline int IsInf(dReal x) {
     if (x >= Inf) {
         return 1;
     }
@@ -46,42 +45,42 @@ inline int IsInf(Real x) {
     }
 }
 
-inline bool IsFinite(Real x) {
+inline bool IsFinite(dReal x) {
     return OpenRAVE::RaveFabs(x) < Inf;
 }
 
-inline Real Sqr(Real x) {
+inline dReal Sqr(dReal x) {
     return x*x;
 }
-inline Real Sqrt(Real x) {
+inline dReal Sqrt(dReal x) {
     return OpenRAVE::RaveSqrt(x);
 }
-inline Real Abs(Real x) {
+inline dReal Abs(dReal x) {
     return OpenRAVE::RaveFabs(x);
 }
-inline Real Sign(Real x) {
+inline dReal Sign(dReal x) {
     return (x > 0 ? 1 : (x < 0 ? -1 : 0));
 }
-inline Real Min(Real x,Real y) {
+inline dReal Min(dReal x,dReal y) {
     return (x < y ? x : y);
 }
-inline Real Max(Real x,Real y) {
+inline dReal Max(dReal x,dReal y) {
     return (x > y ? x : y);
 }
-inline bool FuzzyZero(Real x,Real tol) {
+inline bool FuzzyZero(dReal x,dReal tol) {
     return OpenRAVE::RaveFabs(x) <= tol;
 }
-inline bool FuzzyEquals(Real x,Real y,Real tol) {
+inline bool FuzzyEquals(dReal x,dReal y,dReal tol) {
     return OpenRAVE::RaveFabs(x - y) <= tol;
 }
-inline bool FuzzyInRange(Real x, Real xmin, Real xmax, Real tol) {
+inline bool FuzzyInRange(dReal x, dReal xmin, dReal xmax, dReal tol) {
     return x >= xmin - tol && x <= xmax + tol;
 }
-inline void Swap(Real& x,Real& y) {
-    Real temp = x; x = y; y = temp;
+inline void Swap(dReal& x,dReal& y) {
+    dReal temp = x; x = y; y = temp;
 }
 
-inline void LinearCombination(Real a, std::vector<Real>& v1, Real b, std::vector<Real>& v2, std::vector<Real>& v3) {
+inline void LinearCombination(dReal a, std::vector<dReal>& v1, dReal b, std::vector<dReal>& v2, std::vector<dReal>& v3) {
     size_t v1size = v1.size();
     RAMP_OPTIM_ASSERT(v1size == v2.size());
     if (v3.size() != v1size) {
@@ -110,14 +109,16 @@ inline void LinearCombination(Real a, std::vector<Real>& v1, Real b, std::vector
 }
 
 //solves the quadratic formula and returns the number of roots found
-inline int SolveQuadratic(Real a, Real b, Real c, Real& x1, Real& x2)
+inline int SolveQuadratic(dReal a, dReal b, dReal c, dReal& x1, dReal& x2)
 {
-    return OpenRAVE::mathextra::solvequad(a, b, c, x1, x2);
+    return mathextra::solvequad(a, b, c, x1, x2);
 }
 
 //return a value x in [xmin,xmax] such that |a*x - b| <= epsilon*max(|a||b|)
 //for ill posed problems choose x=0
-bool SafeEqSolve(Real a, Real b, Real epsilon, Real xmin, Real xmax, Real& x);
+bool SafeEqSolve(dReal a, dReal b, dReal epsilon, dReal xmin, dReal xmax, dReal& x);
 
 } // end namespace RampOptimizerInternal
+
+} // end namespace OpenRAVE
 #endif

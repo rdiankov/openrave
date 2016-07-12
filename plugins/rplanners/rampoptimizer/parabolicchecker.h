@@ -16,6 +16,8 @@
 
 #include "ramp.h"
 
+namespace OpenRAVE {
+
 namespace RampOptimizerInternal {
 
 enum ParabolicCheckReturn {
@@ -38,16 +40,18 @@ enum ParabolicCheckReturn {
 
 // Check if the Ramp violates the velocity and acceleration bounds. (Also check for non-negative
 // duration.)
-ParabolicCheckReturn CheckRamp(Ramp& ramp, Real xmin, Real xmax, Real vm, Real am);
+ParabolicCheckReturn CheckRamp(Ramp& ramp, dReal xmin, dReal xmax, dReal vm, dReal am);
 
 // Check each Ramp in the vector as well as velocity continuity between consecutive ramps
-ParabolicCheckReturn CheckRamps(std::vector<Ramp>& rampsVector, Real xmin, Real xmax, Real vm, Real am);
+ParabolicCheckReturn CheckRamps(std::vector<Ramp>& rampsVector, dReal xmin, dReal xmax, dReal vm, dReal am);
 
 // Check a ParabolicCurve.
-ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, Real xmin, Real xmax, Real vm, Real am, Real x0, Real x1, Real v0, Real v1);
+ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am, dReal x0, dReal x1, dReal v0, dReal v1);
 
 // Check a ParabolicCurvesND
-ParabolicCheckReturn CheckParabolicCurvesND(ParabolicCurvesND& curvesnd, std::vector<Real>& xminVect, std::vector<Real>& xmaxVect, std::vector<Real>& vmVect, std::vector<Real>& amVect, std::vector<Real>& x0Vect, std::vector<Real>& x1Vect, std::vector<Real>& v0Vect, std::vector<Real>& v1Vect);
+ParabolicCheckReturn CheckParabolicCurvesND(ParabolicCurvesND& curvesnd, std::vector<dReal>& xminVect, std::vector<dReal>& xmaxVect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect);
 
 } // end namespace RampOptimizerInternal
+
+} // end namespace OpenRAVE
 #endif
