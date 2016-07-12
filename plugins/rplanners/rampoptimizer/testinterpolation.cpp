@@ -4,6 +4,7 @@
 #include <iostream>
 #include <openrave/openrave.h>
 
+using namespace OpenRAVE;
 using namespace RampOptimizerInternal;
 
 int main() {
@@ -146,7 +147,7 @@ int main() {
     }
     
     if (1) { // Test ImposeJointLimitFixedDuration
-        Real bmin, bmax;
+        dReal bmin, bmax;
         
         // Case IIa
         ParabolicCurve curve0, curve1, curve2;

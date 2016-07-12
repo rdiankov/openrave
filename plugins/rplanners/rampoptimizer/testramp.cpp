@@ -2,6 +2,8 @@
 #include <iostream>
 #include <boost/format.hpp>
 #include <assert.h>
+
+using namespace OpenRAVE;
 using namespace RampOptimizerInternal;
 
 int main() {
@@ -40,7 +42,7 @@ int main() {
         std::cout << "[Ramp] Test initialization and evaluation: done" << std::endl;
 
         // Test GetPeaks: normal situation where the peaks are at end points
-        Real bmin, bmax;
+        dReal bmin, bmax;
         ramp0.GetPeaks(bmin, bmax);
         assert(FuzzyEquals(bmin, 3.3, epsilon));
         assert(FuzzyEquals(bmax, 5.962, epsilon));
