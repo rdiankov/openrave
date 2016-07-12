@@ -418,7 +418,7 @@ public:
     }
 
     /// \brief serializes the interface
-    virtual void Serialize(BaseJSONWriterPtr writer, int options=0) const {
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const {
     }
 private:
     std::string __xmlid;
@@ -599,13 +599,17 @@ public:
     /// Samples formats are 'json'
     virtual const std::string& GetFormat() const = 0;
 
-    /// \brief saves character data to the child. Special characters like '<' are automatically converted to fit inside JSON.
-    ///
-    /// \throw openrave_exception throws if this element cannot have character data or the character data was not written
-    virtual void SetCharData(const std::string& data) = 0;
+    virtual void Null() = 0;
+    virtual void Bool(bool value) = 0;
+    virtual void Int(int value) = 0;
+    virtual void Double(double value) = 0;
+    virtual void String(const std::string& value) = 0;
+    virtual void String(const char* value) = 0;
 
-    /// \brief returns a writer for child elements
-    virtual BaseJSONWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
+    virtual void StartArray() = 0;
+    virtual void EndArray() = 0;
+    virtual void StartObject() = 0;
+    virtual void EndObject() = 0;
 };
 
 } // end namespace OpenRAVE
@@ -2239,7 +2243,8 @@ public:
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
-    void SerializeJSON(std::ostream& o, int options=0) const;
+
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);

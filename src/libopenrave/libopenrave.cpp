@@ -2062,16 +2062,9 @@ void TriMesh::serialize(std::ostream& o, int options) const
     }
 }
 
-void TriMesh::SerializeJSON(std::ostream& o, int options) const
+void TriMesh::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    o << vertices.size() << " ";
-    FOREACHC(it,vertices) {
-        SerializeRound3(o, *it);
-    }
-    o << indices.size() << " ";
-    FOREACHC(it,indices) {
-        o << *it << " ";
-    }
+    // TODO(jsonserialization)
 }
 
 
@@ -2327,10 +2320,9 @@ bool SensorBase::SensorData::serialize(std::ostream& O) const
     return true;
 }
 
-bool SensorBase::SensorData::SerializeJSON(std::ostream& O) const
+void SensorBase::SensorData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     RAVELOG_WARN("SensorData JSON serialization not implemented\n");
-    return true;
 }
 
 bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
@@ -2339,10 +2331,9 @@ bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-bool SensorBase::LaserSensorData::SerializeJSON(std::ostream& O) const
+void SensorBase::LaserSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     RAVELOG_WARN("LaserSensorData JSON serialization not implemented\n");
-    return true;
 }
 
 bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
@@ -2351,10 +2342,9 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-bool SensorBase::CameraSensorData::SerializeJSON(std::ostream& O) const
+void SensorBase::CameraSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     RAVELOG_WARN("CameraSensorData JSON serialization not implemented\n");
-    return true;
 }
 
 void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2365,12 +2355,14 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::SensorGeometry::Serialize(BaseJSONWriterPtr writer, int options) const
+void SensorBase::SensorGeometry::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    AttributesList atts;
+    writer->StartObject();
     if( hardware_id.size() > 0 ) {
-        writer->AddChild("hardware_id",atts)->SetCharData(hardware_id);
+        writer->String("hardware_id");
+        writer->String(hardware_id);
     }
+    writer->EndObject();
 }
 
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2411,42 +2403,10 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::CameraGeomData::Serialize(BaseJSONWriterPtr writer, int options) const
+void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    SensorGeometry::Serialize(writer, options);
-    AttributesList atts;
-    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-    ss << KK.fx << " 0 " << KK.cx << " 0 " << KK.fy << " " << KK.cy;
-    writer->AddChild("intrinsic",atts)->SetCharData(ss.str());
-    ss.str("");
-    ss << KK.focal_length;
-    writer->AddChild("focal_length",atts)->SetCharData(ss.str());
-    if( KK.distortion_model.size() > 0 ) {
-        writer->AddChild("distortion_model",atts)->SetCharData(KK.distortion_model);
-        if( KK.distortion_coeffs.size() > 0 ) {
-            ss.str("");
-            FOREACHC(it, KK.distortion_coeffs) {
-                ss << *it << " ";
-            }
-            writer->AddChild("distortion_coeffs",atts)->SetCharData(ss.str());
-        }
-    }
-    ss.str("");
-    ss << width << " " << height; // _numchannels=3
-    writer->AddChild("image_dimensions",atts)->SetCharData(ss.str());
-    writer->AddChild("measurement_time",atts)->SetCharData(boost::lexical_cast<std::string>(measurement_time));
-    writer->AddChild("gain",atts)->SetCharData(boost::lexical_cast<std::string>(gain));
-    //writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-    if( sensor_reference.size() > 0 ) {
-        atts.push_back(std::make_pair("url", sensor_reference));
-        writer->AddChild("sensor_reference",atts);
-        atts.clear();
-    }
-    if( target_region.size() > 0 ) {
-        atts.push_back(std::make_pair("url", target_region));
-        writer->AddChild("target_region",atts);
-        atts.clear();
-    }
+    SensorGeometry::SerializeJSON(writer, options);
+    // TODO(jsonserialization)
 }
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2454,7 +2414,7 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }
 
-void SensorBase::Serialize(BaseJSONWriterPtr writer, int options) const
+void SensorBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }

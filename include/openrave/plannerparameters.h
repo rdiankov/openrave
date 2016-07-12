@@ -51,18 +51,9 @@ protected:
         return !!O;
     }
 
-    // save the extra data to XML
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O,options&~1) ) { // skip writing extra
-            return false;
-        }
-        O << "<exploreprob>" << _fExploreProb << "</exploreprob>" << std::endl;
-        O << "<expectedsize>" << _nExpectedDataSize << "</expectedsize>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -141,21 +132,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O,options&~1) ) {
-            return false;
-        }
-        O << "<radius>" << fRadius << "</radius>" << std::endl;
-        O << "<distthresh>" << fDistThresh << "</distthresh>" << std::endl;
-        O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << std::endl;
-        O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << std::endl;
-        O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -240,24 +219,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O,options&~1) ) {
-            return false;
-        }
-        O << "<grasps>" << _vgrasps.size() << " ";
-        for(std::vector<Transform>::const_iterator it = _vgrasps.begin(); it != _vgrasps.end(); ++it) {
-            O << *it << " ";
-        }
-        O << "</grasps>" << std::endl;
-        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << std::endl;
-        O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << std::endl;
-        O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << std::endl;
-        O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -391,36 +355,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O, options&~1) ) {
-            return false;
-        }
-        O << "<fstandoff>" << fstandoff << "</fstandoff>" << std::endl;
-        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << std::endl;
-        O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << std::endl;
-        O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << std::endl;
-        O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << std::endl;
-        O << "<vmanipulatordirection>" << vmanipulatordirection << "</vmanipulatordirection>" << std::endl;
-        O << "<btransformrobot>" << btransformrobot << "</btransformrobot>" << std::endl;
-        O << "<breturntrajectory>" << breturntrajectory << "</breturntrajectory>" << std::endl;
-        O << "<bonlycontacttarget>" << bonlycontacttarget << "</bonlycontacttarget>" << std::endl;
-        O << "<btightgrasp>" << btightgrasp << "</btightgrasp>" << std::endl;
-        O << "<bavoidcontact>" << bavoidcontact << "</bavoidcontact>" << std::endl;
-        O << "<vavoidlinkgeometry>" << std::endl;
-        for(std::vector<std::string>::const_iterator it = vavoidlinkgeometry.begin(); it != vavoidlinkgeometry.end(); ++it) {
-            O << *it << " ";
-        }
-        O << "</vavoidlinkgeometry>" << std::endl;
-        O << "<fcoarsestep>" << fcoarsestep << "</fcoarsestep>" << std::endl;
-        O << "<ffinestep>" << ffinestep << "</ffinestep>" << std::endl;
-        O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << std::endl;
-        O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << std::endl;
-        O << "<vintersectplane>" << vintersectplane << "</vintersectplane>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -563,23 +500,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O, options&~1) ) {
-            return false;
-        }
-        O << "<interpolation>" << _interpolation << "</interpolation>" << std::endl;
-        O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << std::endl;
-        O << "<hasvelocities>" << _hasvelocities << "</hasvelocities>" << std::endl;
-        O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
-        O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
-        O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
-        O << "<verifyinitialpath>" << verifyinitialpath  << "</verifyinitialpath>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -705,30 +628,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !TrajectoryTimingParameters::SerializeJSON(O, options&~1) ) {
-            return false;
-        }
-        O << "<maxlinkspeed>" << maxlinkspeed << "</maxlinkspeed>" << std::endl;
-        O << "<maxlinkaccel>" << maxlinkaccel << "</maxlinkaccel>" << std::endl;
-        O << "<manipname>" << manipname << "</manipname>" << std::endl;
-        O << "<maxmanipspeed>" << maxmanipspeed << "</maxmanipspeed>" << std::endl;
-        O << "<maxmanipaccel>" << maxmanipaccel << "</maxmanipaccel>" << std::endl;
-        O << "<constraintmanipdir>" << vConstraintManipDir << "</constraintmanipdir>" << std::endl;
-        O << "<constraintglobaldir>" << vConstraintGlobalDir << "</constraintglobaldir>" << std::endl;
-        O << "<cosmanipanglethresh>" << fCosManipAngleThresh << "</cosmanipanglethresh>" << std::endl;
-        O << "<mingripperdistance>" << mingripperdistance << "</mingripperdistance>" << std::endl;
-        O << "<velocitydistancethresh>" << velocitydistancethresh << "</velocitydistancethresh>" << std::endl;
-        O << "<maxmergeiterations>" << maxmergeiterations << "</maxmergeiterations>" << std::endl;
-        O << "<minswitchtime>" << minswitchtime << "</minswitchtime>" << std::endl;
-        O << "<nshortcutcycles>" << nshortcutcycles << "</nshortcutcycles>" << std::endl;
-        O << "<searchvelaccelmult>" << fSearchVelAccelMult << "</searchvelaccelmult>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -828,7 +730,7 @@ protected:
     bool _bProcessing;
 
     virtual bool serialize(std::ostream& O, int options=0) const;
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const;
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
     virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
@@ -860,16 +762,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O, options&~1) ) {
-            return false;
-        }
-        O << "<minimumgoalpaths>" << _minimumgoalpaths << "</minimumgoalpaths>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -937,19 +832,9 @@ protected:
         return !!O;
     }
 
-    virtual bool SerializeJSON(std::ostream& O, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
-        if( !PlannerParameters::SerializeJSON(O, options&~1) ) {
-            return false;
-        }
-        O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
-        O << "<nrrtextenttype>" << _nRRTExtentType << "</nrrtextenttype>" << std::endl;
-        O << "<nminiterations>" << _nMinIterations << "</nminiterations>" << std::endl;
-        if( !(options & 1) ) {
-            O << _sExtraParameters << std::endl;
-        }
-
-        return !!O;
+        // TODO(jsonserialization)
     }
 
     ProcessElement startElement(const std::string& name, const AttributesList& atts)

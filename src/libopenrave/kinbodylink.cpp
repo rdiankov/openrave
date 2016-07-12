@@ -272,20 +272,9 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::Link::SerializeJSON(std::ostream& o, int options) const
+void KinBody::Link::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    o << _index << " ";
-    if( options & SO_Geometry ) {
-        o << _vGeometries.size() << " ";
-        FOREACHC(it,_vGeometries) {
-            (*it)->SerializeJSON(o,options);
-        }
-    }
-    if( options & SO_Dynamics ) {
-        SerializeRound(o,_info._tMassFrame);
-        SerializeRound(o,_info._mass);
-        SerializeRound3(o,_info._vinertiamoments);
-    }
+    // TODO(jsonserialization)
 }
 
 void KinBody::Link::SetStatic(bool bStatic)

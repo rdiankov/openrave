@@ -57,27 +57,9 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O, int options) cons
     return !!O;
 }
 
-bool WorkspaceTrajectoryParameters::SerializeJSON(std::ostream& O, int options) const
+void WorkspaceTrajectoryParameters::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    if( !PlannerParameters::serialize(O, options&~1) ) {
-        return false;
-    }
-    O << "<maxdeviationangle>" << maxdeviationangle << "</maxdeviationangle>" << std::endl;
-    O << "<maintaintiming>" << maintaintiming << "</maintaintiming>" << std::endl;
-    O << "<greedysearch>" << greedysearch << "</greedysearch>" << std::endl;
-    O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << std::endl;
-    O << "<ignorefirstcollisionee>" << ignorefirstcollisionee << "</ignorefirstcollisionee>" << std::endl;
-    O << "<ignorelastcollisionee>" << ignorelastcollisionee << "</ignorelastcollisionee>" << std::endl;
-    O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << std::endl;
-    if( !!workspacetraj ) {
-        O << "<workspacetrajectory>";
-        workspacetraj->serialize(O);
-        O << "</workspacetrajectory>" << std::endl;
-    }
-    if( !(options & 1) ) {
-        O << _sExtraParameters << endl;
-    }
-    return !!O;
+    // TODO(jsonserialization)
 }
 
 BaseXMLReader::ProcessElement WorkspaceTrajectoryParameters::startElement(const std::string& name, const AttributesList& atts)

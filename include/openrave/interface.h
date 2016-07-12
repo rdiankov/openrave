@@ -179,7 +179,7 @@ public:
         TODO: add example
         \endcode
      */
-    virtual void Serialize(BaseJSONWriterPtr writer, int options=0) const;
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
 protected:
     /// \brief The function to be executed for every command.

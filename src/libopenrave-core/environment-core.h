@@ -2555,6 +2555,23 @@ protected:
         return false;
     }
 
+    static bool _IsJSONFile(const std::string& filename)
+    {
+        size_t len = filename.size();
+        if( len < 5 ) {
+            return false;
+        }
+        if( filename[len-5] == '.' && ::tolower(filename[len-4]) == 'j' && ::tolower(filename[len-3]) == 's' && ::tolower(filename[len-2]) == 'o' && ::tolower(filename[len-1]) == 'n' ) {
+            return true;
+        }
+        return false;
+    }
+
+    static bool _IsJSONData(const std::string& data)
+    {
+        return data.size() >= 2 && data[0] == '{';
+    }
+
     std::vector<RobotBasePtr> _vecrobots;      ///< robots (possibly controlled)
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots)
 

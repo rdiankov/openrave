@@ -134,32 +134,9 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::AttachedSensor::SerializeJSON(std::ostream& o, int options) const
+void RobotBase::AttachedSensor::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
-    SerializeRound(o,_info._trelative);
-    o << (!pdata ? -1 : pdata->GetType()) << " ";
-    // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
-    if( !!psensor ) {
-        SensorBase::SensorGeometryConstPtr prawgeom = psensor->GetSensorGeometry();
-        if( !!prawgeom ) {
-            switch(prawgeom->GetType()) {
-            case SensorBase::ST_Laser: {
-                SensorBase::LaserGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::LaserGeomData const>(prawgeom);
-                o << pgeom->min_angle[0] << " " << pgeom->max_angle[0] << " " << pgeom->resolution[0] << " " << pgeom->max_range << " ";
-                break;
-            }
-            case SensorBase::ST_Camera: {
-                SensorBase::CameraGeomDataConstPtr pgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>(prawgeom);
-                o << pgeom->KK.fx << " " << pgeom->KK.fy << " " << pgeom->KK.cx << " " << pgeom->KK.cy << " " << pgeom->width << " " << pgeom->height << " ";
-                break;
-            }
-            default:
-                // don't support yet
-                break;
-            }
-        }
-    }
+    // TODO(jsonserialization)
 }
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
@@ -2564,19 +2541,10 @@ void RobotBase::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::SerializeJSON(std::ostream& o, int options) const
+void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    KinBody::serialize(o,options);
-    if( options & SO_RobotManipulators ) {
-        FOREACHC(itmanip,_vecManipulators) {
-            (*itmanip)->SerializeJSON(o,options);
-        }
-    }
-    if( options & SO_RobotSensors ) {
-        FOREACHC(itsensor,_vecSensors) {
-            (*itsensor)->SerializeJSON(o,options);
-        }
-    }
+    KinBody::SerializeJSON(writer,options);
+    // TODO(jsonserialization)
 }
 
 const std::string& RobotBase::GetRobotStructureHash() const

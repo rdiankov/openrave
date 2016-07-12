@@ -125,10 +125,10 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
     }
 }
 
-void InterfaceBase::Serialize(BaseJSONWriterPtr writer, int options) const
+void InterfaceBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     FOREACHC(it, __mapReadableInterfaces) {
-        it->second->Serialize(writer,options);
+        it->second->SerializeJSON(writer,options);
     }
 }
 

@@ -17,6 +17,9 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <openrave/jsonreaders.h>
+#include <openrave/utils.h>
+
 namespace openravepy {
 
 class PyTrajectoryBase : public PyInterfaceBase
@@ -205,10 +208,9 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        std::stringstream ss;
-        ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-        _ptrajectory->SerializeJSON(ss,pyGetIntFromPy(ooptions,0));
-        return object(ss.str());
+        OpenRAVE::jsonreaders::BufferJSONWriter writer;
+        _ptrajectory->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
+        return object(std::string(writer.SerializeJSON()));
     }
 
     bool Read(const string& s, object probot) {

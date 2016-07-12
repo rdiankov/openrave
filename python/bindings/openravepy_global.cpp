@@ -68,12 +68,10 @@ public:
 
     object SerializeJSON(int options=0)
     {
-        std::string xmlid;
-        OpenRAVE::jsonreaders::StreamJSONWriter writer(xmlid);
-        _xmlreadable->Serialize(OpenRAVE::jsonreaders::StreamJSONWriterPtr(&writer,utils::null_deleter()),options);
-        std::stringstream ss;
-        writer.Serialize(ss);
-        return ConvertStringToUnicode(ss.str());
+        OpenRAVE::jsonreaders::BufferJSONWriter writer;
+        _xmlreadable->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),options);
+        // TODO(jsonserialization): ConvertStringToUnicode? json is utf-8 encoded, converting to unicode probably will mess things up
+        return object(std::string(writer.SerializeJSON()));
     }
 
     XMLReadablePtr GetXMLReadable() {

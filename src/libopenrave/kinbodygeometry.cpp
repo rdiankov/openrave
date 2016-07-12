@@ -283,6 +283,13 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     return true;
 }
 
+void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+{
+    writer->StartObject();
+    // TODO(jsonserialization)
+    writer->EndObject();
+}
+
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 }
@@ -290,6 +297,13 @@ KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::Geomet
 bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
 {
     return _info.InitCollisionMesh(fTessellation);
+}
+
+void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+{
+    writer->StartObject();
+    // TODO(jsonserialization)
+    writer->EndObject();
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
@@ -371,19 +385,6 @@ void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
     SerializeRound3(o,_info._vRenderScale);
     if( _info._type == GT_TriMesh ) {
         _info._meshcollision.serialize(o,options);
-    }
-    else {
-        SerializeRound3(o,_info._vGeomData);
-    }
-}
-
-void KinBody::Link::Geometry::SerializeJSON(std::ostream& o, int options) const
-{
-    SerializeRound(o,_info._t);
-    o << _info._type << " ";
-    SerializeRound3(o,_info._vRenderScale);
-    if( _info._type == GT_TriMesh ) {
-        _info._meshcollision.SerializeJSON(o,options);
     }
     else {
         SerializeRound3(o,_info._vGeomData);
