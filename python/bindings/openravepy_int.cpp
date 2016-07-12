@@ -17,6 +17,7 @@
 #include "openravepy_int.h"
 
 #include <openrave/utils.h>
+#include <openrave/jsonreaders.h>
 
 namespace openravepy
 {
@@ -431,6 +432,13 @@ object PyInterfaceBase::GetReadableInterface(const std::string& xmltag)
 void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object oreadable)
 {
     _pbase->SetReadableInterface(xmltag,ExtractXMLReadable(oreadable));
+}
+
+object PyInterfaceBase::SerializeJSON(object ooptions)
+{
+    OpenRAVE::jsonreaders::BufferJSONWriter writer;
+    _pbase->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
+    return object(std::string(writer.SerializeJSON()));
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1817,6 +1825,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1915,6 +1924,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces,DOXY_FN(InterfaceBase,GetReadableInterfaces))
         .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface,DOXY_FN(InterfaceBase,GetReadableInterface))
         .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface,args("xmltag","xmlreadable"), DOXY_FN(InterfaceBase,SetReadableInterface))
+        .def("SerializeJSON",&PyInterfaceBase::SerializeJSON,SerializeJSON_overloads(args("options"),DOXY_FN(InterfaceBase,SerializeJSON)))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)
