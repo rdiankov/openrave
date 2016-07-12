@@ -31,7 +31,7 @@ set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DISPLAY_NAME "Essential plugins for mo
 set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DEPENDS ${COMPONENT_PREFIX}base PARENT_SCOPE)
 set(PLUGIN_COMPONENTS ${PLUGINS_BASE})
 
-set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave mobyrave configurationcache dualmanipulation grasper ikfastsolvers logging pqprave qtcoinrave qtosgrave rmanipulation rplanners textserver)
+set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave mobyrave configurationcache dualmanipulation grasper ikfastsolvers logging pqprave rmanipulation rplanners textserver)
 if( OPT_QTOSG_VIEWER )
   set(PLUGINS ${PLUGINS} qtosgrave)
 endif()
@@ -44,7 +44,6 @@ endif()
 if( OPT_FCL_COLLISION )
   set(PLUGINS ${PLUGINS} fclrave)
 endif()
->>>>>>> 9a7b00f7c20471abee205d326f0336733b8f41b0
 
 foreach(PLUGIN ${PLUGINS})
   string(TOUPPER ${PLUGIN} PLUGIN_UPPER)
