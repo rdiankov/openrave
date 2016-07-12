@@ -977,7 +977,6 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
 
     params->_hastimestamps = hastimestamps;
-    params->_multidofinterp = 2; // always force switch points to be the same
     params->_sExtraParameters = plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         return PS_Failed;
@@ -1055,7 +1054,6 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters->_checkpathconstraintsfn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
         parameters->_sExtraParameters += _extraparameters;
-        parameters->_multidofinterp = 2; // always force switch points to be the same
         _parameters = parameters;
     }
     else {
@@ -1247,7 +1245,7 @@ size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofv
     return InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
 
-size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -1320,7 +1318,8 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     }
 
     // This ensures that the beginning and final velocities will be preserved
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
+    //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")); // make sure velocities are set
 
     // retiming is done, now merge the two trajectories
     size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();
@@ -1777,7 +1776,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 //            // have to set deltatime to 0 and insert values
 //            spec.InsertDeltaTime(values.begin(), 0);
 //            traj.Insert(0, values);
-//            
+//
 //            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
 //            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
 //                // have to insert a new point
@@ -1797,6 +1796,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
 //            traj->Remove(endindex+1, traj->GetNumWaypoints());
 //        }
 //    }
+    return TrajectoryBasePtr();
 }
 
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
@@ -3040,6 +3040,23 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
     }
     _report.reset(new CollisionReport());
     pmanip->GetIkSolver()->GetFreeParameters(_vfreestart);
+
+    std::stringstream ssout, ssin;
+    ssin << "GetFreeIndices";
+    if( !pmanip->GetIkSolver()->SendCommand(ssout, ssin) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to GetFreeIndices from iksolver", ORE_Assert);
+    }
+    std::vector<int> vfreeindices((istream_iterator<int>(ssout)), istream_iterator<int>());
+    if( (int)vfreeindices.size() != pmanip->GetIkSolver()->GetNumFreeParameters() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("free parameters from iksolver do not match", ORE_Assert);
+    }   
+
+    // have to convert to roobt dof
+    for(size_t i = 0; i < vfreeindices.size(); ++i) {
+        vfreeindices[i] = pmanip->GetArmIndices().at(vfreeindices[i]); // have to convert to robot dof!
+    }
+    _probot->GetDOFWeights(_vfreeweights, vfreeindices);
+    
     // the halton sequence centers around 0.5, so make it center around vfreestart
     for(std::vector<dReal>::iterator it = _vfreestart.begin(); it != _vfreestart.end(); ++it) {
         *it -= 0.5;
@@ -3055,6 +3072,11 @@ bool ManipulatorIKGoalSampler::Sample(std::vector<dReal>& vgoal)
     }
     vgoal.swap(ikreturn->_vsolution); // won't be using the ik return anymore
     return true;
+}
+
+static bool ComparePriorityPair(const std::pair<int, dReal>& p0, const std::pair<int, dReal>& p1)
+{
+    return p0.second > p1.second;
 }
 
 IkReturnPtr ManipulatorIKGoalSampler::Sample()
@@ -3073,6 +3095,8 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         }
         return ikreturnlocal;
     }
+    int numfree = _pmanip->GetIkSolver()->GetNumFreeParameters();
+    std::vector<dReal> vfree;
     IkReturnPtr ikreturnjittered;
     for(int itry = 0; itry < _nummaxtries; ++itry ) {
         if( _listsamples.size() == 0 ) {
@@ -3083,20 +3107,22 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         std::list<SampleInfo>::iterator itsample = _listsamples.begin();
         advance(itsample,isampleindex);
 
+        SampleInfo& sampleinfo = *itsample;
+        
         int numRedundantSamplesForEEChecking = 0;
-        if( (int)_pmanip->GetArmIndices().size() > itsample->_ikparam.GetDOF() ) {
+        if( (int)_pmanip->GetArmIndices().size() > sampleinfo._ikparam.GetDOF() ) {
             numRedundantSamplesForEEChecking = 40;
         }
 
-        bool bFullEndEffectorKnown = itsample->_ikparam.GetType() == IKP_Transform6D || _pmanip->GetArmDOF() <= itsample->_ikparam.GetDOF();
+        bool bFullEndEffectorKnown = sampleinfo._ikparam.GetType() == IKP_Transform6D || _pmanip->GetArmDOF() <= sampleinfo._ikparam.GetDOF();
         bool bCheckEndEffector = true;
         if( _ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions ) {
             // use requested end effector to be always ignored
             bCheckEndEffector = false;
         }
         // if first grasp, quickly prune grasp is end effector is in collision
-        IkParameterization ikparam = itsample->_ikparam;
-        if( itsample->_numleft == _nummaxsamples && bCheckEndEffector ) { //!(_ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+        IkParameterization ikparam = sampleinfo._ikparam;
+        if( sampleinfo._numleft == _nummaxsamples && bCheckEndEffector ) { //!(_ikfilteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
             // because a goal can be colliding, have to always go in this loop and check if the end effector
             // could be jittered.
             // if bCheckEndEffector is true, then should call CheckEndEffectorCollision to quickly prune samples; otherwise, have to rely on calling FindIKSolution
@@ -3185,7 +3211,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                 }
             }
             catch(const std::exception& ex) {
-                if( itsample->_ikparam.GetType() == IKP_Transform6D ) {
+                if( sampleinfo._ikparam.GetType() == IKP_Transform6D ) {
                     RAVELOG_WARN(str(boost::format("CheckEndEffectorCollision threw exception: %s")%ex.what()));
                 }
                 else {
@@ -3197,16 +3223,41 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
             }
         }
 
-        std::vector<dReal> vfree;
-        int orgindex = itsample->_orgindex;
-        if( _pmanip->GetIkSolver()->GetNumFreeParameters() > 0 ) {
-
+        vfree.resize(0);
+        int orgindex = sampleinfo._orgindex;
+        if( numfree > 0 ) {
             if( _searchfreeparameters ) {
-                if( !itsample->_psampler ) {
-                    itsample->_psampler = RaveCreateSpaceSampler(_probot->GetEnv(),"halton");
-                    itsample->_psampler->SetSpaceDOF(_pmanip->GetIkSolver()->GetNumFreeParameters());
+                // halton sampler
+                if( !sampleinfo._psampler ) {
+                    sampleinfo._psampler = RaveCreateSpaceSampler(_probot->GetEnv(),"halton");
+                    sampleinfo._psampler->SetSpaceDOF(numfree);
+#if 1
+                    // read all the samples and order them so that samples close to 0.5 are sampled first!
+                    sampleinfo._psampler->SampleSequence(sampleinfo._vfreesamples,_nummaxsamples);
+                    OPENRAVE_ASSERT_OP(sampleinfo._vfreesamples.size(),==,_nummaxsamples*numfree);
+                    sampleinfo._vcachedists.resize(_nummaxsamples);
+                    for(int isample = 0; isample < _nummaxsamples; ++isample) {
+                        dReal dist = 0;
+                        for(int jfree = 0; jfree < numfree; ++jfree) {
+                            dist += _vfreeweights[jfree]*RaveFabs(sampleinfo._vfreesamples[isample*numfree+jfree] - 0.5);
+                        }
+                        
+                        sampleinfo._vcachedists[isample].first = isample;
+                        sampleinfo._vcachedists[isample].second = dist;
+                    }
+                    std::sort(sampleinfo._vcachedists.begin(), sampleinfo._vcachedists.end(), ComparePriorityPair);
+#endif
                 }
-                itsample->_psampler->SampleSequence(vfree,1);
+                
+#if 1
+                if( sampleinfo._vcachedists.size() > 0 ) {
+                    int isample = sampleinfo._vcachedists.back().first;
+                    sampleinfo._vcachedists.pop_back();
+                    vfree.resize(numfree);
+                    std::copy(sampleinfo._vfreesamples.begin() + isample*numfree, sampleinfo._vfreesamples.begin() + (isample+1)*numfree, vfree.begin());
+                }
+#else
+                sampleinfo._psampler->SampleSequence(vfree,1);
                 // it's pretty dangerous to add _vfreestart since if it starts on a joint limit (0), then it will start exploring from each of the joint limits. rather, we want ik solutions that are away from joint limits
 //                for(size_t i = 0; i < _vfreestart.size(); ++i) {
 //                    vfree.at(i) += _vfreestart[i];
@@ -3217,13 +3268,22 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
 //                        vfree[i] -= 1;
 //                    }
 //                }
+#endif
             }
             else {
                 _pmanip->GetIkSolver()->GetFreeParameters(vfree);
             }
         }
+        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            std::stringstream ss; ss << "free=[";
+            FOREACHC(itfree, vfree) {
+                ss << *itfree << ", ";
+            }
+            ss << "]";
+            RAVELOG_VERBOSE(ss.str());
+        }
         bool bsuccess = _pmanip->FindIKSolutions(ikparam, vfree, _ikfilteroptions|(bFullEndEffectorKnown&&bCheckEndEffector ? IKFO_IgnoreEndEffectorEnvCollisions : 0), _vikreturns);
-        if( --itsample->_numleft <= 0 || vfree.size() == 0 || !_searchfreeparameters ) {
+        if( --sampleinfo._numleft <= 0 || vfree.size() == 0 || !_searchfreeparameters ) {
             _listsamples.erase(itsample);
         }
 

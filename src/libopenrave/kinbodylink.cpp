@@ -393,6 +393,7 @@ void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname,std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
 int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const

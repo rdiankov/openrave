@@ -1,4 +1,4 @@
-
+// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2009 Rosen Diankov (rdiankov@cs.cmu.edu)
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,11 +22,11 @@
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
 
-  if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-      return InterfaceBasePtr(new FCLCollisionChecker(penv, sinput));
-  }
+    if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
+        return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
+    }
 
-  return InterfaceBasePtr();
+    return InterfaceBasePtr();
 }
 
 void GetPluginAttributesValidated(PLUGININFO& info)

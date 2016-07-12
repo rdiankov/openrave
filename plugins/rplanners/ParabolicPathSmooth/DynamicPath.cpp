@@ -87,7 +87,13 @@ bool SolveMinTime(const Vector& x0,const Vector& dx0,const Vector& x1,const Vect
     }
     else {
         vector<std::vector<ParabolicRamp1D> > ramps;
-        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);
+        ////////Puttichai
+
+        // we can switch between the original implementation (SolveMinTImeBounded) and a new
+        // implementation (SolveMinTimeBounded2) here
+
+        //Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);
+        Real res=SolveMinTimeBounded(x0,dx0,x1,dx1, accMax,velMax,xMin,xMax, ramps,multidofinterp);////////Puttichai
         if(res < 0) {
             return false;
         }
@@ -434,7 +440,7 @@ struct RampSection
 };
 
 
-int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters)
+int CheckRamp(const ParabolicRampND& ramp,FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters, __attribute__((unused)) int options)
 {
     ramp.constraintchecked = 1;
     int ret0 = feas->ConfigFeasible(ramp.x0, ramp.dx0);
@@ -992,6 +998,26 @@ bool DynamicPath::IsValid() const
         }
     }
     return true;
+}
+
+////////Puttichai
+void DynamicPath::Save(std::string filename) const {
+    size_t ndof = ramps[0].ramps.size();
+    for (size_t i = 1; i < ramps.size(); ++i) {
+        // simple verification
+        PARABOLIC_RAMP_ASSERT(ramps[i].ramps.size() == ndof);
+    }
+
+    std::string s = "";
+    std::string dummy;
+
+    for (size_t iramp = 0; iramp < ramps.size(); ++iramp) {
+        ramps[iramp].ToString(dummy);
+        s = s + dummy;
+    }
+
+    std::ofstream f(filename.c_str());
+    f << s;
 }
 
 } //namespace ParabolicRamp
