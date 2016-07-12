@@ -93,8 +93,8 @@ void ParabolicRamp1D::SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t
     x1 = _x1;
     dx1 = _dx1;
     a1 = (dx1-dx0)/t;
-    a2 = 0;
     v = dx1;
+    a2 = 0;
     tswitch1 = t;
     tswitch2 = t;
     ttotal = t;
@@ -2430,13 +2430,13 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
             i--;
         }
     }
-    if(!FuzzyEquals(ttotal,endTime,EpsilonT*0.1)) {
+    if(!FuzzyEquals(ttotal,endTime,EpsilonT)) {
         PARABOLIC_RAMP_PLOG("Ramp times: ");
         for(size_t i=0; i<ramps.size(); i++)
             PARABOLIC_RAMP_PLOG("%.15e ",ramps[i].ttotal);
         PARABOLIC_RAMP_PLOG("\n");
     }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT));
     PARABOLIC_RAMP_PLOG("Successfully fixed x bounds violation");
     return true;
 }
@@ -2681,13 +2681,13 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
             i--;
         }
     }
-    if(!FuzzyEquals(ttotal,endTime,EpsilonT*0.1)) {
+    if(!FuzzyEquals(ttotal,endTime,EpsilonT)) {
         PARABOLIC_RAMP_PLOG("Ramp times: ");
         for(size_t i=0; i<ramps.size(); i++)
             PARABOLIC_RAMP_PLOG("%.15e ",ramps[i].ttotal);
         PARABOLIC_RAMP_PLOG("\n");
     }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT));
     return true;
 }
 
@@ -2947,7 +2947,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                 PARABOLIC_RAMP_ASSERT(Abs(ramps[i][j].v) <= vmax[i]+EpsilonV);
                 ttotal += ramps[i][j].ttotal;
             }
-            PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+            PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT));
         }
         if( !solved ) {
             continue; //go back and re-solve
