@@ -24,3 +24,11 @@ Environment Variables
   At startup, OpenRAVE searches for every shared object/dll plugin in these directories and loads them. The default plugins are always loaded, so there is no need to include them again.
 
   Use ':' to separate each directory (';' for Windows). 
+
+.. envvar:: OPENRAVE_DEFAULT_VIEWER
+
+  At program startup, OpenRAVE will try to load this viewer if it exists, otherwise will default to the next best valid viewer.
+
+.. envvar:: OPENRAVE_DEFAULT_COLLISIONCHECKER
+
+  At program startup, OpenRAVE will try to load this collision checker if it exists, otherwise will default to the next best valid viewer.

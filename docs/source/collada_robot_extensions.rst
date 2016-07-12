@@ -454,7 +454,7 @@ Example
           <link_collision_state link="linka"><bool>true</bool></link_collision_state>
         </technique>
       </extra>
-  </library_kinematics_models>
+  </library_kinematics_models> 
 
 .. _collada_geometry_info:
 
@@ -1106,13 +1106,15 @@ Converts electrical energy into mechanical energy usually using magnetic fields 
   :class: collada
   :delim: |
   :widths: 20, 70, 10
- 
-  <gear_ratio> | Contains a **float type** that specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission. | 1 
+
+  <model_type> | Contains a string that specifies the the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc. | 0 or 1
+  <gear_ratio> | Contains a **float_type** that specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission. | 1 
   <assigned_power_rating> | Contains a **float_type** that specifies the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**. | 1
   <max_speed> | Contains a **float_type** that specifies the maximum speed of the motor. Units are **Time-¹**. | 1
   <no_load_speed> | Contains a **float_type** that specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**. | 0 or 1
   <stall_torque> | Contains a **float type** that specifies the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**. | 1
-  <speed_torque_point> | Contains a **float2_array** that specifies the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). | 0 or more
+  <nominal_speed_torque_point> | Contains a **float2_array** that specifies the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). | 0 or more
+  <max_speed_torque_point> | Contains a **float2_array** that specifies the speed and torque achievable when the motor is powered by the max voltage/current. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the max instantaneous torque directly (ideal). | 0 or more
   <rotor_inertia> | Contains a **float_type** that specifies the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**. | 1
   <torque_constant> | Contains a **float_type** that specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**. | 1
   <nominal_torque> | Contains a **float_type** that specifies the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**. | 1
@@ -1120,6 +1122,9 @@ Converts electrical energy into mechanical energy usually using magnetic fields 
   <speed_constant> | Contains a **float_type** that specifies the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**. | 1
   <starting_current> | Contains a **float_type** that specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**. | 1
   <terminal_resistance> | Contains a **float_type** that specifies the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**. | 1
+  <max_instantaneous_torque> | Contains a **float_type** that specifies the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**. | 1
+  <coloumb_friction> | Contains a **float_type** that specifies the static coloumb friction on each joint after the gear box. Defaults to 0 if not specified. Units are **Mass * Distance * Time-²**. | 0 or 1
+  <viscous_friction> | Contains a **float_type** that specifies the viscous friction on each joint after the gear box. Defaults to 0 if not specified. Units are **Mass * Distance * Time-²**. | 0 or 1
 
 Related variables, but not inserted in the electric_motor specification:
 

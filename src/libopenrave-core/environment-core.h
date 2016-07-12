@@ -126,7 +126,7 @@ public:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
         _unit = std::make_pair("meter",1.0); //default unit settings
-            
+
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -169,14 +169,22 @@ public:
 
         // set a collision checker, don't call EnvironmentBase::CreateCollisionChecker
         CollisionCheckerBasePtr localchecker;
-        boost::array<string,3> checker_prefs = { { "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
-        FOREACH(itchecker,checker_prefs) {
-            localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
-            if( !!localchecker ) {
-                break;
-            }
+
+        const char* pOPENRAVE_DEFAULT_COLLISIONCHECKER = std::getenv("OPENRAVE_DEFAULT_COLLISIONCHECKER");
+        if( !!pOPENRAVE_DEFAULT_COLLISIONCHECKER && strlen(pOPENRAVE_DEFAULT_COLLISIONCHECKER) > 0 ) {
+            localchecker = RaveCreateCollisionChecker(shared_from_this(), std::string(pOPENRAVE_DEFAULT_COLLISIONCHECKER));
         }
 
+        if( !localchecker ) {
+            boost::array<string,4> checker_prefs = { { "fcl_", "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
+            FOREACH(itchecker,checker_prefs) {
+                localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
+                if( !!localchecker ) {
+                    break;
+                }
+            }
+        }
+        
         if( !localchecker ) {     // take any collision checker
             std::map<InterfaceType, std::vector<std::string> > interfacenames;
             RaveGetLoadedInterfaces(interfacenames);
@@ -794,7 +802,7 @@ public:
         }
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
-            RAVELOG_DEBUG("disabling physics\n");
+            RAVELOG_DEBUG_FORMAT("env %d, disabling physics for", GetId());
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(),"GenericPhysicsEngine");
             _SetDefaultGravity();
         }
@@ -1227,6 +1235,16 @@ public:
             }
             robot->__struri = preader->_filename;
         }
+
+        if( !!robot ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    robot->__struri = itatt->second;
+                }
+            }
+        }
+
         return robot;
     }
 
@@ -1357,6 +1375,15 @@ public:
                 return KinBodyPtr();
             }
             body->__struri = preader->_filename;
+        }
+
+        if( !!body ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    body->__struri = itatt->second;
+                }
+            }
         }
         return body;
     }
@@ -1510,7 +1537,39 @@ public:
         if( !ptrimesh ) {
             ptrimesh.reset(new TriMesh());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshFromFile(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+            ptrimesh.reset();
+        }
+        return ptrimesh;
+    }
+
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts)
+    {
+        RaveVector<float> diffuseColor, ambientColor;
+        return _ReadTrimeshData(ptrimesh, data, formathint, diffuseColor, ambientColor, atts);
+    }
+
+    virtual boost::shared_ptr<TriMesh> _ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
+    {
+        if( data.size() == 0 ) {
+            return boost::shared_ptr<TriMesh>();
+        }
+
+        Vector vScaleGeometry(1,1,1);
+        float ftransparency;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> vScaleGeometry.x >> vScaleGeometry.y >> vScaleGeometry.z;
+                if( !ss ) {
+                    vScaleGeometry.z = vScaleGeometry.y = vScaleGeometry.x;
+                }
+            }
+        }
+        if( !ptrimesh ) {
+            ptrimesh.reset(new TriMesh());
+        }
+        if( !OpenRAVEXMLParser::CreateTriMeshFromData(data, formathint, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
@@ -1808,6 +1867,16 @@ public:
             state.uri = (*itbody)->GetURI();
             state.updatestamp = (*itbody)->GetUpdateStamp();
             state.environmentid = (*itbody)->GetEnvironmentId();
+            if( (*itbody)->IsRobot() ) {
+                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(*itbody);
+                if( !!probot ) {
+                    RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
+                    if( !!pmanip ) {
+                        state.activeManipulatorName = pmanip->GetName();
+                        state.activeManipulatorTransform = pmanip->GetTransform();
+                    }
+                }
+            }
             _vPublishedBodies.push_back(state);
         }
     }
@@ -1816,7 +1885,7 @@ public:
     {
         return _unit;
     }
-    
+
     virtual void SetUnit(std::pair<std::string, dReal> unit)
     {
         _unit = unit;
@@ -2283,7 +2352,7 @@ protected:
     void _SimulationThread()
     {
         int environmentid = RaveGetEnvironmentId(shared_from_this());
-        
+
         uint64_t nLastUpdateTime = utils::GetMicroTime();
         uint64_t nLastSleptTime = utils::GetMicroTime();
         RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
@@ -2513,7 +2582,7 @@ protected:
 
     vector<KinBody::BodyState> _vPublishedBodies;
     string _homedirectory;
-    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters 
+    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
 
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 

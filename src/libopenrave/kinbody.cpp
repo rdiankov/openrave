@@ -67,6 +67,7 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     max_speed = 0;
     no_load_speed = 0;
     stall_torque = 0;
+    max_instantaneous_torque = 0;
     nominal_torque = 0;
     rotor_inertia = 0;
     torque_constant = 0;
@@ -74,6 +75,8 @@ ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
     speed_constant = 0;
     starting_current = 0;
     terminal_resistance = 0;
+    coloumb_friction = 0;
+    viscous_friction = 0;
 }
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
@@ -227,6 +230,7 @@ void KinBody::Destroy()
     _pManageData.reset();
 
     _ResetInternalCollisionCache();
+    _selfcollisionchecker.reset();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -412,6 +416,19 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     }
     // have to reset the adjacency cache
     _ResetInternalCollisionCache();
+}
+
+void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
+{
+    OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
+    FOREACH(itlink, _veclinks) {
+        Link& link = **itlink;
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
+        it->second.resize(geometries.size());
+        std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    }
+    _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
@@ -1249,6 +1266,18 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
         enablestates[ilink] = _veclinks[ilink]->IsEnabled();
     }
+}
+
+uint64_t KinBody::GetLinkEnableStatesMask() const
+{
+    if( _veclinks.size() > 64 ) {
+        RAVELOG_WARN_FORMAT("%s has too many links and will only return enable mask for first 64", _name);
+    }
+    uint64_t linkstate = 0;
+    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
+        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+    }
+    return linkstate;
 }
 
 KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
@@ -2685,6 +2714,22 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
             }
+
+            dReal fFriction = 0; // torque due to friction
+            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
+            if( !!pjoint->_info._infoElectricMotor ) {
+                if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
+                    if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
+                        fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
+                    }
+                    else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
+                        fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
+                    }
+                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
+                }
+
+                doftorques.at(pjoint->GetDOFIndex()) += fFriction;
+            }
         }
         else if( pjoint->IsMimic(0) ) {
             // passive joint, so have to transfer the torque to its dependent joints.
@@ -2698,6 +2743,10 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
+            }
+
+            if( !!pjoint->_info._infoElectricMotor ) {
+                // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
             }
 
             pjoint->_ComputePartialVelocities(vpartials,0,mapcachedpartials);
@@ -3185,6 +3234,10 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         _selfcollisionchecker = collisionchecker;
         // reset the internal cache
         _ResetInternalCollisionCache();
+        if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+            // collision checking will not be automatically updated with environment calls, so need to do this manually
+            _selfcollisionchecker->InitKinBody(shared_kinbody());
+        }
     }
 }
 
@@ -3212,7 +3265,22 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
 
     if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
         if( !!report ) {
-            RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                std::vector<OpenRAVE::dReal> v;
+                GetDOFValues(v);
+                stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                ss << "self collision report=" << report->__str__() << " ";
+                for(size_t i = 0; i < v.size(); ++i ) {
+                    if( i > 0 ) {
+                        ss << "," << v[i];
+                    }
+                    else {
+                        ss << "colvalues=[" << v[i];
+                    }
+                }
+                ss << "]";
+                RAVELOG_VERBOSE(ss.str());
+            }
         }
         return true;
     }
@@ -3822,8 +3890,8 @@ void KinBody::_ComputeInternalInformation()
             _vClosedLoops.back().reserve(itclosedloop->size());
             // fill the links
             FOREACH(itlinkindex,*itclosedloop) {
-                _vClosedLoopIndices.back().push_back(make_pair<int16_t,int16_t>(*itlinkindex,0));
-                _vClosedLoops.back().push_back(make_pair<LinkPtr,JointPtr>(_veclinks.at(*itlinkindex),JointPtr()));
+                _vClosedLoopIndices.back().push_back(make_pair(*itlinkindex,0));
+                _vClosedLoops.back().push_back(make_pair(_veclinks.at(*itlinkindex),JointPtr()));
             }
             // fill the joints
             for(size_t i = 0; i < _vClosedLoopIndices.back().size(); ++i) {
@@ -4119,6 +4187,22 @@ void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
     }
 }
 
+void KinBody::GetAttached(std::set<KinBodyConstPtr>&setAttached) const
+{
+    setAttached.insert(shared_kinbody_const());
+    FOREACHC(itbody,_listAttachedBodies) {
+        KinBodyConstPtr pattached = itbody->lock();
+        if( !!pattached && setAttached.insert(pattached).second ) {
+            pattached->GetAttached(setAttached);
+        }
+    }
+}
+
+bool KinBody::HasAttached() const
+{
+    return _listAttachedBodies.size() > 0;
+}
+
 bool KinBody::_IsAttached(KinBodyConstPtr pbody, std::set<KinBodyConstPtr>&setChecked) const
 {
     if( !setChecked.insert(shared_kinbody_const()).second ) {
@@ -4137,6 +4221,7 @@ void KinBody::_AttachBody(KinBodyPtr pbody)
 {
     _listAttachedBodies.push_back(pbody);
     pbody->_listAttachedBodies.push_back(shared_kinbody());
+    _PostprocessChangedParameters(Prop_BodyAttached);
 }
 
 bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
@@ -4159,7 +4244,11 @@ bool KinBody::_RemoveAttachedBody(KinBodyPtr pbody)
         }
     }
 
-    return numremoved==2;
+    if( numremoved > 0 ) {
+        _PostprocessChangedParameters(Prop_BodyAttached);
+    }
+
+    return numremoved == 2;
 }
 
 void KinBody::Enable(bool bEnable)

@@ -14,7 +14,7 @@ __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Apache License, Version 2.0'
 # python 2.5 raises 'import *' not allowed with 'from .'
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, matrixFromPose
-from ..openravepy_ext import planning_error
+from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy
@@ -91,7 +91,7 @@ class Grasper:
             cmd += 'execute %d '%execute
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('Grasp failed')
+            raise PlanningError('Grasp failed')
         resvalues = res.split()
         mindist = None
         volume = None
@@ -151,7 +151,7 @@ class Grasper:
             cmd += str(f) + ' '
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('Grasp failed')
+            raise PlanningError('Grasp failed')
         resultgrasps = res.split()
         resvalues=[]
         nextid = int(resultgrasps.pop(0))
@@ -186,7 +186,7 @@ class Grasper:
             cmd += 'returntriangles %d '%returntriangles
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('ConvexHull')
+            raise PlanningError('ConvexHull')
         resvalues = res.split()
         planes = None
         faces = None

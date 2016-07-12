@@ -280,7 +280,7 @@ OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastime
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory using a planner. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -340,13 +340,20 @@ OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr traj);
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
 OPENRAVE_API TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr traj);
 
-/// \brief segment the trajectory given the start and end points.
+/// \brief segment the trajectory given the start and end points in-memory
 ///
 /// this is an in-memory operation
 /// \param traj the trajectory to segment
 /// \param starttime the start time of the segment
 /// \param endtime the end time of the segment
 OPENRAVE_API void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime);
+
+/// \brief extract a segment of the trajectory given the start and end points and return a new trajectory
+///
+/// \param traj the trajectory to segment
+/// \param starttime the start time of the segment. If < 0, returns the first waypoint of the trajectory
+/// \param endtime the end time of the segment. If > duration, returns the last waypoint of the trajectory
+OPENRAVE_API TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime);
 
 /// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
 ///
@@ -416,6 +423,11 @@ public:
     /// \param perturbation It is multiplied by each DOF's resolution (_vConfigResolution) before added to the state.
     virtual void SetPerturbation(dReal perturbation);
 
+    /// \brief if using dynamics limiting, choose whether to use the nominal torque or max instantaneous torque.
+    ///
+    /// \param torquelimitmode 1 if should use instantaneous max torque, 0 if should use nominal torque
+    virtual void SetTorqueLimitMode(int torquelimitmode);
+    
     /// \brief set user check fucntions
     ///
     /// Two functions can be set, one to be called before check collision and one after.
@@ -432,8 +444,10 @@ public:
 protected:
     /// \brief checks an already set state
     ///
+    /// \param vdofvelocities the current velocities set on the robot
+    /// \param vaccelconfig the current accelerations being applied on the robot
     /// \param options should already be masked with _filtermask
-    virtual int _CheckState(const std::vector<dReal>& vaccelconfig, int options, ConstraintFilterReturnPtr filterreturn);
+    virtual int _CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vaccelconfig, int options, ConstraintFilterReturnPtr filterreturn);
 
     /// \brief sets and checks the state, also takes into account perturbations
     ///
@@ -442,16 +456,17 @@ protected:
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
-    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1; ///< in configuration space
+    std::vector<dReal> _vtempconfig, _vtempvelconfig, dQ, _vtempveldelta, _vtempaccelconfig, _vperturbedvalues, _vcoeff2, _vcoeff1, _vprevtempconfig, _vprevtempvelconfig; ///< in configuration space
     CollisionReportPtr _report;
     std::list<KinBodyPtr> _listCheckBodies;
     int _filtermask;
+    int _torquelimitmode; ///< 1 if should use instantaneous max torque, 0 if should use nominal torque
     dReal _perturbation;
     boost::array< boost::function<bool() >, 2> _usercheckfns;
 
     // for dynamics
     ConfigurationSpecification _specvel;
-    std::vector< std::pair<int, dReal> > _vtorquevalues;
+    std::vector< std::pair<int, std::pair<dReal, dReal> > > _vtorquevalues; ///< cache for dof indices and the torque limits that the current torque should be in
     std::vector< int > _vdofindices;
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
@@ -588,8 +603,10 @@ protected:
     struct SampleInfo
     {
         IkParameterization _ikparam;
+        SpaceSamplerBasePtr _psampler; ///< sampler used to sample the free parameters of the iksolver
+        std::vector<dReal> _vfreesamples; ///< optional samples N*vfree.size()
+        std::vector< std::pair<int, dReal> > _vcachedists; ///< used for sorting freesamples. the sample closest to the midpoint is at the back of the vector (so it can be popped efficiently)
         int _numleft;
-        SpaceSamplerBasePtr _psampler;
         int _orgindex;
     };
     RobotBasePtr _probot;
@@ -602,6 +619,7 @@ protected:
     std::vector< IkReturnPtr > _vikreturns;
     std::list<int> _listreturnedsamples;
     std::vector<dReal> _vfreestart;
+    std::vector<dReal> _vfreeweights; ///< the joint weights of the free indices
     int _tempikindex; ///< if _vikreturns.size() > 0, points to the original ik index of those solutions
     int _ikfilteroptions;
     bool _searchfreeparameters;

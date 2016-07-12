@@ -92,12 +92,12 @@ void RobotBase::AttachedSensor::SetRelativeTransform(const Transform& t)
     GetRobot()->_PostprocessChangedParameters(Prop_SensorPlacement);
 }
 
-void RobotBase::AttachedSensor::UpdateInfo()
+void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
 {
     if( !!psensor ) {
         _info._sensorname = psensor->GetXMLId();
         // TODO try to get the sensor geometry...?
-        //GetSensorGeometry(ST_
+        _info._sensorgeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(psensor->GetSensorGeometry(type));
         //_info._sensorgeometry
     }
     LinkPtr prealattachedlink = pattachedlink.lock();
@@ -246,9 +246,15 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     if( _options & Save_ActiveManipulatorToolTransform ) {
         if( !!_pManipActive ) {
             if( probot == _probot ) {
-                _pManipActive->SetLocalToolTransform(_tActiveManipLocalTool);
-                _pManipActive->SetLocalToolDirection(_vActiveManipLocalDirection);
-                _pManipActive->SetIkSolver(_pActiveManipIkSolver);
+                RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(_pManipActive->GetName()); // manipulator pointers might have changed, it is always safer to re-request the current manip
+                if( !!pmanip ) {
+                    pmanip->SetLocalToolTransform(_tActiveManipLocalTool);
+                    pmanip->SetLocalToolDirection(_vActiveManipLocalDirection);
+                    pmanip->SetIkSolver(_pActiveManipIkSolver);
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("failed to restore active manipulator %s coordinate system", _pManipActive->GetName());
+                }
             }
             else {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(_pManipActive->GetName());
@@ -311,8 +317,12 @@ RobotBase::~RobotBase()
 void RobotBase::Destroy()
 {
     ReleaseAllGrabbed();
+    _pManipActive.reset();
     _vecManipulators.clear();
     _vecSensors.clear();
+    _nActiveDOF = 0;
+    _vActiveDOFIndices.resize(0);
+    _vAllDOFIndices.resize(0);
     SetController(ControllerBasePtr(),std::vector<int>(),0);
 
     KinBody::Destroy();
@@ -329,10 +339,12 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         _vecManipulators.push_back(newmanip);
         __hashrobotstructure.resize(0);
     }
-    // TODO: sensors
     _vecSensors.resize(0);
-    if( attachedsensorinfos.size() > 0 ) {
-        RAVELOG_WARN("currently do not support initializing from AttachedSensorInfo\n");
+    FOREACHC(itattachedsensorinfo, attachedsensorinfos) {
+        AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
+        _vecSensors.push_back(newattachedsensor);
+        newattachedsensor->UpdateInfo(); // just in case
+        __hashrobotstructure.resize(0);
     }
     return true;
 }
@@ -580,35 +592,58 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
             }
         }
     }
-    _vActiveDOFIndices = vJointIndices;
-    _nAffineDOFs = nAffineDOFBitmask;
+
+    bool bactivedofchanged = false;
+    if( _vActiveDOFIndices.size() != vJointIndices.size() ) {
+        bactivedofchanged = true;
+    }
+    else {
+        // same size, check to see if the values and order is the same
+        for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            if( _vActiveDOFIndices[i] != vJointIndices[i] ) {
+                bactivedofchanged = true;
+                break;
+            }
+        }
+    }
+    if( bactivedofchanged ) {
+        _vActiveDOFIndices = vJointIndices;
+    }
+
+    if( _nAffineDOFs != nAffineDOFBitmask ) {
+        bactivedofchanged = true;
+        _nAffineDOFs = nAffineDOFBitmask;
+    }
+
     _nActiveDOF = vJointIndices.size() + RaveGetAffineDOF(_nAffineDOFs);
 
-    // do not initialize interpolation, since it implies a motion sampling strategy
-    int offset = 0;
-    _activespec._vgroups.resize(0);
-    if( GetActiveDOFIndices().size() > 0 ) {
-        ConfigurationSpecification::Group group;
-        stringstream ss;
-        ss << "joint_values " << GetName();
-        FOREACHC(it,GetActiveDOFIndices()) {
-            ss << " " << *it;
+    if( bactivedofchanged ) {
+        // do not initialize interpolation, since it implies a motion sampling strategy
+        int offset = 0;
+        _activespec._vgroups.resize(0);
+        if( GetActiveDOFIndices().size() > 0 ) {
+            ConfigurationSpecification::Group group;
+            stringstream ss;
+            ss << "joint_values " << GetName();
+            FOREACHC(it,GetActiveDOFIndices()) {
+                ss << " " << *it;
+            }
+            group.name = ss.str();
+            group.dof = (int)GetActiveDOFIndices().size();
+            group.offset = offset;
+            offset += group.dof;
+            _activespec._vgroups.push_back(group);
         }
-        group.name = ss.str();
-        group.dof = (int)GetActiveDOFIndices().size();
-        group.offset = offset;
-        offset += group.dof;
-        _activespec._vgroups.push_back(group);
-    }
-    if( GetAffineDOF() > 0 ) {
-        ConfigurationSpecification::Group group;
-        group.name = str(boost::format("affine_transform %s %d")%GetName()%GetAffineDOF());
-        group.offset = offset;
-        group.dof = RaveGetAffineDOF(GetAffineDOF());
-        _activespec._vgroups.push_back(group);
-    }
+        if( GetAffineDOF() > 0 ) {
+            ConfigurationSpecification::Group group;
+            group.name = str(boost::format("affine_transform %s %d")%GetName()%GetAffineDOF());
+            group.offset = offset;
+            group.dof = RaveGetAffineDOF(GetAffineDOF());
+            _activespec._vgroups.push_back(group);
+        }
 
-    _PostprocessChangedParameters(Prop_RobotActiveDOFs);
+        _PostprocessChangedParameters(Prop_RobotActiveDOFs);
+    }
 }
 
 void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bCheckLimits)
@@ -1280,7 +1315,7 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int index, std::vector<dR
         std::vector<dReal> vjacobianjoints;
         ComputeJacobianAxisAngle(index, vjacobianjoints, _vActiveDOFIndices);
         for(size_t i = 0; i < 3; ++i) {
-            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobianjoints.begin()+i*dofstride);
+            std::copy(vjacobianjoints.begin()+i*_vActiveDOFIndices.size(),vjacobianjoints.begin()+(i+1)*_vActiveDOFIndices.size(),vjacobian.begin()+i*dofstride);
         }
     }
 
@@ -1458,6 +1493,11 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
         }
     }
 
+    // double check since collision checkers might not support this case
+    if( pbody->HasAttached() ) {
+        RAVELOG_WARN_FORMAT("robot %s trying to grab body %s with %d attached bodies", GetName()%pbody->GetName()%pbody->HasAttached());
+    }
+
     Transform t = plink->GetTransform();
     Transform tbody = pbody->GetTransform();
     // new body velocity is measured from robot link
@@ -1483,12 +1523,16 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     pgrabbed->_troot = t.inverse() * tbody;
     //uint64_t starttime1 = utils::GetMicroTime();
     // always ignore links that are statically attached to plink (ie assume they are always colliding with the body)
-    
+
     std::vector<boost::shared_ptr<Link> > vattachedlinks;
     plink->GetRigidlyAttachedLinks(vattachedlinks);
     std::set<int> setRobotLinksToIgnore;
     FOREACHC(itlink, vattachedlinks) {
         setRobotLinksToIgnore.insert((*itlink)->GetIndex());
+    }
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+        // collision checking will not be automatically updated with environment calls, so need to do this manually
+        _selfcollisionchecker->InitKinBody(pbody);
     }
     pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
     pbody->SetVelocity(velocity.first, velocity.second);
@@ -1500,6 +1544,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr plink)
     }
     catch(...) {
         BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
         _vGrabbedBodies.pop_back();
         throw;
     }
@@ -1532,7 +1577,13 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     Transform t = pRobotLinkToGrabWith->GetTransform();
     Transform tbody = pbody->GetTransform();
     pgrabbed->_troot = t.inverse() * tbody;
+
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+        // collision checking will not be automatically updated with environment calls, so need to do this manually
+        _selfcollisionchecker->InitKinBody(pbody);
+    }
     pgrabbed->_ProcessCollidingLinks(setRobotLinksToIgnore);
+
     // set velocity
     std::pair<Vector, Vector> velocity = pRobotLinkToGrabWith->GetVelocity();
     velocity.first += velocity.second.cross(tbody.trans - t.trans);
@@ -1544,6 +1595,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith, const std::
     }
     catch(...) {
         BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+        // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
         _vGrabbedBodies.pop_back();
         throw;
     }
@@ -1671,6 +1723,10 @@ void RobotBase::ResetGrabbed(const std::vector<RobotBase::GrabbedInfoConstPtr>& 
 
             GrabbedPtr pgrabbed(new Grabbed(pbody,pRobotLinkToGrabWith));
             pgrabbed->_troot = pgrabbedinfo->_trelative;
+            if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+                // collision checking will not be automatically updated with environment calls, so need to do this manually
+                _selfcollisionchecker->InitKinBody(pbody);
+            }
             pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
             Transform tlink = pRobotLinkToGrabWith->GetTransform();
             Transform tbody = tlink * pgrabbed->_troot;
@@ -1721,7 +1777,16 @@ void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
                 return;
             }
         }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to find manipulator with name: %s"), pmanip->GetName(), ORE_InvalidArguments);
+        // manipulator might have been recoreded, search for the same name
+        FOREACH(itmanip,_vecManipulators) {
+            if( (*itmanip)->GetName() == pmanip->GetName() ) {
+                _pManipActive = *itmanip;
+                return;
+            }
+        }
+
+        _pManipActive.reset();
+        RAVELOG_WARN_FORMAT("failed to find manipulator with name %s, most likely removed", pmanip->GetName());
     }
 }
 
@@ -1989,10 +2054,10 @@ bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBa
             *report = *pusereport;
         }
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            RAVELOG_VERBOSE(str(boost::format("Self collision: %s\n")%report->__str__()));
             std::vector<OpenRAVE::dReal> v;
             GetDOFValues(v);
             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+            ss << "self collision report=" << report->__str__() << " ";
             for(size_t i = 0; i < v.size(); ++i ) {
                 if( i > 0 ) {
                     ss << "," << v[i];
@@ -2190,11 +2255,20 @@ void RobotBase::_ComputeInternalInformation()
         ConfigurationSpecification::Group group;
         stringstream ss;
         ss << "joint_values " << GetName();
-        FOREACHC(it,_vAllDOFIndices) {
-            ss << " " << *it;
+        if( _nActiveDOF >= 0 ) {
+            // use _vActiveDOFIndices
+            FOREACHC(it,_vActiveDOFIndices) {
+                ss << " " << *it;
+            }
+            group.dof = (int)_vActiveDOFIndices.size();
+        }
+        else {
+            FOREACHC(it,_vAllDOFIndices) {
+                ss << " " << *it;
+            }
+            group.dof = (int)_vAllDOFIndices.size();
         }
         group.name = ss.str();
-        group.dof = (int)_vAllDOFIndices.size();
         group.offset = 0;
         // do not initialize interpolation, since it implies a motion sampling strategy
         _activespec._vgroups.push_back(group);
@@ -2384,6 +2458,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _UpdateAttachedSensors();
 
     _vActiveDOFIndices = r->_vActiveDOFIndices;
+    _activespec = r->_activespec;
     _vAllDOFIndices = r->_vAllDOFIndices;
     vActvAffineRotationAxis = r->vActvAffineRotationAxis;
     _nActiveDOF = r->_nActiveDOF;

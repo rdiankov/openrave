@@ -14,7 +14,7 @@ __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Apache License, Version 2.0'
 # python 2.5 raises 'import *' not allowed with 'from .'
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization, IkParameterization, poseSerialization
-from ..openravepy_ext import planning_error
+from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy
@@ -128,7 +128,7 @@ class TaskManipulation:
             cmd.write('outputtraj ')
         res = self.prob.SendCommand(cmd.getvalue(),releasegil=releasegil)
         if res is None:
-            raise planning_error()
+            raise PlanningError()
         resvalues = res.split()
         numgoals = int(resvalues.pop(0))
         goals = []
@@ -188,7 +188,7 @@ class TaskManipulation:
             cmd += 'finestep %.15e '%finestep
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('CloseFingers')
+            raise PlanningError('CloseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(dof)])
@@ -230,7 +230,7 @@ class TaskManipulation:
             cmd += 'finestep %.15e '%finestep
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('ReleaseFingers')
+            raise PlanningError('ReleaseFingers')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(dof)])
@@ -267,7 +267,7 @@ class TaskManipulation:
             cmd += 'finestep %.15e '%finestep
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('ReleaseActive')
+            raise PlanningError('ReleaseActive')
         resvalues = res.split()
         if outputfinal:
             final = array([float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])

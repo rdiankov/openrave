@@ -72,7 +72,7 @@ if not __openravepy_build_doc__:
 from numpy import reshape, array, float64, int32, zeros, isnan
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
-from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType
+from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
 from ..openravepy_ext import transformPoints, transformInversePoints
 from . import DatabaseGenerator
 
@@ -506,7 +506,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
     
     def show(self,options=None):
         if self.env.GetViewer() is None:
-            self.env.SetViewer('qtcoin')
+            self.env.SetViewer(RaveGetDefaultViewerType())
             time.sleep(0.4) # give time for viewer to initialize
         self.env.UpdatePublishedBodies()
         T = self.env.Triangulate(self.robot)
@@ -543,7 +543,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             handles = None
     def ShowLink(self,ilink,progressive=False):
         if self.env.GetViewer() is None:
-            self.env.SetViewer('qtcoin')
+            self.env.SetViewer(RaveGetDefaultViewerType())
             time.sleep(0.4) # give time for viewer to initialize
         self.env.UpdatePublishedBodies()
         volumecolors = array(((1,0,0,0.5),(0,1,0,0.5),(0,0,1,0.5),(0,1,1,0.5),(1,0,1,0.5),(1,1,0,0.5),(0.5,1,0,0.5),(0.5,0,1,0.5),(0,0.5,1,0.5),(1,0.5,0,0.5),(0,1,0.5,0.5),(1,0,0.5,0.5)))

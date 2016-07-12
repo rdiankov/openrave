@@ -11,7 +11,7 @@ if(NOT OPENGL_FOUND)
 endif()
 
 #include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
-find_package(OpenSceneGraph 3.0 COMPONENTS osgDB osgQt osgGA osgText osgViewer osgManipulator)# osgShadow)
+find_package(OpenSceneGraph 3.4 COMPONENTS osgDB osgQt osgGA osgFX osgText osgViewer osgManipulator)
 
 if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND)
   message(STATUS "Detected Qt/OSG GUI, making plugin")
@@ -23,8 +23,8 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND OPENGL_FOUND AND OPENSCE
   
   link_directories(${OPENRAVE_LINK_DIRS})
 
-  set(QTOSG_SRCS objecttree.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h treemodel.cpp renderitem.cpp renderitem.h treeitem.cpp qtosgviewer.cpp qtosgrave.cpp)
-  set(QTOSG_MOCS qtosgviewer.h treemodel.h OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED)
+  set(QTOSG_SRCS objecttree.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp)
+  set(QTOSG_MOCS qtosgviewer.h qtreemodel.h OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED)
   set(QTOSG_RCCS qtosgviewer.qrc)
 
   # generate rules for building source files from the resources
@@ -41,7 +41,10 @@ if (QT_FOUND AND QT_QTCORE_FOUND AND QT_QTGUI_FOUND AND OPENGL_FOUND AND OPENSCE
     set(QTOSG_COMPILE_FLAGS "${QTOSG_COMPILE_FLAGS} -DHAVE_X11_XLIB_H")
   endif()
 
-  set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${OPENSCENEGRAPH_LIBRARIES} ${PTHREADS_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${OPENGL_LIBRARIES})
+  set (extLIBS ${QT_LIBRARIES} ${LIBXML2_LIBRARIES} ${PTHREADS_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${OPENGL_LIBRARIES})
+  set (extLIBS ${extLIBS} ${OPENSCENEGRAPH_LIBRARIES})
+  #set (extLIBS ${extLIBS} ${OSGDB_LIBRARY_DEBUG} ${OSGQT_LIBRARY_DEBUG} ${OSGGA_LIBRARY_DEBUG} ${OSGFX_LIBRARY_DEBUG} ${OSGTEXT_LIBRARY_DEBUG} ${OSGVIEWER_LIBRARY_DEBUG} ${OSGMANIPULATOR_LIBRARY_DEBUG})
+  
   if( MSVC )
     set (extLIBS ${extLIBS} winmm imm32 ws2_32)
   endif()

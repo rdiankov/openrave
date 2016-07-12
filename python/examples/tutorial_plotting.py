@@ -74,8 +74,8 @@ def main(env,options):
         Ic[:,:,3] = 0.5*sin(20*Y)+0.5
         handles.append(env.drawplane(transform=matrixFromAxisAngle(array((1,0,0)),pi/4),extents=[1.0,0.5],texture=Ic))
         # spin one of the plots in another thread
-        spinner = PlotSpinner(handles[-1])
-        spinner.start()
+        #spinner = PlotSpinner(handles[-1])
+        #spinner.start()
         Tcamera = eye(4)
         Tcamera[0:3,3] = [-0.37, 0.26, 3.3]
         env.GetViewer().SetCamera(Tcamera)

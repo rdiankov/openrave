@@ -158,7 +158,7 @@ typedef boost::shared_ptr<PyAffineTrajectoryRetimer> PyAffineTrajectoryRetimerPt
 class PyDynamicsCollisionConstraint
 {
 public:
-    PyDynamicsCollisionConstraint(object oparameters, object olistCheckBodies, int filtermask=0xffffffff)
+    PyDynamicsCollisionConstraint(object oparameters, object olistCheckBodies, uint32_t filtermask=0xffffffff)
     {
         PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(oparameters);
         std::list<KinBodyPtr> listCheckBodies;
@@ -170,17 +170,32 @@ public:
         }
         _pconstraints.reset(new OpenRAVE::planningutils::DynamicsCollisionConstraint(parameters, listCheckBodies, filtermask));
     }
-    
+
     virtual ~PyDynamicsCollisionConstraint() {
     }
 
-    int Check(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval=IT_Closed, int options=0xffff)//, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr())
+    object Check(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval=IT_Closed, uint32_t options=0xffff, bool filterreturn=false)//, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr())
     {
         std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
         std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
         std::vector<dReal> dq0 = ExtractArray<dReal>(odq0);
         std::vector<dReal> dq1 = ExtractArray<dReal>(odq1);
-        return _pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options);
+        if( filterreturn ) {
+            ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
+            _pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options, pfilterreturn);
+            boost::python::dict ofilterreturn;
+            ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
+            ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
+            ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
+            ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
+            ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
+            ofilterreturn["returncode"] = pfilterreturn->_returncode;
+            ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
+            return ofilterreturn;
+        }
+        else {
+            return object(_pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options));
+        }
     }
 
     object GetReport() const {
@@ -189,6 +204,24 @@ public:
         }
         return object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
     }
+
+    void SetPlannerParameters(object oparameters)
+    {
+        _pconstraints->SetPlannerParameters(openravepy::GetPlannerParameters(oparameters));
+    }
+
+    void SetFilterMask(int filtermask) {
+        _pconstraints->SetFilterMask(filtermask);
+    }
+
+    void SetPerturbation(dReal perturbation) {
+        _pconstraints->SetPerturbation(perturbation);
+    }
+
+    void SetTorqueLimitMode(int torquelimitmode) {
+        _pconstraints->SetTorqueLimitMode(torquelimitmode);
+    }
+
 
     PyEnvironmentBasePtr _pyenv;
     OpenRAVE::planningutils::DynamicsCollisionConstraintPtr _pconstraints;
@@ -216,9 +249,9 @@ size_t pyExtendActiveDOFWaypoint(int index, object odofvalues, object odofveloci
     return OpenRAVE::planningutils::ExtendActiveDOFWaypoint(index, ExtractArray<dReal>(odofvalues), ExtractArray<dReal>(odofvelocities), openravepy::GetTrajectory(pytraj), openravepy::GetRobot(pyrobot), fmaxvelmult, fmaxaccelmult, plannername);
 }
 
-size_t pyInsertActiveDOFWaypointWithRetiming(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
+size_t pyInsertActiveDOFWaypointWithRetiming(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, PyRobotBasePtr pyrobot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="")
 {
-    return OpenRAVE::planningutils::InsertActiveDOFWaypointWithRetiming(index, ExtractArray<dReal>(odofvalues), ExtractArray<dReal>(odofvelocities), openravepy::GetTrajectory(pytraj), openravepy::GetRobot(pyrobot), fmaxvelmult, fmaxaccelmult, plannername);
+    return OpenRAVE::planningutils::InsertActiveDOFWaypointWithRetiming(index, ExtractArray<dReal>(odofvalues), ExtractArray<dReal>(odofvelocities), openravepy::GetTrajectory(pytraj), openravepy::GetRobot(pyrobot), fmaxvelmult, fmaxaccelmult, plannername, plannerparameters);
 }
 
 size_t pyInsertWaypointWithSmoothing(int index, object odofvalues, object odofvelocities, PyTrajectoryBasePtr pytraj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="")
@@ -285,7 +318,7 @@ object toPyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironm
 class DHParameter_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyDHParameter& p)
+    static boost::python::tuple getinitargs(const PyDHParameter& p)
     {
         return boost::python::make_tuple(object(), p.parentindex, p.transform, p.d, p.a, p.theta, p.alpha);
     }
@@ -306,7 +339,7 @@ boost::python::list pyGetDHParameters(PyKinBodyPtr pybody)
 class PyManipulatorIKGoalSampler
 {
 public:
-    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, int ikfilteroptions = IKFO_CheckEnvCollisions) {
+    PyManipulatorIKGoalSampler(object pymanip, object oparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal jitter=0, bool searchfreeparameters=true, uint32_t ikfilteroptions = IKFO_CheckEnvCollisions) {
         std::list<IkParameterization> listparameterizationsPtr;
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
@@ -383,10 +416,10 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeActiveDOFTrajectory_overloads, planninguti
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeAffineTrajectory_overloads, planningutils::pyRetimeAffineTrajectory, 3, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeTrajectory_overloads, planningutils::pyRetimeTrajectory, 1, 6)
 BOOST_PYTHON_FUNCTION_OVERLOADS(ExtendActiveDOFWaypoint_overloads, planningutils::pyExtendActiveDOFWaypoint, 5, 8)
-BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 8)
+BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 9)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 7)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
@@ -423,7 +456,7 @@ void InitPlanningUtils()
                   .staticmethod("ExtendWaypoint")
                   .def("ExtendActiveDOFWaypoint",planningutils::pyExtendActiveDOFWaypoint, ExtendActiveDOFWaypoint_overloads(args("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername"),DOXY_FN1(ExtendActiveDOFWaypoint)))
                   .staticmethod("ExtendActiveDOFWaypoint")
-                  .def("InsertActiveDOFWaypointWithRetiming",planningutils::pyInsertActiveDOFWaypointWithRetiming, InsertActiveDOFWaypointWithRetiming_overloads(args("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername"),DOXY_FN1(InsertActiveDOFWaypointWithRetiming)))
+                  .def("InsertActiveDOFWaypointWithRetiming",planningutils::pyInsertActiveDOFWaypointWithRetiming, InsertActiveDOFWaypointWithRetiming_overloads(args("index","dofvalues", "dofvelocities", "trajectory", "robot", "maxvelmult", "maxaccelmult", "plannername", "plannerparameters"),DOXY_FN1(InsertActiveDOFWaypointWithRetiming)))
                   .staticmethod("InsertActiveDOFWaypointWithRetiming")
                   .def("InsertWaypointWithSmoothing",planningutils::pyInsertWaypointWithSmoothing, InsertWaypointWithSmoothing_overloads(args("index","dofvalues","dofvelocities","trajectory","maxvelmult","maxaccelmult","plannername"),DOXY_FN1(InsertWaypointWithSmoothing)))
                   .staticmethod("InsertWaypointWithSmoothing")
@@ -475,9 +508,13 @@ void InitPlanningUtils()
         ;
 
         class_<planningutils::PyDynamicsCollisionConstraint, planningutils::PyDynamicsCollisionConstraintPtr >("DynamicsCollisionConstraint", DOXY_CLASS(planningutils::DynamicsCollisionConstraint), no_init)
-        .def(init<object, object, int>(args("plannerparameters", "checkbodies", "filtermask")))
-        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
-        .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport));
+        .def(init<object, object, uint32_t>(args("plannerparameters", "checkbodies", "filtermask")))
+        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(args("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn"), DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport))
+        .def("SetPlannerParameters", &planningutils::PyDynamicsCollisionConstraint::SetPlannerParameters, args("parameters"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPlannerParameters))
+        .def("SetFilterMask", &planningutils::PyDynamicsCollisionConstraint::SetFilterMask, args("filtermask"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetFilterMask))
+        .def("SetPerturbation", &planningutils::PyDynamicsCollisionConstraint::SetPerturbation, args("parameters"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPerturbation))
+        .def("SetTorqueLimitMode", &planningutils::PyDynamicsCollisionConstraint::SetTorqueLimitMode, args("torquelimitmode"), DOXY_FN(planningutils::DynamicsCollisionConstraint,SetTorqueLimitMode))
         ;
     }
 }

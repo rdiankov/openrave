@@ -1,7 +1,0 @@
-include(FindPackageHandleStandardArgs)
-include(Findosg_functions)
-OSG_FIND_PATH   (OSGQT osgQt/)
-OSG_FIND_LIBRARY(OSGQT osgQt)
-
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(osgQt DEFAULT_MSG
-    OSGQT_LIBRARY OSGQT_INCLUDE_DIR)

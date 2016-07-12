@@ -274,7 +274,7 @@ public:
 
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-        \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
+        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot. 
      */
     virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
@@ -304,7 +304,7 @@ public:
 
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
-        \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
+        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId. More info in \ref arch_kinbody.
      */
     virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
@@ -341,12 +341,20 @@ public:
     /** \brief reads in the rigid geometry of a resource file into a TriMesh structure
 
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
-        \param options Options to control the parsing process.
+        \param atts Options to control the parsing process.
      */
     virtual boost::shared_ptr<TriMesh> ReadTrimeshURI(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
     virtual boost::shared_ptr<TriMesh> ReadTrimeshFile(boost::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
+
+    /** \brief reads in the rigid geometry from in-memory data from an opened cad file into a TriMesh structure
+
+        \param data the contents of a file that stores the cad data
+        \param formathint is the hint to the underlying cad importer for the format of data
+        \param atts Options to control the parsing process.
+     */
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts = AttributesList()) = 0;
 
     //@}
 

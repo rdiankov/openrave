@@ -61,4 +61,7 @@
 // the python path that OpenRAVE was compiled with
 #define OPENRAVE_PYTHON_EXECUTABLE "@PYTHON_EXECUTABLE@"
 
+// whether log4cxx is to be used
+#define OPENRAVE_LOG4CXX @OPENRAVE_LOG4CXX@
+
 #endif

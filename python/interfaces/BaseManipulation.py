@@ -14,7 +14,7 @@ __copyright__ = 'Copyright (C) 2009-2011 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Apache License, Version 2.0'
 # python 2.5 raises 'import *' not allowed with 'from .'
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization
-from ..openravepy_ext import planning_error
+from .. import PlanningError
     
 import numpy
 from copy import copy as shallowcopy
@@ -109,7 +109,7 @@ class BaseManipulation:
             cmd += 'maxdeviationangle %.15e '%maxdeviationangle
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveHandStraight')
+            raise PlanningError('MoveHandStraight')
         if outputtrajobj is not None and outputtrajobj:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
@@ -163,7 +163,7 @@ class BaseManipulation:
             cmd += 'postprocessingparameters %s\n'%postprocessingparameters
         res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
-            raise planning_error('MoveActiveJoints')
+            raise PlanningError('MoveActiveJoints')
         if outputtrajobj is not None and outputtrajobj:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
@@ -229,7 +229,7 @@ class BaseManipulation:
             cmd += 'goalmaxtries %d '%goalmaxtries
         res = self.prob.SendCommand(cmd, releasegil=releasegil)
         if res is None:
-            raise planning_error('MoveToHandPosition')
+            raise PlanningError('MoveToHandPosition')
         if outputtrajobj is not None and outputtrajobj:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
@@ -250,7 +250,7 @@ class BaseManipulation:
             cmd += 'maxdivision %d '%maxdivision
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('MoveUnsyncJoints')
+            raise PlanningError('MoveUnsyncJoints')
         if outputtrajobj is not None and outputtrajobj:
             return RaveCreateTrajectory(self.prob.GetEnv(),'').deserialize(res)
         return res
@@ -270,7 +270,7 @@ class BaseManipulation:
             cmd += 'outputfinal'
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('JitterActive')
+            raise PlanningError('JitterActive')
         resvalues = res.split()
         if outputfinal:
             final = numpy.array([numpy.float64(resvalues[i]) for i in range(self.robot.GetActiveDOF())])
@@ -296,7 +296,7 @@ class BaseManipulation:
             cmd += 'filteroptions %d '%filteroptions
         res = self.prob.SendCommand(cmd)
         if res is None:
-            raise planning_error('FindIKWithFilters')
+            raise PlanningError('FindIKWithFilters')
         resvalues = res.split()
         num = int(resvalues[0])
         dim = (len(resvalues)-1)/num

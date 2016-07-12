@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2014 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2016 Rosen Diankov <rosen.diankov@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
@@ -18,6 +18,10 @@
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
+
+#ifdef OPENRAVE_HAS_LAPACK
+#include "jacobianinverse.h"
+#endif
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
@@ -43,6 +47,7 @@ public:
             _bEmptyTransform6D = true;
         }
 
+        _fRefineWithJacobianInverseAllowedError = -1;
         _vfreeparams.resize(ikfunctions->_GetNumFreeParameters());
         _fFreeIncRevolute = PI/8; // arbitrary
         _fFreeIncPrismaticNum = 10.0; // arbitrary
@@ -56,6 +61,8 @@ public:
         _ikthreshold = 1e-4;
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
+        RegisterCommand("SetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_SetJacobianRefineCommand,this,_1,_2),
+                        "sets the allowed workspace error, if ik solver returns above that, then use jacobian inverse to refine.");
         RegisterCommand("SetDefaultIncrements",boost::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
                         "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
         RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
@@ -86,6 +93,19 @@ public:
     {
         sinput >> _ikthreshold;
         return !!sinput;
+    }
+
+    bool _SetJacobianRefineCommand(ostream& sout, istream& sinput)
+    {
+        sinput >> _fRefineWithJacobianInverseAllowedError;
+        _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
+        int nMaxIterations=-1;
+        sinput >> nMaxIterations;
+        if( !!sinput && nMaxIterations >= 0 ) {
+            _jacobinvsolver.SetMaxIterations(nMaxIterations);
+        }
+        
+        return true;
     }
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
@@ -163,7 +183,7 @@ public:
             ss << "]" << endl;
             throw OPENRAVE_EXCEPTION_FORMAT0(ss.str(), ORE_InvalidArguments);
         }
-        
+
         return _CallFilters(vsolution, pmanip, param, ikreturn, minpriority, maxpriority);
     }
 
@@ -208,7 +228,7 @@ public:
     const std::string& GetKinematicsStructureHash() const {
         return _kinematicshash;
     }
-    
+
     virtual bool Init(RobotBase::ManipulatorConstPtr pmanip)
     {
         if( _kinematicshash.size() > 0 && pmanip->GetInverseKinematicsStructureHash(_iktype) != _kinematicshash ) {
@@ -284,6 +304,12 @@ public:
         }
         pmanip->GetIndependentLinks(_vindependentlinks);
 
+#ifdef OPENRAVE_HAS_LAPACK
+        if( !!pmanip ) {
+            _jacobinvsolver.Init(*pmanip);
+        }
+#endif
+        
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -401,12 +427,12 @@ public:
             }
             return -1; // don't know
         }
-        
+
         void RegisterCollidingEndEffector(const Transform& t, bool bcolliding)
         {
             _listCollidingTransforms.push_back(std::make_pair(t, bcolliding));
         }
-        
+
 protected:
         void _InitSavers()
         {
@@ -678,22 +704,39 @@ protected:
     {
         IkSolverBase::Clone(preference, cloningoptions);
         boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
+
+        _pmanip.reset();
+        _cblimits.reset();
+        _vchildlinks.resize(0);
+        _vchildlinkindices.resize(0);
+        _vindependentlinks.resize(0);
+        RobotBase::ManipulatorPtr rmanip = r->_pmanip.lock();
+        if( !!rmanip ) {
+            RobotBasePtr probot = GetEnv()->GetRobot(rmanip->GetRobot()->GetName());
+            if( !!probot ) {
+                RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(rmanip->GetName());
+                _pmanip = pmanip;
+                _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
+
+                if( !!pmanip ) {
+                    pmanip->GetChildLinks(_vchildlinks);
+                    _vchildlinkindices.resize(_vchildlinks.size());
+                    for(size_t i = 0; i < _vchildlinks.size(); ++i) {
+                        _vchildlinkindices[i] = _vchildlinks[i]->GetIndex();
+                    }
+                    pmanip->GetIndependentLinks(_vindependentlinks);
+                }
+            }
+        }
         _vfreeparams = r->_vfreeparams;
         _vfreerevolute = r->_vfreerevolute;
         _vjointrevolute = r->_vjointrevolute;
         _vfreeparamscales = r->_vfreeparamscales;
+        _ikfunctions = r->_ikfunctions; // probably not necessary, but not setting it here could create inconsistency problems later on
         _vFreeInc = r->_vFreeInc;
         _fFreeIncRevolute = r->_fFreeIncRevolute;
         _fFreeIncPrismaticNum = r->_fFreeIncPrismaticNum;
         _nTotalDOF = r->_nTotalDOF;
-        //?
-        //_ikfunctions = r->_ikfunctions;
-        //_cblimits;
-        //_vchildlinks, _vindependentlinks
-        //_resource
-
-        _ikthreshold = r->_ikthreshold;
-        _kinematicshash = r->_kinematicshash;
         _qlower = r->_qlower;
         _qupper = r->_qupper;
         _qmid = r->_qmid;
@@ -701,6 +744,11 @@ protected:
         _qbigrangemaxsols = r->_qbigrangemaxsols;
         _qbigrangemaxcumprod = r->_qbigrangemaxcumprod;
         _iktype = r->_iktype;
+
+        _kinematicshash = r->_kinematicshash;
+        _ikthreshold = r->_ikthreshold;
+
+        _bEmptyTransform6D = r->_bEmptyTransform6D;
     }
 
 protected:
@@ -778,12 +826,14 @@ protected:
     /// \param tLocalTool _pmanip->GetLocalToolTransform()
     inline bool _CallIk(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
     {
+        bool bsuccess = false;
         if( !!_ikfunctions->_ComputeIk2 ) {
-            return _CallIk2(param, vfree, tLocalTool, solutions);
+            bsuccess = _CallIk2(param, vfree, tLocalTool, solutions);
         }
         else {
-            return _CallIk1(param, vfree, tLocalTool, solutions);
+            bsuccess = _CallIk1(param, vfree, tLocalTool, solutions);
         }
+        return bsuccess;
     }
 
     bool _CallIk1(const IkParameterization& param, const vector<IkReal>& vfree, const Transform& tLocalTool, ikfast::IkSolutionList<IkReal>& solutions)
@@ -934,14 +984,17 @@ protected:
                 }
                 IkReal eetrans[3] = {t.trans.x, t.trans.y, t.trans.z};
                 IkReal eerot[9] = {t.m[0],t.m[1],t.m[2],t.m[4],t.m[5],t.m[6],t.m[8],t.m[9],t.m[10]};
-//                stringstream ss; ss << "./ik " << std::setprecision(16);
+//                RobotBase::ManipulatorPtr pmanip(_pmanip);
+//                stringstream ss; ss << pmanip->GetRobot()->GetName() << ":" << pmanip->GetName() << " ./ik " << std::setprecision(17);
 //                ss << eerot[0]  << " " << eerot[1]  << " " << eerot[2]  << " " << eetrans[0]  << " " << eerot[3]  << " " << eerot[4]  << " " << eerot[5]  << " " << eetrans[1]  << " " << eerot[6]  << " " << eerot[7]  << " " << eerot[8]  << " " << eetrans[2] << " ";
 //                FOREACH(itfree,vfree) {
 //                    ss << *itfree << " ";
 //                }
 //                ss << endl;
+                bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+//                ss << "ret=" << bret << " numsols=" << solutions.GetNumSolutions();
 //                RAVELOG_INFO(ss.str());
-                return _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                return bret;
             }
             case IKP_Rotation3D: {
                 TransformMatrix t(Transform(param.GetRotation3D(),Vector()));
@@ -1146,6 +1199,26 @@ protected:
         return static_cast<IkReturnAction>(allres);
     }
 
+    void _CheckRefineSolution(const IkParameterization& param, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    {
+        IkParameterization paramnew = manip.GetIkParameterization(param,false);
+        dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
+        if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
+            if( param.GetType() == IKP_Transform6D ) { // only 6d supported for now
+                if( _jacobinvsolver.ComputeSolution(param.GetTransform6D(), manip, vsolution) == 0 ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                    ss << "IkParameterization('" << param << "'); sol=[";
+                    FOREACH(it, vsolution) {
+                        ss << *it << ",";
+                    }
+                    ss << "]";
+                    RAVELOG_WARN_FORMAT("failed to refine solution lasterror=%f, %s", RaveSqrt(_jacobinvsolver._lasterror2)%ss.str());
+                }
+            }
+        }
+    }
+                
+
     /// validate a solution
     /// \param paramnewglobal[out]
     IkReturnAction _ValidateSolutionSingle(const ikfast::IkSolution<IkReal>& iksol, boost::tuple<const vector<IkReal>&, const vector<dReal>&, int>& freeq0check, std::vector<IkReal>& sol, std::vector<dReal>& vravesol, SolutionInfo& bestsolution, const IkParameterization& param, StateCheckEndEffector& stateCheck, IkParameterization& paramnewglobal)
@@ -1170,7 +1243,7 @@ protected:
 
         /// if have to check for closest solution, make sure this new solution is closer than best found so far
         //dReal d = dReal(1e30);
-        
+
         int filteroptions = boost::get<2>(freeq0check);
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
             _ComputeAllSimilarJointAngles(vravesols, vravesol);
@@ -1219,6 +1292,8 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
+                _CheckRefineSolution(param, *pmanip, itravesol->first);
+                
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1257,6 +1332,8 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(vravesol,false);
+                _CheckRefineSolution(param, *pmanip, vravesol);
+                
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1343,10 +1420,10 @@ protected:
                         stateCheck.RegisterCollidingEndEffector(pmanip->GetTransform(), bIsEndEffectorCollision);
                     }
                 }
-                
+
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "ikfast collision " << report.__str__() << " colvalues=[";
+                    ss << "ikfast collision " << probot->GetName() << ":" << pmanip->GetName() << " " << report.__str__() << " colvalues=[";
                     std::vector<dReal> vallvalues;
                     probot->GetDOFValues(vallvalues);
                     for(size_t i = 0; i < vallvalues.size(); ++i ) {
@@ -1377,7 +1454,7 @@ protected:
             RAVELOG_ERROR(ss.str());
             return static_cast<IkReturnAction>(retactionall|IKRA_RejectKinematicsPrecision);
         }
-        
+
         if( (int)boost::get<1>(freeq0check).size() == _nTotalDOF ) {
             // order the listlocalikreturns depending on the distance to boost::get<1>(freeq0check), that way first solution is prioritized
             std::vector< std::pair<size_t, dReal> > vdists; vdists.reserve(listlocalikreturns.size());
@@ -1392,7 +1469,7 @@ protected:
             if( vdists.size() == 0 ) {
                 return IKRA_Reject; // none could pass already computed solution
             }
-            
+
             std::stable_sort(vdists.begin(),vdists.end(),SortSolutionDistances);
             listlocalikreturns.clear();
             for(size_t i = 0; i < vdists.size(); ++i) {
@@ -1402,11 +1479,11 @@ protected:
                 listlocalikreturns.push_back(vtempikreturns.at(vdists[i].first));
             }
         }
-        
+
         if( listlocalikreturns.size() == 0 ) {
             return IKRA_Reject;
         }
-        
+
         // check ones with filter <= 0
         if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(IKSP_MinPriority, 0) ) {
 //            unsigned int maxsolutions = 1;
@@ -1426,8 +1503,10 @@ protected:
                 FOREACH(it, localret->_mapdata["solutionindices"]) {
                     _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
                 }
-                
+
                 probot->SetActiveDOFValues(localret->_vsolution,false);
+                _CheckRefineSolution(param, *pmanip, localret->_vsolution);
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1573,6 +1652,8 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
+                _CheckRefineSolution(param, *pmanip, itravesol->first);
+                
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1611,6 +1692,8 @@ protected:
                     *it += itravesol->second<<16;
                 }
                 probot->SetActiveDOFValues(vravesol,false);
+                _CheckRefineSolution(param, *pmanip, vravesol);
+                
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1901,15 +1984,20 @@ protected:
     std::vector<int> _qbigrangeindices; ///< indices into _qlower/_qupper of joints that are revolute, not circular, and have ranges > 360
     std::vector<size_t> _qbigrangemaxsols, _qbigrangemaxcumprod;
     IkParameterizationType _iktype;
-    boost::shared_ptr<void> _resource;
     std::string _kinematicshash;
-    dReal _ikthreshold;
+    dReal _ikthreshold; ///< workspace distance threshold sanity checking between desired workspace goal and the workspace position with the returned ik values.
+    dReal _fRefineWithJacobianInverseAllowedError; ///< if > 0, then use jacobian inverse numerical method to refine the results until workspace error drops down this much. By default it is disabled (=-1)
 
-    // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters)
+    ikfastsolvers::JacobianInverseSolver<double> _jacobinvsolver; ///< jacobian inverse solver if _fRefineWithJacobianInverseAllowedError is > 0
+    
+    //@{
+    // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters) since the filters themselves can potentially call into this ik solver.
     std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
     int _nSameStateRepeatCount;
+    //@}
 
     bool _bEmptyTransform6D; ///< if true, then the iksolver has been built with identity of the manipulator transform. Only valid for Transform6D IKs.
+    
 };
 
 #ifdef OPENRAVE_IKFAST_FLOAT32

@@ -345,11 +345,11 @@ object toPyIkParameterization(const std::string& serializeddata)
 class IkParameterization_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyIkParameterization &r)
+    static boost::python::tuple getinitargs(const PyIkParameterization &r)
     {
         std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         ss << r._param;
-        return make_tuple(ss.str());
+        return boost::python::make_tuple(ss.str());
     }
 };
 

@@ -29,161 +29,26 @@
  ***************************************************************************/
 
 #include "ParabolicRamp.h"
+#include "pramp.h"
+#include "ppramp.h"
+#include "plpramp.h"
+#include <math.h>
 #include <iostream>
+#include <openrave/mathextra.h>
 using namespace std;
 
 namespace ParabolicRampInternal {
 
-//a flag used during testing of failed ramps
-static bool gSuppressSavingRamps = false;
-
-//a flag used to stop SolveMinAccel from complaining during internal testing
-static bool gMinAccelQuiet = false;
-
-//a flag used to stop SolveMinTime2 from complaining during internal testing
-static bool gMinTime2Quiet = false;
-
-
-//solves the quadratic formula and returns the number of roots found
-int SolveQuadratic(Real a, Real b, Real c, Real& x1, Real& x2)
-{
-    if(a == 0)
-    {
-        if(b == 0)
-        {
-            if(c == 0) {
-                return -1;
-            }
-            return 0;
-        }
-        x1=-c/b;
-        return 1;
-    }
-    if(c == 0) { //det = b^2
-        x1 = 0;
-        x2 = -b/a;
-        return 2;
-    }
-
-    Real det = b*b-4.0*a*c;
-    if(det < 0.0) {
-        return 0;
-    }
-    if(det == 0.0) {
-        x1 = -b/(2.0*a);
-        return 1;
-    }
-    det = sqrt(det);
-    if(Abs(-b - det) < Abs(a)) {
-        x1 = 0.5 * (-b + det)/a;
-    }
-    else {
-        x1 = 2.0 * c / (-b-det);
-    }
-    if(Abs(-b + det) < Abs(a)) {
-        x2 = 0.5 * (-b-det) / a;
-    }
-    else {
-        x2 = 2.0 * c / (-b+det);
-    }
-    return 2;
-}
-
-
-//return a value x in [xmin,xmax] such that |a*x - b| <= epsilon*max(|a||b|)
-//for ill posed problems choose x=0
-bool SafeEqSolve(Real a,Real b,Real epsilon,Real xmin,Real xmax,Real& x)
-{
-    if(a < 0) return SafeEqSolve(-a,-b,epsilon,xmin,xmax,x);
-    //now we know a>=0
-    Real epsScaled = epsilon*Max(a,Abs(b));
-
-    //infinte range
-    if(IsInf(xmin)==-1 && IsInf(xmax)==1) {
-        if(a == 0) {
-            x = 0.0;
-            return Abs(b) <= epsScaled;
-        }
-        x = b/a;
-        return true;
-    }
-
-    Real axmin=a*xmin,axmax=a*xmax;
-    if(!(b + epsScaled >= axmin  && b - epsScaled <= axmax)) { //ranges don't intersect
-        return false;
-    }
-    if(a != 0) {
-        x = b/a;
-        if(xmin <= x && x <= xmax) {
-            return true;
-        }
-    }
-    if (Abs(0.5*(axmin+axmax) - b) <= epsScaled) {
-        //center of range is in epsilon range
-        x = 0.5*(xmin+xmax);
-        return true;
-    }
-    if(Abs(axmax - b) <= epsScaled) {
-        x = xmax;
-        return true;
-    }
-    assert(Abs(axmin - b) <= epsScaled);
-    x = xmin;
-    return true;
-}
-
-bool SaveRamp(const char* fn,Real x0,Real dx0,Real x1,Real dx1,
-              Real a,Real v,Real t)
-{
-    if(gSuppressSavingRamps) return true;
-    std::string fullfilename = GetDumpDirectory();
-    fullfilename += '/';
-    fullfilename += fn;
-    PARABOLIC_RAMP_PLOG("Saving ramp to %s\n",fullfilename.c_str());
-    FILE* f=fopen(fullfilename.c_str(),"ab");
-    if(!f) {
-        f = fopen(fullfilename.c_str(),"wb");
-        if(!f) {
-            PARABOLIC_RAMP_PLOG("Unable to open file %s for saving\n",fullfilename.c_str());
-            return false;
-        }
-    }
-    double vals[7]={x0,dx0,x1,dx1,a,v,t};
-    fwrite(vals,sizeof(double),7,f);
-    fclose(f);
-    return true;
-}
-
-
-bool LoadRamp(FILE* f,Real& x0,Real& dx0,Real& x1,Real& dx1,
-              Real& a,Real& v,Real& t)
-{
-    double vals[7];
-    int size = fread(vals,sizeof(double),7,f);
-    if(size != 7) return false;
-    x0=vals[0];  dx0=vals[1];
-    x1=vals[2];  dx1=vals[3];
-    a=vals[4];  v=vals[5];
-    t=vals[6];
-    return true;
-}
-
-
-bool LoadRamp(const char* fn,Real& x0,Real& dx0,Real& x1,Real& dx1,
-              Real& a,Real& v,Real& t)
-{
-    FILE* f=fopen(fn,"rb");
-    if(!f) return false;
-    bool res=LoadRamp(f,x0,dx0,x1,dx1,a,v,t);
-    fclose(f);
-    return res;
-}
+extern bool gSuppressSavingRamps;
+extern bool gMinAccelQuiet;
+extern bool gMinTime2Quiet;
 
 void TestRamps(const char* fn)
 {
     FILE* f=fopen(fn,"rb");
-    if(!f) return;
-
+    if(!f) {
+        return;
+    }
     gSuppressSavingRamps=true;
     ParabolicRamp1D ramp;
     Real a,v,t;
@@ -216,1406 +81,6 @@ void TestRamps(const char* fn)
     gSuppressSavingRamps=false;
 }
 
-class ParabolicRamp
-{
-public:
-    Real Evaluate(Real t) const;
-    Real Derivative(Real t) const;
-    Real Accel(Real t) const;
-    bool Solve(Real amax);
-    bool SolveFixedTime(Real endTime);
-    Real MaxVelocity() const;
-
-    //input
-    Real x0,dx0;
-    Real x1,dx1;
-
-    //calculated
-    Real a;
-    Real ttotal;
-};
-
-
-class PPRamp
-{
-public:
-    Real Evaluate(Real t) const;
-    Real Derivative(Real t) const;
-    Real Accel(Real t) const;
-    bool SolveMinTime(Real amax);
-    bool SolveMinTime2(Real amax,Real timeLowerBound);
-    bool SolveFixedTime(Real amax, Real endTime);
-    bool SolveMinAccel(Real endTime);
-    Real MaxVelocity() const;
-
-    Real CalcTotalTime(Real a) const;
-    Real CalcSwitchTime(Real a) const;
-    Real CalcMinAccel(Real endTime,Real sign,Real& switchTime) const;
-    int CalcSwitchTimes(Real a,Real& t1,Real& t2) const;
-    int CalcTotalTimes(Real a,Real& t1,Real& t2) const;
-
-    //input
-    Real x0,dx0;
-    Real x1,dx1;
-
-    //calculated
-    Real a;
-    Real tswitch,ttotal;
-};
-
-class PLPRamp
-{
-public:
-    Real Evaluate(Real t) const;
-    Real Derivative(Real t) const;
-    Real Accel(Real t) const;
-    bool SolveMinTime(Real amax,Real vmax);
-    bool SolveMinTime2(Real amax,Real vmax,Real timeLowerBound);
-    bool SolveFixedTime(Real amax, Real vmax, Real endTime);
-    bool SolveFixedAccelSwitch1Time(Real amax, Real vmax, Real a, Real tswitch1, Real endTime);
-    bool SolveMinAccel(Real endTime,Real vmax);
-
-    Real CalcTotalTime(Real a,Real v) const;
-    Real CalcSwitchTime1(Real a,Real v) const;
-    Real CalcSwitchTime2(Real a,Real v) const;
-    Real CalcMinAccel(Real endTime,Real v) const;  //variable a
-    Real CalcMinTimeVariableV(Real endTime,Real a,Real vmax) const;  //variable v
-
-    //input
-    Real x0,dx0;
-    Real x1,dx1;
-
-    //calculated
-    Real a,v;
-    Real tswitch1,tswitch2,ttotal;
-};
-
-
-
-Real ParabolicRamp::Evaluate(Real t) const
-{
-    return x0 + t*dx0 + 0.5*a*Sqr(t);
-}
-
-Real ParabolicRamp::Derivative(Real t) const
-{
-    return dx0 + a*t;
-}
-
-Real ParabolicRamp::Accel(Real t) const
-{
-    return a;
-}
-
-bool ParabolicRamp::Solve(Real amax)
-{
-    //x0 + tv0 + t^2/2 a = x1
-    //v0 + ta = v1
-    //ta = v1-v0
-    //t = 2*(x1-x0)/(v1+v0)
-    //a = (v1-v0)/t
-    Real numerator = 2.0*(x1-x0);
-    Real denominator = dx1+dx0;
-    bool res = SafeEqSolve(denominator,numerator,EpsilonT,0.0,Inf,ttotal);
-    if(!res) {
-        return false;
-    }
-    /*
-       if(Abs(numerator)*EpsilonT < Abs(denominator)) {
-       ttotal = numerator/denominator;
-       }
-       else {
-       //dx1 ~= dx0
-       if(FuzzyZero(numerator,EpsilonX) && FuzzyZero(denominator,EpsilonV)) {
-        a=0;
-        ttotal = 0;
-        return true;
-       }
-       else
-        return false;
-       }
-       Real numerator = 0.5*(Sqr(dx0)-Sqr(dx1));
-       Real denominator = x0-x1;
-       //check potential numerical errors
-       if(FuzzyZero(denominator,EpsilonX)) {
-       if(FuzzyEquals(dx0,dx1,EpsilonV)) {
-        a=0;
-        ttotal = 0;
-        return true;
-       }
-       else if(FuzzyEquals(dx0,-dx1,EpsilonV)) { //pure parabola, any acceleration works
-        a=amax*Sign(dx1);
-        ttotal = (dx1-dx0)/a;
-        return true;
-       }
-       if(Abs(denominator) <= Abs(numerator)) {
-        //no parabola will work
-        return false;
-       }
-       }
-       a = numerator/denominator;
-
-       //pick the denominator less likely to result in numerical errors
-       if(Abs(a) < Abs(dx0+dx1)) {
-       if(Abs(dx0+dx1) < EpsilonV) {
-        //danger of numerical errors
-        //dx0 = - dx1
-        //need x0 = x1
-        return false;
-       }
-       else {
-        ttotal = 2.0*(x1-x0)/(dx0+dx1);
-       }
-       }
-       else {
-       ttotal = (dx1-dx0)/a;
-       }
-
-       if(ttotal < 0 && ttotal > -EpsilonT) ttotal = 0;
-       if(ttotal < 0) {
-       ttotal = -1;
-       a=0;
-       return false;
-       }
-
-       //check for numerical errors
-       if(Abs(a) > amax && Abs(a) <= amax+EpsilonA) {
-       //double check if the capped version works
-       a = Sign(a)*amax;
-       }
-     */
-    PARABOLIC_RAMP_ASSERT(ttotal >= 0);
-
-    //pick some value of a that satisfies |ta - v1-v0| < epsilonV
-    res = SafeEqSolve(ttotal,dx1-dx0,EpsilonV,-amax,amax,a);
-    if(!res) return false;
-    PARABOLIC_RAMP_ASSERT(Abs(a) <= amax+EpsilonA);
-    //PARABOLIC_RAMP_ASSERT(FuzzyEquals(Evaluate(ttotal),x1,EpsilonX) && FuzzyEquals(Derivative(ttotal),dx1,EpsilonV));
-
-    if(FuzzyEquals(Evaluate(ttotal),x1,EpsilonX) && FuzzyEquals(Derivative(ttotal),dx1,EpsilonV)) {
-        return true;
-    }
-    return false;
-}
-
-bool ParabolicRamp::SolveFixedTime(Real endTime)
-{
-    if(!FuzzyEquals(endTime*(dx1+dx0),2.0*(x1-x0),EpsilonX)) {
-        return false;
-    }
-    ttotal = endTime;
-    bool res = SafeEqSolve(ttotal,dx1-dx0,EpsilonV,-Inf,Inf,a);
-    if(!res) {
-        return false;
-    }
-    /*
-       if(FuzzyEquals(x0,x1,EpsilonX)) {
-       if(FuzzyEquals(dx0,dx1,EpsilonV)) {
-        a = 0;
-        return FuzzyEquals(endTime,0.0,EpsilonT);
-       }
-       else if(FuzzyEquals(dx0,-dx1,EpsilonV)) { //pure parabola, any acceleration works
-        a=(dx1-dx0)/endTime;
-        return true;
-       }
-       //no parabola will work
-       return false;
-       }
-       a = 0.5*(Sqr(dx0)-Sqr(dx1))/(x0-x1);
-       //pick the denominator less likely to result in numerical errors
-       if(Abs(a) < Abs(dx0+dx1)) {
-       if(Abs(dx0+dx1) < EpsilonV) {
-        //danger of numerical errors
-        //dx0 = - dx1
-        //need x0 = x1
-        return false;
-       }
-       else {
-        ttotal = 2.0*(x1-x0)/(dx0+dx1);
-       }
-       }
-       else {
-       ttotal = (dx1-dx0)/a;
-       }
-       if(!FuzzyEquals(ttotal,endTime,EpsilonT)) return false;
-       ttotal = endTime;
-     */
-    if(FuzzyEquals(Evaluate(ttotal),x1,EpsilonX) && FuzzyEquals(Derivative(ttotal),dx1,EpsilonV)) {
-        return true;
-    }
-    return false;
-}
-
-Real ParabolicRamp::MaxVelocity() const
-{
-    if(fabs(dx0) > fabs(dx1)) return dx0;
-    else return dx1;
-}
-
-Real PPRamp::Evaluate(Real t) const
-{
-    if(t < tswitch) return x0 + 0.5*a*t*t + dx0*t;
-    else {
-        Real tmT = t - ttotal;
-        return x1 - 0.5*a*tmT*tmT + dx1*tmT;
-    }
-}
-
-Real PPRamp::Derivative(Real t) const
-{
-    if(t < tswitch) return a*t + dx0;
-    else {
-        Real tmT = t - ttotal;
-        return -a*tmT + dx1;
-    }
-}
-
-Real PPRamp::Accel(Real t) const
-{
-    if(t < tswitch) return a;
-    else return -a;
-}
-
-bool PPRamp::SolveMinTime(Real amax)
-{
-    Real tpn = CalcTotalTime(amax), tnp = CalcTotalTime(-amax);
-    //cout<<"Time for parabola +-: "<<tpn<<", parabola -+: "<<tnp<<endl;
-    if(tpn >= 0) {
-        if(tnp >= 0 && tnp < tpn) {
-            a = -amax;
-            ttotal = tnp;
-        }
-        else {
-            a = amax;
-            ttotal = tpn;
-        }
-    }
-    else if(tnp >= 0) {
-        a = -amax;
-        ttotal = tnp;
-    }
-    else {
-        tswitch = -1;
-        ttotal = -1;
-        a = 0;
-        return false;
-    }
-    tswitch = CalcSwitchTime(a);
-    //uncomment for additional debugging
-    if(!FuzzyEquals(x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch,x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal),EpsilonX)) {
-        PARABOLIC_RAMP_PLOG("Error computing parabolic-parabolic min-time...\n");
-        PARABOLIC_RAMP_PLOG("x0=%.15e,%.15e, x1=%.15e,%.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("a = %.15e, tswitch = %.15e, ttotal = %.15e\n",a,tswitch,ttotal);
-        PARABOLIC_RAMP_PLOG("Forward %.15e, backward %.15e, diff %.15e\n",x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch,x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal), x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch - (x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal)));
-        //Real b = 2.0*dx0; //2.0*(dx0-dx1);
-        //Real c = (Sqr(dx0)-Sqr(dx1))*0.5/a+x0-x1;
-        Real b = 2.0*a*dx0; //2.0*(dx0-dx1);
-        Real c = (Sqr(dx0)-Sqr(dx1))*0.5+(x0-x1)*a;
-        Real t1,t2;
-        int res=SolveQuadratic(a*a,b,c,t1,t2);
-        PARABOLIC_RAMP_PLOG("Quadratic equation %.15e x^2 + %.15e x + %.15e = 0\n",a*a,b,c);
-        PARABOLIC_RAMP_PLOG("%d results, %.15e %.15e\n",res,t1,t2);
-        SaveRamp("PP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,Inf,-1);
-        return false;
-    }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch,x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal),EpsilonX));
-
-    return true;
-}
-
-bool PPRamp::SolveMinTime2(Real amax,Real timeLowerBound)
-{
-    PARABOLIC_RAMP_ASSERT(timeLowerBound >= 0);
-    Real t1pn,t1np,t2pn,t2np;
-    int respn = CalcTotalTimes(amax,t1pn,t2pn);
-    int resnp = CalcTotalTimes(-amax,t1np,t2np);
-    ttotal = Inf;
-    if(respn >= 1) {
-        if(t1pn >= timeLowerBound && t1pn < ttotal) {
-            ttotal = t1pn;
-            a = amax;
-        }
-    }
-    if(respn >= 2) {
-        if(t2pn >= timeLowerBound && t2pn < ttotal) {
-            ttotal = t2pn;
-            a = amax;
-        }
-    }
-    if(resnp >= 1) {
-        if(t1np >= timeLowerBound && t1np < ttotal) {
-            ttotal = t1np;
-            a = -amax;
-        }
-    }
-    if(resnp >= 2) {
-        if(t2np >= timeLowerBound && t2np < ttotal) {
-            ttotal = t2np;
-            a = -amax;
-        }
-    }
-    if(IsInf(ttotal)) {
-        a = 0;
-        tswitch = ttotal = -1;
-        return false;
-    }
-
-    PARABOLIC_RAMP_ASSERT(ttotal >= timeLowerBound);
-    Real ts1,ts2;
-    int res = CalcSwitchTimes(a,ts1,ts2);
-    PARABOLIC_RAMP_ASSERT(res > 0);
-    if(res == 1) {
-        tswitch = ts1;
-        PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,ts1*2.0 - (dx1-dx0)/a,EpsilonT));
-    }
-    else {
-        if(FuzzyEquals(ttotal,ts1*2.0 - (dx1-dx0)/a,EpsilonT))
-            tswitch = ts1;
-        else {
-            PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,ts2*2.0 - (dx1-dx0)/a,EpsilonT));
-            tswitch = ts2;
-        }
-    }
-
-    //uncomment for additional debugging
-    Real eps = EpsilonX;
-    if(!FuzzyEquals(x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch,x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal),eps)) {
-        PARABOLIC_RAMP_PLOG("Error computing parabola min-time...\n");
-        PARABOLIC_RAMP_PLOG("x0=%.15e,%.15e, x1=%.15e,%.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("a = %.15e, tswitch = %.15e, ttotal = %.15e\n",a,tswitch,ttotal);
-        PARABOLIC_RAMP_PLOG("Forward %.15e, backward %.15e, diff %.15e\n",x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch,x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal), x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch - (x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal)));
-        //Real b = 2.0*dx0; //2.0*(dx0-dx1);
-        //Real c = (Sqr(dx0)-Sqr(dx1))*0.5/a+x0-x1;
-        Real b = 2.0*a*dx0; //2.0*(dx0-dx1);
-        Real c = (Sqr(dx0)-Sqr(dx1))*0.5+(x0-x1)*a;
-        Real t1,t2;
-        int res=SolveQuadratic(a*a,b,c,t1,t2);
-        PARABOLIC_RAMP_PLOG("Quadratic equation %.15e x^2 + %.15e x + %.15e = 0\n",a*a,b,c);
-        PARABOLIC_RAMP_PLOG("%d results, %.15e %.15e\n",res,t1,t2);
-        SaveRamp("PP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,Inf,timeLowerBound);
-        return false;
-    }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(x0 + 0.5*a*Sqr(tswitch) + dx0*tswitch,x1 - 0.5*a*Sqr(tswitch-ttotal) + dx1*(tswitch-ttotal),eps));
-
-    return true;
-}
-
-/** known is the final time endTime=t3
-
-   t1,t3,a1,a2,v0,v1,dx = symbols('t1,t3,a1,a2,v0,v1,dx')
-   v0 + a1*t1 + a2*(t3-t1) - v1 = 0
-   a2 = -a1
-   => 2*a1*t1 - a1*t3 + v0 - v1 = 0
-   => a1 = -(v0 - v1)/(2*t1 - t3)
-   => t1 = (a1*t3 - v0 + v1)/(2*a1)
-   a2 = -a1
-
-   eq = -dx + v0*t1 + 0.5*a1*t1**2 + (v0+a1*t1)*(t3-t1) + 0.5*a2*(t3-t1)**2
-
-   assuming a1 != 0
-   eq2 = eq.subs(a2,-a1).subs(t1,(a1*t3 - v0 + v1)/(2*a1))
-   eq3 = (eq2*a1).expand()
-   => 0.25*a1**2*t3**2 - a1*dx + a1*t3*v0/2 + 0.5*a1*t3*v1 - 0.25*v0**2 + v0*v1/2 - 0.25*v1**2
-
-   => c2*a1**2 + c1*a1 + c0
-   c2 = 0.25*t3**2
-   c1 = -1.0*dx + 0.5*t3*v0 + 0.5*t3*v1
-   c0 = - 0.25*v0**2 + 0.5*v0*v1 - 0.25*v1**2
-
-   \author Rosen Diankov
- */
-bool PPRamp::SolveFixedTime(Real amax,Real endTime)
-{
-    if( endTime <= 0 ) {
-        return false;
-    }
-    Real c2 = 0.25 * endTime * endTime;
-    Real c1 = x0 - x1 + 0.5*endTime*(dx0+dx1);
-    Real c0 = -0.25*(dx0-dx1)*(dx0-dx1);
-    Real aroots[2];
-    int numroots = SolveQuadratic(c2, c1, c0, aroots[0], aroots[1]);
-    if( numroots ==2 && Abs(aroots[0]) > Abs(aroots[1]) ) {
-        swap(aroots[0],aroots[1]);
-    }
-
-    for(int i = 0; i < numroots; ++i) {
-        if( Abs(aroots[i]) <= amax+EpsilonA ) {
-            a = aroots[i];
-            if( aroots[i] > amax ) {
-                a = amax;
-            }
-            else if( aroots[i] < -amax ) {
-                a = -amax;
-            }
-            else {
-                a = aroots[i];
-            }
-
-            if( FuzzyZero(a,EpsilonA) ) {
-                tswitch = 0;
-            }
-            else {
-                tswitch = 0.5*(endTime + (dx1 - dx0)/a);
-            }
-
-            // check if tswitch is ok
-            if( tswitch < 0 ) {
-                if( tswitch >= -EpsilonT ) {
-                    tswitch = 0;
-                }
-                else {
-                    // bad root;
-                    continue;
-                }
-            }
-            else if( tswitch > endTime ) {
-                if( tswitch <= endTime+EpsilonT ) {
-                    tswitch = endTime;
-                }
-                else {
-                    // bad root;
-                    continue;
-                }
-            }
-
-            // a=0 might pop up since we multiplied the equation by a
-            Real expecteddx = a*(-tswitch*tswitch + endTime*(2.0*tswitch - 0.5*endTime)) + endTime*dx0;
-            if( FuzzyEquals(expecteddx,x1-x0,EpsilonX) ) {
-                ttotal = endTime;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool PPRamp::SolveMinAccel(Real endTime)
-{
-    Real switch1,switch2;
-    Real apn = CalcMinAccel(endTime,1.0,switch1);
-    Real anp = CalcMinAccel(endTime,-1.0,switch2);
-    //cout<<"Accel for parabola +-: "<<apn<<", parabola -+: "<<anp<<endl;
-    if(apn >= 0) {
-        if(anp >= 0 && anp < apn) a = -anp;
-        else a = apn;
-    }
-    else if(anp >= 0) a = -anp;
-    else {
-        a=0;
-        tswitch = -1;
-        ttotal = -1;
-        return false;
-    }
-    ttotal = endTime;
-    if(a == apn)
-        tswitch = switch1;
-    else
-        tswitch = switch2;
-
-    //debug
-    Real t2mT = tswitch-ttotal;
-    if(!FuzzyEquals(x0 + tswitch*dx0 + 0.5*a*Sqr(tswitch),x1+t2mT*dx1-0.5*a*Sqr(t2mT),EpsilonX)) {
-        PARABOLIC_RAMP_PLOG("PPRamp: Error solving min-accel!\n");
-        PARABOLIC_RAMP_PLOG("Forward ramp: %.15e, backward %.15e, diff %.15e\n",x0 + tswitch*dx0 + 0.5*a*Sqr(tswitch),x1+t2mT*dx1-0.5*a*Sqr(t2mT),x0 + tswitch*dx0 + 0.5*a*Sqr(tswitch)-(x1+t2mT*dx1-0.5*a*Sqr(t2mT)));
-        PARABOLIC_RAMP_PLOG("A+ = %.15e, A- = %.15e\n",apn,anp);
-        PARABOLIC_RAMP_PLOG("ramp %.15e,%.15e -> %.15e, %.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("Switch 1 %.15e, switch 2 %.15e, total %.15e\n",switch1,switch2,ttotal);
-
-        {
-            Real sign = 1.0;
-            Real a=Sqr(endTime);
-            Real b=sign*(2.0*(dx0+dx1)*endTime+4.0*(x0-x1));
-            Real c=-Sqr(dx1-dx0);
-            PARABOLIC_RAMP_PLOG("Quadratic %.15e x^2 + %.15e x + %.15e = 0\n",a,b,c);
-            Real t1,t2;
-            int res = SolveQuadratic(a,b,c,t1,t2);
-            PARABOLIC_RAMP_PLOG("Solutions: %d, %.15e and %.15e\n",res,t1,t2);
-        }
-        {
-            Real sign = -1.0;
-            Real a=Sqr(endTime);
-            Real b=sign*(2.0*(dx0+dx1)*endTime+4.0*(x0-x1));
-            Real c=-Sqr(dx1-dx0);
-            PARABOLIC_RAMP_PLOG("Quadratic %.15e x^2 + %.15e x + %.15e = 0\n",a,b,c);
-            Real t1,t2;
-            int res = SolveQuadratic(a,b,c,t1,t2);
-            PARABOLIC_RAMP_PLOG("Solutions: %d, %.15e and %.15e\n",res,t1,t2);
-        }
-        SaveRamp("PP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,Inf,endTime);
-    }
-    if(!FuzzyEquals(dx0 + a*tswitch,dx1-a*t2mT,EpsilonV)) {
-        PARABOLIC_RAMP_PLOG("PPRamp: Error solving min-accel!\n");
-        PARABOLIC_RAMP_PLOG("Velocity error %.15e vs %.15e, err %.15e\n",dx0+a*tswitch,dx1-a*t2mT,dx0+a*tswitch-(dx1-a*t2mT));
-        PARABOLIC_RAMP_PLOG("ramp %.15e,%.15e -> %.15e, %.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("Accel %.15e\n",a);
-        PARABOLIC_RAMP_PLOG("Switch %.15e, total %.15e\n",tswitch,ttotal);
-        SaveRamp("PP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,Inf,endTime);
-        return false;
-    }
-    return true;
-}
-
-Real PPRamp::MaxVelocity() const
-{
-    return tswitch*a+dx0;
-}
-
-Real PPRamp::CalcTotalTime(Real a) const
-{
-    Real tswitch = CalcSwitchTime(a);
-    //PARABOLIC_RAMP_PLOG("a = %.15e, switch time %.15e\n",a,tswitch);
-    if(tswitch < 0) return -1;
-    if(tswitch < (dx1-dx0)/a) return -1;
-    return tswitch*2.0 - (dx1-dx0)/a;
-}
-
-int PPRamp::CalcTotalTimes(Real a,Real& t1,Real& t2) const
-{
-    Real ts1,ts2;
-    int res=CalcSwitchTimes(a,ts1,ts2);
-    if(res == 0) return res;
-    else if(res == 1) {
-        if(ts1 < (dx1-dx0)/a) return 0;
-        t1 = ts1*2.0 - (dx1-dx0)/a;
-        return 1;
-    }
-    else {
-        //check limits
-        if(ts1 < (dx1-dx0)/a) t1=-1;
-        else t1 = ts1*2.0 - (dx1-dx0)/a;
-        if(ts2 < (dx1-dx0)/a) t2=-1;
-        else t2 = ts2*2.0 - (dx1-dx0)/a;
-        if(t1 < 0) {
-            if(t2 < 0) return 0;
-            t1 = t2;
-            return 1;
-        }
-        else {
-            if(t2 < 0) return 1;
-            else return 2;
-        }
-    }
-}
-
-int PPRamp::CalcSwitchTimes(Real a,Real& t1,Real& t2) const
-{
-    int res;
-    if(Abs(a) > 1.0) {
-        //this may be prone to numerical errors
-        Real b = 2.0*dx0; //2.0*(dx0-dx1);
-        Real c = (Sqr(dx0)-Sqr(dx1))*0.5/a+x0-x1;
-        res=SolveQuadratic(a,b,c,t1,t2);
-    }
-    else {
-        Real b = 2.0*a*dx0; //2.0*(dx0-dx1);
-        Real c = (Sqr(dx0)-Sqr(dx1))*0.5+(x0-x1)*a;
-        res=SolveQuadratic(a*a,b,c,t1,t2);
-    }
-    if(res == 0) {
-        return res;
-    }
-    else if(res == 2) {
-        if(t1 < 0 && t1 > -EpsilonT*0.1) t1=0;
-        if(t2 < 0 && t2 > -EpsilonT*0.1) t2=0;
-        if(t1 < 0 || t1*Abs(a) < (dx1-dx0)*Sign(a)) {
-            if(t2 < 0 || t2*Abs(a) < (dx1-dx0)*Sign(a)) return 0;
-            t1 = t2;
-            return 1;
-        }
-        else if(t2 < 0 || t2*Abs(a) < (dx1-dx0)*Sign(a)) {
-            return 1;
-        }
-        else {
-            return 2; //both are ok
-        }
-    }
-    else {
-        if(t1 < 0 && t1 > -EpsilonT) t1=0;
-        if(t1 < 0) return 0;
-        return 1;
-    }
-}
-
-Real PPRamp::CalcSwitchTime(Real a) const
-{
-    Real t1,t2;
-    int res = CalcSwitchTimes(a,t1,t2);
-    if(res == 0) {
-        return -1;
-    }
-    else if(res == 2) {
-        //check total time
-        if(t2*Abs(a) < (dx1-dx0)*Sign(a)) return t1;
-        else if(t1*Abs(a) < (dx1-dx0)*Sign(a)) return t2;
-        else
-            //both are ok
-            return Min(t1,t2);
-    }
-    else return t1;
-}
-
-//for a PP ramp:
-//xs = x0 + ts*dx0 + 0.5*z*ts^2
-//xs = x1 - (T-ts)*dx1 - 0.5*z*(T-ts)^2
-//xs' = dx0 + ts*z
-//xs' = dx1 + (T-ts)*z
-//z = sign*a
-//(2ts-T)*z = dx1 - dx0
-//ts = 1/2* (T+(dx1 - dx0)/z)
-//T-ts = 1/2* (T-(dx1 - dx0)/z)
-//2 T(dx0+dx1) + 4(x0 - x1) - (dx1 - dx0)^2/z + z*T^2 = 0
-//what if z is close to 0?
-//suppose dx1 ~= dx0, then the other solution is
-//4 T dx0 + 4(x0 - x1) + z*T^2 = 0
-//=>z = - 4 dx0 / T + 4(x1 - x0)/T^2
-//
-//alt: let y = (dx1 - dx0)/z, z = (dx1 - dx0)/y  (y is a time shift)
-//ts = 1/2* (T+y)
-//T-ts = 1/2* (T-y)
-//x0 + 1/2(T+y)*dx0 + 0.5*z*1/4(T+y)^2 = x1 - 1/2(T-y)*dx1 - 0.5*z*1/4(T-y)^2
-//4(x0-x1) + 2(T+y)*dx0 + 0.5*z*(T+y)^2 = - 2(T-y)*dx1 - 0.5*z*(T-y)^2
-//[4(x0-x1)/T + 2(dx0+dx1)] y - y^2 (dx1 - dx0)/T + (dx1 - dx0) T = 0
-Real PPRamp::CalcMinAccel(Real endTime,Real sign,Real& switchTime) const
-{
-    Real a = -(dx1 - dx0)/endTime;
-    Real b = (2.0*(dx0+dx1)+4.0*(x0-x1)/endTime);
-    Real c = (dx1 - dx0)*endTime;
-    Real rat1,rat2;
-    int res=SolveQuadratic(a,b,c,rat1,rat2);
-    Real accel1 = (dx1-dx0)/rat1;
-    Real accel2 = (dx1-dx0)/rat2;
-    Real switchTime1 = endTime*0.5+0.5*rat1;
-    Real switchTime2 = endTime*0.5+0.5*rat2;
-    //fix up numerical errors
-    if(switchTime1 >  endTime && switchTime1 < endTime+EpsilonT*1e-1)
-        switchTime1 = endTime;
-    if(switchTime2 >  endTime && switchTime2 < endTime+EpsilonT*1e-1)
-        switchTime2 = endTime;
-    if(switchTime1 < 0 && switchTime1 > EpsilonT*1e-1)
-        switchTime1 = 0;
-    if(switchTime2 < 0 && switchTime2 > EpsilonT*1e-1)
-        switchTime2 = 0;
-    if(res > 0 && FuzzyZero(rat1,EpsilonT)) {
-        //consider it as a zero, ts = T/2
-        //z = - 4*(x0-x1)/T^2 - 2 (dx0+dx1)/T
-        if(!FuzzyZero(endTime,EpsilonT)) { //no good answer if endtime is small
-            accel1=-2.0*(dx0+dx1)/endTime + 4.0*(x1-x0)/Sqr(endTime);
-        }
-    }
-    if(res > 1 && FuzzyZero(rat2,EpsilonT)) {
-        if(!FuzzyZero(endTime,EpsilonT)) { //no good answer if endtime is small
-            accel2=-2.0*(dx0+dx1)/endTime + 4.0*(x1-x0)/Sqr(endTime);
-        }
-    }
-    bool firstInfeas = false;
-    if(res > 0 && (FuzzyZero(accel1,EpsilonA) || FuzzyZero(endTime/rat1,EpsilonA))) { //infer that accel must be small
-        if(!FuzzyZero(dx0-dx1,EpsilonT)) { //no good answer if dx0=dx1
-            switchTime1 = endTime*0.5;
-        }
-        if(!FuzzyEquals(x0 + switchTime1*dx0 + 0.5*Sqr(switchTime1)*accel1,x1 - (endTime-switchTime1)*dx1 - 0.5*Sqr(endTime-switchTime1)*accel1,EpsilonX) ||
-           !FuzzyEquals(dx0+switchTime1*accel1,dx1+(endTime-switchTime1)*accel1,EpsilonV)) {
-            firstInfeas = true;
-        }
-    }
-    if(res > 1 && (FuzzyZero(accel2,EpsilonA) || FuzzyZero(endTime/rat2,EpsilonA))) {
-        if(!FuzzyZero(dx0-dx1,EpsilonT)) { //no good answer if dx0=dx1
-            switchTime2 = endTime*0.5;
-        }
-        if(!FuzzyEquals(x0 + switchTime2*dx0 + 0.5*Sqr(switchTime2)*accel2,x1 - (endTime-switchTime2)*dx1 - 0.5*Sqr(endTime-switchTime2)*accel2,EpsilonX) ||
-           !FuzzyEquals(dx0+switchTime2*accel2,dx1+(endTime-switchTime2)*accel2,EpsilonV)) {
-            res--;
-        }
-    }
-    if(firstInfeas) {
-        accel1 = accel2;
-        rat1 = rat2;
-        switchTime1 = switchTime2;
-        res--;
-    }
-    if(res==0) return -1;
-    else if(res==1) {
-        if(switchTime1 >= 0 && switchTime1 <= endTime) { switchTime=switchTime1; return sign*accel1; }
-        return -1.0;
-    }
-    else if(res==2) {
-        if(switchTime1 >= 0 && switchTime1 <= endTime) {
-            if(switchTime2 >= 0 && switchTime2 <= endTime) {
-                if(accel1 < accel2) { switchTime=switchTime1; return sign*accel1; }
-                else { switchTime=switchTime2; return sign*accel2; }
-            }
-            else { switchTime=switchTime1; return sign*accel1; }
-        }
-        else if(switchTime2 >= 0 && switchTime2 <= endTime) { switchTime=switchTime2; return sign*accel2; }
-        return -1.0;
-    }
-    if(FuzzyZero(a,EpsilonT) && FuzzyZero(b,EpsilonT) && FuzzyZero(c,EpsilonT)) {
-        switchTime = 0.5*endTime;
-        return 0;
-    }
-    return -1.0;
-
-    /*
-       Real a=endTime;
-       Real b=sign*(2.0*(dx0+dx1)+4.0*(x0-x1)/endTime);
-       if(FuzzyZero(b,EpsilonX)) {
-       //need to double check for numerical instability
-       //if sign is +, this means we're switching directly to -
-       //if sign is -, this means we're switching directly to +
-       //if(sign > 0.0 && x1 > x0+dx0*endTime) return -1;
-       //else if(sign < 0.0 && x1 < x0+dx0*endTime) return -1;
-       switchTime = 0;
-       Real a=(dx1-dx0)/endTime;
-       if((sign > 0.0) == (a >= 0.0)) return -1;
-       else return Abs(a);
-       }
-       Real c=-Sqr(dx1-dx0)/endTime;
-       if(FuzzyEquals(dx1,dx0,EpsilonV)) {
-       //one of the solutions will be very close to zero, use alt solution
-       Real a=-2.0*(dx0+dx1)/endTime + 4.0*(x1-x0)/Sqr(endTime);
-       PARABOLIC_RAMP_PLOG("only two solutions: 0 and %.15e\n",a);
-       switchTime = 0.5*endTime;
-       //try out the zero solution
-       PARABOLIC_RAMP_PLOG("diff at 0 solution: %.15e\n",x0-x1 + switchTime*(dx0+dx1));
-       if(FuzzyEquals(x0 + switchTime*dx0,x1 - switchTime*dx1,EpsilonX))
-        return 0;
-       PARABOLIC_RAMP_ASSERT(FuzzyEquals(dx0 + switchTime*a,dx1 + switchTime*a,EpsilonV));
-       PARABOLIC_RAMP_ASSERT(FuzzyEquals(x0 + switchTime*dx0 + 0.5*a*Sqr(switchTime),x1 - switchTime*dx1-0.5*a*Sqr(switchTime),EpsilonX));
-       if((sign > 0.0) != (a >= 0.0)) return -1;
-       return Abs(a);
-       }
-       if(FuzzyZero(c,EpsilonA)) {
-       //need better numerical performance when dx1 ~= dx0
-       a = a/Abs(dx1-dx0);
-       b = b/Abs(dx1-dx0);
-       c = -Abs(dx1-dx0)/endTime;
-       }
-       Real accel1,accel2;
-       int res=SolveQuadratic(a,b,c,accel1,accel2);
-       //remove negative accelerations
-       if(res >= 1 && accel1 < 0) {
-       accel1 = accel2;
-       res--;
-       }
-       if(res >= 2 && accel2 < 0) {
-       res--;
-       }
-
-       Real switchTime1 = endTime*0.5+sign*0.5*(dx1-dx0)/accel1;
-       Real switchTime2 = endTime*0.5+sign*0.5*(dx1-dx0)/accel2;
-       //if(accel1 == 0 && x0 == x1) switchTime1 = 0;
-       //if(accel2 == 0 && x0 == x1) switchTime2 = 0;
-       if(res==0) return -1;
-       else if(res==1) {
-       if(!IsFinite(accel1)) {
-        PARABOLIC_RAMP_PLOG("Error computing accelerations!\n");
-        PARABOLIC_RAMP_PLOG("Quadratic %.15e x^2 + %.15e x + %.15e = 0\n",a,b,c);
-        PARABOLIC_RAMP_PLOG("x0 %.15e, dx0 %.15e, x1 %.15e, dx1 %.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("EndTime %.15e, sign %.15e\n",endTime,sign);
-        PARABOLIC_RAMP_PLOG("Results %.15e %.15e\n",accel1,accel2);
-       }
-       if(switchTime1 >= 0 && switchTime1 <= endTime) { switchTime=switchTime1; return accel1; }
-       return -1.0;
-       }
-       else if(res==2) {
-       if(!IsFinite(accel1) || !IsFinite(accel2)) {
-        PARABOLIC_RAMP_PLOG("Error computing accelerations!\n");
-        PARABOLIC_RAMP_PLOG("Quadratic %.15e x^2 + %.15e x + %.15e = 0\n",a,b,c);
-        PARABOLIC_RAMP_PLOG("x0 %.15e, dx0 %.15e, x1 %.15e, dx1 %.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("EndTime %.15e, sign %.15e\n",endTime,sign);
-        PARABOLIC_RAMP_PLOG("Results %.15e %.15e\n",accel1,accel2);
-       }
-       if(FuzzyZero(switchTime1,EpsilonT) || FuzzyZero(switchTime2,EpsilonT)) {
-        //need to double check for numerical instability
-        //if sign is +, this means we're switching directly to -
-        //if sign is -, this means we're switching directly to +
-        if(sign > 0.0 && x1 > x0+dx0*endTime) return -1;
-        else if(sign < 0 && x1 < x0+dx0*endTime) return -1;
-        switchTime = 0;
-        if(FuzzyZero(switchTime1,EpsilonT)) return accel1;
-        else return accel2;
-       }
-       if(switchTime1 >= 0 && switchTime1 <= endTime) {
-        if(switchTime2 >= 0 && switchTime2 <= endTime) {
-       if(switchTime1 < switchTime2) { switchTime=switchTime1; return accel1; }
-       else { switchTime=switchTime2; return accel2; }
-        }
-        else { switchTime=switchTime1; return accel1; }
-       }
-       else if(switchTime2 >= 0 && switchTime2 <= endTime) { switchTime=switchTime2; return accel2; }
-       return -1.0;
-       }
-       return -1.0;
-     */
-}
-
-
-Real PLPRamp::Evaluate(Real t) const
-{
-    Real tmT = t - ttotal;
-    if(t < tswitch1) return x0 + 0.5*a*Sqr(t) + dx0*t;
-    else if(t < tswitch2) {
-        Real xswitch = x0 + 0.5*a*Sqr(tswitch1) + dx0*tswitch1;
-        return xswitch + (t-tswitch1)*v;
-    }
-    else return x1 - 0.5*a*Sqr(tmT) + dx1*tmT;
-}
-
-Real PLPRamp::Derivative(Real t) const
-{
-    Real tmT = t - ttotal;
-    if(t < tswitch1) return a*t + dx0;
-    else if(t < tswitch2) return v;
-    else return -a*tmT + dx1;
-}
-
-Real PLPRamp::Accel(Real t) const
-{
-    if(t < tswitch1) return a;
-    else if(t < tswitch2) return 0;
-    else return -a;
-}
-
-Real PLPRamp::CalcTotalTime(Real a,Real v) const
-{
-    Real t1 = (v-dx0)/a;
-    Real t2mT = (dx1-v)/a;
-    Real y1 = 0.5*(Sqr(v) - Sqr(dx0))/a + x0;
-    Real y2 = 0.5*(Sqr(dx1) - Sqr(v))/a + x1;
-    Real t2mt1 = (y2-y1)/v;
-    //Real xswitch = x0 + 0.5*a*Sqr(t1) + dx0*t1;
-    if(t1 < 0 || t2mT > 0 || t2mt1 < 0) return -1;
-    if(!IsFinite(t1) || !IsFinite(t2mT)) return -1;
-    return t1 + t2mt1 - t2mT;
-}
-
-Real PLPRamp::CalcSwitchTime1(Real a,Real v) const
-{
-    Real t1 = (v-dx0)/a;
-    if(t1 < 0) return -1;
-    return t1;
-}
-
-Real PLPRamp::CalcSwitchTime2(Real a,Real v) const
-{
-    Real t1 = (v-dx0)/a;
-    Real y1 = 0.5*(Sqr(v) - Sqr(dx0))/a + x0;
-    Real y2 = 0.5*(Sqr(dx1) - Sqr(v))/a + x1;
-    Real t2mt1 = (y2-y1)/v;
-    //Real t2mt1 = 0.5*(Sqr(dx1) + Sqr(dx0))/(v*a) - v/a + (x1 - x0)/v;
-    //Real xswitch = x0 + 0.5*a*Sqr(t1) + dx0*t1;
-    if(t1 < 0 || t2mt1 < 0) return -1;
-    return t1 + t2mt1;
-}
-
-Real PLPRamp::CalcMinAccel(Real endTime,Real v) const
-{
-    Real den=endTime*v - (x1-x0);
-    //straight line sections have den ~= 0
-    if(FuzzyZero(den,EpsilonX)) {
-        if(FuzzyEquals(dx0,v,EpsilonV) && FuzzyEquals(dx1,v,EpsilonV)) return 0;
-        return Inf;
-    }
-
-    //Real a = (v - (dx0+dx1) + 0.5/v*(Sqr(dx0)+Sqr(dx1)))/(endTime - (x1-x0)/v);
-    //Real a = (Sqr(v) - v*(dx0+dx1) + 0.5*(Sqr(dx0)+Sqr(dx1)))/den;
-    Real a = (Sqr(v-dx0)+Sqr(v-dx1))/(den*2);
-    /*
-       Real t1 = (v-dx0)/a;
-       Real t2mT = (dx1-v)/a;
-       Real y1 = 0.5*(Sqr(v) - Sqr(dx0))/a + x0;
-       Real y2 = 0.5*(Sqr(dx1) - Sqr(v))/a + x1;
-       //Real t2mt1 = 0.5*(Sqr(dx1) + Sqr(dx0))/(v*a) - v/a + (x1 - x0)/v;
-       Real t2mt1 = (y2-y1)/v;
-       Real vold = v;
-       //cout<<"EndTime "<<endTime<<", v "<<v<<endl;
-       //cout<<"a = "<<a<<", t1="<<t1<<", t2mt1="<<t2mt1<<", t2mT="<<t2mT<<endl;
-       if(t1 < 0 || t2mT > 0 || t2mt1 < 0) return Inf;
-       if(!IsFinite(t1) || !IsFinite(t2mT)) return Inf;
-     */
-    if(!(CalcTotalTime(a,v) >= 0)) { return Inf; }
-    return a;
-
-    /*
-       if(!(CalcTotalTime(a,v) >= 0)) {
-       //this is very strange -- does it happen because of a compiler
-       //optimization error?
-       PARABOLICWARN("PLPRamp::CalcMinAccel: some numerical error prevented computing total time\n");
-       PARABOLICWARN("  Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
-       PARABOLICWARN("  endTime %.15e, accel %.15e, vel %.15e, switch times %.15e %.15e, total time %.15e\n",endTime,a,v,CalcSwitchTime1(a,v),CalcSwitchTime2(a,v),CalcTotalTime(a,v));
-       PARABOLIC_RAMP_ASSERT(v == vold);
-       PARABOLIC_RAMP_PLOG("y1=%.15e, y2=%.15e, t2mt1 = %.15e\n",y1,y2,t2mt1);
-       Real y1_test = 0.5*(Sqr(v) - Sqr(dx0))/a + x0;
-       Real y2_test = 0.5*(Sqr(dx1) - Sqr(v))/a + x1;
-       Real t2mt1_test = (y2_test-y1_test)/v;
-       //Real t2mt1_test = 0.5*(Sqr(dx1) + Sqr(dx0))/(v*a) - v/a + (x1 - x0)/v;
-       PARABOLIC_RAMP_PLOG("y1=%.15e, y2=%.15e, t2mt1 = %.15e\n",y1_test,y2_test,t2mt1_test);
-       PARABOLIC_RAMP_PLOG("dy1=%.15e, dy2=%.15e, dt2mt1 = %.15e\n",y1-y1_test,y2-y2_test,t2mt1-t2mt1_test);
-       return Inf;
-       PARABOLIC_RAMP_ASSERT(y1 == y1_test);
-       PARABOLIC_RAMP_ASSERT(y2 == y2_test);
-       PARABOLIC_RAMP_ASSERT(y2-y1 == y2_test-y1_test);
-       PARABOLIC_RAMP_ASSERT(t2mt1 == t2mt1_test);
-       }
-       PARABOLIC_RAMP_ASSERT(CalcTotalTime(a,v) >= 0);
-       return a;
-     */
-}
-
-
-bool PLPRamp::SolveMinTime(Real amax,Real vmax)
-{
-    return SolveMinTime2(amax,vmax,0);
-}
-
-bool PLPRamp::SolveMinTime2(Real amax,Real vmax,Real timeLowerBound)
-{
-    Real t1 = CalcTotalTime(amax,vmax);
-    Real t2 = CalcTotalTime(-amax,vmax);
-    Real t3 = CalcTotalTime(amax,-vmax);
-    Real t4 = CalcTotalTime(-amax,-vmax);
-    //cout<<"Time for PLP ++-: "<<t1<<", -++: "<<t2<<", +--: "<<t3<<", --+: "<<t4<<endl;
-    ttotal = Inf;
-    if(t1 >= timeLowerBound && t1 < ttotal) {
-        a = amax;
-        v = vmax;
-        ttotal = t1;
-    }
-    if(t2 >= timeLowerBound && t2 < ttotal) {
-        a = -amax;
-        v = vmax;
-        ttotal = t2;
-    }
-    if(t3 >= timeLowerBound && t3 < ttotal) {
-        a = amax;
-        v = -vmax;
-        ttotal = t3;
-    }
-    if(t4 >= timeLowerBound && t4 < ttotal) {
-        a = -amax;
-        v = -vmax;
-        ttotal = t4;
-    }
-    if(IsInf(ttotal)) {
-        a = v = 0;
-        tswitch1 = tswitch2 = ttotal = -1;
-
-        //PARABOLIC_RAMP_PLOG("Times... %.15e %.15e %.15e %.15e\n",t1,t2,t3,t4);
-        //PARABOLIC_RAMP_PLOG("Trying alternate MinTime2 solution technique...\n");
-        Real v1 = CalcMinTimeVariableV(timeLowerBound,amax,vmax);
-        Real v2 = CalcMinTimeVariableV(timeLowerBound,-amax,vmax);
-        if(v1 != 0) {
-            a = amax;
-            v = v1;
-            tswitch1 = (v1-dx0)/a;
-            tswitch2 = timeLowerBound - (v1-dx1)/a;
-            ttotal = timeLowerBound;
-            //PARABOLIC_RAMP_PLOG("Candidate 1 timing %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
-            //PARABOLIC_RAMP_PLOG("Test 1 x %.15e %.15e\n",x1-(ttotal-tswitch2)*v1+0.5*Sqr(ttotal-tswitch2)*a,x0+tswitch1*dx0+0.5*Sqr(tswitch1)*a+(tswitch1-tswitch2)*v1);
-            //PARABOLIC_RAMP_PLOG("x1, v1 = %.15e, %.15e\n",x0+dx0*tswitch1+0.5*Sqr(tswitch1)*a,dx0+tswitch1*a);
-            //PARABOLIC_RAMP_PLOG("x2, v2 = %.15e, %.15e\n",x1-dx1*(ttotal-tswitch2)+0.5*Sqr(ttotal-tswitch2)*a,dx1+(ttotal-tswitch2)*a);
-            return true;
-        }
-        if(v2 != 0) {
-            a = -amax;
-            v = v2;
-            tswitch1 = (v2-dx0)/a;
-            tswitch2 = timeLowerBound - (v2-dx1)/a;
-            ttotal = timeLowerBound;
-            //PARABOLIC_RAMP_PLOG("Candidate 2 timing %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
-            //PARABOLIC_RAMP_PLOG("Test 2 x %.15e %.15e\n",x1-(ttotal-tswitch2)*v1+0.5*Sqr(ttotal-tswitch2)*a,x0+tswitch1*dx0+0.5*Sqr(tswitch1)*a+(tswitch1-tswitch2)*v1);
-            //PARABOLIC_RAMP_PLOG("x1, v1 = %.15e, %.15e\n",x0+dx0*tswitch1+0.5*Sqr(tswitch1)*a,dx0+tswitch1*a);
-            //PARABOLIC_RAMP_PLOG("x2, v2 = %.15e, %.15e\n",x1-dx1*(ttotal-tswitch1)+0.5*Sqr(ttotal-tswitch1)*a,dx1+(ttotal-tswitch2)*a);
-            return true;
-        }
-        return false;
-    }
-    tswitch1 = CalcSwitchTime1(a,v);
-    tswitch2 = CalcSwitchTime2(a,v);
-
-    if(tswitch1 > tswitch2 && FuzzyEquals(tswitch1,tswitch2,EpsilonT)) {
-        tswitch1 = tswitch2 = 0.5*(tswitch1+tswitch2);
-    }
-    if(tswitch2 > ttotal && FuzzyEquals(tswitch2,ttotal,EpsilonT)) {
-        tswitch2 = ttotal;
-    }
-
-    Real t2mT = tswitch2-ttotal;
-    Real xswitch = x0 + 0.5*a*Sqr(tswitch1) + dx0*tswitch1;
-    Real xswitch2 = xswitch + (tswitch2-tswitch1)*v;
-    if(!FuzzyEquals(xswitch2,x1 - 0.5*a*Sqr(t2mT) + dx1*t2mT,EpsilonX)) {
-        PARABOLICWARN("PLP Ramp has incorrect switch 2 position: %.15e vs %.15e\n",xswitch2,x1 - 0.5*a*Sqr(t2mT) + dx1*t2mT);
-        PARABOLIC_RAMP_PLOG("Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("Acceleration %.15e, vel %.15e, deceleration %.15e\n",a,v,-a);
-        PARABOLIC_RAMP_PLOG("Switch times %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
-        SaveRamp("PLP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,timeLowerBound);
-        return false;
-    }
-    return true;
-}
-
-/** only ttotal=t3 is known
-   try to use max accel/velocity whenever possible
-   constraints are:
-   0 <= t1 <= t2 <= t3
-   -amax <= a <= amax
-   -vmax <= v <= vmax
-
-   t1,t2,t3,a1,a2,v0,v1,dx = symbols('t1,t2,t3,a1,a2,v0,v1,dx')
-   a2 = -a1
-   veq = v0 + a1*t1 + a2*(t3-t2) - v1 = 0
-   => t1 = -(a1*t2 - a1*t3 + v0 - v1)/a1
-   => t2 = -(a1*t1 - a1*t3 + v0 - v1)/a1
-
-   eq = -dx + v0*t1+0.5*a1*t1**2 + (v0+a1*t1)*(t2-t1) + (v0+a1*t1)*(t3-t2) + 0.5*a2*(t3-t2)**2
-   eq2 = eq.subs(a2,-a1).subs(t2,-(a1*t1 - a1*t3 + v0 - v1)/a1)
-   eq3 = (eq2*a1).expand()
-
-   c2(a1)*t1**2 + c1(a1)*t1 + c0(a1) = 0
-   c2(a1) = -a1*a1
-   c1(a1) = a1*(a1*t3+v1-v0)
-   c0(a1) = a1*(t3*v0-dx) - 0.5*(v0-v1)*(v0-v1);
-
-   b2(t1)*a1**2 + b1(t1)*a1 + b0(t1) = 0
-
-   t1a = -t1**2 + t1*t3
-   t1b = -dx + t1*(v1-v0) + t3*v0
-   t1c = -0.5*(v0-v1)*(v0-v1)
-
-   if velocity is saturated to vmax, then
-
-   v0 + a1*t1 = vmax
-   a1 = (vmax-v0)/t1
-
-   eq4 = (eq3.subs(a1,(vmax-v0)/t1)*t1).expand()
-   t1 = (dx*v0 - dx*vmax - t3*v0*vmax + t3*vmax**2)/(0.5*v0**2 - 1.0*v0*vmax + 0.5*v1**2 - v1*vmax + vmax**2)
-
-   if acceleration is minimized then
-
-   besta1 = -0.5*t1b/t1a
-
-   0.25*t1b**2/ta1 - 0.5*t1b**2/t1a + t1c = 0
-   -0.25*t1b**2 + t1c*t1a = 0
-
-   (-t1**2 + t1*t3)*(-0.5*v0 + 0.5*v1)*(v0 - v1) - 0.25*(-dx + t1*(-v0 + v1) + t3*v0)**2 = 0
-
-   A*t1**2 + B*t1 + C = 0
-   A = 0.25*v0**2 - 0.5*v0*v1 + 0.25*v1**2 = 0.25*(v0-v1)**2
-   B = -0.5*dx*v0 + 0.5*dx*v1 + 0.5*t3*v0*v1 - 0.5*t3*v1**2 = 0.5*dx*(v1-v0) - 0.5*t3*v1*(v1-v0) = 0.5*(dx - t3*v1)*(v1-v0)
-   C = -0.25*dx**2 + 0.5*dx*t3*v0 - 0.25*t3**2*v0**2 = -0.25*(t3*v0-dx)**2
-
-   \author Rosen Diankov
- */
-bool PLPRamp::SolveFixedTime(Real amax, Real vmax, Real endTime)
-{
-    if( endTime <= 0 ) {
-        return false;
-    }
-
-    Real testa[2] = {amax,-amax};
-    for(int ia = 0; ia < 2; ++ia) {
-        a = testa[ia];
-        Real c2 = -a*a;
-        Real c1 = a*(a*endTime + dx1 - dx0);
-        Real c0 = a*(endTime*dx0-x1+x0) - 0.5*(dx0-dx1)*(dx0-dx1);
-        Real troots[2];
-        int numroots = SolveQuadratic(c2, c1, c0, troots[0], troots[1]);
-        for(int i = 0; i < numroots; ++i) {
-            if( SolveFixedAccelSwitch1Time(amax, vmax, a, troots[i], endTime) ) {
-                return true;
-            }
-        }
-    }
-
-    // amax didn't work, so see if there's a solution when velocity is saturated
-    Real testv[2] = {vmax,-vmax};
-    for(int iv = 0; iv < 2; ++iv) {
-        Real denom = 0.5*((dx0 - testv[iv])*(dx0 - testv[iv]) + (dx1-testv[iv])*(dx1-testv[iv]));
-        if( FuzzyZero(denom,EpsilonV*EpsilonV) ) {
-            continue;
-        }
-        Real num = (x1-x0-endTime*testv[iv])*(dx0 - testv[iv]);
-        tswitch1 = num/denom;
-        a = (testv[iv]-dx0)/tswitch1;
-        if( SolveFixedAccelSwitch1Time(amax, vmax, a, tswitch1, endTime) ) {
-            return true;
-        }
-    }
-
-    // cannot solve for a1, t1 so guessing some values
-    Real testt[2] = {0.2*endTime, 0.4*endTime};
-    for(int it = 0; it < 2; ++it) {
-        Real tswitch1 = testt[it];
-        Real b2 = -tswitch1*tswitch1;
-        Real b1 = -x0 + x1 + tswitch1*(dx1-dx0) + endTime*dx0;
-        Real b0 = -0.5*(dx0-dx1)*(dx0-dx1);
-        Real aroots[2];
-        int numroots = SolveQuadratic(b2, b1, b0, aroots[0], aroots[1]);
-        for(int i = 0; i < numroots; ++i) {
-            if( SolveFixedAccelSwitch1Time(amax, vmax, aroots[i], tswitch1, endTime) ) {
-                return true;
-            }
-        }
-    }
-    
-    // there's ramps that cannot be solved no matter what
-    return false;
-}
-
-/* solve with t3=endTime, t1=tswitch1, and acceleration fixed
- */
-bool PLPRamp::SolveFixedAccelSwitch1Time(Real amax, Real vmax, Real a, Real tswitch1, Real endTime)
-{
-    this->a = a;
-    this->tswitch1 = tswitch1;
-    if( tswitch1 < 0 ) {
-        if( tswitch1 >= -EpsilonT ) {
-            tswitch1 = 0;
-        }
-        else {
-            return false;
-        }
-    }
-    else if( tswitch1 > endTime ) {
-        if( tswitch1 <= endTime+EpsilonT ) {
-            tswitch2 = endTime;
-        }
-        else {
-            return false;
-        }
-    }
-
-    if( a < -amax ) {
-        if( a > -amax-EpsilonA ) {
-            a = -amax;
-        }
-        else {
-            return false;
-        }
-    }
-    if( a > amax ) {
-        if( a < amax+EpsilonA ) {
-            a = amax;
-        }
-        else {
-            return false;
-        }
-    }
-
-    tswitch2 = -tswitch1 + endTime + (dx1-dx0)/a;
-    if( tswitch2 < tswitch1 ) {
-        if( tswitch2 >= tswitch1-EpsilonT ) {
-            tswitch2 = tswitch1;
-        }
-        else {
-            return false;
-        }
-    }
-    else if( tswitch2 > endTime ) {
-        if( tswitch2 <= endTime+EpsilonT ) {
-            tswitch2 = endTime;
-        }
-        else {
-            return false;
-        }
-    }
-
-    v = dx0 + a*tswitch1;
-    if( Abs(v) > vmax + EpsilonV ) {
-        return false;
-    }
-
-    // double check the values
-    Real expecteddx = a*(tswitch1*(-0.5*tswitch1 + endTime) + tswitch2*(-0.5*tswitch2 + endTime) - 0.5*endTime*endTime) + endTime*dx0;
-    if( !FuzzyEquals(expecteddx,x1-x0,EpsilonX) ) {
-        return false;
-    }
-
-    ttotal = endTime;
-    return true;
-}
-
-/*
-   For minimum accel, solve for t1 first:
-
-   t1,t2,t3,a1,a2,v0,v1,dx,vx = symbols('t1,t2,t3,a1,a2,v0,v1,dx,vx')
-   a2 = -a1
-   veq = v0 + a1*t1 + a2*(t3-t2) - v1 = 0
-   => t1 = -(a1*t2 - a1*t3 + v0 - v1)/a1
-   => t2 = -(a1*t1 - a1*t3 + v0 - v1)/a1
-
-   eq = -dx + v0*t1+0.5*a1*t1**2 + (v0+a1*t1)*(t2-t1) + (v0+a1*t1)*(t3-t2) + 0.5*a2*(t3-t2)**2
-   eq2 = eq.subs(a2,-a1).subs(t2,-(a1*t1 - a1*t3 + v0 - v1)/a1)
-   eq3 = (eq2*a1).expand()
-
-   let vx = a1*t1
-
-   eq4=eq3.subs(a1*t1,vx)
-   eq4 = -a1*dx + a1*t3*v0 + a1*t3*vx - 0.5*v0**2 + 1.0*v0*v1 - 1.0*v0*vx - 0.5*v1**2 + 1.0*v1*vx - 1.0*vx**2
-
-   solve(eq4,a1) = (0.5*(v1-v0)**2 + v0*vx - v1*vx + vx**2)/(-dx + t3*(v0 + vx)) = ( (vx - (v1-v0)*0.5)**2 + (v1-v0)*0.5 ) / (t3*(v0+vx) - dx)
-   then solve for da/dvx=0, which turns out to be:
-
-   adiffsol=1.0*t3*vx**2 + (-2.0*dx + 2.0*t3*v0)*vx - 1.0*dx*v0 + 1.0*dx*v1 + 0.5*t3*v0**2 - 0.5*t3*v1**2
-
-   \author Rosen Diankov and Kris Hauser
- */
-
-bool PLPRamp::SolveMinAccel(Real endTime,Real vmax)
-{
-    Real coeffs[3];
-    coeffs[0] = endTime;
-    coeffs[1] = 2.0*(endTime*dx0-(x1-x0));
-    coeffs[2] = (dx1-dx0)*((x1-x0) - 0.5*endTime*(dx1+dx0));
-    Real vxroots[2];
-    int numroots = SolveQuadratic(coeffs[0], coeffs[1], coeffs[2], vxroots[0], vxroots[1]);
-    tswitch1 = tswitch2 = ttotal = -1;
-    if( numroots == 0 ) {
-        return false;
-    }
-    for(int iroot = 0; iroot < numroots; ++iroot) {
-        if( vxroots[iroot] > 0 && vxroots[iroot] < endTime ) {
-            Real vx = vxroots[iroot];
-            Real newa = ( Sqr(vx - (dx1-dx0)*0.5) + Sqr((dx1-dx0)*0.5) ) / (endTime*(dx0+vx) - (x1-x0));
-            if( fabs(newa) < EpsilonA ) {
-                // no acceleration so not a PLP ramp
-                continue;
-            }
-            // check if max velocity is exceeded
-            Real newv = dx0+vx;
-            if( fabs(newv) > vmax+EpsilonV ) {
-                continue;
-            }
-            else if( newv > vmax ) {
-                newv = vmax;
-            }
-            else if( newv < -vmax ) {
-                newv = -vmax;
-            }
-            Real newtswitch1 = vx/newa;
-            if( newtswitch1 < 0 ) {
-                // tswitch1 is negative, so impossible;
-                continue;
-            }
-            Real newtswitch2 = endTime - newtswitch1 + (dx1 - dx0)/newa;
-            if( newtswitch2 >= newtswitch1 && newtswitch2 < endTime ) {
-                if( tswitch1 == -1 || fabs(newa) < a ) {
-                    a = newa;
-                    v = newv;
-                    tswitch1 = newtswitch1;
-                    tswitch2 = newtswitch2;
-                }
-            }
-        }
-    }
-    if( tswitch1 == -1 ) {
-        // try a different method
-        Real a1 = CalcMinAccel(endTime,vmax);
-        Real a2 = CalcMinAccel(endTime,-vmax);
-        a = Inf;
-        if(fabs(a1) < a) {
-            a = a1;
-            v = vmax;
-        }
-        if(fabs(a2) < a) {
-            a = a2;
-            v = -vmax;
-        }
-        if(IsInf(a)) {
-            a = 0;
-            tswitch1 = tswitch2 = ttotal = -1;
-            return false;
-        }
-        if(fabs(a) == 0) {
-            tswitch1 = 0;
-            tswitch2 = endTime;
-            ttotal = endTime;
-        }
-        else {
-            ttotal = CalcTotalTime(a,v);
-            tswitch1 = CalcSwitchTime1(a,v);
-            tswitch2 = CalcSwitchTime2(a,v);
-
-            if(tswitch1 > tswitch2 && FuzzyEquals(tswitch1,tswitch2,EpsilonT)) {
-                tswitch1 = tswitch2 = 0.5*(tswitch1+tswitch2);
-            }
-            if(tswitch2 > endTime && FuzzyEquals(tswitch2,endTime,EpsilonT)) {
-                tswitch2 = endTime;
-            }
-            if(ttotal < 0) {  //there was an error computing the total time
-                PARABOLICWARN("PLPRamp::SolveMinAccel: some numerical error prevented computing total time\n");
-                PARABOLICWARN("  Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
-                PARABOLICWARN("  endTime %.15e, accel %.15e, vel %.15e, switch times %.15e %.15e, total time %.15e\n",endTime,a,v,tswitch1,tswitch2,ttotal);
-                SaveRamp("PLP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,vmax,endTime);
-                return false;
-            }
-        }
-        if(ttotal > endTime + EpsilonT) {
-            PARABOLICWARN("PLPRamp::SolveMinAccel: total time greater than endTime!\n");
-            PARABOLICWARN("  endTime %.15e, accel %.15e, vel %.15e, switch times %.15e %.15e, total time %.15e\n",endTime,a,v,tswitch1,tswitch2,ttotal);
-            SaveRamp("PLP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,vmax,endTime);
-            return false;
-        }
-        if(fabs(ttotal-endTime) >= EpsilonT) {
-            PARABOLICWARN("PLPRamp::SolveMinAccel: total time and endTime are different!\n");
-            PARABOLICWARN("  endTime %.15e, accel %.15e, vel %.15e, switch times %.15e %.15e, total time %.15e\n",endTime,a,v,tswitch1,tswitch2,ttotal);
-            SaveRamp("PLP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,vmax,endTime);
-        }
-        PARABOLIC_RAMP_ASSERT(fabs(ttotal-endTime) < EpsilonT);
-        //fiddle with the numerical errors
-        ttotal = endTime;
-        if(tswitch2 > ttotal) {
-            tswitch2=ttotal;
-        }
-        if(tswitch1 > ttotal) {
-            tswitch1=ttotal;
-        }
-    }
-
-    ttotal = endTime;
-    Real t2mT = tswitch2-ttotal;
-    Real xswitch = x0 + 0.5*a*Sqr(tswitch1) + dx0*tswitch1;
-    Real xswitch2 = xswitch + (tswitch2-tswitch1)*v;
-    if(!FuzzyEquals(xswitch2,x1 - 0.5*a*Sqr(t2mT) + dx1*t2mT,EpsilonX)) {
-        PARABOLICWARN("PLP Ramp has incorrect switch 2 position: %.15e vs %.15e\n",xswitch2,x1 - 0.5*a*Sqr(t2mT) + dx1*t2mT);
-        PARABOLIC_RAMP_PLOG("Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("Acceleration %.15e, vel %.15e, deceleration %.15e\n",a,v,-a);
-        PARABOLIC_RAMP_PLOG("Switch times %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
-        SaveRamp("PLP_SolveMinAccel_failure.dat",x0,dx0,x1,dx1,-1,vmax,endTime);
-        return false;
-    }
-
-    return true;
-}
-
-Real PLPRamp::CalcMinTimeVariableV(Real endTime,Real a,Real vmax) const
-{
-    //Try alternate solution technique with acceleration bounded, time fixed, velocity variable
-    Real b = -a*endTime - (dx1+dx0);
-    Real c = a*(x1-x0) + (Sqr(dx0)+Sqr(dx1))*0.5;
-    Real v1,v2;
-    //PARABOLIC_RAMP_PLOG("Quadratic coeffs %.15e, %.15e, %.15e\n",1.0,b,c);
-    int res=SolveQuadratic(1.0,b,c,v1,v2);
-    //PARABOLIC_RAMP_PLOG("Quadratic res %d, accel %.15e, velocities %.15e %.15e\n",res,a,v1,v2);
-    if(res >= 1) {
-        Real ts1 = (v1-dx0)/a;
-        Real ts2 = endTime - (v1-dx1)/a;
-        //PARABOLIC_RAMP_PLOG("Solution 1 times %.15e %.15e %.15e\n",ts1,ts2,endTime);
-        if(Abs(v1) <= vmax+EpsilonV && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime+EpsilonT)
-            //it's a valid solution!
-            return v1;
-    }
-    if(res == 2) {
-        Real ts1 = (v2-dx0)/a;
-        Real ts2 = endTime - (v2-dx1)/a;
-        //PARABOLIC_RAMP_PLOG("Solution 2 times %.15e %.15e %.15e\n",ts1,ts2,endTime);
-        if(Abs(v2) <= vmax+EpsilonV && ts1 >= 0 && ts2 >= ts1 && ts2 <= endTime+EpsilonT)
-            //it's a valid solution!
-            return v2;
-    }
-    return 0;
-}
-
-
 // Set a ramp with desired position, velocity and time duration (added on 2013/04/24)
 void ParabolicRamp1D::SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t)
 {
@@ -1628,13 +93,12 @@ void ParabolicRamp1D::SetPosVelTime(Real _x0,Real _dx0,Real _x1,Real _dx1,Real t
     x1 = _x1;
     dx1 = _dx1;
     a1 = (dx1-dx0)/t;
-    v = a2 = 0;
+    v = dx1;
+    a2 = 0;
     tswitch1 = t;
     tswitch2 = t;
     ttotal = t;
 }
-
-
 
 void ParabolicRamp1D::SetConstant(Real x,Real t)
 {
@@ -1699,10 +163,8 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
     if(!IsInf(vmax)) {
         plpres = plp.SolveMinAccel(endTime,vmax);
     }
-    //cout<<"PP a: "<<pp.a<<", max vel "<<pp.MaxVelocity()<<endl;
-    //cout<<"PLP a: "<<plp.a<<", vel "<<plp.v<<endl;
     a1 = Inf;
-    if(pres && FuzzyEquals(endTime,p.ttotal,EpsilonT) && Abs(p.MaxVelocity()) <= vmax+EpsilonV) {
+    if(pres && FuzzyEquals(endTime,p.ttotal,EpsilonT) && p.GetMaxSpeed() <= vmax+EpsilonV) {
         if(FuzzyEquals(p.Evaluate(endTime),x1,EpsilonX) && FuzzyEquals(p.Derivative(endTime),dx1,EpsilonV)) {
             a1 = p.a;
             //tswitch1 = tswitch2 = p.ttotal;
@@ -1719,21 +181,23 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
             tswitch2 = endTime;
             ttotal = endTime;
         }
+        a2 = -a1;
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && Abs(pp.a) < Abs(a1)) {
-        a1 = pp.a;
+    if(ppres && pp.GetMaxSpeed() <= vmax+EpsilonV && Abs(pp._a1) < Abs(a1) && Abs(pp._a2) < Abs(a1)) {
+        a1 = pp._a1;
+        a2 = pp._a2;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;
         ttotal = pp.ttotal;
     }
     if(plpres && Abs(plp.v) <= vmax+EpsilonV && Abs(plp.a) < Abs(a1)) {
         a1 = plp.a;
+        a2 = -a1;
         v = plp.v;
         tswitch1 = plp.tswitch1;
         tswitch2 = plp.tswitch2;
         ttotal = plp.ttotal;
     }
-    a2 = -a1;
 
     if(IsInf(a1)) {
         if(vmax == 0) {
@@ -1744,10 +208,10 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
                 return true;
             }
         }
-        if(ppres && Abs(pp.MaxVelocity()) <= vmax + EpsilonV) {
+        if(ppres && pp.GetMaxSpeed() <= vmax + EpsilonV) {
             //some slight numerical error caused velocity to exceed maximum
-            a1 = pp.a;
-            a2 = -pp.a;
+            a1 = pp._a1;
+            a2 = pp._a2;
             v = 0;
             tswitch1 = tswitch2 = pp.tswitch;
             ttotal = pp.ttotal;
@@ -1760,8 +224,8 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
         PARABOLIC_RAMP_PLOG("end time %.15e, vmax = %.15e\n",endTime,vmax);
 
         PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        PARABOLIC_RAMP_PLOG("p.a = %.15e, max vel=%.15e, end x=%.15e, end dx=%.15e\n",p.a,p.MaxVelocity(),p.Evaluate(endTime),p.Derivative(endTime));
-        PARABOLIC_RAMP_PLOG("pp.a = %.15e, max vel=%.15e\n",pp.a,pp.MaxVelocity());
+        PARABOLIC_RAMP_PLOG("p.a = %.15e, maxspeed=%.15e, end x=%.15e, end dx=%.15e\n",p.a,p.GetMaxSpeed(),p.Evaluate(endTime),p.Derivative(endTime));
+        PARABOLIC_RAMP_PLOG("pp._a1 = %.15e, pp._a2 = %.15e, maxspeed=%.15e\n",pp._a1,pp._a2,pp.GetMaxSpeed());
         PARABOLIC_RAMP_PLOG("plp.a = %.15e, v=%.15e\n",plp.a,plp.v);
 
         Real switch1,switch2;
@@ -1778,16 +242,651 @@ bool ParabolicRamp1D::SolveMinAccel(Real endTime,Real vmax)
         PARABOLIC_RAMP_PLOG("end time %.15e, vmax = %.15e\n",endTime,vmax);
 
         PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        PARABOLIC_RAMP_PLOG("p.a = %.15e, max vel=%.15e\n",p.a,p.MaxVelocity());
-        PARABOLIC_RAMP_PLOG("pp.a = %.15e, max vel=%.15e\n",pp.a,pp.MaxVelocity());
+        PARABOLIC_RAMP_PLOG("p.a = %.15e, maxspeed=%.15e\n",p.a,p.GetMaxSpeed());
+        PARABOLIC_RAMP_PLOG("pp._a1 = %.15e, pp._a2 = %.15e, maxspeed=%.15e\n",pp._a1,pp._a2,pp.GetMaxSpeed());
         PARABOLIC_RAMP_PLOG("plp.a = %.15e, v=%.15e\n",plp.a,plp.v);
         return false;
     }
     return true;
 }
 
+////////Puttichai
+bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
+{
+    // if (endTime < ttotal) {
+    //     RAVELOG_WARN_FORMAT("endTime = %.15f; ttotal = %.15f", endTime%ttotal);
+    // } // I just found out that sometimes endTime can be less than ttotal due to calls from x-bound fixing procedure (in SolveMinAccelBounded)
+
+    /*
+       We want to 'stretch' this velocity profile to have a new duration of endTime. First, try
+       re-interpolating this profile to have two ramps. If that doesn't work, try modifying the
+       profile accordingly.
+     */
+
+    // PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+
+    /*
+       Two-ramp case: let t = endTime (the new duration that we want), a1 and a2 the new
+       accelerations of the profile, tswitch1 the duration of the new first ramp.
+
+       Starting from
+
+              d = (dx0*tswitch1 + 0.5*a1*(tswitch1*tswitch1)) + ((dx0 + a1*tswitch1)*dt2 + 0.5*a2*(dt2*dt2)),
+
+       where d is the displacement done by this trajectory, dt2 = tswitch2 - tswitch1, i.e., the
+       duration of the second ramp.  Then we can write a1 and a2 in terms of tswitch1 as
+
+              a1 = A + B/tswitch1
+              a2 = A - B/dt2,
+
+       where A = (dx1 - dx0)/t and B = (2d/t) - (dx0 + dx1). We want to get the velocity profile
+       which has minimal acceleration: set the minimization objective to
+
+              J(tswitch1) = a1*a1 + a2*a2.
+
+       We start by calculating feasible ranges of tswitch1 due to various constraints.
+
+       1) Acceleration constraints for the first ramp:
+
+              -amax <= a1 <= amax.
+
+         From this, we have
+
+              -amax - A <= B/tswitch1            ---   I)
+              B/tswitch1 >= amax - A.            ---  II)
+
+         Let sum1 = -amax - A and sum2 = amax - A. We can obtain the feasible ranges of tswitch1
+         accordingly.
+
+       2) Acceleration constraints for the second ramp:
+
+              -amax <= a2 <= amax.
+
+         From this, we have
+
+              -amax - A <= -B/(t - tswitch1)      --- III)
+              -B/(t - tswitch1) <= amax - A.      ---  IV)
+
+         As before, the feasible ranges of tswitch1 can be computed accordingly.
+
+       We will obtain an interval iX for each constraint X. Since tswitch1 needs to satisfy all the
+       four constraints plus the initial feasible range [0, endTime], we will obtain only one single
+       feasible range for tswitch1. (Proof sketch: intersection operation is associative and
+       intersection of two intervals gives either an interval or an empty set.)
+
+     */
+
+    if (endTime < -EpsilonT) {
+        PARABOLIC_RAMP_PLOG("endTime is negative");
+        return false;
+    }
+    if (endTime <= EpsilonT) {
+        // Check if this is a stationary trajectory
+        if ((FuzzyEquals(x0, x1, EpsilonX)) && (FuzzyEquals(dx0, dx1, EpsilonV))) {
+            // This is actually a stationary trajectory
+            tswitch1 = 0;
+            tswitch2 = 0;
+            ttotal = 0;
+            a1 = 0;
+            a2 = 0;
+            v = dx0;
+            if (IsValid()) {
+                return true;
+            }
+            else {
+                PARABOLIC_RAMP_PLOG("(stationary trajectory) Finished stretching but the profile does not pass IsValid test.");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false;
+            }
+        }
+        else {
+            // The given endTime is too short for any movement to be made.
+            return false;
+        }
+    }
+    
+    Real d = x1 - x0; // displacement made by this profile
+    Real A, B, C, D; // temporary variables for solving equations
+
+    Real endTimeInv = 1/endTime;
+    A = (dx1 - dx0)*endTimeInv;
+    B = (2*d)*endTimeInv - (dx0 + dx1);
+    Real sum1 = -amax - A;
+    Real sum2 = amax - A;
+    C = B/sum1;
+    D = B/sum2;
+
+    // PARABOLIC_RAMP_PLOG("A = %.15e; B = %.15e, C = %.15e, D = %.15e; sum1 = %.15e; sum2 = %.15e", A, B, C, D, sum1, sum2);
+    if (IS_DEBUGLEVEL(OpenRAVE::Level_Verbose)) {
+        if ((Abs(A) <= EpsilonA) && (Abs(B) <= EpsilonA)) {
+            PARABOLIC_RAMP_PLOG("A and B are zero");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        }
+    }
+
+    // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
+    // acceleration. Instead of having a class representing an interval, we use the interval bounds
+    // directly. Naming convention: iXl = lower bound of interval X, iXu = upper bound of interval X.
+    Real i0l = 0, i0u = endTime;
+    Real i1l = -Inf, i1u = Inf;
+    Real i2l = -Inf, i2u = Inf;
+    Real i3l = -Inf, i3u = Inf;
+    Real i4l = -Inf, i4u = Inf;
+
+    // Intervals 1 and 2 are derived from constraints on a1 (the acceleration of the first ramp)
+    // I) sum1 <= B/tswitch1
+    if (sum1 == 0) {
+        if (B == 0) {
+            // tswitch1 can be anything
+        }
+        else {
+            i1l = Inf;
+        }
+    }
+    else if (sum1 > 0) {
+        PARABOLIC_RAMP_PLOG("sum1 > 0. This implies that endTime is too short");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
+    }
+    else {
+        // i1 = [C, Inf)
+        i1l = C;
+    }
+
+    // II) B/tswitch1 <= sum2
+    if (sum2 == 0) {
+        if (B == 0) {
+            // tswitch1 can be anything
+        }
+        else {
+            i2l = Inf;
+        }
+    }
+    else if (sum2 > 0) {
+        // i2 = [D, Inf)
+        i2l = D;
+    }
+    else {
+        PARABOLIC_RAMP_PLOG("sum2 < 0. This implies that endTime is too short");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
+    }
+
+    // Find the intersection between interval 1 and interval 2, store it in interval 2.
+    if ((i1l > i2u) || (i1u < i2l)) {
+        PARABOLIC_RAMP_PLOG("interval1 and interval2 do not have any intersection");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
+    }
+    else {
+        i2l = Max(i1l, i2l);
+        i2u = Min(i1u, i2u);
+    }
+
+    // Intervals 3 and 3 are derived from constraints on a2 (the acceleration of the second (last) ramp)
+    // III) sum1 <= B/(tswitch1 - t)
+    if (sum1 == 0) {
+        if (B == 0) {
+            // tswitch1 can be anything
+        }
+        else {
+            i3l = Inf;
+        }
+    }
+    else if (sum1 > 0) {
+        // i3 = [t + C, Inf)
+        i3l = endTime + C;
+    }
+    else {
+        // i3 = (-Inf, t + C]
+        i3u = endTime + C;
+    }
+
+    // IV)
+    if (sum2 == 0) {
+        if (B == 0) {
+            // tswitch1 can be anything
+        }
+        else {
+            i4l = Inf;
+        }
+    }
+    else if (sum2 > 0) {
+        // i4 = (-Inf, t + D]
+        i4u = endTime + D;
+    }
+    else {
+        // i4 = [t + D, INf)
+        i4l = endTime + D;
+    }
+
+    // Find the intersection between interval 3 and interval 4, store it in interval 4.
+    if ((i3l > i4u) || (i3u < i4l)) {
+        PARABOLIC_RAMP_PLOG("interval3 and interval4 do not have any intersection");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
+    }
+    else {
+        i4l = Max(i3l, i4l);
+        i4u = Min(i3u, i4u);
+    }
+
+    // Find the intersection between interval 2 and interval 4, store it in interval 4.
+    if (FuzzyEquals(i2l, i4u, EpsilonT) || FuzzyEquals(i2u, i4l, EpsilonT)) {
+        PARABOLIC_RAMP_PLOG("interval2 and interval4 intersect at a point, most likely because the given endTime is actually its minimum time.");
+        // Make sure that the above statement is true.
+        if (!SolveMinTime(amax, vmax)) {
+            return false; // what ?
+        }
+        else {
+            if (FuzzyEquals(ttotal, endTime, EpsilonT)) {
+                PARABOLIC_RAMP_PLOG("The hypothesis is correct.");
+                return true;
+            }
+            else {
+                PARABOLIC_RAMP_PLOG("The hypothesis is wrong. Something else just happened");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false; // what ?
+            }
+        }
+    }
+    else if ((i2l > i4u) || (i2u < i4l)) {
+        PARABOLIC_RAMP_PLOG("interval2 and interval4 do not have any intersection");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
+    }
+    else {
+        i4l = Max(i2l, i4l);
+        i4u = Min(i2u, i4u);
+    }
+
+    // Find the intersection between interval 0 and interval 4, store it in interval 4.
+    if ((i0l > i4u) || (i0u < i4l)) {
+        PARABOLIC_RAMP_PLOG("interval0 and interval4 do not have any intersection");
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        return false;
+    }
+    else {
+        i4l = Max(i0l, i4l);
+        i4u = Min(i0u, i4u);
+    }
+
+    if (i4l > i4u) {
+        PARABOLIC_RAMP_PLOG("interval 4 is empty but the algorithm cannot detect this.");
+        PARABOLIC_RAMP_PLOG("interval4 = [%.15e, %.15e]", i4l, i4u);
+        return false;
+    }
+
+    /*
+       Now we have already obtained a range of feasible values for tswitch1. We choose a value of
+       tswitch1 by selecting the one which minimize J(tswitch1) := (a1^2 + a2^2).
+
+       Now let x = tswitch1 for convenience. We can write J(x) as
+
+              J(x) = (A + B/x)^2 + (A - B/(t - x))^2.
+
+       Then we find x which minimizes J(x) by examining the roots of dJ/dx.
+     */
+    bool res = SolveForTSwitch1(A, B, endTime, i4l, i4u);
+    if (!res) {
+        // Solving dJ/dx = 0 somehow failed. We just choose the midpoint of the feasible interval.
+        tswitch1 = 0.5*(i4l + i4u);
+    }
+
+    if (FuzzyZero(tswitch1, EpsilonT)) {
+        tswitch1 = 0;
+        a1 = 0;
+        a2 = A;
+        v = dx0; // peak velocity
+    }
+    else if (FuzzyEquals(tswitch1, endTime, EpsilonT)) {
+        tswitch1 = endTime;
+        a1 = A;
+        a2 = 0;
+        v = dx1; // peak velocity
+    }
+    else {
+        // The calculated tswitch1 works just fine.
+        a1 = A + B/tswitch1;
+        a2 = A - B/(endTime - tswitch1);
+        v = dx0 + (a1*tswitch1); // peak velocity
+    }
+
+    // Consistency checking
+    if (!FuzzyEquals(v, dx1 - a2*(endTime - tswitch1), EpsilonV)) {
+        PARABOLIC_RAMP_PLOG("Verification failed (vpeak != dx1 - a2*dt): %.15e != %.15e", v, dx1 - a2*(endTime - tswitch1));
+        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+        PARABOLIC_RAMP_PLOG("Calculated values: A = %.15e; B = %.15e; tswitch1 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", A, B, tswitch1, a1, a2, v);
+        return false;
+    }
+
+    if (!(Abs(v) > vmax + EpsilonV)) {
+        // The two-ramp profile works. Go for it.
+        tswitch2 = tswitch1;
+        ttotal = endTime;
+
+        // Finish modifying the velocity profile
+        if (IsValid()) {
+            return true;
+        }
+        else {
+            PARABOLIC_RAMP_PLOG("Finished stretching but the profile does not pass IsValid test.");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            PARABOLIC_RAMP_PLOG("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", tswitch1, tswitch2, a1, a2, v);
+            return false;
+        }
+    }
+    else {
+        // The two-ramp profile does not work because it violates the velocity bounds. Modify it
+        // accordingly.
+        Real vmaxNew = v > 0 ? vmax : -vmax;
+
+        // a1 and a2 should not be zero if the velocity limit is violated. The first check is done
+        // at the line: FuzzyEquals(v, dx1 - a2*dt)above.
+        if ((FuzzyZero(a1, EpsilonA)) || (FuzzyZero(a2, EpsilonA))) {
+            PARABOLIC_RAMP_PLOG("Velocity limit is violated but at least one acceleration is zero: a1 = %.15e; a2 = %.15e", a1, a2);
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            return false;
+        }
+        Real a1inv = 1/a1;
+        Real a2inv = 1/a2;
+
+        Real dv1 = v - vmaxNew;
+        Real dv2 = vmaxNew - dx0;
+        Real dv3 = vmaxNew - dx1;
+        Real t1Trimmed = dv2*a1inv; // vmaxNew = dx0 + a1*t1Trimmed
+        Real t2Trimmed = -dv3*a2inv; // dx1 = vmaxNew + a2*t2Trimmed
+
+        /*
+           Idea: we cut the excessive area above the velocity limit and paste that on both sides of
+           the velocity profile. We do not divide the area and paste it equally on both
+           sides. Instead, we try to minimize the sum of the new accelerations squared:
+
+                  minimize    a1New^2 + a2New^2.
+
+           Let D2 be the area of the velocity profile above the velocity limit. We have
+
+                  D2 = 0.5*dt1*dv2 + 0.5*dt2*dv3.
+
+           Using the relations
+
+                  a1New = dv2/(t1Trimmed - dt1)    and
+                  a2New = -dv3/(t2Trimmed - dt2)
+
+           we finally arrive at the equation
+
+                  A2/a1New + B2/a2New = C2,
+
+           where A2 = dv2^2, B2 = -dv3^2, and C2 = t1Trimmed*dv2 + t2Trimmed*dv3 - 2*D2.
+
+           Let x = a1New and y = a2New for convenience, we can formulate the problem as
+
+                  minimize(x, y)    x^2 + y^2
+                  subject to        A2/x + B2/y = C2.
+
+           From the above problem, we can see that the objective function is actually a circle while
+           the constraint function is a hyperbola. (The hyperbola is centered at (A2/C2,
+           B2/C2)). Therefore, the minimizer is the point where both curves touch.
+
+           Let p = (x0, y0) be the point that the two curves touch. Then
+
+                  (slope of the hyperbola at p)*(y0/x0) = -1,
+
+           i.e., the tangent line of the hyperbola at p and the line connecting the origin and p are
+           perpendicular. Solving the above equation gives us
+
+                  x0 = (A2 + (A2*B2*B2)^(1/3))/C2.
+         */
+
+        Real A2 = dv2*dv2;
+        Real B2 = -dv3*dv3;
+        Real D2 = 0.5*dv1*(endTime - t1Trimmed - t2Trimmed); // area of the velocity profile above the velocity limit.
+        Real C2 = t1Trimmed*dv2 + t2Trimmed*dv3 - 2*D2;
+
+        Real root = cbrt(A2*B2*B2);
+
+        if (FuzzyZero(C2, EpsilonX)) {
+            // This means the excessive area is too large such that after we paste it on both sides
+            // of the original velocity profile, the whole profile becomes one-ramp with a = 0 and v
+            // = vmaxNew.
+            PARABOLIC_RAMP_PLOG("C2 == 0. Unable to fix this case.");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            return false;
+        }
+
+        Real C2inv = 1/C2;
+        a1 = (A2 + root)*C2inv;
+        if (Abs(a1) > amax) {
+            // a1 exceeds the bound, try making it stays at the bound.
+            a1 = a1 > 0 ? amax : -amax;
+            // Recalculate the related variable
+            root = C2*a1 - A2;
+        }
+        // RAVELOG_DEBUG_FORMAT("root = %.15e", root);
+
+        // Now compute a2
+        // Special case: a1 == 0. Then this implies vm == dx0. Reevaluate those above equations
+        // leads to a2 = B2/C2
+        // RAVELOG_DEBUG_FORMAT("a1 = %.15e; EpsilonA = %.15e", a1%EpsilonA);
+        if (Abs(a1) <= EpsilonA) {
+            a1 = 0;
+            a2 = B2/C2;
+            root = C2*a1 - A2;
+
+            // RAVELOG_DEBUG_FORMAT("case1: a1 = %.15e; a2 = %.15e", a1%a2);
+        }
+        else {
+            // From the hyperbola equation, we have y = B2*x/(C2*x - A2) = B2*x/root
+            if (Abs(root) < EpsilonA*EpsilonX) {
+                // Special case: a2 == 0. This implies vm == dx1. If we calculate back the value of a1,
+                // we will get a1 = A2/C2 which is actually root = 0.
+                a2 = 0;
+                a1 = A2/C2;
+
+                // RAVELOG_DEBUG_FORMAT("case2: a1 = %.15e; a2 = %.15e", a1%a2);
+            }
+            else {
+                a2 = B2*a1/root;
+                if (Abs(a2) > amax) {
+                    // a2 exceeds the bound, try making it stays at the bound.
+                    a2 = a2 > 0 ? amax : -amax;
+                    // Recalculate the related variable
+                    if (C2*a2 - B2 == 0) {
+                        // this case means a1 == 0 which shuold have been catched from above
+                        PARABOLIC_RAMP_PLOG("(C2*a2 - B2 == 0) a1 shuold have been zero but a1 = %.15e", a1);
+                        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                        return false;
+                    }
+                    a1 = A2*a2/(C2*a2 - B2);
+
+                    // RAVELOG_DEBUG_FORMAT("case3: a1 = %.15e; a2 = %.15e", a1%a2);
+                }
+            }
+        }
+        // RAVELOG_DEBUG_FORMAT("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0%x1%dx0%dx1%vmax%amax%endTime);
+
+        // Final check on the accelerations
+        if ((Abs(a1) > amax) || (Abs(a2) > amax)) {
+            PARABOLIC_RAMP_PLOG("Cannot fix accelration bounds violation");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            return false;
+        }
+
+        if ((Abs(a1) <= EpsilonA) && (Abs(a2) <= EpsilonA)) {
+            PARABOLIC_RAMP_PLOG("Both accelerations are zero.");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            PARABOLIC_RAMP_PLOG("A2 = %.15e; B2 = %.15e; C2 = %.15e; D2 = %.15e", A2, B2, C2, D2);
+            return false;
+        }
+
+        if (Abs(a1) <= EpsilonA) {
+            tswitch1 = endTime + dv3/a2;
+            tswitch2 = tswitch1;
+            v = vmaxNew;
+            ttotal = endTime;
+        }
+        else if (Abs(a2) <= EpsilonA) {
+            tswitch1 = dv2/a1;
+            tswitch2 = tswitch1;
+            v = vmaxNew;
+            ttotal = endTime;
+        }
+        else {
+            tswitch1 = dv2/a1;
+            v = vmaxNew;
+            Real tLastRamp = -dv3/a2;
+            if (tswitch1 + tLastRamp > endTime) {
+                // Final fix
+                if (A == 0) {
+                    PARABOLIC_RAMP_PLOG("(final fix) A = 0. Don't know how to deal with this case");
+                    PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                    return false;
+                }
+                tswitch1 = (dv2 - B)/A; // note that we use A and B, not A2 and B2.
+                if (tswitch1 < 0) {
+                    PARABOLIC_RAMP_PLOG("(final fix) tswitch1 is less than 0");
+                    PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                    return false;
+                }
+                tswitch2 = tswitch1;
+
+                a1 = A + (B/tswitch1);
+                a2 = A - (B/(endTime - tswitch1));
+            }
+            else {
+                tswitch2 = endTime - tLastRamp;
+                if (FuzzyEquals(tswitch2, tswitch1, EpsilonT)) {
+                    PARABOLIC_RAMP_PLOG("(final fix) three-ramp works but having too short middle ramp");
+                    // if we leave it like this, this case might cause an error later on when we extract switch times.
+                    tswitch1 = (2*d - (dx1 + vmaxNew)*endTime)/(dx0 - dx1);
+                    tswitch2 = tswitch1;
+                    v = vmaxNew;
+                    a1 = (vmaxNew - dx0)/tswitch1;
+                    a2 = (dx1 - vmaxNew)/(endTime - tswitch1);
+                    if (Abs(a1) > amax + EpsilonA || Abs(a2) > amax + EpsilonA) {
+                        PARABOLIC_RAMP_PLOG("cannot merge into two-ramp because of acceleration limits");
+                        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                        PARABOLIC_RAMP_PLOG("Calculated values: tswitch1 = %.15e, tswitch2 = %.15e, a1 = %.15e, a2 = %.15e, v = %.15e", tswitch1, tswitch2, a1, a2, v);
+                        return false;
+                    }
+                }
+            }
+            ttotal = endTime;
+        }
+
+        // Finish modifying the velocity profile
+        if (IsValid()) {
+            return true;
+        }
+        else {
+            PARABOLIC_RAMP_PLOG("Finished stretching but the profile does not pass IsValid test.");
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+            PARABOLIC_RAMP_PLOG("Calculated values: tswitch1 = %.15e, tswitch2 = %.15e, a1 = %.15e, a2 = %.15e, v = %.15e", tswitch1, tswitch2, a1, a2, v);
+            return false;
+        }
+    }
+}
+
+////////Puttichai
+bool ParabolicRamp1D::SolveForTSwitch1(Real A, Real B, Real endTime, Real l, Real u) {
+    /*
+       Let x = tswitch1 for convenience. The two accelerations can be written in terms of x as
+
+              a1 = A + B/x    and
+              a2 = A - B/(t - x),
+
+       where t is the total duration (endTime). We want to solve the following optimization problem:
+
+              minimize(x)    J(x) = a1^2 + a2^2.
+
+       We find the minimizer by solving dJ/dx = 0. From
+
+              J(x) = (A + B/x)^2 + (A - B/(t - x))^2,
+
+       we have
+
+              dJ/dx = (2*A)*x^4 + (2*B - 4*A*t)*x^3 + (3*A*t^2 - 3*B*t)*x^2 + (A*t^3 + 3*t^2)*x + (B*t^3).
+     */
+    if (l < 0) {
+        if (u < 0) {
+            PARABOLIC_RAMP_PLOG("The given interval is invalid: l = %.15e; u = %.15e", l, u);
+            return false;
+        }
+        PARABOLIC_RAMP_PLOG("Invalid lower bound is given: reset it to zero.");
+        l = 0;
+    }
+
+    if ((Abs(A) < EpsilonA) && (Abs(B) < EpsilonA)) {
+        if (l > 0) {
+            return false;
+        }
+        else {
+            tswitch1 = 0;
+            return true;
+        }
+    }
+
+    Real rawRoots[4];
+    int numRoots;
+    double tSqr = endTime*endTime;
+    double tCube = tSqr*endTime;
+
+    if (Abs(A) < EpsilonA) {
+        Real coeffs[4] = {2*B, -3*B*endTime, 3*B*tSqr, -B*tCube};
+        OpenRAVE::mathextra::polyroots<Real, 3>(&coeffs[0], &rawRoots[0], numRoots);
+    }
+    else {
+        Real coeffs[5] = {2*A, -4*A*endTime + 2*B, 3*A*tSqr - 3*B*endTime, -A*tCube + 3*B*tSqr, -B*tCube};
+        OpenRAVE::mathextra::polyroots<Real, 4>(&coeffs[0], &rawRoots[0], numRoots);
+    }
+
+    if (numRoots == 0) {
+        return false;
+    }
+
+    // Among all the solutions, find the one that minimizes the objective function.
+    Real J = Inf;
+    Real bestT = -1;
+    for (int i = 0; i < numRoots; ++i) {
+        if ((rawRoots[i] <= u) && (rawRoots[i] >= l)) {
+            Real root = rawRoots[i];
+            Real firstTerm, secondTerm;
+            if (Abs(root) < EpsilonT) {
+                firstTerm = 0;
+            }
+            else {
+                firstTerm = A + (B/root);
+            }
+
+            if (Abs(endTime - root) < EpsilonT) {
+                secondTerm = 0;
+            }
+            else {
+                secondTerm = A - (B/(endTime - root));
+            }
+            Real curObj = firstTerm*firstTerm + secondTerm*secondTerm;
+            if (curObj < J) {
+                J = curObj;
+                bestT = root;
+            }
+        }
+    }
+    if (bestT < 0) {
+        return false;
+    }
+    else {
+        tswitch1 = bestT;
+        return true;
+    }
+}
+
+
 bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
 {
+    if( Abs(amax) < 1e-7 ) {
+        PARABOLICWARN("amax is really small %.15e", amax);
+    }
+
     ParabolicRamp p;
     PPRamp pp;
     PLPRamp plp;
@@ -1798,10 +897,9 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
     bool pres = p.Solve(amax);
     bool ppres = pp.SolveMinTime(amax);
     bool plpres = false;
-    if(!IsInf(vmax))
+    if(!IsInf(vmax)) {
         plpres = plp.SolveMinTime(amax,vmax);
-    //cout<<"P time: "<<p.ttotal<<", accel "<<p.a<<endl;
-    //cout<<"PP time: "<<pp.ttotal<<", max vel "<<pp.MaxVelocity()<<endl;
+    }
     //cout<<"PLP time: "<<plp.ttotal<<", vel "<<plp.v<<endl;
     ttotal = Inf;
     if(pres && Abs(p.a) <= amax+EpsilonA && p.ttotal < ttotal) {
@@ -1829,15 +927,18 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
                 ttotal = p.ttotal;
             }
         }
+        a2 = -a1;
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && pp.ttotal < ttotal) {
-        a1 = pp.a;
+    if(ppres && pp.GetMaxSpeed() <= vmax+EpsilonV && pp.ttotal < ttotal) {
+        a1 = pp._a1;
+        a2 = pp._a2;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;
         ttotal = pp.ttotal;
     }
     if(plpres && plp.ttotal < ttotal) {
         a1 = plp.a;
+        a2 = -a1;
         v = plp.v;
         tswitch1 = plp.tswitch1;
         tswitch2 = plp.tswitch2;
@@ -1848,18 +949,20 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
         PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e\n",vmax,amax);
         PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        if(pres)
+        if(pres) {
             PARABOLIC_RAMP_PLOG("  P a=%.15e, ttotal=%.15e\n",p.a,p.ttotal);
-        if(ppres)
-            PARABOLIC_RAMP_PLOG("  PP a=%.15e, tswitch=%.15e, ttotal=%.15e\n",pp.a,pp.tswitch,pp.ttotal);
-        if(plpres)
-            PARABOLIC_RAMP_PLOG("  PLP a=%.15e, tswitch=%.15e, %.15e, ttotal=%.15e\n",pp.a,plp.tswitch1,plp.tswitch2,plp.ttotal);
+        }
+        if(ppres) {
+            PARABOLIC_RAMP_PLOG("  PP a1=%.15e, a2=%.15e, tswitch=%.15e, ttotal=%.15e\n",pp._a1,pp._a2,pp.tswitch,pp.ttotal);
+        }
+        if(plpres) {
+            PARABOLIC_RAMP_PLOG("  PLP a=%.15e, tswitch=%.15e, %.15e, ttotal=%.15e\n",plp.a,plp.tswitch1,plp.tswitch2,plp.ttotal);
+        }
         SaveRamp("Ramp_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,-1);
         a1 = a2 = v = 0;
         tswitch1 = tswitch2 = ttotal = -1;
         return false;
     }
-    a2 = -a1;
     if( tswitch1 < 0 && tswitch1 >= -EpsilonT ) {
         tswitch1 = 0;
     }
@@ -1867,6 +970,9 @@ bool ParabolicRamp1D::SolveMinTime(Real amax,Real vmax)
         tswitch2 = 0;
     }
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
+
+    v = dx0 + a1*tswitch1;
+    
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("Failure to find valid path!\n");
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
@@ -1888,11 +994,9 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
     bool pres = p.Solve(amax);
     bool ppres = pp.SolveMinTime2(amax,tLowerBound);
     bool plpres = false;
-    if(!IsInf(vmax))
+    if(!IsInf(vmax)) {
         plpres = plp.SolveMinTime2(amax,vmax,tLowerBound);
-    //cout<<"P time: "<<p.ttotal<<", accel "<<p.a<<endl;
-    //cout<<"PP time: "<<pp.ttotal<<", max vel "<<pp.MaxVelocity()<<endl;
-    //cout<<"PLP time: "<<plp.ttotal<<", vel "<<plp.v<<endl;
+    }
     ttotal = Inf;
     if(pres && Abs(p.a) <= amax+EpsilonA && p.ttotal < ttotal && p.ttotal >= tLowerBound) {
         if(Abs(p.a) <= amax) {
@@ -1919,15 +1023,19 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
                 ttotal = p.ttotal;
             }
         }
+
+        a2 = -a1;
     }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && pp.ttotal < ttotal) {
-        a1 = pp.a;
+    if(ppres && pp.GetMaxSpeed() <= vmax+EpsilonV && pp.ttotal < ttotal) {
+        a1 = pp._a1;
+        a2 = pp._a2;
         v = 0;
         tswitch1 = tswitch2 = pp.tswitch;
         ttotal = pp.ttotal;
     }
     if(plpres && plp.ttotal < ttotal) {
         a1 = plp.a;
+        a2 = -a1;
         v = plp.v;
         tswitch1 = plp.tswitch1;
         tswitch2 = plp.tswitch2;
@@ -1938,12 +1046,15 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
         PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
         PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e, tmax = %.15e\n",vmax,amax,tLowerBound);
         PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        if(pres)
+        if(pres) {
             PARABOLIC_RAMP_PLOG("  P a=%.15e, ttotal=%.15e\n",p.a,p.ttotal);
-        if(ppres)
-            PARABOLIC_RAMP_PLOG("  PP a=%.15e, tswitch=%.15e, ttotal=%.15e\n",pp.a,pp.tswitch,pp.ttotal);
-        if(plpres)
-            PARABOLIC_RAMP_PLOG("  PLP a=%.15e, tswitch=%.15e, %.15e, ttotal=%.15e\n",pp.a,plp.tswitch1,plp.tswitch2,plp.ttotal);
+        }
+        if(ppres) {
+            PARABOLIC_RAMP_PLOG("  PP a1=%.15e, a1=%.15e, tswitch=%.15e, ttotal=%.15e\n",pp._a1,pp._a2,pp.tswitch,pp.ttotal);
+        }
+        if(plpres) {
+            PARABOLIC_RAMP_PLOG("  PLP a=%.15e, tswitch=%.15e, %.15e, ttotal=%.15e\n",plp.a,plp.tswitch1,plp.tswitch2,plp.ttotal);
+        }
         ppres = pp.SolveMinTime(amax);
         plpres = plp.SolveMinTime(amax,vmax);
         PARABOLIC_RAMP_PLOG("unconstrained PP (%d): %.15e, PLP (%d): %.15e\n",(int)ppres,pp.ttotal,(int)plpres,plp.ttotal);
@@ -1952,7 +1063,6 @@ bool ParabolicRamp1D::SolveMinTime2(Real amax,Real vmax,Real tLowerBound)
         tswitch1 = tswitch2 = ttotal = -1;
         return false;
     }
-    a2 = -a1;
     //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
     if(!IsValid()) {
         PARABOLIC_RAMP_PLOG("ParabolicRamp1D::SolveMinTime: Failure to find valid path!\n");
@@ -1982,132 +1092,138 @@ void ParabolicRamp1D::SolveBraking(Real amax)
 
    \author Rosen Diankov
  */
-bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
-{
-    ParabolicRamp p;
-    PPRamp pp;
-    PLPRamp plp;
-    p.x0 = pp.x0 = plp.x0 = x0;
-    p.x1 = pp.x1 = plp.x1 = x1;
-    p.dx0 = pp.dx0 = plp.dx0 = dx0;
-    p.dx1 = pp.dx1 = plp.dx1 = dx1;
-    bool pres = p.SolveFixedTime(endTime);
-    bool ppres = pp.SolveFixedTime(amax,endTime);
-    bool plpres = false;
-    if(!IsInf(vmax))
-        plpres = plp.SolveFixedTime(amax,vmax,endTime);
-    //cout<<"P time: "<<p.ttotal<<", accel "<<p.a<<endl;
-    //cout<<"PP time: "<<pp.ttotal<<", max vel "<<pp.MaxVelocity()<<endl;
-    //cout<<"PLP time: "<<plp.ttotal<<", vel "<<plp.v<<endl;
-    ttotal = Inf;
-    if(pres && Abs(p.a) <= amax+EpsilonA && FuzzyEquals(p.ttotal,endTime,EpsilonT) ) {
-        if(Abs(p.a) <= amax) {
-            a1 = p.a;
-            if( Abs(a1) < EpsilonA ) {
-                // not accelerating
-                v = dx0;
-                tswitch1 = 0;
-            }
-            else {
-                v = 0;
-                tswitch1 = p.ttotal;
-            }
-            tswitch2 = p.ttotal;
-            ttotal = p.ttotal;
-        }
-        else {
-            //double check
-            p.a = Sign(p.a)*amax;
-            if(FuzzyEquals(p.Evaluate(p.ttotal),x1,EpsilonX) && FuzzyEquals(p.Derivative(p.ttotal),dx1,EpsilonV)) {
-                a1 = p.a;
-                if( Abs(a1) < EpsilonA ) {
-                    // not accelerating
-                    v = dx0;
-                    tswitch1 = 0;
-                }
-                else {
-                    v = 0;
-                    tswitch1 = p.ttotal;
-                }
-                tswitch2=p.ttotal;
-                ttotal = p.ttotal;
-            }
-        }
-    }
-    if(ppres && Abs(pp.MaxVelocity()) <= vmax+EpsilonV && FuzzyEquals(pp.ttotal,endTime,EpsilonT) ) {
-        a1 = pp.a;
-        v = 0;
-        tswitch1 = tswitch2 = pp.tswitch;
-        ttotal = pp.ttotal;
-    }
-    if(plpres && FuzzyEquals(plp.ttotal, endTime, EpsilonT) ) {
-        a1 = plp.a;
-        v = plp.v;
-        tswitch1 = plp.tswitch1;
-        tswitch2 = plp.tswitch2;
-        ttotal = plp.ttotal;
-    }
-    if(IsInf(ttotal)) {
+//bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
+//{
+//    bool res = SolveMinAccel(endTime, vmax, amax);
+//    return res;
 
-        // finally remove the a2=-a1 constraint
-        Real dx = x1-x0;
-        for(tswitch1 = 0; tswitch1 < endTime; tswitch1 += 0.2*endTime) {
-            for(tswitch2 = tswitch1; tswitch2 < endTime; tswitch2 += 0.2*endTime) {
-                Real c1 = -0.5*Sqr(tswitch1)*tswitch2 + 0.5*Sqr(tswitch1)*endTime + 0.5*tswitch1*Sqr(tswitch2) - 0.5*tswitch1*Sqr(endTime);
-                Real c0 = - 1.0*dx*tswitch2 + 1.0*dx*endTime + 0.5*Sqr(tswitch2)*dx0 - 0.5*Sqr(tswitch2)*dx1 + 1.0*tswitch2*endTime*dx1 - 0.5*Sqr(endTime)*dx0 - 0.5*Sqr(endTime)*dx1;
-                if( Abs(c1) > 1e-8 ) {
-                    a1 = -c0/c1;
-                    if( a1 >= -amax && a1 <= amax ) {
-                        v = dx0 + a1*tswitch1;
-                        if( v >= -vmax && v <= vmax ) {
-                            a2 = (a1*tswitch1 + dx0 - dx1)/(tswitch2 - endTime);
-                            if( a2 >= -amax && a2 <= amax ) {
-                                if(IsValid()) {
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+// ParabolicRamp p;
+// PPRamp pp;
+// PLPRamp plp;
+// p.x0 = pp.x0 = plp.x0 = x0;
+// p.x1 = pp.x1 = plp.x1 = x1;
+// p.dx0 = pp.dx0 = plp.dx0 = dx0;
+// p.dx1 = pp.dx1 = plp.dx1 = dx1;
+// bool pres = p.SolveFixedTime(endTime);
+// bool ppres = pp.SolveFixedTime(amax,endTime);
+// bool plpres = false;
+// if(!IsInf(vmax)) {
+//     plpres = plp.SolveFixedTime(amax,vmax,endTime);
+// }
+// ttotal = Inf;
+// if(pres && Abs(p.a) <= amax+EpsilonA && FuzzyEquals(p.ttotal,endTime,EpsilonT) ) {
+//     if(Abs(p.a) <= amax) {
+//         a1 = p.a;
+//         if( Abs(a1) < EpsilonA ) {
+//             // not accelerating
+//             v = dx0;
+//             tswitch1 = 0;
+//         }
+//         else {
+//             v = 0;
+//             tswitch1 = p.ttotal;
+//         }
+//         tswitch2 = p.ttotal;
+//         ttotal = p.ttotal;
+//     }
+//     else {
+//         //double check
+//         p.a = Sign(p.a)*amax;
+//         if(FuzzyEquals(p.Evaluate(p.ttotal),x1,EpsilonX) && FuzzyEquals(p.Derivative(p.ttotal),dx1,EpsilonV)) {
+//             a1 = p.a;
+//             if( Abs(a1) < EpsilonA ) {
+//                 // not accelerating
+//                 v = dx0;
+//                 tswitch1 = 0;
+//             }
+//             else {
+//                 v = 0;
+//                 tswitch1 = p.ttotal;
+//             }
+//             tswitch2=p.ttotal;
+//             ttotal = p.ttotal;
+//         }
+//     }
+//     a2 = -a1;
+// }
+// if(ppres && pp.GetMaxSpeed() <= vmax+EpsilonV && FuzzyEquals(pp.ttotal,endTime,EpsilonT) ) {
+//     a1 = pp._a1;
+//     a2 = pp._a2;
+//     v = 0;
+//     tswitch1 = tswitch2 = pp.tswitch;
+//     ttotal = pp.ttotal;
+// }
+// if(plpres && FuzzyEquals(plp.ttotal, endTime, EpsilonT) ) {
+//     a1 = plp.a;
+//     a2 = -a1;
+//     v = plp.v;
+//     tswitch1 = plp.tswitch1;
+//     tswitch2 = plp.tswitch2;
+//     ttotal = plp.ttotal;
+// }
+// if(IsInf(ttotal)) {
 
-        PARABOLIC_RAMP_PLOG("No ramp equation could solve for min-time (2)!\n");
-        PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
-        PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e, tmax = %.15e\n",vmax,amax,endTime);
-        PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        if(pres)
-            PARABOLIC_RAMP_PLOG("  P a=%.15e, ttotal=%.15e\n",p.a,p.ttotal);
-        if(ppres)
-            PARABOLIC_RAMP_PLOG("  PP a=%.15e, tswitch=%.15e, ttotal=%.15e\n",pp.a,pp.tswitch,pp.ttotal);
-        if(plpres)
-            PARABOLIC_RAMP_PLOG("  PLP a=%.15e, tswitch=%.15e, %.15e, ttotal=%.15e\n",pp.a,plp.tswitch1,plp.tswitch2,plp.ttotal);
-        ppres = pp.SolveMinTime(amax);
-        plpres = plp.SolveMinTime(amax,vmax);
-        PARABOLIC_RAMP_PLOG("unconstrained PP (%d): %.15e, PLP (%d): %.15e\n",(int)ppres,pp.ttotal,(int)plpres,plp.ttotal);
-        SaveRamp("Ramp_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,endTime);
-        a1 = a2 = v = 0;
-        tswitch1 = tswitch2 = ttotal = -1;
-        return false;
-    }
-    a2 = -a1;
-    if( tswitch1 < 0 && tswitch1 >= -EpsilonT ) {
-        tswitch1 = 0;
-    }
-    if( tswitch2 < 0 && tswitch2 >= -EpsilonT ) {
-        tswitch2 = 0;
-    }
-    //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
-    if(!IsValid()) {
-        PARABOLIC_RAMP_PLOG("ParabolicRamp1D::SolveMinTime: Failure to find valid path!\n");
-        PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
-        PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e\n",vmax,amax);
-        PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
-        SaveRamp("Ramp_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,endTime);
-    }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal, endTime, EpsilonT));
-    return true;
-}
+//     // finally remove the a2=-a1 constraint
+//     Real dx = x1-x0;
+//     for(tswitch1 = 0; tswitch1 < endTime; tswitch1 += 0.2*endTime) {
+//         for(tswitch2 = tswitch1; tswitch2 < endTime; tswitch2 += 0.2*endTime) {
+//             Real c1 = -0.5*Sqr(tswitch1)*tswitch2 + 0.5*Sqr(tswitch1)*endTime + 0.5*tswitch1*Sqr(tswitch2) - 0.5*tswitch1*Sqr(endTime);
+//             Real c0 = -1.0*dx*tswitch2 + 1.0*dx*endTime + 0.5*Sqr(tswitch2)*dx0 - 0.5*Sqr(tswitch2)*dx1 + 1.0*tswitch2*endTime*dx1 - 0.5*Sqr(endTime)*dx0 - 0.5*Sqr(endTime)*dx1;
+//             if( Abs(c1) > 1e-8 ) {
+//                 a1 = -c0/c1;
+//                 if( a1 >= -amax && a1 <= amax ) {
+//                     v = dx0 + a1*tswitch1;
+//                     if( v >= -vmax && v <= vmax ) {
+//                         a2 = (a1*tswitch1 + dx0 - dx1)/(tswitch2 - endTime);
+//                         if( a2 >= -amax && a2 <= amax ) {
+//                             if(IsValid()) {
+//                                 return true;
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     PARABOLIC_RAMP_PLOG("No ramp equation could solve for min-time (2)!\n");
+//     PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
+//     PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e, tmax = %.15e\n",vmax,amax,endTime);
+//     PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
+//     if(pres) {
+//         PARABOLIC_RAMP_PLOG("  P a=%.15e, ttotal=%.15e\n",p.a,p.ttotal);
+//     }
+//     if(ppres) {
+//         PARABOLIC_RAMP_PLOG("  PP a1=%.15e, a2=%.15e, tswitch=%.15e, ttotal=%.15e\n",pp._a1, pp._a2, pp.tswitch,pp.ttotal);
+//     }
+//     if(plpres) {
+//         PARABOLIC_RAMP_PLOG("  PLP a=%.15e, tswitch=%.15e, %.15e, ttotal=%.15e\n",plp.a,plp.tswitch1,plp.tswitch2,plp.ttotal);
+//     }
+//     ppres = pp.SolveMinTime(amax);
+//     plpres = plp.SolveMinTime(amax,vmax);
+//     PARABOLIC_RAMP_PLOG("unconstrained PP (%d): %.15e, PLP (%d): %.15e\n",(int)ppres,pp.ttotal,(int)plpres,plp.ttotal);
+//     SaveRamp("Ramp_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,endTime);
+//     a1 = a2 = v = 0;
+//     tswitch1 = tswitch2 = ttotal = -1;
+//     return false;
+// }
+// if( tswitch1 < 0 && tswitch1 >= -EpsilonT ) {
+//     tswitch1 = 0;
+// }
+// if( tswitch2 < 0 && tswitch2 >= -EpsilonT ) {
+//     tswitch2 = 0;
+// }
+// //cout<<"switch time 1: "<<tswitch1<<", 2: "<<tswitch2<<", total "<<ttotal<<endl;
+// if(!IsValid()) {
+//     PARABOLIC_RAMP_PLOG("ParabolicRamp1D::SolveMinTime: Failure to find valid path!\n");
+//     PARABOLIC_RAMP_PLOG("x0=%.15e, x1=%.15e, dx0=%.15e, dx1=%.15e\n",x0,x1,dx0,dx1);
+//     PARABOLIC_RAMP_PLOG("vmax = %.15e, amax = %.15e\n",vmax,amax);
+//     PARABOLIC_RAMP_PLOG("P=%d, PP=%d, PLP=%d\n",(int)pres,(int)ppres,(int)plpres);
+//     SaveRamp("Ramp_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,vmax,endTime);
+// }
+// PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal, endTime, EpsilonT));
+// return true;
+//}
 
 /** all the switch tmes are known tswitch1, tswitch2, and ttotal
 
@@ -2301,7 +1417,9 @@ void ParabolicRamp1D::TrimFront(Real tcut)
     tswitch2 -= tcut;
     if(tswitch1 < 0) tswitch1=0;
     if(tswitch2 < 0) tswitch2=0;
+    v = dx0 + a1*tswitch1;//////// Puttichai
     PARABOLIC_RAMP_ASSERT(IsValid());
+    // PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; a1=%.15e; a2=%.15e; v=%.15e; tswitch1=%.15e; tswitch2=%.15e", x0, x1, dx0, dx1, a1, a1, v, tswitch1, tswitch2);
 
 }
 
@@ -2313,6 +1431,7 @@ void ParabolicRamp1D::TrimBack(Real tcut)
     ttotal -= tcut;
     tswitch1 = Min(tswitch1,ttotal);
     tswitch2 = Min(tswitch2,ttotal);
+    v = dx0 + a1*tswitch1;//////// Puttichai
     PARABOLIC_RAMP_ASSERT(IsValid());
 }
 
@@ -2416,24 +1535,24 @@ bool ParabolicRamp1D::IsValid() const
 
     // increate the epsilons just a little here
     Real t2mT = tswitch2 - ttotal;
-    if(tswitch1 != tswitch2) {
-        if(!FuzzyEquals(a1*tswitch1 + dx0,v,2*EpsilonV)) {
-            PARABOLICWARN("Ramp has incorrect switch 1 speed: %.15e vs %.15e\n",a1*tswitch1 + dx0,v);
-            return false;
-        }
-        if(!FuzzyEquals(a2*t2mT + dx1,v,2*EpsilonV)) {
-            PARABOLICWARN("Ramp has incorrect switch 2 speed: %.15e vs %.15e\n",a2*t2mT + dx1,v);
-            return false;
-        }
+    
+    if(!FuzzyEquals(a1*tswitch1 + dx0,v,2*EpsilonV)) {
+        PARABOLICWARN("Ramp has incorrect switch 1 speed: %.15e vs %.15e\n",a1*tswitch1 + dx0,v);
+        return false;
     }
+    if(!FuzzyEquals(a2*t2mT + dx1,v,2*EpsilonV)) {
+        PARABOLICWARN("Ramp has incorrect switch 2 speed: %.15e vs %.15e\n",a2*t2mT + dx1,v);
+        return false;
+    }
+    
     //check switch2
     Real xswitch = x0 + 0.5*a1*Sqr(tswitch1) + dx0*tswitch1;
     Real xswitch2 = xswitch + (tswitch2-tswitch1)*v;
     if(!FuzzyEquals(xswitch2,x1 + 0.5*a2*Sqr(t2mT) + dx1*t2mT,2*EpsilonX)) {
         PARABOLICWARN("Ramp has incorrect switch 2 position: %.15e vs %.15e\n",xswitch2,x1 + 0.5*a2*Sqr(t2mT) + dx1*t2mT);
-        PARABOLIC_RAMP_PLOG("Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
-        PARABOLIC_RAMP_PLOG("Acceleration %.15e, vel %.15e, deceleration %.15e\n",a1,v,a2);
-        PARABOLIC_RAMP_PLOG("Switch times %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
+        PARABOLICWARN("Ramp %.15e,%.15e -> %.15e,%.15e\n",x0,dx0,x1,dx1);
+        PARABOLICWARN("Acceleration %.15e, vel %.15e, deceleration %.15e\n",a1,v,a2);
+        PARABOLICWARN("Switch times %.15e %.15e %.15e\n",tswitch1,tswitch2,ttotal);
         return false;
     }
     return true;
@@ -2542,11 +1661,11 @@ bool ParabolicRampND::SolveMinTimeLinear(const Vector& amax,const Vector& vmax)
 
     endTime = sramp.ttotal;
     for(size_t i=0; i<ramps.size(); i++) {
-        ramps[i].v = svmax * (x1[i]-x0[i]);
         ramps[i].a1 = samax * (x1[i]-x0[i]);
         ramps[i].a2 = -samax * (x1[i]-x0[i]);
         ramps[i].tswitch1 = sramp.tswitch1;
         ramps[i].tswitch2 = sramp.tswitch2;
+        ramps[i].v = ramps[i].a1*ramps[i].tswitch1;
         ramps[i].ttotal = endTime;
         if(1 ) { //gValidityCheckLevel >= 2) {
             if(!ramps[i].IsValid()) {
@@ -2611,7 +1730,9 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
             ramps[i].a1=ramps[i].a2=ramps[i].v=0;
             continue;
         }
-        if(!ramps[i].SolveMinTime(amax[i],vmax[i])) return false;
+        if(!ramps[i].SolveMinTime(amax[i],vmax[i])) {
+            return false;
+        }
         if(ramps[i].ttotal > endTime) endTime = ramps[i].ttotal;
     }
     //now we have a candidate end time -- repeat looking through solutions
@@ -2624,16 +1745,17 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
                 ramps[i].ttotal = endTime;
                 continue;
             }
-            if(!ramps[i].SolveMinAccel(endTime,vmax[i])) {
+            if(!ramps[i].SolveFixedTime(amax[i],vmax[i],endTime)) {
                 PARABOLIC_RAMP_PLOG("Failed solving min accel for joint %d\n",i);
                 ramps[i].SolveMinTime(amax[i],vmax[i]);
                 PARABOLIC_RAMP_PLOG("its min time is %.15e\n",ramps[i].ttotal);
-                if(ramps[i].tswitch1==ramps[i].tswitch2)
+                if(ramps[i].tswitch1==ramps[i].tswitch2) {
                     PARABOLIC_RAMP_PLOG("its type is PP\n");
-                else if(Abs(ramps[i].v)==vmax[i])
+                } else if(Abs(ramps[i].v)==vmax[i]) {
                     PARABOLIC_RAMP_PLOG("its type is PLP (vmax)\n");
-                else
+                } else {
                     PARABOLIC_RAMP_PLOG("its type is PLP (v=%.15e %%)\n",ramps[i].v/vmax[i]);
+                }
                 SaveRamp("ParabolicRampND_SolveMinAccel_failure.dat",ramps[i].x0,ramps[i].dx0,ramps[i].x1,ramps[i].dx1,-1,vmax[i],endTime);
                 PARABOLIC_RAMP_PLOG("Saving to failed_ramps.txt\n");
                 FILE* f=fopen("failed_ramps.txt","w+");
@@ -2972,10 +2094,14 @@ bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1,Real amax,Real vmax,Rea
     ramp.dx0 = v0;
     ramp.x1 = x1;
     ramp.dx1 = v1;
-    if(!ramp.SolveMinTime(amax,vmax)) return false;
+    if(!ramp.SolveMinTime(amax,vmax)) {
+        return false;
+    }
     Real bmin,bmax;
     ramp.Bounds(bmin,bmax);
-    if(bmin < xmin || bmax > xmax) return false;
+    if(bmin < xmin || bmax > xmax) {
+        return false;
+    }
     return true;
 }
 
@@ -3009,7 +2135,7 @@ inline Real BrakeAccel(Real x,Real v,Real xbound)
     return a;
 }
 
-bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax,Real xmin,Real xmax,std::vector<ParabolicRamp1D>& ramps)
+bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real amax, Real vmax, Real xmin,Real xmax,std::vector<ParabolicRamp1D>& ramps)
 {
     PARABOLIC_RAMP_ASSERT(x0 >= xmin-EpsilonX && x0 <= xmax+EpsilonX && x1 >= xmin-EpsilonX && x1 <= xmax+EpsilonX);
     ParabolicRamp1D ramp;
@@ -3017,14 +2143,20 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
     ramp.dx0 = v0;
     ramp.x1 = x1;
     ramp.dx1 = v1;
-    if(!ramp.SolveMinAccel(endTime,vmax)) return false;
+    if(!ramp.SolveFixedTime(amax,vmax,endTime)) {////////Puttichai
+        PARABOLIC_RAMP_PLOG("SolveMinAccel failed: x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; newDuration=%.15e; vm=%.15e; am=%.15e", x0, x1, v0, v1, endTime, vmax, amax);
+        return false;
+    }
     Real bmin,bmax;
     ramp.Bounds(bmin,bmax);
     if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
+        // std::cout << "X BOUNDS NOT VIOLATED:: GREAT" << std::endl;
         ramps.resize(1);
         ramps[0] = ramp;
         return true;
     }
+    PARABOLIC_RAMP_PLOG("SolveMinAccel passed but x bounds violated: xmin=%.15e; bmin=%.15e; xmax=%.15e; bmax=%.15e", xmin, bmin, xmax, bmax);
+    PARABOLIC_RAMP_PLOG("x0=%.15e; x1=%.15e; v0=%.15e; v1=%.15e; newDuration=%.15e; vm=%.15e; am=%.15e", x0, x1, v0, v1, endTime, vmax, amax);
 
     //not within bounds, do the more complex procedure
     ramps.resize(0);
@@ -3053,7 +2185,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
         bx1 = xmin;
         ba1 = BrakeAccel(x1,-v1,xmin);
     }
-    Real amax=Inf;
+    // Real amax=Inf;
     //Explore types II and III, or II and IV depending on the side
     //Type I path: no collision
     //Type II path: touches one side instantaneously
@@ -3081,7 +2213,33 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
         gMinAccelQuiet = true;
         //first check is a quick reject
         if(Abs(x1-bx0) < (endTime-bt0)*vmax) {
-            if(temp[1].SolveMinAccel(endTime-bt0,vmax)) {
+            // if (temp[1].SolveMinTime(amax, vmax)) {
+            //     // We need to ensure that the new end time is greater than its minimum time,
+            //     // otherwise the stretching (in SolveFixedTime) just does not make sense.
+            //     if (endTime - bt0 > temp[1].ttotal) {
+            //         if (temp[1].SolveFixedTime(amax, vmax, endTime - bt0)) {
+            //             if (Max(Abs(temp[1].a1), Abs(temp[1].a2)) < amax) {
+            //                 temp[1].Bounds(bmin, bmax);
+            //                 if (bmin >= xmin - EpsilonX && bmax <= xmax + EpsilonX) {
+            //                     // successful
+            //                     ramps = temp;
+            //                     amax = Max(Abs(ba0), Max(Abs(temp[1].a1), Abs(temp[1].a2)));
+            //                 }
+            //             }
+            //         }
+            //     }
+            //     else {
+            //         Real mintime = temp[1].ttotal;
+            //         bool result = temp[1].SolveFixedTime(amax, vmax, endTime - bt0);
+            //         if (result) {
+            //             PARABOLICWARN("giving endTime less than its minimum time but SolveFixedTime did not fail");
+            //             PARABOLICWARN("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e; minDuration = %.15e", temp[1].x0, temp[1].x1, temp[1].dx0, temp[1].dx1, vmax, amax, endTime - bt0, mintime);
+            //             PARABOLICWARN("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; ttotal = %.15e; a1 = %.15e; v = %.15e; a2 = %.15e", temp[1].tswitch1, temp[1].tswitch2, temp[1].ttotal, temp[1].a1, temp[1].v, temp[1].a2);
+            //         }
+            //     }
+            // }
+            
+            if(temp[1].SolveFixedTime(amax,vmax,endTime-bt0)) {////////Puttichai
                 if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
                     temp[1].Bounds(bmin,bmax);
                     if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
@@ -3116,7 +2274,33 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
         gMinAccelQuiet = true;
         //first perform a quick reject
         if(Abs(x0-bx1) < (endTime-bt1)*vmax) {
-            if(temp[0].SolveMinAccel(endTime-bt1,vmax)) {
+            // if (temp[0].SolveMinTime(amax, vmax)) {
+            //     // We need to ensure that the new end time is greater than its minimum time,
+            //     // otherwise the stretching (in SolveFixedTime) just does not make sense.
+            //     if (endTime - bt1 > temp[0].ttotal) {
+            //         if (temp[0].SolveFixedTime(amax, vmax, endTime - bt1)) {
+            //             if (Max(Abs(temp[0].a1), Abs(temp[0].a2)) < amax) {
+            //                 temp[0].Bounds(bmin, bmax);
+            //                 if (bmin >= xmin && bmax <= xmax) {
+            //                     // successful
+            //                     ramps = temp;
+            //                     amax = Max(Abs(ba1), Max(Abs(temp[0].a1), Abs(temp[0].a2)));
+            //                 }
+            //             }
+            //         }
+            //     }
+            //     else {
+            //         Real mintime = temp[0].ttotal;
+            //         bool result = temp[0].SolveFixedTime(amax, vmax, endTime - bt1);
+            //         if (result) {
+            //             PARABOLICWARN("giving endTime less than its minimum time but SolveFixedTime did not fail");
+            //             PARABOLICWARN("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e; minDuration = %.15e", temp[0].x0, temp[0].x1, temp[0].dx0, temp[0].dx1, vmax, amax, endTime - bt1, mintime);
+            //             PARABOLICWARN("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; ttotal = %.15e; a1 = %.15e; v = %.15e; a2 = %.15e", temp[0].tswitch1, temp[0].tswitch2, temp[0].ttotal, temp[0].a1, temp[0].v, temp[0].a2);
+            //         }
+            //     }
+            // }
+            
+            if(temp[0].SolveFixedTime(amax,vmax,endTime-bt1)) {////////Puttichai
                 if(Max(Abs(temp[0].a1),Abs(temp[0].a2)) < amax) {
                     temp[0].Bounds(bmin,bmax);
                     if(bmin >= xmin && bmax <= xmax) {
@@ -3182,7 +2366,30 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
             temp[1].dx1 = 0;
             gMinAccelQuiet = true;
             if(Abs(bx0-bx1) < (endTime-bt0-bt1)*vmax) {
-                if(temp[1].SolveMinAccel(endTime - bt0 - bt1,vmax)) {
+                // if (temp[1].SolveMinTime(amax, vmax)) {
+                //     if (endTime - bt0 - bt1 > temp[1].ttotal) {
+                //         if (temp[1].SolveFixedTime(amax, vmax, endTime - bt0 - bt1)) {
+                //             temp[1].Bounds(bmin, bmax);
+                //             PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
+                //             if (Max(Abs(temp[1].a1), Abs(temp[1].a2)) < amax) {
+                //                 // successful
+                //                 ramps = temp;
+                //                 amax = Max(Max(Abs(temp[1].a1), Abs(temp[1].a2)), Max(Abs(ba0), Abs(ba1)));
+                //             }
+                //         }
+                //     }
+                //     else {
+                //         Real mintime = temp[1].ttotal;
+                //             bool result = temp[1].SolveFixedTime(amax, vmax, endTime - bt0 - bt1);
+                //             if (result) {
+                //                 PARABOLICWARN("giving endTime less than its minimum time but SolveFixedTime did not fail");
+                //                 PARABOLICWARN("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e; minDuration = %.15e", temp[1].x0, temp[1].x1, temp[1].dx0, temp[1].dx1, vmax, amax, endTime - bt0 - bt1, mintime);
+                //                 PARABOLICWARN("Calculated values: tswitch1 = %.15e; tswitch2 = %.15e; ttotal = %.15e; a1 = %.15e; v = %.15e; a2 = %.15e", temp[1].tswitch1, temp[1].tswitch2, temp[1].ttotal, temp[1].a1, temp[1].v, temp[1].a2);
+                //             }
+                //     }
+                // }
+                
+                if(temp[1].SolveFixedTime(amax,vmax,endTime - bt0 - bt1)) {////////Puttichai
                     temp[1].Bounds(bmin,bmax);
                     PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
                     if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
@@ -3223,13 +2430,14 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real vmax
             i--;
         }
     }
-    if(!FuzzyEquals(ttotal,endTime,EpsilonT*0.1)) {
+    if(!FuzzyEquals(ttotal,endTime,EpsilonT)) {
         PARABOLIC_RAMP_PLOG("Ramp times: ");
         for(size_t i=0; i<ramps.size(); i++)
             PARABOLIC_RAMP_PLOG("%.15e ",ramps[i].ttotal);
         PARABOLIC_RAMP_PLOG("\n");
     }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT));
+    PARABOLIC_RAMP_PLOG("Successfully fixed x bounds violation");
     return true;
 }
 
@@ -3255,7 +2463,7 @@ bool SolveMaxAccel(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax, Real 
 }
 
 
-bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax, Real vmax,Real xmin,Real xmax,std::vector<ParabolicRamp1D>& ramps)
+bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax, Real vmax, Real xmin,Real xmax,std::vector<ParabolicRamp1D>& ramps)
 {
     PARABOLIC_RAMP_ASSERT(x0 >= xmin-EpsilonX && x0 <= xmax+EpsilonX && x1 >= xmin-EpsilonX && x1 <= xmax+EpsilonX);
     ParabolicRamp1D ramp;
@@ -3330,7 +2538,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
         gMinAccelQuiet = true;
         //first check is a quick reject
         if(Abs(x1-bx0) < (endTime-bt0)*vmax) {
-            if(temp[1].SolveMinAccel(endTime-bt0,vmax)) {
+            if(temp[1].SolveFixedTime(amax,vmax,endTime-bt0)) {
                 if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
                     temp[1].Bounds(bmin,bmax);
                     if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
@@ -3365,7 +2573,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
         gMinAccelQuiet = true;
         //first perform a quick reject
         if(Abs(x0-bx1) < (endTime-bt1)*vmax) {
-            if(temp[0].SolveMinAccel(endTime-bt1,vmax)) {
+            if(temp[0].SolveFixedTime(amax,vmax,endTime-bt1)) {
                 if(Max(Abs(temp[0].a1),Abs(temp[0].a2)) < amax) {
                     temp[0].Bounds(bmin,bmax);
                     if(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX) {
@@ -3394,6 +2602,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
             temp[0].ttotal = endTime;
             ramps = temp;
             amax = Max(Abs(ba0),Abs(ba1));
+            // std::cout << "running IsValid in SolveMinAccelBounded (original)" << std::endl;
             PARABOLIC_RAMP_ASSERT(temp[0].IsValid());
         }
     }
@@ -3431,7 +2640,7 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
             temp[1].dx1 = 0;
             gMinAccelQuiet = true;
             if(Abs(bx0-bx1) < (endTime-bt0-bt1)*vmax) {
-                if(temp[1].SolveMinAccel(endTime - bt0 - bt1,vmax)) {
+                if(temp[1].SolveFixedTime(amax,vmax,endTime - bt0 - bt1)) {
                     temp[1].Bounds(bmin,bmax);
                     PARABOLIC_RAMP_ASSERT(bmin >= xmin-EpsilonX && bmax <= xmax+EpsilonX);
                     if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
@@ -3472,17 +2681,17 @@ bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime,Real amax
             i--;
         }
     }
-    if(!FuzzyEquals(ttotal,endTime,EpsilonT*0.1)) {
+    if(!FuzzyEquals(ttotal,endTime,EpsilonT)) {
         PARABOLIC_RAMP_PLOG("Ramp times: ");
         for(size_t i=0; i<ramps.size(); i++)
             PARABOLIC_RAMP_PLOG("%.15e ",ramps[i].ttotal);
         PARABOLIC_RAMP_PLOG("\n");
     }
-    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+    PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT));
     return true;
 }
 
-
+////////Puttichai
 Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                          const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                          vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp)
@@ -3515,6 +2724,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         PARABOLIC_RAMP_ASSERT(Abs(v1[i]) <= vmax[i]+EpsilonV);
     }
     Real endTime = 0;
+    size_t maxTimeIndex = 0;
     ramps.resize(x0.size());
     for(size_t i=0; i<ramps.size(); i++) {
         ramps[i].resize(1);
@@ -3538,6 +2748,10 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         if(!ramps[i][0].SolveMinTime(amax[i],vmax[i])) {
             return -1;
         }
+        if (1) {
+            PARABOLIC_RAMP_PLOG("SolveMinTime for joint %d successful with duration = %.15e", i, ramps[i][0].ttotal);
+            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e", ramps[i][0].x0, ramps[i][0].x1, ramps[i][0].dx0, ramps[i][0].dx1, vmax[i], amax[i]);
+        }
         Real bmin,bmax;
         ramps[i][0].Bounds(bmin,bmax);
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) {
@@ -3545,7 +2759,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
             bool bSuccess = false;
             for(Real itimemult = 1; itimemult <= 5; ++itimemult) {
                 Real timemult = 1+itimemult*0.5; // perhaps should test different values?
-                if( SolveMinAccelBounded(x0[i], v0[i], x1[i], v1[i], originaltime*timemult, vmax[i], xmin[i], xmax[i], ramps[i]) ) {
+                if( SolveMinAccelBounded(x0[i], v0[i], x1[i], v1[i], originaltime*timemult, amax[i], vmax[i], xmin[i], xmax[i], ramps[i]) ) {////////Puttichai
                     bSuccess = true;
                     // check acceleration limits
                     for(size_t j = 0; j < ramps[i].size(); ++j) {
@@ -3574,23 +2788,28 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         for(size_t j = 0; j < ramps[i].size(); ++j) {
             newtotal += ramps[i][j].ttotal;
         }
+        PARABOLIC_RAMP_PLOG("ramp %d total duration = %.15e\n", i, newtotal);
         if(newtotal > endTime) {
             endTime = newtotal;
+            maxTimeIndex = i;
         }
     }
-    
+    PARABOLIC_RAMP_PLOG("Maximum duration = %.15e from joint %d", endTime, maxTimeIndex);
+    // std::cout << "endTime = " << endTime << std::endl;////////Puttichai
+
     //now we have a candidate end time -- repeat looking through solutions
     //until we have solved all ramps
     std::vector<ParabolicRamp1D> tempramps;
     int numiters = 0;
     int maxiters=10;
+    bool endTimeUpdated = false;
     bool solved = true;
     while(numiters < maxiters) {
         ++numiters;
         solved = true;
         for(size_t i=0; i<ramps.size(); i++) {
             if( ramps[i].size() == 0 ) {
-                PARABOLICWARN("ramp[%d] has 0 size, numiters=%d, multidofinterp=%d", i, numiters, multidofinterp);
+                PARABOLIC_RAMP_PLOG("ramp[%d] has 0 size, numiters=%d, multidofinterp=%d", i, numiters, multidofinterp);
             }
             PARABOLIC_RAMP_ASSERT(ramps[i].size() > 0);
             if(vmax[i]==0 || amax[i]==0) {
@@ -3603,12 +2822,14 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
             for(size_t j=0; j<ramps[i].size(); j++) {
                 ttotal += ramps[i][j].ttotal;
             }
-            if(FuzzyEquals(ttotal,endTime,EpsilonT)) {
+            // Don't do anything if this is the slowest ramp.
+            if ((i == maxTimeIndex) and (!endTimeUpdated)) {
+                PARABOLIC_RAMP_PLOG("joint %d is already the slowest, continue to the next DOF", i);
                 continue;
             }
 
             //now solve minimum acceleration within bounds
-            if( multidofinterp == 2 ) {
+            if ( multidofinterp == 2 ) {
                 if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],tempramps)) {
                     // because SolveMaxAccel doesn't check for boundaries, this could fail
                     PARABOLIC_RAMP_PLOG("Failed solving bounded max accel for joint %d\n",i);
@@ -3618,8 +2839,8 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                 }
                 ramps[i] = tempramps;
             }
-            else if( multidofinterp == 1 ) {
-                if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],tempramps)) {
+            else if ( multidofinterp == 1 ) {
+                if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],tempramps)) {
                     endTime *= 1.05;
                     solved = false;
                     break;
@@ -3627,11 +2848,59 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                 ramps[i] = tempramps;
             }
             else {
-                if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,vmax[i],xmin[i],xmax[i],tempramps)) {
-                    PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
-                    endTime *= 1.05;
+                if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],tempramps)) {////////Puttichai
+                    PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d with endTime = %.15e\n",i,endTime);
                     solved = false;
+                    if( 1 ) { // disable to avoid changing time
+                        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
+                        Real newEndTime;
+                        Real maxNewEndTime = -1;
+                        bool result;
+                        for (size_t k = 0; k < ramps.size(); ++k) {
+                            result = CalculateLeastBoundInoperativeInterval(x0[k], v0[k], x1[k], v1[k], amax[k], vmax[k], newEndTime);
+                            if (!result) {
+                                PARABOLIC_RAMP_PLOG("Calculating newEndTime for joint %d failed. Use the default value instead.", k);
+                                newEndTime = endTime*1.05;
+                            }
+                            else if (newEndTime < endTime) {
+                                if (k != i) {
+                                    // this is ok because it may be the case that least upper bounds time for all joints are less than endTime except for joint i
+                                    continue;
+                                }
+                                else {
+                                    PARABOLICWARN("Calculated newEndTime for joint %d is less than the current value. Logic has failed somewhere: %.15e < %.15e", k, newEndTime, endTime);
+                                    PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[k], x1[k], v0[k], v1[k], vmax[k], amax[k], endTime);
+                                    newEndTime = endTime*1.05;
+                                }
+                            }
+                            else {
+                                // The calculated value is ok.
+                                PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15e\n", k, newEndTime);
+                            }
+                            if (newEndTime > maxNewEndTime) {
+                                PARABOLIC_RAMP_PLOG("maxTimeIndex is updated to %d", k);
+                                maxNewEndTime = newEndTime;
+                                maxTimeIndex = k;
+                                endTimeUpdated = true; // the previous longest also has to be re-interpolated
+                            }
+                        }
+                        if (maxNewEndTime < 0) {
+                            PARABOLICWARN("CalculateLeastBoundInoperativeInterval loop error: maxNewEndTime = %.15e", maxNewEndTime);
+                            maxNewEndTime = newEndTime * 1.05;
+                        }
+                        endTime = maxNewEndTime;
+                    }
+                    else {
+                        endTime *= 1.05;
+                    }
                     break;
+                }
+                PARABOLIC_RAMP_PLOG("Successfully solving bounded min accel for joint %d (endTime = %.15e)\n",i, endTime);
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
+                if ( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                    for (size_t k = 0; k < tempramps.size(); ++k) {
+                        PARABOLIC_RAMP_PLOG("Calculated values (ramp %d): tswitch1 = %.15e; tswitch2 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", k, tempramps[k].tswitch1, tempramps[k].tswitch2, tempramps[k].a1, tempramps[k].a2, tempramps[k].v);
+                    }
                 }
                 ramps[i] = tempramps;
             }
@@ -3645,6 +2914,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                     break;
                 }
             }
+
             if(!inVelBounds) {
                 ramps[i].resize(1);
                 ramps[i][0].x0=x0[i];
@@ -3677,13 +2947,13 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                 PARABOLIC_RAMP_ASSERT(Abs(ramps[i][j].v) <= vmax[i]+EpsilonV);
                 ttotal += ramps[i][j].ttotal;
             }
-            PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT*0.1));
+            PARABOLIC_RAMP_ASSERT(FuzzyEquals(ttotal,endTime,EpsilonT));
         }
         if( !solved ) {
             continue; //go back and re-solve
         }
 
-        if( multidofinterp == 2 ) {
+        if ( multidofinterp == 2 ) {
             // find the ramp that saturates the slowest and convert all switching points to it
             // because we're not computing with limits, there should only be one ramp
             for(size_t i=0; i < ramps.size(); ++i) {
@@ -3748,8 +3018,9 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
     return endTime;
 }
 
+////////Puttichai
 bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
-                          Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax,
+                          Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax,
                           vector<vector<ParabolicRamp1D> >& ramps)
 {
     PARABOLIC_RAMP_ASSERT(x0.size() == v0.size());
@@ -3774,7 +3045,7 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
             continue;
         }
         //now solve minimum acceleration within bounds
-        if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,vmax[i],xmin[i],xmax[i],ramps[i])) {
+        if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],ramps[i])) {
             PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
             return false;
         }
@@ -3782,10 +3053,13 @@ bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,con
     return true;
 }
 
+
+////////Puttichai
 bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1,
                        Real endTime,const Vector& amax, const Vector& vmax,const Vector& xmin,const Vector& xmax,
-                       vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp)
+                       vector<vector<ParabolicRamp1D> >& ramps, int multidofinterp, int numDilationTries)
 {
+    PARABOLIC_RAMP_PLOG("numDilationTries = %d", numDilationTries);
     PARABOLIC_RAMP_ASSERT(x0.size() == v0.size());
     PARABOLIC_RAMP_ASSERT(x1.size() == v1.size());
     PARABOLIC_RAMP_ASSERT(x0.size() == x1.size());
@@ -3809,22 +3083,66 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
         }
         //now solve minimum acceleration within bounds
         if( multidofinterp == 2 ) {
-            if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],ramps[i])) {
+            if(!SolveMaxAccel(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],ramps[i])) {
                 PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d, endTime=%f\n",i, endTime);
+                PARABOLIC_RAMP_PLOG("multidofinterp = %d\n", multidofinterp);
                 return false;
             }
         }
         else if( multidofinterp == 1 ) {
-            if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i], vmax[i],xmin[i],xmax[i],ramps[i])) {
+            if(!SolveMaxAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],ramps[i])) {
                 PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
+                PARABOLIC_RAMP_PLOG("multidofinterp = %d\n", multidofinterp);
                 return false;
             }
         }
         else {
-            if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,vmax[i],xmin[i],xmax[i],ramps[i])) {
+            if(!SolveMinAccelBounded(x0[i],v0[i],x1[i],v1[i],endTime,amax[i],vmax[i],xmin[i],xmax[i],ramps[i])) {
                 PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d\n",i);
-                return false;
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
+
+                if (numDilationTries > 0) {
+                    Real newEndTime;
+                    Real maxNewEndTime = -1;
+                    bool result;
+                    for (size_t k = 0; k < ramps.size(); ++k) {
+                        result = CalculateLeastBoundInoperativeInterval(x0[k], v0[k], x1[k], v1[k], amax[k], vmax[k], newEndTime);
+                        if (!result) {
+                            PARABOLIC_RAMP_PLOG("Calculating newEndTime for joint %d failed. Use the default value instead.", k);
+                            newEndTime = endTime*1.05;
+                        }
+                        else if (newEndTime < endTime) {
+                            if (k != i) {
+                                // this is ok because it may be the case that least upper bounds time for all joints are less than endTime except for joint i
+                            }
+                            else {
+                                PARABOLICWARN("Calculated newEndTime for joint %d is less than the current value. Logic has failed somewhere: %.15e < %.15e", k, newEndTime, endTime);
+                                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[k], x1[k], v0[k], v1[k], vmax[k], amax[k], endTime);
+                                newEndTime = endTime*1.05;
+                            }
+                        }
+                        else {
+                            // The calculated value is ok.
+                            PARABOLIC_RAMP_PLOG("newEndTime for joint %d = %.15e\n", k, newEndTime);
+                        }
+                        if (newEndTime > maxNewEndTime) {
+                            maxNewEndTime = newEndTime;
+                        }
+                    }
+                    if (maxNewEndTime < 0) {
+                        PARABOLICWARN("CalculateLeastBoundInoperativeInterval loop error: maxNewEndTime = %.15e", maxNewEndTime);
+                        maxNewEndTime = newEndTime * 1.05;
+                    }
+                    endTime = maxNewEndTime;
+                    result = SolveAccelBounded(x0, v0, x1, v1, endTime, amax, vmax, xmin, xmax, ramps, multidofinterp, numDilationTries - 1);
+                    return result;
+                }
+                else {
+                    return false;
+                }
             }
+            PARABOLIC_RAMP_PLOG("Successfully solving bounded min accel for joint %d\n",i);
+
             // check acceleration limits
             for(size_t j = 0; j < ramps[i].size(); ++j) {
                 if( Abs(ramps[i][j].a1) > amax[i]+EpsilonA ) {
@@ -3875,5 +3193,120 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
     }
     return true;
 }
+
+////////Puttichai
+bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real amax, Real vmax, Real& newEndTime) {
+    Real d = x1 - x0;
+    Real T0, T1, T2, T3;
+
+    /*
+       Let t be the total duration of the velocity profile, a1 and a2 be the accelerations of both
+       ramps. We write, in the way that has already been described in SolveMinAccel, a1 and a2 in
+       terms of tswitch1 as
+
+              a1 = A + B/tswitch1    and
+              a2 = A - B/(t - tswitch1).
+
+       Imposing the acceleration bounds, we have the following inequalities:
+
+          from -amax <= a1 <= amax
+              tswitch1*sum1 <= B
+                          B <= sum2*tswitch1
+
+          from -am <= a2 <= amax
+              (t - tswitch1)*sum1 <= -B
+                               -b <= sum2*(t - tswitch1),
+
+       where sum1 = -amax - A, sum2 = amax - A.
+
+       From those inequalities, we can deduce that a feasible value of tswitch1 must fall in the
+       intersection of
+
+              [B/sum1, t + B/sum1]    and
+              [B/sum2, t + B/sum2].
+
+       Therefore, the total duration t must satisfy
+
+              t >= B*(1/sum2 - 1/sum1)    and
+              t >= B*(1/sum1 - 1/sum2).
+
+       By substituting A = (dx1 - dx0)/t and B = 2*d/t - (dx0 + dx1) into the above inequalities, we
+       have
+
+              t >= (2*amax*((2*d)/t - (dx0 + dx1)))/(amax*amax - ((dx1 - dx0)/t)**2)    and
+              t >= -(2*amax*((2*d)/t - (dx0 + dx1)))/(amax*amax - ((dx1 - dx0)/t)**2),
+
+       (the inequalities are derived using Sympy). Finally, we have two solutions (for the total
+       time) from each inequality. Then we select the maximum one.
+     */
+
+    Real firstTerm = (v0 + v1)/amax;
+
+    Real temp1 = 2*(-Sqr(amax))*(2*amax*d - Sqr(v0) - Sqr(v1));
+    Real secondTerm1 = Sqrt(temp1)/Sqr(amax);
+    if (temp1 < 0) {
+        T0 = -1;
+        T1 = -1;
+    }
+    else {
+        T0 = firstTerm + secondTerm1;
+        T1 = firstTerm - secondTerm1;
+    }
+    T1 = Max(T0, T1);
+
+    Real temp2 = 2*(Sqr(amax))*(2*amax*d + Sqr(v0) + Sqr(v1));
+    Real secondTerm2 = Sqrt(temp2)/Sqr(amax);
+    if (temp2 < 0) {
+        T2 = -1;
+        T3 = -1;
+    }
+    else {
+        T2 = -firstTerm + secondTerm2;
+        T3 = -firstTerm - secondTerm2;
+    }
+    T3 = Max(T2, T3);
+
+    newEndTime = Max(T1, T3);
+    if (newEndTime > EpsilonT) {
+        // Sanity check
+
+        // dStraight is the displacement produced if we were to travel with only one acceleration
+        // from v0 to v1 in newEndTime. It is used to determine which direction we should aceelerate
+        // first (posititve or negative acceleration).
+        Real dStraight = 0.5*(v0 + v1)*newEndTime;
+        Real am = d - dStraight > 0 ? amax : -amax;
+        Real vm = d - dStraight > 0 ? vmax : -vmax;
+
+        Real vp = 0.5*(am*newEndTime + v0 + v1); // the peak velocity
+        if (Abs(vp) > vmax) {
+            Real dExcess = (vp - vm)*(vp - vm)/amax;
+            Real deltaTime = dExcess/vmax;
+            newEndTime += deltaTime; // the time increased from correcting the velocity bound violation
+        }
+        // Should be no problem now.
+        newEndTime = newEndTime * 1.01; // for safety reasons, we don't make newEndTime too close to the bound
+        return true;
+    }
+    else {
+        PARABOLIC_RAMP_PLOG("Unable to calculate the least upper bound: T0=%.15e, T1 = %.15e, T2 = %.15e, T3 = %.15e", T0, T1, T2, T3);
+        return false;
+    }
+}
+
+void ParabolicRamp1D::ToString(std::string& s) const {
+    // order of variables: x0 dx0 x1 dx1 a1 v a2 tswitch1 tswith2 ttotal
+    s = str(boost::format("%.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e %.15e\n")%x0%dx0%x1%dx1%a1%v%a2%tswitch1%tswitch2%ttotal);
+}
+
+void ParabolicRampND::ToString(std::string& s) const {
+    int ndof = (int) ramps.size();
+    s = str(boost::format("%d\n%.15e\n")%ndof%endTime);
+    std::string dummy;
+    for (int i = 0; i < ndof; ++i) {
+        ramps[i].ToString(dummy);
+        s = s + dummy;
+    }
+}
+
 
 } //namespace ParabolicRamp

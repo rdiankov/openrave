@@ -160,6 +160,15 @@ public:
     virtual void SetTolerance(OpenRAVE::dReal tolerance) {
     }
 
+    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    {
+    }
+
+    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    {
+        return _odespace->GetGeometryGroup();
+    }
+
     virtual bool InitEnvironment()
     {
 //        if( !_odespace->InitEnvironment() ) {
@@ -310,7 +319,7 @@ public:
             vcontacts.resize(min(_nMaxContacts,vcontacts.size()*2));
             log2limit += 1;
         }
-        RAVELOG_WARN(str(boost::format("max contacts %d reached, but still more contacts left! If this is a problem, try increasing the limit with the SetMaxContracts command")%_nMaxContacts));
+        RAVELOG_WARN(str(boost::format("max contacts %d reached, but still more contacts left! If this is a problem, try increasing the limit with the SetMaxContacts command")%_nMaxContacts));
         return vcontacts.size();
     }
 

@@ -46,6 +46,48 @@
 #include <libxml/debugXML.h>
 #include <libxml/xmlmemory.h>
 
+#if OPENRAVE_LOG4CXX
+
+#include <log4cxx/layout.h>
+#include <log4cxx/patternlayout.h>
+#include <log4cxx/consoleappender.h>
+
+namespace log4cxx {
+
+class ColorLayout : public Layout {
+public:
+    DECLARE_LOG4CXX_OBJECT(ColorLayout)
+    BEGIN_LOG4CXX_CAST_MAP()
+    LOG4CXX_CAST_ENTRY(ColorLayout)
+    LOG4CXX_CAST_ENTRY_CHAIN(Layout)
+    END_LOG4CXX_CAST_MAP()
+
+    ColorLayout();
+    ColorLayout(const LayoutPtr& layout);
+    virtual ~ColorLayout();
+
+    virtual void activateOptions(helpers::Pool& p) {
+        _layout->activateOptions(p);
+    }
+    virtual void setOption(const LogString& option, const LogString& value) {
+        _layout->setOption(option, value);
+    }
+    virtual bool ignoresThrowable() const {
+        return _layout->ignoresThrowable();
+    }
+
+    virtual void format(LogString& output, const spi::LoggingEventPtr& event, helpers::Pool& pool) const;
+
+protected:
+    virtual LogString _Colorize(const spi::LoggingEventPtr& event) const;
+
+    LayoutPtr _layout;
+};
+
+}
+
+#endif
+
 namespace OpenRAVE {
 
 #ifdef _WIN32
@@ -382,6 +424,8 @@ public:
             return 0;     // already initialized
         }
 
+        _InitializeLogging(level);
+
 #ifdef USE_CRLIBM
         _crlibm_fpu_state = crlibm_init();
 #endif
@@ -397,7 +441,6 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _nDebugLevel = level;
         _pdatabase.reset(new RaveDatabase());
         if( !_pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
@@ -432,6 +475,12 @@ public:
         }
         _vdbdirectories.push_back(_homedirectory);
 
+        _defaultviewertype.clear();
+        const char* pOPENRAVE_DEFAULT_VIEWER = std::getenv("OPENRAVE_DEFAULT_VIEWER");
+        if( !!pOPENRAVE_DEFAULT_VIEWER && strlen(pOPENRAVE_DEFAULT_VIEWER) > 0 ) {
+            _defaultviewertype = std::string(pOPENRAVE_DEFAULT_VIEWER);
+        }
+        
         _UpdateDataDirs();
         return 0;
     }
@@ -478,6 +527,10 @@ public:
 #endif
         crlibm_exit(_crlibm_fpu_state);
 #endif
+
+#if OPENRAVE_LOG4CXX
+        _logger = 0;
+#endif
     }
 
     void AddCallbackForDestroy(const boost::function<void()>& fn)
@@ -513,6 +566,56 @@ public:
         return "";
     }
 
+#if OPENRAVE_LOG4CXX
+    log4cxx::LoggerPtr GetLogger()
+    {
+        return _logger;
+    }
+
+    void SetDebugLevel(int level)
+    {
+        if (_logger != NULL) {
+            log4cxx::LevelPtr levelptr = log4cxx::Level::getInfo();
+            switch(level&Level_OutputMask) {
+            case Level_Fatal: levelptr = log4cxx::Level::getFatal(); break;
+            case Level_Error: levelptr = log4cxx::Level::getError(); break;
+            case Level_Warn: levelptr = log4cxx::Level::getWarn(); break;
+            case Level_Info: levelptr = log4cxx::Level::getInfo(); break;
+            case Level_Debug: levelptr = log4cxx::Level::getDebug(); break;
+            case Level_Verbose: levelptr = log4cxx::Level::getTrace(); break;
+            }
+            _logger->setLevel(levelptr);
+        }
+        _nDebugLevel = level;
+    }
+
+    int GetDebugLevel()
+    {
+        int level = _nDebugLevel;
+        if (_logger != NULL) {
+            if (_logger->isEnabledFor(log4cxx::Level::getTrace())) {
+                level = Level_Verbose;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getDebug())) {
+                level = Level_Debug;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getInfo())) {
+                level = Level_Info;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getWarn())) {
+                level = Level_Warn;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getError())) {
+                level = Level_Error;
+            }
+            else {
+                level = Level_Fatal;
+            }
+        }
+        return level | (_nDebugLevel & ~Level_OutputMask);
+    }
+
+#else
     void SetDebugLevel(int level)
     {
         _nDebugLevel = level;
@@ -522,6 +625,7 @@ public:
     {
         return _nDebugLevel;
     }
+#endif
 
     class XMLReaderFunctionData : public UserData
     {
@@ -729,6 +833,34 @@ protected:
         boost::mutex::scoped_lock lock(_mutexinternal);
         return _nDataAccessOptions;
     }
+    std::string GetDefaultViewerType() {
+        if( _defaultviewertype.size() > 0 ) {
+            return _defaultviewertype;
+        }
+        
+        // get the first viewer that can be loadable, with preferenace to qtosg, qtcoin
+        boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase;
+        if( !!pdatabase ) {
+            if( pdatabase->HasInterface(PT_Viewer, "qtosg") ) {
+                return std::string("qtosg");
+            }
+
+            if( pdatabase->HasInterface(PT_Viewer, "qtcoin") ) {
+                return std::string("qtcoin");
+            }
+
+            // search for the first viewer found
+            std::map<InterfaceType, std::vector<std::string> > interfacenames;
+            pdatabase->GetLoadedInterfaces(interfacenames);
+            if( interfacenames.find(PT_Viewer) != interfacenames.end() ) {
+                if( interfacenames[PT_Viewer].size() > 0 ) {
+                    return interfacenames[PT_Viewer].at(0);
+                }
+            }
+        }
+
+        return std::string();
+    }
 
 protected:
     static void _create()
@@ -885,6 +1017,23 @@ protected:
 
 #endif
 
+    void _InitializeLogging(int level) {
+#if OPENRAVE_LOG4CXX
+        _logger = log4cxx::Logger::getLogger("openrave");
+
+        // if root appenders have not been configured, configure a default console appender
+        log4cxx::LoggerPtr root(log4cxx::Logger::getRootLogger());
+        if (root->getAllAppenders().size() == 0) {
+            log4cxx::LayoutPtr consolePatternLayout(new log4cxx::PatternLayout(LOG4CXX_STR("%d %c [%p] [%F:%L %M] %m%n")));
+            log4cxx::LayoutPtr colorLayout(new log4cxx::ColorLayout(consolePatternLayout));
+            log4cxx::AppenderPtr consoleAppender(new log4cxx::ConsoleAppender(colorLayout));
+            root->setLevel(log4cxx::Level::getTrace());
+            root->addAppender(consoleAppender);
+        }
+#endif
+        SetDebugLevel(level);
+    }
+
 private:
     static boost::shared_ptr<RaveGlobal> _state;
     // state that is always present
@@ -899,6 +1048,7 @@ private:
     std::map<int, EnvironmentBase*> _mapenvironments;
     std::list<boost::function<void()> > _listDestroyCallbacks;
     std::string _homedirectory;
+    std::string _defaultviewertype; ///< the default viewer type from the environment variable OPENRAVE_DEFAULT_VIEWER
     std::vector<std::string> _vdbdirectories;
     int _nGlobalEnvironmentId;
     SpaceSamplerBasePtr _pdefaultsampler;
@@ -912,9 +1062,26 @@ private:
     std::vector<boost::filesystem::path> _vBoostDataDirs; ///< \brief returns absolute filenames of the data
 #endif
 
+#if OPENRAVE_LOG4CXX
+    log4cxx::LoggerPtr _logger;
+#endif
+
     friend void RaveInitializeFromState(UserDataPtr);
     friend UserDataPtr RaveGlobalState();
 };
+
+#if OPENRAVE_LOG4CXX
+log4cxx::LevelPtr RaveGetVerboseLogLevel()
+{
+    static log4cxx::LevelPtr level(new log4cxx::Level(log4cxx::Level::TRACE_INT, LOG4CXX_STR("VERBOSE"), 7));
+    return level;
+}
+
+log4cxx::LoggerPtr RaveGetLogger()
+{
+    return RaveGlobal::instance()->GetLogger();
+}
+#endif
 
 boost::shared_ptr<RaveGlobal> RaveGlobal::_state;
 
@@ -1165,6 +1332,11 @@ void RaveSetDataAccess(int options)
 int RaveGetDataAccess()
 {
     return RaveGlobal::instance()->GetDataAccess();
+}
+
+std::string RaveGetDefaultViewerType()
+{
+    return RaveGlobal::instance()->GetDefaultViewerType();
 }
 
 const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid)
@@ -1931,7 +2103,7 @@ void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         }
 
         //uint64_t starttime1 = utils::GetMicroTime();
-        
+
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
         FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
@@ -2382,3 +2554,79 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
 }
 
 } // end namespace OpenRAVE
+
+#if OPENRAVE_LOG4CXX
+
+using namespace log4cxx;
+
+IMPLEMENT_LOG4CXX_OBJECT(ColorLayout);
+
+ColorLayout::ColorLayout() : Layout()
+{
+}
+
+ColorLayout::ColorLayout(const LayoutPtr& layout) : Layout(), _layout(layout)
+{
+}
+
+ColorLayout::~ColorLayout()
+{
+}
+
+void ColorLayout::format(LogString& output, const spi::LoggingEventPtr& event, helpers::Pool& pool) const
+{
+    _layout->format(output, event, pool);
+
+    // add color
+    output.reserve(output.size() + 32);
+    output.insert(0, _Colorize(event));
+    output.append(LOG4CXX_STR("\x1b[0m"));
+}
+
+LogString ColorLayout::_Colorize(const spi::LoggingEventPtr& event) const
+{
+    int bg = -1;
+    int fg = -1;
+    bool bold = false;
+    LogString csi;
+
+    csi.reserve(32);
+
+    if (event->getLevel()->isGreaterOrEqual(Level::getFatal())) {
+        fg = OPENRAVECOLOR_FATALLEVEL;
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getError())) {
+        fg = OPENRAVECOLOR_ERRORLEVEL;
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getWarn())) {
+        fg = OPENRAVECOLOR_WARNLEVEL;
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getInfo())) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getDebug())) {
+        fg = OPENRAVECOLOR_DEBUGLEVEL;
+    } else {
+        fg = OPENRAVECOLOR_VERBOSELEVEL;
+    }
+
+    csi += LOG4CXX_STR("\x1b[0");
+
+    if (bg >= 0) {
+        csi += LOG4CXX_STR(';');
+        csi += LOG4CXX_STR('4');
+        csi += LOG4CXX_STR('0') + bg;
+    }
+
+    if (fg >= 0) {
+        csi += LOG4CXX_STR(';');
+        csi += LOG4CXX_STR('3');
+        csi += LOG4CXX_STR('0') + fg;
+    }
+
+    if (bold) {
+        csi += LOG4CXX_STR(';');
+        csi += LOG4CXX_STR('1');
+    }
+
+    csi += LOG4CXX_STR('m');
+
+    return csi;
+}
+
+#endif

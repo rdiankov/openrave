@@ -58,6 +58,8 @@ public:
     PyGeometryInfo() {
         _t = ReturnTransform(Transform());
         _vGeomData = toPyVector4(Vector());
+        _vGeomData2 = toPyVector4(Vector());
+        _vGeomData3 = toPyVector4(Vector());
         _vDiffuseColor = toPyVector3(Vector(1,1,1));
         _vAmbientColor = toPyVector3(Vector(0,0,0));
         _type = GT_None;
@@ -70,6 +72,8 @@ public:
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
+        _vGeomData2 = toPyVector4(info._vGeomData2);
+        _vGeomData3 = toPyVector4(info._vGeomData3);
         _vDiffuseColor = toPyVector3(info._vDiffuseColor);
         _vAmbientColor = toPyVector3(info._vAmbientColor);
         _meshcollision = toPyTriMesh(info._meshcollision);
@@ -90,6 +94,8 @@ public:
         KinBody::GeometryInfo& info = *pinfo;
         info._t = ExtractTransform(_t);
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
+        info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
+        info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
         info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
         info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
         if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
@@ -112,7 +118,7 @@ public:
         return pinfo;
     }
 
-    object _t, _vGeomData, _vDiffuseColor, _vAmbientColor, _meshcollision;
+    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
     GeometryType _type;
     object _filenamerender, _filenamecollision;
     object _vRenderScale, _vCollisionScale;
@@ -227,6 +233,7 @@ public:
         max_speed = 0;
         no_load_speed = 0;
         stall_torque = 0;
+        max_instantaneous_torque = 0;
         nominal_torque = 0;
         rotor_inertia = 0;
         torque_constant = 0;
@@ -234,15 +241,22 @@ public:
         speed_constant = 0;
         starting_current = 0;
         terminal_resistance = 0;
+        coloumb_friction = 0;
+        viscous_friction = 0;
     }
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info) {
+        model_type = info.model_type;
         gear_ratio = info.gear_ratio;
         assigned_power_rating = info.assigned_power_rating;
         max_speed = info.max_speed;
         no_load_speed = info.no_load_speed;
         stall_torque = info.stall_torque;
-        FOREACH(itpoint, info.speed_torque_points) {
-            speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        max_instantaneous_torque = info.max_instantaneous_torque;
+        FOREACH(itpoint, info.nominal_speed_torque_points) {
+            nominal_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
+        }
+        FOREACH(itpoint, info.max_speed_torque_points) {
+            max_speed_torque_points.append(boost::python::make_tuple(itpoint->first, itpoint->second));
         }
         nominal_torque = info.nominal_torque;
         rotor_inertia = info.rotor_inertia;
@@ -251,20 +265,30 @@ public:
         speed_constant = info.speed_constant;
         starting_current = info.starting_current;
         terminal_resistance = info.terminal_resistance;
+        coloumb_friction = info.coloumb_friction;
+        viscous_friction = info.viscous_friction;
     }
 
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
         ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
         ElectricMotorActuatorInfo& info = *pinfo;
+        info.model_type = model_type;
         info.gear_ratio = gear_ratio;
         info.assigned_power_rating = assigned_power_rating;
         info.max_speed = max_speed;
         info.no_load_speed = no_load_speed;
         info.stall_torque = stall_torque;
-        if( !IS_PYTHONOBJECT_NONE(speed_torque_points) ) {
-            size_t num = len(speed_torque_points);
+        info.max_instantaneous_torque = max_instantaneous_torque;
+        if( !IS_PYTHONOBJECT_NONE(nominal_speed_torque_points) ) {
+            size_t num = len(nominal_speed_torque_points);
             for(size_t i = 0; i < num; ++i) {
-                info.speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(speed_torque_points[i][1])));
+                info.nominal_speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(nominal_speed_torque_points[i][1])));
+            }
+        }
+        if( !IS_PYTHONOBJECT_NONE(max_speed_torque_points) ) {
+            size_t num = len(max_speed_torque_points);
+            for(size_t i = 0; i < num; ++i) {
+                info.max_speed_torque_points.push_back(std::make_pair((dReal) boost::python::extract<dReal>(max_speed_torque_points[i][0]), (dReal) boost::python::extract<dReal>(max_speed_torque_points[i][1])));
             }
         }
         info.nominal_torque = nominal_torque;
@@ -274,15 +298,19 @@ public:
         info.speed_constant = speed_constant;
         info.starting_current = starting_current;
         info.terminal_resistance = terminal_resistance;
+        info.coloumb_friction = coloumb_friction;
+        info.viscous_friction = viscous_friction;
         return pinfo;
     }
 
+    std::string model_type;
     dReal gear_ratio;
     dReal assigned_power_rating;
     dReal max_speed;
     dReal no_load_speed;
     dReal stall_torque;
-    boost::python::list speed_torque_points;
+    dReal max_instantaneous_torque;
+    boost::python::list nominal_speed_torque_points, max_speed_torque_points;
     dReal nominal_torque;
     dReal rotor_inertia;
     dReal torque_constant;
@@ -290,6 +318,8 @@ public:
     dReal speed_constant;
     dReal starting_current;
     dReal terminal_resistance;
+    dReal coloumb_friction;
+    dReal viscous_friction;
 };
 typedef boost::shared_ptr<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
@@ -576,6 +606,15 @@ public:
         }
         object GetBoxExtents() const {
             return toPyVector3(_pgeometry->GetBoxExtents());
+        }
+        object GetContainerOuterExtents() const {
+            return toPyVector3(_pgeometry->GetContainerOuterExtents());
+        }
+        object GetContainerInnerExtents() const {
+            return toPyVector3(_pgeometry->GetContainerInnerExtents());
+        }
+        object GetContainerBottomCross() const {
+            return toPyVector3(_pgeometry->GetContainerBottomCross());
         }
         object GetRenderScale() const {
             return toPyVector3(_pgeometry->GetRenderScale());
@@ -938,6 +977,15 @@ public:
     dReal GetMaxTorque(int iaxis=0) const {
         return _pjoint->GetMaxTorque(iaxis);
     }
+    object GetInstantaneousTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetInstantaneousTorqueLimits(iaxis);
+        return boost::python::make_tuple(values.first, values.second);
+    }
+    object GetNominalTorqueLimits(int iaxis=0) const {
+        std::pair<dReal, dReal> values = _pjoint->GetNominalTorqueLimits(iaxis);
+        return boost::python::make_tuple(values.first, values.second);
+    }
+
     dReal GetMaxInertia(int iaxis=0) const {
         return _pjoint->GetMaxInertia(iaxis);
     }
@@ -1384,6 +1432,23 @@ bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& u
 void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
 {
     _pbody->SetLinkGeometriesFromGroup(geomname);
+}
+
+void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olinkgeometryinfos)
+{
+    std::vector< std::vector<KinBody::GeometryInfoPtr> > linkgeometries(len(olinkgeometryinfos));
+    for(size_t i = 0; i < linkgeometries.size(); ++i) {
+        std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i];
+        geometries.resize(len(olinkgeometryinfos[i]));
+        for(size_t j = 0; j < geometries.size(); ++j) {
+            PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(olinkgeometryinfos[i][j]);
+            if( !pygeom ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
+            }
+            geometries[j] = pygeom->GetGeometryInfo();
+        }
+    }
+    _pbody->SetLinkGroupGeometries(geomname, linkgeometries);
 }
 
 void PyKinBody::_ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfoConstPtr>& vlinkinfos)
@@ -2571,18 +2636,20 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
 class GeometryInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyGeometryInfo& r)
+    static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, r._vGeomData, r._vDiffuseColor, r._vAmbientColor, r._meshcollision, r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
         int num = len(state);
         r._t = state[0];
-        r._vGeomData = state[1];
+        r._vGeomData = state[1][0];
+        r._vGeomData2 = state[1][1];
+        r._vGeomData3 = state[1][2];
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
-        r._type = boost::python::extract<GeometryType>(state[5]);
+        r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
         r._filenamerender = state[6];
         r._filenamecollision = state[7];
         r._vRenderScale = state[8];
@@ -2590,16 +2657,14 @@ public:
         r._fTransparency = boost::python::extract<float>(state[10]);
         r._bVisible = boost::python::extract<bool>(state[11]);
         r._bModifiable = boost::python::extract<bool>(state[12]);
-        if( num > 13 ) {
-            r._mapExtraGeometries = dict(state[13]);
-        }
+        r._mapExtraGeometries = dict(state[13]);
     }
 };
 
 class LinkInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyLinkInfo& r)
+    static boost::python::tuple getstate(const PyLinkInfo& r)
     {
         return boost::python::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters);
     }
@@ -2610,13 +2675,14 @@ public:
         r._t = state[2];
         r._tMassFrame = state[3];
         r._mass = boost::python::extract<dReal>(state[4]);
-        r._mapFloatParameters = dict(state[5]);
-        r._mapIntParameters = dict(state[6]);
-        r._vForcedAdjacentLinks = dict(state[7]);
-        r._bStatic = boost::python::extract<bool>(state[8]);
-        r._bIsEnabled = boost::python::extract<bool>(state[9]);
-        if( num > 10 ) {
-            r._mapStringParameters = dict(state[10]);
+        r._vinertiamoments = state[5];
+        r._mapFloatParameters = dict(state[6]);
+        r._mapIntParameters = dict(state[7]);
+        r._vForcedAdjacentLinks = dict(state[8]);
+        r._bStatic = boost::python::extract<bool>(state[9]);
+        r._bIsEnabled = boost::python::extract<bool>(state[10]);
+        if( num > 11 ) {
+            r._mapStringParameters = dict(state[11]);
         }
     }
 };
@@ -2624,17 +2690,19 @@ public:
 class ElectricMotorActuatorInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyElectricMotorActuatorInfo& r)
+    static boost::python::tuple getstate(const PyElectricMotorActuatorInfo& r)
     {
-        return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, r.stall_torque, r.speed_torque_points, r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance);
+        return boost::python::make_tuple(r.gear_ratio, r.assigned_power_rating, r.max_speed, r.no_load_speed, boost::python::make_tuple(r.stall_torque, r.max_instantaneous_torque), boost::python::make_tuple(r.nominal_speed_torque_points, r.max_speed_torque_points), r.nominal_torque, r.rotor_inertia, r.torque_constant, r.nominal_voltage, r.speed_constant, r.starting_current, r.terminal_resistance, boost::python::make_tuple(r.coloumb_friction, r.viscous_friction));
     }
     static void setstate(PyElectricMotorActuatorInfo& r, boost::python::tuple state) {
         r.gear_ratio = boost::python::extract<dReal>(state[0]);
         r.assigned_power_rating = boost::python::extract<dReal>(state[1]);
         r.max_speed = boost::python::extract<dReal>(state[2]);
         r.no_load_speed = boost::python::extract<dReal>(state[3]);
-        r.stall_torque = boost::python::extract<dReal>(state[4]);
-        r.speed_torque_points = boost::python::list(state[5]);
+        r.stall_torque = boost::python::extract<dReal>(state[4][0]);
+        r.max_instantaneous_torque = boost::python::extract<dReal>(state[4][1]);
+        r.nominal_speed_torque_points = boost::python::list(state[5][0]);
+        r.max_speed_torque_points = boost::python::list(state[5][1]);
         r.nominal_torque = boost::python::extract<dReal>(state[6]);
         r.rotor_inertia = boost::python::extract<dReal>(state[7]);
         r.torque_constant = boost::python::extract<dReal>(state[8]);
@@ -2642,18 +2710,20 @@ public:
         r.speed_constant = boost::python::extract<dReal>(state[10]);
         r.starting_current = boost::python::extract<dReal>(state[11]);
         r.terminal_resistance = boost::python::extract<dReal>(state[12]);
+        r.coloumb_friction = boost::python::extract<dReal>(state[13][0]);
+        r.viscous_friction = boost::python::extract<dReal>(state[13][1]);
     }
 };
 
 class JointInfo_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getstate(const PyJointInfo& r)
+    static boost::python::tuple getstate(const PyJointInfo& r)
     {
-        return boost::python::make_tuple(boost::python::make_tuple(r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
+        return boost::python::make_tuple(boost::python::make_tuple((int)r._type, r._name, r._linkname0, r._linkname1, r._vanchor, r._vaxes, r._vcurrentvalues), boost::python::make_tuple(r._vresolution, r._vmaxvel, r._vhardmaxvel, r._vmaxaccel, r._vmaxtorque, r._vweights, r._voffsets, r._vlowerlimit, r._vupperlimit), boost::python::make_tuple(r._trajfollow, r._vmimic, r._mapFloatParameters, r._mapIntParameters, r._bIsCircular, r._bIsActive, r._mapStringParameters, r._infoElectricMotor, r._vmaxinertia));
     }
     static void setstate(PyJointInfo& r, boost::python::tuple state) {
-        r._type = boost::python::extract<KinBody::JointType>(state[0][0]);
+        r._type = (KinBody::JointType)(int)boost::python::extract<int>(state[0][0]);
         r._name = state[0][1];
         r._linkname0 = state[0][2];
         r._linkname1 = state[0][3];
@@ -2700,6 +2770,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetWrapOffset_overloads, SetWrapOffset, 1
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxVel_overloads, GetMaxVel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxAccel_overloads, GetMaxAccel, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxTorque_overloads, GetMaxTorque, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetInstantaneousTorqueLimits_overloads, GetInstantaneousTorqueLimits, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetNominalTorqueLimits_overloads, GetNominalTorqueLimits, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMaxInertia_overloads, GetMaxInertia, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetLinkTransformations_overloads, GetLinkTransformations, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetLinkTransformations_overloads, SetLinkTransformations, 1, 2)
@@ -2743,14 +2815,17 @@ void init_openravepy_kinbody()
                           .value("Sphere",GT_Sphere)
                           .value("Cylinder",GT_Cylinder)
                           .value("Trimesh",GT_TriMesh)
+                          .value("Container",GT_Container)
     ;
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, boost::shared_ptr<PyElectricMotorActuatorInfo> >("ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
-                                       .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
+                                       .def_readwrite("model_type",&PyElectricMotorActuatorInfo::model_type)
                                        .def_readwrite("assigned_power_rating",&PyElectricMotorActuatorInfo::assigned_power_rating)
                                        .def_readwrite("max_speed",&PyElectricMotorActuatorInfo::max_speed)
                                        .def_readwrite("no_load_speed",&PyElectricMotorActuatorInfo::no_load_speed)
                                        .def_readwrite("stall_torque",&PyElectricMotorActuatorInfo::stall_torque)
-                                       .def_readwrite("speed_torque_points",&PyElectricMotorActuatorInfo::speed_torque_points)
+                                       .def_readwrite("max_instantaneous_torque",&PyElectricMotorActuatorInfo::max_instantaneous_torque)
+                                       .def_readwrite("nominal_speed_torque_points",&PyElectricMotorActuatorInfo::nominal_speed_torque_points)
+                                       .def_readwrite("max_speed_torque_points",&PyElectricMotorActuatorInfo::max_speed_torque_points)
                                        .def_readwrite("nominal_torque",&PyElectricMotorActuatorInfo::nominal_torque)
                                        .def_readwrite("rotor_inertia",&PyElectricMotorActuatorInfo::rotor_inertia)
                                        .def_readwrite("torque_constant",&PyElectricMotorActuatorInfo::torque_constant)
@@ -2758,7 +2833,89 @@ void init_openravepy_kinbody()
                                        .def_readwrite("speed_constant",&PyElectricMotorActuatorInfo::speed_constant)
                                        .def_readwrite("starting_current",&PyElectricMotorActuatorInfo::starting_current)
                                        .def_readwrite("terminal_resistance",&PyElectricMotorActuatorInfo::terminal_resistance)
+                                       .def_readwrite("gear_ratio",&PyElectricMotorActuatorInfo::gear_ratio)
+                                       .def_readwrite("coloumb_friction",&PyElectricMotorActuatorInfo::coloumb_friction)
+                                       .def_readwrite("viscous_friction",&PyElectricMotorActuatorInfo::viscous_friction)
                                        .def_pickle(ElectricMotorActuatorInfo_pickle_suite())
+    ;
+
+    object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
+                       .value("None",KinBody::JointNone)
+                       .value("Hinge",KinBody::JointHinge)
+                       .value("Revolute",KinBody::JointRevolute)
+                       .value("Slider",KinBody::JointSlider)
+                       .value("Prismatic",KinBody::JointPrismatic)
+                       .value("RR",KinBody::JointRR)
+                       .value("RP",KinBody::JointRP)
+                       .value("PR",KinBody::JointPR)
+                       .value("PP",KinBody::JointPP)
+                       .value("Universal",KinBody::JointUniversal)
+                       .value("Hinge2",KinBody::JointHinge2)
+                       .value("Spherical",KinBody::JointSpherical)
+                       .value("Trajectory",KinBody::JointTrajectory)
+    ;
+
+    object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
+                          .def_readwrite("_t",&PyGeometryInfo::_t)
+                          .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
+                          .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
+                          .def_readwrite("_vGeomData3",&PyGeometryInfo::_vGeomData3)
+                          .def_readwrite("_vDiffuseColor",&PyGeometryInfo::_vDiffuseColor)
+                          .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
+                          .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
+                          .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
+                          .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
+                          .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
+                          .def_readwrite("_vCollisionScale",&PyGeometryInfo::_vCollisionScale)
+                          .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
+                          .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
+                          .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
+                          .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
+                          .def_pickle(GeometryInfo_pickle_suite())
+    ;
+    object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
+                      .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
+                      .def_readwrite("_name",&PyLinkInfo::_name)
+                      .def_readwrite("_t",&PyLinkInfo::_t)
+                      .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
+                      .def_readwrite("_mass",&PyLinkInfo::_mass)
+                      .def_readwrite("_vinertiamoments",&PyLinkInfo::_vinertiamoments)
+                      .def_readwrite("_mapFloatParameters",&PyLinkInfo::_mapFloatParameters)
+                      .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
+                      .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
+                      .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
+                      .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
+                      .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
+                      .def_pickle(LinkInfo_pickle_suite())
+    ;
+    object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
+                       .def_readwrite("_type",&PyJointInfo::_type)
+                       .def_readwrite("_name",&PyJointInfo::_name)
+                       .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
+                       .def_readwrite("_linkname1",&PyJointInfo::_linkname1)
+                       .def_readwrite("_vanchor",&PyJointInfo::_vanchor)
+                       .def_readwrite("_vaxes",&PyJointInfo::_vaxes)
+                       .def_readwrite("_vcurrentvalues",&PyJointInfo::_vcurrentvalues)
+                       .def_readwrite("_vresolution",&PyJointInfo::_vresolution)
+                       .def_readwrite("_vmaxvel",&PyJointInfo::_vmaxvel)
+                       .def_readwrite("_vhardmaxvel",&PyJointInfo::_vhardmaxvel)
+                       .def_readwrite("_vmaxaccel",&PyJointInfo::_vmaxaccel)
+                       .def_readwrite("_vmaxtorque",&PyJointInfo::_vmaxtorque)
+                       .def_readwrite("_vmaxinertia",&PyJointInfo::_vmaxinertia)
+                       .def_readwrite("_vweights",&PyJointInfo::_vweights)
+                       .def_readwrite("_voffsets",&PyJointInfo::_voffsets)
+                       .def_readwrite("_vlowerlimit",&PyJointInfo::_vlowerlimit)
+                       .def_readwrite("_vupperlimit",&PyJointInfo::_vupperlimit)
+                       .def_readwrite("_trajfollow",&PyJointInfo::_trajfollow)
+                       .def_readwrite("_vmimic",&PyJointInfo::_vmimic)
+                       .def_readwrite("_mapFloatParameters",&PyJointInfo::_mapFloatParameters)
+                       .def_readwrite("_mapIntParameters",&PyJointInfo::_mapIntParameters)
+                       .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
+                       .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
+                       .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
+                       .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
+                       .def_pickle(JointInfo_pickle_suite())
     ;
 
     {
@@ -2801,6 +2958,7 @@ void init_openravepy_kinbody()
                         .def("InitFromGeometries",&PyKinBody::InitFromGeometries,InitFromGeometries_overloads(args("geometries", "uri"), DOXY_FN(KinBody,InitFromGeometries)))
                         .def("Init",&PyKinBody::Init,Init_overloads(args("linkinfos","jointinfos","uri"), DOXY_FN(KinBody,Init)))
                         .def("SetLinkGeometriesFromGroup",&PyKinBody::SetLinkGeometriesFromGroup, args("name"), DOXY_FN(KinBody,SetLinkGeometriesFromGroup))
+                        .def("SetLinkGroupGeometries", &PyKinBody::SetLinkGroupGeometries, args("name", "linkgeometries"), DOXY_FN(KinBody, SetLinkGroupGeometries))
                         .def("SetName", &PyKinBody::SetName,args("name"),DOXY_FN(KinBody,SetName))
                         .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
                         .def("GetDOF",&PyKinBody::GetDOF,DOXY_FN(KinBody,GetDOF))
@@ -2925,6 +3083,7 @@ void init_openravepy_kinbody()
         enum_<KinBody::SaveParameters>("SaveParameters" DOXY_ENUM(SaveParameters))
         .value("LinkTransformation",KinBody::Save_LinkTransformation)
         .value("LinkEnable",KinBody::Save_LinkEnable)
+        .value("LinkVelocities", KinBody::Save_LinkVelocities)
         .value("JointMaxVelocityAndAcceleration",KinBody::Save_JointMaxVelocityAndAcceleration)
         .value("JointWeights", KinBody::Save_JointWeights)
         .value("JointLimits", KinBody::Save_JointLimits)
@@ -2943,81 +3102,10 @@ void init_openravepy_kinbody()
         .value("Enabled",KinBody::AO_Enabled)
         .value("ActiveDOFs",KinBody::AO_ActiveDOFs)
         ;
-        object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
-                           .value("None",KinBody::JointNone)
-                           .value("Hinge",KinBody::JointHinge)
-                           .value("Revolute",KinBody::JointRevolute)
-                           .value("Slider",KinBody::JointSlider)
-                           .value("Prismatic",KinBody::JointPrismatic)
-                           .value("RR",KinBody::JointRR)
-                           .value("RP",KinBody::JointRP)
-                           .value("PR",KinBody::JointPR)
-                           .value("PP",KinBody::JointPP)
-                           .value("Universal",KinBody::JointUniversal)
-                           .value("Hinge2",KinBody::JointHinge2)
-                           .value("Spherical",KinBody::JointSpherical)
-                           .value("Trajectory",KinBody::JointTrajectory)
-        ;
-        object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
-                              .def_readwrite("_t",&PyGeometryInfo::_t)
-                              .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
-                              .def_readwrite("_vDiffuseColor",&PyGeometryInfo::_vDiffuseColor)
-                              .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
-                              .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
-                              .def_readwrite("_type",&PyGeometryInfo::_type)
-                              .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
-                              .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
-                              .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
-                              .def_readwrite("_vCollisionScale",&PyGeometryInfo::_vCollisionScale)
-                              .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
-                              .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
-                              .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
-                              .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
-                              .def_pickle(GeometryInfo_pickle_suite())
-        ;
-        object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
-                          .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
-                          .def_readwrite("_name",&PyLinkInfo::_name)
-                          .def_readwrite("_t",&PyLinkInfo::_t)
-                          .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
-                          .def_readwrite("_mass",&PyLinkInfo::_mass)
-                          .def_readwrite("_vinertiamoments",&PyLinkInfo::_vinertiamoments)
-                          .def_readwrite("_mapFloatParameters",&PyLinkInfo::_mapFloatParameters)
-                          .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
-                          .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
-                          .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
-                          .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
-                          .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
-                          .def_pickle(LinkInfo_pickle_suite())
-        ;
-        object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
-                           .def_readwrite("_type",&PyJointInfo::_type)
-                           .def_readwrite("_name",&PyJointInfo::_name)
-                           .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
-                           .def_readwrite("_linkname1",&PyJointInfo::_linkname1)
-                           .def_readwrite("_vanchor",&PyJointInfo::_vanchor)
-                           .def_readwrite("_vaxes",&PyJointInfo::_vaxes)
-                           .def_readwrite("_vcurrentvalues",&PyJointInfo::_vcurrentvalues)
-                           .def_readwrite("_vresolution",&PyJointInfo::_vresolution)
-                           .def_readwrite("_vmaxvel",&PyJointInfo::_vmaxvel)
-                           .def_readwrite("_vhardmaxvel",&PyJointInfo::_vhardmaxvel)
-                           .def_readwrite("_vmaxaccel",&PyJointInfo::_vmaxaccel)
-                           .def_readwrite("_vmaxtorque",&PyJointInfo::_vmaxtorque)
-                           .def_readwrite("_vmaxinertia",&PyJointInfo::_vmaxinertia)
-                           .def_readwrite("_vweights",&PyJointInfo::_vweights)
-                           .def_readwrite("_voffsets",&PyJointInfo::_voffsets)
-                           .def_readwrite("_vlowerlimit",&PyJointInfo::_vlowerlimit)
-                           .def_readwrite("_vupperlimit",&PyJointInfo::_vupperlimit)
-                           .def_readwrite("_trajfollow",&PyJointInfo::_trajfollow)
-                           .def_readwrite("_vmimic",&PyJointInfo::_vmimic)
-                           .def_readwrite("_mapFloatParameters",&PyJointInfo::_mapFloatParameters)
-                           .def_readwrite("_mapIntParameters",&PyJointInfo::_mapIntParameters)
-                           .def_readwrite("_mapStringParameters",&PyJointInfo::_mapStringParameters)
-                           .def_readwrite("_bIsCircular",&PyJointInfo::_bIsCircular)
-                           .def_readwrite("_bIsActive",&PyJointInfo::_bIsActive)
-                           .def_readwrite("_infoElectricMotor", &PyJointInfo::_infoElectricMotor)
-                           .def_pickle(JointInfo_pickle_suite())
-        ;
+        kinbody.attr("JointType") = jointtype;
+        kinbody.attr("LinkInfo") = linkinfo;
+        kinbody.attr("GeometryInfo") = geometryinfo;
+        kinbody.attr("JointInfo") = jointinfo;
         {
             scope link = class_<PyLink, boost::shared_ptr<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
                          .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
@@ -3092,6 +3180,7 @@ void init_openravepy_kinbody()
                                  .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
                                  .def("SetAmbientColor",&PyLink::PyGeometry::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
                                  .def("SetRenderFilename",&PyLink::PyGeometry::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
+                                 .def("SetVisible",&PyLink::PyGeometry::SetVisible,args("visible"), DOXY_FN(KinBody::Link::Geometry,SetVisible))
                                  .def("IsDraw",&PyLink::PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                  .def("IsVisible",&PyLink::PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
                                  .def("IsModifiable",&PyLink::PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
@@ -3102,6 +3191,9 @@ void init_openravepy_kinbody()
                                  .def("GetCylinderRadius",&PyLink::PyGeometry::GetCylinderRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderRadius))
                                  .def("GetCylinderHeight",&PyLink::PyGeometry::GetCylinderHeight, DOXY_FN(KinBody::Link::Geometry,GetCylinderHeight))
                                  .def("GetBoxExtents",&PyLink::PyGeometry::GetBoxExtents, DOXY_FN(KinBody::Link::Geometry,GetBoxExtents))
+                                 .def("GetContainerOuterExtents",&PyLink::PyGeometry::GetContainerOuterExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerOuterExtents))
+                                 .def("GetContainerInnerExtents",&PyLink::PyGeometry::GetContainerInnerExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerInnerExtents))
+                                 .def("GetContainerBottomCross",&PyLink::PyGeometry::GetContainerBottomCross, DOXY_FN(KinBody::Link::Geometry,GetContainerBottomCross))
                                  .def("GetRenderScale",&PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
                                  .def("GetRenderFilename",&PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
                                  .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
@@ -3128,6 +3220,8 @@ void init_openravepy_kinbody()
                           .def("GetMaxVel", &PyJoint::GetMaxVel, GetMaxVel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxVel)))
                           .def("GetMaxAccel", &PyJoint::GetMaxAccel, GetMaxAccel_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxAccel)))
                           .def("GetMaxTorque", &PyJoint::GetMaxTorque, GetMaxTorque_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxTorque)))
+                          .def("GetInstantaneousTorqueLimits", &PyJoint::GetInstantaneousTorqueLimits, GetInstantaneousTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetInstantaneousTorqueLimits)))
+                          .def("GetNominalTorqueLimits", &PyJoint::GetNominalTorqueLimits, GetNominalTorqueLimits_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetNominalTorqueLimits)))
                           .def("GetMaxInertia", &PyJoint::GetMaxInertia, GetMaxInertia_overloads(args("axis"),DOXY_FN(KinBody::Joint,GetMaxInertia)))
                           .def("GetDOFIndex", &PyJoint::GetDOFIndex, DOXY_FN(KinBody::Joint,GetDOFIndex))
                           .def("GetJointIndex", &PyJoint::GetJointIndex, DOXY_FN(KinBody::Joint,GetJointIndex))

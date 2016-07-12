@@ -50,6 +50,8 @@ void MainOpenRAVEThread();
 static bool bDisplayGUI = true, bShowGUI = true;
 
 static EnvironmentBasePtr s_penv;
+static ViewerBasePtr s_pviewer; ///< static viewer created by the main thread. need to quit from its main loop
+
 //static boost::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
@@ -78,7 +80,7 @@ int main(int argc, char ** argv)
 
     DebugLevel debuglevel = Level_Info;
     list<string> listLoadPlugins;
-    string collisionchecker, physicsengine, servername="textserver";
+    string collisionchecker, physicsengine, servername;//="textserver";
     bool bListPlugins = false;
 
     std::set<std::string> geometryextensions;
@@ -90,7 +92,7 @@ int main(int argc, char ** argv)
     int i = 1;
     while(i < argc) {
         if((_stricmp(argv[i], "-h") == 0)||(_stricmp(argv[i], "-?") == 0)||(_stricmp(argv[i], "/?") == 0)||(_stricmp(argv[i], "--help") == 0)||(_stricmp(argv[i], "-help") == 0)) {
-            RAVELOG_INFO("OpenRAVE Usage\n"
+            printf("OpenRAVE Usage\n"
                          "--nogui             Run without a GUI (does not initialize the graphics engine nor communicate with any window manager)\n"
                          "--hidegui           Run with a hidden GUI, this allows 3D rendering and images to be captured\n"
                          "--listplugins       List all plugins and the interfaces they provide\n"
@@ -242,7 +244,9 @@ int main(int argc, char ** argv)
             }
         }
         printf("%s",ss.str().c_str());
-        s_penv->Destroy();
+        s_penv->Destroy(); // have to Destroy since there might be circular references that might keep the environment alive after this
+        s_penv.reset();
+        RaveDestroy();
         return 0;
     }
 
@@ -274,6 +278,12 @@ int main(int argc, char ** argv)
     //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
     //s_mainThread->join();
     MainOpenRAVEThread();
+    {
+        EnvironmentBasePtr penv = s_penv;
+        if( !!penv ) {
+            penv->Destroy();
+        }
+    }
     s_penv.reset();
     RaveDestroy();
     return 0;
@@ -290,12 +300,9 @@ void MainOpenRAVEThread()
             pviewer = RaveCreateViewer(penv, *s_viewerName);
         }
         if( !pviewer ) {
-            boost::array<string,1> viewer_prefs = { { "qtcoin"}};
-            for(size_t i = 0; i < viewer_prefs.size(); ++i) {
-                pviewer = RaveCreateViewer(penv, viewer_prefs[i]);
-                if( !!pviewer ) {
-                    break;
-                }
+            std::string viewername = RaveGetDefaultViewerType();
+            if( viewername.size() > 0 ) {
+                pviewer = RaveCreateViewer(penv, viewername);
             }
         }
 
@@ -379,10 +386,16 @@ void MainOpenRAVEThread()
 void sigint_handler(int sig)
 {
     // if signal comes from viewer thread, then this could freeze openrave since this function
-    // will call the viewer to exit, but it will be blocked waiting for this function to finish
+    // will call the viewer to exit, but it will be blocked waiting for this function to finish. So do not reset any static variables are call RaveDestroy() here
     s_bThreadDestroyed = true;
-    RaveDestroy();
-    s_penv.reset();
+    ViewerBasePtr pviewer = s_pviewer;
+    if( !!pviewer ) {
+        pviewer->quitmainloop();
+        pviewer.reset();
+    }
+    //RaveDestroy();
+    //s_penv.reset();
+    
 #ifndef _WIN32
     // have to let the default sigint properly shutdown the program
     signal(SIGINT, SIG_DFL);

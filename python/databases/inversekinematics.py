@@ -148,8 +148,9 @@ if not __openravepy_build_doc__:
 else:
     from numpy import array
 
-from ..openravepy_ext import openrave_exception, RobotStateSaver
-from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix
+from .. import openrave_exception
+from ..openravepy_ext import RobotStateSaver
+from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix, RaveGetDefaultViewerType
 from . import DatabaseGenerator
 from ..misc import relpath, TSP
 import time,platform,shutil,sys
@@ -359,15 +360,19 @@ class InverseKinematicsModel(DatabaseGenerator):
                     self.iksolver = RaveCreateIkSolver(self.env,ikname+iksuffix)
         if self.iksolver is not None and self.iksolver.Supports(self.iktype):
             success = self.manip.SetIKSolver(self.iksolver)
-            if success and self.manip.GetIkSolver() is not None and self.freeinc is not None:
+            if success and self.freeinc is not None:
                 freeincvalue = 0.01
                 try:
                     if len(self.freeinc) > 0:
                         freeincvalue = self.freeinc[0]
                 except TypeError:
                     freeincvalue = float(self.freeinc)
-                self.manip.GetIkSolver().SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8))
+                self.iksolver.SendCommand('SetDefaultIncrements %f 100 %f 10'%(freeincvalue,pi/8)) # the default values are for all joints
+                if len(self.freeindices) > 0 and self.freeinc is not None and len(self.freeinc) == len(self.freeindices):
+                    # specify the free increments for the free indices
+                    self.iksolver.SendCommand('SetFreeIncrements %s'%(' '.join([str(f) for f in self.freeinc])))
             return success
+        
         return self.has()
     
     def getDefaultFreeIncrements(self,freeincrot, freeinctrans):
@@ -515,7 +520,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                     intersecting3axes[j] &= ~mask
         solveindices = [i for i in self.manip.GetArmIndices() if not i in freeindices]
         return solveindices,freeindices
-
+    
     def getfilename(self,read=False):
         if self.iktype is None:
             raise InverseKinematicsError(u'ik type is not set')
@@ -792,13 +797,18 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationXAxisAngleZNorm4D
         elif self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D:
-            rawbasedir=dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
-            rawbasepos=self.manip.GetLocalToolTransform()[0:3,3]
+            rawbasedir=self.manip.GetDirection()#dot(self.manip.GetLocalToolTransform()[0:3,0:3],self.manip.GetDirection())
+            rawbasepos=[0.0, 0.0, 0.0]#self.manip.GetLocalToolTransform()[0:3,3]
+            Tgripperraw=self.manip.GetLocalToolTransform()
+            rawnormaldir = [1.0,0.0,0.0]
+            rawbasenormaldir = dot(linalg.inv(self.manip.GetTransform()[:3,:3]), rawnormaldir)
             def solveFullIK_TranslationYAxisAngleXNorm4D(*args,**kwargs):
                 kwargs['rawbasedir'] = rawbasedir
                 kwargs['rawbasepos'] = rawbasepos
                 kwargs['rawglobaldir'] = [0.0,1.0,0.0]
-                kwargs['rawnormaldir'] = [1.0,0.0,0.0]
+                kwargs['rawnormaldir'] = rawnormaldir
+                kwargs['rawbasenormaldir'] = rawbasenormaldir
+                kwargs['Tgripperraw'] = Tgripperraw
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationYAxisAngleXNorm4D
         elif self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D:
@@ -981,7 +991,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     
     def show(self,delay=0.1,options=None,forceclosure=True):
         if self.env.GetViewer() is None:
-            self.env.SetViewer('qtcoin')
+            self.env.SetViewer(RaveGetDefaultViewerType())
             time.sleep(0.4) # give time for viewer to initialize
         with RobotStateSaver(self.robot):
             with self.ArmVisibility(self.manip,0.95):
