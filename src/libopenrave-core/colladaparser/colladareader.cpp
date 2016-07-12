@@ -2076,8 +2076,8 @@ public:
     }
 
     /// Extract Geometry and apply the transformations of the node
-    /// \param pdomnode Node to extract the goemetry
-    /// \param plink    Link of the kinematics model
+    /// \param pdomnode  Node to extract the geometry
+    /// \param plink     Link of the kinematics model
     bool ExtractGeometries(const domNodeRef pdomnode, const Transform& tkinbodytrans, KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( !pdomnode ) {
@@ -2109,7 +2109,7 @@ public:
             }
 
             bhasgeometry |= ExtractGeometries(pdomnode->getNode_array()[i], tkinbodytrans, plink, bindings, vprocessednodes);
-            // Plink stayes the same for all children
+            // Plink stays the same for all children
             // replace pdomnode by child = pdomnode->getNode_array()[i]
             // hope for the best!
             // put everything in a subroutine in order to process pdomnode too!
@@ -2154,6 +2154,7 @@ public:
         Vector vscale;
         decompose(tmnodegeom, tnodegeom, vscale);
         vscale *= _GetUnitScale(pdomnode, _fGlobalScale); // TODO should track the scale per each listGeometryInfos
+
 
         FOREACH(itgeominfo, listGeometryInfos) {
             //  Switch between different type of geometry PRIMITIVES
@@ -2314,7 +2315,7 @@ public:
         return true;
     }
 
-    /// Extract the Geometry in TRIGLE FANS and adds it to OpenRave
+    /// Extract the Geometry in TRIANGLE FANS and adds it to OpenRave
     /// \param  triRef  Array of triangle fans of the COLLADA's model
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
@@ -3132,7 +3133,7 @@ public:
         }
     }
 
-    /// \brief Extractan instance of a sensor without parsing its data
+    /// \brief Extract an instance of a sensor without parsing its data
     ///
     /// \return the newly created sensor
     std::pair<SensorBasePtr, daeElementRef> _ExtractCreateSensor(daeElementRef instance_sensor)
@@ -4124,6 +4125,8 @@ private:
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
                 if( !!tec ) {
+                    std::map< KinBody::LinkPtr, std::map< std::string, std::list< KinBody::GeometryInfo > > > mapGeometryGroups;
+                    std::map<string,domMaterialRef> mapmaterials;
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                         daeElementRef pelt = tec->getContents()[ic];
                         if( pelt->getElementName() == string("ignore_link_pair") ) {
@@ -4155,7 +4158,38 @@ private:
                             pbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
-                            RAVELOG_WARN("currently do not support bind_instance_geometry\n");
+
+                            const std::string groupname = pelt->getAttribute("type");
+                            if( groupname == "" ) {
+                                RAVELOG_WARN("encountered an empty group name");
+                            }
+
+                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+                            KinBody::LinkPtr plink;
+                            if( !!pdomlink ) {
+                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+                            }
+                            else {
+                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
+                            }
+                            if( !plink ) {
+                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+                                continue;
+                            }
+                            BOOST_ASSERT(plink->GetParent()==pbody);
+
+                            domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
+                            if( !domgeom ) {
+                                RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
+                                continue;
+                            }
+
+                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
+                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
+                                RAVELOG_WARN_FORMAT("failed to add g geometry to eometry group %s, link %s\n", groupname%plink->GetName());
+                                continue;
+                            }
+
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
@@ -4172,6 +4206,16 @@ private:
                             }
                             BOOST_ASSERT(plink->GetParent()==pbody);
                             resolveCommon_bool_or_param(pelt, referenceElt, plink->_info._bIsEnabled);
+                        }
+                    }
+                    FOREACH(itlinkgeomgroups, mapGeometryGroups) {
+                        FOREACH(itgeomgroup, itlinkgeomgroups->second) {
+                            std::vector<KinBody::GeometryInfoPtr> vgeometries;
+                            vgeometries.reserve(itgeomgroup->second.size());
+                            FOREACH(itgeominfo, itgeomgroup->second) {
+                                vgeometries.push_back(boost::make_shared<KinBody::GeometryInfo>(*itgeominfo));
+                            }
+                            itlinkgeomgroups->first->SetGroupGeometries(itgeomgroup->first, vgeometries);
                         }
                     }
                 }
