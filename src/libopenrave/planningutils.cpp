@@ -977,7 +977,6 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
 
     params->_hastimestamps = hastimestamps;
-    params->_multidofinterp = 2; // always force switch points to be the same
     params->_sExtraParameters = plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         return PS_Failed;
@@ -1055,7 +1054,6 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters->_checkpathconstraintsfn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
         parameters->_sExtraParameters += _extraparameters;
-        parameters->_multidofinterp = 2; // always force switch points to be the same
         _parameters = parameters;
     }
     else {
@@ -1247,7 +1245,7 @@ size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofv
     return InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
 
-size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -1320,7 +1318,8 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     }
 
     // This ensures that the beginning and final velocities will be preserved
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,"<hasvelocities>1</hasvelocities>");
+    //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
+    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")); // make sure velocities are set
 
     // retiming is done, now merge the two trajectories
     size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();

@@ -62,6 +62,8 @@ public:
         }
     }
 
+    const std::list< ManipConstraintInfo >& GetCheckManips() const { return _listCheckManips; }
+
     /// \brief Compute the AABB that encloses all the links in linklist with respect to a coordinate system Tparent
     ///
     /// \param tparent is most likely the end effector of a manipulator
@@ -163,6 +165,15 @@ public:
                         }
                     }
                     info.fmaxdistfromcenter = RaveSqrt(info.fmaxdistfromcenter);
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "[";
+                        FOREACH(itpoint, info.checkpoints) {
+                            ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+                    }
                     setCheckedManips.insert(endeffector);
                 }
             }
@@ -301,6 +312,7 @@ public:
         }
     }
 
+    
     /// checks at each ramp's edges. This is called in the critical loop
     ParabolicRampInternal::CheckReturn CheckManipConstraints2(const std::vector<ParabolicRampInternal::ParabolicRampND>& outramps)
     {
@@ -341,7 +353,7 @@ public:
                 endeffacclin = endeffaccs.at(endeffindex).first;
                 endeffaccang = endeffaccs.at(endeffindex).second;
                 Transform R = itmanipinfo->plink->GetTransform();
-                // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
+                // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints                
                 FOREACH(itpoint,itmanipinfo->checkpoints) {
                     Vector point = R.rotate(*itpoint);
                     if(_maxmanipspeed>0) {
@@ -357,6 +369,7 @@ public:
                             if( manipspeed > 1e5 || 0.9*_maxmanipspeed < 0.05*manipspeed ) {
                                 RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
                             }
+                            RAVELOG_VERBOSE_FORMAT("maxmanipspeed = %.15e; manipspeed = %.15e", _maxmanipspeed%manipspeed);
                             return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipspeed/manipspeed);
                         }
                     }
@@ -370,6 +383,7 @@ public:
                             if( manipaccel > 1e5 || 0.9*_maxmanipaccel < 0.05*manipaccel ) {
                                 RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
                             }
+                            RAVELOG_VERBOSE_FORMAT("maxmanipaccel = %.15e; manipaccel = %.15e", _maxmanipaccel%manipaccel);
                             return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipaccel/manipaccel);
                         }
                     }

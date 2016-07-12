@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "trajectoryretimer.h"
 
+namespace rplanners {
+
 class LinearTrajectoryRetimer : public TrajectoryRetimer
 {
 public:
@@ -243,3 +245,5 @@ protected:
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
     return PlannerBasePtr(new LinearTrajectoryRetimer(penv, sinput));
 }
+
+} // end namespace rplanners
