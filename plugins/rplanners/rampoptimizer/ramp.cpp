@@ -527,6 +527,16 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     // std::cout << "INITIALIZATION WITH DURATION = " << duration << std::endl;
 }
 
+void ParabolicCurvesND::SetInitialValues(const std::vector<dReal>& _x0Vect) {
+    RAMP_OPTIM_ASSERT(_x0Vect.size() == ndof);
+
+    x0Vect = _x0Vect;
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        curves[idof].SetInitialValue(x0Vect[idof])
+        x1Vect[idof] = curves[idof].x1;
+    }
+}
+
 void ParabolicCurvesND::PrintInfo(std::string name) const {
     std::cout << "ParabolicCurvesND information: " << name << std::endl;
     std::cout << str(boost::format("  This parabolic curve has %d DOFs")%ndof) << std::endl;

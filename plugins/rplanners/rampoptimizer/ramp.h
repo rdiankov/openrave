@@ -132,6 +132,7 @@ public:
     }
     // Resize all vectors to zero.
     void Reset();
+    void SetInitialValues(const std::vector<dReal>& _x0Vect);
     void SetConstant(std::vector<dReal>& _x0Vect, dReal t=0);
     void SetSegment(std::vector<dReal>& _x0Vect, std::vector<dReal>& _x1Vect, std::vector<dReal>& _v0Vect, std::vector<dReal>& _v1Vect, dReal t);
 
