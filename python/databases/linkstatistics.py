@@ -220,7 +220,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                 extensiondist = linalg.norm(j.GetAnchor() - spherepos)
                 linkradius = linalg.norm(localaabb.extents())
                 sphereradius = max(sphereradius, linkradius+extensiondist)
-            
+
             # process any child joints
             minpos = spherepos - sphereradius*ones([1,1,1])
             maxpos = spherepos + sphereradius*ones([1,1,1])
@@ -231,7 +231,7 @@ class LinkStatisticsModel(DatabaseGenerator):
                     childpos, childradius = jointspheres[childjoint.GetJointIndex()]
                     minpos = numpy.minimum(minpos, childpos - sphereradius*ones([1,1,1]))
                     maxpos = numpy.maximum(maxpos, childpos + sphereradius*ones([1,1,1]))
-            
+
             newspherepos = 0.5*(minpos + maxpos)
             newsphereradius = linalg.norm(newspherepos - spherepos) + sphereradius
             for childjoint in childjoints:
@@ -244,41 +244,21 @@ class LinkStatisticsModel(DatabaseGenerator):
         return jointspheres
 
 
-    def _ComputeLinksLength(mimicjointsData):
-        linksLengths = {}
-        jointDistances = {}
-        alljoints = self.robot.GetJoints()
+    def _ComputeLinksLength(robot, mimicjointsData):
+        nonstaticjoints = robot.GetJoints() + [ j for j in robot.GetPassiveJoints() if not j.IsStatic() ]
+        linksLengths = { j : {} for j in nonstaticjoints }
+        jointDistances = { j : { j : 0 } for j in nonstaticjoints }
 
-        def ComputeOrderedNonStaticJoints():
-            graph = {}
-            roots = alljoints
-            for j in alljoints:
-                parentlinks = joint.GetHierarchyParentLink().GetAttachedRigidly()
-                parentjoints = [testj for testj in alljoints if testj.GetHierarchyChildLink() in parentlinks ]
-                roots = [ j for j in roots if j not in parentjoints ]
-                graph.update({ j : parentjoints })
-            tovisit = roots
-            orderedjoints = []
-            while tovisit != []:
-                j = tovisit.pop()
-                if j not in orderedjoints:
-                    orderedjoints.append(j)
-                    tovisit = graph[j] + tovisit
-            return orderedjoints
-
-        orderedjoints = ComputeOrderedNonStaticJoints()
-        for j in self.robot.GetJoints():
+        for j in nonstaticjoints:
             isPrismatic = reduce(or_, map(j.IsPrismatic, range(0, j.GetDOF())))
-            allMimic = ( j.IsMimic() and reduce(and_, map(j.IsMimic, range(0, j.GetDOF()))) )
-            isRevolute = reduce(and_, [j.IsRevolute(i) for i in range(0,j.GetDOF())])
-            isjointvalid = (not j.IsMimic() or allMimic) and (j.IsMimic() or ((not isPrismatic or j.GetDOF() == 1) and isRevolute))
+            isjointvalid = (j.GetDOF() == 1 and j.IsPrismatic(0)) or (reduce(and_, [j.IsRevolute(i) for i in range(0,j.GetDOF())])) or (reduce(and_, map(j.IsMimic, range(0, j.GetDOF()))))
             if not isjointvalid:
                 RaveLogError("Do not support prismatic joints with more than 1 degree of freedom")
                 continue
 
             extensiondist = 0
             if isPrismatic:
-                if isMimic:
+                if j.IsMimic():
                     if j in mimicjointsData and 'limit' in mimicjointsData[j]:
                         extensiondist = mimicjointsData[j]['limit']
                     else:
@@ -287,26 +267,51 @@ class LinkStatisticsModel(DatabaseGenerator):
                     (inflimits, suplimits) = j.GetLimits()
                     extensiondist = max(abs(inflimits[0]), abs(suplimits[0]))
 
-            linksLengths.update( { j.GetIndex() : zeros(len(self.robot.GetLinks())) })
             childlinks = j.GetHierarchyChildLink().GetRigidlyAttachedLinks()
             for childlink in childlinks:
-                aabb = childLink.ComputeAABB()
+                aabb = childlink.ComputeAABB()
                 anchoraabbdiff = aabb.pos() - j.GetAnchor()
                 corners = product([1,-1], [1,-1], [1,-1])
-                linksLength[j][childlink.GetIndex()] = max([ extensiondist + linalg.norm(anchoraabbdiff + array(v) * aabb.extents()) for v in corners ])
+                linksLengths[j][childlink.GetIndex()] = extensiondist + max([ linalg.norm(anchoraabbdiff + array(v) * aabb.extents()) for v in corners ])
 
-
-            childjoints = [testj for testj in alljoints if tesj.GetHierarchyParentLink() in childlinks]
-            jointDistances.update({ j : {} })
+            childjoints = [testj for testj in nonstaticjoints if testj.GetHierarchyParentLink() in childlinks]
             for childjoint in childjoints:
-                childdist = linalg.norm(childjoint.GetAnchor() - j.GetAnchor())
-                jointsDistances[j].update({ childjoint : childdist })
-                for descendantjoint in jointsDistances[childjoint]:
-                    if descendantjoint is not in jointDistances[j]:
-                        jointDistances[j].update({ descendantjoint : childdist + jointDistances[childjoint][descendantjoint] })
+                childdist = extensiondist + linalg.norm(childjoint.GetAnchor() - j.GetAnchor())
+                jointDistances[j].update({ childjoint : childdist })
 
-    def _ComputeDistanceBound()
+        res = [ { 'prismatic' : [], 'revolute' : [], 'mimic' : [] } for link in robot.GetLinks() ]
+        for ilink in range(1,len(robot.GetLinks())):
+            # TODO : 0 should be replaced by the appropriate root(s)
+            chain = [ j for j in robot.GetChain(0, ilink) if not j.IsStatic() ]
+            print linksLengths[chain[-1]], ilink
+            currentmaxradius = linksLengths[chain[-1]][ilink]
+            previousjoint = chain[-1]
+            for joint in chain[::-1]:
+                currentmaxradius = currentmaxradius + jointDistances[joint][previousjoint]
+                previousjoint = joint
+                if joint.IsMimic():
+                    # mimic joint case
+                    res[ilink]['mimic'].append((mimicjointsData[joint]['equation'], currentmaxradius, joint.GetMimicDOFIndices()))
+                elif joint.IsPrismatic(0):
+                    # 1D prismatic joint case
+                    res[ilink]['prismatic'].append(joint.GetJointIndex())
+                elif joint.IsRevolute(0):
+                    # revolute joint case
+                    res[ilink]['revolute'].append((currentmaxradius, joint.GetJointIndex()))
+                else:
+                    # should not happen
+                    RaveLogError("This kind of joint is not supported")
+        return res
 
+    def _ComputeDistanceBound(linkstats, DOFValueVariations):
+        distancebounds = []
+        for linkstat in linkstats:
+            distancebound = 0
+            distancebound = distancebound + sum([DOFValueVariations[index] for index in linkstat['prismatic']])
+            distancebound = distancebound + sum([l * DOFValueVariations[index] for (l,index) in linkstat['revolute']])
+            distancebound = distancebound + sum([ f(l, *[DOFValueVariations[index] for index in indices]) for (f,l,indices) in linkstat['mimic']])
+            distancebounds.append(distancebound)
+        return distancebounds
 
     def show(self,options=None):
         pass

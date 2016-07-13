@@ -668,7 +668,7 @@ public:
         int dof;
         /** \brief semantic information on what part of the environment the group refers to.
 
-            Can be composed of multiple workds; the first word is the group type, and the words following narrow the specifics. Common types are:
+            Can be composed of multiple words; the first word is the group type, and the words following narrow the specifics. Common types are:
 
             - \b joint_values - The joint values of a kinbody/robot. The joint names with the name of the body can follow.
             - \b joint_velocities - The joint velocities (1/second) of a kinbody/robot. The name of the body with the joint names can follow.

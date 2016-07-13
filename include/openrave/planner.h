@@ -162,7 +162,7 @@ private:
         /** \brief sets up the planner parameters to use the configuration specification space
 
             The configuraiton groups should point to controllable target objects. By default, this includes:
-            - joint_values
+            - joint_values (only value actually accepted in current implementation)
             - joint_velocities
             - affine_transform
             - affine_velocities
@@ -189,7 +189,7 @@ private:
          */
         virtual void SetConfigurationSpecification(EnvironmentBasePtr env, const ConfigurationSpecification& spec);
 
-        /// \brief veriries that the configuration space and all parameters are consistent
+        /// \brief verifies that the configuration space and all parameters are consistent
         ///
         /// Assumes at minimum that  _setstatevaluesfn and _getstatefn are set. Correct environment should be
         /// locked when this function is called since _getstatefn will be called.
