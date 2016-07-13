@@ -108,7 +108,7 @@ public:
 
 class ParabolicCurvesND {
 public:
-    ParabolicCurvesND() : constraintchecked(0), modified(0) {
+    ParabolicCurvesND() {
     }
     ParabolicCurvesND(std::vector<ParabolicCurve> curves);
     ~ParabolicCurvesND() {
@@ -145,8 +145,11 @@ public:
     std::vector<dReal> switchpointsList;
     std::vector<ParabolicCurve> curves;
 
-    mutable int constraintchecked;
-    mutable int modified;
+    // constraintCheckedVect contains the status of whether each ndSegment (a segment between two
+    // consecutive switch points) has been checked. Note that constraintCheckedVect.size() ==
+    // switchpointsList.size() - 1.
+    mutable std::vector<bool> constraintCheckedVect;
+    // mutable int modified;
 
 }; // end class ParabolicCurversND
 

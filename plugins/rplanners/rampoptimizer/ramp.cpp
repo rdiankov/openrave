@@ -394,8 +394,6 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
 // paraboliccurvesnd
 ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
     BOOST_ASSERT(!curvesIn.empty());
-    constraintchecked = 0;
-    modified = 0;
 
     ndof = curvesIn.size();
     // Here we need to check whether every curve has (roughly) the same duration
@@ -437,6 +435,9 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
             }
         }
     }
+
+    constraintCheckedVect.resize(switchpointsList.size() - 1);
+    fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
 }
 
 void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
@@ -471,14 +472,14 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
         }
         switchpointsList.reserve(switchpointsList.size() + tempSwitchpointsList.size());
         switchpointsList.insert(switchpointsList.end(), tempSwitchpointsList.begin(), tempSwitchpointsList.end());
+
+        constraintCheckedVect.reserve(constraintCheckedVect.size() + curvesnd.constraintCheckedVect.size());
+        constraintCheckedVect.insert(constraintCheckedVect.end(), curvesnd.constraintCheckedVect.begin(), curvesnd.constraintCheckedVect.end());
     }
     return;
 }
 
 void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
-    constraintchecked = 0;
-    modified = 0;
-
     ndof = curvesIn.size();
     // Here we need to check whether every curve has (roughly) the same duration
     ///////////////////
@@ -519,6 +520,9 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
             }
         }
     }
+
+    constraintCheckedVect.resize(switchpointsList.size() - 1);
+    fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
 
     // std::cout << "INITIALIZATION WITH DURATION = " << duration << std::endl;
 }
@@ -616,8 +620,7 @@ void ParabolicCurvesND::Reset() {
     v0Vect.clear();
     switchpointsList.clear();
     curves.clear();
-    constraintchecked = 0;
-    modified = 0;
+    constraintCheckedVect.clear();
 }
 
 void ParabolicCurvesND::SetConstant(std::vector<dReal>& _x0Vect, dReal t) {
