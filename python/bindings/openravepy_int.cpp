@@ -437,7 +437,9 @@ void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object ore
 object PyInterfaceBase::SerializeJSON(object ooptions)
 {
     OpenRAVE::jsonreaders::BufferJSONWriter writer;
+    writer.StartObject();
     _pbase->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
+    writer.EndObject();
     return object(std::string(writer.SerializeJSON()));
 }
 

@@ -50,7 +50,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     O << "</trajectory>" << endl;
 }
 
-void TrajectoryBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void TrajectoryBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     // TODO(jsonserialization)
 }

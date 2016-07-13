@@ -4574,36 +4574,40 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
     InterfaceBase::Serialize(writer,options);
 }
 
-void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
+    writer->WriteString("sid");
+    writer->WriteString(GetSID());
 
     writer->WriteString("name");
     writer->WriteString(GetName());
 
     writer->WriteString("links");
     writer->StartArray();
-    FOREACHC(it,_veclinks) {
+    FOREACHC(it,GetLinks()) {
+        writer->StartObject();
         (*it)->SerializeJSON(writer, options);
+        writer->EndObject();
     }
     writer->EndArray();
 
     writer->WriteString("joints");
     writer->StartArray();
-    FOREACHC(it,_vecjoints) {
+    FOREACHC(it,GetJoints()) {
+        writer->StartObject();
         (*it)->SerializeJSON(writer, options);
+        writer->EndObject();
     }
     writer->EndArray();
-
 
     writer->WriteString("passive_joints");
     writer->StartArray();
-    FOREACHC(it,_vPassiveJoints) {
+    FOREACHC(it,GetPassiveJoints()) {
+        writer->StartObject();
         (*it)->SerializeJSON(writer, options);
+        writer->EndObject();
     }
     writer->EndArray();
-
-    writer->EndObject();
 }
 
 void KinBody::serialize(std::ostream& o, int options) const

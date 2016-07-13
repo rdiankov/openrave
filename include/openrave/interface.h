@@ -35,6 +35,7 @@ enum SerializationOptions
     SO_RobotSensors = 0x20, ///< serialize robot sensors
     SO_Geometry = 0x40, ///< geometry information (for collision detection)
     SO_InverseKinematics = 0x80, ///< information necessary for inverse kinematics. If Transform6D, then don't include the manipulator local transform
+    SO_GeometryMesh = 0x100, ///< mesh of geometry
 };
 
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
@@ -179,7 +180,7 @@ public:
         TODO: add example
         \endcode
      */
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
 protected:
     /// \brief The function to be executed for every command.

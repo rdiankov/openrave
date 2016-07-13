@@ -417,8 +417,8 @@ public:
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const {
     }
 
-    /// \brief serializes the interface
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const {
+    /// \brief serializes the interface as JSON, may change member data like unique ids etc
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) {
     }
 private:
     std::string __xmlid;
@@ -2217,8 +2217,6 @@ public:
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
-
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);

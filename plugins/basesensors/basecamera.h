@@ -391,18 +391,17 @@ public:
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     }
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0)
     {
-        writer->StartObject();
+        
         writer->WriteString("geom");
+        writer->StartObject();
         _pgeom->SerializeJSON(writer, options);
-        stringstream ss;
-        ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;
+        writer->EndObject();
         writer->WriteString("color");
-        writer->WriteString(ss.str());
+        writer->WriteVector(_vColor);
         writer->WriteString("format");
         writer->WriteString(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
-        writer->EndObject();
     }
 
 protected:

@@ -209,7 +209,9 @@ public:
     object SerializeJSON(object ooptions=object())
     {
         OpenRAVE::jsonreaders::BufferJSONWriter writer;
+        writer.StartObject();
         _ptrajectory->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
+        writer.EndObject();
         return object(std::string(writer.SerializeJSON()));
     }
 

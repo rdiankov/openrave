@@ -135,7 +135,7 @@ public:
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
@@ -149,6 +149,12 @@ public:
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
+
+        /// \brief unique and constant scoped identifier
+        std::string _sid;
+
+        /// \brief unique geometry name
+        std::string _name;
         
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
@@ -186,9 +192,6 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
-
-        /// \brief unique geometry name
-        std::string _name;
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -201,7 +204,10 @@ public:
         virtual ~LinkInfo() {
         }
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+
+        /// \brief unique and constant scoped identifier
+        std::string _sid;
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -343,7 +349,7 @@ public:
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
             virtual AABB ComputeAABB(const Transform& trans) const;
             virtual void serialize(std::ostream& o, int options) const;
-            virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+            virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
             virtual void SetCollisionMesh(const TriMesh& mesh);
@@ -606,7 +612,7 @@ protected:
         virtual void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
 
         virtual void serialize(std::ostream& o, int options) const;
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
@@ -778,7 +784,10 @@ public:
         virtual ~JointInfo() {
         }
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+
+        /// \brief unique and constant scoped identifier
+        std::string _sid;
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
@@ -1083,7 +1092,7 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
         
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// @name Internal Hierarchy Methods
         //@{
@@ -1469,6 +1478,11 @@ private:
     /// Note that the pointers are copied and not the data, so be careful not to modify the geometries afterwards
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
+
+    /// \brief Unique and constant scoped id of the kinbody.
+    virtual const std::string& GetSID() const {
+        return _sid;
+    }
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {
@@ -2056,7 +2070,8 @@ private:
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+    /// \brief Serialize the kinbody as a JSON object.
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -2171,6 +2186,9 @@ protected:
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
+
+    /// \brief unique and constant scoped identifier
+    std::string _sid;
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

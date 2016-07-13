@@ -272,9 +272,10 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
+    writer->WriteString("sid");
+    writer->WriteString(_sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);
@@ -291,88 +292,97 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) con
     writer->WriteString("inertia_moments");
     writer->WriteVector(_vinertiamoments);
 
-    writer->WriteString("float_parameters");
-    writer->StartObject();
-    FOREACHC(kv, _mapFloatParameters) {
-        writer->WriteString(kv->first.c_str());
-        writer->StartArray();
-        for (int i=0; i < kv->second.size(); ++i) {
-            writer->WriteDouble(kv->second[i]);
+    if (_mapFloatParameters.size() > 0) {
+        writer->WriteString("float_parameters");
+        writer->StartObject();
+        FOREACHC(kv, _mapFloatParameters) {
+            writer->WriteString(kv->first.c_str());
+            writer->StartArray();
+            FOREACHC(it, kv->second) {
+                writer->WriteDouble(*it);
+            }
+            writer->EndArray();
         }
-        writer->EndArray();
+        writer->EndObject();
     }
-    writer->EndObject();
 
-    writer->WriteString("int_parameters");
-    writer->StartObject();
-    FOREACHC(kv, _mapIntParameters) {
-        writer->WriteString(kv->first.c_str());
-        writer->StartArray();
-        for (int i=0; i< kv->second.size(); ++i) {
-            writer->WriteInt(kv->second[i]);
+    if (_mapIntParameters.size() > 0) {
+        writer->WriteString("int_parameters");
+        writer->StartObject();
+        FOREACHC(kv, _mapIntParameters) {
+            writer->WriteString(kv->first.c_str());
+            writer->StartArray();
+            FOREACHC(it, kv->second) {
+                writer->WriteInt(*it);
+            }
+            writer->EndArray();
         }
-        writer->EndArray();
+        writer->EndObject();
     }
-    writer->EndObject();
 
-    writer->WriteString("string_parameters");
-    writer->StartObject();
-    FOREACHC(kv, _mapStringParameters) {
-        writer->WriteString(kv->first);
-        writer->WriteString(kv->second);
+    if (_mapStringParameters.size() > 0) {
+        writer->WriteString("string_parameters");
+        writer->StartObject();
+        FOREACHC(kv, _mapStringParameters) {
+            writer->WriteString(kv->first);
+            writer->WriteString(kv->second);
+        }
+        writer->EndObject();
     }
-    writer->EndObject();
     
-    writer->WriteString("forced_adjacent_links");
-    writer->StartArray();
-    for (int i = 0; i < _vForcedAdjacentLinks.size(); ++i) {
-        writer->WriteString(_vForcedAdjacentLinks[i]);
+    if (_vForcedAdjacentLinks.size() > 0) {
+        writer->WriteString("forced_adjacent_links");
+        writer->StartArray();
+        FOREACHC(it, _vForcedAdjacentLinks) {
+            writer->WriteString(*it);
+        }
+        writer->EndArray();
     }
-    writer->EndArray();
 
-    // writer->WriteString("geometry_infos");
-    // writer->StartArray();
-    // for (auto& ptr: _vgeometryinfos) {
-    //     ptr->SerializeJSON(writer, options);
-    // }
-    // writer->EndArray();
+    if (options == 0 || (options & SO_Geometry) != 0) {
 
-    // writer->WriteString("extra_geometries");
-    // writer->StartObject();
-    // for (auto& kv: _mapExtraGeometries) {
-    //     writer->WriteString(kv.first.c_str());
-    //     writer->StartArray();
-    //     for (auto& ptr: kv.second) {
-    //         ptr->SerializeJSON(writer, options);
-    //     }
-    //     writer->EndArray();
-    // }
-    // writer->EndObject();
+        if (_vgeometryinfos.size() > 0) {
+            writer->WriteString("geometries");
+            writer->StartArray();
+            FOREACHC(it, _vgeometryinfos) {
+                writer->StartObject();
+                (*it)->SerializeJSON(writer, options);
+                writer->EndObject();
+            }
+            writer->EndArray();
+        }
+
+#if 0
+        // don't save extra geometries info for now
+        if (_mapExtraGeometries.size() > 0) {
+            writer->WriteString("extra_geometries");
+            writer->StartObject();
+            FOREACHC(kv, _mapExtraGeometries) {
+                writer->WriteString(kv->first);
+                writer->StartArray();
+                FOREACHC(it, kv->second) {
+                    writer->StartObject();
+                    (*it)->SerializeJSON(writer, options);
+                    writer->EndObject();
+                }
+                writer->EndArray();
+            }
+            writer->EndObject();
+        }
+#endif
+    }
 
     writer->WriteString("static");
     writer->WriteBool(_bStatic);
 
     writer->WriteString("enabled");
     writer->WriteBool(_bIsEnabled);
-
-    writer->EndObject();
 }
     
-void KinBody::Link::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::Link::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
-
-    writer->WriteString("info");
+    UpdateInfo();
     _info.SerializeJSON(writer, options);
-
-    writer->WriteString("geometries");
-    writer->StartArray();
-    for (int i=0; i < _vGeometries.size(); ++i) {
-        _vGeometries[i]->SerializeJSON(writer, options);
-    }
-    writer->EndArray();
-
-    writer->EndObject();
 }
 
 void KinBody::Link::SetStatic(bool bStatic)

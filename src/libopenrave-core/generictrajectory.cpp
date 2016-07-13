@@ -320,7 +320,7 @@ public:
         O << "</trajectory>" << endl;
     }
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options) const
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options)
     {
         // TODO(jsonserialization)
     }

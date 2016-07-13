@@ -283,14 +283,15 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     return true;
 }
 
-void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
+    writer->WriteString("sid");
+    writer->WriteString(_sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    writer->WriteString("transform");
+    writer->WriteString("local_transform");
     writer->WriteTransform(_t);
 
     writer->WriteString("type");
@@ -377,9 +378,10 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("modifiable");
     writer->WriteBool(_bModifiable);
 
-    writer->WriteString("mesh");
-    writer->WriteTriMesh(_meshcollision);
-    writer->EndObject();
+    if (options == 0 || (options & SO_GeometryMesh) != 0) {
+        writer->WriteString("mesh");
+        writer->WriteTriMesh(_meshcollision);
+    }
 }
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
@@ -391,12 +393,9 @@ bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
     return _info.InitCollisionMesh(fTessellation);
 }
 
-void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
-    writer->WriteString("info");
     _info.SerializeJSON(writer, options);
-    writer->EndObject();
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const

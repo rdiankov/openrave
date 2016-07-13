@@ -32,10 +32,24 @@ private:
     boost::function<void()> _fn;
 };
 
-void RobotBase::AttachedSensorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void RobotBase::AttachedSensorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
-    writer->EndObject();
+    writer->WriteString("sid");
+    writer->WriteString(_sid);
+
+    writer->WriteString("name");
+    writer->WriteString(_name);
+
+    writer->WriteString("type");
+    writer->WriteString(_sensorname);
+
+    writer->WriteString("link_name");
+    writer->WriteString(_linkname);
+
+    writer->WriteString("relative_transform");
+    writer->WriteTransform(_trelative);
+
+    // TODO(jsonserialization): need additional sensor stuff here
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
@@ -140,13 +154,10 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::AttachedSensor::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void RobotBase::AttachedSensor::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    // TODO(jsonserialization)
-    writer->StartObject();
-    writer->WriteString("info");
+    UpdateInfo();
     _info.SerializeJSON(writer, options);
-    writer->EndObject();
 }
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
@@ -2551,10 +2562,27 @@ void RobotBase::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     KinBody::SerializeJSON(writer,options);
-    // TODO(jsonserialization)
+
+    writer->WriteString("manipulators");
+    writer->StartArray();
+    FOREACHC(it,GetManipulators()) {
+        writer->StartObject();
+        (*it)->SerializeJSON(writer, options);
+        writer->EndObject();
+    }
+    writer->EndArray();
+
+    writer->WriteString("attached_sensors");
+    writer->StartArray();
+    FOREACHC(it,GetAttachedSensors()) {
+        writer->StartObject();
+        (*it)->SerializeJSON(writer, options);
+        writer->EndObject();
+    }
+    writer->EndArray();
 }
 
 const std::string& RobotBase::GetRobotStructureHash() const

@@ -2062,12 +2062,6 @@ void TriMesh::serialize(std::ostream& o, int options) const
     }
 }
 
-void TriMesh::SerializeJSON(BaseJSONWriterPtr writer, int options) const
-{
-    // TODO(jsonserialization)
-}
-
-
 void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 {
     _setRobotLinksToIgnore = setRobotLinksToIgnore;
@@ -2320,7 +2314,7 @@ bool SensorBase::SensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::SensorData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void SensorBase::SensorData::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     RAVELOG_WARN("SensorData JSON serialization not implemented\n");
 }
@@ -2331,7 +2325,7 @@ bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::LaserSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void SensorBase::LaserSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     RAVELOG_WARN("LaserSensorData JSON serialization not implemented\n");
 }
@@ -2342,7 +2336,7 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::CameraSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void SensorBase::CameraSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     RAVELOG_WARN("CameraSensorData JSON serialization not implemented\n");
 }
@@ -2355,14 +2349,12 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::SensorGeometry::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void SensorBase::SensorGeometry::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
     if( hardware_id.size() > 0 ) {
         writer->WriteString("hardware_id");
         writer->WriteString(hardware_id);
     }
-    writer->EndObject();
 }
 
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2403,7 +2395,7 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     SensorGeometry::SerializeJSON(writer, options);
     // TODO(jsonserialization)
@@ -2414,7 +2406,7 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }
 
-void SensorBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void SensorBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }

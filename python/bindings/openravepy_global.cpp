@@ -69,7 +69,9 @@ public:
     object SerializeJSON(int options=0)
     {
         OpenRAVE::jsonreaders::BufferJSONWriter writer;
+        writer.StartObject();
         _xmlreadable->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),options);
+        writer.EndObject();
         // TODO(jsonserialization): ConvertStringToUnicode? json is utf-8 encoded, converting to unicode probably will mess things up
         return object(std::string(writer.SerializeJSON()));
     }

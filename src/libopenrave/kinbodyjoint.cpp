@@ -40,14 +40,13 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
     std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
 }
 
-void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
+    writer->WriteString("sid");
+    writer->WriteString(_sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);
-
-    writer->EndObject();
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -1619,13 +1618,10 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::Joint::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void KinBody::Joint::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    // TODO(jsonserialization)
-    writer->StartObject();
-    writer->WriteString("info");
+    UpdateInfo();
     _info.SerializeJSON(writer, options);
-    writer->EndObject();
 }
 
 }

@@ -57,11 +57,6 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O, int options) cons
     return !!O;
 }
 
-void WorkspaceTrajectoryParameters::SerializeJSON(BaseJSONWriterPtr writer, int options) const
-{
-    // TODO(jsonserialization)
-}
-
 BaseXMLReader::ProcessElement WorkspaceTrajectoryParameters::startElement(const std::string& name, const AttributesList& atts)
 {
     if( _bProcessing ) {

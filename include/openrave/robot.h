@@ -41,7 +41,10 @@ public:
         virtual ~ManipulatorInfo() {
         }
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+
+        /// \brief unique and constant scoped identifier
+        std::string _sid;
 
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
@@ -369,7 +372,7 @@ public:
         /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
         virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
@@ -427,7 +430,10 @@ public:
         virtual ~AttachedSensorInfo() {
         }
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+
+        /// \brief unique and constant scoped identifier
+        std::string _sid;
 
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to
@@ -482,7 +488,7 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief return hash of the sensor definition
         virtual const std::string& GetStructureHash() const;
@@ -989,7 +995,7 @@ private:
 
     virtual void serialize(std::ostream& o, int options) const;
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)

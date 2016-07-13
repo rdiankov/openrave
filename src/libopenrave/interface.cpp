@@ -125,13 +125,11 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
     }
 }
 
-void InterfaceBase::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void InterfaceBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->StartObject();
     FOREACHC(it, __mapReadableInterfaces) {
         it->second->SerializeJSON(writer,options);
     }
-    writer->EndObject();
 }
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)

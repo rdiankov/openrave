@@ -262,11 +262,6 @@ bool PlannerBase::PlannerParameters::serialize(std::ostream& O, int options) con
     return !!O;
 }
 
-void PlannerBase::PlannerParameters::SerializeJSON(BaseJSONWriterPtr writer, int options) const
-{
-    // TODO(jsonserialization)
-}
-
 BaseXMLReader::ProcessElement PlannerBase::PlannerParameters::startElement(const std::string& name, const AttributesList& atts)
 {
     _ss.str(""); // have to clear the string

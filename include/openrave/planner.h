@@ -452,8 +452,6 @@ protected:
         /// don't use PlannerParameters as a tag!
         virtual bool serialize(std::ostream& O, int options=0) const;
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
-
         //@{ XML parsing functions, parses the default parameters
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
         virtual bool endElement(const std::string& name);
