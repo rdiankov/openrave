@@ -286,6 +286,10 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     writer->StartObject();
+
+    writer->WriteString("name");
+    writer->WriteString(_name);
+
     writer->WriteString("transform");
     writer->WriteTransform(_t);
 

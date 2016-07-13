@@ -70,6 +70,7 @@ public:
         _bModifiable = true;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
+        _name = ConvertStringToUnicode(info._name);
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
         _vGeomData2 = toPyVector4(info._vGeomData2);
@@ -92,6 +93,9 @@ public:
     KinBody::GeometryInfoPtr GetGeometryInfo() {
         KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
         KinBody::GeometryInfo& info = *pinfo;
+        if( !IS_PYTHONOBJECT_NONE(_name) ) {
+            info._name = boost::python::extract<std::string>(_name);
+        }
         info._t = ExtractTransform(_t);
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
@@ -118,6 +122,7 @@ public:
         return pinfo;
     }
 
+    object _name;
     object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
     GeometryType _type;
     object _filenamerender, _filenamecollision;
@@ -536,6 +541,10 @@ public:
         KinBody::Link::GeometryPtr _pgeometry;
 public:
         PyGeometry(KinBody::Link::GeometryPtr pgeometry) : _pgeometry(pgeometry) {
+        }
+
+        object GetName() {
+            return ConvertStringToUnicode(_pgeometry->GetName());
         }
 
         virtual void SetCollisionMesh(object pytrimesh) {
@@ -2856,6 +2865,7 @@ void init_openravepy_kinbody()
     ;
 
     object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
+                          .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_t",&PyGeometryInfo::_t)
                           .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
                           .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
@@ -3171,6 +3181,7 @@ void init_openravepy_kinbody()
             link.attr("GeometryInfo") = geometryinfo;
             {
                 scope geometry = class_<PyLink::PyGeometry, boost::shared_ptr<PyLink::PyGeometry> >("Geometry", DOXY_CLASS(KinBody::Link::Geometry),no_init)
+                                 .def("GetName",&PyLink::PyGeometry::GetName, DOXY_FN(KinBody::Link::Geometry,GetName))
                                  .def("SetCollisionMesh",&PyLink::PyGeometry::SetCollisionMesh,args("trimesh"), DOXY_FN(KinBody::Link::Geometry,SetCollisionMesh))
                                  .def("GetCollisionMesh",&PyLink::PyGeometry::GetCollisionMesh, DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh))
                                  .def("InitCollisionMesh",&PyLink::PyGeometry::InitCollisionMesh, InitCollisionMesh_overloads(args("tesselation"), DOXY_FN(KinBody::Link::Geometry,GetCollisionMesh)))

@@ -4583,8 +4583,23 @@ void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 
     writer->WriteString("links");
     writer->StartArray();
-    for (int i=0; i < _veclinks.size(); ++i) {
-        _veclinks[i]->SerializeJSON(writer, options);
+    FOREACHC(it,_veclinks) {
+        (*it)->SerializeJSON(writer, options);
+    }
+    writer->EndArray();
+
+    writer->WriteString("joints");
+    writer->StartArray();
+    FOREACHC(it,_vecjoints) {
+        (*it)->SerializeJSON(writer, options);
+    }
+    writer->EndArray();
+
+
+    writer->WriteString("passive_joints");
+    writer->StartArray();
+    FOREACHC(it,_vPassiveJoints) {
+        (*it)->SerializeJSON(writer, options);
     }
     writer->EndArray();
 

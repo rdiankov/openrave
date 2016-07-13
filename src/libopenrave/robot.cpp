@@ -32,6 +32,12 @@ private:
     boost::function<void()> _fn;
 };
 
+void RobotBase::AttachedSensorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+{
+    writer->StartObject();
+    writer->EndObject();
+}
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
@@ -137,6 +143,10 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 void RobotBase::AttachedSensor::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     // TODO(jsonserialization)
+    writer->StartObject();
+    writer->WriteString("info");
+    _info.SerializeJSON(writer, options);
+    writer->EndObject();
 }
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const

@@ -186,6 +186,9 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+
+        /// \brief unique geometry name
+        std::string _name;
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -329,6 +332,10 @@ public:
 
             inline const KinBody::GeometryInfo& GetInfo() const {
                 return _info;
+            }
+
+            inline const std::string& GetName() const {
+                return _info._name;
             }
 
             virtual bool InitCollisionMesh(float fTessellation=1);
@@ -770,6 +777,8 @@ public:
         JointInfo();
         virtual ~JointInfo() {
         }
+
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name

@@ -41,6 +41,8 @@ public:
         virtual ~ManipulatorInfo() {
         }
 
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
@@ -367,8 +369,7 @@ public:
         /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
         virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
-        /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0, IkParameterizationType iktype=IKP_None) const;
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
@@ -425,6 +426,8 @@ public:
         }
         virtual ~AttachedSensorInfo() {
         }
+
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to

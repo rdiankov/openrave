@@ -18,6 +18,12 @@
 
 namespace OpenRAVE {
 
+void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+{
+    writer->StartObject();
+    writer->EndObject();
+}
+
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {
@@ -1198,9 +1204,13 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     }
 }
 
-void RobotBase::Manipulator::SerializeJSON(BaseJSONWriterPtr writer, int options, IkParameterizationType iktype) const
+void RobotBase::Manipulator::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     // TODO(jsonserialization)
+    writer->StartObject();
+    writer->WriteString("info");
+    _info.SerializeJSON(writer, options);
+    writer->EndObject();
 }
 
 ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecification(const std::string& interpolation) const
