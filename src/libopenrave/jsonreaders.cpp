@@ -87,5 +87,46 @@ const char* BufferJSONWriter::SerializeJSON()
     return _buffer.GetString();
 }
 
+void BufferJSONWriter::SerializeVector(const Vector& v, bool quat) {
+    _writer.StartArray();
+    _writer.Double(v[0]);
+    _writer.Double(v[1]);
+    _writer.Double(v[2]);
+    if (quat) {
+        _writer.Double(v[3]);
+    }
+    _writer.EndArray();
+}
+
+void BufferJSONWriter::SerializeTransform(const Transform& t) {
+    _writer.StartObject();
+    _writer.String("rotate");
+    SerializeVector(t.rot, true);
+    _writer.String("translate");
+    SerializeVector(t.trans);
+    _writer.EndObject();
+}
+
+void BufferJSONWriter::SerializeTriMesh(const TriMesh& trimesh) {
+    _writer.StartObject();
+    _writer.String("vertices");
+    _writer.StartArray();
+    FOREACHC(itv, trimesh.vertices) {
+        SerializeVector(*itv);
+    }
+    _writer.EndArray();
+
+    _writer.String("indices");
+    _writer.StartArray();
+    for (int index=0; index < trimesh.indices.size(); ++index) {
+        _writer.Int(index);
+    }
+    _writer.EndArray();
+
+    _writer.EndObject();
+}
+
+
+
 } // jsonreaders
 } // OpenRAVE

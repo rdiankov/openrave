@@ -286,7 +286,61 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     writer->StartObject();
-    // TODO(jsonserialization)
+    writer->String("transform");
+    writer->SerializeTransform(_t);
+
+    writer->String("type");
+    switch(_type) {
+    case OpenRAVE::GT_Box:
+        writer->String("box");
+        break;
+    case OpenRAVE::GT_TriMesh:
+        writer->String("trimesh");
+        break;
+    // TODO: ...
+    default:
+        writer->String("");
+        break;
+    }
+
+    writer->String("transparency");
+    writer->Double(_fTransparency);
+
+    writer->String("visible");
+    writer->Bool(_bVisible);
+
+    writer->String("renderscale");
+    writer->SerializeVector(_vRenderScale);
+
+    writer->String("collisionscale");
+    writer->SerializeVector(_vCollisionScale);
+
+    writer->String("diffusecolor");
+    writer->SerializeVector(_vDiffuseColor);
+
+    writer->String("ambientcolor");
+    writer->SerializeVector(_vAmbientColor);
+
+    writer->String("geomdata");
+    writer->SerializeVector(_vGeomData);
+
+    writer->String("geomdata2");
+    writer->SerializeVector(_vGeomData2);
+
+    writer->String("geomdata3");
+    writer->SerializeVector(_vGeomData3);
+
+    writer->String("filenamerender");
+    writer->String(_filenamerender.c_str());
+
+    writer->String("filenamecollision");
+    writer->String(_filenamecollision.c_str());
+
+    writer->String("modifiable");
+    writer->Bool(_bModifiable);
+
+    writer->String("meshcollision");
+    writer->SerializeTriMesh(_meshcollision);
     writer->EndObject();
 }
 
@@ -302,7 +356,8 @@ bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
 void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     writer->StartObject();
-    // TODO(jsonserialization)
+    writer->String("info");
+    _info.SerializeJSON(writer, options);
     writer->EndObject();
 }
 

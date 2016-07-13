@@ -4576,7 +4576,19 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
 
 void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
-    InterfaceBase::SerializeJSON(writer,options);
+    writer->StartObject();
+
+    writer->String("name");
+    writer->String(GetName().c_str());
+
+    writer->String("links");
+    writer->StartArray();
+    for (int i=0; i < _veclinks.size(); ++i) {
+        _veclinks[i]->SerializeJSON(writer, options);
+    }
+    writer->EndArray();
+
+    writer->EndObject();
 }
 
 void KinBody::serialize(std::ostream& o, int options) const

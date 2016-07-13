@@ -51,7 +51,11 @@ public:
     virtual void StartObject();
     virtual void EndObject();
 
-private:
+    virtual void SerializeVector(const Vector& v, bool quat = false);
+    virtual void SerializeTransform(const Transform& t);
+    virtual void SerializeTriMesh(const TriMesh& trimesh);
+
+private:    
     rapidjson::StringBuffer _buffer;
     rapidjson::Writer<rapidjson::StringBuffer> _writer;
 };

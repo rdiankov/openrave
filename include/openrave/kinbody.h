@@ -197,6 +197,9 @@ public:
         LinkInfo();
         virtual ~LinkInfo() {
         }
+
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set

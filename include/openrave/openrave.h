@@ -586,32 +586,6 @@ public:
     virtual BaseXMLWriterPtr AddChild(const std::string& xmltag, const AttributesList& atts=AttributesList()) = 0;
 };
 
-/// \brief base class for writing to JSON files.
-///
-/// OpenRAVE Interfaces accept a BaseJSONWriter instance and call its write methods to write the data.
-class OPENRAVE_API BaseJSONWriter : public boost::enable_shared_from_this<BaseJSONWriter>
-{
-public:
-    virtual ~BaseJSONWriter() {
-    }
-    /// \brief return the format for the data writing, should be all lower capitals.
-    ///
-    /// Samples formats are 'json'
-    virtual const std::string& GetFormat() const = 0;
-
-    virtual void Null() = 0;
-    virtual void Bool(bool value) = 0;
-    virtual void Int(int value) = 0;
-    virtual void Double(double value) = 0;
-    virtual void String(const std::string& value) = 0;
-    virtual void String(const char* value) = 0;
-
-    virtual void StartArray() = 0;
-    virtual void EndArray() = 0;
-    virtual void StartObject() = 0;
-    virtual void EndObject() = 0;
-};
-
 } // end namespace OpenRAVE
 
 // define the math functions
@@ -2676,6 +2650,37 @@ const std::string& IkParameterization::GetName() const
     throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
 }
 
+
+/// \brief base class for writing to JSON files.
+///
+/// OpenRAVE Interfaces accept a BaseJSONWriter instance and call its write methods to write the data.
+class OPENRAVE_API BaseJSONWriter : public boost::enable_shared_from_this<BaseJSONWriter>
+{
+public:
+    virtual ~BaseJSONWriter() {
+    }
+    /// \brief return the format for the data writing, should be all lower capitals.
+    ///
+    /// Samples formats are 'json'
+    virtual const std::string& GetFormat() const = 0;
+
+    virtual void Null() = 0;
+    virtual void Bool(bool value) = 0;
+    virtual void Int(int value) = 0;
+    virtual void Double(double value) = 0;
+    virtual void String(const std::string& value) = 0;
+    virtual void String(const char* value) = 0;
+
+    virtual void StartArray() = 0;
+    virtual void EndArray() = 0;
+    virtual void StartObject() = 0;
+    virtual void EndObject() = 0;
+    virtual void SerializeVector(const Vector& v, bool quat = false) = 0;
+    virtual void SerializeTransform(const Transform& t) = 0;
+    virtual void SerializeTriMesh(const TriMesh& trimesh) = 0;
+};
+
+    
 } // end namespace OpenRAVE
 
 #if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))
