@@ -2204,12 +2204,12 @@ private:
         if( IsWrite("bind_instance_geometry") ) {
             FOREACHC(itlink, pbody->GetLinks()) {
                 FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
-                    daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
-                    bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
-                    bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
-
                     int igeom = 0;
                     FOREACHC(itgeominfo, itgeomgroup->second) {
+                        daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
+                        bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
+                        bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
+                        
                         string geomid = _GetExtraGeometryId(*itlink,itgeomgroup->first,igeom);
                         igeom++;
                         domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
