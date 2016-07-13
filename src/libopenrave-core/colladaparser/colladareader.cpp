@@ -4189,7 +4189,9 @@ private:
                                 RAVELOG_WARN_FORMAT("failed to add g geometry to eometry group %s, link %s\n", groupname%plink->GetName());
                                 continue;
                             }
-
+                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
+                                itgeominfo->InitCollisionMesh();
+                            }
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
