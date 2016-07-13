@@ -108,7 +108,7 @@ public:
     }
     bool IsValid();
 
-    bool AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn);
+    void AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn);
 
     // Members
     bool isInitialized;

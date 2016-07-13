@@ -207,6 +207,7 @@ void ParabolicPath::Initialize(const std::vector<dReal>& qMin, const std::vector
 
     RAMP_OPTIM_ASSERT(vmVect.size() == ndof);
     isInitialized = true;
+    return;
 }
 
 bool ParabolicPath::IsValid() {
@@ -220,15 +221,15 @@ bool ParabolicPath::IsValid() {
     return true;
 }
 
-void AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
+void ParabolicPath::AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
     RAMP_OPTIM_ASSERT(isInitialized);
-    
+
     if (IsEmpty()) {
         curvesndVect.reserve(1);
         curvesndVect.push_back(curvesndIn);
 
         duration = curvesndIn.duration;
-        
+
         mainSwitchpoints.reserve(2);
         mainSwitchpoints.push_back(0);
         mainSwitchpoints.push_back(duration);
@@ -242,18 +243,19 @@ void AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
     }
     else {
         RAMP_OPTIM_ASSERT(curvesndIn.ndof == ndof);
-        
+
         curvesndVect.reserve(curvesndVect.size() + 1);
         curvesndVect.push_back(curvesndIn);
 
         curvesndVect.back().SetInitialValues(x1Vect);
         x1Vect = curvesndVect.back().x1Vect;
         v1Vect = curvesndVect.back().v1Vect;
-        
+
         duration = duration + curvesndIn.duration;
         mainSwitchpoints.reserve(mainSwitchpoints.size() + 1);
         mainSwitchpoints.push_back(duration);
     }
+    return;
 }
 
 } // end namespace RampOptimizerInternal
