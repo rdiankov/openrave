@@ -67,6 +67,7 @@ dReal Ramp::EvalAcc(dReal t) const {
 
 void Ramp::GetPeaks(dReal& bmin, dReal& bmax) const {
     GetPeaks(0, duration, bmin, bmax);
+    return;
 }
 
 void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
@@ -134,6 +135,7 @@ void Ramp::Initialize(dReal v0_, dReal a_, dReal dur_, dReal x0_) {
     v1 = v0 + (a*duration);
     d = duration*(v0 + 0.5*a*duration);
     x1 = x0 + d;
+    return;
 }
 
 void Ramp::PrintInfo(std::string name) const {
@@ -157,11 +159,68 @@ void Ramp::UpdateDuration(dReal newDuration) {
     v1 = v0 + (a*duration);
     d = duration*(v0 + 0.5*a*duration);
     x1 = x0 + d;
+    return;
 }
 
 void Ramp::SetInitialValue(dReal newx0) {
     x0 = newx0;
     x1 = x0 + d;
+    return;
+}
+
+void Ramp::Cut(dReal t, Ramp &remRamp) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+    if (t <= 0) {
+        remRamp.Initialize(v0, a, t, x0);
+        Initialize(v0, 0, 0, x0);
+        return;
+    }
+    else if (t >= duration) {
+        remRamp.Initialize(v1, 0, 0, x1);
+        return;
+    }
+
+    dReal remRampDuration = duration - t;
+    UpdateDuration(t);
+    remRamp.Initialize(v1, a, remRampDuration, x1);
+    return;
+}
+
+void Ramp::TrimFront(dReal t) {
+    // Trim front, keep back
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+    if (t <= 0) {
+        return;
+    }
+    else if (t >= duration) {
+        Initialize(v1, 0, 0, x1);
+        return;
+    }
+
+    dReal remDuration = duration - t;
+    dReal newx0 = EvalPos(t);
+    dReal newv0 = EvalVel(t);
+
+    Initialize(newv0, a, remDuration, newx0);
+    return;
+}
+
+void Ramp::TrimBack(dReal t) {
+    // Trim back, keep front
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+    if (t <= 0) {
+        Initialize(v0, 0, 0, x0);
+        return;
+    }
+    else if (t >= duration) {
+        return;
+    }
+
+    UpdateDuration(duration - t);
+    return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -210,6 +269,7 @@ void ParabolicCurve::Append(ParabolicCurve curve) {
     }
     v1 = curve.v1;
     SetInitialValue(x0);
+    return;
 }
 
 void ParabolicCurve::Reset() {
@@ -221,6 +281,7 @@ void ParabolicCurve::Reset() {
     v1 = 0;
     switchpointsList.clear();
     ramps.clear();
+    return;
 }
 
 void ParabolicCurve::SetInitialValue(dReal newx0) {
@@ -231,6 +292,7 @@ void ParabolicCurve::SetInitialValue(dReal newx0) {
         newx0 = ramps[i].x1;
     }
     x1 = x0 + d;
+    return;
 }
 
 void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const {
@@ -279,6 +341,7 @@ void ParabolicCurve::Initialize(std::vector<Ramp> rampsIn) {
         switchpointsList.push_back(duration);
     }
     SetInitialValue(rampsIn[0].x0);
+    return;
 }
 
 void ParabolicCurve::PrintInfo(std::string name) const {
@@ -344,6 +407,7 @@ dReal ParabolicCurve::EvalAcc(dReal t) const {
 
 void ParabolicCurve::GetPeaks(dReal& bmin, dReal& bmax) const {
     GetPeaks(0, duration, bmin, bmax);
+    return;
 }
 
 void ParabolicCurve::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
@@ -371,9 +435,10 @@ void ParabolicCurve::SetConstant(dReal _x0, dReal t) {
     RAMP_OPTIM_ASSERT(t >= 0);
 
     Ramp ramp(0, 0, t, _x0);
-    std::vector<Ramp> ramps(1);
-    ramps[0] = ramp;
-    Initialize(ramps);
+    std::vector<Ramp> _ramps(1);
+    _ramps[0] = ramp;
+    Initialize(_ramps);
+    return;
 }
 
 void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dReal t) {
@@ -385,10 +450,101 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     Ramp ramp(_v0, (_v1 - _v0)/t, t, _x0);
     RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, x1, epsilon));
 
-    std::vector<Ramp> ramps(1);
-    ramps[0] = ramp;
-    Initialize(ramps);
+    std::vector<Ramp> _ramps(1);
+    _ramps[0] = ramp;
+    Initialize(_ramps);
+    return;
 }
+
+void ParabolicCurve::SetZeroDuration(dReal _x0, dReal _v0) {
+    Ramp ramp(_v0, 0, 0, _x0);
+    std::vector<Ramp> _ramps(1);
+    _ramps[0] = ramp;
+    Initialize(_ramps);
+    return;
+}
+
+void ParabolicCurve::Cut(dReal t, ParabolicCurve &remCurve) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+
+    if (t <= 0) {
+        remCurve.Initialize(ramps);
+        SetZeroDuration(x0, v0);
+        return;
+    }
+    else if (t >= duration) {
+        remCurve.SetZeroDuration(x1, v1);
+        return;
+    }
+
+    int index;
+    dReal remainder;
+    FindRampIndex(t, index, remainder);
+
+    std::vector<Ramp> leftHalf(index + 1);
+    std::vector<Ramp> rightHalf(ramps.size() - index);
+
+    std::copy(ramps.begin(), ramps.begin() + index + 1, leftHalf.begin());
+    std::copy(ramps.begin() + index, ramps.end(), rightHalf.begin());
+
+    leftHalf.back().TrimBack(remainder);
+    rightHalf.front().TrimFront(remainder);
+
+    Initialize(leftHalf);
+    remCurve.Initialize(rightHalf);
+    return;
+}
+
+void ParabolicCurve::TrimFront(dReal t) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+
+    if (t <= 0) {
+        return;
+    }
+    else if (t >= duration) {
+        SetZeroDuration(x1, v1);
+        return;
+    }
+
+    int index;
+    dReal remainder;
+    FindRampIndex(t, index, remainder);
+
+    std::vector<Ramp> rightHalf(ramps.size() - index);
+    std::copy(ramps.begin() + index, ramps.end(), rightHalf.begin());
+    rightHalf.front().TrimFront(remainder);
+
+    Initialize(rightHalf);
+    return;
+}
+
+void ParabolicCurve::TrimBack(dReal t) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+
+    if (t <= 0) {
+        SetZeroDuration(x0, v0);
+        return;
+    }
+    else if (t >= duration) {
+        return;
+    }
+
+    int index;
+    dReal remainder;
+    FindRampIndex(t, index, remainder);
+
+    std::vector<Ramp> leftHalf(index + 1);
+
+    std::copy(ramps.begin(), ramps.begin() + index + 1, leftHalf.begin());
+    leftHalf.back().TrimBack(remainder);
+
+    Initialize(leftHalf);
+    return;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // paraboliccurvesnd
@@ -525,6 +681,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
 
     // std::cout << "INITIALIZATION WITH DURATION = " << duration << std::endl;
+    return;
 }
 
 void ParabolicCurvesND::SetInitialValues(const std::vector<dReal>& _x0Vect) {
@@ -532,9 +689,10 @@ void ParabolicCurvesND::SetInitialValues(const std::vector<dReal>& _x0Vect) {
 
     x0Vect = _x0Vect;
     for (size_t idof = 0; idof < ndof; ++idof) {
-        curves[idof].SetInitialValue(x0Vect[idof])
+        curves[idof].SetInitialValue(x0Vect[idof]);
         x1Vect[idof] = curves[idof].x1;
     }
+    return;
 }
 
 void ParabolicCurvesND::PrintInfo(std::string name) const {
@@ -609,6 +767,7 @@ void ParabolicCurvesND::EvalAcc(dReal t, std::vector<dReal>& aVect) const {
 
 void ParabolicCurvesND::GetPeaks(std::vector<dReal>& bminVect, std::vector<dReal>& bmaxVect) const {
     GetPeaks(0, duration, bminVect, bmaxVect);
+    return;
 }
 
 void ParabolicCurvesND::GetPeaks(dReal ta, dReal tb, std::vector<dReal>& bminVect, std::vector<dReal>& bmaxVect) const {
@@ -631,6 +790,7 @@ void ParabolicCurvesND::Reset() {
     switchpointsList.clear();
     curves.clear();
     constraintCheckedVect.clear();
+    return;
 }
 
 void ParabolicCurvesND::SetConstant(std::vector<dReal>& _x0Vect, dReal t) {
@@ -640,14 +800,15 @@ void ParabolicCurvesND::SetConstant(std::vector<dReal>& _x0Vect, dReal t) {
     RAMP_OPTIM_ASSERT(t >= 0);
 
     ndof = _x0Vect.size();
-    std::vector<ParabolicCurve> curves(ndof);
+    std::vector<ParabolicCurve> _curves(ndof);
     for (size_t idof = 0; idof < ndof; ++idof) {
         ParabolicCurve curve;
         curve.SetConstant(_x0Vect[idof], t);
-        curves[idof] = curve;
+        _curves[idof] = curve;
     }
 
-    Initialize(curves);
+    Initialize(_curves);
+    return;
 }
 
 void ParabolicCurvesND::SetSegment(std::vector<dReal>& _x0Vect, std::vector<dReal>& _x1Vect, std::vector<dReal>& _v0Vect, std::vector<dReal>& _v1Vect, dReal t) {
@@ -657,16 +818,100 @@ void ParabolicCurvesND::SetSegment(std::vector<dReal>& _x0Vect, std::vector<dRea
     RAMP_OPTIM_ASSERT(t > 0);
 
     ndof = _x0Vect.size();
-    std::vector<ParabolicCurve> curves(ndof);
+    std::vector<ParabolicCurve> _curves(ndof);
     for (size_t idof = 0; idof < ndof; ++idof) {
         ParabolicCurve curve;
         curve.SetSegment(_x0Vect[idof], _x1Vect[idof], _v0Vect[idof], _v1Vect[idof], t);
-        curves[idof] = curve;
+        _curves[idof] = curve;
     }
 
-    Initialize(curves);
+    Initialize(_curves);
+    return;
 }
 
+void ParabolicCurvesND::SetZeroDuration(std::vector<dReal>& _x0Vect, std::vector<dReal>& _v0Vect) {
+    ndof = _x0Vect.size();
+    RAMP_OPTIM_ASSERT(_v0Vect.size() == ndof);
+
+    std::vector<ParabolicCurve> _curves(ndof);
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        ParabolicCurve curve;
+        curve.SetZeroDuration(_x0Vect[idof], _v0Vect[idof]);
+        _curves[idof] = curve;
+    }
+
+    Initialize(_curves);
+    return;
+}
+
+void ParabolicCurvesND::Cut(dReal t, ParabolicCurvesND &remCurvesND) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+    if (t <= 0) {
+        remCurvesND.Initialize(curves);
+        SetZeroDuration(x0Vect, v0Vect);
+        return;
+    }
+    else if (t >= duration) {
+        remCurvesND.SetZeroDuration(x1Vect, v1Vect);
+        return;
+    }
+
+    std::vector<ParabolicCurve> leftHalf = curves;
+    std::vector<ParabolicCurve> rightHalf(ndof);
+
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        leftHalf[idof].Cut(t, rightHalf[idof]);
+    }
+
+    Initialize(leftHalf);
+    remCurvesND.Initialize(rightHalf);
+    return;
+}
+
+void ParabolicCurvesND::TrimFront(dReal t) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+    if (t <= 0) {
+        return;
+    }
+    else if (t >= duration) {
+        SetZeroDuration(x1Vect, v1Vect);
+        return;
+    }
+
+    std::vector<ParabolicCurve> newCurves = curves;
+
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        newCurves[idof].TrimFront(t);
+    }
+
+    Initialize(newCurves);
+    return;
+}
+
+void ParabolicCurvesND::TrimBack(dReal t) {
+    BOOST_ASSERT(t >= -epsilon);
+    BOOST_ASSERT(t <= duration + epsilon);
+    if (t <= 0) {
+        SetZeroDuration(x0Vect, v0Vect);
+        return;
+    }
+    else if (t >= duration) {
+        return;
+    }
+
+    std::vector<ParabolicCurve> newCurves = curves;
+
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        newCurves[idof].TrimBack(t);
+    }
+
+    Initialize(newCurves);
+    return;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string GenerateStringFromVector(const std::vector<dReal>& vect) {
     std::string s = "[ ";
     std::string separator = "";

@@ -52,6 +52,14 @@ public:
     void SetInitialValue(dReal newx0);
     void UpdateDuration(dReal newDuration);
 
+    // Cut the Ramp into two halves at time t. The left half is stored in the same Ramp. The right half is
+    // returned via remRamp
+    void Cut(dReal t, Ramp &remRamp);
+    // Cut the Ramp into two halves at time t and keep the right half.
+    void TrimFront(dReal t);
+    // Cut the Ramp into two halves at time t and keep the left half.
+    void TrimBack(dReal t);
+
     // Members
     dReal v0;       // initial velocity
     dReal a;        // acceleration
@@ -93,6 +101,15 @@ public:
     // will not be modified here.
     void SetInitialValue(dReal newx0);
     void SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dReal t);
+    void SetZeroDuration(dReal _x0, dReal _v0);
+
+    // Cut the ParabolicCurve into two halves at time t. The left half is stored in the same
+    // ParabolicCurve. The right half is returned via remCurve
+    void Cut(dReal t, ParabolicCurve &remCurve);
+    // Cut the ParabolicCurve into two halves at time t and keep the right half.
+    void TrimFront(dReal t);
+    // Cut the ParabolicCurve into two halves at time t and keep the left half.
+    void TrimBack(dReal t);
 
     // Members
     dReal x0;
@@ -135,7 +152,16 @@ public:
     void SetInitialValues(const std::vector<dReal>& _x0Vect);
     void SetConstant(std::vector<dReal>& _x0Vect, dReal t=0);
     void SetSegment(std::vector<dReal>& _x0Vect, std::vector<dReal>& _x1Vect, std::vector<dReal>& _v0Vect, std::vector<dReal>& _v1Vect, dReal t);
+    void SetZeroDuration(std::vector<dReal>& _x0Vect, std::vector<dReal>& _v0Vect);
 
+    // Cut the ParabolicCurvesND into two halves at time t. The left half is stored in the same
+    // ParabolicCurvesND. The right half is returned via remCurvesND
+    void Cut(dReal t, ParabolicCurvesND &remCurvesND);
+    // Cut the ParabolicCurvesND into two halves at time t and keep the right half.
+    void TrimFront(dReal t);
+    // Cut the ParabolicCurvesND into two halves at time t and keep the left half.
+    void TrimBack(dReal t);
+    
     size_t ndof;
     dReal duration;
     std::vector<dReal> x0Vect;
