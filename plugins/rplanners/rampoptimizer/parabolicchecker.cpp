@@ -91,7 +91,7 @@ ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, dReal xmin, dRea
 
 ParabolicCheckReturn CheckParabolicCurvesND(ParabolicCurvesND& curvesnd, std::vector<dReal>& xminVect, std::vector<dReal>& xmaxVect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect) {
     ParabolicCheckReturn ret;
-    for (int i = 0; i < curvesnd.ndof; ++i) {
+    for (size_t i = 0; i < curvesnd.ndof; ++i) {
         ret = CheckParabolicCurve(curvesnd.curves[i], xminVect[i], xmaxVect[i], vmVect[i], amVect[i], x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i]);
         if (ret != PCR_Normal) {
             return ret;
