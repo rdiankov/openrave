@@ -161,7 +161,7 @@ int CheckParabolicCurvesNDFeasibility(const ParabolicCurvesND& curvesnd, Feasibi
         dReal switchNext = curvesnd.duration;
         dReal dtmin = 1e30;
         for (size_t i = 0; i < curvesnd.ndof; ++i) {
-            
+
         }
     }
 
@@ -192,31 +192,68 @@ int ParabolicCurvesNDFeasibilityChecker::Check(const ParabolicCurvesND &curvesnd
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParabolicPath
-ParabolicPath::ParabolicPath() {
-
+ParabolicPath::ParabolicPath() : isInitialized(false) {
 }
 
-void ParabolicPath::Init(const std::vector<dReal>& velMax, const std::vector<dReal>& accMax) {
+void ParabolicPath::Initialize(const std::vector<dReal>& qMin, const std::vector<dReal>& qMax, const std::vector<dReal>& velMax, const std::vector<dReal>& accMax) {
+    ndof = qMin.size();
+    xminVect = qMin;
+    xmaxVect = qMax;
+    RAMP_OPTIM_ASSERT(xmaxVect.size() == ndof);
+
     vmVect = velMax;
     amVect = accMax;
     RAMP_OPTIM_ASSERT(vmVect.size() == amVect.size());
-}
 
-void ParabolicPath::SetJointLimits(const std::vector<dReal>& qMin, const std::vector<dReal>& qMax) {
-    xminVect = qMin;
-    xmaxVect = qMax;
-    RAMP_OPTIM_ASSERT(xminVect.size() == xmaxVect.size());
+    RAMP_OPTIM_ASSERT(vmVect.size() == ndof);
+    isInitialized = true;
 }
 
 bool ParabolicPath::IsValid() {
     for (size_t icurvesnd = 0; icurvesnd < curvesndVect.size(); ++icurvesnd) {
         ParabolicCheckReturn ret = CheckParabolicCurvesND(curvesndVect[icurvesnd], xminVect, xmaxVect, vmVect, amVect, curvesndVect[icurvesnd].x0Vect, curvesndVect[icurvesnd].x1Vect, curvesndVect[icurvesnd].v0Vect, curvesndVect[icurvesnd].v1Vect);
         if (!(ret == PCR_Normal)) {
-            RAMP_OPTIM_WARN("CheckParabolicCurvesND on ParaboolicCurve %d/%d returns %d", icurvesnd, curvesndVect.size(), ret);
+            RAMP_OPTIM_WARN("CheckParabolicCurvesND on ParabolicCurve %d/%d returns %d", icurvesnd, curvesndVect.size(), ret);
             return false;
         }
     }
     return true;
+}
+
+void AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
+    RAMP_OPTIM_ASSERT(isInitialized);
+    
+    if (IsEmpty()) {
+        curvesndVect.reserve(1);
+        curvesndVect.push_back(curvesndIn);
+
+        duration = curvesndIn.duration;
+        
+        mainSwitchpoints.reserve(2);
+        mainSwitchpoints.push_back(0);
+        mainSwitchpoints.push_back(duration);
+
+        x0Vect = curvesndIn.x0Vect;
+        x1Vect = curvesndIn.x1Vect;
+        v0Vect = curvesndIn.v0Vect;
+        v1Vect = curvesndIn.v1Vect;
+
+        isInitialized = true;
+    }
+    else {
+        RAMP_OPTIM_ASSERT(curvesndIn.ndof == ndof);
+        
+        curvesndVect.reserve(curvesndVect.size() + 1);
+        curvesndVect.push_back(curvesndIn);
+
+        curvesndVect.back().SetInitialValues(x1Vect);
+        x1Vect = curvesndVect.back().x1Vect;
+        v1Vect = curvesndVect.back().v1Vect;
+        
+        duration = duration + curvesndIn.duration;
+        mainSwitchpoints.reserve(mainSwitchpoints.size() + 1);
+        mainSwitchpoints.push_back(duration);
+    }
 }
 
 } // end namespace RampOptimizerInternal

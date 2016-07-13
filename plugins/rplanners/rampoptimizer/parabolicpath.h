@@ -97,18 +97,23 @@ public:
 class ParabolicPath {
 public:
     ParabolicPath();
-    void Init(const std::vector<dReal>& velMax, const std::vector<dReal>& accMax);
-    void SetJointLimits(const std::vector<dReal>& qMin, const std::vector<dReal>& qMax);
+    void Initialize(const std::vector<dReal>& qMin, const std::vector<dReal>& qMax, const std::vector<dReal>& velMax, const std::vector<dReal>& accMax);
     inline void Clear() {
         curvesndVect.clear();
+        mainSwitchpoints.clear();
+        isInitialized = false;
     }
     inline bool IsEmpty() const {
         return (curvesndVect.size() == 0);
     }
     bool IsValid();
 
+    bool AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn);
+
     // Members
+    bool isInitialized;
     std::vector<dReal> xminVect, xmaxVect, vmVect, amVect;
+    size_t ndof;
     std::vector<dReal> x0Vect, x1Vect, v0Vect, v1Vect;
     // ParabolicCurvesND curvesnd;
     std::vector<ParabolicCurvesND> curvesndVect;
