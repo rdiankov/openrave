@@ -47,6 +47,8 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 
     writer->WriteString("name");
     writer->WriteString(_name);
+
+    // TODO(jsonserialization): need additional joint info
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)

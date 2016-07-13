@@ -32,6 +32,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int opt
     writer->WriteString("local_direction");
     writer->WriteVector(_vdirection);
 
+    // TODO(jsonserialization): need additional manipulator info like frame tip and frame origin
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
