@@ -4578,10 +4578,10 @@ void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     writer->StartObject();
 
-    writer->String("name");
-    writer->String(GetName().c_str());
+    writer->WriteString("name");
+    writer->WriteString(GetName());
 
-    writer->String("links");
+    writer->WriteString("links");
     writer->StartArray();
     for (int i=0; i < _veclinks.size(); ++i) {
         _veclinks[i]->SerializeJSON(writer, options);

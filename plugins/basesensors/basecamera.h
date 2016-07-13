@@ -394,14 +394,14 @@ public:
     virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const
     {
         writer->StartObject();
-        writer->String("geom");
+        writer->WriteString("geom");
         _pgeom->SerializeJSON(writer, options);
         stringstream ss;
         ss << _vColor.x << " " << _vColor.y << " " << _vColor.z;
-        writer->String("color");
-        writer->String(ss.str());
-        writer->String("format");
-        writer->String(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+        writer->WriteString("color");
+        writer->WriteString(ss.str());
+        writer->WriteString("format");
+        writer->WriteString(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
         writer->EndObject();
     }
 

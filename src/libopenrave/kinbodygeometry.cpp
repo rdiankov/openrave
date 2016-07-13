@@ -286,61 +286,95 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     writer->StartObject();
-    writer->String("transform");
-    writer->SerializeTransform(_t);
+    writer->WriteString("transform");
+    writer->WriteTransform(_t);
 
-    writer->String("type");
+    writer->WriteString("type");
     switch(_type) {
-    case OpenRAVE::GT_Box:
-        writer->String("box");
+    case GT_Box:
+        writer->WriteString("box");
+
+        writer->WriteString("box");
+        writer->StartObject();
+        writer->WriteString("half_extents");
+        writer->WriteVector(_vGeomData);
+        writer->EndObject();
         break;
-    case OpenRAVE::GT_TriMesh:
-        writer->String("trimesh");
+
+    case GT_Container:
+        writer->WriteString("container");
+
+        writer->WriteString("container");
+        writer->StartObject();
+        writer->WriteString("outer_extents");
+        writer->WriteVector(_vGeomData);
+        writer->WriteString("inner_extents");
+        writer->WriteVector(_vGeomData2);
+        writer->WriteString("bottom_cross");
+        writer->WriteVector(_vGeomData3);
+        writer->EndObject();
         break;
-    // TODO: ...
+
+    case GT_Sphere:
+        writer->WriteString("sphere");
+
+        writer->WriteString("sphere");
+        writer->StartObject();
+        writer->WriteString("radius");
+        writer->WriteDouble(_vGeomData.x);
+        writer->EndObject();
+        break;
+
+    case GT_Cylinder:
+        writer->WriteString("cylinder");
+
+        writer->WriteString("cylinder");
+        writer->StartObject();
+        writer->WriteString("radius");
+        writer->WriteDouble(_vGeomData.x);
+        writer->WriteString("height");
+        writer->WriteDouble(_vGeomData.y);
+        writer->EndObject();
+        break;
+
+    case GT_TriMesh:
+        writer->WriteString("trimesh");
+        break;
+
     default:
-        writer->String("");
+        writer->WriteNull();
         break;
     }
 
-    writer->String("transparency");
-    writer->Double(_fTransparency);
+    writer->WriteString("transparency");
+    writer->WriteDouble(_fTransparency);
 
-    writer->String("visible");
-    writer->Bool(_bVisible);
+    writer->WriteString("visible");
+    writer->WriteBool(_bVisible);
 
-    writer->String("renderscale");
-    writer->SerializeVector(_vRenderScale);
+    writer->WriteString("render_scale");
+    writer->WriteVector(_vRenderScale);
 
-    writer->String("collisionscale");
-    writer->SerializeVector(_vCollisionScale);
+    writer->WriteString("collision_scale");
+    writer->WriteVector(_vCollisionScale);
 
-    writer->String("diffusecolor");
-    writer->SerializeVector(_vDiffuseColor);
+    writer->WriteString("diffuse_color");
+    writer->WriteVector(_vDiffuseColor);
 
-    writer->String("ambientcolor");
-    writer->SerializeVector(_vAmbientColor);
+    writer->WriteString("ambient_color");
+    writer->WriteVector(_vAmbientColor);
 
-    writer->String("geomdata");
-    writer->SerializeVector(_vGeomData);
+    // writer->WriteString("filename_render");
+    // writer->WriteString(_filenamerender);
 
-    writer->String("geomdata2");
-    writer->SerializeVector(_vGeomData2);
+    // writer->WriteString("filename_collision");
+    // writer->WriteString(_filenamecollision);
 
-    writer->String("geomdata3");
-    writer->SerializeVector(_vGeomData3);
+    writer->WriteString("modifiable");
+    writer->WriteBool(_bModifiable);
 
-    writer->String("filenamerender");
-    writer->String(_filenamerender.c_str());
-
-    writer->String("filenamecollision");
-    writer->String(_filenamecollision.c_str());
-
-    writer->String("modifiable");
-    writer->Bool(_bModifiable);
-
-    writer->String("meshcollision");
-    writer->SerializeTriMesh(_meshcollision);
+    writer->WriteString("mesh");
+    writer->WriteTriMesh(_meshcollision);
     writer->EndObject();
 }
 
@@ -356,7 +390,7 @@ bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
 void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int options) const
 {
     writer->StartObject();
-    writer->String("info");
+    writer->WriteString("info");
     _info.SerializeJSON(writer, options);
     writer->EndObject();
 }

@@ -2664,20 +2664,21 @@ public:
     /// Samples formats are 'json'
     virtual const std::string& GetFormat() const = 0;
 
-    virtual void Null() = 0;
-    virtual void Bool(bool value) = 0;
-    virtual void Int(int value) = 0;
-    virtual void Double(double value) = 0;
-    virtual void String(const std::string& value) = 0;
-    virtual void String(const char* value) = 0;
-
     virtual void StartArray() = 0;
     virtual void EndArray() = 0;
     virtual void StartObject() = 0;
     virtual void EndObject() = 0;
-    virtual void SerializeVector(const Vector& v, bool quat = false) = 0;
-    virtual void SerializeTransform(const Transform& t) = 0;
-    virtual void SerializeTriMesh(const TriMesh& trimesh) = 0;
+
+    virtual void WriteNull() = 0;
+    virtual void WriteBool(bool value) = 0;
+    virtual void WriteInt(int value) = 0;
+    virtual void WriteDouble(double value) = 0;
+    virtual void WriteString(const std::string& value) = 0;
+    virtual void WriteString(const char* value) = 0;
+
+    virtual void WriteVector(const Vector& v, bool quat = false) = 0;
+    virtual void WriteTransform(const Transform& t) = 0;
+    virtual void WriteTriMesh(const TriMesh& trimesh) = 0;
 };
 
     

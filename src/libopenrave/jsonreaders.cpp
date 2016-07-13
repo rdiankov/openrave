@@ -26,40 +26,19 @@ BufferJSONWriter::BufferJSONWriter() : _buffer(), _writer(_buffer)
 {
 }
 
+BufferJSONWriter::~BufferJSONWriter()
+{
+}
+
 const std::string& BufferJSONWriter::GetFormat() const
 {
     static const std::string format("json");
     return format;
 }
 
-void BufferJSONWriter::Null()
+const char* BufferJSONWriter::SerializeJSON()
 {
-    _writer.Null();
-}
-
-void BufferJSONWriter::Bool(bool value)
-{
-    _writer.Bool(value);
-}
-
-void BufferJSONWriter::Int(int value)
-{
-    _writer.Int(value);
-}
-
-void BufferJSONWriter::Double(double value)
-{
-    _writer.Double(value);
-}
-
-void BufferJSONWriter::String(const std::string& value)
-{
-    _writer.String(value);
-}
-
-void BufferJSONWriter::String(const char* value)
-{
-    _writer.String(value);
+    return _buffer.GetString();
 }
 
 void BufferJSONWriter::StartArray()
@@ -82,51 +61,74 @@ void BufferJSONWriter::EndObject()
     _writer.EndObject();
 }
 
-const char* BufferJSONWriter::SerializeJSON()
+void BufferJSONWriter::WriteNull()
 {
-    return _buffer.GetString();
+    _writer.Null();
 }
 
-void BufferJSONWriter::SerializeVector(const Vector& v, bool quat) {
-    _writer.StartArray();
-    _writer.Double(v[0]);
-    _writer.Double(v[1]);
-    _writer.Double(v[2]);
+void BufferJSONWriter::WriteBool(bool value)
+{
+    _writer.Bool(value);
+}
+
+void BufferJSONWriter::WriteInt(int value)
+{
+    _writer.Int(value);
+}
+
+void BufferJSONWriter::WriteDouble(double value)
+{
+    _writer.Double(value);
+}
+
+void BufferJSONWriter::WriteString(const std::string& value)
+{
+    _writer.String(value);
+}
+
+void BufferJSONWriter::WriteString(const char* value)
+{
+    _writer.String(value);
+}
+
+void BufferJSONWriter::WriteVector(const Vector& v, bool quat) {
+    StartArray();
+    WriteDouble(v[0]);
+    WriteDouble(v[1]);
+    WriteDouble(v[2]);
     if (quat) {
-        _writer.Double(v[3]);
+        WriteDouble(v[3]);
     }
-    _writer.EndArray();
+    EndArray();
 }
 
-void BufferJSONWriter::SerializeTransform(const Transform& t) {
-    _writer.StartObject();
-    _writer.String("rotate");
-    SerializeVector(t.rot, true);
-    _writer.String("translate");
-    SerializeVector(t.trans);
-    _writer.EndObject();
+void BufferJSONWriter::WriteTransform(const Transform& t) {
+    StartObject();
+    WriteString("rotate");
+    WriteVector(t.rot, true);
+    WriteString("translate");
+    WriteVector(t.trans);
+    EndObject();
 }
 
-void BufferJSONWriter::SerializeTriMesh(const TriMesh& trimesh) {
-    _writer.StartObject();
-    _writer.String("vertices");
-    _writer.StartArray();
+void BufferJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
+    StartObject();
+    WriteString("vertices");
+    StartArray();
     FOREACHC(itv, trimesh.vertices) {
-        SerializeVector(*itv);
+        WriteVector(*itv);
     }
-    _writer.EndArray();
+    EndArray();
 
-    _writer.String("indices");
-    _writer.StartArray();
+    WriteString("indices");
+    StartArray();
     for (int index=0; index < trimesh.indices.size(); ++index) {
-        _writer.Int(index);
+        WriteInt(index);
     }
-    _writer.EndArray();
+    EndArray();
 
-    _writer.EndObject();
+    EndObject();
 }
-
-
 
 } // jsonreaders
 } // OpenRAVE

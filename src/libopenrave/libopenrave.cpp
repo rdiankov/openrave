@@ -2359,8 +2359,8 @@ void SensorBase::SensorGeometry::SerializeJSON(BaseJSONWriterPtr writer, int opt
 {
     writer->StartObject();
     if( hardware_id.size() > 0 ) {
-        writer->String("hardware_id");
-        writer->String(hardware_id);
+        writer->WriteString("hardware_id");
+        writer->WriteString(hardware_id);
     }
     writer->EndObject();
 }

@@ -36,24 +36,26 @@ class OPENRAVE_API BufferJSONWriter : public BaseJSONWriter
 {
 public:
     BufferJSONWriter();
-    const std::string& GetFormat() const;
-    virtual const char* SerializeJSON();
+    virtual ~BufferJSONWriter();
 
-    virtual void Null();
-    virtual void Bool(bool value);
-    virtual void Int(int value);
-    virtual void Double(double value);
-    virtual void String(const std::string& value);
-    virtual void String(const char* value);
+    virtual const std::string& GetFormat() const;
+    virtual const char* SerializeJSON();
 
     virtual void StartArray();
     virtual void EndArray();
     virtual void StartObject();
     virtual void EndObject();
 
-    virtual void SerializeVector(const Vector& v, bool quat = false);
-    virtual void SerializeTransform(const Transform& t);
-    virtual void SerializeTriMesh(const TriMesh& trimesh);
+    virtual void WriteNull();
+    virtual void WriteBool(bool value);
+    virtual void WriteInt(int value);
+    virtual void WriteDouble(double value);
+    virtual void WriteString(const std::string& value);
+    virtual void WriteString(const char* value);
+
+    virtual void WriteVector(const Vector& v, bool quat = false);
+    virtual void WriteTransform(const Transform& t);
+    virtual void WriteTriMesh(const TriMesh& trimesh);
 
 private:    
     rapidjson::StringBuffer _buffer;
