@@ -43,7 +43,7 @@ public:
     virtual CheckReturn ConfigFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, int options=0xffff) {
         return CheckReturn(ConfigFeasible(q0, dq0, options));
     }
-    virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, ParabolicCurvesND& curvendOut) {
+    virtual CheckReturn SegmentFeasible2(const std::vector<dReal>& q0, const std::vector<dReal>& dq0, const std::vector<dReal>& q1, const std::vector<dReal>& dq1, dReal timeElapsed, int options, std::vector<ParabolicCurvesND> &curvendVectOut) {
         BOOST_ASSERT(0);
         return 0;
     }
@@ -63,8 +63,14 @@ public:
     virtual dReal ObstacleDistance(const std::vector<dReal>& x)=0;
 };
 
-
+/// \brief Check feasibility of the given ParabolicCurvesND by recursively bisecting the curve and
+/// checking the midpoints. Each consecutive pair of checking points will be equally spaced (in
+/// time).
 int CheckParabolicCurvesNDFeasibility(const ParabolicCurvesND& curvesnd, FeasibilityCheckerBase* feas, DistanceCheckerBase* dist, int maxiter, int options=0xffff);
+
+/// \brief Check feasibility of the given ParabolicCurvesND by dividing the curve into segments
+/// where in each segment, every DOF has its deviation from the straight line connecting end points
+/// no more than the corresponding tol.
 int CheckParabolicCurvesNDFeasibility(const ParabolicCurvesND& curvesnd, FeasibilityCheckerBase* feas, const std::vector<dReal>& tol, int options=0xffff);
 
 class ParabolicCurvesNDFeasibilityChecker {
@@ -73,7 +79,7 @@ public:
     ParabolicCurvesNDFeasibilityChecker(FeasibilityCheckerBase* feas, DistanceCheckerBase* dist, int maxiter);
 
     virtual int Check(const ParabolicCurvesND& curvesnd, int options=0xffff);
-    virtual CheckReturn Check2(const ParabolicCurvesND& curvesnd, int options, ParabolicCurvesND& curvesndOut) {
+    virtual CheckReturn Check2(const ParabolicCurvesND& curvesnd, int options, std::vector<ParabolicCurvesND>& curvesndVectOut) {
         BOOST_ASSERT(0);
         return CheckReturn(0);
     }

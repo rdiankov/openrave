@@ -156,15 +156,70 @@ int CheckParabolicCurvesNDFeasibility(const ParabolicCurvesND& curvesnd, Feasibi
     dReal t = 0;
     divs.push_back(t);
     while (t < curvesnd.duration) {
-        dReal tnext = t;
+        dReal tNext = t;
         dReal am = 0;
         dReal switchNext = curvesnd.duration;
         dReal dtmin = 1e30;
-        for (size_t i = 0; i < curvesnd.ndof; ++i) {
+        for (size_t idof = 0; idof < curvesnd.ndof; ++idof) {
+            int index;
+            dReal remainder;
+            curvesnd.curves[idof].FindRampIndex(t, index, remainder);
+            switchNext = Min(switchNext, curvesnd.curves[idof].switchpointsList[index + 1]);
+            am = Max(am, Abs(curvesnd.curves[idof].ramps[index].a));
+            dtmin = Min(dtmin, 2.0*Sqrt(tol[idof]/am));
+        }
 
+        if (t + dtmin > switchNext) {
+            tNext = switchNext;
+        }
+        else {
+            tNext = t + dtmin;
+        }
+        t = tNext;
+        divs.push_back(tNext);
+    }
+    divs.push_back(curvesnd.duration);
+
+    std::list<std::pair<int, int> > segs;
+    segs.push_back(std::pair<int, int>(0, divs.size() - 1));
+    std::vector<dReal> q0, q1, dq0, dq1;
+
+    while (!segs.empty()) {
+        int i = segs.front().first;
+        int j = segs.front().second;
+        segs.erase(segs.begin());
+        if (j == i + 1) {
+            curvesnd.EvalPos(divs[i], q0);
+            if (feas->NeedDerivativeForFeasibility()) {
+                curvesnd.EvalVel(divs[i], dq0);
+            }
+
+            curvesnd.EvalPos(divs[j], q0);
+            if (feas->NeedDerivativeForFeasibility()) {
+                curvesnd.EvalVel(divs[j], dq0);
+            }
+
+            int retseg = feas->SegmentFeasible(q0, q1, dq0, dq1, divs[j] - divs[i], options);
+            if (retseg != 0) {
+                return retseg;
+            }
+        }
+        else {
+            int k = (i + j)/2;
+            curvesnd.EvalPos(divs[k], q0);
+            if (feas->NeedDerivativeForFeasibility()) {
+                curvesnd.EvalVel(divs[k], dq0);
+            }
+
+            int retconf = feas->ConfigFeasible(q1, dq1, options);
+            if (retconf != 0) {
+                return retconf;
+            }
+
+            segs.push_back(std::pair<int, int>(i, k));
+            segs.push_back(std::pair<int, int>(k, j));
         }
     }
-
 
     return 0;
 }
