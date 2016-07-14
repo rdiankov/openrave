@@ -654,6 +654,12 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     curves = curvesIn;
     duration = minDur;
 
+    x0Vect.resize(0);
+    x1Vect.resize(0);
+    dVect.resize(0);
+    v0Vect.resize(0);
+    v1Vect.resize(0);
+    
     x0Vect.reserve(ndof);
     x1Vect.reserve(ndof);
     dVect.reserve(ndof);
