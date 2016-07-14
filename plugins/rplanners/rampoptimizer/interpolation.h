@@ -25,13 +25,16 @@ namespace RampOptimizerInternal {
  */
 /// Interpolate a trajectory which starts and stops at the two given waypoints. Path geometry remain
 /// the same after the interpolation.
-bool InterpolateZeroVelND(std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut);
+bool InterpolateZeroVelND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut);
 
 /// Interpolate a trajectory connecting (x0Vect, v0Vect) and (x1Vect, v1Vect).
-bool InterpolateArbitraryVelND(std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect, std::vector<dReal>& xminVect, std::vector<dReal>& xmaxVect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut, bool tryHarder);
+bool InterpolateArbitraryVelND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut, bool tryHarder);
 
 /// Given a set of ParabolicCurves with different duration, try to stretch every curve to have the same duration.
-bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, size_t maxIndex, ParabolicCurvesND& curvesndOut, bool tryHarder);
+bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, size_t maxIndex, ParabolicCurvesND& curvesndOut, bool tryHarder);
+
+/// Interpolate a trajectory connecting (x0Vect, v0Vect) and (x1Vect, v1Vect) which has the specified duration
+bool InterpolateNDFixedDuration(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, dReal duration, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, ParabolicCurvesND& curvesndOut);
 
 /*
    Single DOF interpolation
