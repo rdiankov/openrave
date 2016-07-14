@@ -221,7 +221,7 @@ bool ParabolicPath::IsValid() {
     return true;
 }
 
-void ParabolicPath::AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
+void ParabolicPath::AppendParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
     RAMP_OPTIM_ASSERT(isInitialized);
 
     if (IsEmpty()) {
@@ -255,6 +255,137 @@ void ParabolicPath::AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn) {
         mainSwitchpoints.reserve(mainSwitchpoints.size() + 1);
         mainSwitchpoints.push_back(duration);
     }
+    return;
+}
+
+void ParabolicPath::AppendParabolicPath(const ParabolicPath &pathIn) {
+    RAMP_OPTIM_ASSERT(isInitialized);
+
+    if (IsEmpty()) {
+        Reconstruct(pathIn.curvesndVect);
+        return;
+    }
+    else {
+        for (size_t icurvesnd = 0; icurvesnd < pathIn.curvesndVect.size(); ++icurvesnd) {
+            AppendParabolicCurvesND(pathIn.curvesndVect[icurvesnd]);
+        }
+        return;
+    }
+}
+
+void ParabolicPath::FindParabolicCurvesNDIndex(dReal t, int &index, dReal &remainder) const {
+    RAMP_OPTIM_ASSERT(t >= -epsilon);
+    RAMP_OPTIM_ASSERT(t <= duration + epsilon);
+    if (t < epsilon) {
+        index = 0;
+        remainder = 0;
+    }
+    else if (t > duration - epsilon) {
+        index = ((int) curvesndVect.size()) - 1;
+        remainder = curvesndVect.back().duration;
+    }
+    else {
+        index = 0;
+        // Iterate through mainSwitchpoints
+        std::vector<dReal>::const_iterator it = mainSwitchpoints.begin();
+        while (it != mainSwitchpoints.end() && t > *it) {
+            index++;
+            it++;
+        }
+        RAMP_OPTIM_ASSERT(index < (int)mainSwitchpoints.size());
+        index = index - 1;
+        remainder = t - *(it - 1);
+    }
+    return;
+}
+
+void ParabolicPath::PopBack() {
+    if (IsEmpty()) {
+        return;
+    }
+
+    curvesndVect.pop_back();
+    mainSwitchpoints.pop_back();
+    duration = mainSwitchpoints.back();
+
+    x1Vect = curvesndVect.back().x1Vect;
+    v1Vect = curvesndVect.back().v1Vect;
+}
+
+void ParabolicPath::Reconstruct(const std::vector<ParabolicCurvesND> &curvesndVectIn) {
+    RAMP_OPTIM_ASSERT(curvesndVectIn.size() > 0);
+    RAMP_OPTIM_ASSERT(isInitialized);
+    RAMP_OPTIM_ASSERT(curvesndVectIn.front().ndof == ndof);
+
+    Clear();
+    for (size_t icurvesnd = 0; icurvesnd < curvesndVectIn.size(); ++icurvesnd) {
+        AppendParabolicCurvesND(curvesndVectIn[icurvesnd]);
+    }
+    return;
+}
+
+void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const ParabolicPath &pathIn) {
+    ReplaceSegment(t0, t1, pathIn.curvesndVect);
+    return;
+}
+
+void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<ParabolicCurvesND> &curvesndVectIn) {
+    int index0, index1;
+    dReal rem0, rem1;
+
+    FindParabolicCurvesNDIndex(t0, index0, rem0);
+    FindParabolicCurvesNDIndex(t1, index1, rem1);
+
+    ParabolicCurvesND tempCurvesND;
+    std::vector<ParabolicCurvesND> newCurvesNDVect;
+    newCurvesNDVect.reserve((index0 + 1) + (index1 + 1) + (curvesndVectIn.size()));
+
+    // Insert the left part from the original ParabolicPath
+    for (int i = 0; i < index0; ++i) {
+        newCurvesNDVect.push_back(curvesndVect[i]);
+    }
+    tempCurvesND = curvesndVect[index0];
+    tempCurvesND.TrimBack(rem0);
+    if (tempCurvesND.duration > 0) {
+        newCurvesNDVect.push_back(tempCurvesND);
+    }
+
+    // Insert the middle part from pathIn
+    for (std::vector<ParabolicCurvesND>::const_iterator it = curvesndVectIn.begin(); it != curvesndVectIn.end(); ++it) {
+        newCurvesNDVect.push_back(*it);
+    }
+
+    // Insert the right part from the original ParabolicPath
+    tempCurvesND = curvesndVect[index1];
+    tempCurvesND.TrimFront(rem1);
+    if (tempCurvesND.duration > 0) {
+        newCurvesNDVect.push_back(tempCurvesND);
+    }
+    for (int i = index1 + 1; i < ((int) curvesndVect.size()); ++i) {
+        newCurvesNDVect.push_back(curvesndVect[i]);
+    }
+
+    // Initialize the ParabolicPath with the new set of ParabolicCurvesND
+    Reconstruct(newCurvesNDVect);
+    return;
+}
+
+void ParabolicPath::Save(std::string filename) const {
+    // Do simple verification
+    for (size_t i = 0; i < curvesndVect.size(); ++i) {
+        RAMP_OPTIM_ASSERT(curvesndVect[i].ndof == ndof);
+    }
+
+    std::string s = "";
+    std::string dummy;
+
+    for (size_t icurvesnd = 0; icurvesnd < curvesndVect.size(); ++icurvesnd) {
+        curvesndVect[icurvesnd].ToString(dummy);
+        s = s + dummy;
+    }
+
+    std::ofstream f(filename.c_str());
+    f << s;
     return;
 }
 

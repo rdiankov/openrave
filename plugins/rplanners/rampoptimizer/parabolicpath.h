@@ -101,14 +101,45 @@ public:
     inline void Clear() {
         curvesndVect.clear();
         mainSwitchpoints.clear();
-        isInitialized = false;
+        ndof = 0;
+        duration = 0;
     }
     inline bool IsEmpty() const {
         return (curvesndVect.size() == 0);
     }
     bool IsValid();
 
-    void AddParabolicCurvesND(const ParabolicCurvesND& curvesndIn);
+    /*
+      The following functions DO NOT check if the ParabolicCurvesND, ParabolicPath, etc. to be
+      appended, inserted, etc. to the existing one:
+      
+      1. respect the same bounds (joint values, velocities, and accelerations)
+      2. are compatible (having continuous velocity after the operation)
+     */
+
+    /// \brief Append curvesndIn to curvesndVect and set related values (the appended curvesnd's
+    /// initial and final values, x1Vect, etc.) accordingly.
+    void AppendParabolicCurvesND(const ParabolicCurvesND &curvesndIn);
+
+    /// \brief Append pathIn.curvesndVect to curvesndVect and set related values (the appended
+    /// curvesnd's initial and final values, x1Vect, etc.) accordingly.
+    void AppendParabolicPath(const ParabolicPath &pathIn);
+
+    void FindParabolicCurvesNDIndex(dReal t, int &index, dReal &remainder) const;
+
+    // \brief Pop out the last ParabolicCurvesND and adjust the related values accordingly.
+    void PopBack();
+
+    /// \brief Reassign curvesndVect to be the input one and set the related values accordingly.
+    void Reconstruct(const std::vector<ParabolicCurvesND> &curvesndVectIn);
+    
+    /// \brief Replace the original segment from t0 to t1 with pathIn. Note that this function will
+    /// not check if the replacing parbolicpath boundary values are consistent with the values of
+    /// the original parabolicpath at t0 and t1.
+    void ReplaceSegment(dReal t0, dReal t1, const ParabolicPath &pathIn);
+    void ReplaceSegment(dReal t0, dReal t1, const std::vector<ParabolicCurvesND> &curvesndVectIn);
+
+    void Save(std::string filename) const;
 
     // Members
     bool isInitialized;
