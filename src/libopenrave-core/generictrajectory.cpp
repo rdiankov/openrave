@@ -322,7 +322,25 @@ public:
 
     virtual void SerializeJSON(BaseJSONWriterPtr writer, int options)
     {
-        // TODO(jsonserialization)
+        writer->WriteString("data");
+        writer->StartObject();
+        writer->WriteString("count");
+        writer->WriteInt(GetNumWaypoints());
+        writer->WriteString("data");
+        writer->WriteArray(_vtrajdata);
+        writer->EndObject();
+        if( GetDescription().size() > 0 ) {
+            writer->WriteString("description");
+            writer->WriteString("![CDATA[" + GetDescription() + "]]");
+        }
+
+        if( GetReadableInterfaces().size() > 0 ) {
+            FOREACHC(it, GetReadableInterfaces()) {
+                writer->StartObject();
+                it->second->SerializeJSON(writer, options);
+                writer->EndObject();
+            }
+        }
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)

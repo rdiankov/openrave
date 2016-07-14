@@ -741,6 +741,8 @@ public:
             return offset!=r.offset || dof!=r.dof || name!=r.name || interpolation!=r.interpolation;
         }
 
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+
         /// \brief For each data point, the number of values to offset before data for this group starts.
         int offset;
         /// \brief The number of values in this group.
@@ -919,7 +921,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -1074,6 +1076,8 @@ protected:
 
     /// \brief return a function to get the states of the configuration in the environment
     virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
+
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -2572,7 +2576,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name
@@ -2677,9 +2681,16 @@ public:
     virtual void WriteVector(const Vector& v, bool quat = false) = 0;
     virtual void WriteTransform(const Transform& t) = 0;
     virtual void WriteTriMesh(const TriMesh& trimesh) = 0;
+
+    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a) = 0;
+    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a) = 0;
+    virtual void WriteArray(const std::vector<dReal>& v) = 0;
+    virtual void WriteArray(const std::vector<int>& v) = 0;
+    virtual void WriteArray(const std::vector<std::string>& v) = 0;
+    virtual void WritePair(const std::pair<dReal, dReal>& p) = 0;
 };
 
-    
+
 } // end namespace OpenRAVE
 
 #if !defined(OPENRAVE_DISABLE_ASSERT_HANDLER) && (defined(BOOST_ENABLE_ASSERT_HANDLER))

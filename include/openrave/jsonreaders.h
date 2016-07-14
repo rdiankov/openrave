@@ -57,7 +57,14 @@ public:
     virtual void WriteTransform(const Transform& t);
     virtual void WriteTriMesh(const TriMesh& trimesh);
 
-private:    
+    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);
+    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a);
+    virtual void WriteArray(const std::vector<dReal>& v);
+    virtual void WriteArray(const std::vector<int>& v);
+    virtual void WriteArray(const std::vector<std::string>& v);
+    virtual void WritePair(const std::pair<dReal, dReal>& p);
+
+private:
     rapidjson::StringBuffer _buffer;
     rapidjson::Writer<rapidjson::StringBuffer> _writer;
 };

@@ -49,7 +49,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(BaseJSONWriterPtr writer, int 
     writer->WriteString("relative_transform");
     writer->WriteTransform(_trelative);
 
-    // TODO(jsonserialization): need additional sensor stuff here
+    _sensorgeometry->SerializeJSON(writer, options);
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)

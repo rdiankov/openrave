@@ -48,7 +48,99 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    // TODO(jsonserialization): need additional joint info
+    writer->WriteString("linkname0");
+    writer->WriteString(_linkname0);
+    writer->WriteString("linkname1");
+    writer->WriteString(_linkname1);
+
+    writer->WriteString("anchor");
+    writer->WriteVector(_vanchor);
+
+    writer->WriteString("axes");
+    writer->StartArray();
+    for (int i = 0; i < _vaxes.size(); ++i) {
+        writer->WriteVector(_vaxes[i]);
+    }
+    writer->EndArray();
+
+    writer->WriteString("currentvalues");
+    writer->WriteArray(_vcurrentvalues);
+
+    writer->WriteString("resolution");
+    writer->WriteBoost3Array(_vresolution);
+
+    writer->WriteString("maxvel");
+    writer->WriteBoost3Array(_vmaxvel);
+
+    writer->WriteString("hardmaxvel");
+    writer->WriteBoost3Array(_vhardmaxvel);
+
+    writer->WriteString("maxaccel");
+    writer->WriteBoost3Array(_vmaxaccel);
+
+    writer->WriteString("maxtorque");
+    writer->WriteBoost3Array(_vmaxtorque);
+
+    writer->WriteString("maxinertia");
+    writer->WriteBoost3Array(_vmaxinertia);
+
+    writer->WriteString("weights");
+    writer->WriteBoost3Array(_vweights);
+
+    writer->WriteString("offsets");
+    writer->WriteBoost3Array(_voffsets);
+
+    writer->WriteString("lowerlimit");
+    writer->WriteBoost3Array(_vlowerlimit);
+    writer->WriteString("upperlimit");
+    writer->WriteBoost3Array(_vupperlimit);
+
+    writer->WriteString("iscircular");
+    writer->WriteBoost3Array(_bIsCircular);
+
+    writer->WriteString("isactive");
+    writer->WriteInt(_bIsActive);
+
+    if (!!_trajfollow) {
+        writer->WriteString("trajectory");
+        writer->StartObject();
+        _trajfollow->SerializeJSON(writer, options);
+        writer->EndObject();
+    }
+
+    writer->WriteString("mimic");
+    writer->StartArray();
+    for (size_t i = 0; i < _vmimic.size(); ++i) {
+        if (!!_vmimic[i]) {
+            writer->StartObject();
+            _vmimic[i]->SerializeJSON(writer, options);
+            writer->EndObject();
+        }
+    }
+    writer->EndArray();
+
+    writer->WriteString("float_parameters");
+    writer->StartObject();
+    FOREACH(it, _mapFloatParameters) {
+        writer->WriteString(it->first);
+        writer->WriteArray(it->second);
+    }
+    writer->EndObject();
+
+    writer->WriteString("int_parameters");
+    writer->StartObject();
+    FOREACH(it, _mapIntParameters) {
+        writer->WriteString(it->first);
+        writer->WriteArray(it->second);
+    }
+    writer->EndObject();
+
+    if (!!_infoElectricMotor) {
+        writer->WriteString("electric_motor_info");
+        writer->StartObject();
+        _infoElectricMotor->SerializeJSON(writer, options);
+        writer->EndObject();
+    }
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -1624,6 +1716,78 @@ void KinBody::Joint::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     UpdateInfo();
     _info.SerializeJSON(writer, options);
+}
+
+void KinBody::MimicInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+{
+    writer->WriteString("equations");
+    writer->StartArray();
+    for (size_t i=0; i<_equations.size(); ++i) {
+        writer->WriteString(_equations[i]);
+    }
+    writer->EndArray();
+}
+
+void ElectricMotorActuatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+{
+    writer->WriteString("model_type");
+    writer->WriteString(model_type);
+
+    writer->WriteString("assigned_power_rating");
+    writer->WriteDouble(assigned_power_rating);
+
+    writer->WriteString("max_speed");
+    writer->WriteDouble(max_speed);
+
+    writer->WriteString("no_load_speed");
+    writer->WriteDouble(no_load_speed);
+
+    writer->WriteString("stall_torque");
+    writer->WriteDouble(stall_torque);
+
+    writer->WriteString("max_instantaneous_torque");
+    writer->WriteDouble(max_instantaneous_torque);
+
+    writer->WriteString("nominal_speed_torque_points");
+    for (size_t i=0; i<nominal_speed_torque_points.size(); ++i) {
+        writer->WritePair(nominal_speed_torque_points[i]);
+    }
+
+    writer->WriteString("max_speed_torque_points");
+    for (size_t i=0; i<max_speed_torque_points.size(); ++i) {
+        writer->WritePair(max_speed_torque_points[i]);
+    }
+
+    writer->WriteString("nominal_torque");
+    writer->WriteDouble(nominal_torque);
+
+    writer->WriteString("rotor_inertia");
+    writer->WriteDouble(rotor_inertia);
+
+    writer->WriteString("torque_constant");
+    writer->WriteDouble(torque_constant);
+
+    writer->WriteString("nominal_voltage");
+    writer->WriteDouble(nominal_voltage);
+
+    writer->WriteString("speed_constant");
+    writer->WriteDouble(speed_constant);
+
+    writer->WriteString("starting_current");
+    writer->WriteDouble(starting_current);
+
+
+    writer->WriteString("terminal_resistance");
+    writer->WriteDouble(terminal_resistance);
+
+    writer->WriteString("gear_ratio");
+    writer->WriteDouble(gear_ratio);
+
+    writer->WriteString("coloumb_friction");
+    writer->WriteDouble(coloumb_friction);
+
+    writer->WriteString("viscous_friction");
+    writer->WriteDouble(viscous_friction);
 }
 
 }

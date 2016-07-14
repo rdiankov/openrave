@@ -45,6 +45,8 @@ class OPENRAVE_API ElectricMotorActuatorInfo
 public:
     ElectricMotorActuatorInfo();
 
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+
     std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
     dReal assigned_power_rating; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
@@ -155,12 +157,12 @@ public:
 
         /// \brief unique geometry name
         std::string _name;
-        
+
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
-        
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -737,6 +739,7 @@ private:
     {
 public:
         boost::array< std::string, 3>  _equations;         ///< the original equations
+        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -818,9 +821,9 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
-        
+
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
-        
+
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -887,7 +890,7 @@ public:
         /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
         /// \return min and max of torque limits
         std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
-        
+
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
         }
@@ -1091,7 +1094,7 @@ public:
         virtual void SetWrapOffset(dReal offset, int iaxis=0);
 
         virtual void serialize(std::ostream& o, int options) const;
-        
+
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// @name Internal Hierarchy Methods

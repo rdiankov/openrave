@@ -52,7 +52,36 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 
 void TrajectoryBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    // TODO(jsonserialization)
+    writer->WriteString("type");
+    writer->WriteString(GetXMLId());
+
+    writer->WriteString("configuration");
+    writer->StartObject();
+    GetConfigurationSpecification().SerializeJSON(writer, options);
+    writer->EndObject();
+
+    writer->WriteString("data");
+    writer->StartObject();
+    writer->WriteString("count");
+    writer->WriteInt(GetNumWaypoints());
+    std::vector<dReal> data;
+    GetWaypoints(0,GetNumWaypoints(),data);
+    writer->WriteString("data");
+    writer->WriteArray(data);
+    writer->EndObject();
+
+    if( GetDescription().size() > 0 ) {
+        writer->WriteString("description");
+        writer->WriteString("![CDATA[" + GetDescription() + "]]");
+    }
+
+    if( GetReadableInterfaces().size() > 0 ) {
+        FOREACHC(it, GetReadableInterfaces()) {
+            writer->StartObject();
+            it->second->SerializeJSON(writer, options);
+            writer->EndObject();
+        }
+    }
 }
 
 InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
@@ -106,7 +135,7 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     for(size_t i = 0; i < times.size(); ++i, itdata += dof) {
         Sample(tempdata, times[i]);
         std::copy(tempdata.begin(), tempdata.end(), itdata);
-    }    
+    }
 }
 
 void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times, const ConfigurationSpecification& spec) const

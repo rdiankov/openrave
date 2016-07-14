@@ -122,12 +122,59 @@ void BufferJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
 
     WriteString("indices");
     StartArray();
-    for (int index=0; index < trimesh.indices.size(); ++index) {
+    for (size_t index = 0; index < trimesh.indices.size(); ++index) {
         WriteInt(index);
     }
     EndArray();
 
     EndObject();
+}
+
+void BufferJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a) {
+    StartArray();
+    for (size_t i=0; i<a.size(); ++i) {
+        WriteDouble(a[i]);
+    }
+    EndArray();
+}
+
+void BufferJSONWriter::WriteBoost3Array(const boost::array<uint8_t, 3>& a) {
+    StartArray();
+    for (size_t i=0; i<a.size(); ++i) {
+        WriteInt(a[i]);
+    }
+    EndArray();
+}
+
+void BufferJSONWriter::WriteArray(const std::vector<dReal>& a) {
+    StartArray();
+    for (size_t i=0; i<a.size(); ++i) {
+        WriteDouble(a[i]);
+    }
+    EndArray();
+}
+
+void BufferJSONWriter::WriteArray(const std::vector<int>& a) {
+    StartArray();
+    for (size_t i=0; i<a.size(); ++i) {
+        WriteInt(a[i]);
+    }
+    EndArray();
+}
+
+void BufferJSONWriter::WriteArray(const std::vector<std::string>& a) {
+    StartArray();
+    for (size_t i=0; i<a.size(); ++i) {
+        WriteString(a[i]);
+    }
+    EndArray();
+}
+
+void BufferJSONWriter::WritePair(const std::pair<dReal, dReal>& p) {
+    StartArray();
+    WriteDouble(p.first);
+    WriteDouble(p.second);
+    EndArray();
 }
 
 } // jsonreaders

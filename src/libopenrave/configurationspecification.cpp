@@ -1846,6 +1846,31 @@ std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec
     return O;
 }
 
+void ConfigurationSpecification::Group::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+{
+    writer->WriteString("name");
+    writer->WriteString(name);
+
+    writer->WriteString("offset");
+    writer->WriteInt(offset);
+
+    writer->WriteString("dof");
+    writer->WriteInt(dof);
+
+    writer->WriteString("interpolation");
+    writer->WriteString(interpolation);
+}
+
+void ConfigurationSpecification::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+{
+    FOREACHC(it, _vgroups) {
+        writer->WriteString("group");
+        writer->StartObject();
+        it->SerializeJSON(writer, options);
+        writer->EndObject();
+    }
+}
+
 std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
 {
     if( !!I) {
