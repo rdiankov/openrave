@@ -80,7 +80,7 @@ inline void Swap(dReal& x,dReal& y) {
     dReal temp = x; x = y; y = temp;
 }
 
-inline void LinearCombination(dReal a, std::vector<dReal>& v1, dReal b, std::vector<dReal>& v2, std::vector<dReal>& v3) {
+inline void LinearCombination(dReal a, const std::vector<dReal>& v1, dReal b, const std::vector<dReal>& v2, std::vector<dReal>& v3) {
     size_t v1size = v1.size();
     RAMP_OPTIM_ASSERT(v1size == v2.size());
     if (v3.size() != v1size) {

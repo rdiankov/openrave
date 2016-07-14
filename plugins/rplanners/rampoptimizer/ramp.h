@@ -150,9 +150,9 @@ public:
     // Resize all vectors to zero.
     void Reset();
     void SetInitialValues(const std::vector<dReal>& _x0Vect);
-    void SetConstant(std::vector<dReal>& _x0Vect, dReal t=0);
-    void SetSegment(std::vector<dReal>& _x0Vect, std::vector<dReal>& _x1Vect, std::vector<dReal>& _v0Vect, std::vector<dReal>& _v1Vect, dReal t);
-    void SetZeroDuration(std::vector<dReal>& _x0Vect, std::vector<dReal>& _v0Vect);
+    void SetConstant(const std::vector<dReal>& _x0Vect, dReal t=0);
+    void SetSegment(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _x1Vect, const std::vector<dReal>& _v0Vect, const std::vector<dReal>& _v1Vect, dReal t);
+    void SetZeroDuration(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _v0Vect);
 
     // Cut the ParabolicCurvesND into two halves at time t. The left half is stored in the same
     // ParabolicCurvesND. The right half is returned via remCurvesND
@@ -178,6 +178,7 @@ public:
     // consecutive switch points) has been checked. Note that constraintCheckedVect.size() ==
     // switchpointsList.size() - 1.
     mutable std::vector<bool> constraintCheckedVect;
+    mutable bool constraintChecked;
     // mutable int modified;
 
 }; // end class ParabolicCurversND

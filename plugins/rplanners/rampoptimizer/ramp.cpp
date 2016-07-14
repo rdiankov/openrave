@@ -594,6 +594,7 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
 
     constraintCheckedVect.resize(switchpointsList.size() - 1);
     fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
+    constraintChecked = false;
 }
 
 void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
@@ -631,6 +632,10 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
 
         constraintCheckedVect.reserve(constraintCheckedVect.size() + curvesnd.constraintCheckedVect.size());
         constraintCheckedVect.insert(constraintCheckedVect.end(), curvesnd.constraintCheckedVect.begin(), curvesnd.constraintCheckedVect.end());
+
+        if (constraintChecked) {
+            constraintChecked = constraintChecked && curvesnd.constraintChecked;
+        }
     }
     return;
 }
@@ -679,7 +684,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
 
     constraintCheckedVect.resize(switchpointsList.size() - 1);
     fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
-
+    constraintChecked = false;
     // std::cout << "INITIALIZATION WITH DURATION = " << duration << std::endl;
     return;
 }
@@ -793,7 +798,7 @@ void ParabolicCurvesND::Reset() {
     return;
 }
 
-void ParabolicCurvesND::SetConstant(std::vector<dReal>& _x0Vect, dReal t) {
+void ParabolicCurvesND::SetConstant(const std::vector<dReal>& _x0Vect, dReal t) {
     if (t < 0) {
         RAMP_OPTIM_WARN("Invalid time given: t = %.15e", t);
     }
@@ -811,7 +816,7 @@ void ParabolicCurvesND::SetConstant(std::vector<dReal>& _x0Vect, dReal t) {
     return;
 }
 
-void ParabolicCurvesND::SetSegment(std::vector<dReal>& _x0Vect, std::vector<dReal>& _x1Vect, std::vector<dReal>& _v0Vect, std::vector<dReal>& _v1Vect, dReal t) {
+void ParabolicCurvesND::SetSegment(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _x1Vect, const std::vector<dReal>& _v0Vect, const std::vector<dReal>& _v1Vect, dReal t) {
     if (t <= 0) {
         RAMP_OPTIM_WARN("Invalid time given: t = %.15e", t);
     }
@@ -829,7 +834,7 @@ void ParabolicCurvesND::SetSegment(std::vector<dReal>& _x0Vect, std::vector<dRea
     return;
 }
 
-void ParabolicCurvesND::SetZeroDuration(std::vector<dReal>& _x0Vect, std::vector<dReal>& _v0Vect) {
+void ParabolicCurvesND::SetZeroDuration(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _v0Vect) {
     ndof = _x0Vect.size();
     RAMP_OPTIM_ASSERT(_v0Vect.size() == ndof);
 
