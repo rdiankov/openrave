@@ -911,6 +911,20 @@ void ParabolicCurvesND::TrimBack(dReal t) {
     return;
 }
 
+void ParabolicCurvesND::ToString(std::string &s) const {
+    s = str(boost::format("%d\n%.15e\n")%ndof%duration);
+
+    std::string dummy;
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        for (std::vector<Ramp>::const_iterator itramp = curves[idof].ramps.begin(); itramp != curves[idof].ramps.end(); ++itramp) {
+            dummy = str(boost::format("%.15e %.15e %.15e %.15e")%(itramp->v0)%(itramp->a)%(itramp->duration)%(itramp->x0));
+            s = s + dummy;
+        }
+        s = s + "\n";
+    }
+    return;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string GenerateStringFromVector(const std::vector<dReal>& vect) {
     std::string s = "[ ";

@@ -161,6 +161,8 @@ public:
     void TrimFront(dReal t);
     // Cut the ParabolicCurvesND into two halves at time t and keep the left half.
     void TrimBack(dReal t);
+
+    void ToString(std::string &s) const;
     
     size_t ndof;
     dReal duration;
