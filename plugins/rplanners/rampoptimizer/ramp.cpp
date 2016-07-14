@@ -448,7 +448,7 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     RAMP_OPTIM_ASSERT(t > 0);
 
     Ramp ramp(_v0, (_v1 - _v0)/t, t, _x0);
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, x1, epsilon));
+    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
 
     std::vector<Ramp> _ramps(1);
     _ramps[0] = ramp;
@@ -659,7 +659,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     dVect.resize(0);
     v0Vect.resize(0);
     v1Vect.resize(0);
-    
+
     x0Vect.reserve(ndof);
     x1Vect.reserve(ndof);
     dVect.reserve(ndof);
@@ -676,8 +676,8 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
     // Manage switch points (later I will merge this for loop with the one above)
     switchpointsList = curves[0].switchpointsList;
     std::vector<dReal>::iterator it;
-    for (size_t i = 0; i < ndof; i++) {
-        for (std::size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
+    for (size_t i = 0; i < ndof; ++i) {
+        for (size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
             // Iterate from the second element to the second last element (the first and the last
             // switch points should be the same for every DOF)
             it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
