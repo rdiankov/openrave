@@ -17,6 +17,9 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_kinbody.h"
 
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/uuid/string_generator.hpp>
+
 namespace openravepy {
 
 class PyLink;
@@ -70,7 +73,7 @@ public:
         _bModifiable = true;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
-        _sid = ConvertStringToUnicode(info._sid);
+        _sid = ConvertStringToUnicode(boost::uuids::to_string(info._sid));
         _name = ConvertStringToUnicode(info._name);
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
@@ -95,7 +98,8 @@ public:
         KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
         KinBody::GeometryInfo& info = *pinfo;
         if( !IS_PYTHONOBJECT_NONE(_sid) ) {
-            info._sid = boost::python::extract<std::string>(_sid);
+            boost::uuids::string_generator gen;
+            info._sid = gen(std::string(boost::python::extract<std::string>(_sid)));
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
             info._name = boost::python::extract<std::string>(_name);
@@ -153,7 +157,7 @@ public:
         FOREACHC(itgeominfo, info._vgeometryinfos) {
             _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
         }
-        _sid = ConvertStringToUnicode(info._sid);
+        _sid = ConvertStringToUnicode(boost::uuids::to_string(info._sid));
         _name = ConvertStringToUnicode(info._name);
         _t = ReturnTransform(info._t);
         _tMassFrame = ReturnTransform(info._tMassFrame);
@@ -186,7 +190,8 @@ public:
             info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
         }
         if( !IS_PYTHONOBJECT_NONE(_sid) ) {
-            info._sid = boost::python::extract<std::string>(_sid);
+            boost::uuids::string_generator gen;
+            info._sid = gen(std::string(boost::python::extract<std::string>(_sid)));
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
             info._name = boost::python::extract<std::string>(_name);
@@ -359,7 +364,7 @@ public:
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
         _type = info._type;
-        _sid = ConvertStringToUnicode(info._sid);
+        _sid = ConvertStringToUnicode(boost::uuids::to_string(info._sid));
         _name = ConvertStringToUnicode(info._name);
         _linkname0 = ConvertStringToUnicode(info._linkname0);
         _linkname1 = ConvertStringToUnicode(info._linkname1);
@@ -418,7 +423,8 @@ public:
         KinBody::JointInfo& info = *pinfo;
         info._type = _type;
         if( !IS_PYTHONOBJECT_NONE(_sid) ) {
-            info._sid = boost::python::extract<std::string>(_sid);
+            boost::uuids::string_generator gen;
+            info._sid = gen(std::string(boost::python::extract<std::string>(_sid)));
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
             info._name = boost::python::extract<std::string>(_name);

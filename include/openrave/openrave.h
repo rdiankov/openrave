@@ -81,6 +81,7 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
+#include <boost/uuid/uuid.hpp>
 //#include <boost/cstdint.hpp>
 
 #endif
@@ -2682,6 +2683,7 @@ public:
     virtual void WriteTransform(const Transform& t) = 0;
     virtual void WriteTriMesh(const TriMesh& trimesh) = 0;
 
+    virtual void WriteBoostUUID(const boost::uuids::uuid& uuid) = 0;
     virtual void WriteBoost3Array(const boost::array<dReal, 3>& a) = 0;
     virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a) = 0;
     virtual void WriteArray(const std::vector<dReal>& v) = 0;

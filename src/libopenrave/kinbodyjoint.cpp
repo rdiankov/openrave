@@ -18,12 +18,18 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp> // boost::trim
 #include <boost/lexical_cast.hpp>
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 #include "fparsermulti.h"
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true) {
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _sid(boost::uuids::nil_uuid()), _type(JointNone), _bIsActive(true)
+{
+    boost::uuids::random_generator gen;
+    _sid = gen();
+
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -43,14 +49,14 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsAc
 void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteString(_sid);
+    writer->WriteBoostUUID(_sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    writer->WriteString("linkname0");
+    writer->WriteString("link_name0");
     writer->WriteString(_linkname0);
-    writer->WriteString("linkname1");
+    writer->WriteString("link_name1");
     writer->WriteString(_linkname1);
 
     writer->WriteString("anchor");
@@ -63,25 +69,25 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     writer->EndArray();
 
-    writer->WriteString("currentvalues");
+    writer->WriteString("current_values");
     writer->WriteArray(_vcurrentvalues);
 
     writer->WriteString("resolution");
     writer->WriteBoost3Array(_vresolution);
 
-    writer->WriteString("maxvel");
+    writer->WriteString("max_vel");
     writer->WriteBoost3Array(_vmaxvel);
 
-    writer->WriteString("hardmaxvel");
+    writer->WriteString("hard_max_vel");
     writer->WriteBoost3Array(_vhardmaxvel);
 
-    writer->WriteString("maxaccel");
+    writer->WriteString("max_accel");
     writer->WriteBoost3Array(_vmaxaccel);
 
-    writer->WriteString("maxtorque");
+    writer->WriteString("max_torque");
     writer->WriteBoost3Array(_vmaxtorque);
 
-    writer->WriteString("maxinertia");
+    writer->WriteString("max_inertia");
     writer->WriteBoost3Array(_vmaxinertia);
 
     writer->WriteString("weights");
@@ -90,15 +96,15 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("offsets");
     writer->WriteBoost3Array(_voffsets);
 
-    writer->WriteString("lowerlimit");
+    writer->WriteString("lower_limit");
     writer->WriteBoost3Array(_vlowerlimit);
-    writer->WriteString("upperlimit");
+    writer->WriteString("upper_limit");
     writer->WriteBoost3Array(_vupperlimit);
 
-    writer->WriteString("iscircular");
+    writer->WriteString("is_circular");
     writer->WriteBoost3Array(_bIsCircular);
 
-    writer->WriteString("isactive");
+    writer->WriteString("is_active");
     writer->WriteInt(_bIsActive);
 
     if (!!_trajfollow) {
@@ -119,21 +125,43 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     writer->EndArray();
 
-    writer->WriteString("float_parameters");
-    writer->StartObject();
-    FOREACH(it, _mapFloatParameters) {
-        writer->WriteString(it->first);
-        writer->WriteArray(it->second);
+    if (_mapFloatParameters.size() > 0) {
+        writer->WriteString("float_parameters");
+        writer->StartObject();
+        FOREACHC(kv, _mapFloatParameters) {
+            writer->WriteString(kv->first.c_str());
+            writer->StartArray();
+            FOREACHC(it, kv->second) {
+                writer->WriteDouble(*it);
+            }
+            writer->EndArray();
+        }
+        writer->EndObject();
     }
-    writer->EndObject();
 
-    writer->WriteString("int_parameters");
-    writer->StartObject();
-    FOREACH(it, _mapIntParameters) {
-        writer->WriteString(it->first);
-        writer->WriteArray(it->second);
+    if (_mapIntParameters.size() > 0) {
+        writer->WriteString("int_parameters");
+        writer->StartObject();
+        FOREACHC(kv, _mapIntParameters) {
+            writer->WriteString(kv->first.c_str());
+            writer->StartArray();
+            FOREACHC(it, kv->second) {
+                writer->WriteInt(*it);
+            }
+            writer->EndArray();
+        }
+        writer->EndObject();
     }
-    writer->EndObject();
+
+    if (_mapStringParameters.size() > 0) {
+        writer->WriteString("string_parameters");
+        writer->StartObject();
+        FOREACHC(kv, _mapStringParameters) {
+            writer->WriteString(kv->first);
+            writer->WriteString(kv->second);
+        }
+        writer->EndObject();
+    }
 
     if (!!_infoElectricMotor) {
         writer->WriteString("electric_motor_info");

@@ -33,18 +33,17 @@ public:
     /// \brief holds all user-set manipulator information used to initialize the Manipulator class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API ManipulatorInfo
+    class OPENRAVE_API ManipulatorInfo: public XMLReadable
     {
 public:
-        ManipulatorInfo() : _vdirection(0,0,1) {
-        }
+        ManipulatorInfo();
         virtual ~ManipulatorInfo() {
         }
 
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
-        std::string _sid;
+        boost::uuids::uuid _sid;
 
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
@@ -422,18 +421,17 @@ private:
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
-    class OPENRAVE_API AttachedSensorInfo
+    class OPENRAVE_API AttachedSensorInfo : public XMLReadable
     {
 public:
-        AttachedSensorInfo() {
-        }
+        AttachedSensorInfo();
         virtual ~AttachedSensorInfo() {
         }
 
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
-        std::string _sid;
+        boost::uuids::uuid _sid;
 
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to

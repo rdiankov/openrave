@@ -18,6 +18,7 @@
 #include <openrave/jsonreaders.h>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 namespace OpenRAVE {
 namespace jsonreaders {
@@ -128,6 +129,10 @@ void BufferJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
     EndArray();
 
     EndObject();
+}
+
+void BufferJSONWriter::WriteBoostUUID(const boost::uuids::uuid& uuid) {
+    WriteString(boost::uuids::to_string(uuid));
 }
 
 void BufferJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a) {

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 // used for functions that are also used internally
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
@@ -179,8 +181,11 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
 }
 
-KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
+KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv), _sid(boost::uuids::nil_uuid())
 {
+    boost::uuids::random_generator gen;
+    _sid = gen();
+
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
     _bMakeJoinedLinksAdjacent = true;
@@ -4577,7 +4582,7 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
 void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteString(GetSID());
+    writer->WriteBoostUUID(GetSID());
 
     writer->WriteString("name");
     writer->WriteString(GetName());

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 namespace OpenRAVE {
 
@@ -160,8 +162,10 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
+KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry"), _sid(boost::uuids::nil_uuid())
 {
+    boost::uuids::random_generator gen;
+    _sid = gen();
     _vDiffuseColor = Vector(1,1,1);
     _type = GT_None;
     _fTransparency = 0;
@@ -286,7 +290,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteString(_sid);
+    writer->WriteBoostUUID(_sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);

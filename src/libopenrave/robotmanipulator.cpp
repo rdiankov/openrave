@@ -15,13 +15,21 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <boost/uuid/nil_generator.hpp>
+#include <boost/uuid/random_generator.hpp>
 
 namespace OpenRAVE {
+
+RobotBase::ManipulatorInfo::ManipulatorInfo() : XMLReadable("manipulator"), _sid(boost::uuids::nil_uuid()), _vdirection(0,0,1)
+{
+    boost::uuids::random_generator gen;
+    _sid = gen();
+}
 
 void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteString(_sid);
+    writer->WriteBoostUUID(_sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);

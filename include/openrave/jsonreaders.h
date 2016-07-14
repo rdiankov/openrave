@@ -57,6 +57,7 @@ public:
     virtual void WriteTransform(const Transform& t);
     virtual void WriteTriMesh(const TriMesh& trimesh);
 
+    virtual void WriteBoostUUID(const boost::uuids::uuid& uuid);
     virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);
     virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a);
     virtual void WriteArray(const std::vector<dReal>& v);

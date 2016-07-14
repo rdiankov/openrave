@@ -331,7 +331,7 @@ public:
         writer->EndObject();
         if( GetDescription().size() > 0 ) {
             writer->WriteString("description");
-            writer->WriteString("![CDATA[" + GetDescription() + "]]");
+            writer->WriteString(GetDescription());
         }
 
         if( GetReadableInterfaces().size() > 0 ) {
