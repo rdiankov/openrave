@@ -17,8 +17,11 @@
 #define OPENRAVE_TRAJECTORY_RETIMER
 
 #include "openraveplugindefs.h"
+#include "manipconstraints.h"
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_rplanners", msgid)
+
+namespace rplanners {
 
 class TrajectoryRetimer : public PlannerBase
 {
@@ -44,13 +47,14 @@ public:
     TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nTrajectory re-timing without modifying any of the points. Overwrites the velocities and timestamps.";
+        _bmanipconstraints = false;        
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         params->Validate();
-        _parameters.reset(new TrajectoryTimingParameters());
+        _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
         // reset the cache
         _cachedoldspec = ConfigurationSpecification();
@@ -61,7 +65,7 @@ public:
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new TrajectoryTimingParameters());
+        _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         _parameters->Validate();
         return _InitPlan();
@@ -81,6 +85,15 @@ public:
         for(size_t i = 0; i < _vimaxaccel.size(); ++i) {
             _vimaxaccel[i] = 1/_parameters->_vConfigAccelerationLimit[i];
         }
+        _bmanipconstraints = _parameters->manipname.size() > 0 && (_parameters->maxmanipspeed>0 || _parameters->maxmanipaccel>0);
+        // initialize workspace constraints on manipulators
+        if(_bmanipconstraints ) {
+            if( !_manipconstraintchecker ) {
+                _manipconstraintchecker.reset(new ManipConstraintChecker(GetEnv()));
+            }
+            _manipconstraintchecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
+        }
+        
         return _SupportInterpolation();
     }
 
@@ -116,10 +129,10 @@ public:
 
         ConfigurationSpecification newspec = _parameters->_configurationspecification;
         newspec.AddDerivativeGroups(1,false);
-        bool bWritingAcceleration = false;
+        //bool bWritingAcceleration = false;
         if( _parameters->_interpolation == "quadric" || _parameters->_interpolation == "quintic" ) {
             newspec.AddDerivativeGroups(2,false);
-            bWritingAcceleration = true;
+            //bWritingAcceleration = true;
         }
         newspec.AddDeltaTimeGroup();
         ptraj->GetWaypoints(0,numpoints,_vdiffdata, _parameters->_configurationspecification);
@@ -456,8 +469,9 @@ protected:
         ptraj->Insert(0,data);
     }
 
-    TrajectoryTimingParametersPtr _parameters;
-
+    ConstraintTrajectoryTimingParametersPtr _parameters;
+    boost::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
+    
     // caching
     ConfigurationSpecification _cachedoldspec, _cachednewspec; ///< the configuration specification that the cached structures have been set for
     std::string _cachedposinterpolation;
@@ -470,6 +484,10 @@ protected:
     int _timeoffset;
     std::list<GroupInfoPtr> _listgroupinfo;
     vector<dReal> _vtempdata0, _vtempdata1;
+
+    bool _bmanipconstraints; /// if true, check workspace manip constraints
 };
+
+} // end namespace rplanners
 
 #endif

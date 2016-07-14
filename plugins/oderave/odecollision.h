@@ -160,6 +160,15 @@ public:
     virtual void SetTolerance(OpenRAVE::dReal tolerance) {
     }
 
+    virtual void SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    {
+    }
+
+    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    {
+        return _odespace->GetGeometryGroup();
+    }
+
     virtual bool InitEnvironment()
     {
 //        if( !_odespace->InitEnvironment() ) {

@@ -1268,6 +1268,11 @@ int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
     return _cachetree.UpdateCollisionConfigurations(pbody);
 }
 
+int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
+{
+    return _cachetree.UpdateFreeConfigurations(pbody);
+}
+
 int ConfigurationCache::RemoveFreeConfigurations()
 {
     return _cachetree.RemoveFreeConfigurations();
