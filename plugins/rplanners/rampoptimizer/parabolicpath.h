@@ -104,10 +104,11 @@ class ParabolicPath {
 public:
     ParabolicPath();
     void Initialize(const std::vector<dReal>& qMin, const std::vector<dReal>& qMax, const std::vector<dReal>& velMax, const std::vector<dReal>& accMax);
+    /// \brief Reset all members except those bounds and ndof which have been set during
+    /// initialization. Therefore, we do not change the value of isInitialized.
     inline void Clear() {
         curvesndVect.clear();
         mainSwitchpoints.clear();
-        ndof = 0;
         duration = 0;
     }
     inline bool IsEmpty() const {
@@ -130,7 +131,7 @@ public:
     /// \brief Append pathIn.curvesndVect to curvesndVect and set related values (the appended
     /// curvesnd's initial and final values, x1Vect, etc.) accordingly.
     void AppendParabolicPath(const ParabolicPath &pathIn);
-
+    
     void FindParabolicCurvesNDIndex(dReal t, int &index, dReal &remainder) const;
 
     // \brief Pop out the last ParabolicCurvesND and adjust the related values accordingly.
