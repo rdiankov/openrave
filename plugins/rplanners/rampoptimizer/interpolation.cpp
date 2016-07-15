@@ -112,6 +112,7 @@ bool InterpolateArbitraryVelND(const std::vector<dReal>& x0Vect, const std::vect
         }
         return false;
     }
+    RAMP_OPTIM_PLOG("Interpolation with a fixed duration successful");
 
     std::vector<ParabolicCurve> newCurves(ndof);
     for (size_t i = 0; i < ndof; ++i) {
@@ -120,6 +121,7 @@ bool InterpolateArbitraryVelND(const std::vector<dReal>& x0Vect, const std::vect
             return false;
         }
     }
+    RAMP_OPTIM_PLOG("Imposing joint limits successful");
 
     curvesndOut.Initialize(newCurves);
     return true;
@@ -174,6 +176,9 @@ bool ReinterpolateNDFixedDuration(std::vector<ParabolicCurve>& curvesVectIn, con
         if (curvesVectIn[maxIndex].duration > newDuration) {
             newDuration = curvesVectIn[maxIndex].duration;
             isPrevDurationSafe = true;
+        }
+        else {
+            RAMP_OPTIM_PLOG("The total duration has been changed to %.15e s.", newDuration);
         }
 
         for (size_t i = 0; i < ndof; ++i) {
@@ -341,6 +346,7 @@ bool ImposeVelocityLimit(ParabolicCurve& curve, dReal vm) {
     dReal vp = curve.ramps[0].v1;
     if (Abs(vp) <= vm + epsilon) {
         // The initial curve does not violate the constraint
+        RAMP_OPTIM_PLOG("The initial ParabolicCurve does not violate the velocity constraint");
         return true;
     }
 
@@ -362,6 +368,7 @@ bool ImposeVelocityLimit(ParabolicCurve& curve, dReal vm) {
     ramps[2] = newRamp2;
 
     curve.Initialize(ramps);
+    RAMP_OPTIM_PLOG("Imposing velocity limits successful");
     return true;
 }
 
@@ -394,6 +401,14 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, dReal xmin, dReal xm
     /*
        This function for fixing x-bound violation is taken from OpenRAVE ParabolicPathSmooth library.
      */
+    dReal bmin, bmax;
+    curveIn.GetPeaks(bmin, bmax);
+    if ((bmin >= xmin - epsilon) && (bmax <= xmax + epsilon)) {
+        curveOut.Initialize(curveIn.ramps);
+        RAMP_OPTIM_PLOG("The input ParabolicCurve does not violate joint limits");
+        return true;
+    }
+    
     dReal duration = curveIn.duration;
     dReal x0 = curveIn.x0;
     dReal x1 = curveIn.EvalPos(duration);
@@ -511,18 +526,18 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, dReal xmin, dReal xm
 
     if (newRamps.empty()) {
         RAMP_OPTIM_WARN("Cannot solve for a bounded trajectory");
-        RAMP_OPTIM_WARN("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, vm);
+        RAMP_OPTIM_WARN("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, am);
         return false;
     }
 
     curveOut.Initialize(newRamps);
-    ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, xmin, xmax, vm, vm, x0, x1, v0, v1);
+    ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, xmin, xmax, vm, am, x0, x1, v0, v1);
     if (ret == PCR_Normal) {
         return true;
     }
     else {
         RAMP_OPTIM_PLOG("Finished fixing joint limit violation but CheckParabolicCurve returns %d", ret);
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, vm);
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, am);
         return false;
     }
 }
