@@ -23,7 +23,7 @@ namespace OpenRAVE {
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    OpenRAVE::jsonreaders::StreamPrettyJSONWriter streamwriter(ofstream);
+    OpenRAVE::jsonreaders::StreamJSONWriter streamwriter(ofstream);
     OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
 
     writer->StartObject();
@@ -33,7 +33,7 @@ void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, con
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    OpenRAVE::jsonreaders::StreamPrettyJSONWriter streamwriter(ofstream);
+    OpenRAVE::jsonreaders::StreamJSONWriter streamwriter(ofstream);
     OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
 
     writer->StartObject();
@@ -50,7 +50,7 @@ void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const Attr
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    OpenRAVE::jsonreaders::StreamPrettyJSONWriter streamwriter(ofstream);
+    OpenRAVE::jsonreaders::StreamJSONWriter streamwriter(ofstream);
     OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
 
     writer->StartObject();
