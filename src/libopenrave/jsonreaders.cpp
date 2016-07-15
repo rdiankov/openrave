@@ -17,82 +17,17 @@
 #include "libopenrave.h"
 #include <openrave/jsonreaders.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
 namespace OpenRAVE {
-namespace jsonreaders {
 
-BufferJSONWriter::BufferJSONWriter() : _buffer(), _writer(_buffer)
-{
-}
-
-BufferJSONWriter::~BufferJSONWriter()
-{
-}
-
-const std::string& BufferJSONWriter::GetFormat() const
+const std::string& BaseJSONWriter::GetFormat() const
 {
     static const std::string format("json");
     return format;
 }
 
-const char* BufferJSONWriter::SerializeJSON()
-{
-    return _buffer.GetString();
-}
-
-void BufferJSONWriter::StartArray()
-{
-    _writer.StartArray();
-}
-
-void BufferJSONWriter::EndArray()
-{
-    _writer.EndArray();
-}
-
-void BufferJSONWriter::StartObject()
-{
-    _writer.StartObject();
-}
-
-void BufferJSONWriter::EndObject()
-{
-    _writer.EndObject();
-}
-
-void BufferJSONWriter::WriteNull()
-{
-    _writer.Null();
-}
-
-void BufferJSONWriter::WriteBool(bool value)
-{
-    _writer.Bool(value);
-}
-
-void BufferJSONWriter::WriteInt(int value)
-{
-    _writer.Int(value);
-}
-
-void BufferJSONWriter::WriteDouble(double value)
-{
-    _writer.Double(value);
-}
-
-void BufferJSONWriter::WriteString(const std::string& value)
-{
-    _writer.String(value);
-}
-
-void BufferJSONWriter::WriteString(const char* value)
-{
-    _writer.String(value);
-}
-
-void BufferJSONWriter::WriteVector(const Vector& v, bool quat) {
+void BaseJSONWriter::WriteVector(const Vector& v, bool quat) {
     StartArray();
     WriteDouble(v[0]);
     WriteDouble(v[1]);
@@ -102,8 +37,7 @@ void BufferJSONWriter::WriteVector(const Vector& v, bool quat) {
     }
     EndArray();
 }
-
-void BufferJSONWriter::WriteTransform(const Transform& t) {
+void BaseJSONWriter::WriteTransform(const Transform& t) {
     StartObject();
     WriteString("rotate");
     WriteVector(t.rot, true);
@@ -111,8 +45,7 @@ void BufferJSONWriter::WriteTransform(const Transform& t) {
     WriteVector(t.trans);
     EndObject();
 }
-
-void BufferJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
+void BaseJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
     StartObject();
     WriteString("vertices");
     StartArray();
@@ -131,56 +64,49 @@ void BufferJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
     EndObject();
 }
 
-void BufferJSONWriter::WriteBoostUUID(const boost::uuids::uuid& uuid) {
+void BaseJSONWriter::WriteBoostUUID(const boost::uuids::uuid& uuid) {
     WriteString(boost::uuids::to_string(uuid));
 }
-
-void BufferJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a) {
+void BaseJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a) {
     StartArray();
     for (size_t i=0; i<a.size(); ++i) {
         WriteDouble(a[i]);
     }
     EndArray();
 }
-
-void BufferJSONWriter::WriteBoost3Array(const boost::array<uint8_t, 3>& a) {
+void BaseJSONWriter::WriteBoost3Array(const boost::array<uint8_t, 3>& a) {
     StartArray();
     for (size_t i=0; i<a.size(); ++i) {
         WriteInt(a[i]);
     }
     EndArray();
 }
-
-void BufferJSONWriter::WriteArray(const std::vector<dReal>& a) {
+void BaseJSONWriter::WriteArray(const std::vector<dReal>& a) {
     StartArray();
     for (size_t i=0; i<a.size(); ++i) {
         WriteDouble(a[i]);
     }
     EndArray();
 }
-
-void BufferJSONWriter::WriteArray(const std::vector<int>& a) {
+void BaseJSONWriter::WriteArray(const std::vector<int>& a) {
     StartArray();
     for (size_t i=0; i<a.size(); ++i) {
         WriteInt(a[i]);
     }
     EndArray();
 }
-
-void BufferJSONWriter::WriteArray(const std::vector<std::string>& a) {
+void BaseJSONWriter::WriteArray(const std::vector<std::string>& a) {
     StartArray();
     for (size_t i=0; i<a.size(); ++i) {
         WriteString(a[i]);
     }
     EndArray();
 }
-
-void BufferJSONWriter::WritePair(const std::pair<dReal, dReal>& p) {
+void BaseJSONWriter::WritePair(const std::pair<dReal, dReal>& p) {
     StartArray();
     WriteDouble(p.first);
     WriteDouble(p.second);
     EndArray();
 }
 
-} // jsonreaders
 } // OpenRAVE

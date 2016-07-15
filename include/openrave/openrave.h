@@ -2665,7 +2665,7 @@ public:
     /// \brief return the format for the data writing, should be all lower capitals.
     ///
     /// Samples formats are 'json'
-    virtual const std::string& GetFormat() const = 0;
+    virtual const std::string& GetFormat() const;
 
     virtual void StartArray() = 0;
     virtual void EndArray() = 0;
@@ -2679,17 +2679,17 @@ public:
     virtual void WriteString(const std::string& value) = 0;
     virtual void WriteString(const char* value) = 0;
 
-    virtual void WriteVector(const Vector& v, bool quat = false) = 0;
-    virtual void WriteTransform(const Transform& t) = 0;
-    virtual void WriteTriMesh(const TriMesh& trimesh) = 0;
+    virtual void WriteVector(const Vector& v, bool quat = false);
+    virtual void WriteTransform(const Transform& t);
+    virtual void WriteTriMesh(const TriMesh& trimesh);
 
-    virtual void WriteBoostUUID(const boost::uuids::uuid& uuid) = 0;
-    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a) = 0;
-    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a) = 0;
-    virtual void WriteArray(const std::vector<dReal>& v) = 0;
-    virtual void WriteArray(const std::vector<int>& v) = 0;
-    virtual void WriteArray(const std::vector<std::string>& v) = 0;
-    virtual void WritePair(const std::pair<dReal, dReal>& p) = 0;
+    virtual void WriteBoostUUID(const boost::uuids::uuid& uuid);
+    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);
+    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a);
+    virtual void WriteArray(const std::vector<dReal>& a);
+    virtual void WriteArray(const std::vector<int>& a);
+    virtual void WriteArray(const std::vector<std::string>& a);
+    virtual void WritePair(const std::pair<dReal, dReal>& p);
 };
 
 

@@ -436,11 +436,12 @@ void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object ore
 
 object PyInterfaceBase::SerializeJSON(object ooptions)
 {
-    OpenRAVE::jsonreaders::BufferJSONWriter writer;
-    writer.StartObject();
-    _pbase->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
-    writer.EndObject();
-    return object(std::string(writer.SerializeJSON()));
+    OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
+    OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+    writer->StartObject();
+    _pbase->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
+    writer->EndObject();
+    return object(std::string(bufferwriter.GetBuffer()));
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1698,11 +1699,12 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        OpenRAVE::jsonreaders::BufferJSONWriter writer;
-        writer.StartObject();
-        _penv->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
-        writer.EndObject();
-        return object(std::string(writer.SerializeJSON()));
+        OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
+        OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+        writer->StartObject();
+        _penv->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
+        writer->EndObject();
+        return object(std::string(bufferwriter.GetBuffer()));
     }
 };
 

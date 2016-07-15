@@ -15,21 +15,58 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
+#include <fstream>
+#include <openrave/jsonreaders.h>
 
-namespace OpenRAVE
-{
+namespace OpenRAVE {
 
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
 {
+    std::ofstream ofstream(filename.c_str());
+    OpenRAVE::jsonreaders::StreamPrettyJSONWriter streamwriter(ofstream);
+    OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
 
+    writer->StartObject();
+    penv->SerializeJSON(writer, 0);
+    writer->EndObject();
 }
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
 {
+    std::ofstream ofstream(filename.c_str());
+    OpenRAVE::jsonreaders::StreamPrettyJSONWriter streamwriter(ofstream);
+    OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
 
+    writer->StartObject();
+
+    writer->WriteString("bodies");
+    writer->StartArray();
+    writer->StartObject();
+    pbody->SerializeJSON(writer, 0);
+    writer->EndObject();
+    writer->EndArray();
+
+    writer->EndObject();
 }
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
 {
+    std::ofstream ofstream(filename.c_str());
+    OpenRAVE::jsonreaders::StreamPrettyJSONWriter streamwriter(ofstream);
+    OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
 
+    writer->StartObject();
+
+    if (listbodies.size() > 0) {
+        writer->WriteString("bodies");
+        writer->StartArray();
+        FOREACHC (it,listbodies) {
+            writer->StartObject();
+            (*it)->SerializeJSON(writer, 0);
+            writer->EndObject();
+        }
+        writer->EndArray();
+    }
+
+    writer->EndObject();
 }
 
 }

@@ -208,11 +208,12 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        OpenRAVE::jsonreaders::BufferJSONWriter writer;
-        writer.StartObject();
-        _ptrajectory->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
-        writer.EndObject();
-        return object(std::string(writer.SerializeJSON()));
+        OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
+        OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+        writer->StartObject();
+        _ptrajectory->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
+        writer->EndObject();
+        return object(std::string(bufferwriter.GetBuffer()));
     }
 
     bool Read(const string& s, object probot) {

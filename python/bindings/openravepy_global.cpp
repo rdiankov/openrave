@@ -66,14 +66,14 @@ public:
         return ConvertStringToUnicode(ss.str());
     }
 
-    object SerializeJSON(int options=0)
+    object SerializeJSON(object ooptions=object())
     {
-        OpenRAVE::jsonreaders::BufferJSONWriter writer;
-        writer.StartObject();
-        _xmlreadable->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),options);
-        writer.EndObject();
-        // TODO(jsonserialization): ConvertStringToUnicode? json is utf-8 encoded, converting to unicode probably will mess things up
-        return object(std::string(writer.SerializeJSON()));
+        OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
+        OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+        writer->StartObject();
+        _xmlreadable->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
+        writer->EndObject();
+        return object(std::string(bufferwriter.GetBuffer()));
     }
 
     XMLReadablePtr GetXMLReadable() {
