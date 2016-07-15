@@ -411,6 +411,9 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
         (*itlink)->_vGeometries.resize(pvinfos->size());
         for(size_t i = 0; i < pvinfos->size(); ++i) {
             (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
+            if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
+                (*itlink)->_vGeometries[i]->InitCollisionMesh();
+            }
         }
         (*itlink)->_Update(false);
     }
@@ -418,12 +421,13 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     _ResetInternalCollisionCache();
 }
 
-void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries) {
-    BOOST_ASSERT( linkgeometries.size() == _veclinks.size() );
-
+void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
+{
+    OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
     FOREACH(itlink, _veclinks) {
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
-        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[(*itlink)->GetIndex()];
+        Link& link = **itlink;
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
         it->second.resize(geometries.size());
         std::copy(geometries.begin(),geometries.end(),it->second.begin());
     }
@@ -449,7 +453,9 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         plink->_index = static_cast<int>(_veclinks.size());
         FOREACHC(itgeominfo,info._vgeometryinfos) {
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
-            geom->_info.InitCollisionMesh();
+            if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing
+                geom->_info.InitCollisionMesh();
+            }
             plink->_vGeometries.push_back(geom);
             plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
         }

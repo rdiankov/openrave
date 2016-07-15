@@ -555,7 +555,7 @@ private:
             return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
         case OpenRAVE::GT_Container:
-          {
+        {
             typedef std::shared_ptr<fcl::Box> BoxPtr;
             BoxPtr xfrontBox = std::make_shared<fcl::Box>(info._vGeomData.x - info._vGeomData2.x, info._vGeomData.y*2.0f, info._vGeomData.z*2.0f);
             BoxPtr xbackBox = std::make_shared<fcl::Box>(info._vGeomData.x - info._vGeomData2.x, info._vGeomData.y*2.0f, info._vGeomData.z*2.0f);
@@ -571,7 +571,7 @@ private:
             boxFaces.push_back(std::make_shared<fcl::CollisionObject>(zbackBox, fcl::Transform3f(fcl::Vec3f(0.0f, 0.0f, -0.5f * (info._vGeomData.z + info._vGeomData2.z)))));
 
             return std::make_shared<fcl::Container>(boxFaces);
-          }
+        }
 
         case OpenRAVE::GT_TriMesh:
         {
@@ -649,6 +649,27 @@ private:
         }
     }
 
+    /// \brief controls whether the kinbody info is removed during the destructor
+    class KinBodyInfoRemover
+    {
+public:
+        KinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
+            _bDoRemove = true;
+        }
+        ~KinBodyInfoRemover() {
+            if( _bDoRemove ) {
+                _fn();
+            }
+        }
+
+        void ResetRemove() {
+            _bDoRemove = false;
+        }
+
+private:
+        boost::function<void()> _fn;
+        bool _bDoRemove;
+    };
     void _ResetCurrentGeometryCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
@@ -656,7 +677,9 @@ private:
         //RAVELOG_VERBOSE_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
             pinfo->nGeometryUpdateStamp++;
+            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
             InitKinBody(pbody, pinfo);
+            remover.ResetRemove(); // succeeded
         }
         _cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
     }
@@ -668,7 +691,9 @@ private:
         //RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
             pinfo->nGeometryUpdateStamp++;
+            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
             InitKinBody(pbody, pinfo);
+            remover.ResetRemove(); // succeeded
         }
         KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
         _cachedpinfo.erase(pbody->GetEnvironmentId());
