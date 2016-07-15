@@ -411,6 +411,9 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
         (*itlink)->_vGeometries.resize(pvinfos->size());
         for(size_t i = 0; i < pvinfos->size(); ++i) {
             (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
+            if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
+                (*itlink)->_vGeometries[i]->InitCollisionMesh();
+            }
         }
         (*itlink)->_Update(false);
     }
@@ -450,7 +453,9 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         plink->_index = static_cast<int>(_veclinks.size());
         FOREACHC(itgeominfo,info._vgeometryinfos) {
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
-            geom->_info.InitCollisionMesh();
+            if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing
+                geom->_info.InitCollisionMesh();
+            }
             plink->_vGeometries.push_back(geom);
             plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
         }

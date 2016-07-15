@@ -42,6 +42,11 @@ Vector ConvertQuaternionFromFCL(fcl::Quaternion3f const &v) {
     return Vector(v.getW(), v.getX(), v.getY(), v.getZ());
 }
 
+fcl::AABB ConvertAABBToFcl(const OpenRAVE::AABB& bv) {
+   return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
+}
+
+
 template <class T>
 CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std::vector<fcl::Triangle> const &triangles)
 {
@@ -242,22 +247,19 @@ public:
 
             if( link->vgeoms.size() == 0 ) {
                 RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
-            }
-            else if( link->vgeoms.size() == 1) {
-                // set the unique geometry as its own bounding volume
-                link->linkBV = link->vgeoms[0];
             } else {
                 // create the bounding volume for the link
-                fcl::BVHModel<fcl::OBB> model;
-                model.beginModel();
-                // TODO : Check if I can assume that the collision mesh are already initialized
-                for(GeometryInfoIterator it = begingeom; it != endgeom; ++it) {
-                    _AddGeomInfoToBVHSubmodel(model, *it);
+                KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
+                fcl::AABB enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
+                for(GeometryInfoIterator it = ++begingeom; it != endgeom; ++it) {
+                    KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *it);
+                    enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
-                model.endModel();
-                OPENRAVE_ASSERT_OP( model.getNumBVs(), !=, 0);
-                link->linkBV = _CreateTransformCollisionPairFromOBB(model.getBV(0).bv);
-                link->linkBV.second->setUserData(link.get());
+                CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
+                CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
+                Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
+                pfclcollBV->setUserData(link.get());
+                link->linkBV = std::make_pair(trans, pfclcollBV);
             }
 
             //link->nLastStamp = pinfo->nLastStamp;
@@ -625,6 +627,27 @@ private:
         }
     }
 
+    /// \brief controls whether the kinbody info is removed during the destructor
+    class KinBodyInfoRemover
+    {
+    public:
+        KinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
+            _bDoRemove = true;
+        }
+        ~KinBodyInfoRemover() {
+            if( _bDoRemove ) {
+                _fn();
+            }
+        }
+    
+        void ResetRemove() {
+            _bDoRemove = false;
+        }
+        
+    private:
+        boost::function<void()> _fn;
+        bool _bDoRemove;
+    };
     void _ResetCurrentGeometryCallback(boost::weak_ptr<KinBodyInfo> _pinfo)
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
@@ -632,7 +655,9 @@ private:
         //RAVELOG_VERBOSE_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
             pinfo->nGeometryUpdateStamp++;
+            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
             InitKinBody(pbody, pinfo);
+            remover.ResetRemove(); // succeeded
         }
         _cachedpinfo[pbody->GetEnvironmentId()].erase(std::string());
     }
@@ -644,7 +669,9 @@ private:
         //RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
             pinfo->nGeometryUpdateStamp++;
+            KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
             InitKinBody(pbody, pinfo);
+            remover.ResetRemove(); // succeeded
         }
         KinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentId()][std::string()];
         _cachedpinfo.erase(pbody->GetEnvironmentId());
