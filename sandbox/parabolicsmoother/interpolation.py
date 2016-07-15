@@ -855,7 +855,9 @@ def _CalculateLeastUpperBoundInoperativeInterval(x0, x1, v0, v1, vm, am):
             assert(dExcess > 0)
             deltaTime = mp.fdiv(dExcess, vm)
             newDuration = Add(newDuration, deltaTime)
-        
+
+        log.debug('Calculation successful: T0 = {0}; T1 = {1}; T2 = {2}; T3 = {3}'.\
+                format(mp.nstr(T0, n=_prec), mp.nstr(T1, n=_prec), mp.nstr(T2, n=_prec), mp.nstr(T3, n=_prec)))
         newDuration = Mul(newDuration, number('1.01')) # add 1% safety bound
         return newDuration
     else:
