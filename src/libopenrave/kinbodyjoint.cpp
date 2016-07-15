@@ -54,10 +54,27 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    writer->WriteString("link_name0");
+    writer->WriteString("type");
+    switch (_type) {
+    case JointRevolute:
+        writer->WriteString("revolute");
+        break;
+    case JointPrismatic:
+        writer->WriteString("prismatic");
+        break;
+    case JointNone:
+        writer->WriteNull();
+        break;
+    default:
+        writer->WriteInt(static_cast<int>(_type));
+        break;
+    }
+
+    writer->WriteString("link_names");
+    writer->StartArray();
     writer->WriteString(_linkname0);
-    writer->WriteString("link_name1");
     writer->WriteString(_linkname1);
+    writer->EndArray();
 
     writer->WriteString("anchor");
     writer->WriteVector(_vanchor);
@@ -105,7 +122,7 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteBoost3Array(_bIsCircular);
 
     writer->WriteString("is_active");
-    writer->WriteInt(_bIsActive);
+    writer->WriteBool(_bIsActive);
 
     if (!!_trajfollow) {
         writer->WriteString("trajectory");
@@ -114,16 +131,27 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
 
-    writer->WriteString("mimic");
-    writer->StartArray();
-    for (size_t i = 0; i < _vmimic.size(); ++i) {
-        if (!!_vmimic[i]) {
-            writer->StartObject();
-            _vmimic[i]->SerializeJSON(writer, options);
-            writer->EndObject();
+    if (_vmimic.size() > 0) {
+        bool bfound = false;
+        for (size_t i = 0; i < _vmimic.size(); ++i) {
+            if (!!_vmimic[i]) {
+                bfound = true;
+                break;
+            }
+        }
+        if (bfound) {
+            writer->WriteString("mimic");
+            writer->StartArray();
+            for (size_t i = 0; i < _vmimic.size(); ++i) {
+                if (!!_vmimic[i]) {
+                    writer->StartObject();
+                    _vmimic[i]->SerializeJSON(writer, options);
+                    writer->EndObject();
+                }
+            }
+            writer->EndArray();
         }
     }
-    writer->EndArray();
 
     if (_mapFloatParameters.size() > 0) {
         writer->WriteString("float_parameters");

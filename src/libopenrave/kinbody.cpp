@@ -4587,6 +4587,9 @@ void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("name");
     writer->WriteString(GetName());
 
+    writer->WriteString("transform");
+    writer->WriteTransform(GetTransform());
+
     writer->WriteString("links");
     writer->StartArray();
     FOREACHC(it,GetLinks()) {
@@ -4613,6 +4616,14 @@ void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
     writer->EndArray();
+
+    std::vector<dReal> vdofvalues;
+    GetDOFValues(vdofvalues);
+    if (vdofvalues.size() > 0) {
+        writer->WriteString("dof_values");
+        writer->WriteArray(vdofvalues);
+    }
+
 }
 
 void KinBody::serialize(std::ostream& o, int options) const
