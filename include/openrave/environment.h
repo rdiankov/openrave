@@ -640,6 +640,9 @@ public:
     inline int GetId() const {
         return __nUniqueId;
     }
+
+    /// \brief serialize environment as json
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) = 0;
     
 protected:
     virtual const char* GetHash() const {

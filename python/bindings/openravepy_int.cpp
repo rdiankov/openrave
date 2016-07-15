@@ -1695,6 +1695,15 @@ public:
     EnvironmentBasePtr GetEnv() const {
         return _penv;
     }
+
+    object SerializeJSON(object ooptions=object())
+    {
+        OpenRAVE::jsonreaders::BufferJSONWriter writer;
+        writer.StartObject();
+        _penv->SerializeJSON(OpenRAVE::jsonreaders::BufferJSONWriterPtr(&writer,utils::null_deleter()),pyGetIntFromPy(ooptions,0));
+        writer.EndObject();
+        return object(std::string(writer.SerializeJSON()));
+    }
 };
 
 PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
@@ -2111,6 +2120,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                     .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                     .def("SetUnit",&PyEnvironmentBase::SetUnit, args("unitname","unitmult"),  DOXY_FN(EnvironmentBase,SetUnit))
+                    .def("SerializeJSON",&PyEnvironmentBase::SerializeJSON,SerializeJSON_overloads(args("options"),DOXY_FN(EnvironmentBase,SerializeJSON)))
                     .def("__enter__",&PyEnvironmentBase::__enter__)
                     .def("__exit__",&PyEnvironmentBase::__exit__)
                     .def("__eq__",&PyEnvironmentBase::__eq__)

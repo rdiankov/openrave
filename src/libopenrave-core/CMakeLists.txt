@@ -26,6 +26,10 @@ if( COLLADA_DOM_FOUND )
   set(openrave_core_SOURCES ${openrave_core_SOURCES} colladaparser/colladareader.cpp colladaparser/colladawriter.cpp colladaparser/colladacommon.cpp)
 endif()
 
+# if( RAPIDJSON_FOUND )
+  set(openrave_core_SOURCES ${openrave_core_SOURCES} jsonparser/jsonreader.cpp jsonparser/jsonwriter.cpp jsonparser/jsoncommon.cpp)
+# endif()
+
 if( ASSIMP_FOUND )
   include_directories(${ASSIMP_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${ASSIMP_LIBRARY_DIRS})

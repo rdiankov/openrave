@@ -2591,6 +2591,9 @@ void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
     writer->EndArray();
+
+    writer->WriteString("is_robot");
+    writer->WriteBool(true);
 }
 
 const std::string& RobotBase::GetRobotStructureHash() const

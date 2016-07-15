@@ -19,6 +19,7 @@
 
 #include "ravep.h"
 #include "colladaparser/colladacommon.h"
+#include "jsonparser/jsoncommon.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -460,6 +461,9 @@ public:
                 return true;
             }
         }
+        else if( _IsJSONFile(filename) ) {
+            // TODO(jsonserialization)
+        }
         else if( _IsXFile(filename) ) {
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
@@ -492,6 +496,9 @@ public:
         if( _IsColladaData(data) ) {
             return RaveParseColladaData(shared_from_this(), data, atts);
         }
+        if( _IsJSONData(data) ) {
+            // TODO(jsonserialization)
+        }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
@@ -501,7 +508,12 @@ public:
         std::list<KinBodyPtr> listbodies;
         switch(options) {
         case SO_Everything:
-            RaveWriteColladaFile(shared_from_this(),filename,atts);
+            if( _IsJSONFile(filename) ) {
+                RaveWriteJSONFile(shared_from_this(),filename,atts);
+            }
+            else {
+                RaveWriteColladaFile(shared_from_this(),filename,atts);
+            }
             return;
 
         case SO_Body: {
@@ -547,11 +559,21 @@ public:
         }
         }
 
-        if( listbodies.size() == 1 ) {
-            RaveWriteColladaFile(listbodies.front(),filename,atts);
+        if( _IsJSONFile(filename) ) {
+            if( listbodies.size() == 1 ) {
+                RaveWriteJSONFile(listbodies.front(),filename,atts);
+            }
+            else {
+                RaveWriteJSONFile(listbodies,filename,atts);
+            }
         }
         else {
-            RaveWriteColladaFile(listbodies,filename,atts);
+            if( listbodies.size() == 1 ) {
+                RaveWriteColladaFile(listbodies.front(),filename,atts);
+            }
+            else {
+                RaveWriteColladaFile(listbodies,filename,atts);
+            }
         }
     }
 
@@ -2467,6 +2489,29 @@ protected:
             lockenv.reset();
         }
         return lockenv;
+    }
+
+    /// \brief serialize environment as json
+    void SerializeJSON(BaseJSONWriterPtr writer, int options=0)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+
+        writer->WriteString("unit");
+        writer->StartArray();
+        writer->WriteString(_unit.first);
+        writer->WriteDouble(_unit.second);
+        writer->EndArray();
+
+        if (_vecbodies.size() > 0) {
+            writer->WriteString("bodies");
+            writer->StartArray();
+            FOREACHC (it,_vecbodies) {
+                writer->StartObject();
+                (*it)->SerializeJSON(writer, options);
+                writer->EndObject();
+            }
+            writer->EndArray();
+        }
     }
 
     static bool _IsColladaURI(const std::string& uri)
