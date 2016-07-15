@@ -4184,9 +4184,9 @@ private:
                                 continue;
                             }
 
-                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("mat")).getElement());
+                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
                             if( !dommat ) {
-                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("mat"));
+                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
                             } else {
                               mapmaterials["mat0"] = dommat;
                             }

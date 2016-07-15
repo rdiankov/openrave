@@ -2213,7 +2213,7 @@ private:
                         igeom++;
                         domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
                         bind_instance_geometry->setAttribute("url", (string("#")+geomid).c_str());
-                        bind_instance_geometry->setAttribute("mat", (string("#")+geomid+string("_mat")).c_str());
+                        bind_instance_geometry->setAttribute("material", (string("#")+geomid+string("_mat")).c_str());
                     }
                 }
             }
