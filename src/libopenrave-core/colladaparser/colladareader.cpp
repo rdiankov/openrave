@@ -4184,9 +4184,17 @@ private:
                                 continue;
                             }
 
+                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("mat")).getElement());
+                            if( !dommat ) {
+                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("mat"));
+                            } else {
+                              mapmaterials["mat0"] = dommat;
+                            }
+
+
                             // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
                             if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
-                                RAVELOG_WARN_FORMAT("failed to add g geometry to eometry group %s, link %s\n", groupname%plink->GetName());
+                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
                                 continue;
                             }
 
