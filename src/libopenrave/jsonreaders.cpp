@@ -64,6 +64,30 @@ void BaseJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
     EndObject();
 }
 
+void BaseJSONWriter::WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics)
+{
+    WriteString("fx");
+    WriteDouble(intrinsics.fx);
+
+    WriteString("fy");
+    WriteDouble(intrinsics.fy);
+
+    WriteString("cx");
+    WriteDouble(intrinsics.cx);
+
+    WriteString("cy");
+    WriteDouble(intrinsics.cy);
+
+    WriteString("distortion_model");
+    WriteString(intrinsics.distortion_model);
+
+    WriteString("distortion_coeffs");
+    WriteArray(intrinsics.distortion_coeffs);
+
+    WriteString("focal_length");
+    WriteDouble(intrinsics.focal_length);
+}
+
 void BaseJSONWriter::WriteBoostUUID(const boost::uuids::uuid& uuid) {
     WriteString(boost::uuids::to_string(uuid));
 }

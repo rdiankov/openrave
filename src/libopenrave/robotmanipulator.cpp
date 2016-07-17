@@ -34,13 +34,26 @@ void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int opt
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    writer->WriteString("local_transform");
+    writer->WriteString("localtool_transform");
     writer->WriteTransform(_tLocalTool);
+
+    writer->WriteString("chucking_direction");
+    writer->WriteArray(_vChuckingDirection);
 
     writer->WriteString("local_direction");
     writer->WriteVector(_vdirection);
 
-    // TODO(jsonserialization): need additional manipulator info like frame tip and frame origin
+    writer->WriteString("baselink_name");
+    writer->WriteString(_sBaseLinkName);
+
+    writer->WriteString("effectorlink_name");
+    writer->WriteString(_sEffectorLinkName);
+
+    writer->WriteString("iksolver_xmlid");
+    writer->WriteString(_sIkSolverXMLId);
+
+    writer->WriteString("gripperjoint_names");
+    writer->WriteArray(_vGripperJointNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
@@ -684,7 +697,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
     }
 
     bool bincollision = false;
-    
+
     FOREACHC(itlink,vattachedlinks) {
         if( probot->CheckLinkCollision((*itlink)->GetIndex(), report) ) {
             if( !bAllLinkCollisions ) { // if checking all collisions, have to continue

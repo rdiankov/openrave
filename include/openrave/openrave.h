@@ -2682,6 +2682,7 @@ public:
     virtual void WriteVector(const Vector& v, bool quat = false);
     virtual void WriteTransform(const Transform& t);
     virtual void WriteTriMesh(const TriMesh& trimesh);
+    virtual void WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics);
 
     virtual void WriteBoostUUID(const boost::uuids::uuid& uuid);
     virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);

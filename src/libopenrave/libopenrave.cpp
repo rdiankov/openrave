@@ -480,7 +480,7 @@ public:
         if( !!pOPENRAVE_DEFAULT_VIEWER && strlen(pOPENRAVE_DEFAULT_VIEWER) > 0 ) {
             _defaultviewertype = std::string(pOPENRAVE_DEFAULT_VIEWER);
         }
-        
+
         _UpdateDataDirs();
         return 0;
     }
@@ -837,7 +837,7 @@ protected:
         if( _defaultviewertype.size() > 0 ) {
             return _defaultviewertype;
         }
-        
+
         // get the first viewer that can be loadable, with preferenace to qtosg, qtcoin
         boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase;
         if( !!pdatabase ) {
@@ -2397,8 +2397,27 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
 
 void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    SensorGeometry::SerializeJSON(writer, options);
-    // TODO(jsonserialization)
+    writer->WriteString("sensor_reference");
+    writer->WriteString(sensor_reference);
+
+    writer->WriteString("target_region");
+    writer->WriteString(target_region);
+
+    writer->WriteString("camera_intrinsics");
+    writer->WriteCameraIntrinsics(intrinsics);
+    writer->EndObject();
+
+    writer->WriteString("width");
+    writer->WriteInt(width);
+
+    writer->WriteString("height");
+    writer->WriteInt(height);
+
+    writer->WriteString("measurement_time");
+    writer->WriteDouble(measurement_time);
+
+    writer->WriteString("gain");
+    writer->WriteDouble(gain);
 }
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
