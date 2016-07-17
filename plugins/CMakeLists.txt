@@ -42,7 +42,7 @@ if( OPT_ODE_COLLISION )
   set(PLUGINS ${PLUGINS} oderave)
 endif()
 if( OPT_FCL_COLLISION )
-  set(PLUGINS ${PLUGINS} fclrave)
+	#  set(PLUGINS ${PLUGINS} fclrave)
 endif()
 
 foreach(PLUGIN ${PLUGINS})
