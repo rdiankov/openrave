@@ -64,8 +64,34 @@ void BaseJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
     EndObject();
 }
 
+void BaseJSONWriter::WriteIkParameterization(const IkParameterization& ikparam) {
+    StartObject();
+
+    WriteString("type");
+    WriteString(ikparam.GetName());
+
+    switch(ikparam.GetType()) {
+    case IKP_Transform6D:
+        WriteString("rotate");
+        WriteVector(ikparam.GetTransform6D().rot, true);
+        WriteString("translate");
+        WriteVector(ikparam.GetTransform6D().trans);
+        break;
+    case IKP_TranslationDirection5D:
+        WriteString("translate");
+        WriteVector(ikparam.GetTranslationDirection5D().pos);
+        WriteString("direction");
+        WriteVector(ikparam.GetTranslationDirection5D().dir);
+        break;
+    }
+
+    EndObject();
+}
+
 void BaseJSONWriter::WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics)
 {
+    StartObject();
+
     WriteString("fx");
     WriteDouble(intrinsics.fx);
 
@@ -86,6 +112,8 @@ void BaseJSONWriter::WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& i
 
     WriteString("focal_length");
     WriteDouble(intrinsics.focal_length);
+
+    EndObject();
 }
 
 void BaseJSONWriter::WriteBoostUUID(const boost::uuids::uuid& uuid) {

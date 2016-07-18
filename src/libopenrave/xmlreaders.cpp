@@ -41,6 +41,12 @@ void StringXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) const
     writer->SetCharData(_data);
 }
 
+void StringXMLReadable::SerializeJSON(BaseJSONWriterPtr writer, int options)
+{
+    writer->WriteString("data");
+    writer->WriteString(_data);
+}
+
 const std::string& StringXMLReadable::GetData() const
 {
     return _data;
@@ -58,6 +64,24 @@ void HierarchicalXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) co
         (*it)->Serialize(childwriter,options);
     }
 }
+
+
+void HierarchicalXMLReadable::SerializeJSON(BaseJSONWriterPtr writer, int options)
+{
+    writer->WriteString("data");
+    writer->WriteString(_data);
+    FOREACHC(it, _atts) {
+        writer->WriteString(it->first);
+        writer->WriteString(it->second);
+    }
+    FOREACHC(it, _listchildren) {
+        writer->WriteString((*it)->GetXMLId());
+        writer->StartObject();
+        (*it)->SerializeJSON(writer, options);
+        writer->EndObject();
+    }
+}
+
 
 TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
 {

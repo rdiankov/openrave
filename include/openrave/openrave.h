@@ -2706,6 +2706,9 @@ public:
     /// \brief writes an OpenRAVE TriMesh
     virtual void WriteTriMesh(const TriMesh& trimesh);
 
+    /// \brief writes an OpenRAVE ikparam
+    virtual void WriteIkParameterization(const IkParameterization& ikparam);
+
     /// \brief writes an OpenRAVE CameraIntrinsics
     virtual void WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics);
 

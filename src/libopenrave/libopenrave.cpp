@@ -2426,7 +2426,7 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 
 void SensorBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
+    InterfaceBase::SerializeJSON(writer, options);
 }
 
 class CustomSamplerCallbackData : public boost::enable_shared_from_this<CustomSamplerCallbackData>, public UserData

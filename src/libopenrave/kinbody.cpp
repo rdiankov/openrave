@@ -4624,6 +4624,7 @@ void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->WriteArray(vdofvalues);
     }
 
+    InterfaceBase::SerializeJSON(writer, options);
 }
 
 void KinBody::serialize(std::ostream& o, int options) const

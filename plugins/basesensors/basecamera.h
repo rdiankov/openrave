@@ -393,7 +393,6 @@ public:
 
     virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0)
     {
-        
         writer->WriteString("geom");
         writer->StartObject();
         _pgeom->SerializeJSON(writer, options);
@@ -402,6 +401,8 @@ public:
         writer->WriteVector(_vColor);
         writer->WriteString("format");
         writer->WriteString(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+
+        SensorBase::SerializeJSON(writer, options);
     }
 
 protected:

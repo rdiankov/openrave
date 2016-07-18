@@ -34,6 +34,7 @@ class OPENRAVE_API StringXMLReadable : public XMLReadable
 public:
     StringXMLReadable(const std::string& xmlid, const std::string& data);
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
     const std::string& GetData() const;
     std::string _data;
 };
@@ -48,6 +49,7 @@ public:
     virtual ~HierarchicalXMLReadable() {
     }
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
     std::string _data;
     AttributesList _atts;
     std::list<boost::shared_ptr<HierarchicalXMLReadable> > _listchildren;
