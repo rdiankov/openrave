@@ -291,7 +291,12 @@ public:
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
                             CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
                             if( !!pcol ) {
+#ifdef FCLUSEREPLACEOBJECT
                                 pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
+#else
+                                pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+                                pmanager->registerObject(pcol.get());
+#endif
                                 bcallsetup = true;
                             } else {
                                 pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
@@ -309,7 +314,12 @@ public:
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
+#ifdef FCLUSEBULKUPDATE
                             pmanager->update(itcache->second.vcolobjs.at(ilink).get(), false);
+#else
+                            // Performance issue !!
+                            pmanager->update(itcache->second.vcolobjs.at(ilink).get());
+#endif
                             bcallsetup = true;
                         }
                     }

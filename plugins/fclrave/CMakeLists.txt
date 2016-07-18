@@ -24,19 +24,53 @@ if(FCLRAVE_USE_COLLISION_STATISTICS)
   add_definitions(-DFCLRAVE_COLLISION_OBJECTS_STATISTICS)
 endif()
 
-if(FCLRAVE_PERMANENT_UNSTABLE)
-  add_definitions(-DFCLRAVE_PERMANENT_UNSTABLE)
-endif()
 
 if(FCL_FOUND)
   link_directories(${OPENRAVE_LINK_DIRS} ${FCL_LIBRARY_DIRS})
   include_directories(${FCL_INCLUDE_DIRS} ${FCL_INCLUDEDIR})
+  set(CMAKE_REQUIRED_INCLUDES ${FCL_INCLUDE_DIRS} ${FCL_INCLUDEDIR})
   add_library(fclrave SHARED fclrave.cpp fclcollision.h fclstatistics.h fclspace.h plugindefs.h)
   target_link_libraries(fclrave libopenrave ${FCL_LIBRARIES})
   if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
     add_definitions("-std=c++11")
   endif()
   set_target_properties(fclrave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} ${FCL_CFLAGS_OTHER} -std=c++11" LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${FCL_LDFLAGS}")
+  set(CMAKE_REQUIRED_FLAGS "${PLUGIN_COMPILE_FLAGS} ${FCL_CFLAGS_OTHER} -std=c++11 ${PLUGIN_LINK_FLAGS} ${FCL_LDFLAGS}")
+  set(CMAKE_REQUIRED_LIBRARIES fcl)
+
+  check_cxx_source_compiles("
+    #include <fcl/broadphase/broadphase.h>
+
+    int main() {
+      fcl::NaiveCollisionManager manager;
+      manager.replaceObject(nullptr, nullptr, false);
+      return 0;
+    }"
+    FCL_HAS_REPLACE_OBJECT)
+
+  if( FCL_HAS_REPLACE_OBJECT )
+    add_definitions(-DFCLUSEREPLACEOBJECT)
+  endif()
+
+
+  check_cxx_source_compiles("
+    #include <fcl/broadphase/broadphase.h>
+
+    int main() {
+      fcl::DynamicAABBTreeCollisionManager manager;
+      std::vector<fcl::CollisionObject*> v;
+      manager.update(v, false);
+      return 0;
+    }"
+    FCL_SUPPORT_BULK_UPDATE)
+
+  if( FCL_SUPPORT_BULK_UPDATE )
+    add_definitions(-DFCLUSEBULKUPDATE)
+  endif()
+  set(CMAKE_REQUIRED_FLAGS)
+  set(CMAKE_REQUIRED_INCLUDES)
+  set(CMAKE_REQUIRED_LIBRARIES)
+
   install(TARGETS fclrave DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}plugin-fclrave)
 else()
   message(STATUS "Could not find FCL. Please install FCL (https://github.com/flexible-collision-library/fcl)")
