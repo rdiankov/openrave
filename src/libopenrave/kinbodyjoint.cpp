@@ -70,11 +70,10 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         break;
     }
 
-    writer->WriteString("link_names");
-    writer->StartArray();
+    writer->WriteString("parentLinkName");
     writer->WriteString(_linkname0);
+    writer->WriteString("childLinkName");
     writer->WriteString(_linkname1);
-    writer->EndArray();
 
     writer->WriteString("anchor");
     writer->WriteVector(_vanchor);
@@ -86,25 +85,25 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     writer->EndArray();
 
-    writer->WriteString("current_values");
+    writer->WriteString("currentValues");
     writer->WriteArray(_vcurrentvalues);
 
     writer->WriteString("resolution");
     writer->WriteBoost3Array(_vresolution);
 
-    writer->WriteString("max_vel");
+    writer->WriteString("maxVelocity");
     writer->WriteBoost3Array(_vmaxvel);
 
-    writer->WriteString("hard_max_vel");
+    writer->WriteString("hardMaxVelocity");
     writer->WriteBoost3Array(_vhardmaxvel);
 
-    writer->WriteString("max_accel");
+    writer->WriteString("maxAcceleration");
     writer->WriteBoost3Array(_vmaxaccel);
 
-    writer->WriteString("max_torque");
+    writer->WriteString("maxTorque");
     writer->WriteBoost3Array(_vmaxtorque);
 
-    writer->WriteString("max_inertia");
+    writer->WriteString("maxInertia");
     writer->WriteBoost3Array(_vmaxinertia);
 
     writer->WriteString("weights");
@@ -113,15 +112,15 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("offsets");
     writer->WriteBoost3Array(_voffsets);
 
-    writer->WriteString("lower_limit");
+    writer->WriteString("lowerLimit");
     writer->WriteBoost3Array(_vlowerlimit);
-    writer->WriteString("upper_limit");
+    writer->WriteString("upperLimit");
     writer->WriteBoost3Array(_vupperlimit);
 
-    writer->WriteString("is_circular");
+    writer->WriteString("circular");
     writer->WriteBoost3Array(_bIsCircular);
 
-    writer->WriteString("is_active");
+    writer->WriteString("active");
     writer->WriteBool(_bIsActive);
 
     if (!!_trajfollow) {
@@ -154,7 +153,7 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     if (_mapFloatParameters.size() > 0) {
-        writer->WriteString("float_parameters");
+        writer->WriteString("floatParameters");
         writer->StartObject();
         FOREACHC(kv, _mapFloatParameters) {
             writer->WriteString(kv->first.c_str());
@@ -168,7 +167,7 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     if (_mapIntParameters.size() > 0) {
-        writer->WriteString("int_parameters");
+        writer->WriteString("intParameters");
         writer->StartObject();
         FOREACHC(kv, _mapIntParameters) {
             writer->WriteString(kv->first.c_str());
@@ -182,7 +181,7 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     if (_mapStringParameters.size() > 0) {
-        writer->WriteString("string_parameters");
+        writer->WriteString("stringParameters");
         writer->StartObject();
         FOREACHC(kv, _mapStringParameters) {
             writer->WriteString(kv->first);
@@ -192,7 +191,7 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     if (!!_infoElectricMotor) {
-        writer->WriteString("electric_motor_info");
+        writer->WriteString("electricMotorInfo");
         writer->StartObject();
         _infoElectricMotor->SerializeJSON(writer, options);
         writer->EndObject();
@@ -1786,63 +1785,63 @@ void KinBody::MimicInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 
 void ElectricMotorActuatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->WriteString("model_type");
+    writer->WriteString("modelType");
     writer->WriteString(model_type);
 
-    writer->WriteString("assigned_power_rating");
+    writer->WriteString("assignedPowerRating");
     writer->WriteDouble(assigned_power_rating);
 
-    writer->WriteString("max_speed");
+    writer->WriteString("maxSpeed");
     writer->WriteDouble(max_speed);
 
-    writer->WriteString("no_load_speed");
+    writer->WriteString("noLoadSpeed");
     writer->WriteDouble(no_load_speed);
 
-    writer->WriteString("stall_torque");
+    writer->WriteString("stallTorque");
     writer->WriteDouble(stall_torque);
 
-    writer->WriteString("max_instantaneous_torque");
+    writer->WriteString("maxInstantaneousTorque");
     writer->WriteDouble(max_instantaneous_torque);
 
-    writer->WriteString("nominal_speed_torque_points");
+    writer->WriteString("nominalSpeedTorquePoints");
     for (size_t i=0; i<nominal_speed_torque_points.size(); ++i) {
         writer->WritePair(nominal_speed_torque_points[i]);
     }
 
-    writer->WriteString("max_speed_torque_points");
+    writer->WriteString("maxSpeedTorquePoints");
     for (size_t i=0; i<max_speed_torque_points.size(); ++i) {
         writer->WritePair(max_speed_torque_points[i]);
     }
 
-    writer->WriteString("nominal_torque");
+    writer->WriteString("nominalTorque");
     writer->WriteDouble(nominal_torque);
 
-    writer->WriteString("rotor_inertia");
+    writer->WriteString("rotorInertia");
     writer->WriteDouble(rotor_inertia);
 
-    writer->WriteString("torque_constant");
+    writer->WriteString("torqueConstant");
     writer->WriteDouble(torque_constant);
 
-    writer->WriteString("nominal_voltage");
+    writer->WriteString("nominalVoltage");
     writer->WriteDouble(nominal_voltage);
 
-    writer->WriteString("speed_constant");
+    writer->WriteString("speedConstant");
     writer->WriteDouble(speed_constant);
 
-    writer->WriteString("starting_current");
+    writer->WriteString("startingCurrent");
     writer->WriteDouble(starting_current);
 
 
-    writer->WriteString("terminal_resistance");
+    writer->WriteString("terminalResistance");
     writer->WriteDouble(terminal_resistance);
 
-    writer->WriteString("gear_ratio");
+    writer->WriteString("gearRatio");
     writer->WriteDouble(gear_ratio);
 
-    writer->WriteString("coloumb_friction");
+    writer->WriteString("coloumbFriction");
     writer->WriteDouble(coloumb_friction);
 
-    writer->WriteString("viscous_friction");
+    writer->WriteString("viscousFriction");
     writer->WriteDouble(viscous_friction);
 }
 

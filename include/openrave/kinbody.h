@@ -1483,8 +1483,8 @@ private:
     virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
     /// \brief Unique and constant scoped id of the kinbody.
-    virtual const boost::uuids::uuid& GetSID() const {
-        return _sid;
+    virtual const boost::uuids::uuid& GetID() const {
+        return _id;
     }
 
     /// \brief Unique name of the robot.
@@ -2190,8 +2190,8 @@ protected:
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
 
-    /// \brief unique and constant scoped identifier
-    boost::uuids::uuid _sid;
+    /// \brief unique and constant identifier
+    boost::uuids::uuid _id;
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

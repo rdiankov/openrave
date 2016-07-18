@@ -2352,7 +2352,7 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
 void SensorBase::SensorGeometry::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     if( hardware_id.size() > 0 ) {
-        writer->WriteString("hardware_id");
+        writer->WriteString("hardwareID");
         writer->WriteString(hardware_id);
     }
 }
@@ -2397,13 +2397,13 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
 
 void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->WriteString("sensor_reference");
+    writer->WriteString("sensor");
     writer->WriteString(sensor_reference);
 
-    writer->WriteString("target_region");
+    writer->WriteString("targetRegion");
     writer->WriteString(target_region);
 
-    writer->WriteString("camera_intrinsics");
+    writer->WriteString("cameraIntrinsics");
     writer->WriteCameraIntrinsics(intrinsics);
 
     writer->WriteString("width");
@@ -2412,7 +2412,7 @@ void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int opt
     writer->WriteString("height");
     writer->WriteInt(height);
 
-    writer->WriteString("measurement_time");
+    writer->WriteString("measurementTime");
     writer->WriteDouble(measurement_time);
 
     writer->WriteString("gain");

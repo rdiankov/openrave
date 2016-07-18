@@ -181,10 +181,10 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
 }
 
-KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv), _sid(boost::uuids::nil_uuid())
+KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv), _id(boost::uuids::nil_uuid())
 {
     boost::uuids::random_generator gen;
-    _sid = gen();
+    _id = gen();
 
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
@@ -4581,8 +4581,8 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
 
 void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
-    writer->WriteString("sid");
-    writer->WriteBoostUUID(GetSID());
+    writer->WriteString("id");
+    writer->WriteBoostUUID(GetID());
 
     writer->WriteString("name");
     writer->WriteString(GetName());
@@ -4599,28 +4599,32 @@ void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     writer->EndArray();
 
-    writer->WriteString("joints");
-    writer->StartArray();
-    FOREACHC(it,GetJoints()) {
-        writer->StartObject();
-        (*it)->SerializeJSON(writer, options);
-        writer->EndObject();
+    if (GetJoints().size() > 0) {
+        writer->WriteString("joints");
+        writer->StartArray();
+        FOREACHC(it,GetJoints()) {
+            writer->StartObject();
+            (*it)->SerializeJSON(writer, options);
+            writer->EndObject();
+        }
+        writer->EndArray();
     }
-    writer->EndArray();
 
-    writer->WriteString("passive_joints");
-    writer->StartArray();
-    FOREACHC(it,GetPassiveJoints()) {
-        writer->StartObject();
-        (*it)->SerializeJSON(writer, options);
-        writer->EndObject();
+    if (GetPassiveJoints().size() > 0) {
+        writer->WriteString("passiveJoints");
+        writer->StartArray();
+        FOREACHC(it,GetPassiveJoints()) {
+            writer->StartObject();
+            (*it)->SerializeJSON(writer, options);
+            writer->EndObject();
+        }
+        writer->EndArray();
     }
-    writer->EndArray();
 
     std::vector<dReal> vdofvalues;
     GetDOFValues(vdofvalues);
     if (vdofvalues.size() > 0) {
-        writer->WriteString("dof_values");
+        writer->WriteString("dofValues");
         writer->WriteArray(vdofvalues);
     }
 

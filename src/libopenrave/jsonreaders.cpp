@@ -38,19 +38,24 @@ void BaseJSONWriter::WriteVector(const Vector& v, bool quat) {
     EndArray();
 }
 void BaseJSONWriter::WriteTransform(const Transform& t) {
-    StartObject();
-    WriteString("rotate");
-    WriteVector(t.rot, true);
-    WriteString("translate");
-    WriteVector(t.trans);
-    EndObject();
+    StartArray();
+    WriteDouble(t.rot[0]);
+    WriteDouble(t.rot[1]);
+    WriteDouble(t.rot[2]);
+    WriteDouble(t.rot[3]);
+    WriteDouble(t.trans[0]);
+    WriteDouble(t.trans[1]);
+    WriteDouble(t.trans[2]);
+    EndArray();
 }
 void BaseJSONWriter::WriteTriMesh(const TriMesh& trimesh) {
     StartObject();
     WriteString("vertices");
     StartArray();
     FOREACHC(itv, trimesh.vertices) {
-        WriteVector(*itv);
+        WriteDouble((*itv)[0]);
+        WriteDouble((*itv)[1]);
+        WriteDouble((*itv)[2]);
     }
     EndArray();
 
@@ -104,13 +109,13 @@ void BaseJSONWriter::WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& i
     WriteString("cy");
     WriteDouble(intrinsics.cy);
 
-    WriteString("distortion_model");
+    WriteString("distortionModel");
     WriteString(intrinsics.distortion_model);
 
-    WriteString("distortion_coeffs");
+    WriteString("distortionCoeffs");
     WriteArray(intrinsics.distortion_coeffs);
 
-    WriteString("focal_length");
+    WriteString("focalLength");
     WriteDouble(intrinsics.focal_length);
 
     EndObject();

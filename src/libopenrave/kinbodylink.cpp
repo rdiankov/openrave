@@ -288,17 +288,17 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("transform");
     writer->WriteTransform(_t);
 
-    writer->WriteString("mass_frame");
+    writer->WriteString("massTransform");
     writer->WriteTransform(_tMassFrame);
 
     writer->WriteString("mass");
     writer->WriteDouble(_mass);
 
-    writer->WriteString("inertia_moments");
+    writer->WriteString("inertiaMoments");
     writer->WriteVector(_vinertiamoments);
 
     if (_mapFloatParameters.size() > 0) {
-        writer->WriteString("float_parameters");
+        writer->WriteString("floatParameters");
         writer->StartObject();
         FOREACHC(kv, _mapFloatParameters) {
             writer->WriteString(kv->first.c_str());
@@ -312,7 +312,7 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     if (_mapIntParameters.size() > 0) {
-        writer->WriteString("int_parameters");
+        writer->WriteString("intParameters");
         writer->StartObject();
         FOREACHC(kv, _mapIntParameters) {
             writer->WriteString(kv->first.c_str());
@@ -326,7 +326,7 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     if (_mapStringParameters.size() > 0) {
-        writer->WriteString("string_parameters");
+        writer->WriteString("stringParameters");
         writer->StartObject();
         FOREACHC(kv, _mapStringParameters) {
             writer->WriteString(kv->first);
@@ -336,7 +336,7 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     
     if (_vForcedAdjacentLinks.size() > 0) {
-        writer->WriteString("forced_adjacent_links");
+        writer->WriteString("forcedAdjacentLinks");
         writer->StartArray();
         FOREACHC(it, _vForcedAdjacentLinks) {
             writer->WriteString(*it);

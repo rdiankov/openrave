@@ -51,10 +51,10 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(BaseJSONWriterPtr writer, int 
     writer->WriteString("type");
     writer->WriteString(_sensorname);
 
-    writer->WriteString("link_name");
+    writer->WriteString("linkName");
     writer->WriteString(_linkname);
 
-    writer->WriteString("relative_transform");
+    writer->WriteString("transform");
     writer->WriteTransform(_trelative);
 
     _sensorgeometry->SerializeJSON(writer, options);
@@ -2583,7 +2583,7 @@ void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     writer->EndArray();
 
-    writer->WriteString("attached_sensors");
+    writer->WriteString("attachedSensors");
     writer->StartArray();
     FOREACHC(it,GetAttachedSensors()) {
         writer->StartObject();
@@ -2592,7 +2592,7 @@ void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
     writer->EndArray();
 
-    writer->WriteString("is_robot");
+    writer->WriteString("robot");
     writer->WriteBool(true);
 }
 

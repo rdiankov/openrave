@@ -295,7 +295,7 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    writer->WriteString("local_transform");
+    writer->WriteString("transform");
     writer->WriteTransform(_t);
 
     writer->WriteString("type");
@@ -303,51 +303,43 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     case GT_Box:
         writer->WriteString("box");
 
-        writer->WriteString("box");
-        writer->StartObject();
-        writer->WriteString("half_extents");
+        writer->WriteString("halfExtents");
         writer->WriteVector(_vGeomData);
-        writer->EndObject();
         break;
 
     case GT_Container:
         writer->WriteString("container");
 
-        writer->WriteString("container");
-        writer->StartObject();
-        writer->WriteString("outer_extents");
+        writer->WriteString("outerExtents");
         writer->WriteVector(_vGeomData);
-        writer->WriteString("inner_extents");
+        writer->WriteString("innerExtents");
         writer->WriteVector(_vGeomData2);
-        writer->WriteString("bottom_cross");
+        writer->WriteString("bottomCross");
         writer->WriteVector(_vGeomData3);
-        writer->EndObject();
         break;
 
     case GT_Sphere:
         writer->WriteString("sphere");
 
-        writer->WriteString("sphere");
-        writer->StartObject();
         writer->WriteString("radius");
         writer->WriteDouble(_vGeomData.x);
-        writer->EndObject();
         break;
 
     case GT_Cylinder:
         writer->WriteString("cylinder");
 
-        writer->WriteString("cylinder");
-        writer->StartObject();
         writer->WriteString("radius");
         writer->WriteDouble(_vGeomData.x);
         writer->WriteString("height");
         writer->WriteDouble(_vGeomData.y);
-        writer->EndObject();
         break;
 
     case GT_TriMesh:
         writer->WriteString("trimesh");
+        if (options == 0 || (options & SO_GeometryMesh) != 0) {
+            writer->WriteString("mesh");
+            writer->WriteTriMesh(_meshcollision);
+        }
         break;
 
     default:
@@ -361,16 +353,16 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("visible");
     writer->WriteBool(_bVisible);
 
-    writer->WriteString("render_scale");
+    writer->WriteString("renderScale");
     writer->WriteVector(_vRenderScale);
 
-    writer->WriteString("collision_scale");
+    writer->WriteString("collisionScale");
     writer->WriteVector(_vCollisionScale);
 
-    writer->WriteString("diffuse_color");
+    writer->WriteString("diffuseColor");
     writer->WriteVector(_vDiffuseColor);
 
-    writer->WriteString("ambient_color");
+    writer->WriteString("ambientColor");
     writer->WriteVector(_vAmbientColor);
 
     // writer->WriteString("filename_render");
@@ -381,11 +373,6 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 
     writer->WriteString("modifiable");
     writer->WriteBool(_bModifiable);
-
-    if (options == 0 || (options & SO_GeometryMesh) != 0) {
-        writer->WriteString("mesh");
-        writer->WriteTriMesh(_meshcollision);
-    }
 }
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
