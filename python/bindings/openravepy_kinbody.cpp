@@ -73,7 +73,7 @@ public:
         _bModifiable = true;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
-        _sid = ConvertStringToUnicode(boost::uuids::to_string(info._sid));
+        sid = ConvertStringToUnicode(boost::uuids::to_string(info.sid));
         _name = ConvertStringToUnicode(info._name);
         _t = ReturnTransform(info._t);
         _vGeomData = toPyVector4(info._vGeomData);
@@ -97,9 +97,9 @@ public:
     KinBody::GeometryInfoPtr GetGeometryInfo() {
         KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
         KinBody::GeometryInfo& info = *pinfo;
-        if( !IS_PYTHONOBJECT_NONE(_sid) ) {
+        if( !IS_PYTHONOBJECT_NONE(sid) ) {
             boost::uuids::string_generator gen;
-            info._sid = gen(std::string(boost::python::extract<std::string>(_sid)));
+            info.sid = gen(std::string(boost::python::extract<std::string>(sid)));
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
             info._name = boost::python::extract<std::string>(_name);
@@ -130,7 +130,7 @@ public:
         return pinfo;
     }
 
-    object _sid, _name;
+    object sid, _name;
     object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
     GeometryType _type;
     object _filenamerender, _filenamecollision;
@@ -2883,7 +2883,7 @@ void init_openravepy_kinbody()
     ;
 
     object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
-                          .def_readwrite("_sid",&PyGeometryInfo::_sid)
+                          .def_readwrite("sid",&PyGeometryInfo::sid)
                           .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_t",&PyGeometryInfo::_t)
                           .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)

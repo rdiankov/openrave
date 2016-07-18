@@ -134,6 +134,8 @@ public:
         virtual ~GeometryInfo() {
         }
 
+        GeometryInfo& operator=(const GeometryInfo& other);
+
         /// triangulates the geometry object and initializes collisionmesh. GeomTrimesh types must already be triangulated
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
@@ -153,12 +155,14 @@ public:
         }
 
         /// \brief unique and constant scoped identifier
-        boost::uuids::uuid _sid;
+        boost::uuids::uuid sid;
 
         /// \brief unique geometry name
-        std::string _name;
+        std::string name;
+        std::string& _name RAVE_DEPRECATED;
 
-        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+        Transform transform; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
+        Transform& _t RAVE_DEPRECATED; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
@@ -175,7 +179,8 @@ public:
         /// If empty, will be automatically computed from the geometry's type and render data
         TriMesh _meshcollision;
 
-        GeometryType _type; ///< the type of geometry primitive
+        GeometryType type; ///< the type of geometry primitive
+        GeometryType& _type RAVE_DEPRECATED; ///< the type of geometry primitive
 
         /// \brief filename for render model (optional)
         ///
@@ -279,10 +284,10 @@ public:
 
             /// \brief get local geometry transform
             inline const Transform& GetTransform() const {
-                return _info._t;
+                return _info.transform;
             }
             inline GeometryType GetType() const {
-                return _info._type;
+                return _info.type;
             }
             inline const Vector& GetRenderScale() const {
                 return _info._vRenderScale;
@@ -343,7 +348,7 @@ public:
             }
 
             inline const std::string& GetName() const {
-                return _info._name;
+                return _info.name;
             }
 
             virtual bool InitCollisionMesh(float fTessellation=1);

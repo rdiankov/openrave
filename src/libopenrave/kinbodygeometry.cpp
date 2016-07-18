@@ -162,16 +162,32 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry"), _sid(boost::uuids::nil_uuid())
+KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry"), sid(boost::uuids::nil_uuid()), _name(name), _t(transform), _type(type)
 {
     boost::uuids::random_generator gen;
-    _sid = gen();
+    sid = gen();
+
     _vDiffuseColor = Vector(1,1,1);
-    _type = GT_None;
+    type = GT_None;
     _fTransparency = 0;
     _vRenderScale = _vCollisionScale = Vector(1,1,1);
     _bVisible = true;
     _bModifiable = true;
+}
+
+KinBody::GeometryInfo& KinBody::GeometryInfo::operator=(const GeometryInfo& other)
+{
+    sid = other.sid;
+    name = other.name;
+    transform = other.transform;
+    type = other.type;
+
+    _fTransparency = other._fTransparency;
+    _vRenderScale = other._vRenderScale;
+    _vCollisionScale = other._vCollisionScale;
+    _bVisible = other._bVisible;
+    _bModifiable = other._bModifiable;
+    return *this;
 }
 
 bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
@@ -290,13 +306,13 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteBoostUUID(_sid);
+    writer->WriteBoostUUID(sid);
 
     writer->WriteString("name");
-    writer->WriteString(_name);
+    writer->WriteString(name);
 
     writer->WriteString("transform");
-    writer->WriteTransform(_t);
+    writer->WriteTransform(transform);
 
     writer->WriteString("type");
     switch(_type) {
@@ -392,9 +408,9 @@ void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int option
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
 {
     AABB ab;
-    TransformMatrix tglobal = t * _info._t;
+    TransformMatrix tglobal = t * _info.transform;
 
-    switch(_info._type) {
+    switch(_info.type) {
     case GT_None:
         ab.extents.x = 0;
         ab.extents.y = 0;
@@ -455,7 +471,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         }
         break;
     default:
-        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info.type, ORE_InvalidArguments);
     }
 
     return ab;
@@ -463,10 +479,10 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
 
 void KinBody::Link::Geometry::serialize(std::ostream& o, int options) const
 {
-    SerializeRound(o,_info._t);
-    o << _info._type << " ";
+    SerializeRound(o,_info.transform);
+    o << _info.type << " ";
     SerializeRound3(o,_info._vRenderScale);
-    if( _info._type == GT_TriMesh ) {
+    if( _info.type == GT_TriMesh ) {
         _info._meshcollision.serialize(o,options);
     }
     else {
@@ -549,11 +565,11 @@ void KinBody::Link::Geometry::SetAmbientColor(const RaveVector<float>& color)
 
 bool KinBody::Link::Geometry::ValidateContactNormal(const Vector& _position, Vector& _normal) const
 {
-    Transform tinv = _info._t.inverse();
+    Transform tinv = _info.transform.inverse();
     Vector position = tinv*_position;
     Vector normal = tinv.rotate(_normal);
     const dReal feps=0.00005f;
-    switch(_info._type) {
+    switch(_info.type) {
     case GT_Box: {
         // transform position in +x+y+z octant
         Vector tposition=position, tnormal=normal;
