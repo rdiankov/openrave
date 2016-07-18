@@ -632,6 +632,48 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         }
     }
 
+    // Correct small discrepancies in velocities (if any)
+    if (v0 > vm) {
+        if (FuzzyEquals(v0, vm, epsilon)) {
+            // Acceptable
+            v0 = vm;
+        }
+        else {
+            RAMP_OPTIM_WARN("v0 (%.15e) > vm (%.15e)", v0, vm);
+            return false;
+        }
+    }
+    else if (v0 < -vm) {
+        if (FuzzyEquals(v0, -vm, epsilon)) {
+            // Acceptable
+            v0 = -vm;
+        }
+        else {
+            RAMP_OPTIM_WARN("v0 (%.15e) < -vm (%.15e)", v0, -vm);
+            return false;
+        }
+    }
+    if (v1 > vm) {
+        if (FuzzyEquals(v1, vm, epsilon)) {
+            // Acceptable
+            v1 = vm;
+        }
+        else {
+            RAMP_OPTIM_WARN("v1 (%.15e) > vm (%.15e)", v1, vm);
+            return false;
+        }
+    }
+    else if (v1 < -vm) {
+        if (FuzzyEquals(v1, -vm, epsilon)) {
+            // Acceptable
+            v1 = -vm;
+        }
+        else {
+            RAMP_OPTIM_WARN("v1 (%.15e) < -vm (%.15e)", v1, -vm);
+            return false;
+        }
+    }
+
     dReal d = x1 - x0; // displacement made by this profile
     dReal t0, t1, vp, a0, a1;
     dReal A, B, C, D; // temporary variables for solving equations
