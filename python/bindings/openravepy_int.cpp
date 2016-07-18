@@ -436,12 +436,12 @@ void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object ore
 
 object PyInterfaceBase::SerializeJSON(object ooptions)
 {
-    OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
-    OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+    OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
+    OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
     writer->StartObject();
     _pbase->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
     writer->EndObject();
-    return object(std::string(bufferwriter.GetBuffer()));
+    return object(stringwriter.GetString());
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1699,12 +1699,12 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
-        OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+        OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
+        OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
         writer->StartObject();
         _penv->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
         writer->EndObject();
-        return object(std::string(bufferwriter.GetBuffer()));
+        return object(stringwriter.GetString());
     }
 };
 

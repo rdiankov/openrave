@@ -2405,7 +2405,6 @@ void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int opt
 
     writer->WriteString("camera_intrinsics");
     writer->WriteCameraIntrinsics(intrinsics);
-    writer->EndObject();
 
     writer->WriteString("width");
     writer->WriteInt(width);

@@ -68,12 +68,12 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        OpenRAVE::jsonreaders::BufferJSONWriter bufferwriter;
-        OpenRAVE::BaseJSONWriterPtr writer(&bufferwriter, OpenRAVE::utils::null_deleter());
+        OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
+        OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
         writer->StartObject();
         _xmlreadable->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
         writer->EndObject();
-        return object(std::string(bufferwriter.GetBuffer()));
+        return object(stringwriter.GetString());
     }
 
     XMLReadablePtr GetXMLReadable() {

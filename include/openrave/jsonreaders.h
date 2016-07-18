@@ -24,7 +24,6 @@
 #define OPENRAVE_JSONREADERS_H
 
 #include <openrave/openrave.h>
-#include <openrave/utils.h>
 
 #define RAPIDJSON_HAS_STDSTRING 1
 #include <rapidjson/writer.h>
@@ -35,107 +34,147 @@
 namespace OpenRAVE {
 namespace jsonreaders {
 
-template <typename Writer>
-class RapidJSONWriter: public BaseJSONWriter
+/// \brief writer that writes compact json into a buffer that can be retrieved by calling GetString().
+class OPENRAVE_API StringJSONWriter : public BaseJSONWriter
 {
 public:
-
-    RapidJSONWriter() {
+    StringJSONWriter() : _stringbuffer(), _writer(_stringbuffer) {
     }
-    virtual ~RapidJSONWriter() {
+    virtual ~StringJSONWriter() {
+    }
+
+    virtual std::string GetString() {
+        return std::string(_stringbuffer.GetString());
     }
 
     virtual void StartArray() {
-        _pwriter->StartArray();
+        _writer.StartArray();
     }
     virtual void EndArray() {
-        _pwriter->EndArray();
+        _writer.EndArray();
     }
     virtual void StartObject() {
-        _pwriter->StartObject();
+        _writer.StartObject();
     }
     virtual void EndObject() {
-        _pwriter->EndObject();
+        _writer.EndObject();
     }
 
     virtual void WriteNull() {
-        _pwriter->Null();
+        _writer.Null();
     }
     virtual void WriteBool(bool value) {
-        _pwriter->Bool(value);
+        _writer.Bool(value);
     }
     virtual void WriteInt(int value) {
-        _pwriter->Int(value);
+        _writer.Int(value);
     }
     virtual void WriteDouble(double value) {
-        _pwriter->Double(value);
+        _writer.Double(value);
     }
     virtual void WriteString(const std::string& value) {
-        _pwriter->String(value);
+        _writer.String(value);
     }
     virtual void WriteString(const char* value) {
-        _pwriter->String(value);
+        _writer.String(value);
     }
 
 protected:
 
-    boost::shared_ptr<Writer> _pwriter;
-};
-
-class OPENRAVE_API BufferJSONWriter : public RapidJSONWriter<rapidjson::Writer<rapidjson::StringBuffer> >
-{
-public:
-    BufferJSONWriter() : _writer(_buffer)
-    {
-        _pwriter.reset(&_writer, utils::null_deleter());
-    }
-    virtual ~BufferJSONWriter()
-    {
-    }
-
-    virtual const char* GetBuffer()
-    {
-        return _buffer.GetString();
-    }
-
-protected:
-
-    rapidjson::StringBuffer _buffer;
+    rapidjson::StringBuffer _stringbuffer;
     rapidjson::Writer<rapidjson::StringBuffer> _writer;
 };
 
-
-class OPENRAVE_API BufferPrettyJSONWriter : public RapidJSONWriter<rapidjson::PrettyWriter<rapidjson::StringBuffer> >
+/// \brief writer that writes pretty print formatted json into a buffer that can be retrieved by calling GetString().
+class OPENRAVE_API StringPrettyJSONWriter : public BaseJSONWriter
 {
 public:
-    BufferPrettyJSONWriter() : _writer(_buffer)
-    {
-        _pwriter.reset(&_writer, utils::null_deleter());
+    StringPrettyJSONWriter() : _stringbuffer(), _writer(_stringbuffer) {
     }
-    virtual ~BufferPrettyJSONWriter()
-    {
+    virtual ~StringPrettyJSONWriter() {
     }
 
-    virtual const char* GetBuffer()
-    {
-        return _buffer.GetString();
+    virtual std::string GetString() {
+        return std::string(_stringbuffer.GetString());
+    }
+
+    virtual void StartArray() {
+        _writer.StartArray();
+    }
+    virtual void EndArray() {
+        _writer.EndArray();
+    }
+    virtual void StartObject() {
+        _writer.StartObject();
+    }
+    virtual void EndObject() {
+        _writer.EndObject();
+    }
+
+    virtual void WriteNull() {
+        _writer.Null();
+    }
+    virtual void WriteBool(bool value) {
+        _writer.Bool(value);
+    }
+    virtual void WriteInt(int value) {
+        _writer.Int(value);
+    }
+    virtual void WriteDouble(double value) {
+        _writer.Double(value);
+    }
+    virtual void WriteString(const std::string& value) {
+        _writer.String(value);
+    }
+    virtual void WriteString(const char* value) {
+        _writer.String(value);
     }
 
 protected:
 
-    rapidjson::StringBuffer _buffer;
+    rapidjson::StringBuffer _stringbuffer;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> _writer;
 };
 
-class OPENRAVE_API StreamJSONWriter : public RapidJSONWriter<rapidjson::Writer<rapidjson::OStreamWrapper> >
+/// \brief writer that writes compact json into a std::ostream
+class OPENRAVE_API StreamJSONWriter : public BaseJSONWriter
 {
 public:
-    StreamJSONWriter(std::ostream& ostream) : _ostreamwrapper(ostream), _writer(_ostreamwrapper)
-    {
-        _pwriter.reset(&_writer, utils::null_deleter());
+    StreamJSONWriter(std::ostream& ostream) : _ostreamwrapper(ostream), _writer(_ostreamwrapper) {
     }
-    virtual ~StreamJSONWriter()
-    {
+    virtual ~StreamJSONWriter() {
+    }
+
+    virtual void StartArray() {
+        _writer.StartArray();
+    }
+    virtual void EndArray() {
+        _writer.EndArray();
+    }
+    virtual void StartObject() {
+        _writer.StartObject();
+    }
+    virtual void EndObject() {
+        _writer.EndObject();
+    }
+
+    virtual void WriteNull() {
+        _writer.Null();
+    }
+    virtual void WriteBool(bool value) {
+        _writer.Bool(value);
+    }
+    virtual void WriteInt(int value) {
+        _writer.Int(value);
+    }
+    virtual void WriteDouble(double value) {
+        _writer.Double(value);
+    }
+    virtual void WriteString(const std::string& value) {
+        _writer.String(value);
+    }
+    virtual void WriteString(const char* value) {
+        _writer.String(value);
     }
 
 protected:
@@ -144,16 +183,45 @@ protected:
     rapidjson::Writer<rapidjson::OStreamWrapper> _writer;
 };
 
-class OPENRAVE_API StreamPrettyJSONWriter : public RapidJSONWriter<rapidjson::PrettyWriter<rapidjson::OStreamWrapper> >
+/// \brief writer that writes pretty print formatted json into a std::ostream
+class OPENRAVE_API StreamPrettyJSONWriter : public BaseJSONWriter
 {
 public:
-    StreamPrettyJSONWriter(std::ostream& ostream)
-     : _ostreamwrapper(ostream), _writer(_ostreamwrapper)
-    {
-        _pwriter.reset(&_writer, utils::null_deleter());
+    StreamPrettyJSONWriter(std::ostream& ostream) : _ostreamwrapper(ostream), _writer(_ostreamwrapper) {
     }
-    virtual ~StreamPrettyJSONWriter()
-    {
+    virtual ~StreamPrettyJSONWriter() {
+    }
+
+    virtual void StartArray() {
+        _writer.StartArray();
+    }
+    virtual void EndArray() {
+        _writer.EndArray();
+    }
+    virtual void StartObject() {
+        _writer.StartObject();
+    }
+    virtual void EndObject() {
+        _writer.EndObject();
+    }
+
+    virtual void WriteNull() {
+        _writer.Null();
+    }
+    virtual void WriteBool(bool value) {
+        _writer.Bool(value);
+    }
+    virtual void WriteInt(int value) {
+        _writer.Int(value);
+    }
+    virtual void WriteDouble(double value) {
+        _writer.Double(value);
+    }
+    virtual void WriteString(const std::string& value) {
+        _writer.String(value);
+    }
+    virtual void WriteString(const char* value) {
+        _writer.String(value);
     }
 
 protected:

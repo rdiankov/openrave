@@ -72,7 +72,7 @@ void TrajectoryBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
 
     if( GetDescription().size() > 0 ) {
         writer->WriteString("description");
-        writer->WriteString("![CDATA[" + GetDescription() + "]]");
+        writer->WriteString(GetDescription());
     }
 
     if( GetReadableInterfaces().size() > 0 ) {

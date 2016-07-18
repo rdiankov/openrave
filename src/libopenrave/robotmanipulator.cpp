@@ -34,7 +34,7 @@ void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int opt
     writer->WriteString("name");
     writer->WriteString(_name);
 
-    writer->WriteString("localtool_transform");
+    writer->WriteString("local_tool_transform");
     writer->WriteTransform(_tLocalTool);
 
     writer->WriteString("chucking_direction");
@@ -43,16 +43,16 @@ void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int opt
     writer->WriteString("local_direction");
     writer->WriteVector(_vdirection);
 
-    writer->WriteString("baselink_name");
+    writer->WriteString("base_link_name");
     writer->WriteString(_sBaseLinkName);
 
-    writer->WriteString("effectorlink_name");
+    writer->WriteString("effector_link_name");
     writer->WriteString(_sEffectorLinkName);
 
     writer->WriteString("iksolver_xmlid");
     writer->WriteString(_sIkSolverXMLId);
 
-    writer->WriteString("gripperjoint_names");
+    writer->WriteString("gripper_joint_names");
     writer->WriteArray(_vGripperJointNames);
 }
 

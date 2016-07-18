@@ -2667,29 +2667,67 @@ public:
     /// Samples formats are 'json'
     virtual const std::string& GetFormat() const;
 
+    /// \brief start an array, subsequent writes will be element of the array
     virtual void StartArray() = 0;
+
+    /// \brief ends the array
     virtual void EndArray() = 0;
+
+    /// \brief start an object, subsequent pairs of writes will be key and values in the object
     virtual void StartObject() = 0;
+
+    /// \brief ends the object
     virtual void EndObject() = 0;
 
+    /// \brief writes null
     virtual void WriteNull() = 0;
+
+    /// \brief writes boolean value
     virtual void WriteBool(bool value) = 0;
+
+    /// \brief writes signed integer
     virtual void WriteInt(int value) = 0;
+
+    /// \brief writes double precision floating point
     virtual void WriteDouble(double value) = 0;
+
+    /// \brief writes std::string
     virtual void WriteString(const std::string& value) = 0;
+
+    /// \brief writes c string
     virtual void WriteString(const char* value) = 0;
 
+    /// \brief writes an OpenRAVE Vector
     virtual void WriteVector(const Vector& v, bool quat = false);
+
+    /// \brief writes an OpenRAVE Transform
     virtual void WriteTransform(const Transform& t);
+
+    /// \brief writes an OpenRAVE TriMesh
     virtual void WriteTriMesh(const TriMesh& trimesh);
+
+    /// \brief writes an OpenRAVE CameraIntrinsics
     virtual void WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics);
 
+    /// \brief writes a uuid
     virtual void WriteBoostUUID(const boost::uuids::uuid& uuid);
+
+    /// \brief writes a boost array of dReal
     virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);
+
+    /// \brief writes a boost array of uint8_t
     virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a);
+
+    /// \brief writes a std::vector of dReal
     virtual void WriteArray(const std::vector<dReal>& a);
+
+    /// \brief writes a std::vector of int
     virtual void WriteArray(const std::vector<int>& a);
+
+    /// \brief writes a std::vector of std::string
     virtual void WriteArray(const std::vector<std::string>& a);
+
+    /// \brief writes a std::pair of dReal
     virtual void WritePair(const std::pair<dReal, dReal>& p);
 };
 
