@@ -585,9 +585,16 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
             // Iterate from the second element to the second last element (the first and the last
             // switch points should be the same for every DOF)
             it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
-            if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon)) {
-                // Insert only non-redundant switch points
-                switchpointsList.insert(it, curves[i].switchpointsList[j]);
+            if (it == switchpointsList.end()) {
+                if (!FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
+                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
+                }
+            }
+            else {
+                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon) && !FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
+                    // Insert only non-redundant switch points
+                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
+                }
             }
         }
     }
@@ -681,9 +688,16 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
             // Iterate from the second element to the second last element (the first and the last
             // switch points should be the same for every DOF)
             it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
-            if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon)) {
-                // Insert only non-redundant switch points
-                switchpointsList.insert(it, curves[i].switchpointsList[j]);
+            if (it == switchpointsList.end()) {
+                if (!FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
+                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
+                }
+            }
+            else {
+                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon) && !FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
+                    // Insert only non-redundant switch points
+                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
+                }
             }
         }
     }
