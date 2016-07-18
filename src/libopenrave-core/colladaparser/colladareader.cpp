@@ -4184,12 +4184,22 @@ private:
                                 continue;
                             }
 
-                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
-                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
-                                RAVELOG_WARN_FORMAT("failed to add g geometry to eometry group %s, link %s\n", groupname%plink->GetName());
-                                continue;
+                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
+                            if( !dommat ) {
+                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+                            } else {
+                              mapmaterials["mat0"] = dommat;
                             }
 
+
+                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
+                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
+                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
+                                continue;
+                            }
+                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
+                                itgeominfo->InitCollisionMesh();
+                            }
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
