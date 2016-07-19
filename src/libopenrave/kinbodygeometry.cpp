@@ -162,17 +162,34 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry"), sid(boost::uuids::nil_uuid()), _name(name), _t(transform), _type(type)
+KinBody::GeometryInfo::GeometryInfo() :
+    XMLReadable("geometry"),
+    _t(transform),
+    _vDiffuseColor(diffuseColor),
+    _vAmbientColor(ambientColor),
+    _meshcollision(mesh),
+    _type(type),
+    _fTransparency(transparency),
+    _bVisible(visible),
+    _bModifiable(modifiable)
 {
     boost::uuids::random_generator gen;
     sid = gen();
-
-    _vDiffuseColor = Vector(1,1,1);
+    diffuseColor = Vector(1,1,1);
     type = GT_None;
-    _fTransparency = 0;
+    transparency = 0;
+    visible = true;
+    modifiable = true;
+
     _vRenderScale = _vCollisionScale = Vector(1,1,1);
-    _bVisible = true;
-    _bModifiable = true;
+}
+
+KinBody::GeometryInfo::GeometryInfo(const KinBody::GeometryInfo& other) : KinBody::GeometryInfo()
+{
+    *this = other;
+}
+
+KinBody::GeometryInfo::~GeometryInfo() {
 }
 
 KinBody::GeometryInfo& KinBody::GeometryInfo::operator=(const GeometryInfo& other)
@@ -181,12 +198,20 @@ KinBody::GeometryInfo& KinBody::GeometryInfo::operator=(const GeometryInfo& othe
     name = other.name;
     transform = other.transform;
     type = other.type;
+    transparency = other.transparency;
+    visible = other.visible;
+    modifiable = other.modifiable;
+    diffuseColor = other.diffuseColor;
+    ambientColor = other.ambientColor;
+    mesh = other.mesh;
 
-    _fTransparency = other._fTransparency;
+    _vGeomData = other._vGeomData;
+    _vGeomData2 = other._vGeomData2;
+    _vGeomData3 = other._vGeomData3;
     _vRenderScale = other._vRenderScale;
     _vCollisionScale = other._vCollisionScale;
-    _bVisible = other._bVisible;
-    _bModifiable = other._bModifiable;
+    _filenamerender = other._filenamerender;
+    _filenamecollision = other._filenamecollision;
     return *this;
 }
 
@@ -315,7 +340,7 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteTransform(transform);
 
     writer->WriteString("type");
-    switch(_type) {
+    switch(type) {
     case GT_Box:
         writer->WriteString("box");
 
@@ -354,7 +379,7 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->WriteString("trimesh");
         if (options == 0 || (options & SO_GeometryMesh) != 0) {
             writer->WriteString("mesh");
-            writer->WriteTriMesh(_meshcollision);
+            writer->WriteTriMesh(mesh);
         }
         break;
 
@@ -364,31 +389,19 @@ void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     }
 
     writer->WriteString("transparency");
-    writer->WriteDouble(_fTransparency);
+    writer->WriteDouble(transparency);
 
     writer->WriteString("visible");
-    writer->WriteBool(_bVisible);
-
-    writer->WriteString("renderScale");
-    writer->WriteVector(_vRenderScale);
-
-    writer->WriteString("collisionScale");
-    writer->WriteVector(_vCollisionScale);
+    writer->WriteBool(visible);
 
     writer->WriteString("diffuseColor");
-    writer->WriteVector(_vDiffuseColor);
+    writer->WriteVector(diffuseColor);
 
     writer->WriteString("ambientColor");
-    writer->WriteVector(_vAmbientColor);
-
-    // writer->WriteString("filename_render");
-    // writer->WriteString(_filenamerender);
-
-    // writer->WriteString("filename_collision");
-    // writer->WriteString(_filenamecollision);
+    writer->WriteVector(ambientColor);
 
     writer->WriteString("modifiable");
-    writer->WriteBool(_bModifiable);
+    writer->WriteBool(modifiable);
 }
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)

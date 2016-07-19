@@ -59,37 +59,37 @@ class PyGeometryInfo
 {
 public:
     PyGeometryInfo() {
-        _t = ReturnTransform(Transform());
+        transform = ReturnTransform(Transform());
         _vGeomData = toPyVector4(Vector());
         _vGeomData2 = toPyVector4(Vector());
         _vGeomData3 = toPyVector4(Vector());
-        _vDiffuseColor = toPyVector3(Vector(1,1,1));
-        _vAmbientColor = toPyVector3(Vector(0,0,0));
-        _type = GT_None;
-        _fTransparency = 0;
+        diffuseColor = toPyVector3(Vector(1,1,1));
+        ambientColor = toPyVector3(Vector(0,0,0));
+        type = GT_None;
+        transparency = 0;
         _vRenderScale = toPyVector3(Vector(1,1,1));
         _vCollisionScale = toPyVector3(Vector(1,1,1));
-        _bVisible = true;
-        _bModifiable = true;
+        visible = true;
+        modifiable = true;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
         sid = ConvertStringToUnicode(boost::uuids::to_string(info.sid));
-        _name = ConvertStringToUnicode(info._name);
-        _t = ReturnTransform(info._t);
+        name = ConvertStringToUnicode(info.name);
+        transform = ReturnTransform(info.transform);
         _vGeomData = toPyVector4(info._vGeomData);
         _vGeomData2 = toPyVector4(info._vGeomData2);
         _vGeomData3 = toPyVector4(info._vGeomData3);
-        _vDiffuseColor = toPyVector3(info._vDiffuseColor);
-        _vAmbientColor = toPyVector3(info._vAmbientColor);
-        _meshcollision = toPyTriMesh(info._meshcollision);
-        _type = info._type;
+        diffuseColor = toPyVector3(info.diffuseColor);
+        ambientColor = toPyVector3(info.ambientColor);
+        mesh = toPyTriMesh(info.mesh);
+        type = info._type;
         _filenamerender = ConvertStringToUnicode(info._filenamerender);
         _filenamecollision = ConvertStringToUnicode(info._filenamecollision);
         _vRenderScale = toPyVector3(info._vRenderScale);
         _vCollisionScale = toPyVector3(info._vCollisionScale);
-        _fTransparency = info._fTransparency;
-        _bVisible = info._bVisible;
-        _bModifiable = info._bModifiable;
+        transparency = info.transparency;
+        visible = info.visible;
+        modifiable = info.modifiable;
         //TODO
         //_mapExtraGeometries = info. _mapExtraGeometries;
     }
@@ -101,19 +101,19 @@ public:
             boost::uuids::string_generator gen;
             info.sid = gen(std::string(boost::python::extract<std::string>(sid)));
         }
-        if( !IS_PYTHONOBJECT_NONE(_name) ) {
-            info._name = boost::python::extract<std::string>(_name);
+        if( !IS_PYTHONOBJECT_NONE(name) ) {
+            info.name = boost::python::extract<std::string>(name);
         }
-        info._t = ExtractTransform(_t);
+        info.transform = ExtractTransform(transform);
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
         info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
         info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
-        info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
-        info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
-        if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
-            ExtractTriMesh(_meshcollision,info._meshcollision);
+        info.diffuseColor = ExtractVector34<dReal>(diffuseColor,0);
+        info.ambientColor = ExtractVector34<dReal>(ambientColor,0);
+        if( !IS_PYTHONOBJECT_NONE(mesh) ) {
+            ExtractTriMesh(mesh,info.mesh);
         }
-        info._type = _type;
+        info.type = type;
         if( !IS_PYTHONOBJECT_NONE(_filenamerender) ) {
             info._filenamerender = boost::python::extract<std::string>(_filenamerender);
         }
@@ -122,22 +122,22 @@ public:
         }
         info._vRenderScale = ExtractVector3(_vRenderScale);
         info._vCollisionScale = ExtractVector3(_vCollisionScale);
-        info._fTransparency = _fTransparency;
-        info._bVisible = _bVisible;
-        info._bModifiable = _bModifiable;
+        info.transparency = transparency;
+        info.visible = visible;
+        info.modifiable = modifiable;
         //TODO
         //info._mapExtraGeometries =  _mapExtraGeometries;
         return pinfo;
     }
 
-    object sid, _name;
-    object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
-    GeometryType _type;
+    object sid, name;
+    object transform, _vGeomData, _vGeomData2, _vGeomData3, diffuseColor, ambientColor, mesh;
+    GeometryType type;
     object _filenamerender, _filenamecollision;
     object _vRenderScale, _vCollisionScale;
     boost::python::dict _mapExtraGeometries;
-    float _fTransparency;
-    bool _bVisible, _bModifiable;
+    float transparency;
+    bool visible, modifiable;
 };
 typedef boost::shared_ptr<PyGeometryInfo> PyGeometryInfoPtr;
 
@@ -2665,26 +2665,28 @@ class GeometryInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return boost::python::make_tuple(r.sid, r.name, r.transform, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), boost::python::make_tuple(r.diffuseColor, r.ambientColor), r.mesh, (int)r.type, boost::python::make_tuple(r._filenamerender, r._filenamecollision), boost::python::make_tuple(r._vRenderScale, r._vCollisionScale), r.transparency, r.visible, r.modifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
         int num = len(state);
-        r._t = state[0];
-        r._vGeomData = state[1][0];
-        r._vGeomData2 = state[1][1];
-        r._vGeomData3 = state[1][2];
-        r._vDiffuseColor = state[2];
-        r._vAmbientColor = state[3];
-        r._meshcollision = state[4];
-        r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
-        r._filenamerender = state[6];
-        r._filenamecollision = state[7];
-        r._vRenderScale = state[8];
-        r._vCollisionScale = state[9];
-        r._fTransparency = boost::python::extract<float>(state[10]);
-        r._bVisible = boost::python::extract<bool>(state[11]);
-        r._bModifiable = boost::python::extract<bool>(state[12]);
-        r._mapExtraGeometries = dict(state[13]);
+        r.sid = state[0];
+        r.name = state[1];
+        r.transform = state[2];
+        r._vGeomData = state[3][0];
+        r._vGeomData2 = state[3][1];
+        r._vGeomData3 = state[3][2];
+        r.diffuseColor = state[4][0];
+        r.ambientColor = state[4][1];
+        r.mesh = state[5];
+        r.type = (GeometryType)(int)boost::python::extract<int>(state[6]);
+        r._filenamerender = state[7][0];
+        r._filenamecollision = state[7][1];
+        r._vRenderScale = state[8][0];
+        r._vCollisionScale = state[8][1];
+        r.transparency = boost::python::extract<float>(state[9]);
+        r.visible = boost::python::extract<bool>(state[10]);
+        r.modifiable = boost::python::extract<bool>(state[11]);
+        r._mapExtraGeometries = dict(state[12]);
     }
 };
 
@@ -2884,22 +2886,30 @@ void init_openravepy_kinbody()
 
     object geometryinfo = class_<PyGeometryInfo, boost::shared_ptr<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
                           .def_readwrite("sid",&PyGeometryInfo::sid)
-                          .def_readwrite("_name",&PyGeometryInfo::_name)
-                          .def_readwrite("_t",&PyGeometryInfo::_t)
+                          .def_readwrite("name",&PyGeometryInfo::name)
+                          .def_readwrite("transform",&PyGeometryInfo::transform)
+                          .def_readwrite("_t",&PyGeometryInfo::transform)
                           .def_readwrite("_vGeomData",&PyGeometryInfo::_vGeomData)
                           .def_readwrite("_vGeomData2",&PyGeometryInfo::_vGeomData2)
                           .def_readwrite("_vGeomData3",&PyGeometryInfo::_vGeomData3)
-                          .def_readwrite("_vDiffuseColor",&PyGeometryInfo::_vDiffuseColor)
-                          .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
-                          .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
-                          .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("diffuseColor",&PyGeometryInfo::diffuseColor)
+                          .def_readwrite("_vDiffuseColor",&PyGeometryInfo::diffuseColor)
+                          .def_readwrite("ambientColor",&PyGeometryInfo::ambientColor)
+                          .def_readwrite("_vAmbientColor",&PyGeometryInfo::ambientColor)
+                          .def_readwrite("mesh",&PyGeometryInfo::mesh)
+                          .def_readwrite("_meshcollision",&PyGeometryInfo::mesh)
+                          .def_readwrite("type",&PyGeometryInfo::type)
+                          .def_readwrite("_type",&PyGeometryInfo::type)
                           .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
                           .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
                           .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
                           .def_readwrite("_vCollisionScale",&PyGeometryInfo::_vCollisionScale)
-                          .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
-                          .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
-                          .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
+                          .def_readwrite("transparency",&PyGeometryInfo::transparency)
+                          .def_readwrite("_fTransparency",&PyGeometryInfo::transparency)
+                          .def_readwrite("visible",&PyGeometryInfo::visible)
+                          .def_readwrite("_bVisible",&PyGeometryInfo::visible)
+                          .def_readwrite("modifiable",&PyGeometryInfo::modifiable)
+                          .def_readwrite("_bModifiable",&PyGeometryInfo::modifiable)
                           .def_readwrite("_mapExtraGeometries",&PyGeometryInfo::_mapExtraGeometries)
                           .def_pickle(GeometryInfo_pickle_suite())
     ;

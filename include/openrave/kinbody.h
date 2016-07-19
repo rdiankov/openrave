@@ -131,8 +131,8 @@ public:
     {
 public:
         GeometryInfo();
-        virtual ~GeometryInfo() {
-        }
+        GeometryInfo(const GeometryInfo& other);
+        virtual ~GeometryInfo();
 
         GeometryInfo& operator=(const GeometryInfo& other);
 
@@ -159,25 +159,30 @@ public:
 
         /// \brief unique geometry name
         std::string name;
-        std::string& _name RAVE_DEPRECATED;
 
         Transform transform; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
         Transform& _t RAVE_DEPRECATED; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-        Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
-        Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
-        Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
 
+        Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
-        RaveVector<float> _vDiffuseColor, _vAmbientColor; ///< hints for how to color the meshes
+
+        Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
+        Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
+
+        RaveVector<float> diffuseColor;
+        RaveVector<float> ambientColor;
+        RaveVector<float>& _vDiffuseColor RAVE_DEPRECATED; ///< hints for how to color the meshes
+        RaveVector<float>& _vAmbientColor RAVE_DEPRECATED; ///< hints for how to color the meshes
 
         /// \brief trimesh representation of the collision data of this object in this local coordinate system
         ///
         /// Should be transformed by \ref _t before rendering.
         /// For spheres and cylinders, an appropriate discretization value is chosen.
         /// If empty, will be automatically computed from the geometry's type and render data
-        TriMesh _meshcollision;
+        TriMesh mesh;
+        TriMesh& _meshcollision RAVE_DEPRECATED;
 
         GeometryType type; ///< the type of geometry primitive
         GeometryType& _type RAVE_DEPRECATED; ///< the type of geometry primitive
@@ -196,9 +201,15 @@ public:
 
         Vector _vRenderScale; ///< render scale of the object (x,y,z) from _filenamerender
         Vector _vCollisionScale; ///< render scale of the object (x,y,z) from _filenamecollision
-        float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
-        bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
-        bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+
+        float transparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
+        float& _fTransparency RAVE_DEPRECATED; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
+
+        bool visible; ///< if true, geometry is visible as part of the 3d model (default is true)
+        bool& _bVisible RAVE_DEPRECATED; ///< if true, geometry is visible as part of the 3d model (default is true)
+
+        bool modifiable; ///< if true, object geometry can be dynamically modified (default is true)
+        bool& _bModifiable RAVE_DEPRECATED; ///< if true, object geometry can be dynamically modified (default is true)
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
