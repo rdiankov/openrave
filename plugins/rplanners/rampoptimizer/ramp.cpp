@@ -590,6 +590,11 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
                     switchpointsList.insert(it, curves[i].switchpointsList[j]);
                 }
             }
+            else if (it == switchpointsList.begin()) {
+                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon)) {
+                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
+                }
+            }
             else {
                 if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon) && !FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
                     // Insert only non-redundant switch points
@@ -634,6 +639,8 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
         for (std::vector<dReal>::iterator it = tempSwitchpointsList.begin(); it != tempSwitchpointsList.end(); ++it) {
             *it += originalDur;
         }
+        switchpointsList.pop_back(); // remove the last element of switchpointsList since it must be
+                                     // the same as the first switch point from tempSwitchpointsList
         switchpointsList.reserve(switchpointsList.size() + tempSwitchpointsList.size());
         switchpointsList.insert(switchpointsList.end(), tempSwitchpointsList.begin(), tempSwitchpointsList.end());
 
@@ -690,6 +697,11 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
             it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
             if (it == switchpointsList.end()) {
                 if (!FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
+                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
+                }
+            }
+            else if (it == switchpointsList.begin()) {
+                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon)) {
                     switchpointsList.insert(it, curves[i].switchpointsList[j]);
                 }
             }
