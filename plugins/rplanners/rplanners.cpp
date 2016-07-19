@@ -31,8 +31,11 @@ PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& si
 PlannerBasePtr CreateParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 }
+
+bool bUseNewParabolicSmoother = true;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
@@ -64,7 +67,15 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return rplanners::CreateLinearTrajectoryRetimer(penv,sinput);
         }
         else if( interfacename == "parabolictrajectoryretimer" ) {
-            return rplanners::CreateParabolicTrajectoryRetimer(penv,sinput);
+            if (!bUseNewParabolicSmoother) {
+                return rplanners::CreateParabolicTrajectoryRetimer(penv,sinput);
+            }
+            else {
+                return rplanners::CreateParabolicTrajectoryRetimer2(penv,sinput);
+            }
+        }
+        else if( interfacename == "parabolictrajectoryretimer2" ) {
+            return rplanners::CreateParabolicTrajectoryRetimer2(penv,sinput);
         }
         else if( interfacename == "cubictrajectoryretimer" ) {
             return rplanners::CreateCubicTrajectoryRetimer(penv,sinput);
@@ -76,7 +87,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return CreateLinearSmoother(penv,sinput);
         }
         else if( interfacename == "parabolicsmoother" ) {
-            if (0) {
+            if (!bUseNewParabolicSmoother) {
                 return rplanners::CreateParabolicSmoother(penv,sinput);
             }
             else {
@@ -106,6 +117,7 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("shortcut_linear");
     info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
+    info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer2");
     info.interfacenames[PT_Planner].push_back("CubicTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
     info.interfacenames[PT_Planner].push_back("LinearSmoother");
