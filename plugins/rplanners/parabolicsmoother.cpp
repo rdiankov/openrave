@@ -373,7 +373,7 @@ public:
             if( itcompatposgroup->interpolation.size() == 0 || itcompatposgroup->interpolation == "linear" ) {
                 bRampIsPerfectlyModeled = true;
             }
-
+            RAVELOG_VERBOSE_FORMAT("initial numwaypoints before removing collinear ones = %d", ptraj->GetNumWaypoints());
             // linear ramp or unknown
             vector<ParabolicRamp::Vector> &path=_cachepath; path.resize(0);
             if( path.capacity() < ptraj->GetNumWaypoints() ) {
@@ -419,7 +419,9 @@ public:
                 return PS_Failed;
             }
             RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
-            //DumpDynamicPath(dynamicpath);
+            if (IS_DEBUGLEVEL(Level_Debug)) {
+                DumpDynamicPath(dynamicpath);
+            }
         }
 
         // if ramp is not perfectly modeled, then have to verify!
@@ -444,6 +446,10 @@ public:
             }
 
             int numshortcuts=0;
+            dReal dummyDur1 = 0, dummyDur2 = 0;
+            FOREACH(itramp, dynamicpath.ramps) {
+                dummyDur1 += itramp->endTime;
+            }
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
@@ -453,6 +459,10 @@ public:
                     return PS_Interrupted;
                 }
             }
+            FOREACH(itramp, dynamicpath.ramps) {
+                dummyDur2 += itramp->endTime;
+            }
+            RAVELOG_DEBUG_FORMAT("after shortcutting: duration %.15e -> %.15e, diff = %.15e", dummyDur1%dummyDur2%(dummyDur1 - dummyDur2));
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -688,7 +698,9 @@ public:
             // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
-            //DumpDynamicPath(dynamicpath);
+            if (IS_DEBUGLEVEL(Level_Debug)) {
+                DumpDynamicPath(dynamicpath);
+            }
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -921,6 +933,7 @@ protected:
     /// \brief converts a path of linear points to a ramp that initially satisfies the constraints
     bool _SetMilestones(std::vector<ParabolicRamp::ParabolicRampND>& ramps, const vector<ParabolicRamp::Vector>& vpath)
     {
+        RAVELOG_VERBOSE_FORMAT("initial num waypoints = %d", vpath.size());
         size_t numdof = _parameters->GetDOF();
         ramps.resize(0);
         if(vpath.size()==1) {
@@ -1028,7 +1041,7 @@ protected:
             size_t iswitch = 0;
             for(iswitch = 0; iswitch < vswitchtimes.size(); ++iswitch) {
                 ramp.Evaluate(vswitchtimes.at(iswitch), x1);
-                ramp.Derivative(vswitchtimes.at(iswitch), dx1);
+                ramp.Derivative(vswitchtimes.at(iswitch), dx1);          
                 retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
 //                        if( retseg.retcode == CFO_StateSettingError ) {
 //                            // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
@@ -1192,6 +1205,13 @@ protected:
                 dReal fcurmult = fstarttimemult;
 
                 RAVELOG_VERBOSE_FORMAT("env=%d, shortcutting from t1 = %.15e to t2 = %.15e", GetEnv()->GetId()%t1%t2);
+                
+                // std::stringstream ss; ss << setprecision(std::numeric_limits<dReal>::digits10+1);
+                // ss << "vmVect=[";
+                // SerializeValues(ss, vellimits);
+                // ss << "]; amVect=[";
+                // SerializeValues(ss, accellimits);
+                // RAVELOG_DEBUG_FORMAT("%s", ss.str());
 
                 for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
@@ -1205,6 +1225,9 @@ protected:
                         // reject since it didn't make significant improvement
                         RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d rejected times [%f, %f]. final trajtime=%fs", GetEnv()->GetId()%iters%t1%t2%(endTime-(t2-t1)+newramptime));
                         break;
+                    }
+                    else {
+                        RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d t1 = %.15e; t2 = %.15e; newramptime = %.15e; tdiff = %.15e", GetEnv()->GetId()%iters%t1%t2%newramptime%(t2-t1));
                     }
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
