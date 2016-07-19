@@ -22,9 +22,9 @@
 
 namespace rplanners {
 
-struct ManipConstraintInfo
+struct ManipConstraintInfo2
 {
-    ManipConstraintInfo() : fmaxdistfromcenter(0) {
+    ManipConstraintInfo2() : fmaxdistfromcenter(0) {
     }
 
     RobotBase::ManipulatorPtr pmanip;
@@ -41,10 +41,10 @@ struct ManipConstraintInfo
     std::vector<int> vconfigindices; ///< for every index in vuseddofindices, returns the first configuration space index it came from
 };
 
-class ManipConstraintChecker
+class ManipConstraintChecker2
 {
 public:
-    ManipConstraintChecker(EnvironmentBasePtr penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
+    ManipConstraintChecker2(EnvironmentBasePtr penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
     }
 
     /// \brief given a world AABB oriented, return its 8 vertices
@@ -62,7 +62,7 @@ public:
         }
     }
 
-    const std::list< ManipConstraintInfo >& GetCheckManips() const {
+    const std::list< ManipConstraintInfo2 >& GetCheckManips() const {
         return _listCheckManips;
     }
 
@@ -153,8 +153,8 @@ public:
                     }
                     // Compute the enclosing AABB and add its vertices to the checkpoints
                     AABB enclosingaabb = ComputeEnclosingAABB(globallinklist, endeffector->GetTransform());
-                    _listCheckManips.push_back(ManipConstraintInfo());
-                    ManipConstraintInfo& info = _listCheckManips.back();
+                    _listCheckManips.push_back(ManipConstraintInfo2());
+                    ManipConstraintInfo2& info = _listCheckManips.back();
                     info.pmanip = pmanip;
                     spec.ExtractUsedIndices(pmanip->GetRobot(), info.vuseddofindices, info.vconfigindices);
                     info.plink = endeffector;
@@ -402,7 +402,7 @@ private:
     dReal _maxmanipspeed, _maxmanipaccel;
 
     //@{ cache
-    std::list< ManipConstraintInfo > _listCheckManips; ///< the manipulators and the points on their end efffectors to check for velocity and acceleration constraints
+    std::list< ManipConstraintInfo2 > _listCheckManips; ///< the manipulators and the points on their end efffectors to check for velocity and acceleration constraints
     std::vector<dReal> ac, qfillactive, _vfillactive; // the active DOF
     std::vector<dReal> _afill; // full robot DOF
     std::vector<std::pair<Vector,Vector> > endeffvels, endeffaccs;
