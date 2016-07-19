@@ -165,7 +165,7 @@ public:
         inline void SetClosingDirection(const std::vector<dReal>& closingdirection) {
             SetChuckingDirection(closingdirection);
         }
-        
+
         virtual const std::vector<dReal>& GetChuckingDirection() const {
             return _info._vChuckingDirection;
         }
@@ -273,12 +273,12 @@ public:
         virtual void GetIndependentLinks(std::vector<LinkPtr>& vlinks) const;
 
         /** \brief Checks collision with only the gripper and the rest of the environment with the current link transforms. Ignores disabled links.
-            
+
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
         virtual bool CheckEndEffectorCollision(CollisionReportPtr report = CollisionReportPtr()) const;
-        
+
         /** \brief Checks collision with only the gripper and the rest of the environment given a new end-effector transform. Ignores disabled links.
 
             \param tEE the end effector transform
@@ -363,7 +363,7 @@ public:
         ///
         /// Note that the return type is by-value, so should not be used in iteration
         virtual ConfigurationSpecification GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="") const;
-        
+
         /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
         virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
@@ -491,15 +491,15 @@ public:
             UpdateInfo(type);
             return _info;
         }
-        
-        /// \brief returns the attached sensor info 
+
+        /// \brief returns the attached sensor info
         inline const AttachedSensorInfo& GetInfo() const {
             return _info;
         }
 
 private:
         AttachedSensorInfo _info; ///< user specified data
-        
+
         RobotBaseWeakPtr _probot;
         SensorBasePtr psensor;
         LinkWeakPtr pattachedlink;         ///< the robot link that the sensor is attached to
@@ -522,7 +522,7 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
     typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
-    
+
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
     /// This is serializable and independent of environment.
@@ -532,7 +532,7 @@ public:
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
+        std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collisions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -803,7 +803,7 @@ private:
     ///
     /// Will change the robot structure hash..
     virtual bool RemoveAttachedSensor(AttachedSensorPtr attsensor);
-    
+
     /// \deprecated (11/10/04) send directly through controller
     virtual bool SetMotion(TrajectoryBaseConstPtr ptraj) RAVE_DEPRECATED;
 
