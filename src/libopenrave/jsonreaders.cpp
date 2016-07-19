@@ -17,8 +17,6 @@
 #include "libopenrave.h"
 #include <openrave/jsonreaders.h>
 
-#include <boost/uuid/uuid_io.hpp>
-
 namespace OpenRAVE {
 
 const std::string& BaseJSONWriter::GetFormat() const
@@ -121,9 +119,6 @@ void BaseJSONWriter::WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& i
     EndObject();
 }
 
-void BaseJSONWriter::WriteBoostUUID(const boost::uuids::uuid& uuid) {
-    WriteString(boost::uuids::to_string(uuid));
-}
 void BaseJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a) {
     StartArray();
     for (size_t i=0; i<a.size(); ++i) {

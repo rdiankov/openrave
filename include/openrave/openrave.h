@@ -81,7 +81,6 @@
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/multi_array.hpp>
-#include <boost/uuid/uuid.hpp>
 //#include <boost/cstdint.hpp>
 
 #endif
@@ -2711,9 +2710,6 @@ public:
 
     /// \brief writes an OpenRAVE CameraIntrinsics
     virtual void WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics);
-
-    /// \brief writes a uuid
-    virtual void WriteBoostUUID(const boost::uuids::uuid& uuid);
 
     /// \brief writes a boost array of dReal
     virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);

@@ -43,7 +43,7 @@ public:
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
-        boost::uuids::uuid _sid;
+        std::string sid;
 
         std::string _name;
         std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
@@ -431,7 +431,7 @@ public:
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
-        boost::uuids::uuid _sid;
+        std::string sid;
 
         std::string _name;
         std::string _linkname; ///< the robot link that the sensor is attached to

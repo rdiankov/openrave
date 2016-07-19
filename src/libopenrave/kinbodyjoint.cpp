@@ -18,18 +18,13 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp> // boost::trim
 #include <boost/lexical_cast.hpp>
-#include <boost/uuid/nil_generator.hpp>
-#include <boost/uuid/random_generator.hpp>
 
 #include "fparsermulti.h"
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _sid(boost::uuids::nil_uuid()), _type(JointNone), _bIsActive(true)
+KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true)
 {
-    boost::uuids::random_generator gen;
-    _sid = gen();
-
     for(size_t i = 0; i < _vaxes.size(); ++i) {
         _vaxes[i] = Vector(0,0,1);
     }
@@ -49,7 +44,7 @@ KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _sid(boost::uuids::nil_u
 void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteBoostUUID(_sid);
+    writer->WriteString(sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);

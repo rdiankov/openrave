@@ -17,9 +17,6 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_kinbody.h"
 
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/string_generator.hpp>
-
 namespace openravepy {
 
 class PyLink;
@@ -73,7 +70,7 @@ public:
         modifiable = true;
     }
     PyGeometryInfo(const KinBody::GeometryInfo& info) {
-        sid = ConvertStringToUnicode(boost::uuids::to_string(info.sid));
+        sid = ConvertStringToUnicode(info.sid);
         name = ConvertStringToUnicode(info.name);
         transform = ReturnTransform(info.transform);
         _vGeomData = toPyVector4(info._vGeomData);
@@ -98,8 +95,7 @@ public:
         KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
         KinBody::GeometryInfo& info = *pinfo;
         if( !IS_PYTHONOBJECT_NONE(sid) ) {
-            boost::uuids::string_generator gen;
-            info.sid = gen(std::string(boost::python::extract<std::string>(sid)));
+            info.sid = boost::python::extract<std::string>(sid);
         }
         if( !IS_PYTHONOBJECT_NONE(name) ) {
             info.name = boost::python::extract<std::string>(name);
@@ -157,7 +153,7 @@ public:
         FOREACHC(itgeominfo, info._vgeometryinfos) {
             _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
         }
-        _sid = ConvertStringToUnicode(boost::uuids::to_string(info._sid));
+        sid = ConvertStringToUnicode(info.sid);
         _name = ConvertStringToUnicode(info._name);
         _t = ReturnTransform(info._t);
         _tMassFrame = ReturnTransform(info._tMassFrame);
@@ -189,9 +185,8 @@ public:
             PyGeometryInfoPtr pygeom = boost::python::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
             info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
         }
-        if( !IS_PYTHONOBJECT_NONE(_sid) ) {
-            boost::uuids::string_generator gen;
-            info._sid = gen(std::string(boost::python::extract<std::string>(_sid)));
+        if( !IS_PYTHONOBJECT_NONE(sid) ) {
+            info.sid = boost::python::extract<std::string>(sid);
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
             info._name = boost::python::extract<std::string>(_name);
@@ -231,7 +226,7 @@ public:
     }
 
     boost::python::list _vgeometryinfos;
-    object _sid, _name;
+    object sid, _name;
     object _t, _tMassFrame;
     dReal _mass;
     object _vinertiamoments;
@@ -364,7 +359,7 @@ public:
 
     PyJointInfo(const KinBody::JointInfo& info, PyEnvironmentBasePtr pyenv) {
         _type = info._type;
-        _sid = ConvertStringToUnicode(boost::uuids::to_string(info._sid));
+        sid = ConvertStringToUnicode(info.sid);
         _name = ConvertStringToUnicode(info._name);
         _linkname0 = ConvertStringToUnicode(info._linkname0);
         _linkname1 = ConvertStringToUnicode(info._linkname1);
@@ -422,9 +417,8 @@ public:
         KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
         KinBody::JointInfo& info = *pinfo;
         info._type = _type;
-        if( !IS_PYTHONOBJECT_NONE(_sid) ) {
-            boost::uuids::string_generator gen;
-            info._sid = gen(std::string(boost::python::extract<std::string>(_sid)));
+        if( !IS_PYTHONOBJECT_NONE(sid) ) {
+            info.sid = boost::python::extract<std::string>(sid);
         }
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
             info._name = boost::python::extract<std::string>(_name);
@@ -537,7 +531,7 @@ public:
         return pinfo;
     }
     KinBody::JointType _type;
-    object _sid, _name;
+    object sid, _name;
     object _linkname0, _linkname1;
     object _vanchor, _vaxes, _vcurrentvalues, _vresolution, _vmaxvel, _vhardmaxvel, _vmaxaccel, _vmaxtorque, _vmaxinertia, _vweights, _voffsets, _vlowerlimit, _vupperlimit;
     object _trajfollow;
@@ -2915,7 +2909,7 @@ void init_openravepy_kinbody()
     ;
     object linkinfo = class_<PyLinkInfo, boost::shared_ptr<PyLinkInfo> >("LinkInfo", DOXY_CLASS(KinBody::LinkInfo))
                       .def_readwrite("_vgeometryinfos",&PyLinkInfo::_vgeometryinfos)
-                      .def_readwrite("_sid",&PyLinkInfo::_sid)
+                      .def_readwrite("sid",&PyLinkInfo::sid)
                       .def_readwrite("_name",&PyLinkInfo::_name)
                       .def_readwrite("_t",&PyLinkInfo::_t)
                       .def_readwrite("_tMassFrame",&PyLinkInfo::_tMassFrame)
@@ -2931,7 +2925,7 @@ void init_openravepy_kinbody()
     ;
     object jointinfo = class_<PyJointInfo, boost::shared_ptr<PyJointInfo> >("JointInfo", DOXY_CLASS(KinBody::JointInfo))
                        .def_readwrite("_type",&PyJointInfo::_type)
-                       .def_readwrite("_sid",&PyJointInfo::_sid)
+                       .def_readwrite("sid",&PyJointInfo::sid)
                        .def_readwrite("_name",&PyJointInfo::_name)
                        .def_readwrite("_linkname0",&PyJointInfo::_linkname0)
                        .def_readwrite("_linkname1",&PyJointInfo::_linkname1)

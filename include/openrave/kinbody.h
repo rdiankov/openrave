@@ -155,7 +155,7 @@ public:
         }
 
         /// \brief unique and constant scoped identifier
-        boost::uuids::uuid sid;
+        std::string sid;
 
         /// \brief unique geometry name
         std::string name;
@@ -225,7 +225,7 @@ public:
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
-        boost::uuids::uuid _sid;
+        std::string sid;
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
@@ -806,7 +806,7 @@ public:
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
-        boost::uuids::uuid _sid;
+        std::string sid;
 
         JointType _type; /// The joint type
         std::string _name;         ///< the unique joint name
@@ -1499,7 +1499,7 @@ private:
     virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
     /// \brief Unique and constant scoped id of the kinbody.
-    virtual const boost::uuids::uuid& GetID() const {
+    virtual const std::string& GetID() const {
         return _id;
     }
 
@@ -2207,7 +2207,7 @@ protected:
     virtual void _ResetInternalCollisionCache();
 
     /// \brief unique and constant identifier
-    boost::uuids::uuid _id;
+    std::string _id;
 
     std::string _name; ///< name of body
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

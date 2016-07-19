@@ -16,15 +16,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
-#include <boost/uuid/nil_generator.hpp>
-#include <boost/uuid/random_generator.hpp>
 
 namespace OpenRAVE {
 
-KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _sid(boost::uuids::nil_uuid()), _mass(0), _bStatic(false), _bIsEnabled(true)
+KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true)
 {
-    boost::uuids::random_generator gen;
-    _sid = gen();
 }
 
 KinBody::Link::Link(KinBodyPtr parent)
@@ -280,7 +276,7 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
 void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 {
     writer->WriteString("sid");
-    writer->WriteBoostUUID(_sid);
+    writer->WriteString(sid);
 
     writer->WriteString("name");
     writer->WriteString(_name);
