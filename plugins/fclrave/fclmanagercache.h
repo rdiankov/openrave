@@ -515,13 +515,13 @@ private:
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
     void SaveCollisionObjectDebugInfos() {
         FOREACH(itpcollobj, _tmpbuffer) {
-            SaveCollisionObjectDebugInfos(*itpcollobj)
+            SaveCollisionObjectDebugInfos(*itpcollobj);
         }
     }
 
     void SaveCollisionObjectDebugInfos(fcl::CollisionObject* pcollobj) {
-        KinBodyInfo::LINK* pLINK = static_cast<KinBodyInfo::LINK*>(pcollobj->getUserData());
-        _mapDebugCollisionObjects.insert(std::make_pair(*itpcollobj, std::make_pair(pLINK->bodylinkname, _fclspace->GetInfo(pLINK->GetLink()->GetParent())->_geometrygroup)));
+        FCLSpace::KinBodyInfo::LINK* pLINK = static_cast<FCLSpace::KinBodyInfo::LINK*>(pcollobj->getUserData());
+        _mapDebugCollisionObjects.insert(std::make_pair(pcollobj, std::make_pair(pLINK->bodylinkname, _fclspace.GetInfo(pLINK->GetLink()->GetParent())->_geometrygroup)));
     }
 
     std::map< fcl::CollisionObject*, std::pair<std::string, std::string> > _mapDebugCollisionObjects;
