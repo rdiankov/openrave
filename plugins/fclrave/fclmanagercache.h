@@ -384,18 +384,14 @@ public:
             itcache = mapCachedBodies.begin();
             while(itcache != mapCachedBodies.end()) {
                 KinBodyConstPtr pbody = itcache->second.pwbody.lock();
-                if( !pbody ) {
+                if( !pbody || attachedBodies.count(pbody) == 0 ) {
+                    // not in attached bodies so should remove
                     FOREACH(itcol, itcache->second.vcolobjs) {
                         if( !!itcol->get() ) {
                             pmanager->unregisterObject(itcol->get());
                         }
                     }
                     itcache->second.vcolobjs.resize(0);
-                    itcache = mapCachedBodies.erase(itcache++);
-                }
-                else if( attachedBodies.count(pbody) == 0 ) {
-                    // not in attached bodies so should remove
-                    _RemoveBody(pbody);
                     itcache = mapCachedBodies.erase(itcache++);
                 }
                 else {
