@@ -1346,7 +1346,9 @@ protected:
                             if (1) {
                                 bool res = RampOptimizer::InterpolateArbitraryVelND(shortcutCurvesNDVect1.back().x0Vect, x1, shortcutCurvesNDVect1.back().v0Vect, v1, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutCurvesND2, true);
                                 if (!res) {
+                                    // This may be because we cannot the fix joint limit violation.
                                     RAVELOG_WARN("Failed to InterpolateArbitraryVelND to correct the final velocity\n");
+                                    retcheck.retcode = CFO_RecommendedOptions;
                                     break;
                                 }
                                 if (RaveFabs(shortcutCurvesND2.duration - shortcutCurvesNDVect1.back().duration) > 0.01) {
