@@ -96,6 +96,9 @@ public:
             }
         }
         if( _tmpbuffer.size() > 0 ) {
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+            SaveCollisionObjectDebugInfos();
+#endif
             pmanager->registerObjects(_tmpbuffer); // bulk update
         }
         pmanager->setup();
@@ -135,6 +138,9 @@ public:
             }
         }
         if( _tmpbuffer.size() > 0 ) {
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+            SaveCollisionObjectDebugInfos();
+#endif
             pmanager->registerObjects(_tmpbuffer); // bulk update
         }
     }
@@ -155,6 +161,9 @@ public:
             }
         }
         if( _tmpbuffer.size() > 0 ) {
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+            SaveCollisionObjectDebugInfos();
+#endif
             pmanager->registerObjects(_tmpbuffer); // bulk update
         }
 
@@ -241,6 +250,9 @@ public:
                 itcache->second.geometrygroup = pnewinfo->_geometrygroup;
                 pinfo = pnewinfo;
                 if( _tmpbuffer.size() > 0 ) {
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                    SaveCollisionObjectDebugInfos();
+#endif
                     pmanager->registerObjects(_tmpbuffer); // bulk update
                     _tmpbuffer.resize(0);
                 }
@@ -265,6 +277,9 @@ public:
                             if( newlinkmask & ((uint64_t)1<<ilink) ) {
                                 CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(pinfo, ilink);
                                 if( !!pcolobj ) {
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                                    SaveCollisionObjectDebugInfos(pcolobj.get());
+#endif
                                     pmanager->registerObject(pcolobj.get());
                                 }
                                 itcache->second.vcolobjs.at(ilink) = pcolobj;
@@ -292,9 +307,15 @@ public:
                             CollisionObjectPtr pcol = _fclspace.GetLinkBV(pinfo, ilink);
                             if( !!pcol ) {
 #ifdef FCLRAVE_USE_REPLACEOBJECT
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                                SaveCollisionObjectDebugInfos(pcol.get());
+#endif
                                 pmanager->replaceObject(itcache->second.vcolobjs.at(ilink).get(), pcol.get(), false);
 #else
                                 pmanager->unregisterObject(itcache->second.vcolobjs.at(ilink).get());
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+                                SaveCollisionObjectDebugInfos(pcol.get());
+#endif
                                 pmanager->registerObject(pcol.get());
 #endif
                                 bcallsetup = true;
@@ -383,6 +404,9 @@ public:
             }
         }
         if( _tmpbuffer.size() > 0 ) {
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+            SaveCollisionObjectDebugInfos();
+#endif
             pmanager->registerObjects(_tmpbuffer); // bulk update
         }
         if( bcallsetup ) {
@@ -488,6 +512,20 @@ private:
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
 
+#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+    void SaveCollisionObjectDebugInfos() {
+        FOREACH(itpcollobj, _tmpbuffer) {
+            SaveCollisionObjectDebugInfos(*itpcollobj)
+        }
+    }
+
+    void SaveCollisionObjectDebugInfos(fcl::CollisionObject* pcollobj) {
+        KinBodyInfo::LINK* pLINK = static_cast<KinBodyInfo::LINK*>(pcollobj->getUserData());
+        _mapDebugCollisionObjects.insert(std::make_pair(*itpcollobj, std::make_pair(pLINK->bodylinkname, _fclspace->GetInfo(pLINK->GetLink()->GetParent())->_geometrygroup)));
+    }
+
+    std::map< fcl::CollisionObject*, std::pair<std::string, std::string> > _mapDebugCollisionObjects;
+#endif
 };
 
 typedef boost::shared_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;
