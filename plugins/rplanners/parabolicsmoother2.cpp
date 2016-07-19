@@ -223,7 +223,7 @@ public:
         // Initialize workspace constraints on manipulators
         if (_bmanipconstraints) {
             if (!_manipconstraintchecker) {
-                _manipconstraintchecker.reset(new ManipConstraintChecker(GetEnv()));
+                _manipconstraintchecker.reset(new ManipConstraintChecker2(GetEnv()));
             }
             _manipconstraintchecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
         }
@@ -389,7 +389,7 @@ public:
             ptraj->GetWaypoints(0, ptraj->GetNumWaypoints(), waypoints, _parameters->_configurationspecification);
 
             // Iterate through all waypoints and remove the redundant (collinear) ones
-            dReal collinearThresh = RampOptimizer::Sqr(10*RampOptimizer::epsilon);
+            dReal collinearThresh = g_fEpsilonLinear;//RampOptimizer::Sqr(10*RampOptimizer::epsilon);
             for (size_t iwaypoint = 0; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint) {
                 std::copy(waypoints.begin() + iwaypoint*_parameters->GetDOF(), waypoints.begin() + (iwaypoint + 1)*_parameters->GetDOF(), q.begin());
 
@@ -434,6 +434,7 @@ public:
                 return PS_Failed;
             }
             RAVELOG_DEBUG_FORMAT("Finished initializing %s waypoints (via _SetMilestones)", itcompatposgroup->interpolation);
+            RAVELOG_DEBUG_FORMAT("numwaypoints: %d -> %d", ptraj->GetNumWaypoints()%vWaypoints.size());
             if (IS_DEBUGLEVEL(Level_Debug)) {
                 _DumpParabolicPath(parabolicpath);
             }
@@ -1320,7 +1321,7 @@ protected:
                         // shortcutcurvesnd due to Jacobian projection constraints inside
                         // CheckPathAllConstraints, then we have to reset vellimits and accellimits so
                         // that they are above those of the modified trajectory.
-                        if (bExpectedModifiedConfigurations) {
+                        if (1) {//(bExpectedModifiedConfigurations) {
                             for (size_t icurvesnd = 0; icurvesnd + 1 < shortcutCurvesNDVect1.size(); ++icurvesnd) {
                                 for (size_t jdof = 0; jdof < shortcutCurvesNDVect1[icurvesnd].ndof; ++jdof) {
                                     dReal fminvel = max(RaveFabs(shortcutCurvesNDVect1[icurvesnd].v0Vect[jdof]), RaveFabs(shortcutCurvesNDVect1[icurvesnd].v1Vect[jdof]));
@@ -1538,7 +1539,7 @@ protected:
     SpaceSamplerBasePtr _logginguniformsampler; ///< used for logging, seed is random
     ConstraintFilterReturnPtr _constraintreturn;
     MyParabolicCurvesNDFeasibilityChecker _feasibilitychecker;
-    boost::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
+    boost::shared_ptr<ManipConstraintChecker2> _manipconstraintchecker;
 
     // Caching stuff
     // Used in PlanPath
