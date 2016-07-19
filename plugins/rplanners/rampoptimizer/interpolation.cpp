@@ -1258,8 +1258,15 @@ bool CalculateLeastUpperBoundInoperativeInterval(dReal x0, dReal x1, dReal v0, d
         return true;
     }
     else {
-        RAMP_OPTIM_PLOG("Unable to calculate the least upper bound: T0 = %.15e, T1 = %.15e, T2 = %.15e, T3 = %.15e", T0, T1, T2, T3);
-        return false;
+        if (FuzzyEquals(x1, x0, epsilon) && FuzzyZero(v0, epsilon) && FuzzyZero(v1, epsilon)) {
+            t = 0;
+            return true;
+        }
+        else {
+            RAMP_OPTIM_PLOG("Unable to calculate the least upper bound: T0 = %.15e, T1 = %.15e, T2 = %.15e, T3 = %.15e", T0, T1, T2, T3);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, vm, am);
+            return false;
+        }
     }
 }
 
