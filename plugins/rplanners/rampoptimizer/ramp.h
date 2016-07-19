@@ -27,7 +27,7 @@ namespace OpenRAVE {
 
 namespace RampOptimizerInternal {
 
-const static dReal epsilon = 1e-10;//1e-8;
+const static dReal epsilon = 1e-10;
 const static dReal inf = 1e300;
 
 class Ramp {

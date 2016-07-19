@@ -90,8 +90,51 @@ public:
             for (size_t iswitch = 1; iswitch < vswitchtimes.size(); ++iswitch) {
                 curvesnd.EvalPos(vswitchtimes.at(iswitch), q1);
                 dReal elapsedTime = vswitchtimes.at(iswitch) - vswitchtimes.at(iswitch - 1);
-                curvesnd.EvalVel(vswitchtimes.at(iswitch), dq1);
-                // Do we need to recompute dq1 and elapsed time here?
+
+                if (feas->NeedDerivativeForFeasibility()) {
+                    // Due to constraints, configurations may be modified inside
+                    // SegmentFeasible2. Therefore, dq1 might not be consistent with q0, q1, and
+                    // dq0.
+                    curvesnd.EvalVel(vswitchtimes.at(iswitch), dq1); // original dq1
+
+                    dReal expectedElapsedTime = 0;
+                    dReal totalWeight = 0;
+                    for (size_t idof = 0; idof < curvesnd.ndof; ++idof) {
+                        dReal avgVel = 0.5*(dq0[idof] + dq1[idof]);
+                        if (RaveFabs(avgVel) > g_fEpsilon) {
+                            dReal fWeight = RaveFabs(q1[idof] - q0[idof]);
+                            expectedElapsedTime += fWeight*(q1[idof] - q0[idof])/avgVel;
+                            totalWeight += fWeight;
+                        }
+                    }
+
+                    if (totalWeight > g_fEpsilon) {
+                        // Compute a better elapsed time
+                        dReal newElapsedTime = expectedElapsedTime/totalWeight;
+                        // Check elapsed time consistency
+                        if (RaveFabs(elapsedTime - newElapsedTime) > RampOptimizer::epsilon) {
+                            // The new elapsed time is consistent with the data
+                            RAVELOG_VERBOSE_FORMAT("changing the segment elapsed time: %.15e -> %.15e; diff = %.15e", elapsedTime%newElapsedTime%(newElapsedTime - elapsedTime));
+                            elapsedTime = newElapsedTime;
+                            if (elapsedTime > g_fEpsilon) {
+                                dReal iElapsedTime = 1/elapsedTime;
+                                for (size_t idof = 0; idof < curvesnd.ndof; ++idof) {
+                                    dq1[idof] = 2*iElapsedTime*(q1[idof] - q0[idof]) - dq0[idof];
+                                }
+                            }
+                            else {
+                                dq1 = dq0;
+                            }
+                        }
+                        else {
+                            // No?. Hot fix?
+                            dReal iElapsedTime = 1/elapsedTime;
+                            for (size_t idof = 0; idof < curvesnd.ndof; ++idof) {
+                                dq1[idof] = 2*iElapsedTime*(q1[idof] - q0[idof]) - dq0[idof];
+                            }
+                        }
+                    }
+                }
 
                 RampOptimizer::CheckReturn retseg = feas->SegmentFeasible2(q0, q1, dq0, dq1, elapsedTime, options, segmentCurvesNDVect);
                 if (retseg.retcode != 0) {
