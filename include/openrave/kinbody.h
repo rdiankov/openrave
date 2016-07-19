@@ -219,42 +219,65 @@ public:
     {
 public:
         LinkInfo();
-        virtual ~LinkInfo() {
-        }
+        LinkInfo(const LinkInfo& other);
+        virtual ~LinkInfo();
+
+        LinkInfo& operator=(const LinkInfo& other);
 
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
 
-        std::vector<GeometryInfoPtr> _vgeometryinfos;
+        std::vector<GeometryInfoPtr> geometries;
+        std::vector<GeometryInfoPtr>& _vgeometryinfos RAVE_DEPRECATED;
+
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
-        std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
+        std::map< std::string, std::vector<GeometryInfoPtr> > extraGeometries;
+        std::map< std::string, std::vector<GeometryInfoPtr> >& _mapExtraGeometries RAVE_DEPRECATED;
 
         /// \brief unique link name
-        std::string _name;
+        std::string name;
+        std::string& _name RAVE_DEPRECATED;
+
         /// the current transformation of the link with respect to the body coordinate system
-        Transform _t;
+        Transform transform;
+        Transform& _t RAVE_DEPRECATED;
+
         /// the frame for inertia and center of mass of the link in the link's coordinate system
-        Transform _tMassFrame;
+        Transform massTransform;
+        Transform& _tMassFrame RAVE_DEPRECATED;
+
         /// mass of link
-        dReal _mass;
+        dReal mass;
+        dReal& _mass RAVE_DEPRECATED;
+
         /// inertia along the axes of _tMassFrame
-        Vector _vinertiamoments;
-        std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
-        std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
-        std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
+        Vector inertiaMoments;
+        Vector& _vinertiamoments RAVE_DEPRECATED;
+
+        std::map<std::string, std::vector<dReal> > floatParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<dReal> >& _mapFloatParameters RAVE_DEPRECATED; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<int> > intParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<int> >& _mapIntParameters RAVE_DEPRECATED; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::string > stringParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::string >& _mapStringParameters RAVE_DEPRECATED; ///< custom key-value pairs that could not be fit in the current model
+
         /// force the following links to be treated as adjacent to this link
-        std::vector<std::string> _vForcedAdjacentLinks;
+        std::vector<std::string> forcedAdjacentLinks;
+        std::vector<std::string>& _vForcedAdjacentLinks RAVE_DEPRECATED;
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
         /// shouldn't be affected by physics (including gravity). Collision still works.
-        bool _bStatic;
+        bool isStatic;
+        bool& _bStatic RAVE_DEPRECATED;
 
         /// \true false if the link is disabled. disabled links do not participate in collision detection
-        bool _bIsEnabled;
+        bool isEnabled;
+        bool& _bIsEnabled RAVE_DEPRECATED;
+
         bool __padding0, __padding1; // for 4-byte alignment
     };
     typedef boost::shared_ptr<LinkInfo> LinkInfoPtr;

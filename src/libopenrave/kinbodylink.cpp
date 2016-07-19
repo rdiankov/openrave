@@ -19,8 +19,51 @@
 
 namespace OpenRAVE {
 
-KinBody::LinkInfo::LinkInfo() : XMLReadable("link"), _mass(0), _bStatic(false), _bIsEnabled(true)
+KinBody::LinkInfo::LinkInfo() :
+    XMLReadable("link"),
+    _vgeometryinfos(geometries),
+    _mapExtraGeometries(extraGeometries),
+    _name(name),
+    _t(transform),
+    _tMassFrame(massTransform),
+    _mass(mass),
+    _vinertiamoments(inertiaMoments),
+    _mapFloatParameters(floatParameters),
+    _mapIntParameters(intParameters),
+    _mapStringParameters(stringParameters),
+    _vForcedAdjacentLinks(forcedAdjacentLinks),
+    _bStatic(isStatic),
+    _bIsEnabled(isEnabled)
 {
+    isStatic = false;
+    isEnabled = true;
+}
+
+KinBody::LinkInfo::LinkInfo(const KinBody::LinkInfo& other) : LinkInfo()
+{
+    *this = other;
+}
+
+KinBody::LinkInfo::~LinkInfo()
+{
+}
+
+KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
+{
+    geometries = other.geometries;
+    extraGeometries = other.extraGeometries;
+    name = other.name;
+    transform = other.transform;
+    massTransform = other.massTransform;
+    mass = other.mass;
+    inertiaMoments = other.inertiaMoments;
+    floatParameters = other.floatParameters;
+    intParameters = other.intParameters;
+    stringParameters = other.stringParameters;
+    forcedAdjacentLinks = other.forcedAdjacentLinks;
+    isStatic = other.isStatic;
+    isEnabled = other.isEnabled;
+    return *this;
 }
 
 KinBody::Link::Link(KinBodyPtr parent)
@@ -279,24 +322,24 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString(sid);
 
     writer->WriteString("name");
-    writer->WriteString(_name);
+    writer->WriteString(name);
 
     writer->WriteString("transform");
-    writer->WriteTransform(_t);
+    writer->WriteTransform(transform);
 
     writer->WriteString("massTransform");
-    writer->WriteTransform(_tMassFrame);
+    writer->WriteTransform(massTransform);
 
     writer->WriteString("mass");
-    writer->WriteDouble(_mass);
+    writer->WriteDouble(mass);
 
     writer->WriteString("inertiaMoments");
-    writer->WriteVector(_vinertiamoments);
+    writer->WriteVector(inertiaMoments);
 
-    if (_mapFloatParameters.size() > 0) {
+    if (floatParameters.size() > 0) {
         writer->WriteString("floatParameters");
         writer->StartObject();
-        FOREACHC(kv, _mapFloatParameters) {
+        FOREACHC(kv, floatParameters) {
             writer->WriteString(kv->first.c_str());
             writer->StartArray();
             FOREACHC(it, kv->second) {
@@ -307,10 +350,10 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
 
-    if (_mapIntParameters.size() > 0) {
+    if (intParameters.size() > 0) {
         writer->WriteString("intParameters");
         writer->StartObject();
-        FOREACHC(kv, _mapIntParameters) {
+        FOREACHC(kv, intParameters) {
             writer->WriteString(kv->first.c_str());
             writer->StartArray();
             FOREACHC(it, kv->second) {
@@ -321,20 +364,20 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
 
-    if (_mapStringParameters.size() > 0) {
+    if (stringParameters.size() > 0) {
         writer->WriteString("stringParameters");
         writer->StartObject();
-        FOREACHC(kv, _mapStringParameters) {
+        FOREACHC(kv, stringParameters) {
             writer->WriteString(kv->first);
             writer->WriteString(kv->second);
         }
         writer->EndObject();
     }
     
-    if (_vForcedAdjacentLinks.size() > 0) {
+    if (forcedAdjacentLinks.size() > 0) {
         writer->WriteString("forcedAdjacentLinks");
         writer->StartArray();
-        FOREACHC(it, _vForcedAdjacentLinks) {
+        FOREACHC(it, forcedAdjacentLinks) {
             writer->WriteString(*it);
         }
         writer->EndArray();
@@ -342,10 +385,10 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 
     if (options == 0 || (options & SO_Geometry) != 0) {
 
-        if (_vgeometryinfos.size() > 0) {
+        if (geometries.size() > 0) {
             writer->WriteString("geometries");
             writer->StartArray();
-            FOREACHC(it, _vgeometryinfos) {
+            FOREACHC(it, geometries) {
                 writer->StartObject();
                 (*it)->SerializeJSON(writer, options);
                 writer->EndObject();
@@ -355,10 +398,10 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 
 #if 0
         // don't save extra geometries info for now
-        if (_mapExtraGeometries.size() > 0) {
-            writer->WriteString("extra_geometries");
+        if (extraGeometries.size() > 0) {
+            writer->WriteString("extraGeometries");
             writer->StartObject();
-            FOREACHC(kv, _mapExtraGeometries) {
+            FOREACHC(kv, extraGeometries) {
                 writer->WriteString(kv->first);
                 writer->StartArray();
                 FOREACHC(it, kv->second) {
@@ -373,11 +416,11 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 #endif
     }
 
-    writer->WriteString("static");
-    writer->WriteBool(_bStatic);
+    writer->WriteString("isStatic");
+    writer->WriteBool(isStatic);
 
-    writer->WriteString("enabled");
-    writer->WriteBool(_bIsEnabled);
+    writer->WriteString("isEnabled");
+    writer->WriteBool(isEnabled);
 }
     
 void KinBody::Link::SerializeJSON(BaseJSONWriterPtr writer, int options)
