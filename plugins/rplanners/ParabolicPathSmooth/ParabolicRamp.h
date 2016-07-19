@@ -65,9 +65,13 @@ public:
     bool SolveMinTime2(Real amax,Real vmax,Real tLowerBound);
     /// Solves for minimum acceleration given end time and velocity bounds
     bool SolveMinAccel(Real endTime,Real vmax);
+
+    /// Solves for a value of tswitch1 (used in SolveMinAccel)
+    bool SolveForTSwitch1(Real A, Real B, Real endTime, Real l, Real u); ////////Puttichai
+
     /// Solves for the minimum-time braking trajectory starting from x0,dx0
     void SolveBraking(Real amax);
-    /// Solves for the ramp given max the exact time
+    /// Solves for the ramp given max the exact time trying to use miminimum accel
     bool SolveFixedTime(Real amax,Real vmax,Real endTime);
     /// solves for the ramp given fixed switch times and end time
     bool SolveFixedSwitchTime(Real amax,Real vmax);
@@ -100,6 +104,8 @@ public:
     /// Sanity check
     bool IsValid() const;
 
+    void ToString(std::string& s) const;
+    
     /// Input
     Real x0,dx0;
     Real x1,dx1;
@@ -141,6 +147,7 @@ public:
     void DerivBounds(Vector& vmin,Vector& vmax) const;
     void DerivBounds(Real ta,Real tb,Vector& vmin,Vector& vmax) const;
     bool IsValid() const;
+    void ToString(std::string& s) const;
 
     /// Input
     Vector x0,dx0;
@@ -155,6 +162,9 @@ public:
 
 };
 
+/// Calculates the minimum total duration that a ramp has to be stretched to
+bool CalculateLeastBoundInoperativeInterval(Real x0, Real v0, Real x1, Real v1, Real amax, Real vmax, Real& newEndTime); ////////Puttichai
+
 /// Computes a min-time ramp from (x0,v0) to (x1,v1) under the given
 /// acceleration, velocity, and x bounds.  Returns true if successful.
 bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Real xmin,Real xmax, ParabolicRamp1D& ramp);
@@ -162,21 +172,24 @@ bool SolveMinTimeBounded(Real x0,Real v0,Real x1,Real v1, Real amax,Real vmax,Re
 /// Computes a sequence of up to three ramps connecting (x0,v0) to (x1,v1)
 /// in minimum-acceleration fashion with a fixed end time, under the given
 /// velocity and x bounds.  Returns true if successful.
-bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
+bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime,Real amax, Real vmax, Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps); ////////Puttichai
 
 bool SolveMaxAccelBounded(Real x0,Real v0,Real x1,Real v1, Real endTime, Real amax, Real vmax,Real xmin,Real xmax, std::vector<ParabolicRamp1D>& ramps);
 
 /// Vector version of above.
 /// Returns the time of the minimum time trajectory, or -1 on failure
 /// \param multidofinterp if true, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible
-Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
+Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);////////Puttichai
 
 /// Vector version of above.
 /// Returns true if successful.
 bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);
 
-/// if 0 - SolveMinAccelBounded, if 1 - SolveMaxAccelBounded, if 2 - all ramps have same switch points
-bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp);
+bool SolveMinAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax, const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps);////////Puttichai
+
+/// \param endTime the goal end time to solve for acceleration.
+/// \param numDilationTries the number of times to try to dilation the time if cannot solve for correct ramps
+bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const Vector& v1, Real endTime,const Vector& amax,const Vector& vmax,const Vector& xmin,const Vector& xmax, std::vector<std::vector<ParabolicRamp1D> >& ramps, int multidofinterp, int numDilationTries=0);////////Puttichai
 
 /// Combines an array of 1-d ramp sequences into a sequence of N-d ramps
 //void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps,std::vector<ParabolicRampND>& ndramps);
@@ -203,7 +216,18 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
             tmax = tdofmax;
         }
     }
-    
+    if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+        for(size_t idof = 0; idof < ramps.size(); ++idof) {
+            Real tdofmax = 0;
+            for(size_t iramp = 0; iramp < ramps[idof].size(); ++iramp) {
+                tdofmax += ramps[idof][iramp].ttotal;
+            }
+            if( fabs(tmax - tdofmax) > 1e-15 ) {
+                RAVELOG_VERBOSE_FORMAT("ramp %d time diff between max (%.15e) is %.15e", idof%tmax%(tmax-tdofmax));
+            }
+        }
+    }
+
     std::vector<Real> timeOffsets(ramps.size(),0);  //start time of current index
     Real t=0; // current time
     while(true) {
@@ -220,14 +244,14 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
         }
         // have to clamp to the max
         if( tnext > tmax ) {
-            PARABOLIC_RAMP_PLOG("tnext is greater than the max, so truncating. diff = %.15f", (tnext-tmax));
+            PARABOLIC_RAMP_PLOG("tnext is greater than the max, so truncating. diff = %.15e", (tnext-tmax));
             tnext = tmax;
             if( tnext <= t ) {
                 // just finish, there's nothing more to do...
                 break;
             }
         }
-        
+
         if(!(tnext > t || t == 0)) {
             PARABOLIC_RAMP_PLOG("CombineRamps: error finding next time step?\n");
             PARABOLIC_RAMP_PLOG("tnext = %g, t = %g, step = %d\n",tnext,t,ndramps.size());
@@ -292,8 +316,8 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                 itramp->dx0[i] = iramp.dx0;
                 itramp->x1[i] = iramp.x1;
                 itramp->dx1[i] = iramp.dx1;
-                if(FuzzyEquals(tnext,timeOffsets[i]+indices[i]->ttotal,EpsilonT*0.1)) {
-                    timeOffsets[i] = tnext;
+                if( tnext >= timeOffsets[i]+indices[i]->ttotal ) {
+                    timeOffsets[i] += indices[i]->ttotal;
                     indices[i]++;
                 }
                 PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
@@ -340,7 +364,7 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
                     PARABOLIC_RAMP_ASSERT(itramp->ramps[i].ttotal == itramp->endTime);
                 }
                 //PARABOLIC_RAMP_ASSERT(itramp->ramps[i].IsValid());
-                
+
             }
         }
         PARABOLIC_RAMP_ASSERT(itramp->IsValid());
@@ -362,16 +386,16 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
     }
     for(size_t i=0; i<ramps.size(); i++) {
         if(!FuzzyEquals(ramps[i].front().x0,ndramps.front().x0[i],EpsilonX)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().x0,ndramps.front().x0[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %.15e != %.15e\n",i,ramps[i].front().x0,ndramps.front().x0[i]);
         }
         if(!FuzzyEquals(ramps[i].front().dx0,ndramps.front().dx0[i],EpsilonV)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %g != %g\n",i,ramps[i].front().dx0,ndramps.front().dx0[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d start %.15e != %.15e\n",i,ramps[i].front().dx0,ndramps.front().dx0[i]);
         }
         if(!FuzzyEquals(ramps[i].back().x1,ndramps.back().x1[i],EpsilonX)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().x1,ndramps.back().x1[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %.15e != %.15e\n",i,ramps[i].back().x1,ndramps.back().x1[i]);
         }
         if(!FuzzyEquals(ramps[i].back().dx1,ndramps.back().dx1[i],EpsilonV)) {
-            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %g != %g\n",i,ramps[i].back().dx1,ndramps.back().dx1[i]);
+            PARABOLIC_RAMP_PLOG("CombineRamps: Error: %d back %.15e != %.15e\n",i,ramps[i].back().dx1,ndramps.back().dx1[i]);
         }
         ndramps.front().x0[i] = ndramps.front().ramps[i].x0 = ramps[i].front().x0;
         ndramps.front().dx0[i] = ndramps.front().ramps[i].dx0 = ramps[i].front().dx0;
@@ -379,7 +403,6 @@ void CombineRamps(const std::vector<std::vector<ParabolicRamp1D> >& ramps, T& nd
         ndramps.back().dx1[i] = ndramps.back().ramps[i].dx1 = ramps[i].back().dx1;
     }
 }
-
 
 } //namespace ParabolicRamp
 
