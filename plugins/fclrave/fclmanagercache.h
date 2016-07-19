@@ -473,7 +473,7 @@ private:
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it != mapCachedBodies.end() ) {
             FOREACH(itcol, it->second.vcolobjs) {
-                if( !!itcol->get() && (*itcol)->getUserData() ) {
+                if( !!itcol->get() ) {
                     pmanager->unregisterObject(itcol->get());
                 }
             }
