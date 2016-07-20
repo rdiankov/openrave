@@ -147,6 +147,7 @@ public:
     void ReplaceSegment(dReal t0, dReal t1, const std::vector<ParabolicCurvesND> &curvesndVectIn);
 
     void Save(std::string filename) const;
+    void Serialize(std::ostream &O) const;
 
     // Members
     bool isInitialized;

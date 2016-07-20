@@ -28,6 +28,7 @@ namespace OpenRAVE {
 namespace RampOptimizerInternal {
 
 const static dReal epsilon = 1e-12;
+const static int prec = 12;
 const static dReal inf = 1e300;
 
 class Ramp {
@@ -163,7 +164,8 @@ public:
     void TrimBack(dReal t);
 
     void ToString(std::string &s) const;
-    
+    void Serialize(std::ostream &O) const;
+
     size_t ndof;
     dReal duration;
     std::vector<dReal> x0Vect;

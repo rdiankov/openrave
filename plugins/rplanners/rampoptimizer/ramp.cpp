@@ -964,6 +964,24 @@ void ParabolicCurvesND::ToString(std::string &s) const {
     return;
 }
 
+void ParabolicCurvesND::Serialize(std::ostream &O) const {
+    O << ndof     << std::endl;
+    O << duration << std::endl;
+
+    std::string separator;
+    for (size_t idof = 0; idof < ndof; ++idof) {
+        separator = "";
+        for (std::vector<Ramp>::const_iterator itramp = curves[idof].ramps.begin(); itramp != curves[idof].ramps.end(); ++itramp) {
+            O << separator << itramp->v0;
+            separator = " ";
+            O << separator << itramp->a;
+            O << separator << itramp->duration;
+            O << separator << itramp->x0;
+        }
+        O << std::endl;
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string GenerateStringFromVector(const std::vector<dReal>& vect) {
     std::string s = "[ ";

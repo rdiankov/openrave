@@ -444,6 +444,18 @@ void ParabolicPath::Save(std::string filename) const {
     return;
 }
 
+void ParabolicPath::Serialize(std::ostream &O) const {
+    // Do simple verification
+    for (size_t i = 0; i < curvesndVect.size(); ++i) {
+        RAMP_OPTIM_ASSERT(curvesndVect[i].ndof == ndof);
+    }
+
+    O << std::setprecision(prec);
+    for (std::vector<ParabolicCurvesND>::const_iterator itcurvesnd = curvesndVect.begin(); itcurvesnd != curvesndVect.end(); ++itcurvesnd) {
+        itcurvesnd->Serialize(O);
+    }
+}
+
 } // end namespace RampOptimizerInternal
 
 } // end namespace OpenRAVE

@@ -1499,10 +1499,25 @@ protected:
         }
         string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(randnum%1000));
         ofstream f(filename.c_str());
-        f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);     /// have to do this or otherwise precision gets lost
+        // f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);     /// have to do this or otherwise precision gets lost
+        f << std::setprecision(RampOptimizer::epsilon);
         traj->serialize(f);
         return filename;
     }
+
+    // void _DumpParabolicPath(RampOptimizer::ParabolicPath &path) const {
+    //     uint32_t randnum;
+    //     if( !!_logginguniformsampler ) {
+    //         randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+    //     }
+    //     else {
+    //         randnum = RaveRandomInt();
+    //     }
+    //     string filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
+    //     path.Save(filename);
+
+    //     RAVELOG_DEBUG_FORMAT("Wrote a parabolic path to %s (duration = %.15e)", filename%path.duration);
+    // }
 
     void _DumpParabolicPath(RampOptimizer::ParabolicPath &path) const {
         uint32_t randnum;
@@ -1513,11 +1528,14 @@ protected:
             randnum = RaveRandomInt();
         }
         string filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
-        path.Save(filename);
+        ofstream f(filename.c_str());
+        f << std::setprecision(RampOptimizer::epsilon);
+        path.Serialize(f);
 
         RAVELOG_DEBUG_FORMAT("Wrote a parabolic path to %s (duration = %.15e)", filename%path.duration);
     }
 
+    
     void VectorToString(const std::vector<dReal> &v, std::string &s, const char* name) {
         s = "";
         s += name;
