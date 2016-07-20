@@ -60,23 +60,140 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+ElectricMotorActuatorInfo::ElectricMotorActuatorInfo() :
+    model_type(modelType),
+    assigned_power_rating(assignedPowerRating),
+    max_speed(maxSpeed),
+    no_load_speed(noLoadSpeed),
+    stall_torque(stallTorque),
+    max_instantaneous_torque(maxInstantaneousTorque),
+    nominal_speed_torque_points(nominalSpeedTorquePoints),
+    max_speed_torque_points(maxSpeedTorquePoints),
+    nominal_torque(nominalTorque),
+    rotor_inertia(rotorInertia),
+    torque_constant(torqueConstant),
+    nominal_voltage(nominalVoltage),
+    speed_constant(speedConstant),
+    starting_current(startingCurrent),
+    terminal_resistance(terminalResistance),
+    gear_ratio(gearRatio),
+    coloumb_friction(coloumbFriction),
+    viscous_friction(viscousFriction)
 {
-    gear_ratio = 0;
-    assigned_power_rating = 0;
-    max_speed = 0;
-    no_load_speed = 0;
-    stall_torque = 0;
-    max_instantaneous_torque = 0;
-    nominal_torque = 0;
-    rotor_inertia = 0;
-    torque_constant = 0;
-    nominal_voltage = 0;
-    speed_constant = 0;
-    starting_current = 0;
-    terminal_resistance = 0;
-    coloumb_friction = 0;
-    viscous_friction = 0;
+    gearRatio = 0;
+    assignedPowerRating = 0;
+    maxSpeed = 0;
+    noLoadSpeed = 0;
+    stallTorque = 0;
+    maxInstantaneousTorque = 0;
+    nominalTorque = 0;
+    rotorInertia = 0;
+    torqueConstant = 0;
+    nominalVoltage = 0;
+    speedConstant = 0;
+    startingCurrent = 0;
+    terminalResistance = 0;
+    coloumbFriction = 0;
+    viscousFriction = 0;
+}
+#pragma GCC diagnostic pop
+
+ElectricMotorActuatorInfo::ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other) : ElectricMotorActuatorInfo()
+{
+    *this = other;
+}
+
+ElectricMotorActuatorInfo::~ElectricMotorActuatorInfo()
+{
+}
+
+ElectricMotorActuatorInfo& ElectricMotorActuatorInfo::operator=(const ElectricMotorActuatorInfo& other)
+{
+    modelType = other.modelType;
+    assignedPowerRating = other.assignedPowerRating;
+    maxSpeed = other.maxSpeed;
+    noLoadSpeed = other.noLoadSpeed;
+    stallTorque = other.stallTorque;
+    maxInstantaneousTorque = other.maxInstantaneousTorque;
+    nominalSpeedTorquePoints = other.nominalSpeedTorquePoints;
+    maxSpeedTorquePoints = other.maxSpeedTorquePoints;
+    nominalTorque = other.nominalTorque;
+    rotorInertia = other.rotorInertia;
+    torqueConstant = other.torqueConstant;
+    nominalVoltage = other.nominalVoltage;
+    speedConstant = other.speedConstant;
+    startingCurrent = other.startingCurrent;
+    terminalResistance = other.terminalResistance;
+    gearRatio = other.gearRatio;
+    coloumbFriction = other.coloumbFriction;
+    viscousFriction = other.viscousFriction;
+
+    return *this;
+}
+
+void ElectricMotorActuatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+{
+    writer->WriteString("modelType");
+    writer->WriteString(modelType);
+
+    writer->WriteString("assignedPowerRating");
+    writer->WriteDouble(assignedPowerRating);
+
+    writer->WriteString("maxSpeed");
+    writer->WriteDouble(maxSpeed);
+
+    writer->WriteString("noLoadSpeed");
+    writer->WriteDouble(noLoadSpeed);
+
+    writer->WriteString("stallTorque");
+    writer->WriteDouble(stallTorque);
+
+    writer->WriteString("maxInstantaneousTorque");
+    writer->WriteDouble(maxInstantaneousTorque);
+
+    writer->WriteString("nominalSpeedTorquePoints");
+    for (size_t i=0; i<nominalSpeedTorquePoints.size(); ++i) {
+        writer->WritePair(nominalSpeedTorquePoints[i]);
+    }
+
+    writer->WriteString("maxSpeedTorquePoints");
+    for (size_t i=0; i<maxSpeedTorquePoints.size(); ++i) {
+        writer->WritePair(maxSpeedTorquePoints[i]);
+    }
+
+    writer->WriteString("nominalTorque");
+    writer->WriteDouble(nominalTorque);
+
+    writer->WriteString("rotorInertia");
+    writer->WriteDouble(rotorInertia);
+
+    writer->WriteString("torqueConstant");
+    writer->WriteDouble(torqueConstant);
+
+    writer->WriteString("nominalVoltage");
+    writer->WriteDouble(nominalVoltage);
+
+    writer->WriteString("speedConstant");
+    writer->WriteDouble(speedConstant);
+
+    writer->WriteString("startingCurrent");
+    writer->WriteDouble(startingCurrent);
+
+    writer->WriteString("terminalResistance");
+    writer->WriteDouble(terminalResistance);
+
+    writer->WriteString("gearRatio");
+    writer->WriteDouble(gearRatio);
+
+    writer->WriteString("coloumbFriction");
+    writer->WriteDouble(coloumbFriction);
+
+    writer->WriteString("viscousFriction");
+    writer->WriteDouble(viscousFriction);
 }
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
@@ -468,39 +585,39 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     _vecjoints.reserve(jointinfos.size());
     FOREACHC(itjointinfo, jointinfos) {
         JointInfoConstPtr rawinfo = *itjointinfo;
-        if( setusednames.find(rawinfo->_name) != setusednames.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s is declared more than once"), rawinfo->_name, ORE_InvalidArguments);
+        if( setusednames.find(rawinfo->name) != setusednames.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s is declared more than once"), rawinfo->name, ORE_InvalidArguments);
         }
-        setusednames.insert(rawinfo->_name);
-        JointPtr pjoint(new Joint(shared_kinbody(), rawinfo->_type));
+        setusednames.insert(rawinfo->name);
+        JointPtr pjoint(new Joint(shared_kinbody(), rawinfo->type));
         pjoint->_info = *rawinfo;
         JointInfo& info = pjoint->_info;
-        for(size_t i = 0; i < info._vmimic.size(); ++i) {
-            if( !!info._vmimic[i] ) {
+        for(size_t i = 0; i < info.mimic.size(); ++i) {
+            if( !!info.mimic[i] ) {
                 pjoint->_vmimic[i].reset(new Mimic());
-                pjoint->_vmimic[i]->_equations = info._vmimic[i]->_equations;
+                pjoint->_vmimic[i]->_equations = info.mimic[i]->_equations;
             }
         }
         LinkPtr plink0, plink1;
         FOREACHC(itlink, _veclinks) {
-            if( (*itlink)->_info.name == info._linkname0 ) {
+            if( (*itlink)->_info.name == info.parentLinkName ) {
                 plink0 = *itlink;
                 if( !!plink1 ) {
                     break;
                 }
             }
-            if( (*itlink)->_info.name == info._linkname1 ) {
+            if( (*itlink)->_info.name == info.childLinkName ) {
                 plink1 = *itlink;
                 if( !!plink0 ) {
                     break;
                 }
             }
         }
-        OPENRAVE_ASSERT_FORMAT(!!plink0&&!!plink1, "cannot find links '%s' and '%s' of body '%s' joint %s ", info._linkname0%info._linkname1%GetName()%info._name, ORE_Failed);
+        OPENRAVE_ASSERT_FORMAT(!!plink0&&!!plink1, "cannot find links '%s' and '%s' of body '%s' joint %s ", info.parentLinkName%info.childLinkName%GetName()%info.name, ORE_Failed);
         std::vector<Vector> vaxes(pjoint->GetDOF());
-        std::copy(info._vaxes.begin(),info._vaxes.begin()+vaxes.size(), vaxes.begin());
-        pjoint->_ComputeInternalInformation(plink0, plink1, info._vanchor, vaxes, info._vcurrentvalues);
-        if( info._bIsActive ) {
+        std::copy(info.axes.begin(),info.axes.begin()+vaxes.size(), vaxes.begin());
+        pjoint->_ComputeInternalInformation(plink0, plink1, info.anchor, vaxes, info.currentValues);
+        if( info.isActive ) {
             _vecjoints.push_back(pjoint);
         }
         else {
@@ -763,7 +880,7 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
         }
         std::vector<dReal>::const_iterator itv = v.begin();
         FOREACHC(it, _vDOFOrderedJoints) {
-            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vweights.begin());
+            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.weights.begin());
             itv += (*it)->GetDOF();
         }
     }
@@ -771,7 +888,7 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info._vweights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            pjoint->_info.weights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);
@@ -786,7 +903,7 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
         }
         std::vector<dReal>::const_iterator itv = v.begin();
         FOREACHC(it, _vDOFOrderedJoints) {
-            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vresolution.begin());
+            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.resolution.begin());
             itv += (*it)->GetDOF();
         }
     }
@@ -794,7 +911,7 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info._vresolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            pjoint->_info.resolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);
@@ -809,15 +926,15 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
         std::vector<dReal>::const_iterator itlower = lower.begin(), itupper = upper.begin();
         FOREACHC(it, _vDOFOrderedJoints) {
             for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                if( (*it)->_info._vlowerlimit.at(i) != *(itlower+i) || (*it)->_info._vupperlimit.at(i) != *(itupper+i) ) {
+                if( (*it)->_info.lowerLimit.at(i) != *(itlower+i) || (*it)->_info.upperLimit.at(i) != *(itupper+i) ) {
                     bChanged = true;
-                    std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info._vlowerlimit.begin());
-                    std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info._vupperlimit.begin());
+                    std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info.lowerLimit.begin());
+                    std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info.upperLimit.begin());
                     for(int i = 0; i < (*it)->GetDOF(); ++i) {
                         if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
                             // TODO, necessary to set wrap?
-                            if( (*it)->_info._vlowerlimit.at(i) < -PI || (*it)->_info._vupperlimit.at(i) > PI) {
-                                (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(i) + (*it)->_info._vupperlimit.at(i)),i);
+                            if( (*it)->_info.lowerLimit.at(i) < -PI || (*it)->_info.upperLimit.at(i) > PI) {
+                                (*it)->SetWrapOffset(0.5f * ((*it)->_info.lowerLimit.at(i) + (*it)->_info.upperLimit.at(i)),i);
                             }
                             else {
                                 (*it)->SetWrapOffset(0,i);
@@ -837,14 +954,14 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
         for(size_t index = 0; index < dofindices.size(); ++index) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[index]);
             int iaxis = dofindices[index]-pjoint->GetDOFIndex();
-            if( pjoint->_info._vlowerlimit.at(iaxis) != lower[index] || pjoint->_info._vupperlimit.at(iaxis) != upper[index] ) {
+            if( pjoint->_info.lowerLimit.at(iaxis) != lower[index] || pjoint->_info.upperLimit.at(iaxis) != upper[index] ) {
                 bChanged = true;
-                pjoint->_info._vlowerlimit.at(iaxis) = lower[index];
-                pjoint->_info._vupperlimit.at(iaxis) = upper[index];
+                pjoint->_info.lowerLimit.at(iaxis) = lower[index];
+                pjoint->_info.upperLimit.at(iaxis) = upper[index];
                 if( pjoint->IsRevolute(iaxis) && !pjoint->IsCircular(iaxis) ) {
                     // TODO, necessary to set wrap?
-                    if( pjoint->_info._vlowerlimit.at(iaxis) < -PI || pjoint->_info._vupperlimit.at(iaxis) > PI) {
-                        pjoint->SetWrapOffset(0.5f * (pjoint->_info._vlowerlimit.at(iaxis) + pjoint->_info._vupperlimit.at(iaxis)),iaxis);
+                    if( pjoint->_info.lowerLimit.at(iaxis) < -PI || pjoint->_info.upperLimit.at(iaxis) > PI) {
+                        pjoint->SetWrapOffset(0.5f * (pjoint->_info.lowerLimit.at(iaxis) + pjoint->_info.upperLimit.at(iaxis)),iaxis);
                     }
                     else {
                         pjoint->SetWrapOffset(0,iaxis);
@@ -862,7 +979,7 @@ void KinBody::SetDOFVelocityLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
-        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxvel.begin());
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.maxVel.begin());
         itv += (*it)->GetDOF();
     }
     _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
@@ -872,7 +989,7 @@ void KinBody::SetDOFAccelerationLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
-        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxaccel.begin());
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.maxAccel.begin());
         itv += (*it)->GetDOF();
     }
     _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
@@ -882,7 +999,7 @@ void KinBody::SetDOFTorqueLimits(const std::vector<dReal>& v)
 {
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
-        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxtorque.begin());
+        std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.maxTorque.begin());
         itv += (*it)->GetDOF();
     }
     _PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
@@ -1541,17 +1658,17 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
             // check if out of limits!
             for(size_t j = 0; j < vPassiveJointValues[i].size(); ++j) {
                 if( !_vPassiveJoints[i]->IsCircular(j) ) {
-                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info._vlowerlimit.at(j)-5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_info._vlowerlimit.at(j)%vPassiveJointValues[i][j]));
+                    if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info.lowerLimit.at(j) ) {
+                        if( vPassiveJointValues[i][j] < _vPassiveJoints[i]->_info.lowerLimit.at(j)-5e-4f ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of lower limit! %e < %e\n")%_vPassiveJoints[i]->_info.lowerLimit.at(j)%vPassiveJointValues[i][j]));
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vlowerlimit.at(j);
+                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info.lowerLimit.at(j);
                     }
-                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j) ) {
-                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info._vupperlimit.at(j)+5e-4f ) {
-                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_info._vupperlimit.at(j)%vPassiveJointValues[i][j]));
+                    else if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info.upperLimit.at(j) ) {
+                        if( vPassiveJointValues[i][j] > _vPassiveJoints[i]->_info.upperLimit.at(j)+5e-4f ) {
+                            RAVELOG_WARN(str(boost::format("dummy joint out of upper limit! %e > %e\n")%_vPassiveJoints[i]->_info.upperLimit.at(j)%vPassiveJointValues[i][j]));
                         }
-                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info._vupperlimit.at(j);
+                        vPassiveJointValues[i][j] = _vPassiveJoints[i]->_info.upperLimit.at(j);
                     }
                 }
             }
@@ -1593,17 +1710,17 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                             bool removevalue = false;
                             if( pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
                             }
-                            else if( *iteval < pjoint->_info._vlowerlimit[i] ) {
-                                if(*iteval >= pjoint->_info._vlowerlimit[i]-g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_info._vlowerlimit[i];
+                            else if( *iteval < pjoint->_info.lowerLimit[i] ) {
+                                if(*iteval >= pjoint->_info.lowerLimit[i]-g_fEpsilonJointLimit ) {
+                                    *iteval = pjoint->_info.lowerLimit[i];
                                 }
                                 else {
                                     removevalue=true;
                                 }
                             }
-                            else if( *iteval > pjoint->_info._vupperlimit[i] ) {
-                                if(*iteval <= pjoint->_info._vupperlimit[i]+g_fEpsilonJointLimit ) {
-                                    *iteval = pjoint->_info._vupperlimit[i];
+                            else if( *iteval > pjoint->_info.upperLimit[i] ) {
+                                if(*iteval <= pjoint->_info.upperLimit[i]+g_fEpsilonJointLimit ) {
+                                    *iteval = pjoint->_info.upperLimit[i];
                                 }
                                 else {
                                     removevalue=true;
@@ -1623,22 +1740,22 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                                 if( checklimits == CLA_Nothing || pjoint->GetType() == JointSpherical || pjoint->IsCircular(i) ) {
                                     veval.push_back(*iteval);
                                 }
-                                else if( *iteval < pjoint->_info._vlowerlimit[i]-g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_info._vlowerlimit[i]);
+                                else if( *iteval < pjoint->_info.lowerLimit[i]-g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(pjoint->_info.lowerLimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vlowerlimit[i]%*iteval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: lower limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info.lowerLimit[i]%*iteval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: lower limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vlowerlimit[i]%*iteval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: lower limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info.lowerLimit[i]%*iteval, ORE_InvalidArguments);
                                     }
                                 }
-                                else if( *iteval > pjoint->_info._vupperlimit[i]+g_fEpsilonEvalJointLimit ) {
-                                    veval.push_back(pjoint->_info._vupperlimit[i]);
+                                else if( *iteval > pjoint->_info.upperLimit[i]+g_fEpsilonEvalJointLimit ) {
+                                    veval.push_back(pjoint->_info.upperLimit[i]);
                                     if( checklimits == CLA_CheckLimits ) {
-                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval));
+                                        RAVELOG_WARN(str(boost::format("joint %s: upper limit (%e) is not followed: %e")%pjoint->GetName()%pjoint->_info.upperLimit[i]%*iteval));
                                     }
                                     else if( checklimits == CLA_CheckLimitsThrow ) {
-                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info._vupperlimit[i]%*iteval, ORE_InvalidArguments);
+                                        throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s: upper limit (%e) is not followed: %e"), pjoint->GetName()%pjoint->_info.upperLimit[i]%*iteval, ORE_InvalidArguments);
                                     }
                                 }
                                 else {
@@ -2722,15 +2839,15 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
 
             dReal fFriction = 0; // torque due to friction
             // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
-            if( !!pjoint->_info._infoElectricMotor ) {
+            if( !!pjoint->_info.electricMotorActuator ) {
                 if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
                     if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
-                        fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
+                        fFriction += pjoint->_info.electricMotorActuator->coloumbFriction;
                     }
                     else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
-                        fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
+                        fFriction -= pjoint->_info.electricMotorActuator->coloumbFriction;
                     }
-                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
+                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info.electricMotorActuator->viscousFriction;
                 }
 
                 doftorques.at(pjoint->GetDOFIndex()) += fFriction;
@@ -2750,7 +2867,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
             }
 
-            if( !!pjoint->_info._infoElectricMotor ) {
+            if( !!pjoint->_info.electricMotorActuator ) {
                 // TODO how to process this correctly? what is velocity of this joint? pjoint->GetVelocity(0)?
             }
 
@@ -3317,7 +3434,7 @@ void KinBody::_ComputeInternalInformation()
                     bmimic = true;
                 }
             }
-            if( !bmimic && (*itjoint)->_info._bIsActive ) {
+            if( !bmimic && (*itjoint)->_info.isActive ) {
                 _vecjoints.push_back(*itjoint);
                 itjoint = _vPassiveJoints.erase(itjoint);
             }
@@ -3335,7 +3452,7 @@ void KinBody::_ComputeInternalInformation()
                     break;
                 }
             }
-            if( bmimic || !(*itjoint)->_info._bIsActive ) {
+            if( bmimic || !(*itjoint)->_info.isActive ) {
                 _vPassiveJoints.push_back(*itjoint);
                 itjoint = _vecjoints.erase(itjoint);
             }
@@ -3348,13 +3465,13 @@ void KinBody::_ComputeInternalInformation()
         FOREACH(itjoint,_vecjoints) {
             (*itjoint)->jointindex = jointindex++;
             (*itjoint)->dofindex = dofindex;
-            (*itjoint)->_info._bIsActive = true;
+            (*itjoint)->_info.isActive = true;
             dofindex += (*itjoint)->GetDOF();
         }
         FOREACH(itjoint,_vPassiveJoints) {
             (*itjoint)->jointindex = -1;
             (*itjoint)->dofindex = -1;
-            (*itjoint)->_info._bIsActive = false;
+            (*itjoint)->_info.isActive = false;
         }
     }
 

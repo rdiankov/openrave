@@ -44,31 +44,68 @@ class OPENRAVE_API ElectricMotorActuatorInfo
 {
 public:
     ElectricMotorActuatorInfo();
+    ElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& other);
+    virtual ~ElectricMotorActuatorInfo();
+
+    ElectricMotorActuatorInfo& operator=(const ElectricMotorActuatorInfo& other);
 
     virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
-    std::string model_type; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
+    std::string modelType; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
+    std::string& model_type RAVE_DEPRECATED; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     //@{ from motor data sheet
-    dReal assigned_power_rating; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
-    dReal max_speed; ///< the maximum speed of the motor **Time-¹**
-    dReal no_load_speed; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
-    dReal stall_torque; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
-    dReal max_instantaneous_torque; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
-    std::vector<std::pair<dReal, dReal> > nominal_speed_torque_points; ///< the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). Should be ordered from increasing speed.
-    std::vector<std::pair<dReal, dReal> > max_speed_torque_points; ///< the speed and torque achievable when the motor is powered by the max voltage/current. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the max_instantaneous_torque directly (ideal). Should be ordered from increasing speed.
-    dReal nominal_torque; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
-    dReal rotor_inertia; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
-    dReal torque_constant; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
-    dReal nominal_voltage; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
-    dReal speed_constant; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
-    dReal starting_current; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
-    dReal terminal_resistance; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
+    dReal assignedPowerRating; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
+    dReal& assigned_power_rating RAVE_DEPRECATED; ///< the nominal power the electric motor can safely produce. Units are **Mass * Distance² * Time-³**
+
+    dReal maxSpeed; ///< the maximum speed of the motor **Time-¹**
+    dReal& max_speed RAVE_DEPRECATED; ///< the maximum speed of the motor **Time-¹**
+
+    dReal noLoadSpeed; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
+    dReal& no_load_speed RAVE_DEPRECATED; ///< specifies the speed of the motor powered by the nominal voltage when the motor provides zero torque. Units are **Time-¹**.
+
+    dReal stallTorque; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
+    dReal& stall_torque RAVE_DEPRECATED; ///< the maximum torque achievable by the motor at the nominal voltage. This torque is achieved at zero velocity (stall). Units are **Mass * Distance * Time-²**.
+
+    dReal maxInstantaneousTorque; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
+    dReal& max_instantaneous_torque RAVE_DEPRECATED; ///< the maximum instantenous torque achievable by the motor when voltage <= nominal voltage. Motor going between nominal_torque and max_instantaneous_torque can overheat, so should not be driven at it for a long time. Units are **Mass * Distance * Time-²**.
+
+    std::vector<std::pair<dReal, dReal> > nominalSpeedTorquePoints; ///< the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). Should be ordered from increasing speed.
+    std::vector<std::pair<dReal, dReal> >& nominal_speed_torque_points RAVE_DEPRECATED; ///< the speed and torque achievable when the motor is powered by the nominal voltage. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the stall torque directly (ideal). Should be ordered from increasing speed.
+
+    std::vector<std::pair<dReal, dReal> > maxSpeedTorquePoints; ///< the speed and torque achievable when the motor is powered by the max voltage/current. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the max_instantaneous_torque directly (ideal). Should be ordered from increasing speed.
+    std::vector<std::pair<dReal, dReal> >& max_speed_torque_points RAVE_DEPRECATED; ///< the speed and torque achievable when the motor is powered by the max voltage/current. Given the speed, the max torque can be computed. If not specified, the speed-torque curve will just be a line connecting the no load speed and the max_instantaneous_torque directly (ideal). Should be ordered from increasing speed.
+
+    dReal nominalTorque; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
+    dReal& nominal_torque RAVE_DEPRECATED; ///< the maximum torque the motor can provide continuously without overheating. Units are **Mass * Distance * Time-²**.
+
+    dReal rotorInertia; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
+    dReal& rotor_inertia RAVE_DEPRECATED; ///< the inertia of the rotating element about the axis of rotation. Units are **Mass * Distance²**.
+
+    dReal torqueConstant; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * C
+    dReal& torque_constant RAVE_DEPRECATED; ///< specifies the proportion relating current to torque. Units are **Mass * Distance * Time-¹ * Charge-¹**.
+    
+    dReal nominalVoltage; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
+    dReal& nominal_voltage RAVE_DEPRECATED; ///< the nominal voltage the electric motor can safely produce. Units are **Mass * Distance² * Time-² * Charge**.
+    
+    dReal speedConstant; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
+    dReal& speed_constant RAVE_DEPRECATED; ///< the constant of proportionality relating speed to voltage. Units are **Mass-¹ * Distance-² * Time * Charge-¹**.
+    
+    dReal startingCurrent; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
+    dReal& starting_current RAVE_DEPRECATED; ///< specifies the current through the motor at zero velocity, equal to the nominal voltage divided by the terminal resistance. Also called the stall current.  Units are **Time-¹ * Charge**.
+    
+    dReal terminalResistance; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
+    dReal& terminal_resistance RAVE_DEPRECATED; ///< the resistance of the motor windings. Units are **Mass * Distance² * Time-¹ * Charge-²**.
     //@}
 
     //@{ depending on gear box
-    dReal gear_ratio; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
-    dReal coloumb_friction; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
-    dReal viscous_friction; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal gearRatio; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
+    dReal& gear_ratio RAVE_DEPRECATED; ///< specifies the ratio between the input speed of the transmission (the speed of the motor shaft) and the output speed of the transmission.
+
+    dReal coloumbFriction; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal& coloumb_friction RAVE_DEPRECATED; ///< static coloumb friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    
+    dReal viscousFriction; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
+    dReal& viscous_friction RAVE_DEPRECATED; ///< viscous friction on each joint after the gear box. Units are **Mass * Distance * Time-²**.
     //@}
 };
 
