@@ -823,45 +823,84 @@ public:
     {
 public:
         JointInfo();
-        virtual ~JointInfo() {
-        }
+        JointInfo(const JointInfo& other);
+        virtual ~JointInfo();
+
+        JointInfo& operator=(const JointInfo& other);
 
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
 
-        JointType _type; /// The joint type
-        std::string _name;         ///< the unique joint name
-        std::string _linkname0, _linkname1; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
-        Vector _vanchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
-        boost::array<Vector,3> _vaxes;                ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
-        std::vector<dReal> _vcurrentvalues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
+        JointType type; /// The joint type
+        JointType& _type RAVE_DEPRECATED; /// The joint type
 
-        boost::array<dReal,3> _vresolution;              ///< interpolation resolution
-        boost::array<dReal,3> _vmaxvel;                  ///< the soft maximum velocity (rad/s) to move the joint when planning
-        boost::array<dReal,3> _vhardmaxvel;              ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
-        boost::array<dReal,3> _vmaxaccel;                ///< the maximum acceleration (rad/s^2) of the joint
-        boost::array<dReal,3> _vmaxtorque;               ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
-        boost::array<dReal,3> _vmaxinertia;             ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
-        boost::array<dReal,3> _vweights;                ///< the weights of the joint for computing distance metrics.
+        std::string name;         ///< the unique joint name
+        std::string& _name RAVE_DEPRECATED;         ///< the unique joint name
+
+        std::string parentLinkName;
+        std::string childLinkName; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
+        std::string& _linkname0 RAVE_DEPRECATED; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
+        std::string& _linkname1 RAVE_DEPRECATED; ///< attaching links, all axes and anchors are defined in the link pointed to by _linkname0 coordinate system. _linkname0 is usually the parent link.
+
+        Vector anchor; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
+        Vector& _vanchor RAVE_DEPRECATED; ///< the anchor of the rotation axes defined in _linkname0's coordinate system. this is only used to construct the internal left/right matrices. passed into Joint::_ComputeInternalInformation
+
+        boost::array<Vector,3> axes; ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
+        boost::array<Vector,3>& _vaxes RAVE_DEPRECATED; ///< axes in _linkname0's or environment coordinate system used to define joint movement. passed into Joint::_ComputeInternalInformation
+
+        std::vector<dReal> currentValues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
+        std::vector<dReal>& _vcurrentvalues RAVE_DEPRECATED; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
+
+        boost::array<dReal,3> resolution; ///< interpolation resolution
+        boost::array<dReal,3>& _vresolution RAVE_DEPRECATED; ///< interpolation resolution
+
+        boost::array<dReal,3> maxVel; ///< the soft maximum velocity (rad/s) to move the joint when planning
+        boost::array<dReal,3>& _vmaxvel RAVE_DEPRECATED; ///< the soft maximum velocity (rad/s) to move the joint when planning
+        boost::array<dReal,3> hardMaxVel; ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
+        boost::array<dReal,3>& _vhardmaxvel RAVE_DEPRECATED; ///< the hard maximum velocity, robot cannot exceed this velocity. used for verification checking
+        
+        boost::array<dReal,3> maxAccel; ///< the maximum acceleration (rad/s^2) of the joint
+        boost::array<dReal,3>& _vmaxaccel RAVE_DEPRECATED; ///< the maximum acceleration (rad/s^2) of the joint
+
+        boost::array<dReal,3> maxTorque; ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
+        boost::array<dReal,3>& _vmaxtorque RAVE_DEPRECATED; ///< maximum torque (N.m, kg m^2/s^2) that should be applied to the joint. Usually this is computed from the motor nominal torque and gear ratio. Ignore if values are 0.
+        
+        boost::array<dReal,3> maxInertia; ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
+        boost::array<dReal,3>& _vmaxinertia RAVE_DEPRECATED; ///< maximum inertia (kg m^2) that the joint can exhibit. Usually this is set for safety reasons. Ignore if values are 0.
+        
+        boost::array<dReal,3> weights; ///< the weights of the joint for computing distance metrics.
+        boost::array<dReal,3>& _vweights RAVE_DEPRECATED; ///< the weights of the joint for computing distance metrics.
 
         /// \brief internal offset parameter that determines the branch the angle centers on
         ///
         /// Wrap offsets are needed for rotation joints since the range is limited to 2*pi.
         /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
         /// \param iaxis the axis to get the offset from
-        boost::array<dReal,3> _voffsets;
-        boost::array<dReal,3> _vlowerlimit, _vupperlimit;         ///< joint limits
+        boost::array<dReal,3> offsets;
+        boost::array<dReal,3>& _voffsets RAVE_DEPRECATED;
+        
+
+        boost::array<dReal,3> lowerLimit; ///< joint limits
+        boost::array<dReal,3> upperLimit; ///< joint limits
+        boost::array<dReal,3>& _vlowerlimit RAVE_DEPRECATED; ///< joint limits
+        boost::array<dReal,3>& _vupperlimit RAVE_DEPRECATED; ///< joint limits
+
         TrajectoryBasePtr _trajfollow; ///< used if joint type is JointTrajectory
 
-        boost::array<MimicInfoPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
+        boost::array<MimicInfoPtr,3> mimic; ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
+        boost::array<MimicInfoPtr,3>& _vmimic RAVE_DEPRECATED; ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
-        std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
-        std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
-        std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<dReal> > floatParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<dReal> >& _mapFloatParameters RAVE_DEPRECATED; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<int> > intParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::vector<int> >& _mapIntParameters RAVE_DEPRECATED; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::string > stringParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, std::string >& _mapStringParameters RAVE_DEPRECATED; ///< custom key-value pairs that could not be fit in the current model
 
-        ElectricMotorActuatorInfoPtr _infoElectricMotor;
+        ElectricMotorActuatorInfoPtr electricMotorActuator;
+        ElectricMotorActuatorInfoPtr& _infoElectricMotor RAVE_DEPRECATED;
 
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
@@ -869,9 +908,11 @@ public:
         /// at its lower limit. The most common identification on revolute joints at -pi and pi. 'circularity' means the
         /// joint does not stop at limits.
         /// Although currently not developed, it could be possible to support identification for joints that are not revolute.
-        boost::array<uint8_t,3> _bIsCircular;
+        boost::array<uint8_t,3> isCircular;
+        boost::array<uint8_t,3>& _bIsCircular RAVE_DEPRECATED;
 
-        bool _bIsActive;                 ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool isActive; ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
+        bool& _bIsActive RAVE_DEPRECATED; ///< if true, should belong to the DOF of the body, unless it is a mimic joint (_ComputeInternalInformation decides this)
     };
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
@@ -903,14 +944,14 @@ public:
 
         /// \brief The unique name of the joint
         inline const std::string& GetName() const {
-            return _info._name;
+            return _info.name;
         }
 
         inline dReal GetMaxVel(int iaxis=0) const {
-            return _info._vmaxvel[iaxis];
+            return _info.maxVel[iaxis];
         }
         inline dReal GetMaxAccel(int iaxis=0) const {
-            return _info._vmaxaccel[iaxis];
+            return _info.maxAccel[iaxis];
         }
 
         ///< \brief gets the max instantaneous torque of the joint
@@ -931,7 +972,7 @@ public:
         std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
 
         inline dReal GetMaxInertia(int iaxis=0) const {
-            return _info._vmaxinertia[iaxis];
+            return _info.maxInertia[iaxis];
         }
 
         /// \brief Get the degree of freedom index in the body's DOF array.
@@ -966,7 +1007,7 @@ public:
         }
 
         inline KinBody::JointType GetType() const {
-            return _info._type;
+            return _info.type;
         }
 
         /// \brief gets all resolutions for the joint axes
@@ -1122,7 +1163,7 @@ public:
         /// This allows the wrap offset to be set so the joint can function in [-pi+offset,pi+offset]..
         /// \param iaxis the axis to get the offset from
         inline dReal GetWrapOffset(int iaxis=0) const {
-            return _info._voffsets.at(iaxis);
+            return _info.offsets.at(iaxis);
         }
 
         inline dReal GetOffset(int iaxis=0) const RAVE_DEPRECATED {
@@ -1209,7 +1250,7 @@ public:
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
-            return _info._mapFloatParameters;
+            return _info.floatParameters;
         }
 
         /// \brief set custom float parameters
@@ -1219,7 +1260,7 @@ public:
 
         /// \brief return a map of custom integer parameters
         inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
-            return _info._mapIntParameters;
+            return _info.intParameters;
         }
 
         /// \brief set custom int parameters
@@ -1229,7 +1270,7 @@ public:
 
         /// \brief return a map of custom string parameters
         inline const std::map<std::string, std::string >& GetStringParameters() const {
-            return _info._mapStringParameters;
+            return _info.stringParameters;
         }
 
         /// \brief set custom string parameters

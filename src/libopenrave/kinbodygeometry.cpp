@@ -160,6 +160,10 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 KinBody::GeometryInfo::GeometryInfo() :
     XMLReadable("geometry"),
     _t(transform),
@@ -179,6 +183,7 @@ KinBody::GeometryInfo::GeometryInfo() :
 
     _vRenderScale = _vCollisionScale = Vector(1,1,1);
 }
+#pragma GCC diagnostic pop
 
 KinBody::GeometryInfo::GeometryInfo(const KinBody::GeometryInfo& other) : KinBody::GeometryInfo()
 {

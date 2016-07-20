@@ -23,22 +23,94 @@
 
 namespace OpenRAVE {
 
-KinBody::JointInfo::JointInfo() : XMLReadable("joint"), _type(JointNone), _bIsActive(true)
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+KinBody::JointInfo::JointInfo() :
+    XMLReadable("joint"),
+    _type(type),
+    _name(name),
+    _linkname0(parentLinkName),
+    _linkname1(childLinkName),
+    _vanchor(anchor),
+    _vaxes(axes),
+    _vcurrentvalues(currentValues),
+    _vresolution(resolution),
+    _vmaxvel(maxVel),
+    _vhardmaxvel(hardMaxVel),
+    _vmaxaccel(maxAccel),
+    _vmaxtorque(maxTorque),
+    _vmaxinertia(maxInertia),
+    _vweights(weights),
+    _voffsets(offsets),
+    _vlowerlimit(lowerLimit),
+    _vupperlimit(upperLimit),
+    _vmimic(mimic),
+    _mapFloatParameters(floatParameters),
+    _mapIntParameters(intParameters),
+    _mapStringParameters(stringParameters),
+    _infoElectricMotor(electricMotorActuator),
+    _bIsCircular(isCircular),
+    _bIsActive(isActive)
 {
-    for(size_t i = 0; i < _vaxes.size(); ++i) {
-        _vaxes[i] = Vector(0,0,1);
+    type = JointNone;
+    isActive = true;
+    for(size_t i = 0; i < axes.size(); ++i) {
+        axes[i] = Vector(0,0,1);
     }
-    std::fill(_vresolution.begin(), _vresolution.end(), 0.02);
-    std::fill(_vmaxvel.begin(), _vmaxvel.end(), 10);
-    std::fill(_vhardmaxvel.begin(), _vhardmaxvel.end(), 10);
-    std::fill(_vmaxaccel.begin(), _vmaxaccel.end(), 50);
-    std::fill(_vmaxtorque.begin(), _vmaxtorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
-    std::fill(_vmaxinertia.begin(), _vmaxinertia.end(), 0);
-    std::fill(_vweights.begin(), _vweights.end(), 1);
-    std::fill(_voffsets.begin(), _voffsets.end(), 0);
-    std::fill(_vlowerlimit.begin(), _vlowerlimit.end(), 0);
-    std::fill(_vupperlimit.begin(), _vupperlimit.end(), 0);
-    std::fill(_bIsCircular.begin(), _bIsCircular.end(), 0);
+    std::fill(resolution.begin(), resolution.end(), 0.02);
+    std::fill(maxVel.begin(), maxVel.end(), 10);
+    std::fill(hardMaxVel.begin(), hardMaxVel.end(), 10);
+    std::fill(maxAccel.begin(), maxAccel.end(), 50);
+    std::fill(maxTorque.begin(), maxTorque.end(), 0); // set max torque to 0 to notify the system that dynamics parameters might not be valid.
+    std::fill(maxInertia.begin(), maxInertia.end(), 0);
+    std::fill(weights.begin(), weights.end(), 1);
+    std::fill(offsets.begin(), offsets.end(), 0);
+    std::fill(lowerLimit.begin(), lowerLimit.end(), 0);
+    std::fill(upperLimit.begin(), upperLimit.end(), 0);
+    std::fill(isCircular.begin(), isCircular.end(), 0);
+}
+#pragma GCC diagnostic pop
+
+KinBody::JointInfo::JointInfo(const KinBody::JointInfo& other) : KinBody::JointInfo()
+{
+    *this = other;
+}
+
+KinBody::JointInfo::~JointInfo()
+{
+}
+
+KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& other)
+{
+    sid = other.sid;
+    type = other.type;
+    name = other.name;
+    parentLinkName = other.parentLinkName;
+    childLinkName = other.childLinkName;
+    anchor = other.anchor;
+    axes = other.axes;
+    currentValues = other.currentValues;
+    resolution = other.resolution;
+    maxVel = other.maxVel;
+    hardMaxVel = other.hardMaxVel;
+    maxAccel = other.maxAccel;
+    maxTorque = other.maxTorque;
+    maxInertia = other.maxInertia;
+    weights = other.weights;
+    offsets = other.offsets;
+    lowerLimit = other.lowerLimit;
+    upperLimit = other.upperLimit;
+    mimic = other.mimic;
+    floatParameters = other.floatParameters;
+    intParameters = other.intParameters;
+    stringParameters = other.stringParameters;
+    electricMotorActuator = other.electricMotorActuator;
+    isCircular = other.isCircular;
+    isActive = other.isActive;
+
+    return *this;
 }
 
 void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
@@ -47,10 +119,10 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString(sid);
 
     writer->WriteString("name");
-    writer->WriteString(_name);
+    writer->WriteString(name);
 
     writer->WriteString("type");
-    switch (_type) {
+    switch (type) {
     case JointRevolute:
         writer->WriteString("revolute");
         break;
@@ -61,74 +133,74 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->WriteNull();
         break;
     default:
-        writer->WriteInt(static_cast<int>(_type));
+        writer->WriteInt(static_cast<int>(type));
         break;
     }
 
     writer->WriteString("parentLinkName");
-    writer->WriteString(_linkname0);
+    writer->WriteString(parentLinkName);
     writer->WriteString("childLinkName");
-    writer->WriteString(_linkname1);
+    writer->WriteString(childLinkName);
 
     writer->WriteString("anchor");
-    writer->WriteVector(_vanchor);
+    writer->WriteVector(anchor);
 
     writer->WriteString("axes");
     writer->StartArray();
-    for (int i = 0; i < _vaxes.size(); ++i) {
-        writer->WriteVector(_vaxes[i]);
+    for (int i = 0; i < axes.size(); ++i) {
+        writer->WriteVector(axes[i]);
     }
     writer->EndArray();
 
     writer->WriteString("currentValues");
-    writer->WriteArray(_vcurrentvalues);
+    writer->WriteArray(currentValues);
 
     writer->WriteString("resolution");
-    writer->WriteBoost3Array(_vresolution);
+    writer->WriteBoost3Array(resolution);
 
-    writer->WriteString("maxVelocity");
-    writer->WriteBoost3Array(_vmaxvel);
+    writer->WriteString("maxVel");
+    writer->WriteBoost3Array(maxVel);
 
-    writer->WriteString("hardMaxVelocity");
-    writer->WriteBoost3Array(_vhardmaxvel);
+    writer->WriteString("hardMaxVel");
+    writer->WriteBoost3Array(hardMaxVel);
 
-    writer->WriteString("maxAcceleration");
-    writer->WriteBoost3Array(_vmaxaccel);
+    writer->WriteString("maxAccel");
+    writer->WriteBoost3Array(maxAccel);
 
     writer->WriteString("maxTorque");
-    writer->WriteBoost3Array(_vmaxtorque);
+    writer->WriteBoost3Array(maxTorque);
 
     writer->WriteString("maxInertia");
-    writer->WriteBoost3Array(_vmaxinertia);
+    writer->WriteBoost3Array(maxInertia);
 
     writer->WriteString("weights");
-    writer->WriteBoost3Array(_vweights);
+    writer->WriteBoost3Array(weights);
 
     writer->WriteString("offsets");
-    writer->WriteBoost3Array(_voffsets);
+    writer->WriteBoost3Array(offsets);
 
     writer->WriteString("lowerLimit");
-    writer->WriteBoost3Array(_vlowerlimit);
+    writer->WriteBoost3Array(lowerLimit);
     writer->WriteString("upperLimit");
-    writer->WriteBoost3Array(_vupperlimit);
+    writer->WriteBoost3Array(upperLimit);
 
-    writer->WriteString("circular");
-    writer->WriteBoost3Array(_bIsCircular);
+    writer->WriteString("IsCircular");
+    writer->WriteBoost3Array(isCircular);
 
-    writer->WriteString("active");
-    writer->WriteBool(_bIsActive);
+    writer->WriteString("isActive");
+    writer->WriteBool(isActive);
 
-    if (!!_trajfollow) {
-        writer->WriteString("trajectory");
-        writer->StartObject();
-        _trajfollow->SerializeJSON(writer, options);
-        writer->EndObject();
-    }
+    // if (!!_trajfollow) {
+    //     writer->WriteString("trajectory");
+    //     writer->StartObject();
+    //     _trajfollow->SerializeJSON(writer, options);
+    //     writer->EndObject();
+    // }
 
-    if (_vmimic.size() > 0) {
+    if (mimic.size() > 0) {
         bool bfound = false;
-        for (size_t i = 0; i < _vmimic.size(); ++i) {
-            if (!!_vmimic[i]) {
+        for (size_t i = 0; i < mimic.size(); ++i) {
+            if (!!mimic[i]) {
                 bfound = true;
                 break;
             }
@@ -136,10 +208,10 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         if (bfound) {
             writer->WriteString("mimic");
             writer->StartArray();
-            for (size_t i = 0; i < _vmimic.size(); ++i) {
-                if (!!_vmimic[i]) {
+            for (size_t i = 0; i < mimic.size(); ++i) {
+                if (!!mimic[i]) {
                     writer->StartObject();
-                    _vmimic[i]->SerializeJSON(writer, options);
+                    mimic[i]->SerializeJSON(writer, options);
                     writer->EndObject();
                 }
             }
@@ -147,10 +219,10 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         }
     }
 
-    if (_mapFloatParameters.size() > 0) {
+    if (floatParameters.size() > 0) {
         writer->WriteString("floatParameters");
         writer->StartObject();
-        FOREACHC(kv, _mapFloatParameters) {
+        FOREACHC(kv, floatParameters) {
             writer->WriteString(kv->first.c_str());
             writer->StartArray();
             FOREACHC(it, kv->second) {
@@ -161,10 +233,10 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
 
-    if (_mapIntParameters.size() > 0) {
+    if (intParameters.size() > 0) {
         writer->WriteString("intParameters");
         writer->StartObject();
-        FOREACHC(kv, _mapIntParameters) {
+        FOREACHC(kv, intParameters) {
             writer->WriteString(kv->first.c_str());
             writer->StartArray();
             FOREACHC(it, kv->second) {
@@ -175,20 +247,20 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
         writer->EndObject();
     }
 
-    if (_mapStringParameters.size() > 0) {
+    if (stringParameters.size() > 0) {
         writer->WriteString("stringParameters");
         writer->StartObject();
-        FOREACHC(kv, _mapStringParameters) {
+        FOREACHC(kv, stringParameters) {
             writer->WriteString(kv->first);
             writer->WriteString(kv->second);
         }
         writer->EndObject();
     }
 
-    if (!!_infoElectricMotor) {
-        writer->WriteString("electricMotorInfo");
+    if (!!electricMotorActuator) {
+        writer->WriteString("electricMotorActuator");
         writer->StartObject();
-        _infoElectricMotor->SerializeJSON(writer, options);
+        electricMotorActuator->SerializeJSON(writer, options);
         writer->EndObject();
     }
 }
@@ -269,7 +341,7 @@ KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
     jointindex=-1;
     dofindex = -1; // invalid index
     _bInitialized = false;
-    _info._type = type;
+    _info.type = type;
 }
 
 KinBody::Joint::~Joint()
@@ -278,38 +350,38 @@ KinBody::Joint::~Joint()
 
 int KinBody::Joint::GetDOF() const
 {
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
+    if( _info.type & KinBody::JointSpecialBit ) {
+        switch(_info.type) {
         case KinBody::JointHinge2:
         case KinBody::JointUniversal: return 2;
         case KinBody::JointSpherical: return 3;
         case KinBody::JointTrajectory: return 1;
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _info._type, ORE_Failed);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("invalid joint type 0x%x"), _info.type, ORE_Failed);
         }
     }
-    return int(_info._type & 0xf);
+    return int(_info.type & 0xf);
 }
 
 bool KinBody::Joint::IsCircular(int iaxis) const
 {
-    return static_cast<bool>(_info._bIsCircular.at(iaxis));
+    return static_cast<bool>(_info.isCircular.at(iaxis));
 }
 
 bool KinBody::Joint::IsRevolute(int iaxis) const
 {
-    if( _info._type & KinBody::JointSpecialBit ) {
-        return _info._type == KinBody::JointHinge2 || _info._type == KinBody::JointUniversal;
+    if( _info.type & KinBody::JointSpecialBit ) {
+        return _info.type == KinBody::JointHinge2 || _info.type == KinBody::JointUniversal;
     }
-    return !(_info._type&(1<<(4+iaxis)));
+    return !(_info.type&(1<<(4+iaxis)));
 }
 
 bool KinBody::Joint::IsPrismatic(int iaxis) const
 {
-    if( _info._type & KinBody::JointSpecialBit ) {
+    if( _info.type & KinBody::JointSpecialBit ) {
         return false;
     }
-    return !!(_info._type&(1<<(4+iaxis)));
+    return !!(_info.type&(1<<(4+iaxis)));
 }
 
 bool KinBody::Joint::IsStatic() const
@@ -338,7 +410,7 @@ bool KinBody::Joint::IsStatic() const
         if( IsCircular(i) ) {
             return false;
         }
-        if( _info._vlowerlimit.at(i) < _info._vupperlimit.at(i) ) {
+        if( _info.lowerLimit.at(i) < _info.upperLimit.at(i) ) {
             return false;
         }
     }
@@ -357,8 +429,8 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
     }
     dReal f;
     Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
+    if( _info.type & KinBody::JointSpecialBit ) {
+        switch(_info.type) {
         case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
             Vector vec1, vec2, vec3;
@@ -366,7 +438,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             vec2 = (axis2cur - _vaxes[0].dot3(axis2cur)*_vaxes[0]).normalize();
             vec3 = _vaxes[0].cross(vec1);
             f = 2.0*RaveAtan2(vec3.dot3(vec2), vec1.dot3(vec2));
-            pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]));
+            pValues.push_back(GetClosestValueAlongCircle(_info.offsets[0]+f, _doflastsetvalues[0]));
             vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
             vec2 = (axis1cur - axis2cur.dot(axis1cur)*axis2cur).normalize();
             vec3 = axis2cur.cross(vec1);
@@ -377,7 +449,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]));
+            pValues.push_back(GetClosestValueAlongCircle(_info.offsets[1]+f, _doflastsetvalues[1]));
             break;
         }
         case KinBody::JointSpherical: {
@@ -397,7 +469,7 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
             break;
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info._type, ORE_Failed);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info.type, ORE_Failed);
         }
     }
     else {
@@ -424,11 +496,11 @@ void KinBody::Joint::GetValues(vector<dReal>& pValues, bool bAppend) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                pValues.push_back(GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]));
+                pValues.push_back(GetClosestValueAlongCircle(_info.offsets[i]+f, _doflastsetvalues[i]));
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
-                pValues.push_back(_info._voffsets[i]+f);
+                pValues.push_back(_info.offsets[i]+f);
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
                 }
@@ -442,8 +514,8 @@ dReal KinBody::Joint::GetValue(int iaxis) const
     OPENRAVE_ASSERT_FORMAT0(_bInitialized, "joint not initialized",ORE_NotInitialized);
     dReal f;
     Transform tjoint = _tinvLeft * _attachedbodies[0]->GetTransform().inverse() * _attachedbodies[1]->GetTransform() * _tinvRight;
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
+    if( _info.type & KinBody::JointSpecialBit ) {
+        switch(_info.type) {
         case KinBody::JointHinge2: {
             Vector axis1cur = tjoint.rotate(_vaxes[0]), axis2cur = tjoint.rotate(_vaxes[1]);
             Vector vec1, vec2, vec3;
@@ -458,7 +530,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+                return GetClosestValueAlongCircle(_info.offsets[0]+f, _doflastsetvalues[0]);
             }
             else if( iaxis == 1 ) {
                 vec1 = (_vaxes[0] - axis2cur.dot(_vaxes[0])*axis2cur).normalize();
@@ -471,7 +543,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                 else if( f > PI ) {
                     f -= 2*PI;
                 }
-                return GetClosestValueAlongCircle(_info._voffsets[1]+f, _doflastsetvalues[1]);
+                return GetClosestValueAlongCircle(_info.offsets[1]+f, _doflastsetvalues[1]);
             }
             break;
         }
@@ -537,10 +609,10 @@ dReal KinBody::Joint::GetValue(int iaxis) const
         }
     }
     else {
-        if( _info._type == KinBody::JointPrismatic ) {
-            return _info._voffsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
+        if( _info.type == KinBody::JointPrismatic ) {
+            return _info.offsets[0]+(tjoint.trans.x*_vaxes[0].x+tjoint.trans.y*_vaxes[0].y+tjoint.trans.z*_vaxes[0].z);
         }
-        else if( _info._type == KinBody::JointRevolute ) {
+        else if( _info.type == KinBody::JointRevolute ) {
             f = 2.0f*RaveAtan2(tjoint.rot.y*_vaxes[0].x+tjoint.rot.z*_vaxes[0].y+tjoint.rot.w*_vaxes[0].z, tjoint.rot.x);
             // expect values to be within -PI to PI range
             if( f < -PI ) {
@@ -549,7 +621,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             else if( f > PI ) {
                 f -= 2*PI;
             }
-            return GetClosestValueAlongCircle(_info._voffsets[0]+f, _doflastsetvalues[0]);
+            return GetClosestValueAlongCircle(_info.offsets[0]+f, _doflastsetvalues[0]);
         }
 
         // chain of revolute and prismatic joints
@@ -576,13 +648,13 @@ dReal KinBody::Joint::GetValue(int iaxis) const
                     f -= 2*PI;
                 }
                 if( i == iaxis ) {
-                    return GetClosestValueAlongCircle(_info._voffsets[i]+f, _doflastsetvalues[i]);
+                    return GetClosestValueAlongCircle(_info.offsets[i]+f, _doflastsetvalues[i]);
                 }
             }
             else { // prismatic
                 f = tjoint.trans.x*vaxis.x+tjoint.trans.y*vaxis.y+tjoint.trans.z*vaxis.z;
                 if( i == iaxis ) {
-                    return _info._voffsets[i]+f;
+                    return _info.offsets[i]+f;
                 }
                 if( i+1 < GetDOF() ) {
                     tjoint.trans -= vaxis*f;
@@ -590,7 +662,7 @@ dReal KinBody::Joint::GetValue(int iaxis) const
             }
         }
     }
-    throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x axis %d\n"), _info._type%iaxis, ORE_Failed);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x axis %d\n"), _info.type%iaxis, ORE_Failed);
 }
 
 void KinBody::Joint::GetVelocities(std::vector<dReal>& pVelocities, bool bAppend) const
@@ -621,12 +693,12 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
         pVelocities.push_back(GetVelocity(0));
         return;
     }
-    const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
-    const Transform& linkchildtransform = _attachedbodies[1]->_info._t;
+    const Transform& linkparenttransform = _attachedbodies[0]->_info.transform;
+    const Transform& linkchildtransform = _attachedbodies[1]->_info.transform;
     Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
     Vector quatdeltainv = quatInverse(quatdelta);
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
+    if( _info.type & KinBody::JointSpecialBit ) {
+        switch(_info.type) {
         case KinBody::JointSpherical: {
             Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
             pVelocities.push_back(v.x);
@@ -635,7 +707,7 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
             break;
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info._type, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info.type, ORE_InvalidArguments);
         }
     }
     else {
@@ -656,25 +728,25 @@ void KinBody::Joint::_GetVelocities(std::vector<dReal>& pVelocities, bool bAppen
 
 dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const
 {
-    const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
-    const Transform& linkchildtransform = _attachedbodies[1]->_info._t;
+    const Transform& linkparenttransform = _attachedbodies[0]->_info.transform;
+    const Transform& linkchildtransform = _attachedbodies[1]->_info.transform;
     Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
     Vector quatdeltainv = quatInverse(quatdelta);
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
+    if( _info.type & KinBody::JointSpecialBit ) {
+        switch(_info.type) {
         case KinBody::JointSpherical: {
             Vector v = quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second);
             return v[axis];
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info._type, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unknown joint type 0x%x"), _info.type, ORE_InvalidArguments);
         }
     }
     else {
-        if( _info._type == KinBody::JointPrismatic ) {
+        if( _info.type == KinBody::JointPrismatic ) {
             return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.first-linkparentvelocity.first-linkparentvelocity.second.cross(linkchildtransform.trans-linkparenttransform.trans)));
         }
-        else if( _info._type == KinBody::JointRevolute ) {
+        else if( _info.type == KinBody::JointRevolute ) {
             return _vaxes[0].dot3(quatRotate(quatdeltainv,linkchildvelocity.second-linkparentvelocity.second));
         }
         else {
@@ -698,7 +770,7 @@ dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&link
             }
         }
     }
-    throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported joint type 0x%x"), _info._type, ORE_InvalidArguments);
+    throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported joint type 0x%x"), _info.type, ORE_InvalidArguments);
 }
 
 Vector KinBody::Joint::GetAnchor() const
@@ -715,10 +787,10 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 {
     OPENRAVE_ASSERT_OP_FORMAT(!!plink0,&&,!!plink1, "one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
     for(int i = 0; i < GetDOF(); ++i) {
-        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxvel[i], >=, 0, "joint %s[%d] max velocity is invalid",_info._name%i, ORE_InvalidArguments);
-        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxaccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info._name%i, ORE_InvalidArguments);
-        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxtorque[i], >=, 0, "joint %s[%d] max torque is invalid",_info._name%i, ORE_InvalidArguments);
-        OPENRAVE_ASSERT_OP_FORMAT(_info._vmaxinertia[i], >=, 0, "joint %s[%d] max inertia is invalid",_info._name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info.maxVel[i], >=, 0, "joint %s[%d] max velocity is invalid",_info.name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info.maxAccel[i], >=, 0, "joint %s[%d] max acceleration is invalid",_info.name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info.maxTorque[i], >=, 0, "joint %s[%d] max torque is invalid",_info.name%i, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT(_info.maxInertia[i], >=, 0, "joint %s[%d] max inertia is invalid",_info.name%i, ORE_InvalidArguments);
     }
 
     KinBodyPtr parent(_parent);
@@ -744,9 +816,9 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
     // update _info
     for(size_t i = 0; i < vaxes.size(); ++i) {
-        _info._vaxes[i] = _vaxes[i];
+        _info.axes[i] = _vaxes[i];
     }
-    _info._vanchor = vanchor;
+    _info.anchor = vanchor;
 
     tbody0 = _attachedbodies[0]->GetTransform();
     tbody1 = _attachedbodies[1]->GetTransform();
@@ -756,8 +828,8 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     _tRight = Transform();
     _tRightNoOffset = Transform();
 
-    if( _info._type & KinBody::JointSpecialBit ) {
-        switch(_info._type) {
+    if( _info.type & KinBody::JointSpecialBit ) {
+        switch(_info.type) {
         case KinBody::JointUniversal:
             _tLeft.trans = vanchor;
             _tRight.trans = -vanchor;
@@ -782,7 +854,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _tRight = _tRight * trel;
             break;
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized joint type 0x%x"), _info._type, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unrecognized joint type 0x%x"), _info.type, ORE_InvalidArguments);
         }
         _tLeftNoOffset = _tLeft;
         _tRightNoOffset = _tRight;
@@ -804,20 +876,20 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
 
         Transform toffset;
         if( IsRevolute(0) ) {
-            toffset.rot = quatFromAxisAngle(_vaxes[0], _info._voffsets[0]);
+            toffset.rot = quatFromAxisAngle(_vaxes[0], _info.offsets[0]);
         }
         else {
-            toffset.trans = _vaxes[0]*_info._voffsets[0];
+            toffset.trans = _vaxes[0]*_info.offsets[0];
         }
         _tLeft = _tLeftNoOffset * toffset;
         _tRight = _tRightNoOffset;
         if( GetDOF() > 1 ) {
             // right multiply by the offset of the last axis, might be buggy?
             if( IsRevolute(GetDOF()-1) ) {
-                _tRight = matrixFromAxisAngle(_vaxes[GetDOF()-1], _info._voffsets[GetDOF()-1]) * _tRight;
+                _tRight = matrixFromAxisAngle(_vaxes[GetDOF()-1], _info.offsets[GetDOF()-1]) * _tRight;
             }
             else {
-                _tRight.trans += _vaxes[GetDOF()-1]*_info._voffsets[GetDOF()-1];
+                _tRight.trans += _vaxes[GetDOF()-1]*_info.offsets[GetDOF()-1];
             }
         }
     }
@@ -825,7 +897,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     if( vcurrentvalues.size() > 0 ) {
         // see if any joints have offsets
         Transform toffset;
-        if( _info._type == KinBody::JointTrajectory ) {
+        if( _info.type == KinBody::JointTrajectory ) {
             vector<dReal> vsampledata;
             Transform t0, t1;
             _info._trajfollow->Sample(vsampledata,0);
@@ -838,7 +910,7 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             }
             toffset = t0*t1.inverse();
         }
-        else if( !(_info._type&KinBody::JointSpecialBit) || _info._type == KinBody::JointUniversal || _info._type == KinBody::JointHinge2 ) {
+        else if( !(_info.type&KinBody::JointSpecialBit) || _info.type == KinBody::JointUniversal || _info.type == KinBody::JointHinge2 ) {
             if( IsRevolute(0) ) {
                 toffset.rot = quatFromAxisAngle(_vaxes[0], -vcurrentvalues[0]);
             }
@@ -862,29 +934,29 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
     _tinvRight = _tRight.inverse();
     _tinvLeft = _tLeft.inverse();
 
-    _vcircularlowerlimit = _info._vlowerlimit;
-    _vcircularupperlimit = _info._vupperlimit;
+    _vcircularlowerlimit = _info.lowerLimit;
+    _vcircularupperlimit = _info.upperLimit;
     for(int i = 0; i < GetDOF(); ++i) {
         if( IsCircular(i) ) {
             // can rotate forever, so don't limit it. Unfortunately if numbers are too big precision will start getting lost
-            _info._vlowerlimit.at(i) = -1e4;
-            _info._vupperlimit.at(i) = 1e4;
+            _info.lowerLimit.at(i) = -1e4;
+            _info.upperLimit.at(i) = 1e4;
         }
     }
 
     if( !!_attachedbodies[0] ) {
-        _info._linkname0 = _attachedbodies[0]->GetName();
+        _info.parentLinkName = _attachedbodies[0]->GetName();
     }
     else {
-        _info._linkname0.clear();
+        _info.parentLinkName.clear();
     }
     if( !!_attachedbodies[1] ) {
-        _info._linkname1 = _attachedbodies[1]->GetName();
+        _info.childLinkName = _attachedbodies[1]->GetName();
     }
     else {
-        _info._linkname1.clear();
+        _info.childLinkName.clear();
     }
-    _info._vcurrentvalues = vcurrentvalues;
+    _info.currentValues = vcurrentvalues;
 
     _bInitialized = true;
 
@@ -927,28 +999,28 @@ void KinBody::Joint::GetLimits(std::vector<dReal>& vLowerLimit, std::vector<dRea
         vUpperLimit.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vLowerLimit.push_back(_info._vlowerlimit[i]);
-        vUpperLimit.push_back(_info._vupperlimit[i]);
+        vLowerLimit.push_back(_info.lowerLimit[i]);
+        vUpperLimit.push_back(_info.upperLimit[i]);
     }
 }
 
 std::pair<dReal, dReal> KinBody::Joint::GetLimit(int iaxis) const
 {
-    return make_pair(_info._vlowerlimit.at(iaxis),_info._vupperlimit.at(iaxis));
+    return make_pair(_info.lowerLimit.at(iaxis),_info.upperLimit.at(iaxis));
 }
 
 void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std::vector<dReal>& vUpperLimit)
 {
     bool bChanged = false;
     for(int i = 0; i < GetDOF(); ++i) {
-        if( _info._vlowerlimit[i] != vLowerLimit.at(i) || _info._vupperlimit[i] != vUpperLimit.at(i) ) {
+        if( _info.lowerLimit[i] != vLowerLimit.at(i) || _info.upperLimit[i] != vUpperLimit.at(i) ) {
             bChanged = true;
-            _info._vlowerlimit[i] = vLowerLimit.at(i);
-            _info._vupperlimit[i] = vUpperLimit.at(i);
+            _info.lowerLimit[i] = vLowerLimit.at(i);
+            _info.upperLimit[i] = vUpperLimit.at(i);
             if( IsRevolute(i) && !IsCircular(i) ) {
                 // TODO, necessary to set wrap?
-                if( _info._vlowerlimit[i] < -PI || _info._vupperlimit[i] > PI) {
-                    SetWrapOffset(0.5f * (_info._vlowerlimit.at(i) + _info._vupperlimit.at(i)),i);
+                if( _info.lowerLimit[i] < -PI || _info.upperLimit[i] > PI) {
+                    SetWrapOffset(0.5f * (_info.lowerLimit.at(i) + _info.upperLimit.at(i)),i);
                 }
                 else {
                     SetWrapOffset(0,i);
@@ -968,8 +1040,8 @@ void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vlower, std::vector<d
         vupper.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vlower.push_back(-_info._vmaxvel[i]);
-        vupper.push_back(_info._vmaxvel[i]);
+        vlower.push_back(-_info.maxVel[i]);
+        vupper.push_back(_info.maxVel[i]);
     }
 }
 
@@ -979,19 +1051,19 @@ void KinBody::Joint::GetVelocityLimits(std::vector<dReal>& vmax, bool bAppend) c
         vmax.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vmax.push_back(_info._vmaxvel[i]);
+        vmax.push_back(_info.maxVel[i]);
     }
 }
 
 std::pair<dReal, dReal> KinBody::Joint::GetVelocityLimit(int iaxis) const
 {
-    return make_pair(-_info._vmaxvel.at(iaxis), _info._vmaxvel.at(iaxis));
+    return make_pair(-_info.maxVel.at(iaxis), _info.maxVel.at(iaxis));
 }
 
 void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
 {
     for(int i = 0; i < GetDOF(); ++i) {
-        _info._vmaxvel[i] = vmaxvel.at(i);
+        _info.maxVel[i] = vmaxvel.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
@@ -1002,19 +1074,19 @@ void KinBody::Joint::GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppen
         vmax.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vmax.push_back(_info._vmaxaccel[i]);
+        vmax.push_back(_info.maxAccel[i]);
     }
 }
 
 dReal KinBody::Joint::GetAccelerationLimit(int iaxis) const
 {
-    return _info._vmaxaccel.at(iaxis);
+    return _info.maxAccel.at(iaxis);
 }
 
 void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
 {
     for(int i = 0; i < GetDOF(); ++i) {
-        _info._vmaxaccel[i] = vmax.at(i);
+        _info.maxAccel[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
@@ -1025,14 +1097,14 @@ void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) con
         vmax.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vmax.push_back(_info._vmaxtorque[i]);
+        vmax.push_back(_info.maxTorque[i]);
     }
 }
 
 void KinBody::Joint::SetTorqueLimits(const std::vector<dReal>& vmax)
 {
     for(int i = 0; i < GetDOF(); ++i) {
-        _info._vmaxtorque[i] = vmax.at(i);
+        _info.maxTorque[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
@@ -1043,22 +1115,22 @@ void KinBody::Joint::GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend) co
         vmax.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vmax.push_back(_info._vmaxinertia[i]);
+        vmax.push_back(_info.maxInertia[i]);
     }
 }
 
 void KinBody::Joint::SetInertiaLimits(const std::vector<dReal>& vmax)
 {
     for(int i = 0; i < GetDOF(); ++i) {
-        _info._vmaxinertia[i] = vmax.at(i);
+        _info.maxInertia[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
 }
 
 void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
 {
-    if( _info._voffsets.at(iaxis) != newoffset ) {
-        _info._voffsets.at(iaxis) = newoffset;
+    if( _info.offsets.at(iaxis) != newoffset ) {
+        _info.offsets.at(iaxis) = newoffset;
         if( iaxis == 0 ) {
             Transform toffset;
             if( IsRevolute(0) ) {
@@ -1091,18 +1163,18 @@ void KinBody::Joint::GetResolutions(std::vector<dReal>& resolutions, bool bAppen
         resolutions.resize(GetDOF());
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        resolutions.push_back(_info._vresolution[i]);
+        resolutions.push_back(_info.resolution[i]);
     }
 }
 
 dReal KinBody::Joint::GetResolution(int iaxis) const
 {
-    return _info._vresolution.at(iaxis);
+    return _info.resolution.at(iaxis);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
-    _info._vresolution.at(iaxis) = resolution;
+    _info.resolution.at(iaxis) = resolution;
     GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
 
@@ -1112,20 +1184,20 @@ void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
         weights.resize(GetDOF());
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        weights.push_back(_info._vweights[i]);
+        weights.push_back(_info.weights[i]);
     }
 }
 
 dReal KinBody::Joint::GetWeight(int iaxis) const
 {
-    return _info._vweights.at(iaxis);
+    return _info.weights.at(iaxis);
 }
 
 void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
 {
     for(int i = 0; i < GetDOF(); ++i) {
         OPENRAVE_ASSERT_OP(vweights.at(i),>,0);
-        _info._vweights[i] = vweights.at(i);
+        _info.weights[i] = vweights.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
@@ -1159,88 +1231,88 @@ void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
 
 dReal KinBody::Joint::GetMaxTorque(int iaxis) const
 {
-    if( !_info._infoElectricMotor ) {
-        return _info._vmaxtorque.at(iaxis);
+    if( !_info.electricMotorActuator ) {
+        return _info.maxTorque.at(iaxis);
     }
     else {
-        if( _info._infoElectricMotor->max_speed_torque_points.size() > 0 ) {
-            if( _info._infoElectricMotor->max_speed_torque_points.size() == 1 ) {
+        if( _info.electricMotorActuator->max_speed_torque_points.size() > 0 ) {
+            if( _info.electricMotorActuator->max_speed_torque_points.size() == 1 ) {
                 // doesn't matter what the velocity is
-                return _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
+                return _info.electricMotorActuator->max_speed_torque_points.at(0).second*_info.electricMotorActuator->gear_ratio;
             }
 
             dReal velocity = RaveFabs(GetVelocity(iaxis));
-            dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
+            dReal revolutionsPerSecond = _info.electricMotorActuator->gear_ratio * velocity;
             if( IsRevolute(iaxis) ) {
                 revolutionsPerSecond /= 2*M_PI;
             }
 
-            if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(0).first ) {
-                return _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
+            if( revolutionsPerSecond <= _info.electricMotorActuator->max_speed_torque_points.at(0).first ) {
+                return _info.electricMotorActuator->max_speed_torque_points.at(0).second*_info.electricMotorActuator->gear_ratio;
             }
 
-            for(size_t i = 1; i < _info._infoElectricMotor->max_speed_torque_points.size(); ++i) {
-                if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(i).first ) {
+            for(size_t i = 1; i < _info.electricMotorActuator->max_speed_torque_points.size(); ++i) {
+                if( revolutionsPerSecond <= _info.electricMotorActuator->max_speed_torque_points.at(i).first ) {
                     // linearly interpolate to get the desired torque
-                    dReal rps0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).first;
-                    dReal torque0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).second;
-                    dReal rps1 = _info._infoElectricMotor->max_speed_torque_points.at(i).first;
-                    dReal torque1 = _info._infoElectricMotor->max_speed_torque_points.at(i).second;
+                    dReal rps0 = _info.electricMotorActuator->max_speed_torque_points.at(i-1).first;
+                    dReal torque0 = _info.electricMotorActuator->max_speed_torque_points.at(i-1).second;
+                    dReal rps1 = _info.electricMotorActuator->max_speed_torque_points.at(i).first;
+                    dReal torque1 = _info.electricMotorActuator->max_speed_torque_points.at(i).second;
                     if( rps1 - rps0 <= g_fEpsilonLinear ) {
-                        return torque1*_info._infoElectricMotor->gear_ratio;
+                        return torque1*_info.electricMotorActuator->gear_ratio;
                     }
 
-                    return ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info._infoElectricMotor->gear_ratio;
+                    return ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info.electricMotorActuator->gear_ratio;
                 }
             }
 
             // revolutionsPerSecond is huge, return the last point
-            return _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
+            return _info.electricMotorActuator->max_speed_torque_points.back().second*_info.electricMotorActuator->gear_ratio;
         }
         else {
-            return _info._infoElectricMotor->max_instantaneous_torque*_info._infoElectricMotor->gear_ratio;
+            return _info.electricMotorActuator->max_instantaneous_torque*_info.electricMotorActuator->gear_ratio;
         }
     }
 }
 
 std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) const
 {
-    if( !_info._infoElectricMotor ) {
-        return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
+    if( !_info.electricMotorActuator ) {
+        return std::make_pair(-_info.maxTorque.at(iaxis), _info.maxTorque.at(iaxis));
     }
     else {
-        if( _info._infoElectricMotor->max_speed_torque_points.size() > 0 ) {
-            dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
-            if( _info._infoElectricMotor->max_speed_torque_points.size() == 1 ) {
+        if( _info.electricMotorActuator->max_speed_torque_points.size() > 0 ) {
+            dReal fMaxTorqueAtZeroSpeed = _info.electricMotorActuator->max_speed_torque_points.at(0).second*_info.electricMotorActuator->gear_ratio;
+            if( _info.electricMotorActuator->max_speed_torque_points.size() == 1 ) {
                 // doesn't matter what the velocity is
                 return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
             }
 
             dReal rawvelocity = GetVelocity(iaxis);
             dReal velocity = RaveFabs(rawvelocity);
-            dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
+            dReal revolutionsPerSecond = _info.electricMotorActuator->gear_ratio * velocity;
             if( IsRevolute(iaxis) ) {
                 revolutionsPerSecond /= 2*M_PI;
             }
 
-            if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(0).first ) {
+            if( revolutionsPerSecond <= _info.electricMotorActuator->max_speed_torque_points.at(0).first ) {
                 return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
             }
 
-            for(size_t i = 1; i < _info._infoElectricMotor->max_speed_torque_points.size(); ++i) {
-                if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(i).first ) {
+            for(size_t i = 1; i < _info.electricMotorActuator->max_speed_torque_points.size(); ++i) {
+                if( revolutionsPerSecond <= _info.electricMotorActuator->max_speed_torque_points.at(i).first ) {
                     // linearly interpolate to get the desired torque
-                    dReal rps0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).first;
-                    dReal torque0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).second;
-                    dReal rps1 = _info._infoElectricMotor->max_speed_torque_points.at(i).first;
-                    dReal torque1 = _info._infoElectricMotor->max_speed_torque_points.at(i).second;
+                    dReal rps0 = _info.electricMotorActuator->max_speed_torque_points.at(i-1).first;
+                    dReal torque0 = _info.electricMotorActuator->max_speed_torque_points.at(i-1).second;
+                    dReal rps1 = _info.electricMotorActuator->max_speed_torque_points.at(i).first;
+                    dReal torque1 = _info.electricMotorActuator->max_speed_torque_points.at(i).second;
 
                     dReal finterpolatedtorque;
                     if( rps1 - rps0 <= g_fEpsilonLinear ) {
-                        finterpolatedtorque = torque1*_info._infoElectricMotor->gear_ratio;
+                        finterpolatedtorque = torque1*_info.electricMotorActuator->gear_ratio;
                     }
                     else {
-                        finterpolatedtorque = ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info._infoElectricMotor->gear_ratio;
+                        finterpolatedtorque = ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info.electricMotorActuator->gear_ratio;
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
@@ -1255,7 +1327,7 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
 
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
-            dReal f = _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
+            dReal f = _info.electricMotorActuator->max_speed_torque_points.back().second*_info.electricMotorActuator->gear_ratio;
             if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
@@ -1264,7 +1336,7 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
             }
         }
         else {
-            dReal f = _info._infoElectricMotor->max_instantaneous_torque*_info._infoElectricMotor->gear_ratio;
+            dReal f = _info.electricMotorActuator->max_instantaneous_torque*_info.electricMotorActuator->gear_ratio;
             return std::make_pair(-f, f);
         }
     }
@@ -1272,42 +1344,42 @@ std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) 
 
 std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
 {
-    if( !_info._infoElectricMotor ) {
-        return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
+    if( !_info.electricMotorActuator ) {
+        return std::make_pair(-_info.maxTorque.at(iaxis), _info.maxTorque.at(iaxis));
     }
     else {
-        if( _info._infoElectricMotor->nominal_speed_torque_points.size() > 0 ) {
-            dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->nominal_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
-            if( _info._infoElectricMotor->nominal_speed_torque_points.size() == 1 ) {
+        if( _info.electricMotorActuator->nominal_speed_torque_points.size() > 0 ) {
+            dReal fMaxTorqueAtZeroSpeed = _info.electricMotorActuator->nominal_speed_torque_points.at(0).second*_info.electricMotorActuator->gear_ratio;
+            if( _info.electricMotorActuator->nominal_speed_torque_points.size() == 1 ) {
                 // doesn't matter what the velocity is
                 return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
             }
 
             dReal rawvelocity = GetVelocity(iaxis);
             dReal velocity = RaveFabs(rawvelocity);
-            dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
+            dReal revolutionsPerSecond = _info.electricMotorActuator->gear_ratio * velocity;
             if( IsRevolute(iaxis) ) {
                 revolutionsPerSecond /= 2*M_PI;
             }
 
-            if( revolutionsPerSecond <= _info._infoElectricMotor->nominal_speed_torque_points.at(0).first ) {
+            if( revolutionsPerSecond <= _info.electricMotorActuator->nominal_speed_torque_points.at(0).first ) {
                 return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
             }
 
-            for(size_t i = 1; i < _info._infoElectricMotor->nominal_speed_torque_points.size(); ++i) {
-                if( revolutionsPerSecond <= _info._infoElectricMotor->nominal_speed_torque_points.at(i).first ) {
+            for(size_t i = 1; i < _info.electricMotorActuator->nominal_speed_torque_points.size(); ++i) {
+                if( revolutionsPerSecond <= _info.electricMotorActuator->nominal_speed_torque_points.at(i).first ) {
                     // linearly interpolate to get the desired torque
-                    dReal rps0 = _info._infoElectricMotor->nominal_speed_torque_points.at(i-1).first;
-                    dReal torque0 = _info._infoElectricMotor->nominal_speed_torque_points.at(i-1).second;
-                    dReal rps1 = _info._infoElectricMotor->nominal_speed_torque_points.at(i).first;
-                    dReal torque1 = _info._infoElectricMotor->nominal_speed_torque_points.at(i).second;
+                    dReal rps0 = _info.electricMotorActuator->nominal_speed_torque_points.at(i-1).first;
+                    dReal torque0 = _info.electricMotorActuator->nominal_speed_torque_points.at(i-1).second;
+                    dReal rps1 = _info.electricMotorActuator->nominal_speed_torque_points.at(i).first;
+                    dReal torque1 = _info.electricMotorActuator->nominal_speed_torque_points.at(i).second;
 
                     dReal finterpolatedtorque;
                     if( rps1 - rps0 <= g_fEpsilonLinear ) {
-                        finterpolatedtorque = torque1*_info._infoElectricMotor->gear_ratio;
+                        finterpolatedtorque = torque1*_info.electricMotorActuator->gear_ratio;
                     }
                     else {
-                        finterpolatedtorque = ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info._infoElectricMotor->gear_ratio;
+                        finterpolatedtorque = ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info.electricMotorActuator->gear_ratio;
                     }
 
                     // due to back emf, the deceleration magnitude is less than acceleration?
@@ -1322,7 +1394,7 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
 
             // due to back emf, the deceleration magnitude is less than acceleration?
             // revolutionsPerSecond is huge, return the last point
-            dReal f = _info._infoElectricMotor->nominal_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
+            dReal f = _info.electricMotorActuator->nominal_speed_torque_points.back().second*_info.electricMotorActuator->gear_ratio;
             if( rawvelocity > 0 ) {
                 return std::make_pair(-0.9*f, f);
             }
@@ -1331,7 +1403,7 @@ std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
             }
         }
         else {
-            dReal f = _info._infoElectricMotor->nominal_torque*_info._infoElectricMotor->gear_ratio;
+            dReal f = _info.electricMotorActuator->nominal_torque*_info.electricMotorActuator->gear_ratio;
             return std::make_pair(-f, f);
         }
     }
@@ -1416,14 +1488,14 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
     throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported math format %s"), format, ORE_InvalidArguments);
 }
 
-void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& vmimicdofs, int iaxis) const
+void KinBody::Joint::GetMimicDOFIndices(std::vector<int>& v_vmimicdofs, int iaxis) const
 {
     OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "joint %s axis %d is not mimic", GetName()%iaxis,ORE_InvalidArguments);
-    vmimicdofs.resize(0);
+    v_vmimicdofs.resize(0);
     FOREACHC(it, _vmimic.at(iaxis)->_vmimicdofs) {
-        std::vector<int>::iterator itinsert = std::lower_bound(vmimicdofs.begin(),vmimicdofs.end(), it->dofindex);
-        if((itinsert == vmimicdofs.end())||(*itinsert != it->dofindex)) {
-            vmimicdofs.insert(itinsert,it->dofindex);
+        std::vector<int>::iterator itinsert = std::lower_bound(v_vmimicdofs.begin(),v_vmimicdofs.end(), it->dofindex);
+        if((itinsert == v_vmimicdofs.end())||(*itinsert != it->dofindex)) {
+            v_vmimicdofs.insert(itinsert,it->dofindex);
         }
     }
 }
@@ -1442,10 +1514,10 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
     mimic->_equations.at(2) = acceleq;
 
     // copy equations into the info
-    if( !_info._vmimic.at(iaxis) ) {
-        _info._vmimic.at(iaxis).reset(new MimicInfo());
+    if( !_info.mimic.at(iaxis) ) {
+        _info.mimic.at(iaxis).reset(new MimicInfo());
     }
-    _info._vmimic.at(iaxis)->_equations = mimic->_equations;
+    _info.mimic.at(iaxis)->_equations = mimic->_equations;
 
     OpenRAVEFunctionParserRealPtr posfn = CreateJointFunctionParser();
     mimic->_posfn = posfn;
@@ -1533,7 +1605,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             size_t nameendindex = sequation.find(' ');
             string varname;
             if( nameendindex == std::string::npos ) {
-                RAVELOG_WARN(str(boost::format("invalid equation syntax '%s' for joint %s")%sequation%_info._name));
+                RAVELOG_WARN(str(boost::format("invalid equation syntax '%s' for joint %s")%sequation%_info.name));
                 varname = sequation;
                 sequation = "0";
             }
@@ -1555,7 +1627,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
         for(size_t j = 0; j < resultVars.size(); ++j) {
             if( !vfns[j] ) {
                 // print a message instead of throwing an exception since it might be common for only position equations to be specified
-                RAVELOG_WARN(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives of joint %s!")%mapinvnames[resultVars[j]]%_info._name));
+                RAVELOG_WARN(str(boost::format("SetMimicEquations: missing variable %s from partial derivatives of joint %s!")%mapinvnames[resultVars[j]]%_info.name));
                 vfns[j] = CreateJointFunctionParser();
                 vfns[j]->Parse("0","");
             }
@@ -1579,7 +1651,7 @@ void KinBody::Joint::_ComputePartialVelocities(std::vector<std::pair<int,dReal> 
         vpartials.push_back(make_pair(dofindex+iaxis,1.0));
         return;
     }
-    OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info._name, ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(!!_vmimic.at(iaxis), "cannot compute partial velocities of joint %s", _info.name, ORE_Failed);
     KinBodyConstPtr parent(_parent);
     MIMIC::DOFFormat thisdofformat;
     thisdofformat.dofindex = -1; // always -1 since it is mimiced
@@ -1698,10 +1770,10 @@ KinBody::JointConstPtr KinBody::Joint::MIMIC::DOFFormat::GetJoint(KinBodyConstPt
 void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vector<dReal>& parameters)
 {
     if( parameters.size() > 0 ) {
-        _info._mapFloatParameters[key] = parameters;
+        _info.floatParameters[key] = parameters;
     }
     else {
-        _info._mapFloatParameters.erase(key);
+        _info.floatParameters.erase(key);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
@@ -1709,10 +1781,10 @@ void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vecto
 void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
 {
     if( parameters.size() > 0 ) {
-        _info._mapIntParameters[key] = parameters;
+        _info.intParameters[key] = parameters;
     }
     else {
-        _info._mapIntParameters.erase(key);
+        _info.intParameters.erase(key);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
@@ -1720,24 +1792,24 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
 void KinBody::Joint::SetStringParameters(const std::string& key, const std::string& value)
 {
     if( value.size() > 0 ) {
-        _info._mapStringParameters[key] = value;
+        _info.stringParameters[key] = value;
     }
     else {
-        _info._mapStringParameters.erase(key);
+        _info.stringParameters.erase(key);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
 }
 
 void KinBody::Joint::UpdateInfo()
 {
-    _info._vcurrentvalues.resize(0);
-    GetValues(_info._vcurrentvalues);
+    _info.currentValues.resize(0);
+    GetValues(_info.currentValues);
 }
 
 void KinBody::Joint::serialize(std::ostream& o, int options) const
 {
     if( options & SO_Kinematics ) {
-        o << dofindex << " " << jointindex << " " << _info._type << " ";
+        o << dofindex << " " << jointindex << " " << _info.type << " ";
         SerializeRound(o,_tRightNoOffset);
         SerializeRound(o,_tLeftNoOffset);
         for(int i = 0; i < GetDOF(); ++i) {
@@ -1752,12 +1824,12 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
     if( options & SO_Dynamics ) {
         for(int i = 0; i < GetDOF(); ++i) {
-            SerializeRound(o,_info._vmaxvel[i]);
-            SerializeRound(o,_info._vmaxaccel[i]);
-            SerializeRound(o,_info._vmaxtorque[i]);
-            SerializeRound(o,_info._vmaxinertia[i]);
-            SerializeRound(o,_info._vlowerlimit[i]);
-            SerializeRound(o,_info._vupperlimit[i]);
+            SerializeRound(o,_info.maxVel[i]);
+            SerializeRound(o,_info.maxAccel[i]);
+            SerializeRound(o,_info.maxTorque[i]);
+            SerializeRound(o,_info.maxInertia[i]);
+            SerializeRound(o,_info.lowerLimit[i]);
+            SerializeRound(o,_info.upperLimit[i]);
         }
     }
 }
