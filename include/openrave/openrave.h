@@ -2712,10 +2712,10 @@ public:
     virtual void WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics);
 
     /// \brief writes a boost array of dReal
-    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a);
+    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a, size_t n=3);
 
     /// \brief writes a boost array of uint8_t
-    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a);
+    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a, size_t n=3);
 
     /// \brief writes a std::vector of dReal
     virtual void WriteArray(const std::vector<dReal>& a);

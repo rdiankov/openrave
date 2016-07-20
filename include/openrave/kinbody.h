@@ -865,6 +865,8 @@ public:
 
         JointInfo& operator=(const JointInfo& other);
 
+        virtual int GetDOF() const;
+
         virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
 
         /// \brief unique and constant scoped identifier

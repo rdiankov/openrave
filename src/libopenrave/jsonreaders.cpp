@@ -119,16 +119,16 @@ void BaseJSONWriter::WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& i
     EndObject();
 }
 
-void BaseJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a) {
+void BaseJSONWriter::WriteBoost3Array(const boost::array<dReal, 3>& a, size_t n) {
     StartArray();
-    for (size_t i=0; i<a.size(); ++i) {
+    for (size_t i=0; i<a.size() && i < n; ++i) {
         WriteDouble(a[i]);
     }
     EndArray();
 }
-void BaseJSONWriter::WriteBoost3Array(const boost::array<uint8_t, 3>& a) {
+void BaseJSONWriter::WriteBoost3Array(const boost::array<uint8_t, 3>& a, size_t n) {
     StartArray();
-    for (size_t i=0; i<a.size(); ++i) {
+    for (size_t i=0; i<a.size() && i < n; ++i) {
         WriteInt(a[i]);
     }
     EndArray();
