@@ -1009,7 +1009,7 @@ private:
                 std::string stractuator = str(boost::format("body%d_actuator%d")%_mapBodyIds[pbody->GetEnvironmentId()]%(*itjoint)->GetJointIndex());
                 std::string url = std::string("#") + stractuator;
                 instance_actuator->setAttribute("url",url.c_str());
-                
+
                 // add the motor actuator to the library
                 daeElementRef domactuator = _actuatorsLib->add("actuator");
                 domactuator->setAttribute("id", stractuator.c_str());
@@ -1041,7 +1041,7 @@ private:
                 extrawriter->AddChild("max_speed_torque_point")->SetCharData(ssmax_speed_torque_point.str());
 
                 extrawriter->AddChild("gear_ratio")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->gear_ratio));
-                
+
                 extrawriter->AddChild("coloumb_friction")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->coloumb_friction));
                 extrawriter->AddChild("viscous_friction")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->viscous_friction));
             }
@@ -2201,6 +2201,23 @@ private:
                 link_collision_state->add("bool")->setCharData((*itlink)->IsEnabled() ? "true" : "false");
             }
         }
+        if( IsWrite("bind_instance_geometry") ) {
+            FOREACHC(itlink, pbody->GetLinks()) {
+                FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
+                    int igeom = 0;
+                    FOREACHC(itgeominfo, itgeomgroup->second) {
+                        daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
+                        bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
+                        bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
+                        string geomid = _GetExtraGeometryId(*itlink,itgeomgroup->first,igeom);
+                        igeom++;
+                        domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
+                        bind_instance_geometry->setAttribute("url", (string("#")+geomid).c_str());
+                        bind_instance_geometry->setAttribute("material", (string("#")+geomid+string("_mat")).c_str());
+                    }
+                }
+            }
+        }
     }
 
     /// Set vector of four elements
@@ -2314,6 +2331,11 @@ private:
     virtual std::string _GetGeometryId(KinBody::LinkConstPtr plink, int igeom) {
         return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom);
     }
+
+    virtual std::string _GetExtraGeometryId(KinBody::LinkConstPtr plink, const std::string& groupname, int igeom) {
+        return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom%groupname);
+    }
+
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
         int index = pjoint->GetJointIndex();
         if( index < 0 ) {     // must be passive

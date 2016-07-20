@@ -977,7 +977,6 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
 
     params->_hastimestamps = hastimestamps;
-    params->_multidofinterp = 2; // always force switch points to be the same
     params->_sExtraParameters = plannerparameters;
     if( !planner->InitPlan(RobotBasePtr(),params) ) {
         return PS_Failed;
@@ -1055,7 +1054,6 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters->_checkpathconstraintsfn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
         parameters->_sExtraParameters += _extraparameters;
-        parameters->_multidofinterp = 2; // always force switch points to be the same
         _parameters = parameters;
     }
     else {
