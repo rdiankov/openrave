@@ -158,7 +158,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         bool bchanged = false;
         for(size_t i = 0; i < _vEnabledLinks.size(); ++i) {
             if( pbody->GetLinks().at(i)->IsEnabled() != !!_vEnabledLinks[i] ) {
-                pbody->GetLinks().at(i)->_info._bIsEnabled = !!_vEnabledLinks[i];
+                pbody->GetLinks().at(i)->_info.isEnabled = !!_vEnabledLinks[i];
                 bchanged = true;
             }
         }
@@ -239,17 +239,17 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_info._bStatic = true;
+    plink->_info.name = "base";
+    plink->_info.isStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itab, vaabbs) {
         GeometryInfo info;
-        info._type = GT_Box;
-        info._t.trans = itab->pos;
-        info._bVisible = visible;
+        info.type = GT_Box;
+        info.transform.trans = itab->pos;
+        info.visible = visible;
         info._vGeomData = itab->extents;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info.diffuseColor=Vector(1,0.5f,0.5f,1);
+        info.ambientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
@@ -276,8 +276,8 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_info._bStatic = true;
+    plink->_info.name = "base";
+    plink->_info.isStatic = true;
     size_t numvertices=0, numindices=0;
     FOREACHC(itobb, vobbs) {
         TransformMatrix tm;
@@ -286,12 +286,12 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         tm.m[4] = itobb->right.y; tm.m[5] = itobb->up.y; tm.m[6] = itobb->dir.y;
         tm.m[8] = itobb->right.z; tm.m[9] = itobb->up.z; tm.m[10] = itobb->dir.z;
         GeometryInfo info;
-        info._type = GT_Box;
-        info._t = tm;
-        info._bVisible = visible;
+        info.type = GT_Box;
+        info.transform = tm;
+        info.visible = visible;
         info._vGeomData = itobb->extents;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info.diffuseColor=Vector(1,0.5f,0.5f,1);
+        info.ambientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
@@ -318,17 +318,17 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_info._bStatic = true;
+    plink->_info.name = "base";
+    plink->_info.isStatic = true;
     TriMesh trimesh;
     FOREACHC(itv, vspheres) {
         GeometryInfo info;
-        info._type = GT_Sphere;
-        info._t.trans.x = itv->x; info._t.trans.y = itv->y; info._t.trans.z = itv->z;
-        info._bVisible = visible;
+        info.type = GT_Sphere;
+        info.transform.trans.x = itv->x; info.transform.trans.y = itv->y; info.transform.trans.z = itv->z;
+        info.visible = visible;
         info._vGeomData.x = itv->w;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info.diffuseColor=Vector(1,0.5f,0.5f,1);
+        info.ambientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
@@ -347,15 +347,15 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_info._bStatic = true;
+    plink->_info.name = "base";
+    plink->_info.isStatic = true;
     plink->_collision = trimesh;
     GeometryInfo info;
-    info._type = GT_TriMesh;
-    info._bVisible = visible;
-    info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-    info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
-    info._meshcollision = trimesh;
+    info.type = GT_TriMesh;
+    info.visible = visible;
+    info.diffuseColor=Vector(1,0.5f,0.5f,1);
+    info.ambientColor=Vector(0.1,0.0f,0.0f,0);
+    info.mesh = trimesh;
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
     _veclinks.push_back(plink);
@@ -379,8 +379,8 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_info._bStatic = true;
+    plink->_info.name = "base";
+    plink->_info.isStatic = true;
     FOREACHC(itinfo,geometries) {
         Link::GeometryPtr geom(new Link::Geometry(plink,**itinfo));
         geom->_info.InitCollisionMesh();
@@ -399,11 +399,11 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     FOREACHC(itlink, _veclinks) {
         std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
         if( geomname.size() == 0 ) {
-            pvinfos = &(*itlink)->_info._vgeometryinfos;
+            pvinfos = &(*itlink)->_info.geometries;
         }
         else {
-            std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
-            if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
+            std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info.extraGeometries.find(geomname);
+            if( it == (*itlink)->_info.extraGeometries.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
             }
             pvinfos = &it->second;
@@ -426,7 +426,7 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
     OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
     FOREACH(itlink, _veclinks) {
         Link& link = **itlink;
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info.extraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
         const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
         it->second.resize(geometries.size());
         std::copy(geometries.begin(),geometries.end(),it->second.begin());
@@ -443,24 +443,24 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     set<std::string> setusednames;
     FOREACHC(itlinkinfo, linkinfos) {
         LinkInfoConstPtr rawinfo = *itlinkinfo;
-        if( setusednames.find(rawinfo->_name) != setusednames.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once"), rawinfo->_name, ORE_InvalidArguments);
+        if( setusednames.find(rawinfo->name) != setusednames.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once"), rawinfo->name, ORE_InvalidArguments);
         }
-        setusednames.insert(rawinfo->_name);
+        setusednames.insert(rawinfo->name);
         LinkPtr plink(new Link(shared_kinbody()));
         plink->_info = *rawinfo;
         LinkInfo& info = plink->_info;
         plink->_index = static_cast<int>(_veclinks.size());
-        FOREACHC(itgeominfo,info._vgeometryinfos) {
+        FOREACHC(itgeominfo,info.geometries) {
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
-            if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing
+            if( geom->_info.mesh.vertices.size() == 0 ) { // try to avoid recomputing
                 geom->_info.InitCollisionMesh();
             }
             plink->_vGeometries.push_back(geom);
             plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
         }
-        FOREACHC(itadjacentname, info._vForcedAdjacentLinks) {
-            _vForcedAdjacentLinks.push_back(std::make_pair(info._name, *itadjacentname));
+        FOREACHC(itadjacentname, info.forcedAdjacentLinks) {
+            _vForcedAdjacentLinks.push_back(std::make_pair(info.name, *itadjacentname));
         }
         _veclinks.push_back(plink);
     }
@@ -483,13 +483,13 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         }
         LinkPtr plink0, plink1;
         FOREACHC(itlink, _veclinks) {
-            if( (*itlink)->_info._name == info._linkname0 ) {
+            if( (*itlink)->_info.name == info._linkname0 ) {
                 plink0 = *itlink;
                 if( !!plink1 ) {
                     break;
                 }
             }
-            if( (*itlink)->_info._name == info._linkname1 ) {
+            if( (*itlink)->_info.name == info._linkname1 ) {
                 plink1 = *itlink;
                 if( !!plink0 ) {
                     break;
@@ -1280,7 +1280,7 @@ uint64_t KinBody::GetLinkEnableStatesMask() const
     }
     uint64_t linkstate = 0;
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+        linkstate |= ((uint64_t)_veclinks[ilink]->_info.isEnabled<<ilink);
     }
     return linkstate;
 }
@@ -1405,8 +1405,8 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
     bool bchanged = false;
     for(size_t ilink = 0; ilink < enablestates.size(); ++ilink) {
         bool bEnable = enablestates[ilink]!=0;
-        if( _veclinks[ilink]->_info._bIsEnabled != bEnable ) {
-            _veclinks[ilink]->_info._bIsEnabled = bEnable;
+        if( _veclinks[ilink]->_info.isEnabled != bEnable ) {
+            _veclinks[ilink]->_info.isEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -2676,7 +2676,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
     // forward recursion
     std::vector<Vector> vLinkCOMLinearAccelerations(_veclinks.size()), vLinkCOMMomentOfInertia(_veclinks.size());
     for(size_t i = 0; i < vLinkVelocities.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
+        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info.transform.trans;
         Vector vangularaccel = vLinkAccelerations.at(i).second;
         Vector vangularvelocity = vLinkVelocities.at(i).second;
         vLinkCOMLinearAccelerations[i] = vLinkAccelerations.at(i).first + vangularaccel.cross(vglobalcomfromlink) + vangularvelocity.cross(vangularvelocity.cross(vglobalcomfromlink));
@@ -2812,9 +2812,9 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
             // remove the base link velocity frame
             // v_B = v_A + angularvel x (B-A)
             vLinkVelocities[2].resize(_veclinks.size());
-            Vector vbasepos = _veclinks.at(0)->_info._t.trans;
+            Vector vbasepos = _veclinks.at(0)->_info.transform.trans;
             for(size_t i = 1; i < vLinkVelocities[0].size(); ++i) {
-                Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+                Vector voffset = _veclinks.at(i)->_info.transform.trans - vbasepos;
                 vLinkVelocities[2][i].first = vbaselinear + vbaseangular.cross(voffset);
                 vLinkVelocities[2][i].second = vbaseangular;
             }
@@ -2868,7 +2868,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 
     for(size_t i = 0; i < _veclinks.size(); ++i) {
-        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info._t.trans;
+        Vector vglobalcomfromlink = _veclinks.at(i)->GetGlobalCOM() - _veclinks.at(i)->_info.transform.trans;
         TransformMatrix tm = _veclinks.at(i)->GetGlobalInertia();
         for(size_t j = 0; j < 3; ++j) {
             if( vLinkAccelerations[j].size() > 0 ) {
@@ -2991,10 +2991,10 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         return;
     }
     if( !usebaselinkvelocity ) {
-        Vector vbasepos = _veclinks.at(0)->_info._t.trans;
+        Vector vbasepos = _veclinks.at(0)->_info.transform.trans;
         // v_B = v_A + angularvel x (B-A)
         for(size_t i = 1; i < vLinkVelocities.size(); ++i) {
-            Vector voffset = _veclinks.at(i)->_info._t.trans - vbasepos;
+            Vector voffset = _veclinks.at(i)->_info.transform.trans - vbasepos;
             vLinkVelocities[i].first -= vLinkVelocities[0].first + vLinkVelocities[0].second.cross(voffset);
             vLinkVelocities[i].second -= vLinkVelocities[0].second;
         }
@@ -3177,9 +3177,9 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
 
         const pair<Vector, Vector>& vParentVelocities = vLinkVelocities.at(parentindex);
         const pair<Vector, Vector>& vParentAccelerations = vLinkAccelerations.at(parentindex);
-        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info._t.trans;
+        Vector xyzdelta = tchild.trans - _veclinks.at(parentindex)->_info.transform.trans;
         if( !!pdofaccelerations || !!pdofvelocities ) {
-            tdelta = _veclinks.at(parentindex)->_info._t * pjoint->GetInternalHierarchyLeftTransform();
+            tdelta = _veclinks.at(parentindex)->_info.transform * pjoint->GetInternalHierarchyLeftTransform();
             vlocalaxis = pjoint->GetInternalHierarchyAxis(0);
         }
 
@@ -4139,12 +4139,12 @@ void KinBody::_ComputeInternalInformation()
     // set the "self" extra geometry group
     std::string selfgroup("self");
     FOREACH(itlink, _veclinks) {
-        if( (*itlink)->_info._mapExtraGeometries.find(selfgroup) == (*itlink)->_info._mapExtraGeometries.end() ) {
+        if( (*itlink)->_info.extraGeometries.find(selfgroup) == (*itlink)->_info.extraGeometries.end() ) {
             std::vector<GeometryInfoPtr> vgeoms;
             FOREACH(itgeom, (*itlink)->_vGeometries) {
                 vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));
             }
-            (*itlink)->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
+            (*itlink)->_info.extraGeometries.insert(make_pair(selfgroup, vgeoms));
         }
     }
 
@@ -4260,8 +4260,8 @@ void KinBody::Enable(bool bEnable)
 {
     bool bchanged = false;
     FOREACH(it, _veclinks) {
-        if( (*it)->_info._bIsEnabled != bEnable ) {
-            (*it)->_info._bIsEnabled = bEnable;
+        if( (*it)->_info.isEnabled != bEnable ) {
+            (*it)->_info.isEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -4287,7 +4287,7 @@ bool KinBody::SetVisible(bool visible)
     FOREACH(it, _veclinks) {
         FOREACH(itgeom,(*it)->_vGeometries) {
             if( (*itgeom)->IsVisible() != visible ) {
-                (*itgeom)->_info._bVisible = visible;
+                (*itgeom)->_info.visible = visible;
                 bchanged = true;
             }
         }
@@ -4356,7 +4356,7 @@ public:
         }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
-                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
+                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info.transform = vcurtrans.at(i);
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
@@ -4378,7 +4378,7 @@ private:
         CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
-            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
+            boost::static_pointer_cast<Link>(_veclinks[i])->_info.transform = _vInitialLinkTransformations.at(i);
         }
         _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {

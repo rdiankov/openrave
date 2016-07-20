@@ -163,17 +163,17 @@ static TransformMatrix ComputeInertia(const Transform& tMassFrame, const Vector&
 }
 TransformMatrix KinBody::Link::GetLocalInertia() const
 {
-    return ComputeInertia(_info._tMassFrame, _info._vinertiamoments);
+    return ComputeInertia(_info.massTransform, _info.inertiaMoments);
 }
 
 TransformMatrix KinBody::Link::GetGlobalInertia() const
 {
-    return ComputeInertia(_info._t*_info._tMassFrame, _info._vinertiamoments);
+    return ComputeInertia(_info._t*_info.massTransform, _info.inertiaMoments);
 }
 
 void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
 {
-    _info._tMassFrame=massframe;
+    _info.massTransform=massframe;
     GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
 }
 
@@ -310,9 +310,9 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
         }
     }
     if( options & SO_Dynamics ) {
-        SerializeRound(o,_info._tMassFrame);
-        SerializeRound(o,_info._mass);
-        SerializeRound3(o,_info._vinertiamoments);
+        SerializeRound(o,_info.massTransform);
+        SerializeRound(o,_info.mass);
+        SerializeRound3(o,_info.inertiaMoments);
     }
 }
 

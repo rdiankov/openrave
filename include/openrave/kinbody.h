@@ -331,17 +331,17 @@ public:
                 return _info._filenamerender;
             }
             inline float GetTransparency() const {
-                return _info._fTransparency;
+                return _info.transparency;
             }
             /// \deprecated (12/1/12)
             inline bool IsDraw() const RAVE_DEPRECATED {
-                return _info._bVisible;
+                return _info.visible;
             }
             inline bool IsVisible() const {
-                return _info._bVisible;
+                return _info.visible;
             }
             inline bool IsModifiable() const {
-                return _info._bModifiable;
+                return _info.modifiable;
             }
 
             inline dReal GetSphereRadius() const {
@@ -366,15 +366,15 @@ public:
                 return _info._vGeomData3;
             }
             inline const RaveVector<float>& GetDiffuseColor() const {
-                return _info._vDiffuseColor;
+                return _info.diffuseColor;
             }
             inline const RaveVector<float>& GetAmbientColor() const {
-                return _info._vAmbientColor;
+                return _info.ambientColor;
             }
 
             /// \brief returns the local collision mesh
             inline const TriMesh& GetCollisionMesh() const {
-                return _info._meshcollision;
+                return _info.mesh;
             }
 
             inline const KinBody::GeometryInfo& GetInfo() const {
@@ -444,7 +444,7 @@ protected:
         typedef Geometry GEOMPROPERTIES RAVE_DEPRECATED;
 
         inline const std::string& GetName() const {
-            return _info._name;
+            return _info.name;
         }
 
         /// \brief Indicates a static body that does not move with respect to the root link.
@@ -452,7 +452,7 @@ protected:
         //// Static should be used when an object has infinite mass and
         ///< shouldn't be affected by physics (including gravity). Collision still works.
         inline bool IsStatic() const {
-            return _info._bStatic;
+            return _info.isStatic;
         }
 
         /// \brief Enables a Link. An enabled link takes part in collision detection and physics simulations
@@ -497,7 +497,7 @@ protected:
 
         /// \brief Return the current transformation of the link in the world coordinate system.
         inline Transform GetTransform() const {
-            return _info._t;
+            return _info.transform;
         }
 
         /// \brief Return all the direct parent links in the kinematics hierarchy of this link.
@@ -515,16 +515,16 @@ protected:
 
         /// \brief return center of mass offset in the link's local coordinate frame
         inline Vector GetLocalCOM() const {
-            return _info._tMassFrame.trans;
+            return _info.massTransform.trans;
         }
 
         /// \brief return center of mass of the link in the global coordinate system
         inline Vector GetGlobalCOM() const {
-            return _info._t*_info._tMassFrame.trans;
+            return _info.transform*_info.massTransform.trans;
         }
 
         inline Vector GetCOMOffset() const {
-            return _info._tMassFrame.trans;
+            return _info.massTransform.trans;
         }
 
         /// \brief return inertia in link's local coordinate frame. The translation component is the the COM in the link's frame.
@@ -550,20 +550,20 @@ protected:
 
         /// \brief return the mass frame in the link's local coordinate system that holds the center of mass and principal axes for inertia.
         inline const Transform& GetLocalMassFrame() const {
-            return _info._tMassFrame;
+            return _info.massTransform;
         }
 
         /// \brief return the mass frame in the global coordinate system that holds the center of mass and principal axes for inertia.
         inline Transform GetGlobalMassFrame() const {
-            return _info._t*_info._tMassFrame;
+            return _info.transform*_info.massTransform;
         }
 
         /// \brief return the principal moments of inertia inside the mass frame
         inline const Vector& GetPrincipalMomentsOfInertia() const {
-            return _info._vinertiamoments;
+            return _info.inertiaMoments;
         }
         inline dReal GetMass() const {
-            return _info._mass;
+            return _info.mass;
         }
 
         /// \brief sets a link to be static.
@@ -657,7 +657,7 @@ protected:
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
-            return _info._mapFloatParameters;
+            return _info.floatParameters;
         }
 
         /// \brief set custom float parameters
@@ -667,7 +667,7 @@ protected:
 
         /// \brief return a map of custom integer parameters
         inline const std::map<std::string, std::vector<int> >& GetIntParameters() const {
-            return _info._mapIntParameters;
+            return _info.intParameters;
         }
 
         /// \brief set custom int parameters
@@ -677,7 +677,7 @@ protected:
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::string >& GetStringParameters() const {
-            return _info._mapStringParameters;
+            return _info.stringParameters;
         }
 
         /// \brief set custom string parameters

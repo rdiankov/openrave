@@ -503,14 +503,14 @@ void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
 {
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
     LinkPtr parent(_parent);
-    _info._meshcollision = mesh;
+    _info.mesh = mesh;
     parent->_Update();
 }
 
 bool KinBody::Link::Geometry::SetVisible(bool visible)
 {
-    if( _info._bVisible != visible ) {
-        _info._bVisible = visible;
+    if( _info.visible != visible ) {
+        _info.visible = visible;
         LinkPtr parent(_parent);
         parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
         return true;
@@ -528,14 +528,14 @@ void KinBody::Link::Geometry::SetTransparency(float f)
 void KinBody::Link::Geometry::SetDiffuseColor(const RaveVector<float>& color)
 {
     LinkPtr parent(_parent);
-    _info._vDiffuseColor = color;
+    _info.diffuseColor = color;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
 void KinBody::Link::Geometry::SetAmbientColor(const RaveVector<float>& color)
 {
     LinkPtr parent(_parent);
-    _info._vAmbientColor = color;
+    _info.ambientColor = color;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
