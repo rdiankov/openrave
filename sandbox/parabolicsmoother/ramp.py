@@ -448,13 +448,16 @@ class ParabolicCurve(object):
             plt.figure(fignum)
             
         t0 = zero
+        prevacc = self.ramps[0].a
         for ramp in self.ramps:
             if color is None:
                 line = ramp.PlotAcc(t0=t0, fignum=fignum, linewidth=lw, **kwargs)
                 color = line.get_color()
             else:
                 line = ramp.PlotAcc(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
+            plt.plot([t0, t0], [prevacc, ramp.a], color=color, linewidth=lw, **kwargs)
             t0 += ramp.duration
+            prevacc = ramp.a
         plt.show(False)
         return line
 # end class ParabolicCurve
