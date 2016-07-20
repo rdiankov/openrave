@@ -619,6 +619,23 @@ public:
                                         ss << *itvalue << ",";
                                     }
                                     ss << "]; deltatime=" << rampndtrimmed.endTime;
+                                    ss << "; xmin=[";
+                                    FOREACHC(itvalue, parameters->_vConfigLowerLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "]; xmax=[";
+                                    FOREACHC(itvalue, parameters->_vConfigUpperLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "]; vellimits=[";
+                                    FOREACHC(itvalue, parameters->_vConfigVelocityLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "]; accellimits=[";
+                                    FOREACHC(itvalue, parameters->_vConfigAccelerationLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "];";
                                     RAVELOG_WARN_FORMAT("env=%d, original ramp %d does not satisfy contraints. check retcode=0x%x! %s", GetEnv()->GetId()%irampindex%checkret.retcode%ss.str());
                                 }
                                 else {
