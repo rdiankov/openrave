@@ -265,16 +265,28 @@ class ParabolicCurve(object):
             self.x1 = Add(self.x0, self.d)
 
 
-    def Merge(self):
+    def Merge(self, prec=epsilon):
         """
         Merge merges consecutive ramp(s) if they have the same acceleration
         """
         if not self.isEmpty:
+            if Abs((Abs(mp.log10(prec)) - (Abs(mp.floor(mp.log10(prec)))))) < Abs((Abs(mp.log10(prec)) - (Abs(mp.ceil(mp.log10(prec)))))):
+                precexp = mp.floor(mp.log10(prec))
+            else:
+                precexp = mp.ceil(mp.log10(prec))
+                
             aCur = self.ramps[0].a
             nmerged = 0 # the number of merged ramps
             for i in xrange(1, len(self.ramps)):
                 j = i - nmerged
-                if Abs(Sub(self.ramps[j].a, aCur)) < epsilon:
+                if (Abs(self.ramps[j].a) > 1):
+                    if Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.floor(mp.log10(Abs(self.ramps[j].a))))))) < Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.ceil(mp.log10(Abs(self.ramps[j].a))))))):
+                        threshold = 10**(precexp + mp.floor(mp.log10(Abs(self.ramps[j].a))) + 1)
+                    else:
+                        threshold = 10**(precexp + mp.ceil(mp.log10(Abs(self.ramps[j].a))) + 1)
+                else:
+                    threshold = 10**(precexp)
+                if Abs(Sub(self.ramps[j].a, aCur)) < threshold:
                     # merge ramps
                     redundantRamp = self.ramps.pop(j)
                     newDur = Add(self.ramps[j - 1].duration, redundantRamp.duration)
@@ -391,7 +403,7 @@ class ParabolicCurve(object):
 
 
     # Visualization
-    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2):
+    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2, includingSW=False):
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
             tVect = np.append(tVect, self.duration)
@@ -400,10 +412,16 @@ class ParabolicCurve(object):
         if fignum is not None:
             plt.figure(fignum)
         plt.plot(tVect, xVect, color=color, linewidth=lw)
+
+        if includingSW:
+            ax = plt.gca().axis()
+            for s in self.switchpointsList:
+                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
+                
         plt.show(False)
 
 
-    def PlotVel(self, fignum=None, color=None, lw=2, **kwargs):
+    def PlotVel(self, fignum=None, color=None, lw=2, includingSW=False, **kwargs):
         if fignum is not None:
             plt.figure(fignum)
 
@@ -415,6 +433,12 @@ class ParabolicCurve(object):
             else:
                 line = ramp.PlotVel(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
             t0 += ramp.duration
+
+        if includingSW:
+            ax = plt.gca().axis()
+            for s in self.switchpointsList:
+                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
+            
         plt.show(False)
         return line
 
