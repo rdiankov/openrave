@@ -86,10 +86,11 @@ class Ramp(object):
         self.v0 = v0
         self.a = a
         self.duration = dur
-        
+
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
-   
+        self.x1 = Add(self.x0, self.d)
+        
 
     def UpdateDuration(self, newDur):
         if type(newDur) is not mp.mpf:
@@ -99,7 +100,8 @@ class Ramp(object):
         self.duration = newDur
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
-
+        self.x1 = Add(self.x0, self.d)
+        
 
     def EvalPos(self, t):
         if type(t) is not mp.mpf:
@@ -175,9 +177,9 @@ class Ramp(object):
     def __repr__(self):
         bmin, bmax = self.GetPeaks()
         return "x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; a = {4}; duration = {5}; bmin = {6}; bmax = {7}".\
-            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.EvalPos(curve.duration), n=_prec),
-                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.duration, n=_prec),
-                   mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
+            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.EvalPos(self.duration), n=_prec),
+                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.a, n=_prec),
+                   mp.nstr(self.duration, n=_prec), mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
 # end class Ramp
 
 
@@ -199,6 +201,7 @@ class ParabolicCurve(object):
         if len(ramps) == 0:
             self.isEmpty = True
             self.x0 = zero
+            self.x1 = zero
             self.v0 = zero
             self.v1 = zero
             self.switchpointsList = []
@@ -207,7 +210,6 @@ class ParabolicCurve(object):
         else:
             self.ramps = ramps[:] # copy all the ramps
             self.isEmpty = False
-            self.SetInitialValue(self.ramps[0].x0) # set self.x0
             self.v0 = self.ramps[0].v0
             self.v1 = self.ramps[-1].v1
             
@@ -218,6 +220,8 @@ class ParabolicCurve(object):
                 d = Add(d, ramp.d)
             self.duration = dur
             self.d = d
+
+            self.SetInitialValue(self.ramps[0].x0) # set self.x0
 
 
     def __getitem__(self, index):
@@ -233,6 +237,7 @@ class ParabolicCurve(object):
             if not curve.isEmpty:
                 self.ramps = curve.ramps[:]
                 self.x0 = curve.x0
+                self.x1 = curve.x1
                 self.v0 = curve.v0
                 self.v1 = curve.v1
                 self.switchpointsList = curve.switchpointsList[:]
@@ -249,7 +254,7 @@ class ParabolicCurve(object):
             for ramp in ramps_:
                 self.ramps.append(ramp)
                 # Update displacement
-                self.ramps[-1].x0 = d
+                self.ramps[-1].x0 = self.ramps[-2].x1
                 d = Add(d, self.ramps[-1].d)                
                 dur = Add(dur, self.ramps[-1].duration)
                 self.switchpointsList.append(dur)
@@ -257,18 +262,31 @@ class ParabolicCurve(object):
             self.v1 = self.ramps[-1].v1
             self.duration = dur
             self.d = d
+            self.x1 = Add(self.x0, self.d)
 
 
-    def Merge(self):
+    def Merge(self, prec=epsilon):
         """
         Merge merges consecutive ramp(s) if they have the same acceleration
         """
         if not self.isEmpty:
+            if Abs((Abs(mp.log10(prec)) - (Abs(mp.floor(mp.log10(prec)))))) < Abs((Abs(mp.log10(prec)) - (Abs(mp.ceil(mp.log10(prec)))))):
+                precexp = mp.floor(mp.log10(prec))
+            else:
+                precexp = mp.ceil(mp.log10(prec))
+                
             aCur = self.ramps[0].a
             nmerged = 0 # the number of merged ramps
             for i in xrange(1, len(self.ramps)):
                 j = i - nmerged
-                if Abs(Sub(self.ramps[j].a, aCur)) < epsilon:
+                if (Abs(self.ramps[j].a) > 1):
+                    if Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.floor(mp.log10(Abs(self.ramps[j].a))))))) < Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.ceil(mp.log10(Abs(self.ramps[j].a))))))):
+                        threshold = 10**(precexp + mp.floor(mp.log10(Abs(self.ramps[j].a))) + 1)
+                    else:
+                        threshold = 10**(precexp + mp.ceil(mp.log10(Abs(self.ramps[j].a))) + 1)
+                else:
+                    threshold = 10**(precexp)
+                if Abs(Sub(self.ramps[j].a, aCur)) < threshold:
                     # merge ramps
                     redundantRamp = self.ramps.pop(j)
                     newDur = Add(self.ramps[j - 1].duration, redundantRamp.duration)
@@ -350,6 +368,7 @@ class ParabolicCurve(object):
         for ramp in self.ramps:
             ramp.x0 = newx0
             newx0 = Add(newx0, ramp.d)
+        self.x1 = Add(self.x0, self.d)
     
 
     def Trim(self, deltaT):
@@ -384,7 +403,7 @@ class ParabolicCurve(object):
 
 
     # Visualization
-    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2):
+    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2, includingSW=False):
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
             tVect = np.append(tVect, self.duration)
@@ -393,10 +412,16 @@ class ParabolicCurve(object):
         if fignum is not None:
             plt.figure(fignum)
         plt.plot(tVect, xVect, color=color, linewidth=lw)
+
+        if includingSW:
+            ax = plt.gca().axis()
+            for s in self.switchpointsList:
+                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
+                
         plt.show(False)
 
 
-    def PlotVel(self, fignum=None, color=None, lw=2, **kwargs):
+    def PlotVel(self, fignum=None, color=None, lw=2, includingSW=False, **kwargs):
         if fignum is not None:
             plt.figure(fignum)
 
@@ -408,6 +433,12 @@ class ParabolicCurve(object):
             else:
                 line = ramp.PlotVel(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
             t0 += ramp.duration
+
+        if includingSW:
+            ax = plt.gca().axis()
+            for s in self.switchpointsList:
+                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
+            
         plt.show(False)
         return line
 
@@ -417,13 +448,16 @@ class ParabolicCurve(object):
             plt.figure(fignum)
             
         t0 = zero
+        prevacc = self.ramps[0].a
         for ramp in self.ramps:
             if color is None:
                 line = ramp.PlotAcc(t0=t0, fignum=fignum, linewidth=lw, **kwargs)
                 color = line.get_color()
             else:
                 line = ramp.PlotAcc(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
+            plt.plot([t0, t0], [prevacc, ramp.a], color=color, linewidth=lw, **kwargs)
             t0 += ramp.duration
+            prevacc = ramp.a
         plt.show(False)
         return line
 # end class ParabolicCurve
@@ -437,7 +471,9 @@ class ParabolicCurvesND(object):
             self.curves = []
             self.isEmpty = True
             self.x0Vect = None
+            self.x1Vect = None
             self.v0Vect = None
+            self.v1Vect = None
             self.dVect = None
             self.ndof = 0
             self.switchpointsList = []
@@ -464,9 +500,11 @@ class ParabolicCurvesND(object):
             self.curves = curves_
             self.ndof = len(self.curves)
             self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+            self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
             self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+            self.v0Vect = np.asarray([curve.v1 for curve in self.curves])
             self.dVect = np.asarray([curve.d for curve in self.curves])
-
+            
             # Create a list of switch points
             switchpointsList = curves[0].switchpointsList[:]
             for curve in self.curves[1:]:
@@ -497,7 +535,9 @@ class ParabolicCurvesND(object):
                 self.curves = curvesnd[:]
                 self.ndof = len(self.curves)
                 self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+                self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
                 self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+                self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
                 self.dVect = np.asarray([curve.d for curve in self.curves])
                 self.switchpointsList = curvesnd.switchpointsList[:]
                 self.isEmpty = False
@@ -509,8 +549,9 @@ class ParabolicCurvesND(object):
                 self.curves[i].Append(curve)
                 self.dVect[i] = Add(self.dVect[i], curve.d)
 
-            newSwitchpoints = [Add(s, originalDur) for s in curvesnd.switchpointsList]
+            newSwitchpoints = [Add(s, originalDur) for s in curvesnd.switchpointsList[1:]]
             self.switchpointsList.extend(newSwitchpoints)
+            self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
 
 
     def SetInitialValues(self, x0Vect):
@@ -518,6 +559,7 @@ class ParabolicCurvesND(object):
         self.x0Vect = np.array(x0Vect_)
         for (i, curve) in enumerate(self.curves):
             curve.SetInitialValue(self.x0Vect[i])
+        self.x1Vect = np.asarray([Add(x0, d) for (x0, d) in zip(self.x0Vect, self.dVect)])
             
 
     def EvalPos(self, t):
@@ -759,3 +801,60 @@ def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
             curves[idof].Append(curve)
 
     return ParabolicCurvesND(curves)
+
+
+def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
+    """
+    Data format:
+
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 1 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 2 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+     :
+     :
+    
+    chunk N
+
+    For each ParabolicCurve:
+      ramp 0      ramp 1            ramp M
+    v0 a t x0 | v0 a t x0 | ... | v0 a t x0
+    
+    """
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    ndof = int(rawdata[0])
+    nlines_chunk = 2 + ndof
+
+    nchunks = len(rawdata)/nlines_chunk
+
+    curvesnd = ParabolicCurvesND()
+    for ichunk in xrange(nchunks):
+        curves = []
+        for idof in xrange(ndof):
+            curvedata = rawdata[(ichunk*nlines_chunk) + 2 + idof]
+            curvedata = curvedata.strip().split(" ")
+            curve = ParabolicCurve()
+            nramps = len(curvedata)/4
+            for iramp in xrange(nramps):
+                v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
+                ramp = Ramp(v, a, t, x0)
+                nextCurve = ParabolicCurve([ramp])
+                curve.Append(nextCurve)
+            curves.append(curve)
+        nextCurvesND = ParabolicCurvesND(curves)
+        curvesnd.Append(nextCurvesND)
+
+    return curvesnd
