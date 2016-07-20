@@ -36,7 +36,7 @@ KinBody::JointInfo::JointInfo() :
     _vanchor(anchor),
     _vaxes(axes),
     _vcurrentvalues(currentValues),
-    _vresolution(resolution),
+    _vresolution(resolutions),
     _vmaxvel(maxVel),
     _vhardmaxvel(hardMaxVel),
     _vmaxaccel(maxAccel),
@@ -59,7 +59,7 @@ KinBody::JointInfo::JointInfo() :
     for(size_t i = 0; i < axes.size(); ++i) {
         axes[i] = Vector(0,0,1);
     }
-    std::fill(resolution.begin(), resolution.end(), 0.02);
+    std::fill(resolutions.begin(), resolutions.end(), 0.02);
     std::fill(maxVel.begin(), maxVel.end(), 10);
     std::fill(hardMaxVel.begin(), hardMaxVel.end(), 10);
     std::fill(maxAccel.begin(), maxAccel.end(), 50);
@@ -92,7 +92,7 @@ KinBody::JointInfo& KinBody::JointInfo::operator=(const KinBody::JointInfo& othe
     anchor = other.anchor;
     axes = other.axes;
     currentValues = other.currentValues;
-    resolution = other.resolution;
+    resolutions = other.resolutions;
     maxVel = other.maxVel;
     hardMaxVel = other.hardMaxVel;
     maxAccel = other.maxAccel;
@@ -172,8 +172,8 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
     writer->WriteString("currentValues");
     writer->WriteArray(currentValues);
 
-    writer->WriteString("resolution");
-    writer->WriteBoost3Array(resolution, dof);
+    writer->WriteString("resolutions");
+    writer->WriteBoost3Array(resolutions, dof);
 
     writer->WriteString("maxVel");
     writer->WriteBoost3Array(maxVel, dof);
@@ -1168,18 +1168,18 @@ void KinBody::Joint::GetResolutions(std::vector<dReal>& resolutions, bool bAppen
         resolutions.resize(GetDOF());
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        resolutions.push_back(_info.resolution[i]);
+        resolutions.push_back(_info.resolutions[i]);
     }
 }
 
 dReal KinBody::Joint::GetResolution(int iaxis) const
 {
-    return _info.resolution.at(iaxis);
+    return _info.resolutions.at(iaxis);
 }
 
 void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
-    _info.resolution.at(iaxis) = resolution;
+    _info.resolutions.at(iaxis) = resolution;
     GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
 }
 

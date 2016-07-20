@@ -156,14 +156,18 @@ void ElectricMotorActuatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int opti
     writer->WriteDouble(maxInstantaneousTorque);
 
     writer->WriteString("nominalSpeedTorquePoints");
+    writer->StartArray();
     for (size_t i=0; i<nominalSpeedTorquePoints.size(); ++i) {
         writer->WritePair(nominalSpeedTorquePoints[i]);
     }
+    writer->EndArray();
 
     writer->WriteString("maxSpeedTorquePoints");
+    writer->StartArray();
     for (size_t i=0; i<maxSpeedTorquePoints.size(); ++i) {
         writer->WritePair(maxSpeedTorquePoints[i]);
     }
+    writer->EndArray();
 
     writer->WriteString("nominalTorque");
     writer->WriteDouble(nominalTorque);
@@ -903,7 +907,7 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
         }
         std::vector<dReal>::const_iterator itv = v.begin();
         FOREACHC(it, _vDOFOrderedJoints) {
-            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.resolution.begin());
+            std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info.resolutions.begin());
             itv += (*it)->GetDOF();
         }
     }
@@ -911,7 +915,7 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info.resolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            pjoint->_info.resolutions.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);

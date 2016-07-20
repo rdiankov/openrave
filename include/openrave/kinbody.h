@@ -892,7 +892,7 @@ public:
         std::vector<dReal> currentValues; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
         std::vector<dReal>& _vcurrentvalues RAVE_DEPRECATED; ///< joint values at initialization. passed into Joint::_ComputeInternalInformation
 
-        boost::array<dReal,3> resolution; ///< interpolation resolution
+        boost::array<dReal,3> resolutions; ///< interpolation resolution
         boost::array<dReal,3>& _vresolution RAVE_DEPRECATED; ///< interpolation resolution
 
         boost::array<dReal,3> maxVel; ///< the soft maximum velocity (rad/s) to move the joint when planning
