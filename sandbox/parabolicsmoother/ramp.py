@@ -789,10 +789,10 @@ def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
             ramp0 = Ramp(v0, a1, tswitch1, x0)
             if ramp0.duration > epsilon:
                 ramps.append(ramp0)
-            ramp1 = Ramp(v, 0, tswitch2 - tswitch1)
+            ramp1 = Ramp(v, 0, tswitch2 - tswitch1, ramp0.x1)
             if ramp1.duration > epsilon:
                 ramps.append(ramp1)
-            ramp2 = Ramp(v, a2, ttotal - tswitch2)
+            ramp2 = Ramp(v, a2, ttotal - tswitch2, ramp1.x1)
             if ramp2.duration > epsilon:
                 ramps.append(ramp2)
             assert(len(ramps) > 0)
