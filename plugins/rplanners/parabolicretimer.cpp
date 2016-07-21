@@ -142,7 +142,8 @@ protected:
                 }
             }
 
-            for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
+            size_t maxSlowDowns = 10;
+            for(size_t islowdowntry = 0; islowdowntry < maxSlowDowns; ++islowdowntry ) {
                 mintime = ParabolicRamp::SolveMinTimeBounded(_v0pos, _v0vel, _v1pos, _v1vel, accellimits, vellimits, info->_vConfigLowerLimit,info->_vConfigUpperLimit, _ramps, _parameters->_multidofinterp);
                 if( mintime < 0 ) {
                     break;
