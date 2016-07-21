@@ -1632,6 +1632,7 @@ public:
         KinBody::LinkPtr plink = pkinbody->GetLink(linkname);
         if( !plink ) {
             plink.reset(new KinBody::Link(pkinbody));
+            plink->_info.sid = pdomlink->getSid();
             plink->_info._name = linkname;
             plink->_info._mass = 1e-10;
             plink->_info._vinertiamoments = Vector(1e-7,1e-7,1e-7);
@@ -2668,6 +2669,7 @@ public:
                                     geominfo._type = GT_Box;
                                     geominfo._vGeomData = vextents;
                                     geominfo._t = tlocalgeom;
+                                    geominfo.sid = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2682,6 +2684,7 @@ public:
                                     geominfo._type = GT_Sphere;
                                     geominfo._vGeomData.x = fradius;
                                     geominfo._t = tlocalgeom;
+                                    geominfo.sid = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2701,6 +2704,7 @@ public:
                                     geominfo._type = GT_Cylinder;
                                     geominfo._vGeomData = vGeomData;
                                     geominfo._t = tlocalgeom;
+                                    geominfo.sid = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2715,6 +2719,7 @@ public:
                                     geominfo._type = GT_Container;
                                     geominfo._vGeomData = vextents;
                                     geominfo._t = tlocalgeom;
+                                    geominfo.sid = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2727,6 +2732,7 @@ public:
                                     geominfo._type = GT_Container;
                                     geominfo._vGeomData2 = vextents;
                                     geominfo._t = tlocalgeom;
+                                    geominfo.sid = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2739,6 +2745,7 @@ public:
                                     geominfo._type = GT_Container;
                                     geominfo._vGeomData3 = vextents;
                                     geominfo._t = tlocalgeom;
+                                    geominfo.sid = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2771,24 +2778,28 @@ public:
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
+                listGeometryInfos.back().sid = domgeom->getId();
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
+                listGeometryInfos.back().sid = domgeom->getId();
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
+                listGeometryInfos.back().sid = domgeom->getId();
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
+                listGeometryInfos.back().sid = domgeom->getId();
             }
             if( meshRef->getPolygons_array().getCount()> 0 ) {
                 RAVELOG_WARN("openrave does not support collada polygons\n");
