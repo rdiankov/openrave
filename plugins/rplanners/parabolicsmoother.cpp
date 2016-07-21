@@ -102,7 +102,7 @@ public:
                     if( totalweight > g_fEpsilon ) {
                         // find a better elapsed time
                         dReal newelapsedtime = expectedelapsedtime/totalweight;
-                        if( RaveFabs(elapsedtime-newelapsedtime) > ParabolicRamp::EpsilonT ) {
+                        if( RaveFabs(newelapsedtime) > ParabolicRamp::EpsilonT ) {
                             RAVELOG_VERBOSE_FORMAT("changing ramp elapsed time %.15e -> %.15e", elapsedtime%newelapsedtime);
                             elapsedtime = newelapsedtime;
                             if( elapsedtime > g_fEpsilon ) {
