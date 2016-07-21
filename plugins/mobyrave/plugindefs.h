@@ -1,3 +1,19 @@
+// -*- coding: utf-8 --*
+// Copyright (C) 2006-2011 Rosen Diankov <rosen.diankov@gmail.com>
+//
+// This file is part of OpenRAVE.
+// OpenRAVE is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
@@ -8,8 +24,8 @@
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
 #include <boost/typeof/std/vector.hpp>
-//#include <boost/typeof/std/list.hpp>
-//#include <boost/typeof/std/map.hpp>
+#include <boost/typeof/std/list.hpp>
+#include <boost/typeof/std/map.hpp>
 #include <boost/typeof/std/string.hpp>
 
 #define FOREACH(it, v) for(BOOST_TYPEOF(v) ::iterator it = (v).begin(); it != (v).end(); (it)++)
@@ -26,19 +42,8 @@
 #include <map>
 #include <string>
 
-#include <boost/config.hpp>
-
-#ifdef BOOST_NO_CXX11_DECLTYPE
-
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
-
-#else
-
-#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
-
-#endif
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -53,13 +58,13 @@
 
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/range/concepts.hpp>
-#include <boost/range/detail/any_iterator.hpp>
-#include <boost/unordered_map.hpp>
 
-#define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_oderave", msgid)
+/*
+// This section is commented because it may have been copied from an older
+// version.  The active code following this was modeled from bulletrave and
+// properly compiles.  TODO: Remove this commented code when validated
+
+#define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_mobyrave", msgid)
 
 using namespace std;
 
@@ -98,10 +103,14 @@ using OpenRAVE::TrajectoryBaseConstPtr;
 using OpenRAVE::ControllerBase;
 using OpenRAVE::AttributesList;
 
+#endif
 
-#include <fcl/collision.h>
-#include <fcl/BVH/BVH_model.h>
-#include <fcl/broadphase/broadphase.h>
-#include <fcl/shape/geometric_shapes.h>
+//#endif
+*/
+
+using namespace std;
+using namespace OpenRAVE;
+
+static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 
 #endif

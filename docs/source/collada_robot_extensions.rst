@@ -454,7 +454,7 @@ Example
           <link_collision_state link="linka"><bool>true</bool></link_collision_state>
         </technique>
       </extra>
-  </library_kinematics_models>
+  </library_kinematics_models> 
 
 .. _collada_geometry_info:
 
