@@ -525,8 +525,8 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, dReal xmin, dReal xm
     }
 
     if (newRamps.empty()) {
-        RAMP_OPTIM_WARN("Cannot solve for a bounded trajectory");
-        RAMP_OPTIM_WARN("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, am);
+        RAMP_OPTIM_PLOG("Cannot solve for a bounded trajectory");
+        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0, x1, v0, v1, duration, xmin, xmax, vm, am);
         return false;
     }
 
