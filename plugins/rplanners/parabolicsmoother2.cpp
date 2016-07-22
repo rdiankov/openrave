@@ -112,7 +112,7 @@ public:
                         // Compute a better elapsed time
                         dReal newElapsedTime = expectedElapsedTime/totalWeight;
                         // Check elapsed time consistency
-                        if (RaveFabs(elapsedTime - newElapsedTime) > RampOptimizer::epsilon) {
+                        if (RaveFabs(newElapsedTime) > RampOptimizer::epsilon) {
                             // The new elapsed time is consistent with the data
                             RAVELOG_VERBOSE_FORMAT("changing the segment elapsed time: %.15e -> %.15e; diff = %.15e", elapsedTime%newElapsedTime%(newElapsedTime - elapsedTime));
                             elapsedTime = newElapsedTime;
@@ -1391,7 +1391,6 @@ protected:
                                             }
                                         }
                                     }
-
                                 }
                             }
                             else {
