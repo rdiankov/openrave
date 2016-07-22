@@ -369,7 +369,7 @@ public:
                             if( manipspeed > 1e5 || 0.9*_maxmanipspeed < 0.05*manipspeed ) {
                                 RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
                             }
-                            RAVELOG_VERBOSE_FORMAT("maxmanipspeed = %.15e; manipspeed = %.15e", _maxmanipspeed%manipspeed);
+                            RAVELOG_VERBOSE_FORMAT("ramp %d/%d: maxmanipspeed = %.15e; manipspeed = %.15e", (itramp - outramps.begin())%outramps.size()%_maxmanipspeed%manipspeed);
                             return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipspeed/manipspeed);
                         }
                     }
@@ -383,7 +383,7 @@ public:
                             if( manipaccel > 1e5 || 0.9*_maxmanipaccel < 0.05*manipaccel ) {
                                 RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
                             }
-                            RAVELOG_VERBOSE_FORMAT("maxmanipaccel = %.15e; manipaccel = %.15e", _maxmanipaccel%manipaccel);
+                            RAVELOG_VERBOSE_FORMAT("ramp %d/%d: maxmanipaccel = %.15e; manipaccel = %.15e", (itramp - outramps.begin())%outramps.size()%_maxmanipaccel%manipaccel);
                             return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipaccel/manipaccel);
                         }
                     }

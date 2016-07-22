@@ -102,7 +102,7 @@ public:
                     if( totalweight > g_fEpsilon ) {
                         // find a better elapsed time
                         dReal newelapsedtime = expectedelapsedtime/totalweight;
-                        if( RaveFabs(elapsedtime-newelapsedtime) > ParabolicRamp::EpsilonT ) {
+                        if( RaveFabs(newelapsedtime) > ParabolicRamp::EpsilonT ) {
                             RAVELOG_VERBOSE_FORMAT("changing ramp elapsed time %.15e -> %.15e", elapsedtime%newelapsedtime);
                             elapsedtime = newelapsedtime;
                             if( elapsedtime > g_fEpsilon ) {
@@ -419,7 +419,6 @@ public:
                 return PS_Failed;
             }
             RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
-            //DumpDynamicPath(dynamicpath);
         }
 
         // if ramp is not perfectly modeled, then have to verify!
@@ -447,10 +446,15 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
-                //DumpDynamicPath(dynamicpath);
+                if (IS_DEBUGLEVEL(Level_Verbose)) {
+                    DumpDynamicPath(dynamicpath);
+                }
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
+                }
+                if (IS_DEBUGLEVEL(Level_Verbose)) {
+                    DumpDynamicPath(dynamicpath);
                 }
             }
 
@@ -545,6 +549,7 @@ public:
                             // (Puttichai) try using an increment instead of a multiplier
                             size_t maxIncrement = 30;
                             for(size_t idilate = 0; idilate < maxIncrement; ++idilate ) {
+                                RAVELOG_VERBOSE_FORMAT("env=%d, ramp %d, idilate=%d/%d", GetEnv()->GetId()%irampindex%idilate%maxIncrement);
                                 tempramps1d.resize(0);
                                 if( ParabolicRamp::SolveAccelBounded(rampndtrimmed.x0, rampndtrimmed.dx0, rampndtrimmed.x1, rampndtrimmed.dx1, endTime,  parameters->_vConfigAccelerationLimit, parameters->_vConfigVelocityLimit, parameters->_vConfigLowerLimit, parameters->_vConfigUpperLimit, tempramps1d, _parameters->_multidofinterp, rampndtrimmed.dx0.size()) ) {
 
@@ -571,6 +576,7 @@ public:
                                         ParabolicRamp::CheckReturn newrampret = _feasibilitychecker.Check2(*itnewrampnd, 0xffff, outramps);
                                         if( newrampret.retcode != 0 ) { // probably don't need to check bDifferentVelocity
                                             RAVELOG_VERBOSE_FORMAT("env=%d, has bad ramp retcode=0x%x", GetEnv()->GetId()%newrampret.retcode);
+
                                             bHasBadRamp = true;
                                             break;
                                         }
@@ -619,10 +625,27 @@ public:
                                         ss << *itvalue << ",";
                                     }
                                     ss << "]; deltatime=" << rampndtrimmed.endTime;
-                                    RAVELOG_WARN_FORMAT("env=%d, original ramp %d does not satisfy contraints. check retcode=0x%x! %s", GetEnv()->GetId()%irampindex%checkret.retcode%ss.str());
+                                    ss << "; xmin=[";
+                                    FOREACHC(itvalue, parameters->_vConfigLowerLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "]; xmax=[";
+                                    FOREACHC(itvalue, parameters->_vConfigUpperLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "]; vellimits=[";
+                                    FOREACHC(itvalue, parameters->_vConfigVelocityLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "]; accellimits=[";
+                                    FOREACHC(itvalue, parameters->_vConfigAccelerationLimit) {
+                                        ss << *itvalue << ",";
+                                    }
+                                    ss << "];";
+                                    RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x! %s", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode%ss.str());
                                 }
                                 else {
-                                    RAVELOG_WARN_FORMAT("env=%d, original ramp %d does not satisfy contraints. check retcode=0x%x!", GetEnv()->GetId()%irampindex%checkret.retcode);
+                                    RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x!", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode);
                                 }
                                 _DumpTrajectory(ptraj, Level_Debug);
                                 return PS_Failed;
@@ -820,23 +843,32 @@ public:
                         // due to epsilon inaccuracies, have to clamp the max accel depending on _vConfigAccelerationLimit
                         for(size_t idof = 0; idof < outramp.ramps.size(); ++idof) {
                             if( outramp.ramps[idof].a1 < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
+                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a1 > _parameters->_vConfigAccelerationLimit[idof] ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
+                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             if( outramp.ramps[idof].a2 < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
+                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a2 > _parameters->_vConfigAccelerationLimit[idof] ) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
+                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                         }
                         if( bAccelChanged ) {
+                            RAVELOG_DEBUG_FORMAT("env=%d, deltatime = %.15e", GetEnv()->GetId()%deltatime);
                             if( !outramp.IsValid() ) {
                                 RAVELOG_WARN_FORMAT("env=%d, ramp becomes invalid after changing acceleration limits", GetEnv()->GetId());
                                 return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9); //?
@@ -1095,12 +1127,14 @@ protected:
             rampStartTime[i] = endTime;
             endTime += ramps[i].endTime;
         }
+        dReal originalEndTime = endTime;
+        dReal dummyEndTime;
         ParabolicRamp::Vector x0, x1, dx0, dx1;
         ParabolicRamp::DynamicPath &intermediate=_cacheintermediate, &intermediate2=_cacheintermediate2;
         std::vector<dReal>& vellimits=_cachevellimits, &accellimits=_cacheaccellimits;
         vellimits.resize(_parameters->_vConfigVelocityLimit.size());
         accellimits.resize(_parameters->_vConfigAccelerationLimit.size());
-        std::vector<ParabolicRamp::ParabolicRampND>& accumoutramps=_cacheaccumoutramps, &outramps=_cacheoutramps;
+        std::vector<ParabolicRamp::ParabolicRampND>& accumoutramps=_cacheaccumoutramps, &outramps=_cacheoutramps, &outramps2=_cacheoutramps2;
 
         int numslowdowns = 0; // total number of times a ramp has been slowed down.
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1+g_fEpsilonLinear;
@@ -1117,6 +1151,7 @@ protected:
             if(t1 > t2) {
                 ParabolicRamp::Swap(t1,t2);
             }
+            RAVELOG_DEBUG_FORMAT("env = %d, shortcut iter = %d/%d, shortcutting from t1 = %.15e to t2 = %.15e", GetEnv()->GetId()%iters%numIters%t1%t2);
             if( t2 - t1 < mintimestep ) {
                 continue;
             }
@@ -1191,8 +1226,6 @@ protected:
 
                 dReal fcurmult = fstarttimemult;
 
-                RAVELOG_VERBOSE_FORMAT("env=%d, shortcutting from t1 = %.15e to t2 = %.15e", GetEnv()->GetId()%t1%t2);
-
                 for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
                     iIterProgress += 0x1000;
@@ -1263,20 +1296,99 @@ protected:
 
                         if( retcheck.bDifferentVelocity && outramps.size() > 0 ) {
                             ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
+                            dReal allowedstretchtime = (t2 - t1) - (newramptime + mintimestep);
 
                             bool res=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
                             if( !res ) {
                                 RAVELOG_WARN("failed to SolveMinTime for different vel ramp\n");
+                                retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
                             }
-                            if( RaveFabs(intermediate2.GetTotalTime()-outramp.endTime) > 0.01 ) {
+                            if( RaveFabs(intermediate2.GetTotalTime()-outramp.endTime) > allowedstretchtime) {
                                 RAVELOG_DEBUG_FORMAT("env=%d, intermediate2 ramp duration is too long %fs", GetEnv()->GetId()%intermediate2.GetTotalTime());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
                             }
-                            // intermediate2 should be pretty close to outramp, so just insert directly
-                            outramps.pop_back();
-                            outramps.insert(outramps.end(), intermediate2.ramps.begin(), intermediate2.ramps.end());
+
+                            // Check the newly interpolated segment. Note that intermediate2 should have ramps.size() == 1.
+                            OPENRAVE_ASSERT_OP(intermediate2.ramps.size(), ==, 1);
+                            retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff, outramps2);
+                            if (retcheck.retcode != 0) {
+                                RAVELOG_DEBUG_FORMAT("env=%d, the final SolveMinTime generated infeasible segment retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
+                                ////////////////////////////////////////////////////////////////////////////////
+                                ParabolicRamp::ParabolicRampND &temp2 = intermediate2.ramps[0];
+                                std::vector<dReal> &xmin = _parameters->_vConfigLowerLimit, &xmax = _parameters->_vConfigUpperLimit, &vmax = _parameters->_vConfigVelocityLimit, &amax = _parameters->_vConfigAccelerationLimit;
+                                std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;
+                                std::vector<ParabolicRamp::ParabolicRampND> temprampsnd;
+                                dReal endtime = temp2.endTime;
+                                size_t maxIncrement = 3;
+                                for (size_t idilation = 0; idilation < maxIncrement; ++idilation) {
+                                    RAVELOG_DEBUG_FORMAT("env=%d, idilation = %d/%d", GetEnv()->GetId()%idilation%maxIncrement);
+                                    bool res2 = ParabolicRamp::SolveAccelBounded(temp2.x0, temp2.dx0, temp2.x1, temp2.dx1, endtime, amax, vmax, xmin, xmax, tempramps1d, 0, 6);
+                                    if (res2) {
+                                        temprampsnd.resize(0);
+                                        CombineRamps(tempramps1d, temprampsnd);
+                                        if (temprampsnd[0].endTime > endTime*10) {
+                                            RAVELOG_WARN_FORMAT("env=%d, new endtime (%.15e) is too big compared to prev endtime (%.15e)", GetEnv()->GetId()%temprampsnd[0].endTime%endtime);
+                                            break;
+                                        }
+                                        endtime = temprampsnd[0].endTime;
+                                        if (!(endtime < outramp.endTime + allowedstretchtime)) {
+                                            // endtime has become too long that the shortcut is longer than t2 - t1
+                                            break;
+                                        }
+                                        // Check feasibility
+                                        bool bhasbadramp = false;
+                                        RAVELOG_VERBOSE_FORMAT("env=%d, original endtime = %.15e; new endtime = %.15e", GetEnv()->GetId()%outramp.endTime%endtime);
+                                        FOREACH(itnewrampnd, temprampsnd) {
+                                            retcheck = _feasibilitychecker.Check2(*itnewrampnd, 0xffff, outramps2);
+                                            if (retcheck.retcode != 0) {
+                                                RAVELOG_VERBOSE_FORMAT("env=%d, has bad ramp: retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
+                                                bhasbadramp = true;
+                                                break;
+                                            }
+                                            if (retcheck.bDifferentVelocity) {
+                                                RAVELOG_VERBOSE_FORMAT("env=%d, still ends with different velocity. terminated", GetEnv()->GetId());
+                                                retcheck.retcode = CFO_FinalValuesNotReached;
+                                                break;
+                                            }
+                                        }
+                                        if (!bhasbadramp) {
+                                            RAVELOG_DEBUG_FORMAT("env=%d, idilation = %d/%d produces feasible ramp", GetEnv()->GetId()%idilation%maxIncrement);
+                                            RAVELOG_DEBUG_FORMAT("env=%d, time increment = %.15e; allowed stretched time = %.15e", GetEnv()->GetId()%(endtime - outramp.endTime)%allowedstretchtime);
+                                            break;
+                                        }
+                                    }
+                                    // Here we increase endtime by only EpsilonT. As determined
+                                    // empirically, only a few increments with EpsilonT
+                                    // increment would be sufficient if the segment can be
+                                    // feasible at all.
+                                    endtime += ParabolicRamp::EpsilonT;
+
+                                    if (!(endtime < outramp.endTime + allowedstretchtime)) {
+                                        // endtime has become too long that the shortcut is longer than t2 - t1
+                                        break;
+                                    }
+                                }
+                                ////////////////////////////////////////////////////////////////////////////////
+                                break;
+                            }
+                            else if (retcheck.bDifferentVelocity) {
+                                // Give up and continue to the next iteration.
+                                RAVELOG_DEBUG_FORMAT("env=%d, after Check2, intermediate2 does not end at the desired velocity", GetEnv()->GetId());
+                                retcheck.retcode = CFO_FinalValuesNotReached;
+                                break;
+                            }
+                            else {
+                                // Otherwise, the new segment is good.
+                                RAVELOG_DEBUG_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
+                                outramps.pop_back();
+                                outramps.insert(outramps.end(), outramps2.begin(), outramps2.end());
+                            }
+
+                        }
+                        else {
+                            RAVELOG_DEBUG("new shortcut is aligned with boundary values after running Check2");
                         }
                         accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
                     }
@@ -1356,12 +1468,13 @@ protected:
 
                 //revise the timing
                 rampStartTime.resize(ramps.size());
+                dummyEndTime = endTime;
                 endTime=0;
                 for(size_t i=0; i<ramps.size(); i++) {
                     rampStartTime[i] = endTime;
                     endTime += ramps[i].endTime;
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime=%f",GetEnv()->GetId()%iters%numslowdowns%endTime);
+                RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numslowdowns%dummyEndTime%endTime%(dummyEndTime - endTime));
                 //DumpDynamicPath(dynamicpath);
             }
             catch(const std::exception& ex) {
@@ -1370,8 +1483,7 @@ protected:
             }
         }
 
-        RAVELOG_VERBOSE_FORMAT("finished at shortcut iter=%d slowdowns=%d, endTime=%f",iters%numslowdowns%endTime);
-        //DumpDynamicPath(dynamicpath);
+        RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         return shortcuts;
     }
 
@@ -1461,7 +1573,7 @@ protected:
 
     //@{ cache
     ParabolicRamp::DynamicPath _cacheintermediate, _cacheintermediate2, _cachedynamicpath;
-    std::vector<ParabolicRamp::ParabolicRampND> _cacheaccumoutramps, _cacheoutramps;
+    std::vector<ParabolicRamp::ParabolicRampND> _cacheaccumoutramps, _cacheoutramps, _cacheoutramps2;
     std::vector<dReal> _cachetrajpoints, _cacheswitchtimes;
     vector<ParabolicRamp::Vector> _cachepath;
     std::vector<dReal> _cachevellimits, _cacheaccellimits;
