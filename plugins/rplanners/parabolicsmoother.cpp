@@ -1187,9 +1187,20 @@ protected:
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // for slowing down when timing constraints
         dReal fstarttimemult = 1.0; // the start velocity/accel multiplier for the velocity and acceleration computations. If manip speed/accel or dynamics constraints are used, then this will track the last successful multipler. Basically if the last successful one is 0.1, it's very unlikely than a muliplier of 0.8 will meet the constraints the next time.
 
+        size_t nItersFromPrevSuccessful = 0;
+        size_t nCutoffIters = 100;
+        dReal score;
+        dReal currentBestScore = 1.0;
+        dReal cutoffRatio = 5e-3;
         uint32_t tshortcutstart = utils::GetMicroTime();
         int iters=0;
         for(iters=0; iters<numIters; iters++) {
+            nItersFromPrevSuccessful += 1;
+            if (nItersFromPrevSuccessful > nCutoffIters) {
+                // No progress for already nCutOffIters. Stop right away.
+                break;
+            }
+            
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
             if( iters == 0 ) {
                 t1 = 0;
@@ -1521,8 +1532,9 @@ protected:
                     rampStartTime[i] = endTime;
                     endTime += ramps[i].endTime;
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numslowdowns%dummyEndTime%endTime%(dummyEndTime - endTime));
-
+                dReal diff = dummyEndTime - endTime;
+                RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numslowdowns%dummyEndTime%endTime%diff);
+                
                 if (IS_DEBUGLEVEL(Level_Debug)) {
                     // Write the progress
                     shortcutprogress << str(boost::format("\n%d %.15e %.15e %.15e %.15e")%iters%t1%t2%dummyEndTime%endTime);
@@ -1568,6 +1580,18 @@ protected:
                         sep = " ";
                     }
                 }
+                
+                score = diff/nItersFromPrevSuccessful;
+                if (score/currentBestScore < cutoffRatio) {
+                    // The progress just made is below the cutoff. If we continue, it is unlikely
+                    // that we will make much more progress. So stop here.
+                    break;
+                }
+                if (score > currentBestScore) {
+                    currentBestScore = score;
+                }
+
+                nItersFromPrevSuccessful = 0;
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, exception happened during shortcut iteration progress=0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
@@ -1577,7 +1601,15 @@ protected:
         uint32_t tshortcutend = utils::GetMicroTime();
         dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
 
-        RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+        if (iters == numIters) {
+            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+        }
+        else if (score/currentBestScore < cutoffRatio) {
+            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (current score falls below %.15e), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%cutoffRatio%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+        }
+        else if (nItersFromPrevSuccessful > nCutoffIters) {
+            RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+        }
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
         _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
 
