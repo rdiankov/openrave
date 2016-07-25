@@ -657,6 +657,15 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         Real C2inv = 1/C2;
         a1 = (A2 + root)*C2inv;
         if (Abs(a1) > amax) {
+            if (FuzzyZero(root, EpsilonA*EpsilonX)) { // this condition gives a2 = 0
+                // The computed a1 is exceeding the bound and its corresponding a2 is
+                // zero. Therefore, we cannot fix this case. This is probably because the given
+                // endTime is actually less than the minimum duration that it can get.
+                PARABOLIC_RAMP_PLOG("|a1| > amax && a2 == 0; Unable to fix this case. This is probably because the given endTime is too short.");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false;
+            }
+            
             // a1 exceeds the bound, try making it stays at the bound.
             a1 = a1 > 0 ? amax : -amax;
             // Recalculate the related variable
@@ -671,6 +680,13 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         if (Abs(a1) <= EpsilonA) {
             a1 = 0;
             a2 = B2/C2;
+            if (Abs(a2) > amax) {
+                // The computed a2 is exceeding the bound while a1 = 0. This is similar to the case
+                // above (when |a1| > amax and a2 == 0).
+                PARABOLIC_RAMP_PLOG("a1 == 0 && |a2| > amax; Unable to fix this case. This is probably because the given endTime is too short.");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false;
+            }            
             root = C2*a1 - A2;
 
             // RAVELOG_DEBUG_FORMAT("case1: a1 = %.15e; a2 = %.15e", a1%a2);
@@ -2194,6 +2210,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
     //Type IV path: hits both top and bottom
     //consider braking to side, then solving to x1,v1
     if(bt0 < endTime && Abs(ba0) < amax+EpsilonA) {
+        PARABOLIC_RAMP_PLOG("Chechking type IIa");
         //type IIa
         temp.resize(2);
         temp[0].x0 = x0;
@@ -2246,6 +2263,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
                         //got a better path
                         ramps = temp;
                         amax = Max(Abs(ba0),Max(Abs(temp[1].a1),Abs(temp[1].a2)));
+                        PARABOLIC_RAMP_PLOG("Type IIa successful");
                     }
                 }
             }
@@ -2255,6 +2273,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
     //consider reverse braking from x1,v1, then solving from x0,v0
     //consider braking to side, then solving to x1,v1
     if(bt1 < endTime && Abs(ba1) < amax+EpsilonA) {
+        PARABOLIC_RAMP_PLOG("Chechking type IIb");
         //type IIb
         temp.resize(2);
         temp[0].x0 = x0;
@@ -2307,6 +2326,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
                         //got a better path
                         ramps = temp;
                         amax = Max(Abs(ba1),Max(Abs(temp[0].a1),Abs(temp[0].a2)));
+                        PARABOLIC_RAMP_PLOG("Type IIb successful");
                     }
                 }
             }
@@ -2314,6 +2334,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
         gMinAccelQuiet = false;
     }
     if(bx0 == bx1) {
+        PARABOLIC_RAMP_PLOG("Chechking type III");
         //type III: braking to side, then continuing, then accelerating to x1
         if(bt0 + bt1 < endTime && Max(Abs(ba0),Abs(ba1)) < amax+EpsilonA) {
             temp.resize(1);
@@ -2330,9 +2351,11 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
             ramps = temp;
             amax = Max(Abs(ba0),Abs(ba1));
             PARABOLIC_RAMP_ASSERT(temp[0].IsValid());
+            PARABOLIC_RAMP_PLOG("Type III successful");
         }
     }
     else {
+        PARABOLIC_RAMP_PLOG("Chechking type IV");
         //type IV paths
         if(bt0 + bt1 < endTime && Max(Abs(ba0),Abs(ba1)) < amax) {
             //first segment brakes to one side, last segment brakes to the other
@@ -2395,6 +2418,7 @@ bool SolveMinAccelBounded(Real x0,Real v0,Real x1,Real v1,Real endTime, Real ama
                     if(Max(Abs(temp[1].a1),Abs(temp[1].a2)) < amax) {
                         ramps = temp;
                         amax = Max(Max(Abs(temp[1].a1),Abs(temp[1].a2)),Max(Abs(ba0),Abs(ba1)));
+                        PARABOLIC_RAMP_PLOG("Type IV successful");
                     }
                 }
             }

@@ -681,7 +681,7 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
         return ParabolicCurve()
 
     if Sub(interval5.a, interval4.b) > epsilon or Sub(interval4.a, interval5.b) > epsilon:
-        # interval4 and interval5 do not intersect each other
+        log.debug("interval4 and interval5 do not intersect each other")
         return ParabolicCurve()
     # interval6 = interval4 \cap interval5 : valid interval for t0 computed from a1's constraints
     interval6 = iv.mpf([max(interval4.a, interval5.a), min(interval4.b, interval5.b)])
@@ -689,13 +689,13 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
     # import IPython; IPython.embed()
 
     if Sub(interval3.a, interval6.b) > epsilon or Sub(interval6.a, interval3.b) > epsilon:
-        # interval3 and interval6 do not intersect each other
+        log.debug("interval3 and interval6 do not intersect each other")
         return ParabolicCurve()
     # interval7 = interval3 \cap interval6
     interval7 = iv.mpf([max(interval3.a, interval6.a), min(interval3.b, interval6.b)])
 
     if Sub(interval0.a, interval7.b) > epsilon or Sub(interval7.a, interval0.b) > epsilon:
-        # interval0 and interval7 do not intersect each other
+        log.debug("interval0 and interval7 do not intersect each other")
         return ParabolicCurve()
     # interval8 = interval0 \cap interval7 : valid interval of t0 when considering all constraints (from a0 and a1)
     interval8 = iv.mpf([max(interval0.a, interval7.a), min(interval0.b, interval7.b)])
@@ -744,17 +744,25 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
         initguess = mp.sign(temp)*(Abs(temp)**(1./3.))
         root = mp.findroot(lambda x: Sub(Prod([x, x, x]), temp), x0=initguess)
 
-        # import IPython; IPython.embed()
+        import IPython; IPython.embed()
         log.debug("root = {0}".format(mp.nstr(root, n=_prec)))
         a0new = mp.fdiv(Add(A2, root), C2)
         if (Abs(a0new) > Add(am, epsilon)):
+            if FuzzyZero(Sub(Mul(C2, a0new), A2), epsilon):
+                # The computed a0new is exceeding the bound and its corresponding a1new is
+                # zero. Therefore, there is no other way to fix this. This is probably because the
+                # given newDuration is less than the minimum duration (x0, x1, v0, v1, vm, am) can
+                # get.
+                log.debug("abs(a0new) > am and a1new = 0; Cannot fix this case. This happens probably because the given newDuration is too short.")
+                return ParabolicCurve()
+            
             a0new = Mul(mp.sign(a0new), am)
 
         if (Abs(a0new) < epsilon):
             a1new = mp.fdiv(B2, C2)
             if (Abs(a1new) > Add(am, epsilon)):
-                log.warn("abs(a1new) > am; cannot fix this case")
-                # Cannot fix this case
+                # Similar to the case above
+                log.debug("a0new = 0 and abs(a1new) > am; Cannot fix this case. This happens probably because the given newDuration is too short.")
                 return ParabolicCurve()
 
         else:
