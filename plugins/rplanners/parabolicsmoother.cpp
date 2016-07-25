@@ -446,15 +446,9 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
-                if (IS_DEBUGLEVEL(Level_Verbose)) {
-                    DumpDynamicPath(dynamicpath);
-                }
                 numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
-                }
-                if (IS_DEBUGLEVEL(Level_Verbose)) {
-                    DumpDynamicPath(dynamicpath);
                 }
             }
 
@@ -711,7 +705,6 @@ public:
             // dynamic path dynamicpath.GetTotalTime() could change if timing constraints get in the way, so use fExpectedDuration
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration-_dummytraj->GetDuration()),<,0.01); // maybe because of trimming, will be a little different
             RAVELOG_DEBUG_FORMAT("env=%d, after shortcutting %d times: path waypoints=%d, traj waypoints=%d, traj time=%fs", GetEnv()->GetId()%numshortcuts%dynamicpath.ramps.size()%_dummytraj->GetNumWaypoints()%_dummytraj->GetDuration());
-            //DumpDynamicPath(dynamicpath);
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
@@ -1119,6 +1112,16 @@ protected:
 
     int _Shortcut(ParabolicRamp::DynamicPath& dynamicpath, int numIters, ParabolicRamp::RandomNumberGeneratorBase* rng, dReal mintimestep)
     {
+        uint32_t fileindex;
+        if( !!_logginguniformsampler ) {
+            fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            fileindex = RaveRandomInt();
+        }
+        fileindex = fileindex%1000; // to be used throughout the shortcutting process
+        _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 0); // save the dynamicpath before shortcutting
+
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         int shortcuts = 0;
         vector<dReal> rampStartTime(ramps.size());
@@ -1129,6 +1132,48 @@ protected:
         }
         dReal originalEndTime = endTime;
         dReal dummyEndTime;
+
+        /*
+           shortcutprogress keeps track of the shortcutting progress. The format will be the following:
+
+           first_total_duration maxiters
+           successful_shortcut_iter t0 t1 totalduration_before totalduration_after
+           x0
+           x1
+           v0
+           v1
+           xmin
+           xmax
+           vellimits
+           accellimits
+           successful_shortcut_iter t0 t1 totalduration_before totalduration_after
+           x0
+           x1
+           v0
+           v1
+           xmin
+           xmax
+           vellimits
+           accellimits
+           :
+           :
+           successful_shortcut_iter t0 t1 totalduration_before totalduration_after
+           x0
+           x1
+           v0
+           v1
+           xmin
+           xmax
+           vellimits
+           accellimits
+         */
+        std::stringstream shortcutprogress;
+        std::string sep;
+        if (IS_DEBUGLEVEL(Level_Debug)) {
+            shortcutprogress << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            shortcutprogress << originalEndTime << " " << numIters;
+        }
+
         ParabolicRamp::Vector x0, x1, dx0, dx1;
         ParabolicRamp::DynamicPath &intermediate=_cacheintermediate, &intermediate2=_cacheintermediate2;
         std::vector<dReal>& vellimits=_cachevellimits, &accellimits=_cacheaccellimits;
@@ -1141,6 +1186,8 @@ protected:
 
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // for slowing down when timing constraints
         dReal fstarttimemult = 1.0; // the start velocity/accel multiplier for the velocity and acceleration computations. If manip speed/accel or dynamics constraints are used, then this will track the last successful multipler. Basically if the last successful one is 0.1, it's very unlikely than a muliplier of 0.8 will meet the constraints the next time.
+
+        uint32_t tshortcutstart = utils::GetMicroTime();
         int iters=0;
         for(iters=0; iters<numIters; iters++) {
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
@@ -1475,15 +1522,72 @@ protected:
                     endTime += ramps[i].endTime;
                 }
                 RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numslowdowns%dummyEndTime%endTime%(dummyEndTime - endTime));
-                //DumpDynamicPath(dynamicpath);
+
+                if (IS_DEBUGLEVEL(Level_Debug)) {
+                    // Write the progress
+                    shortcutprogress << str(boost::format("\n%d %.15e %.15e %.15e %.15e")%iters%t1%t2%dummyEndTime%endTime);
+
+                    sep = "\n";
+                    FOREACHC(itval, x0) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, x1) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, dx0) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, dx1) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, _parameters->_vConfigLowerLimit) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, _parameters->_vConfigUpperLimit) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, vellimits) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                    sep = "\n";
+                    FOREACHC(itval, accellimits) {
+                        shortcutprogress << sep << *itval;
+                        sep = " ";
+                    }
+                }
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env=%d, exception happened during shortcut iteration progress=0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
                 // continue to next iteration...
             }
         }
+        uint32_t tshortcutend = utils::GetMicroTime();
+        dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
 
         RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
+        RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
+        _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
+
+        if (IS_DEBUGLEVEL(Level_Debug)) {
+            std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
+            std::ofstream f(shortcutprogressfilename.c_str());
+            f << shortcutprogress.str();
+            RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
+        }
+
         return shortcuts;
     }
 
@@ -1547,21 +1651,45 @@ protected:
         return filename;
     }
 
-    void DumpDynamicPath(ParabolicRamp::DynamicPath& path) const {
-        uint32_t randnum;
-        if( !!_logginguniformsampler ) {
-            randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+    /*
+       This function is used for dumping dynamicpaths before and after shortcutting. The integer
+       option indicates whether it is called before (0) or after (1) shortcutting so as to set the
+       file name accordingly.
+     */
+    void _DumpDynamicPath(ParabolicRamp::DynamicPath &path, DebugLevel level=Level_Debug, uint32_t fileindex=1000, int option=-1) const {
+        if (!IS_DEBUGLEVEL(level)) {
+            return;
+        }
+
+        if (fileindex == 1000) {
+            uint32_t randnum;
+            if( !!_logginguniformsampler ) {
+                randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+            }
+            else {
+                randnum = RaveRandomInt();
+            }
+            fileindex = randnum%1000;
+        }
+
+        std::string filename;
+        if (option == 0) {
+            filename = str(boost::format("%s/dynamicpath%d.beforeshortcut.xml")%RaveGetHomeDirectory()%fileindex);
+        }
+        else if (option == 1) {
+            filename = str(boost::format("%s/dynamicpath%d.aftershortcut.xml")%RaveGetHomeDirectory()%fileindex);
         }
         else {
-            randnum = RaveRandomInt();
+            filename = str(boost::format("%s/dynamicpath%d.xml")%RaveGetHomeDirectory()%fileindex);
         }
-        string filename = str(boost::format("%s/dynamicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
+
         path.Save(filename);
         dReal duration = 0;
         for (std::vector<ParabolicRamp::ParabolicRampND>::const_iterator it = path.ramps.begin(); it != path.ramps.end(); ++it) {
             duration += it->endTime;
         }
         RAVELOG_DEBUG_FORMAT("Wrote a dynamic path to %s (duration = %.15e)", filename%duration);
+        return;
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
