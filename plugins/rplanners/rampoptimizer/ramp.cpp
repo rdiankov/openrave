@@ -172,7 +172,7 @@ void Ramp::Cut(dReal t, Ramp &remRamp) {
     BOOST_ASSERT(t >= -epsilon);
     BOOST_ASSERT(t <= duration + epsilon);
     if (t <= 0) {
-        remRamp.Initialize(v0, a, t, x0);
+        remRamp.Initialize(v0, a, duration, x0);
         Initialize(v0, 0, 0, x0);
         return;
     }
