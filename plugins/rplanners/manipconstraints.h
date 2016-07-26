@@ -146,7 +146,7 @@ public:
                         if(pmanip->IsGrabbing(*itbody)) {
                             FOREACH(itlink,(*itbody)->GetLinks()) {
                                 globallinklist.push_back(*itlink);
-                            }
+                            }                            
                         }
                     }
                     // Compute the enclosing AABB and add its vertices to the checkpoints
@@ -353,12 +353,31 @@ public:
                 endeffacclin = endeffaccs.at(endeffindex).first;
                 endeffaccang = endeffaccs.at(endeffindex).second;
                 Transform R = itmanipinfo->plink->GetTransform();
+
+                ////////////////////////////////////////////////////////////////////////////////////////////////////
+                // RAVELOG_DEBUG_FORMAT("q = [%.15e, %.15e, %.15e, %.15e, %.15e, %.15e]", qfillactive[0]%qfillactive[1]%qfillactive[2]%qfillactive[3]%qfillactive[4]%qfillactive[5]);
+                // RAVELOG_DEBUG_FORMAT("v = [%.15e, %.15e, %.15e, %.15e, %.15e, %.15e]", _vfillactive[0]%_vfillactive[1]%_vfillactive[2]%_vfillactive[3]%_vfillactive[4]%_vfillactive[5]);
+                // RAVELOG_DEBUG_FORMAT("a = [%.15e, %.15e, %.15e, %.15e, %.15e, %.15e]", _afill[0]%_afill[1]%_afill[2]%_afill[3]%_afill[4]%_afill[5]);
+                // RAVELOG_DEBUG_FORMAT("endeffindex = %d", endeffindex);
+                // RAVELOG_DEBUG_FORMAT("endeffvellin = [%.15e, %.15e, %.15e]", endeffvellin.x%endeffvellin.y%endeffvellin.z);
+                // RAVELOG_DEBUG_FORMAT("endeffvelang = [%.15e, %.15e, %.15e]", endeffvelang.x%endeffvelang.y%endeffvelang.z);
+                // RAVELOG_DEBUG_FORMAT("endeffacclin = [%.15e, %.15e, %.15e]", endeffacclin.x%endeffacclin.y%endeffacclin.z);
+                // RAVELOG_DEBUG_FORMAT("endeffaccang = [%.15e, %.15e, %.15e]", endeffaccang.x%endeffaccang.y%endeffaccang.z);
+                // RAVELOG_DEBUG_FORMAT("R.rot = [%.15e, %.15e, %.15e, %.15e]", R.rot.x%R.rot.y%R.rot.z%R.rot.w);
+                // RAVELOG_DEBUG_FORMAT("R.trans = [%.15e, %.15e, %.15e]", R.trans.x%R.trans.y%R.trans.z);
+                ////////////////////////////////////////////////////////////////////////////////////////////////////
+                
                 // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints                
                 FOREACH(itpoint,itmanipinfo->checkpoints) {
                     Vector point = R.rotate(*itpoint);
+
+                    // RAVELOG_DEBUG_FORMAT("checkpoint = [%.15e, %.15e, %.15e]", itpoint->x%itpoint->y%itpoint->z);
+                    // RAVELOG_DEBUG_FORMAT("point = [%.15e, %.15e, %.15e]", point.x%point.y%point.z);
+                        
                     if(_maxmanipspeed>0) {
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        // RAVELOG_DEBUG_FORMAT("manipspeed = %.15e", manipspeed);
                         if( manipspeed > 1e5 ) {
                             RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
                         }
@@ -376,6 +395,7 @@ public:
                     if(_maxmanipaccel>0) {
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
                         dReal manipaccel = RaveSqrt(apoint.lengthsqr3());
+                        // RAVELOG_DEBUG_FORMAT("manipaccel = %.15e", manipaccel);
                         if( maxmanipaccel < manipaccel ) {
                             maxmanipaccel = manipaccel;
                         }
