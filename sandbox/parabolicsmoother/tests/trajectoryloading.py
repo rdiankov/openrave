@@ -69,6 +69,47 @@ env.GetKinBody('wall3').SetVisible(False)
 env.GetKinBody('wall4').SetVisible(False)
 
 
+class GeometryGroupSaver(object):
+    """
+    Interface class for switching between padded and unpadded robots
+    """
+
+    def __init__(self, robot, padding=0):
+        self.robot = robot
+        self.padding = padding
+        self.cdmodel = orpy.databases.convexdecomposition.ConvexDecompositionModel(self.robot, padding=padding)
+        if not self.cdmodel.load():
+            self.cdmodel.autogenerate()
+
+        self._Initialize()
+        
+
+    def _Initialize(self):
+        links = self.robot.GetLinks()
+        for gbody in self.robot.GetGrabbed():
+            for l in gbody.GetLinks():
+                links.append(l)
+
+        for l in links:
+            infos = [g.GetInfo() for g in l.GetGeometries()]
+            for info in infos:
+                info._vGeomData += np.array([envclearance, envclearance, envclearance, 0])
+            l.SetGroupGeometries(groupname, infos)
+
+            
+    def SwitchRegular(self):
+        self.robot.SetLinkGeometriesFromGroup('self')
+        for gbody in self.robot.GetGrabbed():
+            gbody.SetLinkGeometriesFromGroup('self')
+
+      
+    def SwitchPadded(self):
+        self.robot.SetLinkGeometriesFromGroup(groupname)
+        for gbody in self.robot.GetGrabbed():
+            gbody.SetLinkGeometriesFromGroup(groupname)
+        self.cdmodel.setrobot()
+
+    
 ####################################################################################################\
 # shortcutting stuff
 import matplotlib.pyplot as plt
