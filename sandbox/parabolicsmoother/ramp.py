@@ -2,6 +2,7 @@ from mpmath import mp, iv, arange
 import numpy as np
 import matplotlib.pyplot as plt
 import bisect
+from copy import deepcopy
 
 _prec = 500
 epsilon = mp.mpf('1e-100')
@@ -200,7 +201,7 @@ class Ramp(object):
             remRamp = Ramp(self.v0, self.a, self.duration, self.x0)
             self.Initialize(self.v0, 0, 0, self.x0)
             return remRamp
-        elif (t >= duration):
+        elif (t >= self.duration):
             renRamp = Ramp(self.v1, 0, 0, self.x1)
             return remRamp
 
@@ -217,7 +218,7 @@ class Ramp(object):
 
         if (t <= 0):
             return
-        elif (t >= duration):
+        elif (t >= self.duration):
             self.Initialize(self.v1, 0, 0, self.x1)
             return
 
@@ -239,7 +240,7 @@ class Ramp(object):
         elif (t >= self.duration):
             return
 
-        self.UpdateDuration(t)
+        self.UpdateDuration(self.duration - t)
         return
         
 
@@ -277,7 +278,7 @@ class ParabolicCurve(object):
             self.duration = dur
             self.d = d
         else:
-            self.ramps = ramps[:] # copy all the ramps
+            self.ramps = deepcopy(ramps) # copy all the ramps
             self.isEmpty = False
             self.v0 = self.ramps[0].v0
             self.v1 = self.ramps[-1].v1
@@ -301,15 +302,47 @@ class ParabolicCurve(object):
         return len(self.ramps)
 
 
+    def Initialize(self, ramps):
+        self.switchpointsList = [] # a list of all switch points, including ones at t = 0 and t = duration
+        dur = zero
+        d = zero
+        self.ramps = []
+        
+        if len(ramps) == 0:
+            self.isEmpty = True
+            self.x0 = zero
+            self.x1 = zero
+            self.v0 = zero
+            self.v1 = zero
+            self.switchpointsList = []
+            self.duration = dur
+            self.d = d
+        else:
+            self.ramps = deepcopy(ramps) # copy all the ramps
+            self.isEmpty = False
+            self.v0 = self.ramps[0].v0
+            self.v1 = self.ramps[-1].v1
+            
+            self.switchpointsList.append(dur)
+            for ramp in self.ramps:
+                dur = Add(dur, ramp.duration)
+                self.switchpointsList.append(dur)
+                d = Add(d, ramp.d)
+            self.duration = dur
+            self.d = d
+
+            self.SetInitialValue(self.ramps[0].x0) # set self.x0
+
+
     def Append(self, curve):
         if self.isEmpty:
             if not curve.isEmpty:
-                self.ramps = curve.ramps[:]
+                self.ramps = deepcopy(curve.ramps)
                 self.x0 = curve.x0
                 self.x1 = curve.x1
                 self.v0 = curve.v0
                 self.v1 = curve.v1
-                self.switchpointsList = curve.switchpointsList[:]
+                self.switchpointsList = deepcopy(curve.switchpointsList)
                 self.isEmpty = False
                 self.duration = curve.duration
                 self.d = curve.d
@@ -319,9 +352,8 @@ class ParabolicCurve(object):
         else:
             dur = self.duration
             d = self.d
-            ramps_ = curve[:]
-            for ramp in ramps_:
-                self.ramps.append(ramp)
+            for ramp in curve.ramps:
+                self.ramps.append(deepcopy(ramp))
                 # Update displacement
                 self.ramps[-1].x0 = self.ramps[-2].x1
                 d = Add(d, self.ramps[-1].d)                
@@ -505,7 +537,7 @@ class ParabolicCurve(object):
 
         if (t <= 0):
             return
-        elif (t >= duration):
+        elif (t >= self.duration):
             self.SetZeroDuration(self.x1, self.v1)
             return
 
@@ -525,7 +557,7 @@ class ParabolicCurve(object):
         if (t <= 0):
             self.SetZeroDuration(self.x0, self.v0)
             return
-        elif (t >= duration):
+        elif (t >= self.duration):
             return
 
         i, remainder = self._FindRampIndex(t)
@@ -615,18 +647,14 @@ class ParabolicCurvesND(object):
         else:
             # Check first if every curve in curves has the same duration.
             # (if necessary) Trim all curve to have the same duration.
-            curves_ = curves[:]
+            curves_ = deepcopy(curves)
             minDur = curves_[0].duration
             for curve in curves_[1:]:
                 assert(Abs(Sub(curve.duration, minDur)) < epsilon)
                 minDur = min(minDur, curve.duration)
-            for curve in curves_:
-                deltaT = Sub(curve.duration, minDur)
-                if curve.Trim(deltaT):
-                    continue
-                else:
-                    # Cannot trim the curve
-                    assert(False)
+            # for curve in curves_:
+            #     deltaT = Sub(curve.duration, minDur)
+            #     curve.TrimBack(deltaT)
 
             # Now all curves have the same duration
             self.isEmpty = False
@@ -636,11 +664,11 @@ class ParabolicCurvesND(object):
             self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
             self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
             self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
-            self.v0Vect = np.asarray([curve.v1 for curve in self.curves])
+            self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
             self.dVect = np.asarray([curve.d for curve in self.curves])
             
             # Create a list of switch points
-            switchpointsList = curves[0].switchpointsList[:]
+            switchpointsList = deepcopy(curves[0].switchpointsList)
             for curve in self.curves[1:]:
                 for s in curve.switchpointsList:
                     switchpointsList.insert(bisect.bisect_left(switchpointsList, s), s)
@@ -654,6 +682,56 @@ class ParabolicCurvesND(object):
                         self.switchpointsList.append(s)
 
 
+    def Initialize(self, curves):
+        if (len(curves) == 0):
+            self.curves = []
+            self.isEmpty = True
+            self.x0Vect = None
+            self.x1Vect = None
+            self.v0Vect = None
+            self.v1Vect = None
+            self.dVect = None
+            self.ndof = 0
+            self.switchpointsList = []
+            self.duration = zero
+        else:
+            # Check first if every curve in curves has the same duration.
+            # (if necessary) Trim all curve to have the same duration.
+            curves_ = deepcopy(curves)
+            minDur = curves_[0].duration
+            for curve in curves_[1:]:
+                assert(Abs(Sub(curve.duration, minDur)) < epsilon)
+                minDur = min(minDur, curve.duration)
+            # for curve in curves_:
+            #     deltaT = Sub(curve.duration, minDur)
+            #     curve.TrimBack(deltaT)
+
+            # Now all curves have the same duration
+            self.isEmpty = False
+            self.duration = minDur
+            self.curves = curves_
+            self.ndof = len(self.curves)
+            self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+            self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
+            self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+            self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
+            self.dVect = np.asarray([curve.d for curve in self.curves])
+            
+            # Create a list of switch points
+            switchpointsList = deepcopy(curves[0].switchpointsList)
+            for curve in self.curves[1:]:
+                for s in curve.switchpointsList:
+                    switchpointsList.insert(bisect.bisect_left(switchpointsList, s), s)
+
+            self.switchpointsList = []
+            if len(switchpointsList) > 0:
+                self.switchpointsList.append(switchpointsList[0])
+                for s in switchpointsList[1:]:
+                    if Sub(s, self.switchpointsList[-1]) > epsilon:
+                        # Add only non-redundant switch points
+                        self.switchpointsList.append(s)
+                        
+
     def __getitem__(self, index):
         return self.curves[index]
 
@@ -666,14 +744,14 @@ class ParabolicCurvesND(object):
         if self.isEmpty:
             if len(curvesnd) > 0:
                 self.duration = curvesnd.duration
-                self.curves = curvesnd[:]
+                self.curves = deepcopy(curvesnd.curves)
                 self.ndof = len(self.curves)
                 self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
                 self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
                 self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
                 self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
                 self.dVect = np.asarray([curve.d for curve in self.curves])
-                self.switchpointsList = curvesnd.switchpointsList[:]
+                self.switchpointsList = deepcopy(curvesnd.switchpointsList)
                 self.isEmpty = False
         else:
             assert(self.ndof == curvesnd.ndof)
@@ -788,13 +866,13 @@ class ParabolicCurvesND(object):
     def Cut(self, t):
         t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
-        assert(t <= Add(duration, epsilon))
+        assert(t <= Add(self.duration, epsilon))
 
         if (t <= 0):
             remCurvesND = ParabolicCurvesND()
             remCurvesND.SetZeroDuration(self.x0Vect, self.v0Vect)
             return
-        elif (t >= duration):
+        elif (t >= self.duration):
             remCurvesND = ParabolicCurvesND()
             remCurvesND.SetZeroDuration(self.x1Vect, self.v1Vect)
             return
@@ -812,7 +890,7 @@ class ParabolicCurvesND(object):
     def TrimFront(self, t):
         t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
-        assert(t <= Add(duration, epsilon))
+        assert(t <= Add(self.duration, epsilon))
 
         if (t <= 0):
             return
@@ -830,7 +908,7 @@ class ParabolicCurvesND(object):
     def TrimBack(self, t):
         t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
-        assert(t <= Add(duration, epsilon))
+        assert(t <= Add(self.duration, epsilon))
 
         if (t <= 0):
             self.SetZeroDuration(self.x0Vect, self.v0Vect)
