@@ -1191,7 +1191,7 @@ protected:
         size_t nCutoffIters = 100;
         dReal score;
         dReal currentBestScore = 1.0;
-        dReal cutoffRatio = 5e-3;
+        dReal cutoffRatio = 2e-3;
         uint32_t tshortcutstart = utils::GetMicroTime();
         int iters=0;
         for(iters=0; iters<numIters; iters++) {
