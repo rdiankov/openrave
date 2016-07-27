@@ -22,34 +22,19 @@ RobotBase::ManipulatorInfo::ManipulatorInfo() : XMLReadable("manipulator"), _vdi
 {
 }
 
-void RobotBase::ManipulatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("sid");
-    writer->WriteString(sid);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    writer->WriteString("name");
-    writer->WriteString(_name);
-
-    writer->WriteString("transform");
-    writer->WriteTransform(_tLocalTool);
-
-    writer->WriteString("chuckingDirection");
-    writer->WriteArray(_vChuckingDirection);
-
-    writer->WriteString("direction");
-    writer->WriteVector(_vdirection);
-
-    writer->WriteString("baseLinkName");
-    writer->WriteString(_sBaseLinkName);
-
-    writer->WriteString("effectorLinkName");
-    writer->WriteString(_sEffectorLinkName);
-
-    writer->WriteString("iksolverType");
-    writer->WriteString(_sIkSolverXMLId);
-
-    writer->WriteString("gripperJointNames");
-    writer->WriteArray(_vGripperJointNames);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", _tLocalTool);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "chuckingDirection", _vChuckingDirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "direction", _vdirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "baseLinkName", _sBaseLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "effectorLinkName", _sEffectorLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "iksolverType", _sIkSolverXMLId);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "gripperJointNames", _vGripperJointNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
@@ -1232,9 +1217,9 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     }
 }
 
-void RobotBase::Manipulator::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void RobotBase::Manipulator::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    _info.SerializeJSON(writer, options);
+    _info.SerializeJSON(value, allocator, options);
 }
 
 ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecification(const std::string& interpolation) const

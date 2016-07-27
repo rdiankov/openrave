@@ -329,80 +329,54 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     return true;
 }
 
-void KinBody::GeometryInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("sid");
-    writer->WriteString(sid);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    writer->WriteString("name");
-    writer->WriteString(name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", transform);
 
-    writer->WriteString("transform");
-    writer->WriteTransform(transform);
-
-    writer->WriteString("type");
     switch(type) {
     case GT_Box:
-        writer->WriteString("box");
-
-        writer->WriteString("halfExtents");
-        writer->WriteVector(_vGeomData);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "box");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "halfExtents", _vGeomData);
         break;
 
     case GT_Container:
-        writer->WriteString("container");
-
-        writer->WriteString("outerExtents");
-        writer->WriteVector(_vGeomData);
-        writer->WriteString("innerExtents");
-        writer->WriteVector(_vGeomData2);
-        writer->WriteString("bottomCross");
-        writer->WriteVector(_vGeomData3);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "container");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "outerExtents", _vGeomData);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "innerExtents", _vGeomData2);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "bottomCross", _vGeomData3);
         break;
 
     case GT_Sphere:
-        writer->WriteString("sphere");
-
-        writer->WriteString("radius");
-        writer->WriteDouble(_vGeomData.x);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "sphere");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "radius", _vGeomData.x);
         break;
 
     case GT_Cylinder:
-        writer->WriteString("cylinder");
-
-        writer->WriteString("radius");
-        writer->WriteDouble(_vGeomData.x);
-        writer->WriteString("height");
-        writer->WriteDouble(_vGeomData.y);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "cylinder");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "radius", _vGeomData.x);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "height", _vGeomData.y);
         break;
 
     case GT_TriMesh:
-        writer->WriteString("trimesh");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "trimesh");
         if (options == 0 || (options & SO_GeometryMesh) != 0) {
-            writer->WriteString("mesh");
-            writer->WriteTriMesh(mesh);
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, "mesh", mesh);
         }
         break;
 
     default:
-        writer->WriteNull();
         break;
     }
 
-    writer->WriteString("transparency");
-    writer->WriteDouble(transparency);
-
-    writer->WriteString("visible");
-    writer->WriteBool(visible);
-
-    writer->WriteString("diffuseColor");
-    writer->WriteVector(diffuseColor);
-
-    writer->WriteString("ambientColor");
-    writer->WriteVector(ambientColor);
-
-    writer->WriteString("modifiable");
-    writer->WriteBool(modifiable);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transparency", transparency);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "visible", visible);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "diffuseColor", diffuseColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "ambientColor", ambientColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "modifiable", modifiable);
 }
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
@@ -414,9 +388,9 @@ bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
     return _info.InitCollisionMesh(fTessellation);
 }
 
-void KinBody::Link::Geometry::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::Link::Geometry::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    _info.SerializeJSON(writer, options);
+    _info.SerializeJSON(value, allocator, options);
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const

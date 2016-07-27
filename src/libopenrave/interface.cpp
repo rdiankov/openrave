@@ -125,17 +125,23 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
     }
 }
 
-void InterfaceBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void InterfaceBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("readableInterfaces");
-    writer->StartObject();
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    rapidjson::Value readableInterfaces;
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(readableInterfaces);
+
     FOREACHC(it, __mapReadableInterfaces) {
-        writer->WriteString(it->first);
-        writer->StartObject();
-        it->second->SerializeJSON(writer,options);
-        writer->EndObject();
+        rapidjson::Value readableInterface;
+        RAVE_SERIALIZEJSON_CLEAR_OBJECT(readableInterface);
+
+        RAVE_SERIALIZEJSON_ADDMEMBER(readableInterface, "name", it->first);
+        it->second->SerializeJSON(readableInterface, allocator, options);
+        readableInterfaces.PushBack(readableInterface, allocator);
     }
-    writer->EndObject();
+
+    value.AddMember("readableInterfaces", readableInterfaces, allocator);
 }
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)

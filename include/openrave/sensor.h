@@ -58,7 +58,7 @@ public:
         virtual bool serialize(std::ostream& O) const;
 
         /// Serialize the sensor data to stream in JSON format
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
 
         uint64_t __stamp;         ///< time stamp of the sensor data in microseconds. If 0, then the data is uninitialized! (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
         Transform __trans;             ///< the coordinate system the sensor was when the measurement was taken, this is taken directly from SensorBase::GetTransform
@@ -84,7 +84,7 @@ public:
 
         virtual bool serialize(std::ostream& O) const;
         
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
     };
     class OPENRAVE_API CameraSensorData : public SensorData
     {
@@ -95,7 +95,7 @@ public:
         std::vector<uint8_t> vimagedata;         ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
         virtual bool serialize(std::ostream& O) const;
         
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
     };
 
     /// \brief Stores joint angles and EE position.
@@ -196,7 +196,7 @@ public:
 
         virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
         
         virtual SensorGeometry& operator=(const SensorGeometry& r) {
             hardware_id = r.hardware_id;
@@ -251,7 +251,7 @@ public:
 
         virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
         
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
 
         std::string sensor_reference; ///< name of sensor that whose data is referenced. This sensor transforms the data in a particular way.
         std::string target_region; ///< name of the kinbody that describes the region of interest for the camera. 
@@ -433,7 +433,7 @@ public:
     virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
     /// \brief serialize the sensor geometry and other attributes.
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
 
 protected:
     std::string _name;     ///< name of the sensor

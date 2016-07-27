@@ -1772,70 +1772,6 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     }
 }
 
-ConfigurationSpecification::JSONReader::JSONReader(ConfigurationSpecification& spec) : _spec(spec)
-{
-    _spec = ConfigurationSpecification(); // reset
-}
-
-BaseJSONReader::ProcessElement ConfigurationSpecification::JSONReader::startElement(const std::string& name, const AttributesList &atts)
-{
-    if( !!_preader ) {
-        if( _preader->startElement(name, atts) == PE_Support )
-            return PE_Support;
-        return PE_Ignore;
-    }
-    _ss.str(""); // have to clear the string
-    if( name == "group" ) {
-        _spec._vgroups.resize(_spec._vgroups.size()+1);
-        ConfigurationSpecification::Group& g = _spec._vgroups.back();
-        FOREACHC(itatt,atts) {
-            if( itatt->first == "name" ) {
-                g.name = itatt->second;
-            }
-            else if( itatt->first == "interpolation" ) {
-                g.interpolation = itatt->second;
-            }
-            else if( itatt->first == "offset" ) {
-                g.offset = boost::lexical_cast<int>(itatt->second);
-            }
-            else if( itatt->first == "dof" ) {
-                g.dof = boost::lexical_cast<int>(itatt->second);
-            }
-        }
-        return PE_Support;
-    }
-    else if( name == "configuration" ) {
-        _preader.reset(new ConfigurationSpecification::JSONReader(_spec));
-        return PE_Support;
-    }
-    return PE_Pass;
-}
-
-bool ConfigurationSpecification::JSONReader::endElement(const std::string& name)
-{
-    if( !!_preader ) {
-        if( _preader->endElement(name) ) {
-            _preader.reset();
-        }
-        return false;
-    }
-    if( name == "configuration" ) {
-        return true;
-    }
-    return false;
-}
-
-void ConfigurationSpecification::JSONReader::characters(const std::string& ch)
-{
-    if( !_preader ) {
-        _ss.clear();
-        _ss << ch;
-    }
-    else {
-        _preader->characters(ch);
-    }
-}
-
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
     O << "<configuration>" << endl;
@@ -1846,29 +1782,29 @@ std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec
     return O;
 }
 
-void ConfigurationSpecification::Group::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void ConfigurationSpecification::Group::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
-    writer->WriteString("name");
-    writer->WriteString(name);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    writer->WriteString("offset");
-    writer->WriteInt(offset);
-
-    writer->WriteString("dof");
-    writer->WriteInt(dof);
-
-    writer->WriteString("interpolation");
-    writer->WriteString(interpolation);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "offset", offset);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "dof", dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "interpolation", interpolation);
 }
 
-void ConfigurationSpecification::SerializeJSON(BaseJSONWriterPtr writer, int options) const
+void ConfigurationSpecification::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    rapidjson::Value groups;
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(groups);
+
     FOREACHC(it, _vgroups) {
-        writer->WriteString("group");
-        writer->StartObject();
-        it->SerializeJSON(writer, options);
-        writer->EndObject();
+        rapidjson::Value group;
+        it->SerializeJSON(group, allocator, options);
+        groups.PushBack(group, allocator);
     }
+    value.AddMember("groups", groups, allocator);
 }
 
 std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)

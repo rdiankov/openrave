@@ -16,57 +16,68 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
 #include <fstream>
-#include <openrave/jsonreaders.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/ostreamwrapper.h>
 
 namespace OpenRAVE {
 
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    OpenRAVE::jsonreaders::StreamJSONWriter streamwriter(ofstream);
-    OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
+    rapidjson::OStreamWrapper ostreamwrapper(ofstream);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
+    rapidjson::Document doc;
 
-    writer->StartObject();
-    penv->SerializeJSON(writer, 0);
-    writer->EndObject();
+    penv->SerializeJSON(doc, doc.GetAllocator(), 0);
+
+    doc.Accept(writer);
 }
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    OpenRAVE::jsonreaders::StreamJSONWriter streamwriter(ofstream);
-    OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
+    rapidjson::OStreamWrapper ostreamwrapper(ofstream);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
+    rapidjson::Document doc;
 
-    writer->StartObject();
+    {
+        rapidjson::Value bodiesValue;
+        bodiesValue.SetArray();
 
-    writer->WriteString("bodies");
-    writer->StartArray();
-    writer->StartObject();
-    pbody->SerializeJSON(writer, 0);
-    writer->EndObject();
-    writer->EndArray();
+        {
+            rapidjson::Value bodyValue;
+            pbody->SerializeJSON(bodyValue, doc.GetAllocator(), 0);
+            bodiesValue.PushBack(bodyValue, doc.GetAllocator());
+        }
 
-    writer->EndObject();
+        doc.AddMember("bodies", bodiesValue, doc.GetAllocator());
+    }
+
+    doc.Accept(writer);
 }
+
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());
-    OpenRAVE::jsonreaders::StreamJSONWriter streamwriter(ofstream);
-    OpenRAVE::BaseJSONWriterPtr writer(&streamwriter, OpenRAVE::utils::null_deleter());
+    rapidjson::OStreamWrapper ostreamwrapper(ofstream);
+    rapidjson::Writer<rapidjson::OStreamWrapper> writer(ostreamwrapper);
+    rapidjson::Document doc;
 
-    writer->StartObject();
+    {
+        rapidjson::Value bodiesValue;
+        bodiesValue.SetArray();
 
-    if (listbodies.size() > 0) {
-        writer->WriteString("bodies");
-        writer->StartArray();
-        FOREACHC (it,listbodies) {
-            writer->StartObject();
-            (*it)->SerializeJSON(writer, 0);
-            writer->EndObject();
+        if (listbodies.size() > 0) {
+            FOREACHC (it,listbodies) {
+                rapidjson::Value bodyValue;
+                (*it)->SerializeJSON(bodyValue, doc.GetAllocator(), 0);
+                bodiesValue.PushBack(bodyValue, doc.GetAllocator());
+            }
         }
-        writer->EndArray();
+
+        doc.AddMember("bodies", bodiesValue, doc.GetAllocator());
     }
 
-    writer->EndObject();
+    doc.Accept(writer);
 }
 
 }

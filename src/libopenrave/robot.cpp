@@ -36,24 +36,15 @@ RobotBase::AttachedSensorInfo::AttachedSensorInfo() : XMLReadable("attachedsenso
 {
 }
 
-void RobotBase::AttachedSensorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("sid");
-    writer->WriteString(sid);
-
-    writer->WriteString("name");
-    writer->WriteString(_name);
-
-    writer->WriteString("type");
-    writer->WriteString(_sensorname);
-
-    writer->WriteString("linkName");
-    writer->WriteString(_linkname);
-
-    writer->WriteString("transform");
-    writer->WriteTransform(_trelative);
-
-    _sensorgeometry->SerializeJSON(writer, options);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", _sensorname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "linkName", _linkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", _trelative);
+    _sensorgeometry->SerializeJSON(value, allocator, options);
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
@@ -158,10 +149,10 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::AttachedSensor::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void RobotBase::AttachedSensor::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     UpdateInfo();
-    _info.SerializeJSON(writer, options);
+    _info.SerializeJSON(value, allocator, options);
 }
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
@@ -2566,30 +2557,35 @@ void RobotBase::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    KinBody::SerializeJSON(writer,options);
+    KinBody::SerializeJSON(value, allocator, options);
 
-    writer->WriteString("manipulators");
-    writer->StartArray();
-    FOREACHC(it,GetManipulators()) {
-        writer->StartObject();
-        (*it)->SerializeJSON(writer, options);
-        writer->EndObject();
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+    {
+        rapidjson::Value manipulatorsValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(manipulatorsValue);
+        FOREACHC(it, GetLinks()) {
+            rapidjson::Value manipulatorValue;
+            (*it)->SerializeJSON(manipulatorValue, allocator, options);
+            manipulatorsValue.PushBack(manipulatorValue, allocator);
+        }
+        value.AddMember("manipulators", manipulatorsValue, allocator);
     }
-    writer->EndArray();
 
-    writer->WriteString("attachedSensors");
-    writer->StartArray();
-    FOREACHC(it,GetAttachedSensors()) {
-        writer->StartObject();
-        (*it)->SerializeJSON(writer, options);
-        writer->EndObject();
+    {
+        rapidjson::Value attachedSensorsValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorsValue);
+        FOREACHC(it, GetLinks()) {
+            rapidjson::Value attachedSensorValue;
+            (*it)->SerializeJSON(attachedSensorValue, allocator, options);
+            attachedSensorsValue.PushBack(attachedSensorValue, allocator);
+        }
+        value.AddMember("attachedSensors", attachedSensorsValue, allocator);
     }
-    writer->EndArray();
 
-    writer->WriteString("robot");
-    writer->WriteBool(true);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "robot", true);
 }
 
 const std::string& RobotBase::GetRobotStructureHash() const

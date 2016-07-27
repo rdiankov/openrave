@@ -18,7 +18,6 @@
 #include <boost/lexical_cast.hpp>
 #include <openrave/planningutils.h>
 #include <openrave/xmlreaders.h>
-#include <openrave/jsonreaders.h>
 
 namespace OpenRAVE {
 
@@ -50,38 +49,38 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
     O << "</trajectory>" << endl;
 }
 
-void TrajectoryBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void TrajectoryBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("type");
-    writer->WriteString(GetXMLId());
+    // writer->WriteString("type");
+    // writer->WriteString(GetXMLId());
 
-    writer->WriteString("configuration");
-    writer->StartObject();
-    GetConfigurationSpecification().SerializeJSON(writer, options);
-    writer->EndObject();
+    // writer->WriteString("configuration");
+    // writer->StartObject();
+    // GetConfigurationSpecification().SerializeJSON(writer, options);
+    // writer->EndObject();
 
-    writer->WriteString("data");
-    writer->StartObject();
-    writer->WriteString("count");
-    writer->WriteInt(GetNumWaypoints());
-    std::vector<dReal> data;
-    GetWaypoints(0,GetNumWaypoints(),data);
-    writer->WriteString("data");
-    writer->WriteArray(data);
-    writer->EndObject();
+    // writer->WriteString("data");
+    // writer->StartObject();
+    // writer->WriteString("count");
+    // writer->WriteInt(GetNumWaypoints());
+    // std::vector<dReal> data;
+    // GetWaypoints(0,GetNumWaypoints(),data);
+    // writer->WriteString("data");
+    // writer->WriteArray(data);
+    // writer->EndObject();
 
-    if( GetDescription().size() > 0 ) {
-        writer->WriteString("description");
-        writer->WriteString(GetDescription());
-    }
+    // if( GetDescription().size() > 0 ) {
+    //     writer->WriteString("description");
+    //     writer->WriteString(GetDescription());
+    // }
 
-    if( GetReadableInterfaces().size() > 0 ) {
-        FOREACHC(it, GetReadableInterfaces()) {
-            writer->StartObject();
-            it->second->SerializeJSON(writer, options);
-            writer->EndObject();
-        }
-    }
+    // if( GetReadableInterfaces().size() > 0 ) {
+    //     FOREACHC(it, GetReadableInterfaces()) {
+    //         writer->StartObject();
+    //         it->second->SerializeJSON(writer, options);
+    //         writer->EndObject();
+    //     }
+    // }
 }
 
 InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)

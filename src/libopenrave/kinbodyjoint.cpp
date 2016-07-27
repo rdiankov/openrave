@@ -128,84 +128,45 @@ int KinBody::JointInfo::GetDOF() const
     return int(type & 0xf);
 }
 
-void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     int dof = GetDOF();
 
-    writer->WriteString("sid");
-    writer->WriteString(sid);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    writer->WriteString("name");
-    writer->WriteString(name);
-
-    writer->WriteString("type");
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
     switch (type) {
     case JointRevolute:
-        writer->WriteString("revolute");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "revolute");
         break;
     case JointPrismatic:
-        writer->WriteString("prismatic");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "prismatic");
         break;
     case JointNone:
-        writer->WriteNull();
         break;
     default:
-        writer->WriteInt(static_cast<int>(type));
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", static_cast<int>(type));
         break;
     }
 
-    writer->WriteString("parentLinkName");
-    writer->WriteString(parentLinkName);
-    writer->WriteString("childLinkName");
-    writer->WriteString(childLinkName);
-
-    writer->WriteString("anchor");
-    writer->WriteVector(anchor);
-
-    writer->WriteString("axes");
-    writer->StartArray();
-    for (size_t i = 0; i < axes.size() && i < (size_t)dof; ++i) {
-        writer->WriteVector(axes[i]);
-    }
-    writer->EndArray();
-
-    writer->WriteString("currentValues");
-    writer->WriteArray(currentValues);
-
-    writer->WriteString("resolutions");
-    writer->WriteBoost3Array(resolutions, dof);
-
-    writer->WriteString("maxVel");
-    writer->WriteBoost3Array(maxVel, dof);
-
-    writer->WriteString("hardMaxVel");
-    writer->WriteBoost3Array(hardMaxVel, dof);
-
-    writer->WriteString("maxAccel");
-    writer->WriteBoost3Array(maxAccel, dof);
-
-    writer->WriteString("maxTorque");
-    writer->WriteBoost3Array(maxTorque, dof);
-
-    writer->WriteString("maxInertia");
-    writer->WriteBoost3Array(maxInertia, dof);
-
-    writer->WriteString("weights");
-    writer->WriteBoost3Array(weights, dof);
-
-    writer->WriteString("offsets");
-    writer->WriteBoost3Array(offsets, dof);
-
-    writer->WriteString("lowerLimit");
-    writer->WriteBoost3Array(lowerLimit, dof);
-    writer->WriteString("upperLimit");
-    writer->WriteBoost3Array(upperLimit, dof);
-
-    writer->WriteString("isCircular");
-    writer->WriteBoost3Array(isCircular, dof);
-
-    writer->WriteString("isActive");
-    writer->WriteBool(isActive);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "parentLinkName", parentLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "childLinkName", childLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "anchor", anchor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "axes", axes, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "currentValues", currentValues);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "resolutions", resolutions, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxVel", maxVel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "hardMaxVel", hardMaxVel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxAccel", maxAccel, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxTorque", maxTorque, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxInertia", maxInertia, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "weights", weights, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "offsets", offsets, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "lowerLimit", lowerLimit, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "upperLimit", upperLimit, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "isCircular", isCircular, dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "isActive", isActive);
 
     // if (!!_trajfollow) {
     //     writer->WriteString("trajectory");
@@ -223,60 +184,33 @@ void KinBody::JointInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
             }
         }
         if (bfound) {
-            writer->WriteString("mimic");
-            writer->StartArray();
+            rapidjson::Value mimics;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(mimics);
             for (size_t i = 0; i < mimic.size() && i < (size_t)dof; ++i) {
-                writer->StartObject();
-                mimic[i]->SerializeJSON(writer, options);
-                writer->EndObject();
+                rapidjson::Value mimicValue;
+                mimic[i]->SerializeJSON(mimicValue, allocator, options);
+                mimics.PushBack(mimicValue, allocator);
             }
-            writer->EndArray();
+            value.AddMember("mimic", mimics, allocator);
         }
     }
 
     if (floatParameters.size() > 0) {
-        writer->WriteString("floatParameters");
-        writer->StartObject();
-        FOREACHC(kv, floatParameters) {
-            writer->WriteString(kv->first.c_str());
-            writer->StartArray();
-            FOREACHC(it, kv->second) {
-                writer->WriteDouble(*it);
-            }
-            writer->EndArray();
-        }
-        writer->EndObject();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "floatParameters", floatParameters);
     }
 
     if (intParameters.size() > 0) {
-        writer->WriteString("intParameters");
-        writer->StartObject();
-        FOREACHC(kv, intParameters) {
-            writer->WriteString(kv->first.c_str());
-            writer->StartArray();
-            FOREACHC(it, kv->second) {
-                writer->WriteInt(*it);
-            }
-            writer->EndArray();
-        }
-        writer->EndObject();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "intParameters", intParameters);
     }
 
     if (stringParameters.size() > 0) {
-        writer->WriteString("stringParameters");
-        writer->StartObject();
-        FOREACHC(kv, stringParameters) {
-            writer->WriteString(kv->first);
-            writer->WriteString(kv->second);
-        }
-        writer->EndObject();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "stringParameters", stringParameters);
     }
 
     if (!!electricMotorActuator) {
-        writer->WriteString("electricMotorActuator");
-        writer->StartObject();
-        electricMotorActuator->SerializeJSON(writer, options);
-        writer->EndObject();
+        rapidjson::Value electricMotorActuatorValue;
+        electricMotorActuator->SerializeJSON(electricMotorActuatorValue, allocator, options);
+        value.AddMember("electricMotorActuator", electricMotorActuatorValue, allocator);
     }
 }
 
@@ -1839,20 +1773,16 @@ void KinBody::Joint::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::Joint::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::Joint::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     UpdateInfo();
-    _info.SerializeJSON(writer, options);
+    _info.SerializeJSON(value, allocator, options);
 }
 
-void KinBody::MimicInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::MimicInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("equations");
-    writer->StartArray();
-    for (size_t i=0; i<_equations.size(); ++i) {
-        writer->WriteString(_equations[i]);
-    }
-    writer->EndArray();
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "equations", _equations);
 }
 
 }

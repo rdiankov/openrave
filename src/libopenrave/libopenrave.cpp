@@ -2232,67 +2232,6 @@ void DummyXMLReader::characters(const std::string& ch)
     }
 }
 
-// Dummy Reader
-DummyJSONReader::DummyJSONReader(const std::string& fieldname, const std::string& pparentname, boost::shared_ptr<std::ostream> osrecord) : _fieldname(fieldname), _osrecord(osrecord)
-{
-    _parentname = pparentname;
-    _parentname += ":";
-    _parentname += _fieldname;
-}
-
-BaseJSONReader::ProcessElement DummyJSONReader::startElement(const std::string& name, const AttributesList &atts)
-{
-    if( !!_pcurreader ) {
-        if( _pcurreader->startElement(name, atts) == PE_Support ) {
-            return PE_Support;
-        }
-        return PE_Ignore;
-    }
-
-    if( !!_osrecord ) {
-        *_osrecord << "<" << name << " ";
-        FOREACHC(itatt, atts) {
-            *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
-        }
-        *_osrecord << ">" << endl;
-    }
-
-    // create a new parser
-    _pcurreader.reset(new DummyJSONReader(name, _parentname,_osrecord));
-    return PE_Support;
-}
-
-bool DummyJSONReader::endElement(const std::string& name)
-{
-    if( !!_pcurreader ) {
-        if( _pcurreader->endElement(name) ) {
-            _pcurreader.reset();
-            if( !!_osrecord ) {
-                *_osrecord << "</" << name << ">" << endl;
-            }
-        }
-        return false;
-    }
-
-    if( name == _fieldname ) {
-        return true;
-    }
-    RAVELOG_ERROR(str(boost::format("invalid xml tag %s\n")%name));
-    return false;
-}
-
-void DummyJSONReader::characters(const std::string& ch)
-{
-    if( !_pcurreader ) {
-        if( !!_osrecord ) {
-            *_osrecord << ch;
-        }
-    }
-    else {
-        _pcurreader->characters(ch);
-    }
-}
-
 EnvironmentBase::EnvironmentBase()
 {
     if( !RaveGlobalState() ) {
@@ -2314,7 +2253,7 @@ bool SensorBase::SensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::SensorData::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void SensorBase::SensorData::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVELOG_WARN("SensorData JSON serialization not implemented\n");
 }
@@ -2325,7 +2264,7 @@ bool SensorBase::LaserSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::LaserSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void SensorBase::LaserSensorData::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVELOG_WARN("LaserSensorData JSON serialization not implemented\n");
 }
@@ -2336,7 +2275,7 @@ bool SensorBase::CameraSensorData::serialize(std::ostream& O) const
     return true;
 }
 
-void SensorBase::CameraSensorData::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void SensorBase::CameraSensorData::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVELOG_WARN("CameraSensorData JSON serialization not implemented\n");
 }
@@ -2349,11 +2288,11 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::SensorGeometry::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
     if( hardware_id.size() > 0 ) {
-        writer->WriteString("hardwareID");
-        writer->WriteString(hardware_id);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "hardwareID", hardware_id);
     }
 }
 
@@ -2395,28 +2334,17 @@ void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options)
     }
 }
 
-void SensorBase::CameraGeomData::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("sensor");
-    writer->WriteString(sensor_reference);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    writer->WriteString("targetRegion");
-    writer->WriteString(target_region);
-
-    writer->WriteString("cameraIntrinsics");
-    writer->WriteCameraIntrinsics(intrinsics);
-
-    writer->WriteString("width");
-    writer->WriteInt(width);
-
-    writer->WriteString("height");
-    writer->WriteInt(height);
-
-    writer->WriteString("measurementTime");
-    writer->WriteDouble(measurement_time);
-
-    writer->WriteString("gain");
-    writer->WriteDouble(gain);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sensor", sensor_reference);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "targetRegion", target_region);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "cameraIntrinsics", intrinsics);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "width", width);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "height", height);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "measurementTime", measurement_time);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "gain", gain);
 }
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2424,9 +2352,9 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }
 
-void SensorBase::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void SensorBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    InterfaceBase::SerializeJSON(writer, options);
+    InterfaceBase::SerializeJSON(value, allocator, options);
 }
 
 class CustomSamplerCallbackData : public boost::enable_shared_from_this<CustomSamplerCallbackData>, public UserData

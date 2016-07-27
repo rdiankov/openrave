@@ -391,18 +391,20 @@ public:
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     }
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0)
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0)
     {
-        writer->WriteString("geom");
-        writer->StartObject();
-        _pgeom->SerializeJSON(writer, options);
-        writer->EndObject();
-        writer->WriteString("color");
-        writer->WriteVector(_vColor);
-        writer->WriteString("format");
-        writer->WriteString(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
+        SensorBase::SerializeJSON(value, allocator, options);
 
-        SensorBase::SerializeJSON(writer, options);
+        RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
+        {
+            rapidjson::Value geomValue;
+            _pgeom->SerializeJSON(geomValue, allocator, options);
+            value.AddMember("geom", geomValue, allocator);
+        }
+
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "color", _vColor);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "format", _channelformat.size() > 0 ? _channelformat : std::string("uint8"));        
     }
 
 protected:

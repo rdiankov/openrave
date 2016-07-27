@@ -321,87 +321,45 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
     }
 }
 
-void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("sid");
-    writer->WriteString(sid);
-
-    writer->WriteString("name");
-    writer->WriteString(name);
-
-    writer->WriteString("transform");
-    writer->WriteTransform(transform);
-
-    writer->WriteString("massTransform");
-    writer->WriteTransform(massTransform);
-
-    writer->WriteString("mass");
-    writer->WriteDouble(mass);
-
-    writer->WriteString("inertiaMoments");
-    writer->WriteVector(inertiaMoments);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", transform);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "massTransform", massTransform);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "mass", mass);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "inertiaMoments", inertiaMoments);
 
     if (floatParameters.size() > 0) {
-        writer->WriteString("floatParameters");
-        writer->StartObject();
-        FOREACHC(kv, floatParameters) {
-            writer->WriteString(kv->first.c_str());
-            writer->StartArray();
-            FOREACHC(it, kv->second) {
-                writer->WriteDouble(*it);
-            }
-            writer->EndArray();
-        }
-        writer->EndObject();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "floatParameters", floatParameters);
     }
 
     if (intParameters.size() > 0) {
-        writer->WriteString("intParameters");
-        writer->StartObject();
-        FOREACHC(kv, intParameters) {
-            writer->WriteString(kv->first.c_str());
-            writer->StartArray();
-            FOREACHC(it, kv->second) {
-                writer->WriteInt(*it);
-            }
-            writer->EndArray();
-        }
-        writer->EndObject();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "intParameters", intParameters);
     }
 
     if (stringParameters.size() > 0) {
-        writer->WriteString("stringParameters");
-        writer->StartObject();
-        FOREACHC(kv, stringParameters) {
-            writer->WriteString(kv->first);
-            writer->WriteString(kv->second);
-        }
-        writer->EndObject();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "stringParameters", stringParameters);
     }
     
     if (forcedAdjacentLinks.size() > 0) {
-        writer->WriteString("forcedAdjacentLinks");
-        writer->StartArray();
-        FOREACHC(it, forcedAdjacentLinks) {
-            writer->WriteString(*it);
-        }
-        writer->EndArray();
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "forcedAdjacentLinks", forcedAdjacentLinks);
     }
-
     if (options == 0 || (options & SO_Geometry) != 0) {
 
         if (geometries.size() > 0) {
-            writer->WriteString("geometries");
-            writer->StartArray();
+            rapidjson::Value geometriesValue;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(geometriesValue);
             FOREACHC(it, geometries) {
-                writer->StartObject();
-                (*it)->SerializeJSON(writer, options);
-                writer->EndObject();
+                rapidjson::Value geometryValue;
+                (*it)->SerializeJSON(geometryValue, allocator, options);
+                geometriesValue.PushBack(geometryValue, allocator);
             }
-            writer->EndArray();
+            value.AddMember("geometries", geometriesValue, allocator);
         }
-
 #if 0
+
         // don't save extra geometries info for now
         if (extraGeometries.size() > 0) {
             writer->WriteString("extraGeometries");
@@ -421,17 +379,14 @@ void KinBody::LinkInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
 #endif
     }
 
-    writer->WriteString("isStatic");
-    writer->WriteBool(isStatic);
-
-    writer->WriteString("isEnabled");
-    writer->WriteBool(isEnabled);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "isStatic", isStatic);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "isEnabled", isEnabled);
 }
     
-void KinBody::Link::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::Link::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     UpdateInfo();
-    _info.SerializeJSON(writer, options);
+    _info.SerializeJSON(value, allocator, options);
 }
 
 void KinBody::Link::SetStatic(bool bStatic)

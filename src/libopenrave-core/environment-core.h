@@ -2492,25 +2492,23 @@ protected:
     }
 
     /// \brief serialize environment as json
-    void SerializeJSON(BaseJSONWriterPtr writer, int options=0)
+    void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
-        writer->WriteString("unit");
-        writer->StartArray();
-        writer->WriteString(_unit.first);
-        writer->WriteDouble(_unit.second);
-        writer->EndArray();
+        RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "unit", _unit);
 
-        if (_vecbodies.size() > 0) {
-            writer->WriteString("bodies");
-            writer->StartArray();
-            FOREACHC (it,_vecbodies) {
-                writer->StartObject();
-                (*it)->SerializeJSON(writer, options);
-                writer->EndObject();
+        if (_vecbodies.size() > 0)
+        {
+            rapidjson::Value bodies;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(bodies);
+            FOREACHC(it, _vecbodies) {
+                rapidjson::Value body;
+                (*it)->SerializeJSON(body, allocator, options);
+                bodies.PushBack(body, allocator);
             }
-            writer->EndArray();
+            value.AddMember("bodies", bodies, allocator);
         }
     }
 

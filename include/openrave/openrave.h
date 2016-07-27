@@ -83,6 +83,9 @@
 #include <boost/multi_array.hpp>
 //#include <boost/cstdint.hpp>
 
+#define RAPIDJSON_HAS_STDSTRING 1
+#include <rapidjson/document.h>
+
 #endif
 
 #if defined(__GNUC__)
@@ -381,15 +384,9 @@ typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
 typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
-class BaseJSONReader;
-typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
-typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
 class BaseXMLWriter;
 typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
 typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
-class BaseJSONWriter;
-typedef boost::shared_ptr<BaseJSONWriter> BaseJSONWriterPtr;
-typedef boost::shared_ptr<BaseJSONWriter const> BaseJSONWriterConstPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
@@ -418,8 +415,12 @@ public:
     }
 
     /// \brief serializes the interface as JSON, may change member data like unique ids etc
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) {
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) {
     }
+
+    virtual void DeserializeJSON(const rapidjson::Value &value, int options=0) {
+    }
+
 private:
     std::string __xmlid;
 };
@@ -478,50 +479,6 @@ public:
 
 typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateXMLReaderFn;
 
-/// \brief base class for all json readers. JSONReaders are used to process data from json files.
-///
-/// Custom readers can be registered through \ref RaveRegisterJSONReader.
-class OPENRAVE_API BaseJSONReader : public boost::enable_shared_from_this<BaseJSONReader>
-{
-public:
-    enum ProcessElement
-    {
-        PE_Pass=0,     ///< current tag was not supported, so pass onto another class
-        PE_Support=1,     ///< current tag will be processed by this class
-        PE_Ignore=2,     ///< current tag and all its children should be ignored
-    };
-    BaseJSONReader() {
-    }
-    virtual ~BaseJSONReader() {
-    }
-
-    /// a readable interface that stores the information processsed for the current tag
-    /// This pointer is used to the InterfaceBase class registered readers
-    virtual ReadablePtr GetReadable() {
-        return ReadablePtr();
-    }
-
-    /// Gets called in the beginning of each "<type>" expression. In this case, name is "type"
-    /// \param name of the tag, will be always lower case
-    /// \param atts string of attributes where the first std::string is the attribute name and second is the value
-    /// \return true if tag is accepted and this class will process it, otherwise false
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) = 0;
-
-    /// Gets called at the end of each "</type>" expression. In this case, name is "type"
-    /// \param name of the tag, will be always lower case
-    /// \return true if JSONReader has finished parsing (one condition is that name==_fieldname) , otherwise false
-    virtual bool endElement(const std::string& name) = 0;
-
-    /// gets called for all data in between tags.
-    /// \param ch a string to the data
-    virtual void characters(const std::string& ch) = 0;
-
-    /// JSON filename/resource used for this class (can be empty)
-    std::string _filename;
-};
-
-typedef boost::function<BaseJSONReaderPtr(InterfaceBasePtr, const AttributesList&)> CreateJSONReaderFn;
-
 /// \brief reads until the tag ends
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
@@ -541,27 +498,6 @@ private:
     std::string _fieldname;
     boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
     boost::shared_ptr<BaseXMLReader> _pcurreader;
-};
-
-/// \brief reads until the tag ends
-class OPENRAVE_API DummyJSONReader : public BaseJSONReader
-{
-public:
-    DummyJSONReader(const std::string& fieldname, const std::string& parentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
-    const std::string& GetFieldName() const {
-        return _fieldname;
-    }
-    virtual boost::shared_ptr<std::ostream> GetStream() const {
-        return _osrecord;
-    }
-private:
-    std::string _parentname;     /// JSON filename
-    std::string _fieldname;
-    boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
-    boost::shared_ptr<BaseJSONReader> _pcurreader;
 };
 
 /// \brief base class for writing to XML files.
@@ -741,7 +677,7 @@ public:
             return offset!=r.offset || dof!=r.dof || name!=r.name || interpolation!=r.interpolation;
         }
 
-        virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
 
         /// \brief For each data point, the number of values to offset before data for this group starts.
         int offset;
@@ -795,19 +731,6 @@ protected:
         ConfigurationSpecification& _spec;
         std::stringstream _ss;
         BaseXMLReaderPtr _preader;
-    };
-
-    class JSONReader : public BaseJSONReader
-    {
-public:
-        JSONReader(ConfigurationSpecification& spec);
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-        virtual bool endElement(const std::string& name);
-        virtual void characters(const std::string& ch);
-protected:
-        ConfigurationSpecification& _spec;
-        std::stringstream _ss;
-        BaseJSONReaderPtr _preader;
     };
 
     ConfigurationSpecification();
@@ -1077,7 +1000,7 @@ protected:
     /// \brief return a function to get the states of the configuration in the environment
     virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) const;
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -2652,83 +2575,185 @@ const std::string& IkParameterization::GetName() const
     throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
 }
 
+#define RAVE_SERIALIZEJSON(value, ...) rapidjson::Value value; RaveSerializeJSON(value, allocator, ##__VA_ARGS__)
+#define RAVE_SERIALIZEJSON_PUSHBACK(value, ...) { do { RAVE_SERIALIZEJSON(__v, ##__VA_ARGS__); value.PushBack(__v, allocator); } while(false); };
+#define RAVE_SERIALIZEJSON_ADDMEMBER(value, key, ...) { do { RAVE_SERIALIZEJSON(__v, ##__VA_ARGS__); value.AddMember(key, __v, allocator); } while(false); };
 
-/// \brief base class for writing to JSON files.
-///
-/// OpenRAVE Interfaces accept a BaseJSONWriter instance and call its write methods to write the data.
-class OPENRAVE_API BaseJSONWriter : public boost::enable_shared_from_this<BaseJSONWriter>
+#define RAVE_SERIALIZEJSON_ENSURE_OBJECT(value) { if (!value.IsObject()) { value.SetObject(); } }
+#define RAVE_SERIALIZEJSON_ENSURE_ARRAY(value) { if (!value.IsArray()) { value.SetArray(); } }
+
+#define RAVE_SERIALIZEJSON_CLEAR_OBJECT(value) { do { value.SetObject(); } while (false); }
+#define RAVE_SERIALIZEJSON_CLEAR_ARRAY(value) { do { value.SetArray(); } while (false); }
+
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, bool v);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int v);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal v);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const char* v);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::string& v);
+template <typename T1, typename T2>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::pair<T1, T2>& p);
+template <typename K, typename V>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::map<K, V>& m);
+template <typename T, std::size_t N>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const boost::array<T, N>& a, std::size_t n = (std::size_t)-1);
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n = (std::size_t)-1);
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false);
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveTransform<T>& t);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const TriMesh& trimesh);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics);
+
+/// \brief serialize a bool as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, bool v)
 {
-public:
-    virtual ~BaseJSONWriter() {
+    value = rapidjson::Value(v).Move();
+}
+
+/// \brief serialize a int as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int v)
+{
+    value = rapidjson::Value(v).Move();
+}
+
+/// \brief serialize a dReal as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal v)
+{
+    value = rapidjson::Value(v).Move();
+}
+
+/// \brief serialize a c string as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const char* v)
+{
+    value = rapidjson::Value().SetString(v, allocator);
+}
+
+/// \brief serialize a std::string as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::string& v)
+{
+    value = rapidjson::Value().SetString(v, allocator);
+}
+
+/// \brief serialize a std::pair as json
+template <typename T1, typename T2>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::pair<T1, T2>& p)
+{
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, p.first);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, p.second);
+}
+
+/// \brief serialize a std::map as json
+template <typename K, typename V>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::map<K, V>& m)
+{
+    RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
+
+    for (typename std::map<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
+        RAVE_SERIALIZEJSON(key, it->first);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, key, it->second);
     }
-    /// \brief return the format for the data writing, should be all lower capitals.
-    ///
-    /// Samples formats are 'json'
-    virtual const std::string& GetFormat() const;
+}
 
-    /// \brief start an array, subsequent writes will be element of the array
-    virtual void StartArray() = 0;
+/// \brief serialize a std::vector as json
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::vector<T>& v, std::size_t n = (std::size_t)-1)
+{
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
+    for (std::size_t i = 0; i < v.size() && i < n; ++i)
+    {
+        RAVE_SERIALIZEJSON_PUSHBACK(value, v[i]);
+    }
+}
 
-    /// \brief ends the array
-    virtual void EndArray() = 0;
+/// \brief serialize a boost::array as json
+template <typename T, std::size_t N>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const boost::array<T, N>& a, std::size_t n = (std::size_t)-1)
+{
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
+    for (std::size_t i = 0; i < a.size() && i < n; ++i)
+    {
+        RAVE_SERIALIZEJSON_PUSHBACK(value, a[i]);
+    }
+}
 
-    /// \brief start an object, subsequent pairs of writes will be key and values in the object
-    virtual void StartObject() = 0;
+/// \brief serialize an OpenRAVE Vector as json
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false)
+{
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, v[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, v[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, v[2]);
+    if (quat)
+    {
+        RAVE_SERIALIZEJSON_PUSHBACK(value, v[3]);
+    }
+}
 
-    /// \brief ends the object
-    virtual void EndObject() = 0;
+/// \brief serialize an OpenRAVE Transform as json
+template <typename T>
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveTransform<T>& t)
+{
+    RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[2]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[3]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.trans[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.trans[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, t.trans[2]);
+}
 
-    /// \brief writes null
-    virtual void WriteNull() = 0;
+/// \brief serialize an OpenRAVE TriMesh as json
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const TriMesh& trimesh)
+{
+    RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
+    {
+        rapidjson::Value verticesValue;
+        verticesValue.SetArray();
+        for (std::vector<Vector>::const_iterator it = trimesh.vertices.begin(); it != trimesh.vertices.end(); ++it) {
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, (*it)[0]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, (*it)[1]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, (*it)[2]);
+        }
+        value.AddMember("vertices", verticesValue, allocator);
+    }
 
-    /// \brief writes boolean value
-    virtual void WriteBool(bool value) = 0;
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "indices", trimesh.indices);
+}
 
-    /// \brief writes signed integer
-    virtual void WriteInt(int value) = 0;
+/// \brief serialize an OpenRAVE IkParameterization as json
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam)
+{
+    RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", ikparam.GetName());
+    switch(ikparam.GetType()) {
+    case IKP_Transform6D:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "rotate", ikparam.GetTransform6D().rot);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "translate", ikparam.GetTransform6D().trans);
+        break;
+    case IKP_TranslationDirection5D:
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "translate", ikparam.GetTranslationDirection5D().pos);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "direction", ikparam.GetTranslationDirection5D().dir);
+        break;
+    }
+}
 
-    /// \brief writes double precision floating point
-    virtual void WriteDouble(double value) = 0;
-
-    /// \brief writes std::string
-    virtual void WriteString(const std::string& value) = 0;
-
-    /// \brief writes c string
-    virtual void WriteString(const char* value) = 0;
-
-    /// \brief writes an OpenRAVE Vector
-    virtual void WriteVector(const Vector& v, bool quat = false);
-
-    /// \brief writes an OpenRAVE Transform
-    virtual void WriteTransform(const Transform& t);
-
-    /// \brief writes an OpenRAVE TriMesh
-    virtual void WriteTriMesh(const TriMesh& trimesh);
-
-    /// \brief writes an OpenRAVE ikparam
-    virtual void WriteIkParameterization(const IkParameterization& ikparam);
-
-    /// \brief writes an OpenRAVE CameraIntrinsics
-    virtual void WriteCameraIntrinsics(const SensorBase::CameraIntrinsics& intrinsics);
-
-    /// \brief writes a boost array of dReal
-    virtual void WriteBoost3Array(const boost::array<dReal, 3>& a, size_t n=3);
-
-    /// \brief writes a boost array of uint8_t
-    virtual void WriteBoost3Array(const boost::array<uint8_t, 3>& a, size_t n=3);
-
-    /// \brief writes a std::vector of dReal
-    virtual void WriteArray(const std::vector<dReal>& a);
-
-    /// \brief writes a std::vector of int
-    virtual void WriteArray(const std::vector<int>& a);
-
-    /// \brief writes a std::vector of std::string
-    virtual void WriteArray(const std::vector<std::string>& a);
-
-    /// \brief writes a std::pair of dReal
-    virtual void WritePair(const std::pair<dReal, dReal>& p);
-};
+/// \brief serialize an OpenRAVE CameraIntrinsics as json
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics)
+{
+    RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "fx", intrinsics.fx);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "fy", intrinsics.fy);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "cx", intrinsics.cx);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "cy", intrinsics.cy);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "focalLength", intrinsics.focal_length);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "distortionModel", intrinsics.distortion_model);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "distortionCoeffs", intrinsics.distortion_coeffs);
+}
 
 
 } // end namespace OpenRAVE
@@ -2810,7 +2835,6 @@ BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::XMLReadable)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::InterfaceBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLReader)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseXMLWriter)
-BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::BaseJSONWriter)
 
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::EnvironmentBase)
 BOOST_TYPEOF_REGISTER_TYPE(OpenRAVE::EnvironmentBase::BODYSTATE)

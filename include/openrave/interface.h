@@ -180,7 +180,7 @@ public:
         TODO: add example
         \endcode
      */
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
 
 protected:
     /// \brief The function to be executed for every command.

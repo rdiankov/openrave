@@ -135,69 +135,28 @@ ElectricMotorActuatorInfo& ElectricMotorActuatorInfo::operator=(const ElectricMo
     return *this;
 }
 
-void ElectricMotorActuatorInfo::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("modelType");
-    writer->WriteString(modelType);
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    writer->WriteString("assignedPowerRating");
-    writer->WriteDouble(assignedPowerRating);
-
-    writer->WriteString("maxSpeed");
-    writer->WriteDouble(maxSpeed);
-
-    writer->WriteString("noLoadSpeed");
-    writer->WriteDouble(noLoadSpeed);
-
-    writer->WriteString("stallTorque");
-    writer->WriteDouble(stallTorque);
-
-    writer->WriteString("maxInstantaneousTorque");
-    writer->WriteDouble(maxInstantaneousTorque);
-
-    writer->WriteString("nominalSpeedTorquePoints");
-    writer->StartArray();
-    for (size_t i=0; i<nominalSpeedTorquePoints.size(); ++i) {
-        writer->WritePair(nominalSpeedTorquePoints[i]);
-    }
-    writer->EndArray();
-
-    writer->WriteString("maxSpeedTorquePoints");
-    writer->StartArray();
-    for (size_t i=0; i<maxSpeedTorquePoints.size(); ++i) {
-        writer->WritePair(maxSpeedTorquePoints[i]);
-    }
-    writer->EndArray();
-
-    writer->WriteString("nominalTorque");
-    writer->WriteDouble(nominalTorque);
-
-    writer->WriteString("rotorInertia");
-    writer->WriteDouble(rotorInertia);
-
-    writer->WriteString("torqueConstant");
-    writer->WriteDouble(torqueConstant);
-
-    writer->WriteString("nominalVoltage");
-    writer->WriteDouble(nominalVoltage);
-
-    writer->WriteString("speedConstant");
-    writer->WriteDouble(speedConstant);
-
-    writer->WriteString("startingCurrent");
-    writer->WriteDouble(startingCurrent);
-
-    writer->WriteString("terminalResistance");
-    writer->WriteDouble(terminalResistance);
-
-    writer->WriteString("gearRatio");
-    writer->WriteDouble(gearRatio);
-
-    writer->WriteString("coloumbFriction");
-    writer->WriteDouble(coloumbFriction);
-
-    writer->WriteString("viscousFriction");
-    writer->WriteDouble(viscousFriction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "modelType", modelType);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "assignedPowerRating", assignedPowerRating);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxSpeed", maxSpeed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "noLoadSpeed", noLoadSpeed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "stallTorque", stallTorque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxInstantaneousTorque", maxInstantaneousTorque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "nominalSpeedTorquePoints", nominalSpeedTorquePoints);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxSpeedTorquePoints", maxSpeedTorquePoints);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "nominalTorque", nominalTorque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "rotorInertia", rotorInertia);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "torqueConstant", torqueConstant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "nominalVoltage", nominalVoltage);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "speedConstant", speedConstant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "startingCurrent", startingCurrent);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "terminalResistance", terminalResistance);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "gearRatio", gearRatio);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "coloumbFriction", coloumbFriction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "viscousFriction", viscousFriction);
 }
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
@@ -562,12 +521,20 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     Destroy();
     _veclinks.reserve(linkinfos.size());
     set<std::string> setusednames;
+    set<std::string> setusedsids;
     FOREACHC(itlinkinfo, linkinfos) {
         LinkInfoConstPtr rawinfo = *itlinkinfo;
         if( setusednames.find(rawinfo->name) != setusednames.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once"), rawinfo->name, ORE_InvalidArguments);
         }
         setusednames.insert(rawinfo->name);
+
+        // check sid duplicates
+        if( setusedsids.find(rawinfo->sid) != setusedsids.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s sid %s is not unique"), rawinfo->name%rawinfo->sid, ORE_InvalidArguments);
+        }
+        setusedsids.insert(rawinfo->sid);
+
         LinkPtr plink(new Link(shared_kinbody()));
         plink->_info = *rawinfo;
         LinkInfo& info = plink->_info;
@@ -4700,56 +4667,56 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
     InterfaceBase::Serialize(writer,options);
 }
 
-void KinBody::SerializeJSON(BaseJSONWriterPtr writer, int options)
+void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    writer->WriteString("id");
-    writer->WriteString(GetID());
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "id", GetID());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", GetName());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", GetTransform());
 
-    writer->WriteString("name");
-    writer->WriteString(GetName());
-
-    writer->WriteString("transform");
-    writer->WriteTransform(GetTransform());
-
-    writer->WriteString("links");
-    writer->StartArray();
-    FOREACHC(it,GetLinks()) {
-        writer->StartObject();
-        (*it)->SerializeJSON(writer, options);
-        writer->EndObject();
-    }
-    writer->EndArray();
-
-    if (GetJoints().size() > 0) {
-        writer->WriteString("joints");
-        writer->StartArray();
-        FOREACHC(it,GetJoints()) {
-            writer->StartObject();
-            (*it)->SerializeJSON(writer, options);
-            writer->EndObject();
+    {
+        rapidjson::Value linksValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(linksValue);
+        FOREACHC(it, GetLinks()) {
+            rapidjson::Value linkValue;
+            (*it)->SerializeJSON(linkValue, allocator, options);
+            linksValue.PushBack(linkValue, allocator);
         }
-        writer->EndArray();
+        value.AddMember("links", linksValue, allocator);
     }
 
-    if (GetPassiveJoints().size() > 0) {
-        writer->WriteString("passiveJoints");
-        writer->StartArray();
-        FOREACHC(it,GetPassiveJoints()) {
-            writer->StartObject();
-            (*it)->SerializeJSON(writer, options);
-            writer->EndObject();
+    if (GetJoints().size() > 0)
+    {
+        rapidjson::Value jointsValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(jointsValue);
+        FOREACHC(it, GetJoints()) {
+            rapidjson::Value jointValue;
+            (*it)->SerializeJSON(jointValue, allocator, options);
+            jointsValue.PushBack(jointValue, allocator);
         }
-        writer->EndArray();
+        value.AddMember("joints", jointsValue, allocator);
+    }
+
+    if (GetPassiveJoints().size() > 0)
+    {
+        rapidjson::Value passiveJointsValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(passiveJointsValue);
+        FOREACHC(it, GetJoints()) {
+            rapidjson::Value jointValue;
+            (*it)->SerializeJSON(jointValue, allocator, options);
+            passiveJointsValue.PushBack(jointValue, allocator);
+        }
+        value.AddMember("passiveJoints", passiveJointsValue, allocator);
     }
 
     std::vector<dReal> vdofvalues;
     GetDOFValues(vdofvalues);
-    if (vdofvalues.size() > 0) {
-        writer->WriteString("dofValues");
-        writer->WriteArray(vdofvalues);
+    if (vdofvalues.size() > 0)
+    {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, "dofValues", vdofvalues);
     }
 
-    InterfaceBase::SerializeJSON(writer, options);
+    InterfaceBase::SerializeJSON(value, allocator, options);
 }
 
 void KinBody::serialize(std::ostream& o, int options) const

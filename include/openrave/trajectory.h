@@ -159,7 +159,7 @@ public:
     virtual void serialize(std::ostream& O, int options=0) const;
 
     /// \brief output the trajectory in JSON format
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0);
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
 
     /// \brief initialize the trajectory
     virtual InterfaceBasePtr deserialize(std::istream& I);

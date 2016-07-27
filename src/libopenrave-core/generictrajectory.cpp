@@ -18,7 +18,6 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/xmlreaders.h>
-#include <openrave/jsonreaders.h>
 
 namespace OpenRAVE {
 
@@ -320,27 +319,27 @@ public:
         O << "</trajectory>" << endl;
     }
 
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options)
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
     {
-        writer->WriteString("data");
-        writer->StartObject();
-        writer->WriteString("count");
-        writer->WriteInt(GetNumWaypoints());
-        writer->WriteString("data");
-        writer->WriteArray(_vtrajdata);
-        writer->EndObject();
-        if( GetDescription().size() > 0 ) {
-            writer->WriteString("description");
-            writer->WriteString(GetDescription());
-        }
+        // writer->WriteString("data");
+        // writer->StartObject();
+        // writer->WriteString("count");
+        // writer->WriteInt(GetNumWaypoints());
+        // writer->WriteString("data");
+        // writer->WriteArray(_vtrajdata);
+        // writer->EndObject();
+        // if( GetDescription().size() > 0 ) {
+        //     writer->WriteString("description");
+        //     writer->WriteString(GetDescription());
+        // }
 
-        if( GetReadableInterfaces().size() > 0 ) {
-            FOREACHC(it, GetReadableInterfaces()) {
-                writer->StartObject();
-                it->second->SerializeJSON(writer, options);
-                writer->EndObject();
-            }
-        }
+        // if( GetReadableInterfaces().size() > 0 ) {
+        //     FOREACHC(it, GetReadableInterfaces()) {
+        //         writer->StartObject();
+        //         it->second->SerializeJSON(writer, options);
+        //         writer->EndObject();
+        //     }
+        // }
     }
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)

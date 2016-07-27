@@ -18,7 +18,6 @@
 #include "openravepy_int.h"
 
 #include <openrave/xmlreaders.h>
-#include <openrave/jsonreaders.h>
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -68,12 +67,13 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
-        OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
-        writer->StartObject();
-        _xmlreadable->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
-        writer->EndObject();
-        return object(stringwriter.GetString());
+        // OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
+        // OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
+        // writer->StartObject();
+        // _xmlreadable->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
+        // writer->EndObject();
+        // return object(stringwriter.GetString());
+        return object();
     }
 
     XMLReadablePtr GetXMLReadable() {

@@ -642,7 +642,7 @@ public:
     }
 
     /// \brief serialize environment as json
-    virtual void SerializeJSON(BaseJSONWriterPtr writer, int options=0) = 0;
+    virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) = 0;
     
 protected:
     virtual const char* GetHash() const {
