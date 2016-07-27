@@ -3,7 +3,7 @@ set (openrave_SOURCES openrave.cpp)
 
 include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS})
 
-set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} openrave-md5)
+set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} openrave-md5 tbb)
 if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   set(openrave_libraries ${openrave_libraries} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
@@ -29,7 +29,7 @@ if( CLOCK_GETTIME_FOUND )
   set(openrave_libraries ${openrave_libraries} rt)
 endif()
 
-set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS}")
+set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS} -I/usr/local/include/")
 
 if( NEED_TRIINDEX  )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DNEED_DTRIINDEX_TYPEDEF")

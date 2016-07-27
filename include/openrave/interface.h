@@ -126,7 +126,7 @@ public:
 
     /// \brief return true if the command is supported
     virtual bool SupportsCommand(const std::string& cmd);
-    
+
     /** \brief Used to send special commands to the interface and receive output.
 
         The command must be registered by \ref RegisterCommand. A special command '\b help' is
@@ -222,7 +222,7 @@ private:
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    mutable std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
+    mutable tbb::unordered_map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
