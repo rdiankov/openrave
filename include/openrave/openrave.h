@@ -2755,6 +2755,137 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
+{
+    if (value.IsBool()) {
+        v = value.GetBool();
+        return true;
+    }
+    return false;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v)
+{
+    if (value.IsInt()) {
+        v = value.GetInt();
+        return true;
+    }
+    return false;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, dReal &v)
+{
+    if (value.IsNumber()) {
+        v = static_cast<dReal>(value.GetDouble());
+        return true;
+    }
+    return false;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::string &v)
+{
+    if (value.IsString()) {
+        v = value.GetString();
+        return true;
+    }
+    return false;
+}
+
+template <typename T1, typename T2>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p)
+{
+    if (value.IsArray() && value.Size() == 2) {
+        return RaveDeserializeJSON(value[0], p.first) && RaveDeserializeJSON(value[1], p.second);
+    }
+    return false;
+}
+
+template <typename T>
+inline bool RaveSerializeJSON(const rapidjson::Value &value, std::vector<T>& v)
+{
+    if (value.IsArray()) {
+        v.resize(value.Size());
+        for (std::size_t i = 0; i < value.Size(); ++i) {
+            if (!RaveDeserializeJSON(value[i], v[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+template <typename K, typename V>
+inline bool RaveSerializeJSON(const rapidjson::Value &value, std::map<K, V>& m)
+{
+    if (value.IsObject()) {
+        m.clear();
+        for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+            K k;
+            if (!RaveDeserializeJSON(it->name, k)) {
+                return false;
+            }
+            if (!RaveDeserializeJSON(it->value, m[k])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+template <typename T, std::size_t N>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a)
+{
+    if (value.IsArray() && value.Size() <= N) {
+        for (std::size_t i = 0; i < value.Size(); ++i) {
+            if (!RaveDeserializeJSON(value[i], a[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+template <typename T>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v)
+{
+    if (value.IsArray()) {
+        if (value.Size() == 3)
+        {
+            return \
+                RaveDeserializeJSON(value[0], v[0]) && \
+                RaveDeserializeJSON(value[1], v[1]) && \
+                RaveDeserializeJSON(value[2], v[2]);
+        }
+        else if (value.Size() == 4)
+        {
+            return \
+                RaveDeserializeJSON(value[0], v[0]) && \
+                RaveDeserializeJSON(value[1], v[1]) && \
+                RaveDeserializeJSON(value[2], v[2]) && \
+                RaveDeserializeJSON(value[3], v[3]);
+        }
+    }
+    return false;
+}
+
+template <typename T>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t)
+{
+    if (value.IsArray() && value.Size() == 7) {
+        return \
+            RaveDeserializeJSON(value[0], t.rot[0]) && \
+            RaveDeserializeJSON(value[1], t.rot[1]) && \
+            RaveDeserializeJSON(value[2], t.rot[2]) && \
+            RaveDeserializeJSON(value[3], t.rot[3]) && \
+            RaveDeserializeJSON(value[4], t.trans[0]) && \
+            RaveDeserializeJSON(value[5], t.trans[1]) && \
+            RaveDeserializeJSON(value[6], t.trans[2]);
+    }
+    return false;
+}
 
 } // end namespace OpenRAVE
 
