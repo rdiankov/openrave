@@ -636,7 +636,7 @@ public:
             bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
-            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+            if( !bCollision || !(_options & OpenRAVE::CO_AllGeometryContacts)) {
                 return bCollision;
             }
         }
@@ -742,7 +742,7 @@ public:
             bool bCollision = query._request.isSatisfied(query._result);
 
             // if there is no collision or no need to gather more data, just return
-            if( !bCollision || !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts))) {
+            if( !bCollision || !(_options & OpenRAVE::CO_AllGeometryContacts)) {
                 return bCollision;
             }
         }
