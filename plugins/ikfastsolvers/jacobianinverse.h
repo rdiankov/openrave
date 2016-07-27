@@ -184,7 +184,7 @@ public:
             }
             _invJ = prod(_Jt,_invJJt);
             _qdelta = prod(_invJ,_error);
-            dReal fmindeltascale = 0.6; // depending on
+            dReal fmindeltascale = 1.0; // depending on
             bool baddelta = false;
             for(size_t i = 0; i < vnew.size(); ++i) {
                 if(!isfinite(_qdelta(i,0))) { // don't assert since it is frequent and could destroy the entire plan
@@ -237,20 +237,15 @@ public:
 
     virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error, int nMaxIterations)
     {
-        Vector vEEAxisAngle = axisAngleFromQuat(tcur.rot);
-        if( vEEAxisAngle.dot3(_vGoalAxisAngle) < 0 ) {
-            // compute from other hemisphere
-            vEEAxisAngle = axisAngleFromQuat(-tcur.rot);
-        }
-        dReal d = tcur.rot.dot(_vGoalQuat);
         T totalerror2=0;
+        const Vector axisangleerror = axisAngleFromQuat(quatMultiply(_vGoalQuat, quatInverse(tcur.rot)));
         for(int i = 0; i < 3; ++i) {
-            error(i,0) = 0.2*(_vGoalAxisAngle[i]-vEEAxisAngle[i]); // doesn't work well
-            totalerror2 += _error(i,0)*_error(i,0);
+            error(i,0) = axisangleerror[i];
+            totalerror2 += error(i,0)*error(i,0);
         }
         for(int i = 0; i < 3; ++i) {
             error(i+3,0) = (_vGoalPosition[i]-tcur.trans[i]);
-            totalerror2 += _error(i+3,0)*_error(i+3,0);
+            totalerror2 += error(i+3,0)*error(i+3,0);
         }
         dReal fallowableerror2 = 0.03; // arbitrary... since solutions are close, is this step necessary?
         if( totalerror2 > _errorthresh2 && totalerror2 > fallowableerror2+1e-7 ) {
