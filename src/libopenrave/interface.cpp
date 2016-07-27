@@ -37,7 +37,7 @@ void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
 {
     UserDataPtr olduserdata;
     {
-        std::map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
+        tbb::concurrent_unordered_map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
         if( it == __mapUserData.end() ) {
             __mapUserData[key] = data;
         }
@@ -51,7 +51,7 @@ void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
 
 UserDataPtr InterfaceBase::GetUserData(const std::string& key) const
 {
-    std::map<std::string, UserDataPtr>::const_iterator it = __mapUserData.find(key);
+    tbb::concurrent_unordered_map<std::string, UserDataPtr>::const_iterator it = __mapUserData.find(key);
     if( it == __mapUserData.end() ) {
         return UserDataPtr();
     }
@@ -62,14 +62,14 @@ bool InterfaceBase::RemoveUserData(const std::string& key) const
 {
     // have to destroy the userdata pointer outside the lock, otherwise can get into a deadlock
     UserDataPtr olduserdata;
-    std::map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
+    tbb::concurrent_unordered_map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
     if( it == __mapUserData.end() ) {
         return false;
     }
     olduserdata = it->second;
     {
         boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
-        __mapUserData.erase(it);
+        __mapUserData.unsafe_erase(it);
     }
     olduserdata.reset();
     return true;

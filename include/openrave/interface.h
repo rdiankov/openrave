@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
+#include "tbb/concurrent_unordered_map.h"
+
 namespace OpenRAVE {
 
 /// serialization options for interfaces
@@ -222,7 +224,7 @@ private:
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    mutable tbb::unordered_map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
+    mutable tbb::concurrent_unordered_map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
