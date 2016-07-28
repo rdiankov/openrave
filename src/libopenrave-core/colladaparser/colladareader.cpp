@@ -3519,6 +3519,9 @@ public:
         return false;
     }
     template <typename U> static domFloat resolveFloat(domCommon_float_or_paramRef paddr, const U& parent) {
+        if( !paddr ) {
+            return 0;
+        }
         if( !!paddr->getFloat() ) {
             return paddr->getFloat()->getValue();
         }
