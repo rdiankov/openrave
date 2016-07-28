@@ -2587,7 +2587,8 @@ const std::string& IkParameterization::GetName() const
 
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, bool v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int v);
-inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal v);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, double v);
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, float v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const char* v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::string& v);
 template <typename T1, typename T2>
@@ -2618,8 +2619,14 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     value = rapidjson::Value(v).Move();
 }
 
-/// \brief serialize a dReal as json, these functions are overloaded to allow for templates
-inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal v)
+/// \brief serialize a double as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, double v)
+{
+    value = rapidjson::Value(v).Move();
+}
+
+/// \brief serialize a float as json, these functions are overloaded to allow for templates
+inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, float v)
 {
     value = rapidjson::Value(v).Move();
 }
@@ -2755,6 +2762,26 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, double &v);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, float &v);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::string &v);
+template <typename T1, typename T2>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p);
+template <typename T>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
+template <typename K, typename V>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
+template <typename T, std::size_t N>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
+template <typename T>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v);
+template <typename T>
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics);
+
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
 {
     if (value.IsBool()) {
@@ -2773,10 +2800,19 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v)
     return false;
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, dReal &v)
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, double &v)
 {
     if (value.IsNumber()) {
-        v = static_cast<dReal>(value.GetDouble());
+        v = value.GetDouble();
+        return true;
+    }
+    return false;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, float &v)
+{
+    if (value.IsNumber()) {
+        v = static_cast<float>(value.GetDouble());
         return true;
     }
     return false;
@@ -2801,7 +2837,7 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>
 }
 
 template <typename T>
-inline bool RaveSerializeJSON(const rapidjson::Value &value, std::vector<T>& v)
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v)
 {
     if (value.IsArray()) {
         v.resize(value.Size());
@@ -2816,7 +2852,7 @@ inline bool RaveSerializeJSON(const rapidjson::Value &value, std::vector<T>& v)
 }
 
 template <typename K, typename V>
-inline bool RaveSerializeJSON(const rapidjson::Value &value, std::map<K, V>& m)
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m)
 {
     if (value.IsObject()) {
         m.clear();
@@ -2854,17 +2890,17 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v)
     if (value.IsArray()) {
         if (value.Size() == 3)
         {
-            return \
-                RaveDeserializeJSON(value[0], v[0]) && \
-                RaveDeserializeJSON(value[1], v[1]) && \
+            return
+                RaveDeserializeJSON(value[0], v[0]) &&
+                RaveDeserializeJSON(value[1], v[1]) &&
                 RaveDeserializeJSON(value[2], v[2]);
         }
         else if (value.Size() == 4)
         {
-            return \
-                RaveDeserializeJSON(value[0], v[0]) && \
-                RaveDeserializeJSON(value[1], v[1]) && \
-                RaveDeserializeJSON(value[2], v[2]) && \
+            return
+                RaveDeserializeJSON(value[0], v[0]) &&
+                RaveDeserializeJSON(value[1], v[1]) &&
+                RaveDeserializeJSON(value[2], v[2]) &&
                 RaveDeserializeJSON(value[3], v[3]);
         }
     }
@@ -2875,14 +2911,120 @@ template <typename T>
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t)
 {
     if (value.IsArray() && value.Size() == 7) {
-        return \
-            RaveDeserializeJSON(value[0], t.rot[0]) && \
-            RaveDeserializeJSON(value[1], t.rot[1]) && \
-            RaveDeserializeJSON(value[2], t.rot[2]) && \
-            RaveDeserializeJSON(value[3], t.rot[3]) && \
-            RaveDeserializeJSON(value[4], t.trans[0]) && \
-            RaveDeserializeJSON(value[5], t.trans[1]) && \
+        return
+            RaveDeserializeJSON(value[0], t.rot[0]) &&
+            RaveDeserializeJSON(value[1], t.rot[1]) &&
+            RaveDeserializeJSON(value[2], t.rot[2]) &&
+            RaveDeserializeJSON(value[3], t.rot[3]) &&
+            RaveDeserializeJSON(value[4], t.trans[0]) &&
+            RaveDeserializeJSON(value[5], t.trans[1]) &&
             RaveDeserializeJSON(value[6], t.trans[2]);
+    }
+    return false;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
+{
+    if (!value.IsObject() || !value.HasMember("vertices") || !value.HasMember("indices"))
+    {
+        return false;
+    }
+
+    if (!value["vertices"].IsArray() || value["vertices"].Size() % 3 != 0)
+    {
+        return false;
+    }
+
+    trimesh.vertices.clear();
+    trimesh.vertices.reserve(value["vertices"].Size() / 3);
+
+    for (rapidjson::Value::ConstValueIterator it = value["vertices"].Begin(); it != value["vertices"].End(); ++it)
+    {
+        Vector vertex;
+        if (!it->IsNumber())
+        {
+            return false;
+        }
+        vertex.x = it->GetDouble();
+        ++it;
+
+        if (!it->IsNumber())
+        {
+            return false;
+        }
+        vertex.y = it->GetDouble();
+        ++it;
+
+        if (!it->IsNumber())
+        {
+            return false;
+        }
+        vertex.z = it->GetDouble();
+        ++it;
+        
+        trimesh.vertices.push_back(vertex);
+    }
+
+    return RaveDeserializeJSON(value["indices"], trimesh.indices);
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, IkParameterization& ikparam)
+{
+    if (!value.IsObject() || !value.HasMember("type") || !value["type"].IsString())
+    {
+        return false;
+    }
+
+    std::string type = value["type"].GetString();
+
+    if (type == "Transform6D")
+    {
+        Transform transform;
+        if (!value.HasMember("rotate") || !RaveDeserializeJSON(value["rotate"], transform.rot))
+        {
+            return false;
+        }
+        if (!value.HasMember("translate") || !RaveDeserializeJSON(value["translate"], transform.trans))
+        {
+            return false;
+        }
+        ikparam.SetTransform6D(transform);
+    }
+    else if (type == "TranslationDirection5D")
+    {
+        RAY ray;
+        if (!value.HasMember("translate") || !RaveDeserializeJSON(value["translate"], ray.pos))
+        {
+            return false;
+        }
+        if (!value.HasMember("direction") || !RaveDeserializeJSON(value["direction"], ray.dir))
+        {
+            return false;
+        }
+        ikparam.SetTranslationDirection5D(ray);
+    }
+    return true;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics)
+{
+    if (value.IsObject() &&
+        value.HasMember("fx") &&
+        value.HasMember("fy") &&
+        value.HasMember("cx") &&
+        value.HasMember("cy") &&
+        value.HasMember("focalLength") &&
+        value.HasMember("distortionModel") &&
+        value.HasMember("distortionCoeffs"))
+    {
+        return
+            RaveDeserializeJSON(value["fx"], intrinsics.fx) &&
+            RaveDeserializeJSON(value["fy"], intrinsics.fy) &&
+            RaveDeserializeJSON(value["cx"], intrinsics.cx) &&
+            RaveDeserializeJSON(value["cy"], intrinsics.cy) &&
+            RaveDeserializeJSON(value["focalLength"], intrinsics.focal_length) &&
+            RaveDeserializeJSON(value["distortionModel"], intrinsics.distortion_model) &&
+            RaveDeserializeJSON(value["distortionCoeffs"], intrinsics.distortion_coeffs);
     }
     return false;
 }

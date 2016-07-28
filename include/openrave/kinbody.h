@@ -177,6 +177,7 @@ public:
         /// \param fTessellation to control how fine the triangles need to be. 1.0f is the default value
         bool InitCollisionMesh(float fTessellation=1);
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual bool DeserializeJSON(const rapidjson::Value &value);
 
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;

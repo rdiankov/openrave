@@ -379,6 +379,117 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "modifiable", modifiable);
 }
 
+bool KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    if (!value.IsObject() || !value.HasMember("type") || !value["type"].IsString())
+    {
+        return false;
+    }
+
+    std::string type = value["type"].GetString();
+
+    if (type == "box")
+    {
+        type = GT_Box;
+        if (!value.HasMember("halfExtents") || !RaveDeserializeJSON(value["halfExtents"], _vGeomData))
+        {
+            return false;
+        }
+    }
+    else if (type == "container")
+    {
+        type = GT_Container;
+        if (!value.HasMember("outerExtents") || !RaveDeserializeJSON(value["outerExtents"], _vGeomData))
+        {
+            return false;
+        }
+        if (!value.HasMember("innerExtents") || !RaveDeserializeJSON(value["innerExtents"], _vGeomData2))
+        {
+            return false;
+        }
+        if (!value.HasMember("bottomCross") || !RaveDeserializeJSON(value["bottomCross"], _vGeomData3))
+        {
+            return false;
+        }
+
+    }
+    else if (type == "sphere")
+    {
+        type = GT_Sphere;
+        if (!value.HasMember("radius") || !RaveDeserializeJSON(value["radius"], _vGeomData.x))
+        {
+            return false;
+        }
+    }
+    else if (type == "cylinder")
+    {
+        type = GT_Cylinder;
+        if (!value.HasMember("radius") || !RaveDeserializeJSON(value["radius"], _vGeomData.x))
+        {
+            return false;
+        }
+        if (!value.HasMember("height") || !RaveDeserializeJSON(value["height"], _vGeomData.y))
+        {
+            return false;
+        }
+    }
+    else if (type == "trimesh")
+    {
+        type = GT_TriMesh;
+        if (!value.HasMember("mesh") || !RaveDeserializeJSON(value["mesh"], mesh))
+        {
+            return false;
+        }
+    }
+    else
+    {
+        RAVELOG_WARN_FORMAT("Unknown geometry type: %s", type);
+        return false;
+    }
+
+    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("transparency") || !RaveDeserializeJSON(value["transparency"], transparency))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("visible") || !RaveDeserializeJSON(value["visible"], visible))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("diffuseColor") || !RaveDeserializeJSON(value["diffuseColor"], diffuseColor))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("ambientColor") || !RaveDeserializeJSON(value["ambientColor"], ambientColor))
+    {
+        return false;
+    }
+
+    if (!value.HasMember("modifiable") || !RaveDeserializeJSON(value["modifiable"], modifiable))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 }
