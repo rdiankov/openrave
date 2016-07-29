@@ -1381,8 +1381,8 @@ protected:
                             OPENRAVE_ASSERT_OP(intermediate2.ramps.size(), ==, 1);
                             retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff, outramps2);
                             if (retcheck.retcode != 0) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, the final SolveMinTime generated infeasible segment retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
-                                ////////////////////////////////////////////////////////////////////////////////
+                                RAVELOG_WARN_FORMAT("env=%d, the final SolveMinTime generated infeasible segment retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
+                                // TODO probably never get here, so remove if not necessary
                                 ParabolicRamp::ParabolicRampND &temp2 = intermediate2.ramps[0];
                                 std::vector<dReal> &xmin = _parameters->_vConfigLowerLimit, &xmax = _parameters->_vConfigUpperLimit, &vmax = _parameters->_vConfigVelocityLimit, &amax = _parameters->_vConfigAccelerationLimit;
                                 std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tempramps1d;

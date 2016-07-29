@@ -72,6 +72,14 @@ public:
         }
         pmanager->clear();
         _tmpbuffer.resize(0);
+//        FOREACH(it, mapCachedBodies) {
+//            FOREACH(itcol, it->second.vcolobjs) {
+//                if( !!itcol->get() ) {
+//                    pmanager->unregisterObject(itcol->get());
+//                }
+//            }
+//            it->second.vcolobjs.resize(0);
+//        }
         mapCachedBodies.clear();
         FOREACH(itbody, attachedBodies) {
             FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(*itbody);
@@ -169,12 +177,22 @@ public:
 
     }
 
-    /// \brief removes tracking of the body
-    void RemoveBody(KinBodyConstPtr pbody)
+    /// \brief remove tracking of the body, return true if body was removed
+    bool RemoveBody(KinBodyConstPtr pbody)
     {
-        if( _RemoveBody(pbody) ) {
-            mapCachedBodies.erase(pbody->GetEnvironmentId());
+        std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
+        if( it != mapCachedBodies.end() ) {
+            FOREACH(itcol, it->second.vcolobjs) {
+                if( !!itcol->get() ) {
+                    pmanager->unregisterObject(itcol->get());
+                }
+            }
+            it->second.vcolobjs.resize(0);
+            mapCachedBodies.erase(it);
+            return true;
         }
+
+        return false;
     }
 
     /// \brief Synchronizes the element of the manager instance whose update stamps are outdated
@@ -461,23 +479,6 @@ private:
             }
         }
         return bsetUpdateStamp;
-    }
-
-    /// \brief return true if body was removed
-    bool _RemoveBody(KinBodyConstPtr pbody)
-    {
-        std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
-        if( it != mapCachedBodies.end() ) {
-            FOREACH(itcol, it->second.vcolobjs) {
-                if( !!itcol->get() ) {
-                    pmanager->unregisterObject(itcol->get());
-                }
-            }
-            it->second.vcolobjs.resize(0);
-            return true;
-        }
-
-        return false;
     }
 
     void _UpdateActiveLinks(RobotBaseConstPtr probot)
