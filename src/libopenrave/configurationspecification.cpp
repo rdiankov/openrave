@@ -1786,10 +1786,10 @@ void ConfigurationSpecification::Group::SerializeJSON(rapidjson::Value &value, r
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "offset", offset);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "dof", dof);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "interpolation", interpolation);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "offset", offset);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "dof", dof);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "interpolation", interpolation);
 }
 
 void ConfigurationSpecification::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const

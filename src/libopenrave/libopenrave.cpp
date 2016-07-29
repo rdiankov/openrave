@@ -2292,7 +2292,7 @@ void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value &value, rapidjso
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
     if( hardware_id.size() > 0 ) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "hardwareID", hardware_id);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardwareID", hardware_id);
     }
 }
 
@@ -2338,13 +2338,13 @@ void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value &value, rapidjso
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sensor", sensor_reference);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "targetRegion", target_region);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "cameraIntrinsics", intrinsics);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "width", width);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "height", height);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "measurementTime", measurement_time);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "gain", gain);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sensor", sensor_reference);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "targetRegion", target_region);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "cameraIntrinsics", intrinsics);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "width", width);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", height);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "measurementTime", measurement_time);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gain", gain);
 }
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const

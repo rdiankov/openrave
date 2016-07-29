@@ -333,38 +333,38 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", transform);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
 
     switch(type) {
     case GT_Box:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "box");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "halfExtents", _vGeomData);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "box");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "halfExtents", _vGeomData);
         break;
 
     case GT_Container:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "container");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "outerExtents", _vGeomData);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "innerExtents", _vGeomData2);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "bottomCross", _vGeomData3);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "container");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "outerExtents", _vGeomData);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "innerExtents", _vGeomData2);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "bottomCross", _vGeomData3);
         break;
 
     case GT_Sphere:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "sphere");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "radius", _vGeomData.x);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "sphere");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x);
         break;
 
     case GT_Cylinder:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "cylinder");
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "radius", _vGeomData.x);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "height", _vGeomData.y);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "cylinder");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "radius", _vGeomData.x);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", _vGeomData.y);
         break;
 
     case GT_TriMesh:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", "trimesh");
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
         if (options == 0 || (options & SO_GeometryMesh) != 0) {
-            RAVE_SERIALIZEJSON_ADDMEMBER(value, "mesh", mesh);
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", mesh);
         }
         break;
 
@@ -372,11 +372,11 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
         break;
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transparency", transparency);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "visible", visible);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "diffuseColor", diffuseColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "ambientColor", ambientColor);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "modifiable", modifiable);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transparency", transparency);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "visible", visible);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "diffuseColor", diffuseColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "ambientColor", ambientColor);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modifiable", modifiable);
 }
 
 bool KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)

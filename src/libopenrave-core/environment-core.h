@@ -2497,7 +2497,7 @@ protected:
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
         RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "unit", _unit);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "unit", _unit);
 
         if (_vecbodies.size() > 0)
         {

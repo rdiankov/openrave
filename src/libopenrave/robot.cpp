@@ -39,11 +39,11 @@ RobotBase::AttachedSensorInfo::AttachedSensorInfo() : XMLReadable("attachedsenso
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", _sensorname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "linkName", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", _sensorname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
     _sensorgeometry->SerializeJSON(value, allocator, options);
 }
 
@@ -2596,7 +2596,7 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
         value.AddMember("attachedSensors", attachedSensorsValue, allocator);
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "robot", true);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robot", true);
 }
 
 bool RobotBase::DeserializeJSON(const rapidjson::Value &value)

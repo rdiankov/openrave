@@ -139,24 +139,24 @@ void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "modelType", modelType);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "assignedPowerRating", assignedPowerRating);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxSpeed", maxSpeed);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "noLoadSpeed", noLoadSpeed);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "stallTorque", stallTorque);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxInstantaneousTorque", maxInstantaneousTorque);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "nominalSpeedTorquePoints", nominalSpeedTorquePoints);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "maxSpeedTorquePoints", maxSpeedTorquePoints);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "nominalTorque", nominalTorque);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "rotorInertia", rotorInertia);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "torqueConstant", torqueConstant);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "nominalVoltage", nominalVoltage);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "speedConstant", speedConstant);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "startingCurrent", startingCurrent);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "terminalResistance", terminalResistance);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "gearRatio", gearRatio);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "coloumbFriction", coloumbFriction);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "viscousFriction", viscousFriction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modelType", modelType);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "assignedPowerRating", assignedPowerRating);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxSpeed", maxSpeed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "noLoadSpeed", noLoadSpeed);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stallTorque", stallTorque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxInstantaneousTorque", maxInstantaneousTorque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominalSpeedTorquePoints", nominalSpeedTorquePoints);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "maxSpeedTorquePoints", maxSpeedTorquePoints);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominalTorque", nominalTorque);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "rotorInertia", rotorInertia);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "torqueConstant", torqueConstant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "nominalVoltage", nominalVoltage);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "speedConstant", speedConstant);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "startingCurrent", startingCurrent);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "terminalResistance", terminalResistance);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gearRatio", gearRatio);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "coloumbFriction", coloumbFriction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "viscousFriction", viscousFriction);
 }
 
 bool ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value &value)
@@ -4676,9 +4676,9 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
 void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "id", GetID());
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", GetName());
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", GetTransform());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "id", GetID());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", GetName());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", GetTransform());
 
     {
         rapidjson::Value linksValue;
@@ -4719,7 +4719,7 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
     GetDOFValues(vdofvalues);
     if (vdofvalues.size() > 0)
     {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "dofValues", vdofvalues);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "dofValues", vdofvalues);
     }
 
     InterfaceBase::SerializeJSON(value, allocator, options);

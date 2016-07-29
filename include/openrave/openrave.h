@@ -2575,9 +2575,9 @@ const std::string& IkParameterization::GetName() const
     throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
 }
 
-#define RAVE_SERIALIZEJSON(value, ...) rapidjson::Value value; RaveSerializeJSON(value, allocator, ##__VA_ARGS__)
-#define RAVE_SERIALIZEJSON_PUSHBACK(value, ...) { do { RAVE_SERIALIZEJSON(__v, ##__VA_ARGS__); value.PushBack(__v, allocator); } while(false); };
-#define RAVE_SERIALIZEJSON_ADDMEMBER(value, key, ...) { do { RAVE_SERIALIZEJSON(__v, ##__VA_ARGS__); value.AddMember(key, __v, allocator); } while(false); };
+#define RAVE_SERIALIZEJSON(value, allocator, ...) rapidjson::Value value; RaveSerializeJSON(value, allocator, ##__VA_ARGS__)
+#define RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, ...) { do { RAVE_SERIALIZEJSON(__v, allocator, ##__VA_ARGS__); value.PushBack(__v, allocator); } while(false); };
+#define RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, key, ...) { do { RAVE_SERIALIZEJSON(__v, allocator, ##__VA_ARGS__); value.AddMember(key, __v, allocator); } while(false); };
 
 #define RAVE_SERIALIZEJSON_ENSURE_OBJECT(value) { if (!value.IsObject()) { value.SetObject(); } }
 #define RAVE_SERIALIZEJSON_ENSURE_ARRAY(value) { if (!value.IsArray()) { value.SetArray(); } }
@@ -2648,8 +2648,8 @@ template <typename T1, typename T2>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const std::pair<T1, T2>& p)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, p.first);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, p.second);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, p.first);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, p.second);
 }
 
 /// \brief serialize a std::map as json
@@ -2659,8 +2659,8 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
 
     for (typename std::map<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
-        RAVE_SERIALIZEJSON(key, it->first);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, key, it->second);
+        RAVE_SERIALIZEJSON(key, allocator, it->first);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, key, it->second);
     }
 }
 
@@ -2671,7 +2671,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for (std::size_t i = 0; i < v.size() && i < n; ++i)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(value, v[i]);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[i]);
     }
 }
 
@@ -2682,7 +2682,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
     for (std::size_t i = 0; i < a.size() && i < n; ++i)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(value, a[i]);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, a[i]);
     }
 }
 
@@ -2691,12 +2691,12 @@ template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveVector<T>& v, bool quat = false)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, v[0]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, v[1]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, v[2]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[2]);
     if (quat)
     {
-        RAVE_SERIALIZEJSON_PUSHBACK(value, v[3]);
+        RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, v[3]);
     }
 }
 
@@ -2705,13 +2705,13 @@ template <typename T>
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const RaveTransform<T>& t)
 {
     RAVE_SERIALIZEJSON_CLEAR_ARRAY(value);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[0]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[1]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[2]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.rot[3]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.trans[0]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.trans[1]);
-    RAVE_SERIALIZEJSON_PUSHBACK(value, t.trans[2]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot[2]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.rot[3]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.trans[0]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.trans[1]);
+    RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, t.trans[2]);
 }
 
 /// \brief serialize an OpenRAVE TriMesh as json
@@ -2722,29 +2722,29 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
         rapidjson::Value verticesValue;
         verticesValue.SetArray();
         for (std::vector<Vector>::const_iterator it = trimesh.vertices.begin(); it != trimesh.vertices.end(); ++it) {
-            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, (*it)[0]);
-            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, (*it)[1]);
-            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, (*it)[2]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, allocator, (*it)[0]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, allocator, (*it)[1]);
+            RAVE_SERIALIZEJSON_PUSHBACK(verticesValue, allocator, (*it)[2]);
         }
         value.AddMember("vertices", verticesValue, allocator);
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "indices", trimesh.indices);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "indices", trimesh.indices);
 }
 
 /// \brief serialize an OpenRAVE IkParameterization as json
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const IkParameterization& ikparam)
 {
     RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "type", ikparam.GetName());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", ikparam.GetName());
     switch(ikparam.GetType()) {
     case IKP_Transform6D:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "rotate", ikparam.GetTransform6D().rot);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "translate", ikparam.GetTransform6D().trans);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "rotate", ikparam.GetTransform6D().rot);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "translate", ikparam.GetTransform6D().trans);
         break;
     case IKP_TranslationDirection5D:
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "translate", ikparam.GetTranslationDirection5D().pos);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "direction", ikparam.GetTranslationDirection5D().dir);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "translate", ikparam.GetTranslationDirection5D().pos);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "direction", ikparam.GetTranslationDirection5D().dir);
         break;
     default:
         break;
@@ -2755,13 +2755,13 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, const SensorBase::CameraIntrinsics& intrinsics)
 {
     RAVE_SERIALIZEJSON_CLEAR_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "fx", intrinsics.fx);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "fy", intrinsics.fy);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "cx", intrinsics.cx);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "cy", intrinsics.cy);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "focalLength", intrinsics.focal_length);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "distortionModel", intrinsics.distortion_model);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "distortionCoeffs", intrinsics.distortion_coeffs);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "fx", intrinsics.fx);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "fy", intrinsics.fy);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "cx", intrinsics.cx);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "cy", intrinsics.cy);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "focalLength", intrinsics.focal_length);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "distortionModel", intrinsics.distortion_model);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v);

@@ -67,12 +67,9 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        // OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
-        // OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
-        // writer->StartObject();
-        // _xmlreadable->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
-        // writer->EndObject();
-        // return object(stringwriter.GetString());
+        // rapidjson::Document doc;
+        // _xmlreadable->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        // return toPyObject(doc);
         return object();
     }
 

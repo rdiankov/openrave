@@ -403,8 +403,8 @@ public:
             value.AddMember("geom", geomValue, allocator);
         }
 
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "color", _vColor);
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "format", _channelformat.size() > 0 ? _channelformat : std::string("uint8"));        
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "color", _vColor);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "format", _channelformat.size() > 0 ? _channelformat : std::string("uint8"));        
     }
 
 protected:

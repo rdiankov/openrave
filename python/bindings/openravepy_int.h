@@ -148,6 +148,7 @@ Transform ExtractTransform(const object& oraw);
 TransformMatrix ExtractTransformMatrix(const object& oraw);
 object toPyArray(const TransformMatrix& t);
 object toPyArray(const Transform& t);
+object toPyObject(const rapidjson::Value& value);
 
 XMLReadablePtr ExtractXMLReadable(object o);
 object toPyXMLReadable(XMLReadablePtr p);

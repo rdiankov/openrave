@@ -136,7 +136,7 @@ void InterfaceBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::
         rapidjson::Value readableInterface;
         RAVE_SERIALIZEJSON_CLEAR_OBJECT(readableInterface);
 
-        RAVE_SERIALIZEJSON_ADDMEMBER(readableInterface, "name", it->first);
+        RAVE_SERIALIZEJSON_ADDMEMBER(readableInterface, allocator, "name", it->first);
         it->second->SerializeJSON(readableInterface, allocator, options);
         readableInterfaces.PushBack(readableInterface, allocator);
     }

@@ -21,6 +21,46 @@
 namespace openravepy
 {
 
+object toPyObject(const rapidjson::Value& value)
+{
+    switch (value.GetType()) {
+    case rapidjson::kObjectType:
+        {
+            boost::python::dict d;
+            for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+                d[it->name.GetString()] = toPyObject(it->value);
+            }
+            return d;
+        }
+    case rapidjson::kArrayType:
+        {
+            boost::python::list l;
+            for (rapidjson::Value::ConstValueIterator it = value.Begin(); it != value.End(); ++it) {
+                l.append(toPyObject(*it));
+            }
+            return l;
+        }
+    case rapidjson::kTrueType:
+        return boost::python::object(boost::python::handle<>(PyBool_FromLong(1)));
+    case rapidjson::kFalseType:
+        return boost::python::object(boost::python::handle<>(PyBool_FromLong(0)));
+    case rapidjson::kStringType:
+        return ConvertStringToUnicode(value.GetString());
+    case rapidjson::kNumberType:
+        if (value.IsDouble()) {
+            return boost::python::object(boost::python::handle<>(PyFloat_FromDouble(value.GetDouble())));
+        }
+        else {
+            return boost::python::object(boost::python::handle<>(PyInt_FromLong(value.GetInt64())));
+        }
+    case rapidjson::kNullType:
+        return object();
+    default:
+        PyErr_SetString(PyExc_RuntimeError, "unsupported type");
+        return object();
+    }
+}
+
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
 static bool s_bReturnTransformQuaternions = false;
 bool GetReturnTransformQuaternions() {
@@ -435,13 +475,9 @@ void PyInterfaceBase::SetReadableInterface(const std::string& xmltag, object ore
 
 object PyInterfaceBase::SerializeJSON(object ooptions)
 {
-    // OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
-    // OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
-    // writer->StartObject();
-    // _pbase->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
-    // writer->EndObject();
-    // return object(stringwriter.GetString());
-    return object();
+    rapidjson::Document doc;
+    _pbase->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+    return toPyObject(doc);
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1699,13 +1735,9 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        // OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
-        // OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
-        // writer->StartObject();
-        // _penv->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
-        // writer->EndObject();
-        // return object(stringwriter.GetString());
-        return object();
+        rapidjson::Document doc;
+        _penv->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
     }
 };
 

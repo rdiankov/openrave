@@ -324,27 +324,27 @@ void KinBody::Link::serialize(std::ostream& o, int options) const
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "sid", sid);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "name", name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "transform", transform);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "massTransform", massTransform);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "mass", mass);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "inertiaMoments", inertiaMoments);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "massTransform", massTransform);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mass", mass);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "inertiaMoments", inertiaMoments);
 
     if (floatParameters.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "floatParameters", floatParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "floatParameters", floatParameters);
     }
 
     if (intParameters.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "intParameters", intParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "intParameters", intParameters);
     }
 
     if (stringParameters.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "stringParameters", stringParameters);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stringParameters", stringParameters);
     }
     
     if (forcedAdjacentLinks.size() > 0) {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, "forcedAdjacentLinks", forcedAdjacentLinks);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "forcedAdjacentLinks", forcedAdjacentLinks);
     }
     if (options == 0 || (options & SO_Geometry) != 0) {
 
@@ -379,8 +379,8 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 #endif
     }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "isStatic", isStatic);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, "isEnabled", isEnabled);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isStatic", isStatic);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isEnabled", isEnabled);
 }
 
 bool KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
