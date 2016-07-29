@@ -357,12 +357,12 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
     D = B/sum2;
 
     // PARABOLIC_RAMP_PLOG("A = %.15e; B = %.15e, C = %.15e, D = %.15e; sum1 = %.15e; sum2 = %.15e", A, B, C, D, sum1, sum2);
-    if (IS_DEBUGLEVEL(OpenRAVE::Level_Verbose)) {
-        if ((Abs(A) <= EpsilonA) && (Abs(B) <= EpsilonA)) {
-            PARABOLIC_RAMP_PLOG("A and B are zero");
-            PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
-        }
-    }
+    // if (IS_DEBUGLEVEL(OpenRAVE::Level_Verbose)) {
+    //     if ((Abs(A) <= EpsilonA) && (Abs(B) <= EpsilonA)) {
+    //         PARABOLIC_RAMP_PLOG("A and B are zero");
+    //         PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+    //     }
+    // }
 
     // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
     // acceleration. Instead of having a class representing an interval, we use the interval bounds
@@ -2876,7 +2876,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                     PARABOLIC_RAMP_PLOG("Failed solving bounded min accel for joint %d with endTime = %.15e\n",i,endTime);
                     solved = false;
                     if( 1 ) { // disable to avoid changing time
-                        PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
+                        // PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
                         Real newEndTime;
                         Real maxNewEndTime = -1;
                         bool result;
@@ -2884,6 +2884,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                             result = CalculateLeastBoundInoperativeInterval(x0[k], v0[k], x1[k], v1[k], amax[k], vmax[k], newEndTime);
                             if (!result) {
                                 PARABOLIC_RAMP_PLOG("Calculating newEndTime for joint %d failed. Use the default value instead.", k);
+                                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[k], x1[k], v0[k], v1[k], vmax[k], amax[k], endTime);
                                 newEndTime = endTime*1.05;
                             }
                             else if (newEndTime < endTime) {
@@ -2920,12 +2921,12 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                     break;
                 }
                 PARABOLIC_RAMP_PLOG("Successfully solving bounded min accel for joint %d (endTime = %.15e)\n",i, endTime);
-                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
-                if ( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
-                    for (size_t k = 0; k < tempramps.size(); ++k) {
-                        PARABOLIC_RAMP_PLOG("Calculated values (ramp %d): tswitch1 = %.15e; tswitch2 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", k, tempramps[k].tswitch1, tempramps[k].tswitch2, tempramps[k].a1, tempramps[k].a2, tempramps[k].v);
-                    }
-                }
+                // PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
+                // if ( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
+                //     for (size_t k = 0; k < tempramps.size(); ++k) {
+                //         PARABOLIC_RAMP_PLOG("Calculated values (ramp %d): tswitch1 = %.15e; tswitch2 = %.15e; a1 = %.15e; a2 = %.15e; v = %.15e", k, tempramps[k].tswitch1, tempramps[k].tswitch2, tempramps[k].a1, tempramps[k].a2, tempramps[k].v);
+                //     }
+                // }
                 ramps[i] = tempramps;
             }
 
