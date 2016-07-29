@@ -82,6 +82,20 @@ class Ramp(object):
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
         self.x1 = Add(self.x0, self.d)
+
+
+    def Initialize(self, v0, a, dur, x0=zero):
+        dur = ConvertFloatToMPF(dur)
+        assert(dur >= -epsilon)
+
+        self.x0 = ConvertFloatToMPF(x0)
+        self.v0 = ConvertFloatToMPF(v0)
+        self.a = ConvertFloatToMPF(a)
+        self.duration = dur
+
+        self.v1 = Add(self.v0, Mul(self.a, self.duration))
+        self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
+        self.x1 = Add(self.x0, self.d)
         
 
     def UpdateDuration(self, newDur):
@@ -240,7 +254,7 @@ class Ramp(object):
         elif (t >= self.duration):
             return
 
-        self.UpdateDuration(self.duration - t)
+        self.UpdateDuration(t)
         return
         
 

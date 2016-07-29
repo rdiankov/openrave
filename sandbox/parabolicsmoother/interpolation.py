@@ -744,7 +744,7 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
         initguess = mp.sign(temp)*(Abs(temp)**(1./3.))
         root = mp.findroot(lambda x: Sub(Prod([x, x, x]), temp), x0=initguess)
 
-        import IPython; IPython.embed()
+        # import IPython; IPython.embed()
         log.debug("root = {0}".format(mp.nstr(root, n=_prec)))
         a0new = mp.fdiv(Add(A2, root), C2)
         if (Abs(a0new) > Add(am, epsilon)):
