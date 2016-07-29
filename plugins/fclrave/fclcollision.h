@@ -1043,6 +1043,8 @@ private:
             return true;     // don't test anymore
         }
 
+//        _o1 = o1;
+//        _o2 = o2;
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
         if( !plink1 || !plink2 ) {
