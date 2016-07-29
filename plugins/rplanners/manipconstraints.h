@@ -203,6 +203,8 @@ public:
         uint64_t changedvelsmask=0, changedaccelsmask=0;
         OPENRAVE_ASSERT_OP(vellimits.size(),<,64);
 
+        vector<dReal> cachevellimits = vellimits, cacheaccellimits = accellimits;
+        
         FOREACHC(itmanipinfo,_listCheckManips) {
             RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
             Transform tlink = itmanipinfo->plink->GetTransform();
@@ -225,6 +227,7 @@ public:
                     Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
                     //vpointtotalvel += (vtransaxis + vangularaxis.cross(vdeltapoint))*curvels.at(j);
                     vpointtotalvel += vtransaxis*curvels[j];
+                    // RAVELOG_DEBUG_FORMAT("dof %d, vtransaxis = np.array([%.15e, %.15e, %.15e])", j%vtransaxis.x%vtransaxis.y%vtransaxis.z);
                 }
                 for(int j = 0; j < armdof; ++j) {
                     Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
@@ -238,6 +241,7 @@ public:
                     if( vpointtotalvel.z < 0 ) {
                         vd.z = -vd.z;
                     }
+                    // RAVELOG_DEBUG_FORMAT("dof %d, vd = np.array([%.15e, %.15e, %.15e])", j%vd.x%vd.y%vd.z);
                     vpointtotalvel += vd;
                 }
                 
@@ -310,6 +314,19 @@ public:
                 accellimits[j] = RaveSqrt(vbestaccels2[j]);
             }
         }
+
+        // vector<dReal> q(6);
+        // RobotBasePtr probot = _listCheckManips.begin()->pmanip->GetRobot();
+        // dReal fmaxdistfromcenter = _listCheckManips.begin()->fmaxdistfromcenter;
+        // probot->GetDOFValues(q);
+        // RAVELOG_DEBUG_FORMAT("fmaxdistfromcenter = %.15e", fmaxdistfromcenter);
+        // RAVELOG_DEBUG_FORMAT("q = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", q[0]%q[1]%q[2]%q[3]%q[4]%q[5]);
+        // RAVELOG_DEBUG_FORMAT("qd = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", curvels[0]%curvels[1]%curvels[2]%curvels[3]%curvels[4]%curvels[5]);
+        // RAVELOG_DEBUG_FORMAT("vellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", cachevellimits[0]%cachevellimits[1]%cachevellimits[2]%cachevellimits[3]%cachevellimits[4]%cachevellimits[5]);
+        // RAVELOG_DEBUG_FORMAT("accellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", cacheaccellimits[0]%cacheaccellimits[1]%cacheaccellimits[2]%cacheaccellimits[3]%cacheaccellimits[4]%cacheaccellimits[5]);
+        // RAVELOG_DEBUG_FORMAT("newvellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", vellimits[0]%vellimits[1]%vellimits[2]%vellimits[3]%vellimits[4]%vellimits[5]);
+        // RAVELOG_DEBUG_FORMAT("newaccellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", accellimits[0]%accellimits[1]%accellimits[2]%accellimits[3]%accellimits[4]%accellimits[5]);
+        
     }
 
     
@@ -389,7 +406,7 @@ public:
                                 RAVELOG_WARN_FORMAT("manip speed is too great %.15e", manipspeed);
                             }
                             RAVELOG_VERBOSE_FORMAT("ramp %d/%d: maxmanipspeed = %.15e; manipspeed = %.15e", (itramp - outramps.begin())%outramps.size()%_maxmanipspeed%manipspeed);
-                            return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipspeed/manipspeed);
+                            return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipspeed/manipspeed, manipspeed, 0);
                         }
                     }
                     if(_maxmanipaccel>0) {
@@ -404,7 +421,7 @@ public:
                                 RAVELOG_WARN_FORMAT("manip accel is too great %.15e", manipaccel);
                             }
                             RAVELOG_VERBOSE_FORMAT("ramp %d/%d: maxmanipaccel = %.15e; manipaccel = %.15e", (itramp - outramps.begin())%outramps.size()%_maxmanipaccel%manipaccel);
-                            return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipaccel/manipaccel);
+                            return ParabolicRampInternal::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9*_maxmanipaccel/manipaccel, 0, manipaccel);
                         }
                     }
                 }

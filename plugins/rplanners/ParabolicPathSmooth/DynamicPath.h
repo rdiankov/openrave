@@ -37,11 +37,13 @@ namespace ParabolicRampInternal {
 
 struct CheckReturn
 {
-    CheckReturn(int retcode = 0, Real fmult=1.0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false) {
+    CheckReturn(int retcode = 0, Real fmult=1.0, Real fvel=0, Real faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fEstimatedMaxManipSpeed(fvel), fEstimatedMaxManipAccel(faccel) {
     }
     int retcode; // one of CFO_X
     Real fTimeBasedSurpassMult; // if retcode == CFO_CheckTimeBasedConstraints, then the multiplier of |max|/|cur|
     bool bDifferentVelocity; ///< end in different velocity than desired
+    Real fEstimatedMaxManipSpeed;
+    Real fEstimatedMaxManipAccel;
 };
 
 /** @brief A base class for a feasibility checker.
