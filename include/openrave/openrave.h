@@ -2746,6 +2746,8 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
         RAVE_SERIALIZEJSON_ADDMEMBER(value, "translate", ikparam.GetTranslationDirection5D().pos);
         RAVE_SERIALIZEJSON_ADDMEMBER(value, "direction", ikparam.GetTranslationDirection5D().dir);
         break;
+    default:
+        break;
     }
 }
 

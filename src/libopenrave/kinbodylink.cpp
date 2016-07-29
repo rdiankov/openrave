@@ -382,11 +382,22 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "isStatic", isStatic);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "isEnabled", isEnabled);
 }
-    
+
+bool KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TODO(jsonserialization)
+    return false;
+}
+
 void KinBody::Link::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     UpdateInfo();
     _info.SerializeJSON(value, allocator, options);
+}
+
+bool KinBody::Link::DeserializeJSON(const rapidjson::Value &value)
+{
+    return _info.DeserializeJSON(value);
 }
 
 void KinBody::Link::SetStatic(bool bStatic)

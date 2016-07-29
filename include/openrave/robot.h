@@ -41,6 +41,7 @@ public:
         }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual bool DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -372,6 +373,7 @@ public:
         virtual void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual bool DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief Return hash of just the manipulator definition.
         virtual const std::string& GetStructureHash() const;
@@ -429,6 +431,7 @@ public:
         }
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual bool DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -487,6 +490,7 @@ public:
         virtual void serialize(std::ostream& o, int options) const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        virtual bool DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief return hash of the sensor definition
         virtual const std::string& GetStructureHash() const;
@@ -994,6 +998,7 @@ private:
     virtual void serialize(std::ostream& o, int options) const;
 
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+    virtual bool DeserializeJSON(const rapidjson::Value &value);
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)

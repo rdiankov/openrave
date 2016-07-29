@@ -159,6 +159,12 @@ void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "viscousFriction", viscousFriction);
 }
 
+bool ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TODO(jsonserialization)
+    return false;
+}
+
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
@@ -4717,6 +4723,17 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
     }
 
     InterfaceBase::SerializeJSON(value, allocator, options);
+}
+
+bool KinBody::DeserializeJSON(const rapidjson::Value &value)
+{
+    if (!InterfaceBase::DeserializeJSON(value))
+    {
+        return false;
+    }
+
+    // TODO(jsonserialization)
+    return false;
 }
 
 void KinBody::serialize(std::ostream& o, int options) const

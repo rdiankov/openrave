@@ -214,6 +214,12 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
     }
 }
 
+bool KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TODO(jsonserialization)
+    return false;
+}
+
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
 {
     BOOST_ASSERT(rawcoeffs.size()==3);
@@ -1779,10 +1785,21 @@ void KinBody::Joint::SerializeJSON(rapidjson::Value &value, rapidjson::Document:
     _info.SerializeJSON(value, allocator, options);
 }
 
+bool KinBody::Joint::DeserializeJSON(const rapidjson::Value &value)
+{
+    return _info.DeserializeJSON(value);
+}
+
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "equations", _equations);
+}
+
+bool KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TODO(jsonserialization)
+    return false;
 }
 
 }

@@ -47,6 +47,12 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     _sensorgeometry->SerializeJSON(value, allocator, options);
 }
 
+bool RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TODO(jsonserialization)
+    return false;
+}
+
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
 {
 }
@@ -153,6 +159,11 @@ void RobotBase::AttachedSensor::SerializeJSON(rapidjson::Value &value, rapidjson
 {
     UpdateInfo();
     _info.SerializeJSON(value, allocator, options);
+}
+
+bool RobotBase::AttachedSensor::DeserializeJSON(const rapidjson::Value &value)
+{
+    return _info.DeserializeJSON(value);
 }
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
@@ -2586,6 +2597,18 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     }
 
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "robot", true);
+}
+
+bool RobotBase::DeserializeJSON(const rapidjson::Value &value)
+{
+    if (!KinBody::DeserializeJSON(value))
+    {
+        return false;
+    }
+
+    // TODO(jsonserialization)
+
+    return false;
 }
 
 const std::string& RobotBase::GetRobotStructureHash() const

@@ -37,6 +37,12 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjso
     RAVE_SERIALIZEJSON_ADDMEMBER(value, "gripperJointNames", _vGripperJointNames);
 }
 
+bool RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TODO(jsonserialization)
+    return false;
+}
+
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {
@@ -1220,6 +1226,11 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
 void RobotBase::Manipulator::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     _info.SerializeJSON(value, allocator, options);
+}
+
+bool RobotBase::Manipulator::DeserializeJSON(const rapidjson::Value &value)
+{
+    return _info.DeserializeJSON(value);
 }
 
 ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecification(const std::string& interpolation) const

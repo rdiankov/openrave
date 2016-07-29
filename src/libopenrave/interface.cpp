@@ -144,6 +144,12 @@ void InterfaceBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::
     value.AddMember("readableInterfaces", readableInterfaces, allocator);
 }
 
+bool InterfaceBase::DeserializeJSON(const rapidjson::Value &value)
+{
+    // TOOD(jsonserialization)
+    return true;
+}
+
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
     boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);

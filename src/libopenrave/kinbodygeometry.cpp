@@ -504,6 +504,11 @@ void KinBody::Link::Geometry::SerializeJSON(rapidjson::Value &value, rapidjson::
     _info.SerializeJSON(value, allocator, options);
 }
 
+bool KinBody::Link::Geometry::DeserializeJSON(const rapidjson::Value &value)
+{
+    return _info.DeserializeJSON(value);
+}
+
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
 {
     AABB ab;
