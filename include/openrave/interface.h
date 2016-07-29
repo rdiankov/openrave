@@ -22,7 +22,9 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
-#include "tbb/concurrent_unordered_map.h"
+#ifdef USE_TBB
+#include "tbb/concurrent_hash_map.h"
+#endif
 
 namespace OpenRAVE {
 
@@ -45,9 +47,16 @@ enum SerializationOptions
 class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
 {
 public:
+
+#ifdef NUSE_TBB
+    typedef tbb::concurrent_unordered_map<std::string, XMLReadablePtr, CaseInsensitiveHashCompare> READERSMAP;
+#else
     typedef std::map<std::string, XMLReadablePtr, CaseInsensitiveCompare> READERSMAP;
+#endif
 
     InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
+
+    /// NOT Thread-safe when using the TBB library
     virtual ~InterfaceBase();
 
     inline InterfaceType GetInterfaceType() const {
@@ -212,6 +221,7 @@ public:
 
 private:
     /// Write the help commands to an output stream
+    /// CAUTION : This method is not thread-safe when using the TBB library
     virtual bool _GetCommandHelp(std::ostream& sout, std::istream& sinput) const;
 
     inline InterfaceBase& operator=(const InterfaceBase&r) {
@@ -224,10 +234,21 @@ private:
     std::string __strpluginname; ///< the name of the plugin, necessary?
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
-    mutable tbb::concurrent_unordered_map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
+
+#ifdef USE_TBB
+    typedef tbb::concurrent_unordered_map<std::string, UserDataPtr> USERDATAMAP;
+#else
+    typedef std::map<std::string, UserDataPtr> USERDATAMAP;
+#endif
+    mutable USERDATAMAP __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
+
+#ifdef USE_TBB
+    typedef tbb::concurrent_unordered_map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveHashCompare> CMDMAP;
+#else
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
+#endif
     CMDMAP __mapCommands; ///< all registered commands
 
 #ifdef RAVE_PRIVATE

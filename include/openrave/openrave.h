@@ -91,6 +91,10 @@
 #define RAVE_DEPRECATED
 #endif
 
+#ifdef USE_TBB
+#include "tbb/concurrent_unordered_map.h"
+#endif
+
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
 
@@ -240,6 +244,43 @@ public:
         return size1<size2;
     }
 };
+
+#ifdef USE_TBB
+class OPENRAVE_LOCAL CaseInsensitiveEqual {
+public:
+
+    bool equal(const std::string & s1, const std::string & s2) const
+    {
+        if ( s1.size() != s2.size() ) {
+            return false;
+        }
+
+        for(std::string::const_iterator it1=s1.begin(), it2=s2.begin(); it1 != s1.end(); ++it1, ++it2)
+        {
+            if( ::toupper(*it1) != ::toupper(*it2) )
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+};
+
+class OPENRAVE_LOCAL CaseInsensitiveHash {
+public:
+
+    std::size_t hash(const std::string & s) const {
+        _tmpUpperCaseBuffer.resize(s.size());
+        std::transform(s.begin(), s.end(), _tmpUpperCaseBuffer.begin(), ::toupper);
+        return _hasher(_tmpUpperCaseBuffer);
+    }
+
+private:
+    mutable std::string _tmpUpperCaseBuffer;
+    tbb::tbb_hash<std::string> _hasher;
+};
+#endif // OPENRAVE_USE_TBB
 
 /// \brief base class for all user data
 class OPENRAVE_API UserData
@@ -827,7 +868,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -2480,7 +2521,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name
