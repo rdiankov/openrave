@@ -124,7 +124,7 @@ public:
         for(iter = 0; iter < _nMaxIterations; ++iter) {
             Transform tmanip = manip.GetTransform();
             T totalerror2 = _ComputeConstraintError(tmanip, _error, _nMaxIterations-iter);
-            dReal ratio = totalerror2/_lasterror2;
+            //dReal ratio = totalerror2/_lasterror2;
             //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(ratio));
             if( totalerror2 <= _errorthresh2 ) {
                 bSuccess = true;
