@@ -38,8 +38,13 @@ def LoadDynamicPathString(pathnumber):
 def RunTrajectory(robot, curvesnd, timestep=0.001, xspeed=1.0):
     T = np.arange(0, curvesnd.duration + 1e-15, timestep)
     for t in T:
+        ts = time.time()
         robot.SetDOFValues(curvesnd.EvalPos(t))
-        time.sleep(timestep/xspeed)
+        sleeptime = timestep/xspeed - (time.time() - ts)
+        if sleeptime < 0:
+            continue
+        else:
+            time.sleep(sleeptime)
     return
 
 # Load a scene
@@ -195,9 +200,17 @@ def PlotData(index, fignum=1, ncolumns=2, nrows=2):
     info['d1'] = d1 # dynamicpath before shortcut
     info['d2'] = d2 # dynamicpath after shortcut
     info['s'] = s # shortcut progress
+    c1 = ramp.DynamicPathStringToParabolicCurvesND(d1)
+    c2 = ramp.DynamicPathStringToParabolicCurvesND(d2)
+    info['c1'] = c1 # paraboliccurvesnd converted from d1 (before shortcut)
+    info['c2'] = c2 # paraboliccurvesnd converted from d2 (after shortcut)
+    
     info['originaldur'] = originaldur
     info['maxiter'] = maxiter
     info['successfuliters'] = successfuliters
+    if len(info['successfuliters']) == 0:
+        return info
+    
     info['T0'] = T0
     info['T1'] = T1
     info['prevdurs'] = prevdurs
@@ -210,11 +223,6 @@ def PlotData(index, fignum=1, ncolumns=2, nrows=2):
     info['XMAX'] = XMAX
     info['VM'] = VM
     info['AM'] = AM    
-
-    c1 = ramp.DynamicPathStringToParabolicCurvesND(d1)
-    c2 = ramp.DynamicPathStringToParabolicCurvesND(d2)
-    info['c1'] = c1 # paraboliccurvesnd converted from d1 (before shortcut)
-    info['c2'] = c2 # paraboliccurvesnd converted from d2 (after shortcut)
 
     info['successfuliters'].append(maxiter)
     info['prevdurs'].append(newdurs[-1])
