@@ -418,7 +418,7 @@ public:
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) {
     }
 
-    virtual void DeserializeJSON(const rapidjson::Value &value, int options=0) {
+    virtual bool DeserializeJSON(const rapidjson::Value &value) {
     }
 
 private:

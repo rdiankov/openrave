@@ -359,6 +359,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
             value.AddMember("geometries", geometriesValue, allocator);
         }
 #if 0
+        // TODO(jsonserialization)
 
         // don't save extra geometries info for now
         if (extraGeometries.size() > 0) {

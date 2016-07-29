@@ -168,6 +168,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isCircular", isCircular, dof);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", isActive);
 
+    // TODO(jsonserialization)
     // if (!!_trajfollow) {
     //     writer->WriteString("trajectory");
     //     writer->StartObject();

@@ -51,36 +51,25 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 
 void TrajectoryBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
-    // writer->WriteString("type");
-    // writer->WriteString(GetXMLId());
+    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
-    // writer->WriteString("configuration");
-    // writer->StartObject();
-    // GetConfigurationSpecification().SerializeJSON(writer, options);
-    // writer->EndObject();
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", GetXMLId());
 
-    // writer->WriteString("data");
-    // writer->StartObject();
-    // writer->WriteString("count");
-    // writer->WriteInt(GetNumWaypoints());
-    // std::vector<dReal> data;
-    // GetWaypoints(0,GetNumWaypoints(),data);
-    // writer->WriteString("data");
-    // writer->WriteArray(data);
-    // writer->EndObject();
+    {
+        rapidjson::Value configuration;
+        GetConfigurationSpecification().SerializeJSON(configuration, allocator, options);
+        value.AddMember("configuration", configuration, allocator);
+    }
 
-    // if( GetDescription().size() > 0 ) {
-    //     writer->WriteString("description");
-    //     writer->WriteString(GetDescription());
-    // }
+    std::vector<dReal> data;
+    GetWaypoints(0, GetNumWaypoints(), data);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "data", data);
 
-    // if( GetReadableInterfaces().size() > 0 ) {
-    //     FOREACHC(it, GetReadableInterfaces()) {
-    //         writer->StartObject();
-    //         it->second->SerializeJSON(writer, options);
-    //         writer->EndObject();
-    //     }
-    // }
+    if( GetDescription().size() > 0 ) {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "description", GetDescription());
+    }
+
+    InterfaceBase::SerializeJSON(value, allocator, options);
 }
 
 InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)

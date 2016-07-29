@@ -205,13 +205,9 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        // OpenRAVE::jsonreaders::StringJSONWriter stringwriter;
-        // OpenRAVE::BaseJSONWriterPtr writer(&stringwriter, utils::null_deleter());
-        // writer->StartObject();
-        // _ptrajectory->SerializeJSON(writer, pyGetIntFromPy(ooptions,0));
-        // writer->EndObject();
-        // return object(stringwriter.GetString());
-        return object();
+        rapidjson::Document doc;
+        _ptrajectory->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
     }
 
     bool Read(const string& s, object probot) {

@@ -68,6 +68,8 @@ void HierarchicalXMLReadable::Serialize(BaseXMLWriterPtr writer, int options) co
 
 void HierarchicalXMLReadable::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
+    // TODO(jsonserialization)
+
     // writer->WriteString("data");
     // writer->WriteString(_data);
     // FOREACHC(it, _atts) {

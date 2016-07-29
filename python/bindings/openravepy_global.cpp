@@ -67,10 +67,9 @@ public:
 
     object SerializeJSON(object ooptions=object())
     {
-        // rapidjson::Document doc;
-        // _xmlreadable->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
-        // return toPyObject(doc);
-        return object();
+        rapidjson::Document doc;
+        _xmlreadable->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+        return toPyObject(doc);
     }
 
     XMLReadablePtr GetXMLReadable() {
