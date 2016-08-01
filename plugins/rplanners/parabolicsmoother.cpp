@@ -836,32 +836,32 @@ public:
                         // due to epsilon inaccuracies, have to clamp the max accel depending on _vConfigAccelerationLimit
                         for(size_t idof = 0; idof < outramp.ramps.size(); ++idof) {
                             if( outramp.ramps[idof].a1 < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
+                                // RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
+                                //                      GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a1 > _parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
+                                // RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
+                                //                      GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             if( outramp.ramps[idof].a2 < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
+                                // RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
+                                //                      GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a2 > _parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
+                                // RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
+                                //                      GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                         }
                         if( bAccelChanged ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, deltatime = %.15e", GetEnv()->GetId()%deltatime);
+                            // RAVELOG_DEBUG_FORMAT("env=%d, deltatime = %.15e", GetEnv()->GetId()%deltatime);
                             if( !outramp.IsValid() ) {
                                 RAVELOG_WARN_FORMAT("env=%d, ramp becomes invalid after changing acceleration limits", GetEnv()->GetId());
                                 return ParabolicRamp::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9); //?
@@ -885,25 +885,25 @@ public:
                     }
                 }
 
-//                // have to make sure that the last ramp's ending velocity is equal to db
-//                bool bDifferentVelocity = false;
-//                for(size_t idof = 0; idof < curvel.size(); ++idof) {
-//                    if( RaveFabs(curvel[idof]-db[idof])+g_fEpsilon > ParabolicRamp::EpsilonV ) {
-//                        bDifferentVelocity = true;
-//                        break;
-//                    }
-//                }
-//                if( bDifferentVelocity ) {
-//                    // see if last ramp's time can be modified to accomodate the velocity
-//                    ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
-//                    outramp.SetPosVelTime(outramp.x0, outramp.dx0, b, db, deltatime);
-//                    outramp.constraintchecked = 1;
-//                    outramps.push_back(outramp);
-//                    curtime = _constraintreturn->_configurationtimes[itime];
-//                    curpos.swap(newpos);
-//                    curvel.swap(newvel);
-//
-//                }
+               // // have to make sure that the last ramp's ending velocity is equal to db
+               // bool bDifferentVelocity = false;
+               // for(size_t idof = 0; idof < curvel.size(); ++idof) {
+               //     if( RaveFabs(curvel[idof]-db[idof])+g_fEpsilon > ParabolicRamp::EpsilonV ) {
+               //         bDifferentVelocity = true;
+               //         break;
+               //     }
+               // }
+               // if( bDifferentVelocity ) {
+               //     // see if last ramp's time can be modified to accomodate the velocity
+               //     ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
+               //     outramp.SetPosVelTime(outramp.x0, outramp.dx0, b, db, deltatime);
+               //     outramp.constraintchecked = 1;
+               //     outramps.push_back(outramp);
+               //     curtime = _constraintreturn->_configurationtimes[itime];
+               //     curpos.swap(newpos);
+               //     curvel.swap(newvel);
+
+               // }
             }
         }
 
@@ -918,7 +918,7 @@ public:
             try {
                 ParabolicRamp::CheckReturn retmanip = _manipconstraintchecker->CheckManipConstraints2(outramps);
                 if( retmanip.retcode != 0 ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, from CheckManipConstraints2: retcode = %d", GetEnv()->GetId()%retmanip.retcode);
+                    // RAVELOG_VERBOSE_FORMAT("env=%d, from CheckManipConstraints2: retcode = %d", GetEnv()->GetId()%retmanip.retcode);
                     return retmanip;
                 }
             }
@@ -1352,7 +1352,7 @@ protected:
                                 break;
                             }
                             if( RaveFabs(intermediate2.GetTotalTime()-outramp.endTime) > allowedstretchtime) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, intermediate2 ramp duration is too long %fs", GetEnv()->GetId()%intermediate2.GetTotalTime());
+                                RAVELOG_VERBOSE_FORMAT("env=%d, intermediate2 ramp duration is too long %fs", GetEnv()->GetId()%intermediate2.GetTotalTime());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
                             }
@@ -1370,7 +1370,7 @@ protected:
                                 dReal endtime = temp2.endTime;
                                 size_t maxIncrement = 3;
                                 for (size_t idilation = 0; idilation < maxIncrement; ++idilation) {
-                                    RAVELOG_DEBUG_FORMAT("env=%d, idilation = %d/%d", GetEnv()->GetId()%idilation%maxIncrement);
+                                    RAVELOG_VERBOSE_FORMAT("env=%d, idilation = %d/%d", GetEnv()->GetId()%idilation%maxIncrement);
                                     bool res2 = ParabolicRamp::SolveAccelBounded(temp2.x0, temp2.dx0, temp2.x1, temp2.dx1, endtime, amax, vmax, xmin, xmax, tempramps1d, 0, 6);
                                     if (res2) {
                                         temprampsnd.resize(0);
@@ -1401,8 +1401,8 @@ protected:
                                             }
                                         }
                                         if (!bhasbadramp) {
-                                            RAVELOG_DEBUG_FORMAT("env=%d, idilation = %d/%d produces feasible ramp", GetEnv()->GetId()%idilation%maxIncrement);
-                                            RAVELOG_DEBUG_FORMAT("env=%d, time increment = %.15e; allowed stretched time = %.15e", GetEnv()->GetId()%(endtime - outramp.endTime)%allowedstretchtime);
+                                            RAVELOG_VERBOSE_FORMAT("env=%d, idilation = %d/%d produces feasible ramp", GetEnv()->GetId()%idilation%maxIncrement);
+                                            RAVELOG_VERBOSE_FORMAT("env=%d, time increment = %.15e; allowed stretched time = %.15e", GetEnv()->GetId()%(endtime - outramp.endTime)%allowedstretchtime);
                                             break;
                                         }
                                     }
@@ -1422,20 +1422,20 @@ protected:
                             }
                             else if (retcheck.bDifferentVelocity) {
                                 // Give up and continue to the next iteration.
-                                RAVELOG_DEBUG_FORMAT("env=%d, after Check2, intermediate2 does not end at the desired velocity", GetEnv()->GetId());
+                                RAVELOG_VERBOSE_FORMAT("env=%d, after Check2, intermediate2 does not end at the desired velocity", GetEnv()->GetId());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
                                 break;
                             }
                             else {
                                 // Otherwise, the new segment is good.
-                                RAVELOG_DEBUG_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
+                                RAVELOG_VERBOSE_FORMAT("env=%d, the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
                                 outramps.pop_back();
                                 outramps.insert(outramps.end(), outramps2.begin(), outramps2.end());
                             }
 
                         }
                         else {
-                            RAVELOG_DEBUG("new shortcut is aligned with boundary values after running Check2");
+                            RAVELOG_VERBOSE("new shortcut is aligned with boundary values after running Check2");
                         }
                         accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
                     }
