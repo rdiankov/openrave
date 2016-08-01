@@ -26,7 +26,7 @@ struct ManipConstraintInfo
 {
     ManipConstraintInfo() : fmaxdistfromcenter(0) {
     }
-    
+
     RobotBase::ManipulatorPtr pmanip;
 
     // the end-effector link of the manipulator
@@ -62,7 +62,9 @@ public:
         }
     }
 
-    const std::list< ManipConstraintInfo >& GetCheckManips() const { return _listCheckManips; }
+    const std::list< ManipConstraintInfo >& GetCheckManips() const {
+        return _listCheckManips;
+    }
 
     /// \brief Compute the AABB that encloses all the links in linklist with respect to a coordinate system Tparent
     ///
@@ -146,7 +148,7 @@ public:
                         if(pmanip->IsGrabbing(*itbody)) {
                             FOREACH(itlink,(*itbody)->GetLinks()) {
                                 globallinklist.push_back(*itlink);
-                            }                            
+                            }
                         }
                     }
                     // Compute the enclosing AABB and add its vertices to the checkpoints
@@ -204,7 +206,7 @@ public:
         OPENRAVE_ASSERT_OP(vellimits.size(),<,64);
 
         vector<dReal> cachevellimits = vellimits, cacheaccellimits = accellimits;
-        
+
         FOREACHC(itmanipinfo,_listCheckManips) {
             RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
             Transform tlink = itmanipinfo->plink->GetTransform();
@@ -220,7 +222,7 @@ public:
             {
                 //Vector vdeltapoint = tlink.rotate(*itpoint);
                 dReal fmaxdistfromcenter = itmanipinfo->fmaxdistfromcenter;
-                
+
                 Vector vpointtotalvel; // total work velocity from jacobian accounting all axes moving
                 for(int j = 0; j < armdof; ++j) {
                     Vector vtransaxis(_vtransjacobian[j], _vtransjacobian[armdof+j], _vtransjacobian[2*armdof+j]);
@@ -244,7 +246,7 @@ public:
                     // RAVELOG_DEBUG_FORMAT("dof %d, vd = np.array([%.15e, %.15e, %.15e])", j%vd.x%vd.y%vd.z);
                     vpointtotalvel += vd;
                 }
-                
+
                 for(int j = 0; j < armdof; ++j) {
                     Vector vtransaxis(_vtransjacobian[j], _vtransjacobian[armdof+j], _vtransjacobian[2*armdof+j]);
                     Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
@@ -254,7 +256,7 @@ public:
                     // |vpointvelbase + vmoveaxis*jointvel| <= maxspeed
                     // vmoveaxis^2 * jointvel^2 + vpointvelbase.dot(vmoveaxis)*jointvel + vpointvelbase^2 <= maxspeed^2
                     // solve for jointvel and see if beyond vellimits
-                    
+
                     if( maxmanipspeed2 > 0 ) {
                         dReal roots[2];
                         int numroots = mathextra::solvequad(vmoveaxis.lengthsqr3(), vpointvelbase.dot3(vmoveaxis), vpointvelbase.lengthsqr3() - maxmanipspeed2, roots[0], roots[1]);
@@ -278,18 +280,18 @@ public:
                             }
                         }
                     }
+
+                    // Vector vabstotalmove(RaveFabs(vpointvelbase.x)
+                    // dReal fworkspeed2 = vmoveaxis.lengthsqr3(); ///< total speed in work space of *itpoint
                     
-                    //Vector vabstotalmove(RaveFabs(vpointvelbase.x)
-//                    dReal fworkspeed2 = vmoveaxis.lengthsqr3(); ///< total speed in work space of *itpoint
-//
-//                    if( maxmanipspeed2 > 0 ) {
-//                        // sqrt(flen2) * vel <= maxspeed
-//                        if( fworkspeed2 * vbestvels2[j] >= maxmanipspeed2 ) {
-//                            vbestvels2[j] = maxmanipspeed2/fworkspeed2;
-//                            changedvelsmask |= (1<<j);
-//                        }
-//                    }
-//
+                    // if( maxmanipspeed2 > 0 ) {
+                    //     // sqrt(flen2) * vel <= maxspeed
+                    //     if( fworkspeed2 * vbestvels2[j] >= maxmanipspeed2 ) {
+                    //         vbestvels2[j] = maxmanipspeed2/fworkspeed2;
+                    //         changedvelsmask |= (1<<j);
+                    //     }
+                    // }
+                    
                     if( maxmanipaccel2 > 0 ) {
                         // TODO should really be using the hessian here accel = Jacobian * dofaccelerations + dofvelocities^T * Hessian * dofvelocities, but it might be too slow, so just approximate with
                         // accel = Jacobian * dofaccelerations
@@ -326,10 +328,10 @@ public:
         // RAVELOG_DEBUG_FORMAT("accellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", cacheaccellimits[0]%cacheaccellimits[1]%cacheaccellimits[2]%cacheaccellimits[3]%cacheaccellimits[4]%cacheaccellimits[5]);
         // RAVELOG_DEBUG_FORMAT("newvellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", vellimits[0]%vellimits[1]%vellimits[2]%vellimits[3]%vellimits[4]%vellimits[5]);
         // RAVELOG_DEBUG_FORMAT("newaccellimits = np.array([%.15e, %.15e, %.15e, %.15e, %.15e, %.15e])", accellimits[0]%accellimits[1]%accellimits[2]%accellimits[3]%accellimits[4]%accellimits[5]);
-        
+
     }
 
-    
+
     /// checks at each ramp's edges. This is called in the critical loop
     ParabolicRampInternal::CheckReturn CheckManipConstraints2(const std::vector<ParabolicRampInternal::ParabolicRampND>& outramps)
     {
@@ -383,14 +385,14 @@ public:
                 // RAVELOG_DEBUG_FORMAT("R.rot = [%.15e, %.15e, %.15e, %.15e]", R.rot.x%R.rot.y%R.rot.z%R.rot.w);
                 // RAVELOG_DEBUG_FORMAT("R.trans = [%.15e, %.15e, %.15e]", R.trans.x%R.trans.y%R.trans.z);
                 ////////////////////////////////////////////////////////////////////////////////////////////////////
-                
-                // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints                
+
+                // For each point in checkpoints, compute its vel and acc and check whether they satisfy the manipulator constraints
                 FOREACH(itpoint,itmanipinfo->checkpoints) {
                     Vector point = R.rotate(*itpoint);
 
                     // RAVELOG_DEBUG_FORMAT("checkpoint = [%.15e, %.15e, %.15e]", itpoint->x%itpoint->y%itpoint->z);
                     // RAVELOG_DEBUG_FORMAT("point = [%.15e, %.15e, %.15e]", point.x%point.y%point.z);
-                        
+
                     if(_maxmanipspeed>0) {
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
                         dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
@@ -428,6 +430,88 @@ public:
             }
         }
         return ParabolicRampInternal::CheckReturn(0);
+    }
+
+
+    /// More heuristics to come!
+    ParabolicRampInternal::CheckReturn CheckManipConstraints3(const std::vector<ParabolicRampInternal::ParabolicRampND> &outramps) {
+        if (_maxmanipspeed <= 0 && _maxmanipaccel <= 0) {
+            return ParabolicRampInternal::CheckReturn(0);
+        }
+
+        dReal maxmanipspeed = 0, maxmanipaccel = 0; // actual values of speed and acceleration.
+        Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
+        FOREACHC(itramp, outramps) {
+            if (itramp->endTime <= g_fEpsilonLinear) {
+                // This one is too short so ignore it.
+                continue;
+            }
+
+            FOREACHC(itmanipinfo, _listCheckManips) {
+                KinBodyPtr probot = itmanipinfo->plink->GetParent();
+
+                itramp->Accel(0, ac);
+                qfillactive.resize(itmanipinfo->vuseddofindices.size());
+                _vfillactive.resize(itmanipinfo->vuseddofindices.size());
+                _afill.resize(probot->GetDOF());
+                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
+                    qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
+                    _vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
+                    _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
+                }
+
+                int endeffindex = itmanipinfo->plink->GetIndex();
+                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+
+                // Set the robot to the new state
+                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+                probot->GetLinkVelocities(endeffvels);
+                probot->GetLinkAccelerations(_afill,endeffaccs);
+                endeffvellin = endeffvels.at(endeffindex).first;
+                endeffvelang = endeffvels.at(endeffindex).second;
+                endeffacclin = endeffaccs.at(endeffindex).first;
+                endeffaccang = endeffaccs.at(endeffindex).second;
+                Transform R = itmanipinfo->plink->GetTransform();
+
+                FOREACH(itpoint, itmanipinfo->checkpoints) {
+                    Vector point = R.rotate(*itpoint);
+
+                    if (_maxmanipspeed > 0) {
+                        Vector vpoint = endeffvellin + endeffvelang.cross(point);
+                        dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        // Keep record of the value only if it violates the bound
+                        if (manipspeed > maxmanipspeed) {
+                            maxmanipspeed = manipspeed;
+                        }
+                    }
+
+                    if (_maxmanipaccel > 0) {
+                        Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
+                        dReal manipaccel = RaveSqrt(apoint.lengthsqr3());
+                        if (manipaccel > maxmanipaccel) {
+                            maxmanipaccel = manipaccel;
+                        }
+                    }
+                }              
+                // Finished iterating through all checkpoints
+            }
+            // Finished iterating through all manipulators
+        }
+        // Finished iterating through all ParabolicRampND
+
+        dReal reductionFactor = 1.0;
+        int retcode = 0;
+        if (_maxmanipspeed > 0 && maxmanipspeed > _maxmanipspeed) {
+            retcode = CFO_CheckTimeBasedConstraints;
+            reductionFactor = _maxmanipspeed/maxmanipspeed;
+        }
+        if (_maxmanipaccel > 0 && maxmanipaccel > _maxmanipaccel) {
+            retcode = CFO_CheckTimeBasedConstraints;
+            reductionFactor = _maxmanipaccel/maxmanipaccel;
+        }
+        RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxmanipspeed%maxmanipaccel);
+        return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxmanipspeed, maxmanipaccel);
     }
 
 private:
