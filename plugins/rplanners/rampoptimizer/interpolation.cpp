@@ -1084,8 +1084,20 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         }
         else {
             t0 = dv2/a0;
+            if (t0 < 0) {
+                RAMP_OPTIM_PLOG("t0 < 0. The given duration is not achievable with the given bounds");
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+                return false;
+            }
+            
             vp = vmNew;
             dReal tLastRamp = -dv3/a1;
+            if (tLastRamp < 0) {
+                RAMP_OPTIM_PLOG("tLastRamp < 0. The given duration is not achievable with the given bounds");
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+                return false;
+            }
+            
             if (t0 + tLastRamp > duration) {
                 // Final fix
                 if (A == 0) {
