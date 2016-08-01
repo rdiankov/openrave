@@ -744,7 +744,7 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
         initguess = mp.sign(temp)*(Abs(temp)**(1./3.))
         root = mp.findroot(lambda x: Sub(Prod([x, x, x]), temp), x0=initguess)
 
-        import IPython; IPython.embed()
+        # import IPython; IPython.embed()
         log.debug("root = {0}".format(mp.nstr(root, n=_prec)))
         a0new = mp.fdiv(Add(A2, root), C2)
         if (Abs(a0new) > Add(am, epsilon)):
@@ -812,17 +812,31 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
             # No problem with those new accelerations
             # import IPython; IPython.embed()
             t0new = mp.fdiv(Sub(vmnew, v0), a0new)
-            assert(t0new > 0)
+            if (t0new < 0):
+                log.debug("t0new < 0. The given newDuration not achievable with the given bounds")
+                return ParabolicCurve()
+            
             t1new = mp.fdiv(Sub(v1, vmnew), a1new)
-            assert(t1new > 0)
+            if (t1new < 0):
+                log.debug("t1new < 0. The given newDuration not achievable with the given bounds")
+                return ParabolicCurve()
+            
             if (Add(t0new, t1new) > newDuration):
                 # Final fix. Since we give more weight to acceleration bounds, we make the velocity
                 # bound saturated. Therefore, we set vp to vmnew.
 
                 # import IPython; IPython.embed()
+                if FuzzyZero(A, epsilon):
+                    log.warn("(final fix) A is zero. Don't know how to fix this case")
+                    return ParabolicCurve()
+
                 t0new = mp.fdiv(Sub(Sub(vmnew, v0), B), A)
+                if (t0new < 0):
+                    log.debug("(final fix) t0new is negative")
+                    return ParabolicCurve()
+
                 t1new = Sub(newDuration, t0new)
-                assert(t1new > zero)
+                
                 a0new = Add(A, Mul(mp.fdiv(one, t0new), B))
                 a1new = Add(A, Mul(mp.fdiv(one, Neg(t1new)), B))
                 ramp1 = Ramp(v0, a0new, t0new, x0)
@@ -830,29 +844,8 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
                 newCurve = ParabolicCurve([ramp1, ramp2])
 
             else:
-                # t0new = mp.fdiv(Sub(vmnew, v0), a0new)
-                # assert(t0new > 0)
                 ramp1 = Ramp(v0, a0new, t0new, x0)
-                
-                # t1new = mp.fdiv(Sub(v1, vmnew), a1new)
-                # assert(t1new > 0)
                 ramp3 = Ramp(ramp1.v1, a1new, t1new)
-                # print "a1",
-                # mp.nprint(a1, n=_prec)
-                # print "a1new",
-                # mp.nprint(a1new, n=_prec)
-                
-                # print "t0trimmed",
-                # mp.nprint(t0trimmed, n=_prec)
-                # print "t0new",
-                # mp.nprint(t0new, n=_prec)
-                # print "t1trimmed", 
-                # mp.nprint(t1trimmed, n=_prec)
-                # print "t1new", 
-                # mp.nprint(t1new, n=_prec)
-                # print "T", 
-                # mp.nprint(newDuration, n=_prec)
-                
                 ramp2 = Ramp(ramp1.v1, zero, Sub(newDuration, Add(t0new , t1new)))
                 newCurve = ParabolicCurve([ramp1, ramp2, ramp3])
                 

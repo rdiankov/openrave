@@ -674,8 +674,8 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         // RAVELOG_DEBUG_FORMAT("root = %.15e", root);
 
         // Now compute a2
-        // Special case: a1 == 0. Then this implies vm == dx0. Reevaluate those above equations
-        // leads to a2 = B2/C2
+        // Special case: a1 == 0. Then this implies vm == dx0. Re-evaluate the above equations leads
+        // to a2 = B2/C2
         // RAVELOG_DEBUG_FORMAT("a1 = %.15e; EpsilonA = %.15e", a1%EpsilonA);
         if (Abs(a1) <= EpsilonA) {
             a1 = 0;
@@ -749,8 +749,22 @@ bool ParabolicRamp1D::SolveFixedTime(Real amax,Real vmax,Real endTime)
         }
         else {
             tswitch1 = dv2/a1;
+            if (tswitch1 < 0) {
+                // The velocity limit is too low such that this trajectory is not possible within the given duration.
+                PARABOLIC_RAMP_PLOG("tswitch1 < 0. The given duration is too short to achieve with the given bounds");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false;
+            }
+            
             v = vmaxNew;
             Real tLastRamp = -dv3/a2;
+            if (tLastRamp < 0) {
+                // The velocity limit is too low such that this trajectory is not possible within the given duration.
+                PARABOLIC_RAMP_PLOG("tLastRamp < 0. The given duration is too short to achieve with the given bounds.");
+                PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0, x1, dx0, dx1, vmax, amax, endTime);
+                return false;
+            }
+
             if (tswitch1 + tLastRamp > endTime) {
                 // Final fix
                 if (A == 0) {
