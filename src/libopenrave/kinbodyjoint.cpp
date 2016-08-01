@@ -217,8 +217,134 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
 
 bool KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    // TODO(jsonserialization)
-    return false;
+    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
+        return false;
+    }
+
+    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name)) {
+        return false;
+    }
+
+    if (value.HasMember("type")) {
+        std::string typestr;
+        if (!RaveDeserializeJSON(value["type"], typestr)) {
+            return false;
+        } else {
+            if (typestr == "revolute") {
+                type = JointRevolute;
+            } else if (typestr == "prismatic") {
+                type = JointPrismatic;
+            } else {
+                int typeint = boost::lexical_cast<int>(typestr);
+                type = static_cast<JointType>(typeint);
+            }
+        }
+    }
+
+    if (!value.HasMember("parentLinkName") || !RaveDeserializeJSON(value["parentLinkName"], parentLinkName)) {
+        return false;
+    }
+
+    if (!value.HasMember("childLinkName") || !RaveDeserializeJSON(value["childLinkName"], childLinkName)) {
+        return false;
+    }
+
+    if (!value.HasMember("anchor") || !RaveDeserializeJSON(value["anchor"], anchor)) {
+        return false;
+    }
+
+    if (!value.HasMember("axes") || !RaveDeserializeJSON(value["axes"], axes)) {
+        return false;
+    }
+
+    if (!value.HasMember("currentValues") || !RaveDeserializeJSON(value["currentValues"], currentValues)) {
+        return false;
+    }
+
+    if (!value.HasMember("resolutions") || !RaveDeserializeJSON(value["resolutions"], resolutions)) {
+        return false;
+    }
+
+    if (!value.HasMember("maxVel") || !RaveDeserializeJSON(value["maxVel"], maxVel)) {
+        return false;
+    }
+
+    if (!value.HasMember("hardMaxVel") || !RaveDeserializeJSON(value["hardMaxVel"], hardMaxVel)) {
+        return false;
+    }
+
+    if (!value.HasMember("maxAccel") || !RaveDeserializeJSON(value["maxAccel"], maxAccel)) {
+        return false;
+    }
+
+    if (!value.HasMember("maxTorque") || !RaveDeserializeJSON(value["maxTorque"], maxTorque)) {
+        return false;
+    }
+
+    if (!value.HasMember("maxInertia") || !RaveDeserializeJSON(value["maxInertia"], maxInertia)) {
+        return false;
+    }
+
+    if (!value.HasMember("weights") || !RaveDeserializeJSON(value["weights"], weights)) {
+        return false;
+    }
+
+    if (!value.HasMember("offsets") || !RaveDeserializeJSON(value["offsets"], offsets)) {
+        return false;
+    }
+
+    if (!value.HasMember("lowerLimit") || !RaveDeserializeJSON(value["lowerLimit"], lowerLimit)) {
+        return false;
+    }
+
+    if (!value.HasMember("upperLimit") || !RaveDeserializeJSON(value["upperLimit"], upperLimit)) {
+        return false;
+    }
+
+    if (!value.HasMember("isCircular") || !RaveDeserializeJSON(value["isCircular"], isCircular)) {
+        return false;
+    }
+
+    if (!value.HasMember("isActive") || !RaveDeserializeJSON(value["isActive"], isActive)) {
+        return false;
+    }
+
+    if (value.HasMember("mimic")) {
+        if (value["mimic"].Size() > 3) {
+            return false;
+        }
+        for (size_t i = 0; i < value["mimic"].Size(); ++i) {
+            if (!mimic[i]->DeserializeJSON(value["mimic"][i])) {
+                return false;
+            }
+        }
+    }
+
+    if (value.HasMember("floatParameters")) {
+        if (!RaveDeserializeJSON(value["floatParameters"], floatParameters)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("intParameters")) {
+        if (!RaveDeserializeJSON(value["intParameters"], intParameters)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("stringParameters")) {
+        if (!RaveDeserializeJSON(value["stringParameters"], stringParameters)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("electricMotorActuator")) {
+        if (!electricMotorActuator->DeserializeJSON(value["electricMotorActuator"])) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -1799,8 +1925,11 @@ void KinBody::MimicInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
 
 bool KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    // TODO(jsonserialization)
-    return false;
+    if (!value.HasMember("equations") || !RaveDeserializeJSON(value["equations"], _equations)) {
+        return false;
+    }
+
+    return true;
 }
 
 }

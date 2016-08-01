@@ -342,7 +342,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     if (stringParameters.size() > 0) {
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "stringParameters", stringParameters);
     }
-    
+
     if (forcedAdjacentLinks.size() > 0) {
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "forcedAdjacentLinks", forcedAdjacentLinks);
     }
@@ -386,8 +386,77 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
 bool KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
 {
+    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
+        return false;
+    }
+
+    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name)) {
+        return false;
+    }
+
+    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform)) {
+        return false;
+    }
+
+    if (!value.HasMember("massTransform") || !RaveDeserializeJSON(value["massTransform"], massTransform)) {
+        return false;
+    }
+
+    if (!value.HasMember("mass") || !RaveDeserializeJSON(value["mass"], mass)) {
+        return false;
+    }
+
+    if (!value.HasMember("inertiaMoments") || !RaveDeserializeJSON(value["inertiaMoments"], inertiaMoments)) {
+        return false;
+    }
+
+    if (value.HasMember("floatParameters")) {
+        if (!RaveDeserializeJSON(value["floatParameters"], floatParameters)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("intParameters")) {
+        if (!RaveDeserializeJSON(value["intParameters"], intParameters)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("stringParameters")) {
+        if (!RaveDeserializeJSON(value["stringParameters"], stringParameters)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("forcedAdjacentLinks")) {
+        if (!RaveDeserializeJSON(value["forcedAdjacentLinks"], forcedAdjacentLinks)) {
+            return false;
+        }
+    }
+
+    if (value.HasMember("geometries")) {
+        if (!value["geometries"].IsArray()) {
+            return false;
+        }
+        geometries.resize(value["geometries"].Size());
+        for (size_t i = 0; i < value["geometries"].Size(); ++i) {
+            if (!geometries[i]->DeserializeJSON(value["geometries"][i])) {
+                return false;
+            }
+        }
+    }
+
     // TODO(jsonserialization)
-    return false;
+    // extraGeometries
+
+    if (!value.HasMember("isStatic") || !RaveDeserializeJSON(value["isStatic"], isStatic)) {
+        return false;
+    }
+
+    if (!value.HasMember("isEnabled") || !RaveDeserializeJSON(value["isEnabled"], isEnabled)) {
+        return false;
+    }
+    return true;
 }
 
 void KinBody::Link::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)

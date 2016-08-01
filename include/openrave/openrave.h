@@ -2769,6 +2769,7 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v);
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, double &v);
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, float &v);
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::string &v);
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v);
 template <typename T1, typename T2>
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p);
 template <typename T>
@@ -2824,6 +2825,15 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::string &v)
 {
     if (value.IsString()) {
         v = value.GetString();
+        return true;
+    }
+    return false;
+}
+
+inline bool RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v)
+{
+    if (value.IsUint()) {
+        v = value.GetUint();
         return true;
     }
     return false;

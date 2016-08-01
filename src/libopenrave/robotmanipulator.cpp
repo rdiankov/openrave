@@ -39,8 +39,43 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjso
 
 bool RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    // TODO(jsonserialization)
-    return false;
+    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
+        return false;
+    }
+
+    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], _name)) {
+        return false;
+    }
+
+    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], _tLocalTool)) {
+        return false;
+    }
+
+    if (!value.HasMember("chuckingDirection") || !RaveDeserializeJSON(value["chuckingDirection"], _vChuckingDirection)) {
+        return false;
+    }
+
+    if (!value.HasMember("direction") || !RaveDeserializeJSON(value["direction"], _vdirection)) {
+        return false;
+    }
+
+    if (!value.HasMember("baseLinkName") || !RaveDeserializeJSON(value["baseLinkName"], _sBaseLinkName)) {
+        return false;
+    }
+
+    if (!value.HasMember("effectorLinkName") || !RaveDeserializeJSON(value["effectorLinkName"], _sEffectorLinkName)) {
+        return false;
+    }
+
+    if (!value.HasMember("iksolverType") || !RaveDeserializeJSON(value["iksolverType"], _sIkSolverXMLId)) {
+        return false;
+    }
+
+    if (!value.HasMember("gripperJointNames") || !RaveDeserializeJSON(value["gripperJointNames"], _vGripperJointNames)) {
+        return false;
+    }
+
+    return true;
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {

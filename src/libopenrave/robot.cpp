@@ -49,8 +49,27 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
 
 bool RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    // TODO(jsonserialization)
-    return false;
+    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
+        return false;
+    }
+
+    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], _name)) {
+        return false;
+    }
+
+    if (!value.HasMember("type") || !RaveDeserializeJSON(value["type"], _sensorname)) {
+        return false;
+    }
+
+    if (!value.HasMember("linkName") || !RaveDeserializeJSON(value["linkName"], _linkname)) {
+        return false;
+    }
+
+    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], _trelative)) {
+        return false;
+    }
+
+    return _sensorgeometry->DeserializeJSON(value);
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)

@@ -2296,6 +2296,14 @@ void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value &value, rapidjso
     }
 }
 
+bool SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value &value)
+{
+    if (!value.HasMember("hardware_id") || !RaveDeserializeJSON(value["hardware_id"], hardware_id)) {
+        return false;
+    }
+    return true;
+}
+
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
 {
     SensorGeometry::Serialize(writer, options);

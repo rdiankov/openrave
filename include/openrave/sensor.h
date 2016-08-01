@@ -197,6 +197,8 @@ public:
         virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+
+        virtual bool DeserializeJSON(const rapidjson::Value &value);
         
         virtual SensorGeometry& operator=(const SensorGeometry& r) {
             hardware_id = r.hardware_id;
