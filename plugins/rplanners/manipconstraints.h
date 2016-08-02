@@ -439,8 +439,9 @@ public:
             return ParabolicRampInternal::CheckReturn(0);
         }
 
-        dReal maxmanipspeed = 0, maxmanipaccel = 0; // actual values of speed and acceleration.
         Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
+        dReal maxactualmanipspeed2 = 0, maxactualmanipaccel2 = 0;
+        
         FOREACHC(itramp, outramps) {
             if (itramp->endTime <= g_fEpsilonLinear) {
                 // This one is too short so ignore it.
@@ -479,18 +480,18 @@ public:
 
                     if (_maxmanipspeed > 0) {
                         Vector vpoint = endeffvellin + endeffvelang.cross(point);
-                        dReal manipspeed = RaveSqrt(vpoint.lengthsqr3());
+                        dReal actualmanipspeed2 = vpoint.lengthsqr3();
                         // Keep record of the value only if it violates the bound
-                        if (manipspeed > maxmanipspeed) {
-                            maxmanipspeed = manipspeed;
+                        if (actualmanipspeed2 > maxactualmanipspeed2) {
+                            maxactualmanipspeed2 = actualmanipspeed2;
                         }
                     }
 
                     if (_maxmanipaccel > 0) {
                         Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
-                        dReal manipaccel = RaveSqrt(apoint.lengthsqr3());
-                        if (manipaccel > maxmanipaccel) {
-                            maxmanipaccel = manipaccel;
+                        dReal actualmanipaccel2 = apoint.lengthsqr3();
+                        if (actualmanipaccel2 > maxactualmanipaccel2) {
+                            maxactualmanipaccel2 = actualmanipaccel2;
                         }
                     }
                 }              
@@ -502,13 +503,17 @@ public:
 
         dReal reductionFactor = 1.0;
         int retcode = 0;
+        dReal maxmanipspeed = RaveSqrt(maxactualmanipspeed2), maxmanipaccel = RaveSqrt(maxactualmanipaccel2);
+        dReal maxallowedmult = 0.9;
         if (_maxmanipspeed > 0 && maxmanipspeed > _maxmanipspeed) {
             retcode = CFO_CheckTimeBasedConstraints;
-            reductionFactor = _maxmanipspeed/maxmanipspeed;
+
+            // If the actual max value is very close to the bound, the multiplier will be too large (too close to 1) to be useful.
+            reductionFactor = min(_maxmanipspeed/maxmanipspeed, maxallowedmult);
         }
         if (_maxmanipaccel > 0 && maxmanipaccel > _maxmanipaccel) {
             retcode = CFO_CheckTimeBasedConstraints;
-            reductionFactor = _maxmanipaccel/maxmanipaccel;
+            reductionFactor = min(_maxmanipaccel/maxmanipaccel, maxallowedmult);
         }
         RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxmanipspeed%maxmanipaccel);
         return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxmanipspeed, maxmanipaccel);

@@ -21,7 +21,7 @@
 #include "manipconstraints.h"
 #include "ParabolicPathSmooth/DynamicPath.h"
 
-bool usingNewHeuristics = true;
+bool usingNewHeuristics = 1;
 
 namespace rplanners {
 
@@ -222,7 +222,7 @@ public:
             }
             _manipconstraintchecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
         }
-     
+
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
@@ -931,16 +931,16 @@ public:
             try {
                 ncheckmanipconstraints += 1;
                 ParabolicRamp::CheckReturn retmanip;
-                tcheckmanipstart = utils::GetMilliTime();
+                tcheckmanipstart = utils::GetMicroTime();
                 if (!usingNewHeuristics) {
                     retmanip = _manipconstraintchecker->CheckManipConstraints2(outramps);
                 }
                 else {
                     retmanip = _manipconstraintchecker->CheckManipConstraints3(outramps);
                 }
-                tcheckmanipend = utils::GetMilliTime();
+                tcheckmanipend = utils::GetMicroTime();
                 checkmaniptime += 0.000001f*(float)(tcheckmanipend - tcheckmanipstart);
-                    
+
                 if( retmanip.retcode != 0 ) {
                     // RAVELOG_VERBOSE_FORMAT("env=%d, from CheckManipConstraints2: retcode = %d", GetEnv()->GetId()%retmanip.retcode);
                     return retmanip;
@@ -1136,6 +1136,13 @@ protected:
 
     int _Shortcut(ParabolicRamp::DynamicPath& dynamicpath, int numIters, ParabolicRamp::RandomNumberGeneratorBase* rng, dReal mintimestep)
     {
+        ninterpolations = 0;
+        interpolationtime = 0;
+        nslowdownloops = 0;
+        slowdownlooptime = 0;
+        nchecks = 0;
+        checktime = 0;
+
         uint32_t fileindex;
         if( !!_logginguniformsampler ) {
             fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
@@ -1211,9 +1218,6 @@ protected:
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // for slowing down when timing constraints
         dReal fstarttimemult = 1.0; // the start velocity/accel multiplier for the velocity and acceleration computations. If manip speed/accel or dynamics constraints are used, then this will track the last successful multipler. Basically if the last successful one is 0.1, it's very unlikely than a muliplier of 0.8 will meet the constraints the next time.
 
-        uint32_t totalinterpolationtime = 0;
-        size_t ninterpolations = 0;
-
         size_t nItersFromPrevSuccessful = 0;
         size_t nCutoffIters = 10000;
         dReal score = 1;
@@ -1227,7 +1231,7 @@ protected:
                 // No progress for already nCutOffIters. Stop right away.
                 break;
             }
-            
+
             dReal t1=rng->Rand()*endTime,t2=rng->Rand()*endTime;
             if( iters == 0 ) {
                 t1 = 0;
@@ -1311,12 +1315,15 @@ protected:
 
                 dReal fcurmult = fstarttimemult;
 
-                for(size_t islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
-                    totalinterpolationtime += utils::GetMicroTime();
+                tloopstart = utils::GetMicroTime();
+                size_t islowdowntry = 0;
+                for(islowdowntry = 0; islowdowntry < 4; ++islowdowntry ) {
+                    tinterpstart = utils::GetMicroTime();
                     bool res=ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
-                    totalinterpolationtime -= utils::GetMicroTime();
+                    tinterpend = utils::GetMicroTime();
+                    interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                     ninterpolations += 1;
-                    
+
                     iIterProgress += 0x1000;
                     if(!res) {
                         break;
@@ -1353,7 +1360,12 @@ protected:
                         //                }
 
                         iIterProgress += 0x10;
+                        tcheckstart = utils::GetMicroTime();
                         retcheck = _feasibilitychecker.Check2(intermediate.ramps[iramp], 0xffff, outramps);
+                        tcheckend = utils::GetMicroTime();
+                        checktime += 0.000001f*(float)(tcheckend - tcheckstart);
+                        nchecks += 1;
+                        
                         iIterProgress += 0x10;
                         if( retcheck.retcode != 0) {
                             break;
@@ -1387,7 +1399,12 @@ protected:
                             ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
                             dReal allowedstretchtime = (t2 - t1) - (newramptime + mintimestep);
 
+                            tinterpstart = utils::GetMicroTime();
                             bool res=ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[iramp].x1, intermediate.ramps[iramp].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            tinterpend = utils::GetMicroTime();
+                            interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
+                            ninterpolations += 1;
+
                             if( !res ) {
                                 RAVELOG_WARN("failed to SolveMinTime for different vel ramp\n");
                                 retcheck.retcode = CFO_FinalValuesNotReached;
@@ -1401,7 +1418,12 @@ protected:
 
                             // Check the newly interpolated segment. Note that intermediate2 should have ramps.size() == 1.
                             OPENRAVE_ASSERT_OP(intermediate2.ramps.size(), ==, 1);
+                            tcheckstart = utils::GetMicroTime();
                             retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff, outramps2);
+                            tcheckend = utils::GetMicroTime();
+                            checktime += 0.000001f*(float)(tcheckend - tcheckstart);
+                            nchecks += 1;
+                            
                             if (retcheck.retcode != 0) {
                                 RAVELOG_WARN_FORMAT("env=%d, the final SolveMinTime generated infeasible segment retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
                                 // TODO probably never get here, so remove if not necessary
@@ -1509,6 +1531,9 @@ protected:
                     }
                     iIterProgress += 0x1000;
                 }
+                nslowdownloops += (islowdowntry + 1);
+                tloopend = utils::GetMicroTime();
+                slowdownlooptime += 0.000001f*(float)(tloopend - tloopstart);
 
                 if( !bsuccess ) {
                     continue;
@@ -1565,7 +1590,7 @@ protected:
                 }
                 dReal diff = dummyEndTime - endTime;
                 RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numslowdowns%dummyEndTime%endTime%diff);
-                
+
                 if (IS_DEBUGLEVEL(Level_Debug)) {
                     // Write the progress
                     shortcutprogress << str(boost::format("\n%d %.15e %.15e %.15e %.15e")%iters%t1%t2%dummyEndTime%endTime);
@@ -1611,7 +1636,7 @@ protected:
                         sep = " ";
                     }
                 }
-                
+
                 score = diff/nItersFromPrevSuccessful;
                 if (score > currentBestScore) {
                     currentBestScore = score;
@@ -1651,13 +1676,22 @@ protected:
             RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
         }
 
-        dReal interpolationtime = 0.000001f*(float)totalinterpolationtime;
-        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/(float)ninterpolations));
-        
+        RAVELOG_DEBUG_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
+        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
+        RAVELOG_DEBUG_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
+
         return shortcuts;
     }
 
     int _Shortcut2(ParabolicRamp::DynamicPath& dynamicpath, int numIters, ParabolicRamp::RandomNumberGeneratorBase *rng, dReal mintimestep) {
+        // For time measuring
+        ninterpolations = 0;
+        interpolationtime = 0;
+        nslowdownloops = 0;
+        slowdownlooptime = 0;
+        nchecks = 0;
+        checktime = 0;
+
         uint32_t fileindex;
         if( !!_logginguniformsampler ) {
             fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
@@ -1735,18 +1769,13 @@ protected:
 
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // Real `MAGIC` happens here
 
-        dReal interpolationtime = 0;
-        uint32_t tinterpolationstart;
-        uint32_t tinterpolationend;
-        size_t ninterpolations = 0;
-        
         int numslowdowns = 0;
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear; // gripper constraints enabled
         size_t nItersFromPrevSuccessful = 0;
         size_t nCutoffIters = 10000;
         dReal cutoffRatio = 0;
         dReal score = 1;
-        dReal currentBestScore = 1.0;        
+        dReal currentBestScore = 1.0;
         uint32_t tshortcutstart = utils::GetMicroTime();
         int iters = 0;
         for (iters = 0; iters < numIters; iters++) {
@@ -1826,16 +1855,19 @@ protected:
                         }
                     }
                 }
-                
+
                 bool bsuccess = false;
                 size_t maxSlowdowns = 4; // will adjust this constant later
-                for (size_t islowdowntry = 0; islowdowntry < maxSlowdowns; ++islowdowntry) {
-                    tinterpolationstart = utils::GetMicroTime();
+
+                tloopstart = utils::GetMicroTime();
+                size_t islowdowntry = 0;
+                for (islowdowntry = 0; islowdowntry < maxSlowdowns; ++islowdowntry) {
+                    tinterpstart = utils::GetMicroTime();
                     bool res = ParabolicRamp::SolveMinTime(x0, dx0, x1, dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate, _parameters->_multidofinterp);
-                    tinterpolationend = utils::GetMicroTime();
-                    interpolationtime += 0.000001f*(float)(tinterpolationend - tinterpolationstart);
+                    tinterpend = utils::GetMicroTime();
+                    interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                     ninterpolations += 1;
-                    
+
                     iIterProgress += 0x1000;
                     if (!res) {
                         // The initial interpolation failed. Continue to the next iteration.
@@ -1864,7 +1896,7 @@ protected:
 
                         if (irampnd > 0) { // copied from _Shortcut although unnecessary
                             intermediate.ramps[irampnd].x0 = intermediate.ramps[irampnd - 1].x1;
-                            intermediate.ramps[irampnd].dx0 = intermediate.ramps[irampnd - 1].dx1;                            
+                            intermediate.ramps[irampnd].dx0 = intermediate.ramps[irampnd - 1].dx1;
                         }
                         if (_parameters->SetStateValues(intermediate.ramps[irampnd].x1) != 0) {
                             retcheck.retcode = CFO_StateSettingError;
@@ -1873,8 +1905,12 @@ protected:
 
                         _parameters->_getstatefn(intermediate.ramps[irampnd].x1); // not sure what this is for.
                         iIterProgress += 0x10;
-                        
+                        tcheckstart = utils::GetMicroTime();
                         retcheck = _feasibilitychecker.Check2(intermediate.ramps[irampnd], 0xffff, outramps);
+                        tcheckend = utils::GetMicroTime();
+                        checktime += 0.000001f*(float)(tcheckend - tcheckstart);
+                        nchecks += 1;
+                        
                         iIterProgress += 0x10;
 
                         if (retcheck.retcode != 0) {
@@ -1910,7 +1946,11 @@ protected:
                             ParabolicRamp::ParabolicRampND &outramp = outramps.at(outramps.size() - 1); // the last ParabolicRampND
                             dReal allowedstretchtime = (t2 - t1) - (newramptime + mintimestep); // the time that the segment is allowed to stretch out such that it is still a useful shortcut
 
+                            tinterpstart = utils::GetMicroTime();
                             bool res = ParabolicRamp::SolveMinTime(outramp.x0, outramp.dx0, intermediate.ramps[irampnd].x1, intermediate.ramps[irampnd].dx1, accellimits, vellimits, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, intermediate2, _parameters->_multidofinterp);
+                            tinterpend = utils::GetMicroTime();
+                            interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
+                            ninterpolations += 1;
 
                             if (!res) {
                                 RAVELOG_WARN_FORMAT("env = %d: failed to correct velocity discrepancy at the end of the segment", GetEnv()->GetId());
@@ -1925,8 +1965,12 @@ protected:
 
                             // Check the newly interpolated segment. Note that intermediate2 should have ramps.size() == 1.
                             OPENRAVE_ASSERT_OP(intermediate2.ramps.size(), ==, 1);
-
+                            tcheckstart = utils::GetMicroTime();
                             retcheck = _feasibilitychecker.Check2(intermediate2.ramps[0], 0xffff, outramps2);
+                            tcheckend = utils::GetMicroTime();
+                            checktime += 0.000001f*(float)(tcheckend - tcheckstart);
+                            nchecks += 1;
+                        
                             if (retcheck.retcode == 0) {
                                 // The final segment is now good.
                                 RAVELOG_VERBOSE_FORMAT("env = %d: the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
@@ -1966,12 +2010,12 @@ protected:
                     }
                     else if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
                         // CFO_CheckTimeBasedConstraints can be returned becasue of two things: torque limit violation and manipulator constraint violation.
-                        
+
                         // Modifiy vellimits and accellimits
                         if (_bmanipconstraints && !!_manipconstraintchecker) {
                             // Manipulator constraints is enabled. Time-based constraint violation
                             // is likely because manipulator constraints.
-                            if (0) {//(islowdowntry == 0) {
+                            if (islowdowntry == 0) {
                                 // Try computing estimates of velocity and acceleration first before scaling down
                                 if (1) {// using the original procedure first
                                     if (_parameters->SetStateValues(x0) != 0) {
@@ -2014,9 +2058,9 @@ protected:
                                         accellimits[j] *= faccelmult;
                                     }
                                 }
-                                
+
                                 numslowdowns += 1;
-                                RAVELOG_VERBOSE_FORMAT("fcurvelmult = %.15e; fcuraccelmult = %.15e", fcurvelmult%fcuraccelmult);
+                                RAVELOG_VERBOSE_FORMAT("fTimeBasedSurpassMult = %.15e; fcurvelmult = %.15e; fcuraccelmult = %.15e", retcheck.fTimeBasedSurpassMult%fcurvelmult%fcuraccelmult);
                             }
                         }
                         else {
@@ -2031,7 +2075,7 @@ protected:
                                 RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d: fcurACCELmult (%.15e) is too small. continue to the next iteration", GetEnv()->GetId()%iters%numIters%fcuraccelmult);
                                 break;
                             }
-                            
+
                             numslowdowns += 1;
                             for (size_t j = 0; j < vellimits.size(); ++j) {
                                 dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
@@ -2046,7 +2090,10 @@ protected:
                     }
                     iIterProgress += 0x1000;
                 }
-                
+                nslowdownloops += (islowdowntry + 1);
+                tloopend = utils::GetMicroTime();
+                slowdownlooptime += 0.000001f*(float)(tloopend - tloopstart);
+
                 if (!bsuccess) {
                     continue;
                 }
@@ -2068,7 +2115,7 @@ protected:
                     ramps.insert(ramps.begin() + i1, ramps.at(i1));
                     i2 = i1 + 1;
                 }
-                
+
                 ramps.at(i1).TrimBack(ramps[i1].endTime - u1); // use at for bounds checking
                 ramps[i1].x1 = accumoutramps.front().x0;
                 ramps[i1].dx1 = accumoutramps.front().dx0;
@@ -2150,7 +2197,7 @@ protected:
                         sep = " ";
                     }
                 }
-                
+
                 score = diff/nItersFromPrevSuccessful;
                 if (score > currentBestScore) {
                     currentBestScore = score;
@@ -2162,7 +2209,7 @@ protected:
                     // progress. So stop here.
                     break;
                 }
-                
+
             }
             catch(const std::exception &ex) {
                 RAVELOG_WARN_FORMAT("env = %d: exception happened during shortcut iterprogress = 0x%x: %s", GetEnv()->GetId()%iIterProgress%ex.what());
@@ -2191,8 +2238,10 @@ protected:
             RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
         }
 
-        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e interpolation/sec.", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
-        
+        RAVELOG_DEBUG_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
+        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
+        RAVELOG_DEBUG_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
+
         return shortcuts;
     }
 
@@ -2291,8 +2340,8 @@ protected:
         path.Save(filename);
         dReal duration = 0;
         for (std::vector<ParabolicRamp::ParabolicRampND>::const_iterator it = path.ramps.begin(); it != path.ramps.end(); ++it) {
-            duration += it->endTime; 
-       }
+            duration += it->endTime;
+        }
         RAVELOG_DEBUG_FORMAT("Wrote a dynamic path to %s (duration = %.15e)", filename%duration);
         return;
     }
@@ -2319,9 +2368,21 @@ protected:
     bool _bmanipconstraints; /// if true, check workspace manip constraints
 
     // for testing
-    int ncheckmanipconstraints = 0;
-    dReal checkmaniptime = 0;
+    int ncheckmanipconstraints;
+    dReal checkmaniptime;
     uint32_t tcheckmanipstart, tcheckmanipend;
+
+    int ninterpolations;
+    dReal interpolationtime;
+    uint32_t tinterpstart, tinterpend;
+
+    int nslowdownloops;
+    dReal slowdownlooptime;
+    uint32_t tloopstart, tloopend;
+
+    int nchecks;
+    dReal checktime;
+    uint32_t tcheckstart, tcheckend;
 };
 
 
