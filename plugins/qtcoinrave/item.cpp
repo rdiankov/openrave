@@ -95,8 +95,8 @@ KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry
     _bReload = false;
     _bDrawStateChanged = false;
     networkid = pchain->GetEnvironmentId();
-    _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::GeometryChangedCallback,this));
-    _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::DrawChangedCallback,this));
+    _geometrycallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkGeometry, std::bind(&KinBodyItem::GeometryChangedCallback,this));
+    _drawcallback = pchain->RegisterChangeCallback(KinBody::Prop_LinkDraw, std::bind(&KinBodyItem::DrawChangedCallback,this));
 }
 
 void KinBodyItem::Load()
@@ -178,7 +178,7 @@ void KinBodyItem::Load()
                 // Fall back on OpenRAVE's standard mesh loader.
                 if( !bSucceeded ) {
                     // need to very careful
-                    typedef boost::shared_ptr<TriMesh> TriMeshPtr;
+                    typedef std::shared_ptr<TriMesh> TriMeshPtr;
                     TriMeshPtr mesh = _pchain->GetEnv()->ReadTrimeshURI(TriMeshPtr(), geom->GetRenderFilename());
                     if (mesh) {
                         // apply render scale to the mesh
@@ -392,7 +392,7 @@ bool KinBodyItem::UpdateFromIv()
         ++ittrans;
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+    std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
     if( !!lockenv ) {
         _pchain->SetLinkTransformations(vtrans,_vdofbranches);
     }
@@ -421,7 +421,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
+        std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _viewer.lock()->LockEnvironment(50000,false);
         if( !lockenv ) {
             return false;
         }

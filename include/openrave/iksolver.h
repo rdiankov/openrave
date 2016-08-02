@@ -189,7 +189,7 @@ public:
         \param[out] solution [optional] Holds the IK solution
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution = boost::shared_ptr< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, std::shared_ptr< std::vector<dReal> > solution = std::shared_ptr< std::vector<dReal> >()) = 0;
 
     /** \brief Return a joint configuration for the given end effector transform.
 
@@ -234,7 +234,7 @@ public:
         \param[out] solution [optional] Holds the IK solution, must be of size RobotBase::Manipulator::_vecarmjoints
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > solution=boost::shared_ptr< std::vector<dReal> >()) = 0;
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, std::shared_ptr< std::vector<dReal> > solution=std::shared_ptr< std::vector<dReal> >()) = 0;
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -297,10 +297,10 @@ public:
     
 protected:
     inline IkSolverBasePtr shared_iksolver() {
-        return boost::static_pointer_cast<IkSolverBase>(shared_from_this());
+        return std::static_pointer_cast<IkSolverBase>(shared_from_this());
     }
     inline IkSolverBaseConstPtr shared_iksolver_const() const {
-        return boost::static_pointer_cast<IkSolverBase const>(shared_from_this());
+        return std::static_pointer_cast<IkSolverBase const>(shared_from_this());
     }
 
     virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority);

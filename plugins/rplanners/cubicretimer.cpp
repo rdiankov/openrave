@@ -40,8 +40,8 @@ public:
 
         //ConfigurationSpecification::Group gaccel;
     };
-    typedef boost::shared_ptr<CubicGroupInfo> CubicGroupInfoPtr;
-    typedef boost::shared_ptr<CubicGroupInfo const> CubicGroupInfoConstPtr;
+    typedef std::shared_ptr<CubicGroupInfo> CubicGroupInfoPtr;
+    typedef std::shared_ptr<CubicGroupInfo const> CubicGroupInfoConstPtr;
 
     CubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
@@ -241,7 +241,7 @@ protected:
     }
 
     bool _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        CubicGroupInfoConstPtr info = boost::dynamic_pointer_cast<CubicGroupInfo const>(inforaw);
+        CubicGroupInfoConstPtr info = std::dynamic_pointer_cast<CubicGroupInfo const>(inforaw);
         _v0pos.resize(info->gpos.dof);
         _v1pos.resize(info->gpos.dof);
         for(int i = 0; i < info->gpos.dof; ++i) {

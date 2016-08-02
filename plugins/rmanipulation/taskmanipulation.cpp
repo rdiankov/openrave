@@ -45,11 +45,12 @@ public:
     typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
     TaskManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
+        using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\n\
 Task-based manipulation planning involving target objects. A lot of the algorithms and theory are covered in:\n\
 \n\
 - Rosen Diankov. \"Automated Construction of Robotic Manipulation Programs\". PhD Thesis, CMU-RI-TR-10-29, Carnegie Mellon University, Robotics Institute, August 2010.\n";
-        RegisterCommand("GraspPlanning",boost::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
+        RegisterCommand("GraspPlanning",std::bind(&TaskManipulation::GraspPlanning,this,_1,_2),
                         "Grasp planning is the ultimate function that puts together many planners achieving a robust and general pick and place motiotions with grasp sets. It first chooses grasps from a grasp set and use it for manipulation. In order for the arm to reach the grasps, it must have a Transform6D or TranslationDirection5D IK solver, anything with less DOF will not work.\nParameters:\n\n\
 * grasps\n\
 * outputtraj\n\
@@ -75,28 +76,28 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 * grasptranslationstepmult\n\
 * graspfinestep\n\
 ");
-        RegisterCommand("CloseFingers",boost::bind(&TaskManipulation::ChuckFingers,this,_1,_2),
+        RegisterCommand("CloseFingers",std::bind(&TaskManipulation::ChuckFingers,this,_1,_2),
                         "Chucks the active manipulator fingers using the grasp planner along manip->GetChuckingDirection().");
-        RegisterCommand("ChuckFingers",boost::bind(&TaskManipulation::ChuckFingers,this,_1,_2),
+        RegisterCommand("ChuckFingers",std::bind(&TaskManipulation::ChuckFingers,this,_1,_2),
                         "Chucks the active manipulator fingers using the grasp planner along manip->GetChuckingDirection().");
-        RegisterCommand("ReleaseFingers",boost::bind(&TaskManipulation::UnchuckFingers,this,_1,_2),
+        RegisterCommand("ReleaseFingers",std::bind(&TaskManipulation::UnchuckFingers,this,_1,_2),
                         "Unchucks the active manipulator fingers using the grasp planner.\n"
                         "Also releases the given object.");
-        RegisterCommand("UnchuckFingers",boost::bind(&TaskManipulation::UnchuckFingers,this,_1,_2),
+        RegisterCommand("UnchuckFingers",std::bind(&TaskManipulation::UnchuckFingers,this,_1,_2),
                         "Unchucks the active manipulator fingers using the grasp planner.\n"
                         "Also releases the given object.");
-        RegisterCommand("ReleaseActive",boost::bind(&TaskManipulation::ReleaseActive,this,_1,_2),
+        RegisterCommand("ReleaseActive",std::bind(&TaskManipulation::ReleaseActive,this,_1,_2),
                         "Moves the active DOF using the grasp planner.");
-        RegisterCommand("CreateSystem",boost::bind(&TaskManipulation::CreateSystem,this,_1,_2),
+        RegisterCommand("CreateSystem",std::bind(&TaskManipulation::CreateSystem,this,_1,_2),
                         "creates a sensor system and initializes it with the current bodies");
-        RegisterCommand("EvaluateConstraints",boost::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
+        RegisterCommand("EvaluateConstraints",std::bind(&TaskManipulation::EvaluateConstraints,this,_1,_2),
                         "Instantiates a jacobian constraint function and runs it on several examples.\n"
                         "The constraints work on the active degress of freedom of the manipulator starting from the current configuration");
-        RegisterCommand("SetMinimumGoalPaths",boost::bind(&TaskManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
+        RegisterCommand("SetMinimumGoalPaths",std::bind(&TaskManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
                         "Sets _minimumgoalpaths for all planner parameters.");
-        RegisterCommand("SetPostProcessing",boost::bind(&TaskManipulation::SetPostProcessingCommand,this,_1,_2),
+        RegisterCommand("SetPostProcessing",std::bind(&TaskManipulation::SetPostProcessingCommand,this,_1,_2),
                         "Sets post processing parameters.");
-        RegisterCommand("SetRobot",boost::bind(&TaskManipulation::SetRobotCommand,this,_1,_2),
+        RegisterCommand("SetRobot",std::bind(&TaskManipulation::SetRobotCommand,this,_1,_2),
                         "Sets the robot.");
         _fMaxVelMult=1;
         _minimumgoalpaths=1;
@@ -307,7 +308,7 @@ protected:
         vector<dReal> vprev, vdelta;
         _robot->GetActiveDOFValues(vprev);
         CM::GripperJacobianConstrains<double> constraints(_robot->GetActiveManipulator(),tTargetWorldFrame,tConstraintTaskFrame, vfreedoms,errorthresh);
-        constraints._distmetricfn = boost::bind(&ActiveDistMetric::Eval,&distmetric,_1,_2);
+        constraints._distmetricfn = std::bind(&ActiveDistMetric::Eval,&distmetric,std::placeholders::_1,std::placeholders::_2);
         vdelta.resize(vprev.size());
         FOREACH(itconfig,listconfigs) {
             _robot->SetActiveDOFValues(*itconfig);
@@ -360,7 +361,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
 
         vector<dReal> vgrasps;
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        std::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
 
         KinBodyPtr ptarget;
         int nNumGrasps=0, nGraspDim=0;
@@ -372,7 +373,7 @@ protected:
         bool bExecute = true;
         string strtrajfilename;
         bool bRandomDests = true, bRandomGrasps = true;     // if true, permute the grasps and destinations when iterating through them
-        boost::shared_ptr<ostream> pOutputTrajStream;
+        std::shared_ptr<ostream> pOutputTrajStream;
         int nMaxSeedGrasps = 20, nMaxSeedDests = 5, nMaxSeedIkSolutions = 0;
         int nMaxIterations = 4000;
         bool bQuitAfterFirstRun = false;
@@ -406,7 +407,7 @@ protected:
                 }
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "execute" ) {
                 sinput >> bExecute;
@@ -627,7 +628,7 @@ protected:
         UserDataPtr ikfilter;
         if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
             // if 5D, have to set a filter
-            ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),_1,_2,_3,ptarget));
+          ikfilter = pmanip->GetIkSolver()->RegisterCustomFilter(0,std::bind(&TaskManipulation::_FilterIkForGrasping,shared_problem(),std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,ptarget));
             //fApproachOffset = 0; // cannot approach?
         }
 
@@ -1109,10 +1110,10 @@ protected:
     {
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
-        boost::shared_ptr<ostream> pOutputTrajStream;
+        std::shared_ptr<ostream> pOutputTrajStream;
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        std::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->vgoalconfig = pmanip->GetChuckingDirection();
 
         vector<dReal> voffset;
@@ -1131,7 +1132,7 @@ protected:
                 sinput >> strtrajfilename;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1170,7 +1171,7 @@ protected:
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveDOFs(pmanip->GetGripperIndices());
 
-        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
+        std::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERROR("grasping planner failure!\n");
             return false;
@@ -1228,11 +1229,11 @@ protected:
     {
         bool bExecute = true, bOutputFinal=false;
         string strtrajfilename;
-        boost::shared_ptr<ostream> pOutputTrajStream;
+        std::shared_ptr<ostream> pOutputTrajStream;
         Vector direction;
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        std::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
         graspparams->vgoalconfig = pmanip->GetChuckingDirection();
         FOREACH(it,graspparams->vgoalconfig) {
             *it = -*it;
@@ -1256,7 +1257,7 @@ protected:
                 ptarget = GetEnv()->GetKinBody(name);
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1307,7 +1308,7 @@ protected:
             break;
         }
 
-        boost::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
+        std::shared_ptr<PlannerBase> graspplanner = RaveCreatePlanner(GetEnv(),"Grasper");
         if( !graspplanner ) {
             RAVELOG_ERROR("grasping planner failure!\n");
             return false;
@@ -1372,8 +1373,8 @@ protected:
     {
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
-        boost::shared_ptr<ostream> pOutputTrajStream;
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        std::shared_ptr<ostream> pOutputTrajStream;
+        std::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
 
         // initialize the moving direction as the opposite of the chucking direction defined in the manipulators
         vector<dReal> vchuckingsign_full(_robot->GetDOF(), 0);
@@ -1403,7 +1404,7 @@ protected:
                 sinput >> bExecute;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = boost::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;
@@ -1507,11 +1508,11 @@ protected:
     }
 
 protected:
-    inline boost::shared_ptr<TaskManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
+    inline std::shared_ptr<TaskManipulation> shared_problem() {
+        return std::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
     }
-    inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
+    inline std::shared_ptr<TaskManipulation const> shared_problem_const() const {
+        return std::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
     /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
@@ -1688,7 +1689,7 @@ protected:
         }
 
         goalsampler.SetSamplingProb(fGoalSamplingProb);
-        params->_samplegoalfn = boost::bind(&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,_1);
+        params->_samplegoalfn = std::bind((bool (planningutils::ManipulatorIKGoalSampler::*)(std::vector<dReal>&))&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,std::placeholders::_1);
 
         // restore
         _robot->SetActiveDOFValues(params->vinitialconfig);

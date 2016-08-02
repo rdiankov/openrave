@@ -117,7 +117,7 @@ void ORCTriMeshDestroy(void* trimesh)
 }
 
 // can only support one viewer per environment
-typedef std::map<EnvironmentBasePtr, boost::shared_ptr<boost::thread> > VIEWERMAP;
+typedef std::map<EnvironmentBasePtr, std::shared_ptr<boost::thread> > VIEWERMAP;
 static VIEWERMAP s_mapEnvironmentThreadViewers;
 static boost::mutex s_mutexViewer;
 static boost::condition s_conditionViewer;
@@ -254,7 +254,7 @@ bool ORCEnvironmentSetViewer(void* env, const char* viewername)
 
     if( !!viewername && strlen(viewername) > 0 ) {
         boost::mutex::scoped_lock lock(s_mutexViewer);
-        boost::shared_ptr<boost::thread> threadviewer(new boost::thread(boost::bind(CViewerThread, penv, std::string(viewername), true)));
+        std::shared_ptr<boost::thread> threadviewer(new boost::thread(std::bind(CViewerThread, penv, std::string(viewername), true)));
         s_mapEnvironmentThreadViewers[penv] = threadviewer;
         s_conditionViewer.wait(lock);
     }

@@ -154,10 +154,10 @@ public:
 
 protected:
     inline SpaceSamplerBasePtr shared_sampler() {
-        return boost::static_pointer_cast<SpaceSamplerBase>(shared_from_this());
+        return std::static_pointer_cast<SpaceSamplerBase>(shared_from_this());
     }
     inline SpaceSamplerBaseConstPtr shared_sampler_const() const {
-        return boost::static_pointer_cast<SpaceSamplerBase const>(shared_from_this());
+        return std::static_pointer_cast<SpaceSamplerBase const>(shared_from_this());
     }
 
     /// \brief Calls the registered callbacks in order, returns the bitwise OR of all the functions.

@@ -10,7 +10,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 
 using namespace OpenRAVE;
 using namespace std;
@@ -69,7 +69,7 @@ int main(int argc, char ** argv)
             bool bincollision = !penv->CheckCollision(probot) && !probot->CheckSelfCollision();
 
             uint32_t starttime = utils::GetMilliTime();
-            UserDataPtr filterhandle = pmanip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(MyTimeoutFilter,_1,_2,_3,starttime));
+            UserDataPtr filterhandle = pmanip->GetIkSolver()->RegisterCustomFilter(0,std::bind(MyTimeoutFilter,_1,_2,_3,starttime));
             bool bsuccess = pmanip->FindIKSolution(pmanip->GetIkParameterization(IKP_Transform6D),v,IKFO_CheckEnvCollisions);
             RAVELOG_INFO("in collision: %d, real success %d, time passed: %d\n",bincollision,bsuccess,utils::GetMilliTime()-starttime);
         }

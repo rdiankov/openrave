@@ -114,7 +114,7 @@ public:
             if( robot->GetActiveConfigurationSpecification() != ptraj->GetConfigurationSpecification() ) {
                 ptraj->Init(robot->GetActiveConfigurationSpecification());
             }
-            boost::shared_ptr<MoveUnsync> pgoalfn(new MoveUnsync());
+            std::shared_ptr<MoveUnsync> pgoalfn(new MoveUnsync());
             pgoalfn->thresh = 0;
             pgoalfn->vhandjoints = vhandjoints;
             pgoalfn->vhandgoal = vhandgoal;
@@ -124,7 +124,7 @@ public:
             BasicRRTParametersPtr params(new BasicRRTParameters());
             params->SetRobotActiveJoints(robot);
             params->_nRRTExtentType = 1; // one step
-            params->_goalfn = boost::bind(&MoveUnsync::Eval,pgoalfn,_1);
+            params->_goalfn = std::bind(&MoveUnsync::Eval,pgoalfn,std::placeholders::_1);
             params->_nMaxIterations = 5000;
             robot->GetActiveDOFValues(params->vinitialconfig);
             params->_fStepLength = 0.04f;
@@ -135,7 +135,7 @@ public:
                 return true;
             }
 
-            boost::shared_ptr<PlannerBase> planner(RaveCreatePlanner(penv,pplannername));
+            std::shared_ptr<PlannerBase> planner(RaveCreatePlanner(penv,pplannername));
             if( !planner ) {
                 RAVELOG_WARN(str(boost::format("failed to find planner %s\n")%pplannername));
                 return false;
@@ -197,11 +197,11 @@ public:
             const T lambda2 = 1e-8;         // normalization constant
             using namespace boost::numeric::ublas;
             if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
-                T totalerror2 = _ComputeConstraintError(_pmanip->GetTransform(),_error);
-                if( totalerror2 >= _errorthresh2 ) {
-                    Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight; // for debugging
-                    throw OPENRAVE_EXCEPTION_FORMAT("initial robot configuration does not satisfy constraints %f>%f",totalerror2%_errorthresh2,ORE_InconsistentConstraints);
-                }
+            T totalerror2 = _ComputeConstraintError(_pmanip->GetTransform(),_error);
+            if( totalerror2 >= _errorthresh2 ) {
+                Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight; // for debugging
+                throw OPENRAVE_EXCEPTION_FORMAT("initial robot configuration does not satisfy constraints %f>%f",totalerror2%_errorthresh2,ORE_InconsistentConstraints);
+            }
             }
 
             std::vector<dReal> vnew = vprev;
@@ -339,7 +339,7 @@ protected:
         boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
     };
 
-    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
+    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, std::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
         if( pActiveTraj->GetNumWaypoints() == 0 ) {
             return false;

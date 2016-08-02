@@ -100,7 +100,7 @@ public:
     CollisionReport _report; ///< if in collision (_returncode&(CFO_CheckEnvCollisions|CFO_CheckSelfCollisions)), then stores the collision report
 };
 
-typedef boost::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
+typedef std::shared_ptr<ConstraintFilterReturn> ConstraintFilterReturnPtr;
 
 /** \brief <b>[interface]</b> Planner interface that generates trajectories for target objects to follow through the environment. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_planner.
     \ingroup interfaces
@@ -109,9 +109,9 @@ class OPENRAVE_API PlannerBase : public InterfaceBase
 {
 public:
     typedef std::list< std::vector<dReal> > ConfigurationList;
-    typedef boost::shared_ptr< PlannerBase::ConfigurationList > ConfigurationListPtr;
+    typedef std::shared_ptr< PlannerBase::ConfigurationList > ConfigurationListPtr;
     typedef std::list< std::pair< std::vector<dReal>, std::vector<dReal> > > ConfigurationVelocityList;
-    typedef boost::shared_ptr< PlannerBase::ConfigurationVelocityList > ConfigurationVelocityListPtr;
+    typedef std::shared_ptr< PlannerBase::ConfigurationVelocityList > ConfigurationVelocityListPtr;
 
     /** \brief Describes a common and serializable interface for planning parameters.
 
@@ -133,20 +133,20 @@ public:
         class OPENRAVE_API StateSaver
         {
 public:
-            StateSaver(boost::shared_ptr<PlannerParameters> params);
+            StateSaver(std::shared_ptr<PlannerParameters> params);
             virtual ~StateSaver();
-            inline boost::shared_ptr<PlannerParameters> GetParameters() const {
+            inline std::shared_ptr<PlannerParameters> GetParameters() const {
                 return _params;
             }
             virtual void Restore();
 protected:
-            boost::shared_ptr<PlannerParameters> _params;
+            std::shared_ptr<PlannerParameters> _params;
             std::vector<dReal> _values;
 private:
             virtual void _Restore();
         };
 
-        typedef boost::shared_ptr<StateSaver> StateSaverPtr;
+        typedef std::shared_ptr<StateSaver> StateSaverPtr;
 
         /** \brief Attemps to copy data from one set of parameters to another in the safest manner.
 
@@ -154,7 +154,7 @@ private:
             pointers to functions are copied directly
          */
         virtual PlannerParameters& operator=(const PlannerParameters& r);
-        virtual void copy(boost::shared_ptr<PlannerParameters const> r);
+        virtual void copy(std::shared_ptr<PlannerParameters const> r);
 
         /// \brief sets up the planner parameters to use the active joints of the robot
         virtual void SetRobotActiveJoints(RobotBasePtr robot);
@@ -439,11 +439,11 @@ protected:
             return ret == 0;
         }
 
-        inline boost::shared_ptr<PlannerBase::PlannerParameters> shared_parameters() {
-            return boost::static_pointer_cast<PlannerBase::PlannerParameters>(shared_from_this());
+        inline std::shared_ptr<PlannerBase::PlannerParameters> shared_parameters() {
+            return std::static_pointer_cast<PlannerBase::PlannerParameters>(shared_from_this());
         }
-        inline boost::shared_ptr<PlannerBase::PlannerParameters const > shared_parameters_const() const {
-            return boost::static_pointer_cast<PlannerBase::PlannerParameters const>(shared_from_this());
+        inline std::shared_ptr<PlannerBase::PlannerParameters const > shared_parameters_const() const {
+            return std::static_pointer_cast<PlannerBase::PlannerParameters const>(shared_from_this());
         }
 
         /// \brief output the planner parameters in a string (in XML format)
@@ -457,7 +457,7 @@ protected:
         virtual bool endElement(const std::string& name);
         virtual void characters(const std::string& ch);
         std::stringstream _ss;         ///< holds the data read by characters
-        boost::shared_ptr<std::stringstream> _sslocal;
+        std::shared_ptr<std::stringstream> _sslocal;
         /// all the top-level XML parameter tags (lower case) that are handled by this parameter structure, should be registered in the constructor
         std::vector<std::string> _vXMLParameters;
         //@}
@@ -474,10 +474,10 @@ private:
         /// expects \verbatim <PlannerParameters> \endverbatim to be the first token. Parses stream until \verbatim </PlannerParameters> \endverbatim reached
         friend OPENRAVE_API std::istream& operator>>(std::istream& I, PlannerParameters& v);
     };
-    typedef boost::shared_ptr<PlannerBase::PlannerParameters> PlannerParametersPtr;
-    typedef boost::shared_ptr<PlannerBase::PlannerParameters const> PlannerParametersConstPtr;
-    typedef boost::weak_ptr<PlannerBase::PlannerParameters> PlannerParametersWeakPtr;
-    typedef boost::weak_ptr<PlannerBase::PlannerParameters const> PlannerParametersWeakConstPtr;
+    typedef std::shared_ptr<PlannerBase::PlannerParameters> PlannerParametersPtr;
+    typedef std::shared_ptr<PlannerBase::PlannerParameters const> PlannerParametersConstPtr;
+    typedef std::weak_ptr<PlannerBase::PlannerParameters> PlannerParametersWeakPtr;
+    typedef std::weak_ptr<PlannerBase::PlannerParameters const> PlannerParametersWeakConstPtr;
 
     /// \brief Planner progress information passed to each callback function
     class OPENRAVE_API PlannerProgress
@@ -521,7 +521,7 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr traj) = 0;
 
     /// \deprecated (11/10/03)
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, boost::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, std::shared_ptr<std::ostream> pOutStream) RAVE_DEPRECATED {
         if( !!pOutStream ) {
             RAVELOG_WARN("planner does not support pOutputStream anymore, please find another method to return information like using SendCommand or writing the data into the returned trajectory\n");
         }
@@ -545,10 +545,10 @@ public:
 
 protected:
     inline PlannerBasePtr shared_planner() {
-        return boost::static_pointer_cast<PlannerBase>(shared_from_this());
+        return std::static_pointer_cast<PlannerBase>(shared_from_this());
     }
     inline PlannerBaseConstPtr shared_planner_const() const {
-        return boost::static_pointer_cast<PlannerBase const>(shared_from_this());
+        return std::static_pointer_cast<PlannerBase const>(shared_from_this());
     }
 
     /** \brief Calls a planner to optimizes the trajectory path.

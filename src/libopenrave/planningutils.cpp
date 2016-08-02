@@ -635,7 +635,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
-    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, std::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
@@ -700,7 +700,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
-    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, std::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
@@ -716,7 +716,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         return PS_HasSolution;
     }
 
-    TrajectoryTimingParametersPtr parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
+    TrajectoryTimingParametersPtr parameters = std::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     if( parameters->_hastimestamps != hastimestamps ) {
         parameters->_hastimestamps = hastimestamps;
         if( !_planner->InitPlan(_robot,parameters) ) {
@@ -876,15 +876,16 @@ private:
 // this function is very messed up...?
 static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
+    using namespace std::placeholders;
     if( traj->GetNumWaypoints() == 1 ) {
-        // don't need retiming, but should at least add a time group
-        ConfigurationSpecification spec = traj->GetConfigurationSpecification();
-        spec.AddDeltaTimeGroup();
-        vector<dReal> data;
-        traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
-        traj->Init(spec);
-        traj->Insert(0,data);
-        return PS_HasSolution;
+    // don't need retiming, but should at least add a time group
+    ConfigurationSpecification spec = traj->GetConfigurationSpecification();
+    spec.AddDeltaTimeGroup();
+    vector<dReal> data;
+    traj->GetWaypoints(0,traj->GetNumWaypoints(),data,spec);
+    traj->Init(spec);
+    traj->Insert(0,data);
+    return PS_HasSolution;
     }
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
@@ -931,9 +932,9 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
                     ss >> vaxis.x >> vaxis.y >> vaxis.z;
                 }
                 robot = pbody;
-                listsetfunctions.push_back(boost::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
-                listgetfunctions.push_back(boost::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
-                listdistfunctions.push_back(boost::bind(_ComputeTransformBodyDistance, _1, _2, pbody, itgroup->offset,affinedofs,vaxis));
+                listsetfunctions.push_back(std::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
+                listgetfunctions.push_back(std::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
+                listdistfunctions.push_back(std::bind(_ComputeTransformBodyDistance, _1, _2, pbody, itgroup->offset,affinedofs,vaxis));
             }
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
@@ -954,15 +955,15 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         }
     }
 
-    boost::shared_ptr<PlannerStateSaver> statesaver;
+    std::shared_ptr<PlannerStateSaver> statesaver;
     if( bsmooth ) {
         if( listsetfunctions.size() > 0 ) {
-            params->_setstatevaluesfn = boost::bind(_SetAffineState,boost::ref(listsetfunctions), _1, _2);
-            params->_getstatefn = boost::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
-            params->_distmetricfn = boost::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
+            params->_setstatevaluesfn = std::bind(_SetAffineState,boost::ref(listsetfunctions), _1, _2);
+            params->_getstatefn = std::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
+            params->_distmetricfn = std::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-            boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
-            params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+            std::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
+            params->_checkpathvelocityconstraintsfn = std::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn));
         }
     }
@@ -974,7 +975,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
-    params->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
+    params->_diffstatefn = std::bind(diffstatefn,_1,_2,vrotaxes);
 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
@@ -1057,7 +1058,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         _parameters = parameters;
     }
     else {
-        parameters = boost::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
+        parameters = std::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     }
 
 
@@ -1121,11 +1122,12 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     }
 
     if( bInitPlan ) {
-        parameters->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
+        using namespace std::placeholders;
+        parameters->_diffstatefn = std::bind(diffstatefn,_1,_2,vrotaxes);
     }
     if( parameters->_hastimestamps != hastimestamps ) {
-        parameters->_hastimestamps = hastimestamps;
-        bInitPlan = true;
+    parameters->_hastimestamps = hastimestamps;
+    bInitPlan = true;
     }
 
     if( !_planner ) {
@@ -2760,7 +2762,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             //RAVELOG_VERBOSE_FORMAT("dqscale=%f fStep=%.15e, fLargestStep=%.15e, timestep=%.15e", dqscale%fBestNewStep%fLargestStep%timestep);
-            if( !bHasMoved || (istep+1 < numSteps && numRepeating > 2) || dqscale >= 1 ) {//dqscale >= 1 ) {
+            if( !bHasMoved || (istep+1 < numSteps && numRepeating > 2) || dqscale >= 1 ) { //dqscale >= 1 ) {
                 // scaled! so have to change dQ and make sure not to increment istep/fStep
                 fStep = fBestNewStep;
                 bComputeNewStep = true;
@@ -3052,14 +3054,14 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
     std::vector<int> vfreeindices((istream_iterator<int>(ssout)), istream_iterator<int>());
     if( (int)vfreeindices.size() != pmanip->GetIkSolver()->GetNumFreeParameters() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("free parameters from iksolver do not match", ORE_Assert);
-    }   
+    }
 
     // have to convert to roobt dof
     for(size_t i = 0; i < vfreeindices.size(); ++i) {
         vfreeindices[i] = pmanip->GetArmIndices().at(vfreeindices[i]); // have to convert to robot dof!
     }
     _probot->GetDOFWeights(_vfreeweights, vfreeindices);
-    
+
     // the halton sequence centers around 0.5, so make it center around vfreestart
     for(std::vector<dReal>::iterator it = _vfreestart.begin(); it != _vfreestart.end(); ++it) {
         *it -= 0.5;
@@ -3111,7 +3113,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         advance(itsample,isampleindex);
 
         SampleInfo& sampleinfo = *itsample;
-        
+
         int numRedundantSamplesForEEChecking = 0;
         if( (int)_pmanip->GetArmIndices().size() > sampleinfo._ikparam.GetDOF() ) {
             numRedundantSamplesForEEChecking = 40;
@@ -3244,14 +3246,14 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                         for(int jfree = 0; jfree < numfree; ++jfree) {
                             dist += _vfreeweights[jfree]*RaveFabs(sampleinfo._vfreesamples[isample*numfree+jfree] - 0.5);
                         }
-                        
+
                         sampleinfo._vcachedists[isample].first = isample;
                         sampleinfo._vcachedists[isample].second = dist;
                     }
                     std::sort(sampleinfo._vcachedists.begin(), sampleinfo._vcachedists.end(), ComparePriorityPair);
 #endif
                 }
-                
+
 #if 1
                 if( sampleinfo._vcachedists.size() > 0 ) {
                     int isample = sampleinfo._vcachedists.back().first;

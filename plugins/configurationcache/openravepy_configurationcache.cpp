@@ -15,6 +15,7 @@
 #include "configurationcachetree.h"
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
+#include <boost/bind/placeholders.hpp>
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
@@ -329,10 +330,10 @@ public:
             return object(); // didn't find anything
         }
         else {
-           return boost::python::make_tuple(toPyArray(nn.first), nn.second);
+            return boost::python::make_tuple(toPyArray(nn.first), nn.second);
         }
     }
-    
+
     dReal ComputeDistance(object oconfi, object oconff) {
         return _cache->ComputeDistance(ExtractArray<dReal>(oconfi), ExtractArray<dReal>(oconff));
     }
@@ -342,7 +343,7 @@ protected:
     configurationcache::ConfigurationCachePtr _cache;
 };
 
-typedef boost::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
+typedef std::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
 
 } // end namespace configurationcachepy
 

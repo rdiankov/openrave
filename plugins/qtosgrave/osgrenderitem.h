@@ -31,7 +31,7 @@ enum ViewGeometry {
 OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness);
 
 /// \brief Encapsulate the Inventor rendering of an Item
-class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
+class Item : public std::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
     Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot);
@@ -102,9 +102,9 @@ protected:
     std::string _visualizationmode; ///< current visualization mode that item is set to
 };
 
-typedef boost::shared_ptr<Item> ItemPtr;
-typedef boost::weak_ptr<Item> ItemWeakPtr;
-typedef boost::shared_ptr<Item const> ItemConstPtr;
+typedef std::shared_ptr<Item> ItemPtr;
+typedef std::weak_ptr<Item> ItemWeakPtr;
+typedef std::shared_ptr<Item const> ItemConstPtr;
 
 
 /// \brief user data set to the OSG nodes to keep track of this item
@@ -214,8 +214,8 @@ private:
     void _PrintNodeFeatures(OSGNodePtr node);
 };
 
-typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
-typedef boost::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
+typedef std::shared_ptr<KinBodyItem> KinBodyItemPtr;
+typedef std::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
 
 class RobotItem : public KinBodyItem
 {

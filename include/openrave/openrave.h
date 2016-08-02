@@ -20,6 +20,8 @@
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
+#define BOOST_BIND_NO_PLACEHOLDERS
+
 #ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
 #define BOOST_ENABLE_ASSERT_HANDLER
 #endif
@@ -28,13 +30,14 @@
 #include <stdarg.h>
 #include <cstring>
 #include <cstdlib>
+#include <memory>
 
 #include <stdint.h>
 
 #ifdef _MSC_VER
 
 #pragma warning(disable:4251) // needs to have dll-interface to be used by clients of class
-#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'boost::shared_ptr<T>' which is incompatible with C
+#pragma warning(disable:4190) // C-linkage specified, but returns UDT 'std::shared_ptr<T>' which is incompatible with C
 #pragma warning(disable:4819) //The file contains a character that cannot be represented in the current code page (932). Save the file in Unicode format to prevent data loss using native typeof
 
 // needed to get typeof working
@@ -248,8 +251,8 @@ public:
     virtual ~UserData() {
     }
 };
-typedef boost::shared_ptr<UserData> UserDataPtr;
-typedef boost::weak_ptr<UserData> UserDataWeakPtr;
+typedef std::shared_ptr<UserData> UserDataPtr;
+typedef std::weak_ptr<UserData> UserDataWeakPtr;
 
 /// \brief user data that can serialize/deserialize itself
 class OPENRAVE_API SerializableData : public UserData
@@ -264,8 +267,8 @@ public:
     /// \brief initialize the object
     virtual void Deserialize(std::istream& I) = 0;
 };
-typedef boost::shared_ptr<SerializableData> SerializableDataPtr;
-typedef boost::weak_ptr<SerializableData> SerializableDataWeakPtr;
+typedef std::shared_ptr<SerializableData> SerializableDataPtr;
+typedef std::weak_ptr<SerializableData> SerializableDataWeakPtr;
 
 #define OPENRAVE_EXCEPTION_FORMAT0(s, errorcode) OpenRAVE::openrave_exception(boost::str(boost::format("[%s:%d] %s")%(__PRETTY_FUNCTION__)%(__LINE__)%(s)),errorcode)
 
@@ -326,64 +329,64 @@ class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
 
-typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
-typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
-typedef boost::shared_ptr<InterfaceBase> InterfaceBasePtr;
-typedef boost::shared_ptr<InterfaceBase const> InterfaceBaseConstPtr;
-typedef boost::weak_ptr<InterfaceBase> InterfaceBaseWeakPtr;
-typedef boost::shared_ptr<KinBody> KinBodyPtr;
-typedef boost::shared_ptr<KinBody const> KinBodyConstPtr;
-typedef boost::weak_ptr<KinBody> KinBodyWeakPtr;
-typedef boost::shared_ptr<RobotBase> RobotBasePtr;
-typedef boost::shared_ptr<RobotBase const> RobotBaseConstPtr;
-typedef boost::weak_ptr<RobotBase> RobotBaseWeakPtr;
-typedef boost::shared_ptr<CollisionCheckerBase> CollisionCheckerBasePtr;
-typedef boost::shared_ptr<CollisionCheckerBase const> CollisionCheckerBaseConstPtr;
-typedef boost::weak_ptr<CollisionCheckerBase> CollisionCheckerBaseWeakPtr;
-typedef boost::shared_ptr<ControllerBase> ControllerBasePtr;
-typedef boost::shared_ptr<ControllerBase const> ControllerBaseConstPtr;
-typedef boost::weak_ptr<ControllerBase> ControllerBaseWeakPtr;
-typedef boost::shared_ptr<IkSolverBase> IkSolverBasePtr;
-typedef boost::shared_ptr<IkSolverBase const> IkSolverBaseConstPtr;
-typedef boost::weak_ptr<IkSolverBase> IkSolverBaseWeakPtr;
-typedef boost::shared_ptr<PhysicsEngineBase> PhysicsEngineBasePtr;
-typedef boost::shared_ptr<PhysicsEngineBase const> PhysicsEngineBaseConstPtr;
-typedef boost::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
-typedef boost::shared_ptr<PlannerBase> PlannerBasePtr;
-typedef boost::shared_ptr<PlannerBase const> PlannerBaseConstPtr;
-typedef boost::weak_ptr<PlannerBase> PlannerBaseWeakPtr;
-typedef boost::shared_ptr<ModuleBase> ModuleBasePtr;
-typedef boost::shared_ptr<ModuleBase const> ModuleBaseConstPtr;
-typedef boost::weak_ptr<ModuleBase> ModuleBaseWeakPtr;
-typedef boost::shared_ptr<SensorBase> SensorBasePtr;
-typedef boost::shared_ptr<SensorBase const> SensorBaseConstPtr;
-typedef boost::weak_ptr<SensorBase> SensorBaseWeakPtr;
-typedef boost::shared_ptr<SensorSystemBase> SensorSystemBasePtr;
-typedef boost::shared_ptr<SensorSystemBase const> SensorSystemBaseConstPtr;
-typedef boost::weak_ptr<SensorSystemBase> SensorSystemBaseWeakPtr;
-typedef boost::shared_ptr<TrajectoryBase> TrajectoryBasePtr;
-typedef boost::shared_ptr<TrajectoryBase const> TrajectoryBaseConstPtr;
-typedef boost::weak_ptr<TrajectoryBase> TrajectoryBaseWeakPtr;
-typedef boost::shared_ptr<ViewerBase> ViewerBasePtr;
-typedef boost::shared_ptr<ViewerBase const> ViewerBaseConstPtr;
-typedef boost::weak_ptr<ViewerBase> ViewerBaseWeakPtr;
-typedef boost::shared_ptr<SpaceSamplerBase> SpaceSamplerBasePtr;
-typedef boost::shared_ptr<SpaceSamplerBase const> SpaceSamplerBaseConstPtr;
-typedef boost::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
-typedef boost::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
-typedef boost::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
-typedef boost::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
+typedef std::shared_ptr<CollisionReport> CollisionReportPtr;
+typedef std::shared_ptr<CollisionReport const> CollisionReportConstPtr;
+typedef std::shared_ptr<InterfaceBase> InterfaceBasePtr;
+typedef std::shared_ptr<InterfaceBase const> InterfaceBaseConstPtr;
+typedef std::weak_ptr<InterfaceBase> InterfaceBaseWeakPtr;
+typedef std::shared_ptr<KinBody> KinBodyPtr;
+typedef std::shared_ptr<KinBody const> KinBodyConstPtr;
+typedef std::weak_ptr<KinBody> KinBodyWeakPtr;
+typedef std::shared_ptr<RobotBase> RobotBasePtr;
+typedef std::shared_ptr<RobotBase const> RobotBaseConstPtr;
+typedef std::weak_ptr<RobotBase> RobotBaseWeakPtr;
+typedef std::shared_ptr<CollisionCheckerBase> CollisionCheckerBasePtr;
+typedef std::shared_ptr<CollisionCheckerBase const> CollisionCheckerBaseConstPtr;
+typedef std::weak_ptr<CollisionCheckerBase> CollisionCheckerBaseWeakPtr;
+typedef std::shared_ptr<ControllerBase> ControllerBasePtr;
+typedef std::shared_ptr<ControllerBase const> ControllerBaseConstPtr;
+typedef std::weak_ptr<ControllerBase> ControllerBaseWeakPtr;
+typedef std::shared_ptr<IkSolverBase> IkSolverBasePtr;
+typedef std::shared_ptr<IkSolverBase const> IkSolverBaseConstPtr;
+typedef std::weak_ptr<IkSolverBase> IkSolverBaseWeakPtr;
+typedef std::shared_ptr<PhysicsEngineBase> PhysicsEngineBasePtr;
+typedef std::shared_ptr<PhysicsEngineBase const> PhysicsEngineBaseConstPtr;
+typedef std::weak_ptr<PhysicsEngineBase> PhysicsEngineBaseWeakPtr;
+typedef std::shared_ptr<PlannerBase> PlannerBasePtr;
+typedef std::shared_ptr<PlannerBase const> PlannerBaseConstPtr;
+typedef std::weak_ptr<PlannerBase> PlannerBaseWeakPtr;
+typedef std::shared_ptr<ModuleBase> ModuleBasePtr;
+typedef std::shared_ptr<ModuleBase const> ModuleBaseConstPtr;
+typedef std::weak_ptr<ModuleBase> ModuleBaseWeakPtr;
+typedef std::shared_ptr<SensorBase> SensorBasePtr;
+typedef std::shared_ptr<SensorBase const> SensorBaseConstPtr;
+typedef std::weak_ptr<SensorBase> SensorBaseWeakPtr;
+typedef std::shared_ptr<SensorSystemBase> SensorSystemBasePtr;
+typedef std::shared_ptr<SensorSystemBase const> SensorSystemBaseConstPtr;
+typedef std::weak_ptr<SensorSystemBase> SensorSystemBaseWeakPtr;
+typedef std::shared_ptr<TrajectoryBase> TrajectoryBasePtr;
+typedef std::shared_ptr<TrajectoryBase const> TrajectoryBaseConstPtr;
+typedef std::weak_ptr<TrajectoryBase> TrajectoryBaseWeakPtr;
+typedef std::shared_ptr<ViewerBase> ViewerBasePtr;
+typedef std::shared_ptr<ViewerBase const> ViewerBaseConstPtr;
+typedef std::weak_ptr<ViewerBase> ViewerBaseWeakPtr;
+typedef std::shared_ptr<SpaceSamplerBase> SpaceSamplerBasePtr;
+typedef std::shared_ptr<SpaceSamplerBase const> SpaceSamplerBaseConstPtr;
+typedef std::weak_ptr<SpaceSamplerBase> SpaceSamplerBaseWeakPtr;
+typedef std::shared_ptr<EnvironmentBase> EnvironmentBasePtr;
+typedef std::shared_ptr<EnvironmentBase const> EnvironmentBaseConstPtr;
+typedef std::weak_ptr<EnvironmentBase> EnvironmentBaseWeakPtr;
 
-typedef boost::shared_ptr<IkReturn> IkReturnPtr;
-typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
-typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
+typedef std::shared_ptr<IkReturn> IkReturnPtr;
+typedef std::shared_ptr<IkReturn const> IkReturnConstPtr;
+typedef std::weak_ptr<IkReturn> IkReturnWeakPtr;
 
 class BaseXMLReader;
-typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
-typedef boost::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
+typedef std::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
+typedef std::shared_ptr<BaseXMLReader const> BaseXMLReaderConstPtr;
 class BaseXMLWriter;
-typedef boost::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
-typedef boost::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
+typedef std::shared_ptr<BaseXMLWriter> BaseXMLWriterPtr;
+typedef std::shared_ptr<BaseXMLWriter const> BaseXMLWriterConstPtr;
 
 ///< Cloning Options for interfaces and environments
 enum CloningOptions {
@@ -414,8 +417,8 @@ private:
     std::string __xmlid;
 };
 
-typedef boost::shared_ptr<XMLReadable> XMLReadablePtr;
-typedef boost::shared_ptr<XMLReadable const> XMLReadableConstPtr;
+typedef std::shared_ptr<XMLReadable> XMLReadablePtr;
+typedef std::shared_ptr<XMLReadable const> XMLReadableConstPtr;
 
 /// \brief a list of key-value pairs. It is possible for keys to repeat.
 typedef std::list<std::pair<std::string,std::string> > AttributesList;
@@ -423,7 +426,7 @@ typedef std::list<std::pair<std::string,std::string> > AttributesList;
 /// \brief base class for all xml readers. XMLReaders are used to process data from xml files.
 ///
 /// Custom readers can be registered through \ref RaveRegisterXMLReader.
-class OPENRAVE_API BaseXMLReader : public boost::enable_shared_from_this<BaseXMLReader>
+class OPENRAVE_API BaseXMLReader : public std::enable_shared_from_this<BaseXMLReader>
 {
 public:
     enum ProcessElement
@@ -468,27 +471,27 @@ typedef boost::function<BaseXMLReaderPtr(InterfaceBasePtr, const AttributesList&
 class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
-    DummyXMLReader(const std::string& fieldname, const std::string& parentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
+    DummyXMLReader(const std::string& fieldname, const std::string& parentname, std::shared_ptr<std::ostream> osrecord = std::shared_ptr<std::ostream>());
     virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
     virtual bool endElement(const std::string& name);
     virtual void characters(const std::string& ch);
     const std::string& GetFieldName() const {
         return _fieldname;
     }
-    virtual boost::shared_ptr<std::ostream> GetStream() const {
+    virtual std::shared_ptr<std::ostream> GetStream() const {
         return _osrecord;
     }
 private:
     std::string _parentname;     /// XML filename
     std::string _fieldname;
-    boost::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
-    boost::shared_ptr<BaseXMLReader> _pcurreader;
+    std::shared_ptr<std::ostream> _osrecord;     ///< used to store the xml data
+    std::shared_ptr<BaseXMLReader> _pcurreader;
 };
 
 /// \brief base class for writing to XML files.
 ///
 /// OpenRAVE Interfaces accept a BaseXMLWriter instance and call its write methods to write the data.
-class OPENRAVE_API BaseXMLWriter : public boost::enable_shared_from_this<BaseXMLWriter>
+class OPENRAVE_API BaseXMLWriter : public std::enable_shared_from_this<BaseXMLWriter>
 {
 public:
     virtual ~BaseXMLWriter() {
@@ -549,11 +552,11 @@ using geometry::RaveTransform;
 using geometry::RaveTransformMatrix;
 typedef RaveVector<dReal> Vector;
 typedef RaveTransform<dReal> Transform;
-typedef boost::shared_ptr< RaveTransform<dReal> > TransformPtr;
-typedef boost::shared_ptr< RaveTransform<dReal> const > TransformConstPtr;
+typedef std::shared_ptr< RaveTransform<dReal> > TransformPtr;
+typedef std::shared_ptr< RaveTransform<dReal> const > TransformConstPtr;
 typedef RaveTransformMatrix<dReal> TransformMatrix;
-typedef boost::shared_ptr< RaveTransformMatrix<dReal> > TransformMatrixPtr;
-typedef boost::shared_ptr< RaveTransformMatrix<dReal> const > TransformMatrixConstPtr;
+typedef std::shared_ptr< RaveTransformMatrix<dReal> > TransformMatrixPtr;
+typedef std::shared_ptr< RaveTransformMatrix<dReal> const > TransformMatrixConstPtr;
 typedef geometry::obb<dReal> OBB;
 typedef geometry::aabb<dReal> AABB;
 typedef geometry::ray<dReal> RAY;
@@ -827,7 +830,7 @@ protected:
     virtual ConfigurationSpecification ConvertToVelocitySpecification() const;
 
     /** \brief converts all the groups to the corresponding derivative group and returns the specification
-        
+
         The new derivative configuration space will have a one-to-one correspondence with the original configuration.
         The interpolation of each of the groups will correspondingly represent the derivative as returned by \ref GetInterpolationDerivative(deriv).
         Only position specifications will be converted, any other groups will be left untouched.
@@ -978,10 +981,10 @@ protected:
     typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
 
     /// \brief return a function to set the states of the configuration in the environment
-    virtual boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr env) const;
+    virtual std::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr env) const;
 
     /// \brief return a function to get the states of the configuration in the environment
-    virtual boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
+    virtual std::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -1023,8 +1026,8 @@ protected:
 OPENRAVE_API std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec);
 OPENRAVE_API std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec);
 
-typedef boost::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
-typedef boost::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
+typedef std::shared_ptr<ConfigurationSpecification> ConfigurationSpecificationPtr;
+typedef std::shared_ptr<ConfigurationSpecification const> ConfigurationSpecificationConstPtr;
 
 template <typename T>
 inline T NormalizeCircularAnglePrivate(T theta, T min, T max)
@@ -2269,36 +2272,36 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
 ///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
-inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
+inline std::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
 {
     if( !!pinterface ) {
         if( pinterface->GetInterfaceType() == T::GetInterfaceTypeStatic() ) {
-            return boost::static_pointer_cast<T>(pinterface);
+            return std::static_pointer_cast<T>(pinterface);
         }
         // encode special cases
         if((pinterface->GetInterfaceType() == PT_Robot)&&(T::GetInterfaceTypeStatic() == PT_KinBody)) {
-            return boost::static_pointer_cast<T>(pinterface);
+            return std::static_pointer_cast<T>(pinterface);
         }
     }
-    return boost::shared_ptr<T>();
+    return std::shared_ptr<T>();
 }
 
 /// \brief Safely casts from the base interface class to an openrave interface using static_pointer_cast.
 ///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
-inline boost::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr pinterface)
+inline std::shared_ptr<T const> RaveInterfaceConstCast(InterfaceBaseConstPtr pinterface)
 {
     if( !!pinterface ) {
         if( pinterface->GetInterfaceType() == T::GetInterfaceTypeStatic() ) {
-            return boost::static_pointer_cast<T const>(pinterface);
+            return std::static_pointer_cast<T const>(pinterface);
         }
         // encode special cases
         if((pinterface->GetInterfaceType() == PT_Robot)&&(T::GetInterfaceTypeStatic() == PT_KinBody)) {
-            return boost::static_pointer_cast<T const>(pinterface);
+            return std::static_pointer_cast<T const>(pinterface);
         }
     }
-    return boost::shared_ptr<T>();
+    return std::shared_ptr<T>();
 }
 
 /// \brief returns a lower case string of the interface type
@@ -2403,11 +2406,11 @@ OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, int 
 /// \param cloningoptions combination of CO_*
 /// \param pcloneenv the environment to create the new clone in. If not specified, will use preference->GetEnv()
 template <typename T>
-inline boost::shared_ptr<T> RaveClone(boost::shared_ptr<T const> preference, int cloningoptions, EnvironmentBasePtr pcloneenv=EnvironmentBasePtr())
+inline std::shared_ptr<T> RaveClone(std::shared_ptr<T const> preference, int cloningoptions, EnvironmentBasePtr pcloneenv=EnvironmentBasePtr())
 {
     InterfaceBasePtr pcloned = RaveCreateInterface(!pcloneenv ? preference->GetEnv() : pcloneenv, preference->GetInterfaceType(), preference->GetXMLId());
     OPENRAVE_ASSERT_FORMAT(!!pcloned, "Failed to clone interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
-    boost::shared_ptr<T> pclonedcast = boost::dynamic_pointer_cast<T>(pcloned);
+    std::shared_ptr<T> pclonedcast = std::dynamic_pointer_cast<T>(pcloned);
     OPENRAVE_ASSERT_FORMAT(!!pclonedcast, "Interface created but failed to cast interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
     pclonedcast->Clone(preference,cloningoptions);
     return pclonedcast;
@@ -2480,7 +2483,7 @@ OPENRAVE_API int RaveGetDataAccess();
 
 /// \brief Gets the default viewer type name
 OPENRAVE_API std::string RaveGetDefaultViewerType();
-    
+
 /** \brief Returns the gettext translated string of the given message id
 
     \param domainname translation domain name

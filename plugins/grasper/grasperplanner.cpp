@@ -684,7 +684,7 @@ protected:
         return ct;
     }
     CollisionReportPtr _report;
-    boost::shared_ptr<GraspParameters> _parameters;
+    std::shared_ptr<GraspParameters> _parameters;
     RobotBasePtr _robot;
     vector<KinBody::LinkPtr> _vAvoidLinkGeometry;
     std::vector<KinBody::LinkPtr> _vlinks;

@@ -28,11 +28,11 @@ public:
         }
         dReal time;
         KinBodyPtr ptarget;
-        boost::shared_ptr<Trajectory> ptraj;
+        std::shared_ptr<Trajectory> ptraj;
     };
 
     // discrete algorithm
-    class ConstrainedTaskData : public boost::enable_shared_from_this<ConstrainedTaskData> {
+    class ConstrainedTaskData : public std::enable_shared_from_this<ConstrainedTaskData> {
 public:
         struct FEATURES
         {
@@ -295,7 +295,7 @@ public:
                 ptarget->SetDOFValues(vtargvalues);
 
                 // sample the grasp and execute in random permutation order (for now just select one grasp)
-                boost::shared_ptr<vector<Transform> > vgrasps = Eval(pNewSample) < fGoalThresh ? pvGraspContactSet : pvGraspSet;
+                std::shared_ptr<vector<Transform> > vgrasps = Eval(pNewSample) < fGoalThresh ? pvGraspContactSet : pvGraspSet;
                 if( SampleIkSolution(vgrasps->at(RaveRandomInt()%vgrasps->size()), vector<dReal>(), pNewSample))
                     return true;
             }
@@ -309,7 +309,7 @@ public:
 
         virtual bool SampleNeigh(vector<dReal>& pNewSample, const vector<dReal>& pCurSample, dReal fRadius)
         {
-            map<int, boost::shared_ptr<FINDGRASPDATA> >::iterator itgrasp;
+            map<int, std::shared_ptr<FINDGRASPDATA> >::iterator itgrasp;
             FORIT(itgrasp, mapgrasps)
             itgrasp->second->status = 0;
 
@@ -344,13 +344,13 @@ public:
                 ptarget->SetDOFValues(vtargvalues);
 
                 // choose a grasp
-                boost::shared_ptr<FINDGRASPDATA> pdata;
+                std::shared_ptr<FINDGRASPDATA> pdata;
                 itgrasp = mapgrasps.find(bestid);
                 if( itgrasp == mapgrasps.end() ) {
                     // create a new permuter
                     pdata.reset(new FINDGRASPDATA());
                     pdata->status = 0;
-                    pdata->pexecutor.reset(new RandomPermutationExecutor(boost::bind(&ConstrainedTaskData::FindGraspPermutation,shared_from_this(),_1,pdata)));
+                    pdata->pexecutor.reset(new RandomPermutationExecutor(std::bind(&ConstrainedTaskData::FindGraspPermutation,shared_from_this(),std::placeholders::_1,pdata)));
                     mapgrasps[bestid] = pdata;
                 }
                 else
@@ -540,7 +540,7 @@ public:
         }
 
         // grasping
-        boost::shared_ptr< vector< Transform > > pvGraspSet, pvGraspContactSet, pvGraspStartSet;
+        std::shared_ptr< vector< Transform > > pvGraspSet, pvGraspContactSet, pvGraspStartSet;
         vector< list<GRASP> > vlistGraspSet;
         dReal fGraspThresh, fConfigThresh;
 
@@ -572,15 +572,15 @@ public:
 protected:
         struct FINDGRASPDATA
         {
-            boost::shared_ptr<RandomPermutationExecutor> pexecutor;
-            boost::shared_ptr< vector< Transform > > pgrasps;
+            std::shared_ptr<RandomPermutationExecutor> pexecutor;
+            std::shared_ptr< vector< Transform > > pgrasps;
             Transform tcurgrasp;
             Transform tlink;
             dReal fThresh2;
             int status;         // 0 not init, 1 init, 2 dead
         };
 
-        bool FindGraspPermutation(unsigned int index, boost::shared_ptr<FINDGRASPDATA> pdata)
+        bool FindGraspPermutation(unsigned int index, std::shared_ptr<FINDGRASPDATA> pdata)
         {
             return GraspDist(pdata->tcurgrasp, vector<dReal>(), pdata->tlink * pdata->pgrasps->at(index)) < pdata->fThresh2;
         }
@@ -593,7 +593,7 @@ protected:
         vector<dReal> vtargvalues, _vfreeparams, _vcurfreeparams;
         vector<dReal> _vfeatures;
         vector<dReal> _vRobotWeights;
-        map<int, boost::shared_ptr<FINDGRASPDATA> > mapgrasps;
+        map<int, std::shared_ptr<FINDGRASPDATA> > mapgrasps;
     };
 
     // used to prune grasps that are not caging a target object
@@ -743,15 +743,16 @@ private:
         vector<Transform> _vTargetTransforms;
     };
 
-    inline boost::shared_ptr<TaskCaging> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskCaging>(shared_from_this());
+    inline std::shared_ptr<TaskCaging> shared_problem() {
+        return std::dynamic_pointer_cast<TaskCaging>(shared_from_this());
     }
-    inline boost::shared_ptr<TaskCaging const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskCaging const>(shared_from_this());
+    inline std::shared_ptr<TaskCaging const> shared_problem_const() const {
+        return std::dynamic_pointer_cast<TaskCaging const>(shared_from_this());
     }
 
 public:
     TaskCaging(EnvironmentBasePtr penv) : ModuleBase(penv) {
+        using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_taskcaging.jpg\n\
   :width: 500\n\n\
@@ -760,14 +761,14 @@ doors by having the hand cage the handles instead of tightly grip. \
 This greatly relaxes the constraints on the robot (see the door manipluation example). The relevant paper is:\n\n\
 \
 - Rosen Diankov, Siddhartha Srinivasa, Dave Ferguson, James Kuffner. Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.";
-        RegisterCommand("graspset",boost::bind(&TaskCaging::GraspSet, this, _1, _2),
+        RegisterCommand("graspset",std::bind(&TaskCaging::GraspSet, this, _1, _2),
                         "Creates a grasp set given a robot end-effector floating in space.\n"
                         "Options: step exploreprob size target targetjoint contactconfigdelta cagedconfig");
-        RegisterCommand("taskconstraintplan", boost::bind(&TaskCaging::TaskConstrainedPlanner, this, _1, _2),
+        RegisterCommand("taskconstraintplan", std::bind(&TaskCaging::TaskConstrainedPlanner, this, _1, _2),
                         "Invokes the relaxed task constrained planner");
-        RegisterCommand("simpleconstraintplan", boost::bind(&TaskCaging::SimpleConstrainedPlanner, this, _1, _2),
+        RegisterCommand("simpleconstraintplan", std::bind(&TaskCaging::SimpleConstrainedPlanner, this, _1, _2),
                         "Invokes a simple one grasp planner");
-        RegisterCommand("bodytraj",boost::bind(&TaskCaging::BodyTrajectory, this, _1, _2),
+        RegisterCommand("bodytraj",std::bind(&TaskCaging::BodyTrajectory, this, _1, _2),
                         "Starts a body to follow a trajectory. The trajrectory must contain timestamps\n"
                         "Options: target targettraj");
     }
@@ -829,67 +830,68 @@ private:
 
     bool GraspSet(ostream& sout, istream& sinput)
     {
+        using namespace std::placeholders;
         dReal fStep = 0.01f;
         dReal fExploreProb = 0.02f;
 
         dReal fContactConfigDelta = 0.01f;     // how much to move in order to find the contact grasp set
-        boost::shared_ptr<GraspConstraint> graspfn(new GraspConstraint());
+        std::shared_ptr<GraspConstraint> graspfn(new GraspConstraint());
 
         KinBodyPtr ptarget;
         graspfn->fCagedConfig = 0.05f;
         graspfn->fIncrement = 0.005f;
         graspfn->_robot = _robot;
 
-        boost::shared_ptr<ExplorationParameters> params(new ExplorationParameters());
+        std::shared_ptr<ExplorationParameters> params(new ExplorationParameters());
         params->_nExpectedDataSize = 1000;
 
         vector<int> vTargetSides;
 
         string cmd;
         while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        sinput >> cmd;
+        if( !sinput ) {
+            break;
+        }
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "step" )
-                sinput >> fStep;
-            else if( cmd == "exploreprob")
-                sinput >> fExploreProb;
-            else if( cmd == "size")
-                sinput >> params->_nExpectedDataSize;
-            else if( cmd == "target") {
-                string name;
-                int linkindex;
-                sinput >> name >> linkindex;
-                ptarget = GetEnv()->GetKinBody(name);
-                graspfn->plink = ptarget->GetLinks().at(linkindex);
-            }
-            else if( cmd == "targetjoint") {
-                int joint; sinput >> joint;
-                graspfn->vtargetjoints.push_back(joint);
-            }
-            else if( cmd == "contactconfigdelta" ) {
-                sinput >> fContactConfigDelta;
-            }
-            else if( cmd == "cagedconfig" ) {
-                sinput >> graspfn->fCagedConfig;
-            }
-            else if( cmd == "cagesides" ) {
-                vTargetSides.resize(graspfn->vtargetjoints.size());
-                FOREACH(it, vTargetSides)
-                sinput >> *it;
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
+        if( cmd == "step" )
+            sinput >> fStep;
+        else if( cmd == "exploreprob")
+            sinput >> fExploreProb;
+        else if( cmd == "size")
+            sinput >> params->_nExpectedDataSize;
+        else if( cmd == "target") {
+            string name;
+            int linkindex;
+            sinput >> name >> linkindex;
+            ptarget = GetEnv()->GetKinBody(name);
+            graspfn->plink = ptarget->GetLinks().at(linkindex);
+        }
+        else if( cmd == "targetjoint") {
+            int joint; sinput >> joint;
+            graspfn->vtargetjoints.push_back(joint);
+        }
+        else if( cmd == "contactconfigdelta" ) {
+            sinput >> fContactConfigDelta;
+        }
+        else if( cmd == "cagedconfig" ) {
+            sinput >> graspfn->fCagedConfig;
+        }
+        else if( cmd == "cagesides" ) {
+            vTargetSides.resize(graspfn->vtargetjoints.size());
+            FOREACH(it, vTargetSides)
+            sinput >> *it;
+        }
+        else {
+            RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+            break;
+        }
 
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
-                return false;
-            }
+        if( !sinput ) {
+            RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+            return false;
+        }
         }
 
         if( !ptarget || !graspfn->plink ) {
@@ -939,8 +941,8 @@ private:
         _robot->SetActiveDOFs(vector<int>(), RobotBase::DOF_X|RobotBase::DOF_Y|RobotBase::DOF_Z|RobotBase::DOF_RotationQuat);
         _robot->GetActiveDOFValues(params->vinitialconfig);
         params->SetRobotActiveJoints(_robot);
-        params->_checkpathconstraintsfn = boost::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3,_4);
-        params->_distmetricfn = boost::bind(&GraspConstraint::Dist6D,graspfn,_1,_2);
+        params->_checkpathconstraintsfn = std::bind(&GraspConstraint::Constraint,graspfn,_1,_2,_3,_4);
+        params->_distmetricfn = std::bind(&GraspConstraint::Dist6D,graspfn,_1,_2);
 
         params->_fStepLength = fStep;
         params->_fExploreProb = fExploreProb;
@@ -1005,14 +1007,15 @@ private:
 
     bool TaskConstrainedPlanner(ostream& sout, istream& sinput)
     {
-        boost::shared_ptr<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
+        using namespace std::placeholders;
+        std::shared_ptr<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
 
         int nLinkIndex=-1;
         string strsavetraj, strbodytraj;
 
         // randomized algorithm parameters
         string plannername;
-        boost::shared_ptr<RAStarParameters> params(new RAStarParameters());
+        std::shared_ptr<RAStarParameters> params(new RAStarParameters());
         params->fDistThresh = 0.03f;
         params->fRadius = 0.1f;
         params->fGoalCoeff = 1;
@@ -1022,149 +1025,149 @@ private:
 
         string cmd;
         while(!sinput.eof()) {
-            sinput >> cmd;
-            if( !sinput ) {
-                break;
-            }
-            std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+        sinput >> cmd;
+        if( !sinput ) {
+            break;
+        }
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "target" ) {
-                string name; sinput >> name;
-                taskdata->ptarget = GetEnv()->GetKinBody(name);
-                if( !taskdata->ptarget ) {
-                    RAVELOG_WARN(str(boost::format("invalid target %s\n")%name));
+        if( cmd == "target" ) {
+            string name; sinput >> name;
+            taskdata->ptarget = GetEnv()->GetKinBody(name);
+            if( !taskdata->ptarget ) {
+                RAVELOG_WARN(str(boost::format("invalid target %s\n")%name));
+            }
+        }
+        else if( cmd == "planner" ) {
+            sinput >> plannername;
+        }
+        else if( cmd == "distthresh" ) {
+            sinput >> params->fDistThresh;
+        }
+        else if( cmd == "sampleradius" ) {
+            sinput >> params->fRadius;
+        }
+        else if( cmd == "goalcoeff" ) {
+            sinput >> params->fGoalCoeff;
+        }
+        else if( cmd == "numchildren") {
+            sinput >> params->nMaxChildren;
+        }
+        else if( cmd == "goalthresh") {
+            sinput >> taskdata->fGoalThresh;
+        }
+        else if( cmd == "targetlink") {
+            sinput >> nLinkIndex;
+        }
+        else if( cmd == "savetraj") {
+            strsavetraj = utils::GetFilenameUntilSeparator(sinput,';');
+        }
+        else if( cmd == "savebodytraj") {
+            strbodytraj = utils::GetFilenameUntilSeparator(sinput,';');
+        }
+        else if( cmd == "graspthresh") {
+            sinput >> taskdata->fGraspThresh;
+        }
+        else if( cmd == "configthresh") {
+            sinput >> taskdata->fConfigThresh;
+        }
+        else if( cmd == "maxsamples") {
+            sinput >> taskdata->nMaxSamples;
+        }
+        else if( cmd == "maxiterations") {
+            sinput >> params->_nMaxIterations;
+        }
+        else if( cmd == "maxikiterations") {
+            sinput >> taskdata->nMaxIkIterations;
+        }
+        else if( cmd == "targetjoints") {
+            int num=0;
+            sinput >> num;
+            taskdata->_vtargetjoints.resize(num);
+            FOREACH(it, taskdata->_vtargetjoints)
+            sinput >> *it;
+        }
+        else if(cmd == "graspset") {
+            taskdata->pvGraspSet.reset(new vector<Transform>());
+            taskdata->pvGraspSet->reserve(200);
+            string filename = utils::GetFilenameUntilSeparator(sinput,';');
+            ifstream fgrasp(filename.c_str());
+            while(!fgrasp.eof()) {
+                Transform t;
+                fgrasp >> t;
+                if( !fgrasp ) {
+                    break;
                 }
+                taskdata->pvGraspSet->push_back(t);
             }
-            else if( cmd == "planner" ) {
-                sinput >> plannername;
-            }
-            else if( cmd == "distthresh" ) {
-                sinput >> params->fDistThresh;
-            }
-            else if( cmd == "sampleradius" ) {
-                sinput >> params->fRadius;
-            }
-            else if( cmd == "goalcoeff" ) {
-                sinput >> params->fGoalCoeff;
-            }
-            else if( cmd == "numchildren") {
-                sinput >> params->nMaxChildren;
-            }
-            else if( cmd == "goalthresh") {
-                sinput >> taskdata->fGoalThresh;
-            }
-            else if( cmd == "targetlink") {
-                sinput >> nLinkIndex;
-            }
-            else if( cmd == "savetraj") {
-                strsavetraj = utils::GetFilenameUntilSeparator(sinput,';');
-            }
-            else if( cmd == "savebodytraj") {
-                strbodytraj = utils::GetFilenameUntilSeparator(sinput,';');
-            }
-            else if( cmd == "graspthresh") {
-                sinput >> taskdata->fGraspThresh;
-            }
-            else if( cmd == "configthresh") {
-                sinput >> taskdata->fConfigThresh;
-            }
-            else if( cmd == "maxsamples") {
-                sinput >> taskdata->nMaxSamples;
-            }
-            else if( cmd == "maxiterations") {
-                sinput >> params->_nMaxIterations;
-            }
-            else if( cmd == "maxikiterations") {
-                sinput >> taskdata->nMaxIkIterations;
-            }
-            else if( cmd == "targetjoints") {
-                int num=0;
-                sinput >> num;
-                taskdata->_vtargetjoints.resize(num);
-                FOREACH(it, taskdata->_vtargetjoints)
-                sinput >> *it;
-            }
-            else if(cmd == "graspset") {
-                taskdata->pvGraspSet.reset(new vector<Transform>());
-                taskdata->pvGraspSet->reserve(200);
-                string filename = utils::GetFilenameUntilSeparator(sinput,';');
-                ifstream fgrasp(filename.c_str());
-                while(!fgrasp.eof()) {
-                    Transform t;
-                    fgrasp >> t;
-                    if( !fgrasp ) {
-                        break;
-                    }
-                    taskdata->pvGraspSet->push_back(t);
+            RAVELOG_DEBUG(str(boost::format("grasp set size = %d\n")%taskdata->pvGraspSet->size()));
+        }
+        else if( cmd == "graspcontactset") {
+            taskdata->pvGraspContactSet.reset(new vector<Transform>());
+            taskdata->pvGraspContactSet->reserve(200);
+            string filename = utils::GetFilenameUntilSeparator(sinput,';');
+            ifstream fgrasp(filename.c_str());
+            while(!fgrasp.eof()) {
+                Transform t;
+                fgrasp >> t;
+                if( !fgrasp ) {
+                    break;
                 }
-                RAVELOG_DEBUG(str(boost::format("grasp set size = %d\n")%taskdata->pvGraspSet->size()));
+                taskdata->pvGraspContactSet->push_back(t);
             }
-            else if( cmd == "graspcontactset") {
-                taskdata->pvGraspContactSet.reset(new vector<Transform>());
-                taskdata->pvGraspContactSet->reserve(200);
-                string filename = utils::GetFilenameUntilSeparator(sinput,';');
-                ifstream fgrasp(filename.c_str());
-                while(!fgrasp.eof()) {
-                    Transform t;
-                    fgrasp >> t;
-                    if( !fgrasp ) {
-                        break;
-                    }
-                    taskdata->pvGraspContactSet->push_back(t);
+            RAVELOG_DEBUG(str(boost::format("grasp contact set size = %d\n")%taskdata->pvGraspContactSet->size()));
+        }
+        else if( cmd == "graspstartset" ) {
+            taskdata->pvGraspStartSet.reset(new vector<Transform>());
+            taskdata->pvGraspStartSet->reserve(200);
+            string filename; sinput >> filename;
+            ifstream fgrasp(filename.c_str());
+            while(!fgrasp.eof()) {
+                Transform t;
+                fgrasp >> t;
+                if( !fgrasp ) {
+                    break;
                 }
-                RAVELOG_DEBUG(str(boost::format("grasp contact set size = %d\n")%taskdata->pvGraspContactSet->size()));
+                taskdata->pvGraspStartSet->push_back(t);
             }
-            else if( cmd == "graspstartset" ) {
-                taskdata->pvGraspStartSet.reset(new vector<Transform>());
-                taskdata->pvGraspStartSet->reserve(200);
-                string filename; sinput >> filename;
-                ifstream fgrasp(filename.c_str());
-                while(!fgrasp.eof()) {
-                    Transform t;
-                    fgrasp >> t;
-                    if( !fgrasp ) {
-                        break;
-                    }
-                    taskdata->pvGraspStartSet->push_back(t);
-                }
-                RAVELOG_DEBUG(str(boost::format("grasp start set size = %d\n")%taskdata->pvGraspStartSet->size()));
-            }
-            else if( cmd == "targettraj" ) {
+            RAVELOG_DEBUG(str(boost::format("grasp start set size = %d\n")%taskdata->pvGraspStartSet->size()));
+        }
+        else if( cmd == "targettraj" ) {
 
-                if( !taskdata->ptarget ) {
-                    RAVELOG_WARN("target cannot be null when specifying trajectories!\n");
-                    return false;
-                }
-
-                int nPoints; sinput >> nPoints;
-                taskdata->vtargettraj.resize(nPoints);
-
-                FOREACH(itp, taskdata->vtargettraj) {
-                    itp->resize(taskdata->ptarget->GetDOF());
-                    FOREACH(it, *itp)
-                    sinput >> *it;
-                }
-            }
-            else if( cmd == "usegoal" ) {
-                sinput >> taskdata->fWeights[0] >> taskdata->fWeights[1] >> taskdata->fWeights[2];
-                taskdata->bSortSolutions = true;
-            }
-            else if( cmd == "fullcol" )
-                taskdata->bCheckFullCollision = true;
-            else if( cmd == "features" ) {
-                string filename;
-                sinput >> filename;
-                taskdata->SetGenerateFeatures(filename);
-            }
-            else {
-                RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
-                break;
-            }
-
-            if( !sinput ) {
-                RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+            if( !taskdata->ptarget ) {
+                RAVELOG_WARN("target cannot be null when specifying trajectories!\n");
                 return false;
             }
+
+            int nPoints; sinput >> nPoints;
+            taskdata->vtargettraj.resize(nPoints);
+
+            FOREACH(itp, taskdata->vtargettraj) {
+                itp->resize(taskdata->ptarget->GetDOF());
+                FOREACH(it, *itp)
+                sinput >> *it;
+            }
+        }
+        else if( cmd == "usegoal" ) {
+            sinput >> taskdata->fWeights[0] >> taskdata->fWeights[1] >> taskdata->fWeights[2];
+            taskdata->bSortSolutions = true;
+        }
+        else if( cmd == "fullcol" )
+            taskdata->bCheckFullCollision = true;
+        else if( cmd == "features" ) {
+            string filename;
+            sinput >> filename;
+            taskdata->SetGenerateFeatures(filename);
+        }
+        else {
+            RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
+            break;
+        }
+
+        if( !sinput ) {
+            RAVELOG_ERROR(str(boost::format("failed processing command %s\n")%cmd));
+            return false;
+        }
         }
 
         if( !taskdata->ptarget ) {
@@ -1199,12 +1202,12 @@ private:
 
         _robot->SetActiveDOFs(pmanip->GetArmIndices());
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
+        std::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
 
         uint32_t basetime = utils::GetMilliTime(), finaltime;
         taskdata->SetRobot(_robot);
 
-        boost::shared_ptr<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
+        std::shared_ptr<Trajectory> ptrajtemp(RaveCreateTrajectory(GetEnv(),taskdata->GetDOF()));
         bool bReverseTrajectory = false;
 
         if( plannername.size() > 0 ) {
@@ -1217,12 +1220,12 @@ private:
             bReverseTrajectory = true;
 
             // create RA* planner
-            params->_goalfn = boost::bind(&ConstrainedTaskData::Eval,taskdata,_1);
-            params->_samplefn = boost::bind(&ConstrainedTaskData::Sample,taskdata,_1);
-            params->_sampleneighfn = boost::bind(&ConstrainedTaskData::SampleNeigh,taskdata,_1,_2,_3);
-            params->_distmetricfn = boost::bind(&ConstrainedTaskData::DistMetric,taskdata,_1,_2);
-            params->_setstatevaluesfn = boost::bind(&ConstrainedTaskData::SetState,taskdata,_1,_2);
-            params->_getstatefn = boost::bind(&ConstrainedTaskData::GetState,taskdata,_1);
+            params->_goalfn = std::bind(&ConstrainedTaskData::Eval,taskdata,_1);
+            params->_samplefn = std::bind(&ConstrainedTaskData::Sample,taskdata,_1);
+            params->_sampleneighfn = std::bind(&ConstrainedTaskData::SampleNeigh,taskdata,_1,_2,_3);
+            params->_distmetricfn = std::bind(&ConstrainedTaskData::DistMetric,taskdata,_1,_2);
+            params->_setstatevaluesfn = std::bind(&ConstrainedTaskData::SetState,taskdata,_1,_2);
+            params->_getstatefn = std::bind(&ConstrainedTaskData::GetState,taskdata,_1);
 
             params->_vConfigLowerLimit = taskdata->GetLower();
             params->_vConfigUpperLimit = taskdata->GetUpper();
@@ -1297,7 +1300,7 @@ private:
 
             taskdata->SetState(params->vinitialconfig);
 
-            boost::shared_ptr<PlannerBase> pra(RaveCreatePlanner(GetEnv(),plannername.c_str()));
+            std::shared_ptr<PlannerBase> pra(RaveCreatePlanner(GetEnv(),plannername.c_str()));
             if( !pra ) {
                 RAVELOG_WARN(str(boost::format("could not find %s planner\n")%plannername));
                 return false;
@@ -1337,7 +1340,7 @@ private:
                 bool bIndependentCollision = pmanip->CheckIndependentCollision(report);
                 // check if non-manipulator links are in collision
                 if( !bIndependentCollision ) {
-                    boost::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0) ? taskdata->pvGraspStartSet : taskdata->pvGraspSet;
+                    std::shared_ptr< vector< Transform > > pvGraspSet = (realindex == 0 && !!taskdata->pvGraspStartSet && taskdata->pvGraspStartSet->size()>0) ? taskdata->pvGraspStartSet : taskdata->pvGraspSet;
                     FOREACH(it, *pvGraspSet) {
                         Transform tgrasp = Ttarget * *it;
 
@@ -1431,7 +1434,7 @@ private:
 
         if( strbodytraj.size() > 0 ) {
 
-            boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
+            std::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
 
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
             taskdata->ptarget->GetDOFValues(tp.q);
@@ -1475,7 +1478,7 @@ private:
         sout << *it << " ";
 
         if( strsavetraj.size() ) {
-            boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
+            std::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
             pfulltraj->serialize(f);
@@ -1493,7 +1496,7 @@ private:
 
         list< Transform > listGraspSet;
 
-        boost::shared_ptr<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
+        std::shared_ptr<ConstrainedTaskData> taskdata(new ConstrainedTaskData());
 
         int nLinkIndex=-1;
         string strsavetraj, strbodytraj;
@@ -1664,7 +1667,7 @@ private:
         FOREACH(it, values)
         sout << *it << " ";
 
-        boost::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
+        std::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),_robot->GetActiveDOF()));
         Trajectory::TPOINT tp;
         FOREACHR(itsol, vtrajectory) {
             tp.q.resize(0);
@@ -1678,7 +1681,7 @@ private:
 
         if( strbodytraj.size() > 0 ) {
 
-            boost::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
+            std::shared_ptr<Trajectory> pbodytraj(RaveCreateTrajectory(GetEnv(),taskdata->ptarget->GetDOF()));
             vector<Trajectory::TPOINT>::const_iterator itrobottraj = ptraj->GetPoints().begin();
 
             taskdata->ptarget->GetDOFValues(tp.q);
@@ -1697,7 +1700,7 @@ private:
         }
 
         if( strsavetraj.size() ) {
-            boost::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
+            std::shared_ptr<Trajectory> pfulltraj(RaveCreateTrajectory(GetEnv(),_robot->GetDOF()));
             _robot->GetFullTrajectoryFromActive(pfulltraj, ptraj);
             ofstream f(strsavetraj.c_str());
             pfulltraj->serialize(f);
@@ -1753,7 +1756,7 @@ private:
     }
 
     // relaxed task constraints
-    bool FindAllRelaxedForward(const vector<dReal>& qprev, int j, Trajectory* ptraj, boost::shared_ptr<ConstrainedTaskData> taskdata)
+    bool FindAllRelaxedForward(const vector<dReal>& qprev, int j, Trajectory* ptraj, std::shared_ptr<ConstrainedTaskData> taskdata)
     {
         //RAVELOG_WARN("%d\n", j);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
@@ -1877,7 +1880,7 @@ private:
     }
 
     // simple task constraints
-    bool FindAllSimple(const vector<dReal>& qprev, int j, list<vector<dReal> >& vtrajectory, dReal fConfigThresh2, vector<list<vector<dReal> > >& vsolutions, boost::shared_ptr<ConstrainedTaskData> taskdata)
+    bool FindAllSimple(const vector<dReal>& qprev, int j, list<vector<dReal> >& vtrajectory, dReal fConfigThresh2, vector<list<vector<dReal> > >& vsolutions, std::shared_ptr<ConstrainedTaskData> taskdata)
     {
         FOREACH_NOINC(itsol, vsolutions[j]) {
 

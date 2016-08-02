@@ -205,7 +205,7 @@ class MobyReplayController : public ControllerBase
     class ControllerPropertiesXMLReader : public BaseXMLReader
     {
     public:
-        ControllerPropertiesXMLReader(boost::shared_ptr<MobyReplayController> controller, const AttributesList& atts) : _controller(controller) {
+        ControllerPropertiesXMLReader(std::shared_ptr<MobyReplayController> controller, const AttributesList& atts) : _controller(controller) {
         }
 
         virtual ProcessElement startElement(const string& name, const AttributesList& atts) {
@@ -275,27 +275,27 @@ class MobyReplayController : public ControllerBase
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        boost::shared_ptr<MobyReplayController> _controller;
+        std::shared_ptr<MobyReplayController> _controller;
         stringstream _ss;
     };
 
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts));
+    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(std::dynamic_pointer_cast<MobyReplayController>(ptr),atts));
     }
 
     MobyReplayController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _mrdfilename(""), _firstAction(true) {
         _penv = penv;
 
         __description = ":Interface Author: James Taylor and Rosen Diankov\n\nThe Moby controller is capable of supporting any combination of PID control depending on the gains specified in the controller xml configuration\n\n";
-        RegisterCommand("Pause",boost::bind(&MobyReplayController::_Pause,this,_1,_2),
+        RegisterCommand("Pause",std::bind(&MobyReplayController::_Pause,this,_1,_2),
                         "pauses the controller from reacting to commands ");
-        RegisterCommand("SetCheckCollisions",boost::bind(&MobyReplayController::_SetCheckCollisions,this,_1,_2),
+        RegisterCommand("SetCheckCollisions",std::bind(&MobyReplayController::_SetCheckCollisions,this,_1,_2),
                         "If set, will check if the robot gets into a collision during movement");
-        RegisterCommand("SetThrowExceptions",boost::bind(&MobyReplayController::_SetThrowExceptions,this,_1,_2),
+        RegisterCommand("SetThrowExceptions",std::bind(&MobyReplayController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
-        RegisterCommand("SetEnableLogging",boost::bind(&MobyReplayController::_SetEnableLogging,this,_1,_2),
+        RegisterCommand("SetEnableLogging",std::bind(&MobyReplayController::_SetEnableLogging,this,_1,_2),
                         "If set, will write trajectories to disk");
         _fCommandTime = 0;
         _fSpeed = 1;
@@ -329,7 +329,7 @@ public:
                 KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&MobyReplayController::_SetJointLimits,boost::bind(&utils::sptr_from<MobyReplayController>, weak_controller())));
+            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,std::bind(&MobyReplayController::_SetJointLimits,std::bind(&utils::sptr_from<MobyReplayController>, weak_controller())));
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
@@ -363,12 +363,12 @@ public:
         }
 
         // get a reference to the physics engine
-        _mobyPhysics = boost::dynamic_pointer_cast<MobyPhysics>(_penv->GetPhysicsEngine());
+        _mobyPhysics = std::dynamic_pointer_cast<MobyPhysics>(_penv->GetPhysicsEngine());
 
         //std::cout << "_mrdfilename: " << _mrdfilename << std::endl;
         if(_mrdfilename == "") throw; // mrdfile set via xml
 
-        _mrdfile = boost::shared_ptr<MRDFile>(new MRDFile(_mrdfilename));
+        _mrdfile = std::shared_ptr<MRDFile>(new MRDFile(_mrdfilename));
         _mrdfile->Open();
         // get the mrd lookup table
         _mrdLookups = _mrdfile->GetLookup();
@@ -815,17 +815,17 @@ private:
         return !!is;
     }
 
-    inline boost::shared_ptr<MobyReplayController> shared_controller()
+    inline std::shared_ptr<MobyReplayController> shared_controller()
     {
-        return boost::dynamic_pointer_cast<MobyReplayController>(shared_from_this());
+        return std::dynamic_pointer_cast<MobyReplayController>(shared_from_this());
     }
 
-    inline boost::shared_ptr<MobyReplayController const> shared_controller_const() const
+    inline std::shared_ptr<MobyReplayController const> shared_controller_const() const
     {
-        return boost::dynamic_pointer_cast<MobyReplayController const>(shared_from_this());
+        return std::dynamic_pointer_cast<MobyReplayController const>(shared_from_this());
     }
 
-    inline boost::weak_ptr<MobyReplayController> weak_controller()
+    inline std::weak_ptr<MobyReplayController> weak_controller()
     {
         return shared_controller();
     }
@@ -944,7 +944,7 @@ private:
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
-        boost::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
+        std::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
@@ -962,25 +962,25 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
+    std::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
     boost::mutex _mutex;
 
     EnvironmentBasePtr _penv;
 
-    boost::shared_ptr<MobyPhysics> _mobyPhysics;
+    std::shared_ptr<MobyPhysics> _mobyPhysics;
 
     // templated comparator for comparing the value of two shared pointers
     // used predominantly to ensure maps keyed on shared pointers are hashed properly
     template<class T>
     class _CompareSharedPtrs {
     public:
-       bool operator()(boost::shared_ptr<T> a, boost::shared_ptr<T> b) const {
+       bool operator()(std::shared_ptr<T> a, boost::shared_ptr<T> b) const {
           return a.get() < b.get();
        }
     };
 
     std::string _mrdfilename;
-    boost::shared_ptr<MRDFile> _mrdfile;
+    std::shared_ptr<MRDFile> _mrdfile;
 
     bool _firstAction;
     dReal _currentTime, _startTime, _simTime;

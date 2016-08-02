@@ -131,7 +131,7 @@ public:
         }
         std::string type, name;
     };
-    typedef boost::shared_ptr<InterfaceType> InterfaceTypePtr;
+    typedef std::shared_ptr<InterfaceType> InterfaceTypePtr;
 
     /// \brief bindings for instance models
     class InstanceModelBinding
@@ -198,7 +198,7 @@ public:
 public:
         KinBody::LinkPtr _link;
         domNodeRef _node;
-        boost::shared_ptr<daeURI> _nodeurifromphysics; ///< node URL from instance_rigid_body
+        std::shared_ptr<daeURI> _nodeurifromphysics; ///< node URL from instance_rigid_body
         domLinkRef _domlink;
         domInstance_rigid_bodyRef _irigidbody;
         domRigid_bodyRef _rigidbody;
@@ -669,14 +669,14 @@ public:
 
         FOREACH(itsensor, vsensors) {
             if( (*itsensor)->Supports(SensorBase::ST_Camera) ) {
-                SensorBase::CameraGeomDataConstPtr pcamgeom = boost::static_pointer_cast<SensorBase::CameraGeomData const>((*itsensor)->GetSensorGeometry(SensorBase::ST_Camera));
+                SensorBase::CameraGeomDataConstPtr pcamgeom = std::static_pointer_cast<SensorBase::CameraGeomData const>((*itsensor)->GetSensorGeometry(SensorBase::ST_Camera));
                 if( pcamgeom->target_region.size() > 0 ) {
                     std::string resolvedTargetRegion; // resolved name
                     //daeURI uri(*_dae, pcamgeom->target_region);
                     //RAVELOG_INFO_FORMAT("asdfasf: %s", _MakeFullURI(pcamgeom->target_region));//uri.getURI());
                     // check if there's any URL matching pcamgeom->target_region
                     FOREACHC(ittestbody, vbodies) {
-                        ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>((*ittestbody)->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
+                        ColladaXMLReadablePtr pcolladainfo = std::dynamic_pointer_cast<ColladaXMLReadable>((*ittestbody)->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
                         if( !!pcolladainfo ) {
                             FOREACHC(iturl, pcolladainfo->_articulated_systemURIs) {
                                 if( iturl->first == pcamgeom->target_region ) {
@@ -728,7 +728,7 @@ public:
     /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
     bool Extract(RobotBasePtr& probot, const std::string& articulatdSystemId=std::string())
     {
-        std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
+        std::list< pair<domInstance_kinematics_modelRef, std::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
             return false;
@@ -763,7 +763,7 @@ public:
             if (!kscene) {
                 continue;
             }
-            boost::shared_ptr<KinematicsSceneBindings> bindings(new KinematicsSceneBindings());
+            std::shared_ptr<KinematicsSceneBindings> bindings(new KinematicsSceneBindings());
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
@@ -851,7 +851,7 @@ public:
             }
         }
 
-        std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
+        std::list< pair<domInstance_kinematics_modelRef, std::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         bool bSuccess = false;
         //  parse each instance kinematics scene for the first available model
         for (size_t iscene = 0; iscene < allscene->getInstance_kinematics_scene_array().getCount(); iscene++) {
@@ -860,7 +860,7 @@ public:
             if (!kscene) {
                 continue;
             }
-            boost::shared_ptr<KinematicsSceneBindings> bindings(new KinematicsSceneBindings());
+            std::shared_ptr<KinematicsSceneBindings> bindings(new KinematicsSceneBindings());
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
@@ -1061,7 +1061,7 @@ public:
             }
 
             // write the axis parameters
-            ColladaXMLReadablePtr pcolladainfo = boost::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
+            ColladaXMLReadablePtr pcolladainfo = std::dynamic_pointer_cast<ColladaXMLReadable>(pbody->GetReadableInterface(ColladaXMLReadable::GetXMLIdStatic()));
             if( !!pcolladainfo ) {
                 // check if any URIs in pcolladainfo->_articulated_systemURIs are external. If yes, and current ias->getUrl() is inside this document, do not add
                 bool bHasExternal = false;
@@ -1953,7 +1953,7 @@ public:
 
                     bool joint_locked = false;     // if locked, joint angle is static
                     bool has_soft_limits = false, has_hard_limits = false;
-                    boost::shared_ptr<uint8_t> is_circular;
+                    std::shared_ptr<uint8_t> is_circular;
 
                     if (!!kinematics_axis_info) {
                         // contains the soft controller limits
@@ -3942,7 +3942,7 @@ private:
             }
 
             resolveCommon_float_or_param(pelt,kscene, jointvalue);
-            bindings.listAxisBindings.push_back(JointAxisBinding(boost::bind(&ColladaReader::_InstantiateNode, this, _1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
+            bindings.listAxisBindings.push_back(JointAxisBinding(std::bind(&ColladaReader::_InstantiateNode, this, std::placeholders::_1), pjtarget, pjointaxis, jointvalue, NULL, NULL, listInstanceScope));
         }
     }
 
@@ -4163,7 +4163,7 @@ private:
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
                             // for now don't load since we don't have good way of updating the geometry throughout the system yet.
-                            
+
 //                            const std::string groupname = pelt->getAttribute("type");
 //                            if( groupname == "" ) {
 //                                RAVELOG_WARN("encountered an empty group name");
@@ -4228,7 +4228,7 @@ private:
                             std::vector<KinBody::GeometryInfoPtr> vgeometries;
                             vgeometries.reserve(itgeomgroup->second.size());
                             FOREACH(itgeominfo, itgeomgroup->second) {
-                                vgeometries.push_back(boost::make_shared<KinBody::GeometryInfo>(*itgeominfo));
+                                vgeometries.push_back(std::make_shared<KinBody::GeometryInfo>(*itgeominfo));
                             }
                             itlinkgeomgroups->first->SetGroupGeometries(itgeomgroup->first, vgeometries);
                         }
@@ -4993,7 +4993,7 @@ private:
         return 1;
     }
 
-    boost::shared_ptr<DAE> _dae;
+    std::shared_ptr<DAE> _dae;
     domCOLLADA* _dom;
     EnvironmentBasePtr _penv;
     dReal _fGlobalScale;

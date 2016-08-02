@@ -43,9 +43,9 @@ public:
     virtual void SetShow(bool bshow) OPENRAVE_DUMMY_IMPLEMENTATION;
 };
 
-typedef boost::shared_ptr<GraphHandle> GraphHandlePtr;
-typedef boost::shared_ptr<GraphHandle const> GraphHandleConstPtr;
-typedef boost::weak_ptr<GraphHandle const> GraphHandleWeakPtr;
+typedef std::shared_ptr<GraphHandle> GraphHandlePtr;
+typedef std::shared_ptr<GraphHandle const> GraphHandleConstPtr;
+typedef std::weak_ptr<GraphHandle const> GraphHandleWeakPtr;
 
 /** \brief <b>[interface]</b> Base class for the graphics and gui engine that renders the environment and provides visual sensor information. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_viewer.
     \ingroup interfaces
@@ -215,10 +215,10 @@ protected:
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     inline ViewerBasePtr shared_viewer() {
-        return boost::static_pointer_cast<ViewerBase>(shared_from_this());
+        return std::static_pointer_cast<ViewerBase>(shared_from_this());
     }
     inline ViewerBaseConstPtr shared_viewer_const() const {
-        return boost::static_pointer_cast<ViewerBase const>(shared_from_this());
+        return std::static_pointer_cast<ViewerBase const>(shared_from_this());
     }
 
 private:

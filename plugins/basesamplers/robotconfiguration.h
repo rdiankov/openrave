@@ -27,7 +27,7 @@ Samples the robot active configuration space, treats revolute and circular joint
 The sampler needs to return values in the range [0,1]. Default sampler is 'mt19937'.\n\
 If the robot active DOFs change, can use the 'TrackActiveSpace' command to automatically update the sampling configuration space. By default this is true.\n\
 ";
-        RegisterCommand("TrackActiveSpace",boost::bind(&RobotConfigurationSampler::TrackActiveSpaceCommand,this,_1,_2),
+        RegisterCommand("TrackActiveSpace",std::bind(&RobotConfigurationSampler::TrackActiveSpaceCommand,this,std::placeholders::_1,std::placeholders::_2),
                         "Enable/disable the automating updating of the active configuration space.");
         string robotname;
         sinput >> robotname;
@@ -47,7 +47,7 @@ If the robot active DOFs change, can use the 'TrackActiveSpace' command to autom
             }
         }
         if( !!_probot ) {
-            _updatedofscallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotActiveDOFs,boost::bind(&RobotConfigurationSampler::_UpdateDOFs,this));
+            _updatedofscallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotActiveDOFs,std::bind(&RobotConfigurationSampler::_UpdateDOFs,this));
         }
     }
 
@@ -119,7 +119,7 @@ protected:
 
         if( !!_probot && btrack ) {
             if( !_updatedofscallback ) {
-                _updatedofscallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotActiveDOFs,boost::bind(&RobotConfigurationSampler::_UpdateDOFs,this));
+                _updatedofscallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotActiveDOFs,std::bind(&RobotConfigurationSampler::_UpdateDOFs,this));
             }
         }
         else {

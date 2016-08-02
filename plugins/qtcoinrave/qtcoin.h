@@ -47,8 +47,19 @@
 #include <set>
 #include <string>
 
+#ifdef BOOST_NO_CXX11_DECLTYPE
+
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(typeof((v).rbegin())it = (v).rbegin(); it != (v).rend(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
+
+#else
+
+#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(decltype((v).rbegin()) it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
+
+#endif
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -198,9 +209,9 @@ inline void SetSoTransform(SoTransform* ptrans, const RaveTransform<float>& t)
 }
 
 class QtCoinViewer;
-typedef boost::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
-typedef boost::weak_ptr<QtCoinViewer> QtCoinViewerWeakPtr;
-typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
+typedef std::shared_ptr<QtCoinViewer> QtCoinViewerPtr;
+typedef std::weak_ptr<QtCoinViewer> QtCoinViewerWeakPtr;
+typedef std::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #define CALLBACK_EVENT QEvent::Type(QEvent::User+101)
 

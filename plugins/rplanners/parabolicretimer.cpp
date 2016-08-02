@@ -34,8 +34,8 @@ public:
         TrajectoryBasePtr ptraj;
         int posindex, velindex, waypointindex, timeindex;
     };
-    typedef boost::shared_ptr<ParabolicGroupInfo> ParabolicGroupInfoPtr;
-    typedef boost::shared_ptr<ParabolicGroupInfo const> ParabolicGroupInfoConstPtr;
+    typedef std::shared_ptr<ParabolicGroupInfo> ParabolicGroupInfoPtr;
+    typedef std::shared_ptr<ParabolicGroupInfo const> ParabolicGroupInfoConstPtr;
 
     ParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
@@ -64,7 +64,7 @@ protected:
     void ResetCachedGroupInfo(GroupInfoPtr g)
     {
         // remove all the points
-        ParabolicGroupInfoPtr parabolicgroup = boost::dynamic_pointer_cast<ParabolicGroupInfo>(g);
+        ParabolicGroupInfoPtr parabolicgroup = std::dynamic_pointer_cast<ParabolicGroupInfo>(g);
         if( parabolicgroup->ptraj->GetNumWaypoints() > 0 ) {
             parabolicgroup->ptraj->Remove(0, parabolicgroup->ptraj->GetNumWaypoints());
         }
@@ -220,7 +220,7 @@ protected:
     }
 
     bool _WriteJointValues(GroupInfoConstPtr inforaw, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
+        ParabolicGroupInfoConstPtr info = std::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
             _v0pos.resize(info->gpos.dof);
             _v1pos.resize(info->gpos.dof);
@@ -577,7 +577,7 @@ protected:
     }
 
     bool _WriteIk(GroupInfoConstPtr inforaw, IkParameterizationType iktype, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::iterator itdata) {
-        ParabolicGroupInfoConstPtr info = boost::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
+        ParabolicGroupInfoConstPtr info = std::dynamic_pointer_cast<ParabolicGroupInfo const>(inforaw);
         if( _parameters->_outputaccelchanges ) {
             dReal deltatime = *(itdata+_timeoffset);
             if( deltatime == 0 ) {
@@ -892,7 +892,7 @@ protected:
         if( _parameters->_outputaccelchanges ) {
             std::list<TrajectoryBaseConstPtr> listtrajectories;
             FOREACH(it,_listgroupinfo) {
-                listtrajectories.push_back(boost::dynamic_pointer_cast<ParabolicGroupInfo>(*it)->ptraj);
+                listtrajectories.push_back(std::dynamic_pointer_cast<ParabolicGroupInfo>(*it)->ptraj);
             }
             TrajectoryBasePtr pmergedtraj = planningutils::MergeTrajectories(listtrajectories);
             if( pmergedtraj->GetNumWaypoints() > 0 ) {

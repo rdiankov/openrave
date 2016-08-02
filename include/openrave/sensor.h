@@ -60,8 +60,8 @@ public:
         uint64_t __stamp;         ///< time stamp of the sensor data in microseconds. If 0, then the data is uninitialized! (floating-point precision is bad here). This can be either simulation or real time depending on the sensor.
         Transform __trans;             ///< the coordinate system the sensor was when the measurement was taken, this is taken directly from SensorBase::GetTransform
     };
-    typedef boost::shared_ptr<SensorBase::SensorData> SensorDataPtr;
-    typedef boost::shared_ptr<SensorBase::SensorData const> SensorDataConstPtr;
+    typedef std::shared_ptr<SensorBase::SensorData> SensorDataPtr;
+    typedef std::shared_ptr<SensorBase::SensorData const> SensorDataConstPtr;
 
     class OPENRAVE_API LaserSensorData : public SensorData
     {
@@ -195,8 +195,8 @@ public:
         }
         std::string hardware_id; ///< optional hardware identifier of the sensor
     };
-    typedef boost::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
-    typedef boost::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
+    typedef std::shared_ptr<SensorBase::SensorGeometry> SensorGeometryPtr;
+    typedef std::shared_ptr<SensorBase::SensorGeometry const> SensorGeometryConstPtr;
 
     class OPENRAVE_API LaserGeomData : public SensorGeometry
     {
@@ -215,8 +215,8 @@ public:
         dReal time_scan;         ///< time between scans [seconds]
     };
 
-    typedef boost::shared_ptr<LaserGeomData> LaserGeomDataPtr;
-    typedef boost::shared_ptr<LaserGeomData const> LaserGeomDataConstPtr;
+    typedef std::shared_ptr<LaserGeomData> LaserGeomDataPtr;
+    typedef std::shared_ptr<LaserGeomData const> LaserGeomDataConstPtr;
     
     class OPENRAVE_API CameraGeomData : public SensorGeometry
     {
@@ -250,8 +250,8 @@ public:
         dReal gain; ///< camera gain setting
         CameraIntrinsics& KK;         ///< \deprecated (14/01/15)
     };
-    typedef boost::shared_ptr<CameraGeomData> CameraGeomDataPtr;
-    typedef boost::shared_ptr<CameraGeomData const> CameraGeomDataConstPtr;
+    typedef std::shared_ptr<CameraGeomData> CameraGeomDataPtr;
+    typedef std::shared_ptr<CameraGeomData const> CameraGeomDataConstPtr;
 
     class OPENRAVE_API JointEncoderGeomData : public SensorGeometry
     {

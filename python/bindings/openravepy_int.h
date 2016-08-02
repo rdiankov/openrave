@@ -42,6 +42,7 @@
 #include <boost/version.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
+#include <boost/bind/placeholders.hpp>
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
@@ -56,6 +57,21 @@
 
 #define CHECK_POINTER(p) { \
         if( !(p) ) { throw openrave_exception(boost::str(boost::format(_("[%s:%d]: invalid pointer"))%__PRETTY_FUNCTION__%__LINE__)); } \
+}
+
+namespace boost {
+// register std::shared_ptr
+//template <class T> inline T* get_pointer(const std::shared_ptr<T>& p){
+//    return p.get();
+//}
+//template <class T> inline T* get_pointer(std::shared_ptr<T>& p){
+//    return p.get();
+//}
+namespace python {
+template <class T> struct pointee< std::shared_ptr<T> >{
+    typedef T type;
+};
+}
 }
 
 using namespace boost::python;
@@ -87,7 +103,7 @@ class PyConfigurationSpecification;
 class PyIkParameterization;
 class PyXMLReadable;
 class PyCameraIntrinsics;
-    
+
 typedef boost::shared_ptr<PyInterfaceBase> PyInterfaceBasePtr;
 typedef boost::shared_ptr<PyInterfaceBase const> PyInterfaceBaseConstPtr;
 typedef boost::shared_ptr<PyKinBody> PyKinBodyPtr;
@@ -127,7 +143,7 @@ typedef boost::shared_ptr<PyConfigurationSpecification const> PyConfigurationSpe
 typedef boost::shared_ptr<PyIkParameterization> PyIkParameterizationPtr;
 typedef boost::shared_ptr<PyXMLReadable> PyXMLReadablePtr;
 typedef boost::shared_ptr<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
-    
+
 inline uint64_t GetMicroTime()
 {
 #ifdef _WIN32
@@ -552,10 +568,10 @@ public:
         _pbase->SetUserData(key, pdata._handle);
     }
     void SetUserData(object o) {
-        _pbase->SetUserData(std::string(), boost::shared_ptr<UserData>(new PyUserObject(o)));
+        _pbase->SetUserData(std::string(), std::shared_ptr<UserData>(new PyUserObject(o)));
     }
     void SetUserData(const std::string& key, object o) {
-        _pbase->SetUserData(key, boost::shared_ptr<UserData>(new PyUserObject(o)));
+        _pbase->SetUserData(key, std::shared_ptr<UserData>(new PyUserObject(o)));
     }
     bool RemoveUserData(const std::string& key) {
         return _pbase->RemoveUserData(key);
@@ -696,7 +712,7 @@ const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationS
 
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>&);
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>&);
-    
+
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 void init_openravepy_global();
 void InitPlanningUtils();

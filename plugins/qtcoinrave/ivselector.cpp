@@ -238,7 +238,7 @@ void IvObjectDragger::CheckCollision(bool flag)
     ItemPtr selectedItem = GetSelectedItem();
     if (_checkCollision && !!selectedItem) {
         // synchronize the collision model transform
-        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+        KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_penv->GetMutex());
             if( !!lock ) {
@@ -281,7 +281,7 @@ void IvObjectDragger::UpdateSkeleton()
     RaveTransform<float> tnew = tbox*told*_toffset;
     SetSoTransform(selectedItem->GetIvTransform(), tnew);
 
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !!pbody ) {
         pbody->UpdateFromIv();
         CheckCollision(_checkCollision);
@@ -296,7 +296,7 @@ void IvObjectDragger::GetMessage(ostream& sout)
     if( !selectedItem ) {
         return;
     }
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !pbody ) {
         return;
     }
@@ -318,7 +318,7 @@ void IvObjectDragger::GetMessage(ostream& sout)
 
 IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
 {
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
+    KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(pItem);
     BOOST_ASSERT( !!pItem );
 
     _trackball = NULL;
@@ -447,7 +447,7 @@ void IvJointDragger::CheckCollision(bool flag)
     _checkCollision = flag;
     ItemPtr selectedItem = GetSelectedItem();
     if (_checkCollision && !!selectedItem) {
-        KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+        KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
 
         if( !!pbody ) {
             EnvironmentMutex::scoped_try_lock lock(_penv->GetMutex());
@@ -473,7 +473,7 @@ void IvJointDragger::UpdateSkeleton()
     if( !selectedItem ) {
         return;
     }
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !pbody ) {
         return;
     }
@@ -485,7 +485,7 @@ void IvJointDragger::UpdateSkeleton()
     float fang = -atan2f(mrot[2][1], mrot[1][1]);
 
     // if a robot, reset the controller
-    RobotItemPtr probotitem = boost::dynamic_pointer_cast<RobotItem>(pbody);
+    RobotItemPtr probotitem = std::dynamic_pointer_cast<RobotItem>(pbody);
 
     {
         EnvironmentMutex::scoped_try_lock lock(_penv->GetMutex());
@@ -576,7 +576,7 @@ void IvJointDragger::UpdateDragger()
     if( !selectedItem ) {
         return;
     }
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !pbody ) {
         return;
     }
@@ -609,7 +609,7 @@ void IvJointDragger::GetMessage(ostream& sout)
     if( !selectedItem ) {
         return;
     }
-    KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(selectedItem);
+    KinBodyItemPtr pbody = std::dynamic_pointer_cast<KinBodyItem>(selectedItem);
     if( !pbody ) {
         return;
     }

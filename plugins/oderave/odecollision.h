@@ -30,8 +30,8 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
     class CollisionCallbackData
     {
-    public:
-        CollisionCallbackData(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
+public:
+        CollisionCallbackData(std::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -86,7 +86,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return _vactivelinks.at(linkindex)>0;
         }
 
-        boost::shared_ptr<ODECollisionChecker> _pchecker;
+        std::shared_ptr<ODECollisionChecker> _pchecker;
         CollisionReportPtr _report;
         KinBodyConstPtr _pbody;
         KinBody::LinkConstPtr _plink;
@@ -103,11 +103,11 @@ private:
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
 
-    inline boost::shared_ptr<ODECollisionChecker> shared_checker() {
-        return boost::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
+    inline std::shared_ptr<ODECollisionChecker> shared_checker() {
+        return std::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
     }
-    inline boost::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
-        return boost::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
+    inline std::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
+        return std::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
     }
 
 public:
@@ -119,7 +119,7 @@ public:
         _nMaxStartContacts = 32;
         _nMaxContacts = 255;     // this is a weird ODE threshold for the new tri-tri collision checker
         __description = ":Interface Author: Rosen Diankov\n\nOpen Dynamics Engine collision checker (fast, but inaccurate for triangle meshes)";
-        RegisterCommand("SetMaxContacts",boost::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,_1,_2),
+        RegisterCommand("SetMaxContacts",std::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,std::placeholders::_1,std::placeholders::_2),
                         str(boost::format("sets the maximum contacts that can be returned by the checker (limit is %d)")%_nMaxContacts));
 #ifndef ODE_USE_MULTITHREAD
         if( !_bnotifiedmessage ) {
@@ -144,13 +144,13 @@ public:
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        boost::shared_ptr<ODECollisionChecker const > r = boost::dynamic_pointer_cast<ODECollisionChecker const>(preference);
+        std::shared_ptr<ODECollisionChecker const > r = std::dynamic_pointer_cast<ODECollisionChecker const>(preference);
         _odespace->SetGeometryGroup(r->GetGeometryGroup());
         _options = r->_options;
         _nMaxStartContacts = r->_nMaxStartContacts;
         _nMaxContacts = r->_nMaxContacts;
     }
-    
+
     bool _SetMaxContactsCommand(ostream& sout, istream& sinput)
     {
         sinput >> _nMaxContacts;
@@ -191,7 +191,7 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        ODESpace::KinBodyInfoPtr pinfo = std::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _odespace->InitKinBody(pbody);
@@ -866,7 +866,7 @@ private:
 
         KinBody::LinkPtr pkb1,pkb2;
         ODESpace::KinBodyInfo::LINK* podelinkinfo1 = NULL, *podelinkinfo2 = NULL;
-        
+
         if(!!b1 && dBodyGetData(b1)) {
             podelinkinfo1 = (ODESpace::KinBodyInfo::LINK*)dBodyGetData(b1);
             pkb1 = podelinkinfo1->GetLink();
@@ -959,7 +959,7 @@ private:
                     if( _options & OpenRAVE::CO_AllLinkCollisions ) {
                         FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
                             if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
-                                
+
                                 pcb->_report->vLinkColliding.push_back(*itlinkpair);
                             }
                         }
@@ -1068,7 +1068,7 @@ private:
                     if( _options & OpenRAVE::CO_AllLinkCollisions ) {
                         FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
                             if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
-                                
+
                                 pcb->_report->vLinkColliding.push_back(*itlinkpair);
                             }
                         }
@@ -1200,8 +1200,8 @@ private:
                         if( _options & OpenRAVE::CO_AllLinkCollisions ) {
                             FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
                                 if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
-                                    
-                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
+
+                                    pcb->_report->vLinkColliding.push_back(*itlinkpair);
                                 }
                             }
                             pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
@@ -1340,7 +1340,7 @@ private:
 
     int _options;
     dGeomID geomray;     // used for all ray tests
-    boost::shared_ptr<ODESpace> _odespace;
+    std::shared_ptr<ODESpace> _odespace;
     size_t _nMaxStartContacts, _nMaxContacts;
     std::string _userdatakey;
     CollisionReport _report;

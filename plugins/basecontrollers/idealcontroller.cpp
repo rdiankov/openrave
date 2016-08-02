@@ -23,19 +23,20 @@ class IdealController : public ControllerBase
 public:
     IdealController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false)
     {
+        using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
 If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
 1. ControllerBase::SetPath is called.\n\n\
 2. ControllerBase::SetDesired is called.\n\n\
 3. ControllerBase::Reset is called resetting everything\n\n\
 If SetDesired is called, only joint values will be set at every timestep leaving the transformation alone.\n";
-        RegisterCommand("Pause",boost::bind(&IdealController::_Pause,this,_1,_2),
+        RegisterCommand("Pause",std::bind(&IdealController::_Pause,this,_1,_2),
                         "pauses the controller from reacting to commands ");
-        RegisterCommand("SetCheckCollisions",boost::bind(&IdealController::_SetCheckCollisions,this,_1,_2),
+        RegisterCommand("SetCheckCollisions",std::bind(&IdealController::_SetCheckCollisions,this,_1,_2),
                         "If set, will check if the robot gets into a collision during movement");
-        RegisterCommand("SetThrowExceptions",boost::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
+        RegisterCommand("SetThrowExceptions",std::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
-        RegisterCommand("SetEnableLogging",boost::bind(&IdealController::_SetEnableLogging,this,_1,_2),
+        RegisterCommand("SetEnableLogging",std::bind(&IdealController::_SetEnableLogging,this,_1,_2),
                         "If set, will write trajectories to disk");
         _fCommandTime = 0;
         _fSpeed = 1;
@@ -66,7 +67,8 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&utils::sptr_from<IdealController>, weak_controller())));
+            std::weak_ptr<IdealController> wptr = weak_controller();
+            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,[wptr](){ utils::sptr_from(wptr)->_SetJointLimits(); } );
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
@@ -410,13 +412,13 @@ private:
         return !!is;
     }
 
-    inline boost::shared_ptr<IdealController> shared_controller() {
-        return boost::dynamic_pointer_cast<IdealController>(shared_from_this());
+    inline std::shared_ptr<IdealController> shared_controller() {
+        return std::dynamic_pointer_cast<IdealController>(shared_from_this());
     }
-    inline boost::shared_ptr<IdealController const> shared_controller_const() const {
-        return boost::dynamic_pointer_cast<IdealController const>(shared_from_this());
+    inline std::shared_ptr<IdealController const> shared_controller_const() const {
+        return std::dynamic_pointer_cast<IdealController const>(shared_from_this());
     }
-    inline boost::weak_ptr<IdealController> weak_controller() {
+    inline std::weak_ptr<IdealController> weak_controller() {
         return shared_controller();
     }
 
@@ -534,7 +536,7 @@ private:
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
-        boost::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
+        std::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
@@ -552,7 +554,7 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
+    std::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
     boost::mutex _mutex;
 };
 

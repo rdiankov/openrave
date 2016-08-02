@@ -40,8 +40,9 @@ class IvModelLoader : public ModuleBase
 public:
     IvModelLoader(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
+        using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simple model loader functionality returning a triangle mesh using the Coin3D library. Depending on the version, Coin3D might be licensed under GPL.";
-        RegisterCommand("LoadModel",boost::bind(&IvModelLoader::_LoadModelCommand,this,_1,_2),"Returns the triangle mesh given a model filename");
+        RegisterCommand("LoadModel",std::bind(&IvModelLoader::_LoadModelCommand,this,_1,_2),"Returns the triangle mesh given a model filename");
     }
 
     int main(const string& cmd)

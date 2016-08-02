@@ -29,7 +29,7 @@ if( CLOCK_GETTIME_FOUND )
   set(openrave_libraries ${openrave_libraries} rt)
 endif()
 
-set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS}")
+set(LIBOPENRAVE_COMPILE_FLAGS "${Boost_CFLAGS} -std=c++11")
 
 if( NEED_TRIINDEX  )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DNEED_DTRIINDEX_TYPEDEF")
@@ -84,7 +84,7 @@ endif()
 link_directories(${OPENRAVE_LINK_DIRS})
 
 add_executable(openrave ${openrave_SOURCES})
-set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
+set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -std=c++11 -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
 
 add_dependencies(openrave libopenrave libopenrave-core)
 

@@ -27,7 +27,7 @@ public:
     class PIDXMLReader : public BaseXMLReader
     {
 public:
-        PIDXMLReader(boost::shared_ptr<XMLData> piddata, const AttributesList& atts) {
+        PIDXMLReader(std::shared_ptr<XMLData> piddata, const AttributesList& atts) {
             _piddata = piddata;
             if( !_piddata )
                 _piddata.reset(new XMLData());
@@ -68,14 +68,14 @@ public:
         }
 
 protected:
-        boost::shared_ptr<XMLData> _piddata;
+        std::shared_ptr<XMLData> _piddata;
         stringstream _ss;
     };
 
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
-        return BaseXMLReaderPtr(new PIDXMLReader(boost::shared_ptr<XMLData>(),atts));
+        return BaseXMLReaderPtr(new PIDXMLReader(std::shared_ptr<XMLData>(),atts));
     }
 
     CustomController(EnvironmentBasePtr penv) : ControllerBase(penv)
@@ -91,7 +91,7 @@ protected:
         _nControlTransformation = nControlTransformation;
 
         // read the gains from the XML
-        boost::shared_ptr<XMLData> piddata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("piddata"));
+        std::shared_ptr<XMLData> piddata = std::dynamic_pointer_cast<XMLData>(GetReadableInterface("piddata"));
         if( !!piddata ) {
             stringstream ss;
             ss << "piddata from custom XML reader is" << endl << "pgains: ";
@@ -143,7 +143,7 @@ protected:
 
 } // end namespace cppexamples
 
-static boost::shared_ptr<void> s_RegisteredReader;
+static std::shared_ptr<void> s_RegisteredReader;
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {

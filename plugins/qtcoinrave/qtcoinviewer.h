@@ -130,7 +130,7 @@ public:
     virtual void UpdateFromModel();
 
     virtual void Reset();
-    virtual boost::shared_ptr<void> LockGUI();
+    virtual std::shared_ptr<void> LockGUI();
 
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
@@ -182,7 +182,7 @@ public:
         _listRemoveItems.push_back(pItem);
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+    std::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
 
@@ -213,7 +213,7 @@ public slots:
     void About();
 
 public:
-    class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
+    class EnvMessage : public std::enable_shared_from_this<EnvMessage>
     {
 public:
         EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
@@ -231,13 +231,13 @@ public:
         }
 
 protected:
-        boost::weak_ptr<QtCoinViewer> _pviewer;
+        std::weak_ptr<QtCoinViewer> _pviewer;
         void** _ppreturn;
         boost::mutex _mutex;
-        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
+        std::shared_ptr<boost::mutex::scoped_lock> _plock;
     };
-    typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
-    typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
+    typedef std::shared_ptr<EnvMessage> EnvMessagePtr;
+    typedef std::shared_ptr<EnvMessage const> EnvMessageConstPtr;
 
 protected:
     void _InitConstructor(std::istream& sinput);
@@ -245,11 +245,11 @@ protected:
     class PrivateGraphHandle : public GraphHandle
     {
 public:
-        PrivateGraphHandle(boost::weak_ptr<QtCoinViewer> wviewer, SoSwitch* handle) : _handle(handle), _wviewer(wviewer) {
+        PrivateGraphHandle(std::weak_ptr<QtCoinViewer> wviewer, SoSwitch* handle) : _handle(handle), _wviewer(wviewer) {
             BOOST_ASSERT(_handle!=NULL);
         }
         virtual ~PrivateGraphHandle() {
-            boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
+            std::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
             if( !!viewer ) {
                 viewer->closegraph(_handle);
             }
@@ -257,7 +257,7 @@ public:
 
         virtual void SetTransform(const RaveTransform<float>& t)
         {
-            boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
+            std::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
             if( !!viewer ) {
                 viewer->SetGraphTransform(_handle,t);
             }
@@ -265,24 +265,24 @@ public:
 
         virtual void SetShow(bool bshow)
         {
-            boost::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
+            std::shared_ptr<QtCoinViewer> viewer = _wviewer.lock();
             if( !!viewer ) {
                 viewer->SetGraphShow(_handle,bshow);
             }
         }
 
         SoSwitch* _handle;
-        boost::weak_ptr<QtCoinViewer> _wviewer;
+        std::weak_ptr<QtCoinViewer> _wviewer;
     };
 
     inline QtCoinViewerPtr shared_viewer() {
-        return boost::dynamic_pointer_cast<QtCoinViewer>(shared_from_this());
+        return std::dynamic_pointer_cast<QtCoinViewer>(shared_from_this());
     }
     inline QtCoinViewerWeakPtr weak_viewer() {
         return QtCoinViewerWeakPtr(shared_viewer());
     }
     inline QtCoinViewerConstPtr shared_viewer_const() const {
-        return boost::dynamic_pointer_cast<QtCoinViewer const>(shared_from_this());
+        return std::dynamic_pointer_cast<QtCoinViewer const>(shared_from_this());
     }
 
     static void mousemove_cb(void * userdata, SoEventCallback * node);
@@ -396,8 +396,8 @@ public:
     QMenu* _pMenuSendCommand;
 
     SoNode*       _selectedNode;
-    boost::shared_ptr<IvDragger>    _pdragger;
-    std::list< boost::shared_ptr<IvDragger> > _plistdraggers;     /// draggers drawn
+    std::shared_ptr<IvDragger>    _pdragger;
+    std::list< std::shared_ptr<IvDragger> > _plistdraggers;     /// draggers drawn
     SoEventCallback* _eventKeyboardCB;
 
     boost::array<SoText2*,2> _messageNodes;
@@ -543,7 +543,7 @@ public:
 
    private:
     EnvironmentBasePtr _penv;
-    boost::shared_ptr<QtCoinViewer> _openraveviewer;
+    std::shared_ptr<QtCoinViewer> _openraveviewer;
     std::vector<uint8_t> _memory;
     //QBasicTimer _timer;
    };

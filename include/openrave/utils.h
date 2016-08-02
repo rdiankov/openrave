@@ -150,9 +150,9 @@ struct null_deleter
     }
 };
 
-template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
+template <class T> std::shared_ptr<T> sptr_from(std::weak_ptr<T> const& wpt)
 {
-    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+    return std::shared_ptr<T>(wpt); // throws on wpt.expired()
 }
 
 template<typename T>
@@ -212,7 +212,7 @@ inline std::string ConvertToLowerCase(const std::string & s)
     from http://stackoverflow.com/questions/5505965/fast-string-splitting-with-multiple-delimiters
 
    \param skipempty if true, then will skip empty strings. otherwise will insert them. use false when order of parameters is necessary.
-   
+
    Usage:
    \code
    std::vector<std::string> vstrings;

@@ -30,7 +30,7 @@ using namespace std;
 #include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 #include <boost/algorithm/string.hpp>
 
 #include <signal.h>
@@ -52,10 +52,10 @@ static bool bDisplayGUI = true, bShowGUI = true;
 static EnvironmentBasePtr s_penv;
 static ViewerBasePtr s_pviewer; ///< static viewer created by the main thread. need to quit from its main loop
 
-//static boost::shared_ptr<boost::thread> s_mainThread;
+//static std::shared_ptr<boost::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
-static boost::shared_ptr<string> s_viewerName;
+static std::shared_ptr<string> s_viewerName;
 
 static list< pair<string, string> > s_listModules; // modules to initially create
 static vector<string> vResourceFiles; // xml files to open
@@ -275,7 +275,7 @@ int main(int argc, char ** argv)
 
     // mac osx requires the main thread to be the gui thread...
     //s_bThreadDestroyed = false;
-    //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
+    //s_mainThread.reset(new boost::thread(std::bind(MainOpenRAVEThread)));
     //s_mainThread->join();
     MainOpenRAVEThread();
     {

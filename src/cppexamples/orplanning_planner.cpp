@@ -49,7 +49,7 @@ public:
         PlannerBasePtr planner = RaveCreatePlanner(penv,"birrt");
 
         // register an optional function to be called for every planner iteration
-        UserDataPtr handle = planner->RegisterPlanCallback(boost::bind(&PlanningPlannerExample::PlanCallback,this,_1));
+        UserDataPtr handle = planner->RegisterPlanCallback(std::bind(&PlanningPlannerExample::PlanCallback,this,_1));
 
         while(IsOk()) {
             GraphHandlePtr pgraph;

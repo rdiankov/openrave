@@ -80,7 +80,7 @@ public:
 public:
         XMLData(const std::string& xmlid) : XMLReadable(xmlid), id(0) {
         }
-        virtual void copy(boost::shared_ptr<XMLData const> pdata) {
+        virtual void copy(std::shared_ptr<XMLData const> pdata) {
             *this = *pdata;
         }
 
@@ -94,7 +94,7 @@ public:
 
     class OPENRAVE_API BodyData : public KinBody::ManageData {
 public:
-        BodyData(SensorSystemBasePtr psensorsystem, KinBodyPtr pbody, boost::shared_ptr<XMLData> initdata) : KinBody::ManageData(psensorsystem), _initdata(initdata), bPresent(false), bEnabled(true), bLock(false)
+        BodyData(SensorSystemBasePtr psensorsystem, KinBodyPtr pbody, std::shared_ptr<XMLData> initdata) : KinBody::ManageData(psensorsystem), _initdata(initdata), bPresent(false), bEnabled(true), bLock(false)
         {
             SetBody(pbody);
         }
@@ -140,7 +140,7 @@ protected:
             _plink = plink;
         }
 
-        boost::shared_ptr<XMLData> _initdata;
+        std::shared_ptr<XMLData> _initdata;
         uint64_t lastupdated;
         Transform tnew;         ///< most recent transform that is was set
 
@@ -155,7 +155,7 @@ protected:
     class OPENRAVE_API SimpleXMLReader : public BaseXMLReader
     {
 public:
-        SimpleXMLReader(boost::shared_ptr<XMLData>);
+        SimpleXMLReader(std::shared_ptr<XMLData>);
         virtual XMLReadablePtr GetReadable() {
             return _pdata;
         }
@@ -164,7 +164,7 @@ public:
         virtual void characters(const std::string& ch);
 
 protected:
-        boost::shared_ptr<XMLData> _pdata;
+        std::shared_ptr<XMLData> _pdata;
         std::stringstream ss;
     };
 
@@ -185,13 +185,13 @@ protected:
     virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2);
 
 protected:
-    typedef std::pair<boost::shared_ptr<BodyData>, Transform > SNAPSHOT;
-    typedef std::map<int,boost::shared_ptr<BodyData> > BODIES;
-    virtual boost::shared_ptr<BodyData> CreateBodyData(KinBodyPtr pbody, boost::shared_ptr<XMLData const> pdata);
+    typedef std::pair<std::shared_ptr<BodyData>, Transform > SNAPSHOT;
+    typedef std::map<int,std::shared_ptr<BodyData> > BODIES;
+    virtual std::shared_ptr<BodyData> CreateBodyData(KinBodyPtr pbody, std::shared_ptr<XMLData const> pdata);
     virtual void _UpdateBodies(std::list<SNAPSHOT>& listbodies);
     virtual void _UpdateBodiesThread();
 
-    virtual void SetRecentTransform(boost::shared_ptr<BodyData> pdata, const Transform& t) {
+    virtual void SetRecentTransform(std::shared_ptr<BodyData> pdata, const Transform& t) {
         pdata->tnew = t;
     }
 

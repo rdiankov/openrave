@@ -40,7 +40,7 @@ public:
     class CollisionMapXMLReader : public BaseXMLReader
     {
 public:
-        CollisionMapXMLReader(boost::shared_ptr<XMLData> cmdata, const AttributesList& atts) {
+        CollisionMapXMLReader(std::shared_ptr<XMLData> cmdata, const AttributesList& atts) {
             _cmdata = cmdata;
             if( !_cmdata ) {
                 _cmdata.reset(new XMLData());
@@ -116,14 +116,14 @@ public:
         }
 
 protected:
-        boost::shared_ptr<XMLData> _cmdata;
+        std::shared_ptr<XMLData> _cmdata;
         stringstream _ss;
     };
 
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
-        return BaseXMLReaderPtr(new CollisionMapXMLReader(boost::shared_ptr<XMLData>(),atts));
+        return BaseXMLReaderPtr(new CollisionMapXMLReader(std::shared_ptr<XMLData>(),atts));
     }
 
     CollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput) : RobotBase(penv) {
@@ -178,7 +178,7 @@ For joints J2xJ3, the index operation is::\n\n\
     virtual void _ComputeInternalInformation()
     {
         RobotBase::_ComputeInternalInformation();
-        boost::shared_ptr<XMLData> cmdata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
+        std::shared_ptr<XMLData> cmdata = std::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
         if( !!cmdata ) {
             // process the collisionmap structures
             FOREACH(itmap,cmdata->listmaps) {
@@ -203,7 +203,7 @@ For joints J2xJ3, the index operation is::\n\n\
             return true;
         }
         // check if the current joint angles fall within the allowable range
-        boost::shared_ptr<XMLData> cmdata = boost::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
+        std::shared_ptr<XMLData> cmdata = std::dynamic_pointer_cast<XMLData>(GetReadableInterface("collisionmap"));
         if( !!cmdata ) {
             vector<dReal> values;
             boost::array<int,2> indices={ { 0,0}};

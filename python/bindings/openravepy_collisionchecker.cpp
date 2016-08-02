@@ -62,13 +62,13 @@ public:
         numWithinTol = report->numWithinTol;
         nKeepPrevious = report->nKeepPrevious;
         if( !!report->plink1 ) {
-            plink1 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(report->plink1), pyenv);
+            plink1 = openravepy::toPyKinBodyLink(std::const_pointer_cast<KinBody::Link>(report->plink1), pyenv);
         }
         else {
             plink1 = object();
         }
         if( !!report->plink2 ) {
-            plink2 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(report->plink2), pyenv);
+            plink2 = openravepy::toPyKinBodyLink(std::const_pointer_cast<KinBody::Link>(report->plink2), pyenv);
         }
         else {
             plink2 = object();
@@ -83,10 +83,10 @@ public:
         FOREACHC(itlinks, report->vLinkColliding) {
             object pylink1, pylink2;
             if( !!itlinks->first ) {
-                pylink1 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(itlinks->first), pyenv);
+                pylink1 = openravepy::toPyKinBodyLink(std::const_pointer_cast<KinBody::Link>(itlinks->first), pyenv);
             }
             if( !!itlinks->second ) {
-                pylink2 = openravepy::toPyKinBodyLink(boost::const_pointer_cast<KinBody::Link>(itlinks->second), pyenv);
+                pylink2 = openravepy::toPyKinBodyLink(std::const_pointer_cast<KinBody::Link>(itlinks->second), pyenv);
             }
             newLinkColliding.append(boost::python::make_tuple(pylink1, pylink2));
         }

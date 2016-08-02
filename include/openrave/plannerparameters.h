@@ -89,8 +89,8 @@ protected:
     }
 };
 
-typedef boost::shared_ptr<ExplorationParameters> ExplorationParametersPtr;
-typedef boost::shared_ptr<ExplorationParameters const> ExplorationParametersConstPtr;
+typedef std::shared_ptr<ExplorationParameters> ExplorationParametersPtr;
+typedef std::shared_ptr<ExplorationParameters const> ExplorationParametersConstPtr;
 
 class OPENRAVE_API RAStarParameters : public PlannerBase::PlannerParameters
 {
@@ -431,8 +431,8 @@ protected:
     }
 };
 
-typedef boost::shared_ptr<GraspParameters> GraspParametersPtr;
-typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
+typedef std::shared_ptr<GraspParameters> GraspParametersPtr;
+typedef std::shared_ptr<GraspParameters const> GraspParametersConstPtr;
 
 /** \brief parameters for timing/smoothing trajectories
 
@@ -531,8 +531,8 @@ protected:
     }
 };
 
-typedef boost::shared_ptr<TrajectoryTimingParameters> TrajectoryTimingParametersPtr;
-typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingParametersConstPtr;
+typedef std::shared_ptr<TrajectoryTimingParameters> TrajectoryTimingParametersPtr;
+typedef std::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingParametersConstPtr;
 
 class OPENRAVE_API ConstraintTrajectoryTimingParameters : public TrajectoryTimingParameters
 {
@@ -674,8 +674,8 @@ protected:
     }
 };
 
-typedef boost::shared_ptr<ConstraintTrajectoryTimingParameters> ConstraintTrajectoryTimingParametersPtr;
-typedef boost::shared_ptr<ConstraintTrajectoryTimingParameters const> ConstraintTrajectoryTimingParametersConstPtr;
+typedef std::shared_ptr<ConstraintTrajectoryTimingParameters> ConstraintTrajectoryTimingParametersPtr;
+typedef std::shared_ptr<ConstraintTrajectoryTimingParameters const> ConstraintTrajectoryTimingParametersConstPtr;
 
 class OPENRAVE_API WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
@@ -705,8 +705,8 @@ protected:
     virtual void characters(const std::string& ch);
 };
 
-typedef boost::shared_ptr<WorkspaceTrajectoryParameters> WorkspaceTrajectoryParametersPtr;
-typedef boost::shared_ptr<WorkspaceTrajectoryParameters const> WorkspaceTrajectoryParametersConstPtr;
+typedef std::shared_ptr<WorkspaceTrajectoryParameters> WorkspaceTrajectoryParametersPtr;
+typedef std::shared_ptr<WorkspaceTrajectoryParameters const> WorkspaceTrajectoryParametersConstPtr;
 
 class OPENRAVE_API RRTParameters : public PlannerBase::PlannerParameters
 {
@@ -764,7 +764,7 @@ protected:
     }
 };
 
-typedef boost::shared_ptr<RRTParameters> RRTParametersPtr;
+typedef std::shared_ptr<RRTParameters> RRTParametersPtr;
 
 class OPENRAVE_API BasicRRTParameters : public RRTParameters
 {
@@ -835,7 +835,7 @@ protected:
     }
 };
 
-typedef boost::shared_ptr<BasicRRTParameters> BasicRRTParametersPtr;
+typedef std::shared_ptr<BasicRRTParameters> BasicRRTParametersPtr;
 
 } // OpenRAVE
 

@@ -64,8 +64,8 @@ IKFAST_COMPILE_ASSERT(IKFAST_VERSION==0x10000048);
 #define IKPI_2  ((IkReal)1.57079632679490)
 
 #ifdef _MSC_VER
-#ifndef isnan
-#define isnan _isnan
+#ifndef std::isnan
+#define std::isnan _std::isnan
 #endif
 #ifndef isinf
 #define isinf _isinf
@@ -180,11 +180,11 @@ inline float IKatan2Simple(float fy, float fx) {
     return atan2f(fy,fx);
 }
 inline float IKatan2(float fy, float fx) {
-    if( isnan(fy) ) {
-        IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
+    if( std::isnan(fy) ) {
+        IKFAST_ASSERT(!std::isnan(fx)); // if both are nan, probably wrong value will be returned
         return float(IKPI_2);
     }
-    else if( isnan(fx) ) {
+    else if( std::isnan(fx) ) {
         return 0;
     }
     return atan2f(fy,fx);
@@ -193,11 +193,11 @@ inline double IKatan2Simple(double fy, double fx) {
     return atan2(fy,fx);
 }
 inline double IKatan2(double fy, double fx) {
-    if( isnan(fy) ) {
-        IKFAST_ASSERT(!isnan(fx)); // if both are nan, probably wrong value will be returned
+    if( std::isnan(fy) ) {
+        IKFAST_ASSERT(!std::isnan(fx)); // if both are nan, probably wrong value will be returned
         return IKPI_2;
     }
-    else if( isnan(fx) ) {
+    else if( std::isnan(fx) ) {
         return 0;
     }
     return atan2(fy,fx);
@@ -216,7 +216,7 @@ inline CheckValue<T> IKatan2WithCheck(T fy, T fx, T epsilon)
     CheckValue<T> ret;
     ret.valid = false;
     ret.value = 0;
-    if( !isnan(fy) && !isnan(fx) ) {
+    if( !std::isnan(fy) && !std::isnan(fx) ) {
         if( IKabs(fy) >= IKFAST_ATAN2_MAGTHRESH || IKabs(fx) > IKFAST_ATAN2_MAGTHRESH ) {
             ret.value = IKatan2Simple(fy,fx);
             ret.valid = true;
@@ -16921,7 +16921,7 @@ if( cj5array[0] >= -1-IKFAST_SINCOS_THRESH && cj5array[0] <= 1+IKFAST_SINCOS_THR
     j5array[1] = -j5array[0];
     sj5array[1] = -sj5array[0];
 }
-else if( isnan(cj5array[0]) )
+else if( std::isnan(cj5array[0]) )
 {
     // probably any value will work
     j5valid[0] = true;
@@ -20514,7 +20514,7 @@ int main(int argc, char** argv)
 #include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {
 IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, const std::vector<dReal>& vfreeinc) {
-    boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions(new ikfast::IkFastFunctions<IkReal>());
+    std::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions(new ikfast::IkFastFunctions<IkReal>());
     ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
     ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;
     ikfunctions->_GetNumFreeParameters = IKFAST_NAMESPACE::GetNumFreeParameters;
