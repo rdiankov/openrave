@@ -2512,6 +2512,52 @@ protected:
         }
     }
 
+    /// \brief deserialize json into environment
+    bool DeserializeJSON(const rapidjson::Value &value)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+
+        if (value.HasMember("unit")) {
+            if (!RaveDeserializeJSON(value["unit"], _unit)) {
+                return false;
+            }
+        }
+
+        _vecbodies.resize(0);
+        if (value.HasMember("bodies")) {
+            if (!value["bodies"].IsArray()) {
+                return false;
+            }
+            _vecbodies.reserve(value["bodies"].Size());
+            for (size_t i = 0; i < value["bodies"].Size(); ++i)
+            {
+                if (!value["bodies"][i].IsObject())
+                {
+                    return false;
+                }
+                if (!value["bodies"][i].HasMember("robot") || !value["bodies"][i]["robot"].GetBool())
+                {
+                    KinBodyPtr body = RaveCreateKinBody(shared_from_this(), "");
+                    if (!body->DeserializeJSON(value["bodies"][i])) {
+                        return false;
+                    }
+                    _AddKinBody(body, false);
+                }
+                else
+                {
+                    RobotBasePtr robot = RaveCreateRobot(shared_from_this(), "");
+                    if (!robot->DeserializeJSON(value["bodies"][i])) {
+                        return false;
+                    }
+                    _AddRobot(robot, false);
+                }
+                
+            }
+        }
+
+        return true;
+    }
+
     static bool _IsColladaURI(const std::string& uri)
     {
         string scheme, authority, path, query, fragment;

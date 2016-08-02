@@ -383,107 +383,124 @@ bool KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
 {
     if (!value.IsObject() || !value.HasMember("type") || !value["type"].IsString())
     {
+        RAVELOG_WARN("failed to deserialize json type");
         return false;
     }
 
-    std::string type = value["type"].GetString();
+    std::string typestr = value["type"].GetString();
 
-    if (type == "box")
+    if (typestr == "box")
     {
         type = GT_Box;
         if (!value.HasMember("halfExtents") || !RaveDeserializeJSON(value["halfExtents"], _vGeomData))
         {
+            RAVELOG_WARN("failed to deserialize json box halfExtents");
             return false;
         }
     }
-    else if (type == "container")
+    else if (typestr == "container")
     {
         type = GT_Container;
         if (!value.HasMember("outerExtents") || !RaveDeserializeJSON(value["outerExtents"], _vGeomData))
         {
+            RAVELOG_WARN("failed to deserialize json container outerExtents");
             return false;
         }
         if (!value.HasMember("innerExtents") || !RaveDeserializeJSON(value["innerExtents"], _vGeomData2))
         {
+            RAVELOG_WARN("failed to deserialize json container innerExtents");
             return false;
         }
         if (!value.HasMember("bottomCross") || !RaveDeserializeJSON(value["bottomCross"], _vGeomData3))
         {
+            RAVELOG_WARN("failed to deserialize json container bottomCross");
             return false;
         }
 
     }
-    else if (type == "sphere")
+    else if (typestr == "sphere")
     {
         type = GT_Sphere;
         if (!value.HasMember("radius") || !RaveDeserializeJSON(value["radius"], _vGeomData.x))
         {
+            RAVELOG_WARN("failed to deserialize json sphere radius");
             return false;
         }
     }
-    else if (type == "cylinder")
+    else if (typestr == "cylinder")
     {
         type = GT_Cylinder;
         if (!value.HasMember("radius") || !RaveDeserializeJSON(value["radius"], _vGeomData.x))
         {
+            RAVELOG_WARN("failed to deserialize json cylinder radius");
             return false;
         }
         if (!value.HasMember("height") || !RaveDeserializeJSON(value["height"], _vGeomData.y))
         {
+            RAVELOG_WARN("failed to deserialize json height radius");
             return false;
         }
     }
-    else if (type == "trimesh")
+    else if (typestr == "trimesh")
     {
         type = GT_TriMesh;
         if (!value.HasMember("mesh") || !RaveDeserializeJSON(value["mesh"], mesh))
         {
+            RAVELOG_WARN("failed to deserialize json trimesh mesh");
             return false;
         }
     }
     else
     {
-        RAVELOG_WARN_FORMAT("Unknown geometry type: %s", type);
+        RAVELOG_WARN_FORMAT("Unknown geometry type: %s", typestr);
         return false;
     }
 
     if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid))
     {
+        RAVELOG_WARN("failed to deserialize json sid");
         return false;
     }
 
     if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name))
     {
+        RAVELOG_WARN("failed to deserialize json name");
         return false;
     }
 
     if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform))
     {
+        RAVELOG_WARN("failed to deserialize json transform");
         return false;
     }
 
     if (!value.HasMember("transparency") || !RaveDeserializeJSON(value["transparency"], transparency))
     {
+        RAVELOG_WARN("failed to deserialize json transparency");
         return false;
     }
 
     if (!value.HasMember("visible") || !RaveDeserializeJSON(value["visible"], visible))
     {
+        RAVELOG_WARN("failed to deserialize json visible");
         return false;
     }
 
     if (!value.HasMember("diffuseColor") || !RaveDeserializeJSON(value["diffuseColor"], diffuseColor))
     {
+        RAVELOG_WARN("failed to deserialize json diffuseColor");
         return false;
     }
 
     if (!value.HasMember("ambientColor") || !RaveDeserializeJSON(value["ambientColor"], ambientColor))
     {
+        RAVELOG_WARN("failed to deserialize json ambientColor");
         return false;
     }
 
     if (!value.HasMember("modifiable") || !RaveDeserializeJSON(value["modifiable"], modifiable))
     {
+        RAVELOG_WARN("failed to deserialize json modifiable");
         return false;
     }
 

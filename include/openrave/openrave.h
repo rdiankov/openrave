@@ -419,6 +419,7 @@ public:
     }
 
     virtual bool DeserializeJSON(const rapidjson::Value &value) {
+        return true;
     }
 
 private:
@@ -2796,11 +2797,11 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
 
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v)
 {
-    if (value.IsInt()) {
+    if (value.IsNumber() && !value.IsDouble()) {
         v = value.GetInt();
         return true;
     }
-    return false;
+    return true;
 }
 
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, double &v)
@@ -2853,7 +2854,7 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v
 {
     if (value.IsArray()) {
         v.resize(value.Size());
-        for (std::size_t i = 0; i < value.Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value.Size(); ++i) {
             if (!RaveDeserializeJSON(value[i], v[i])) {
                 return false;
             }
@@ -2886,7 +2887,7 @@ template <typename T, std::size_t N>
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a)
 {
     if (value.IsArray() && value.Size() <= N) {
-        for (std::size_t i = 0; i < value.Size(); ++i) {
+        for (rapidjson::SizeType i = 0; i < value.Size(); ++i) {
             if (!RaveDeserializeJSON(value[i], a[i])) {
                 return false;
             }
@@ -2939,22 +2940,25 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
 {
     if (!value.IsObject() || !value.HasMember("vertices") || !value.HasMember("indices"))
     {
+        RAVELOG_WARN("failed to deserialize json trimesh");
         return false;
     }
 
     if (!value["vertices"].IsArray() || value["vertices"].Size() % 3 != 0)
     {
+        RAVELOG_WARN("failed to deserialize json trimesh vertices");
         return false;
     }
 
     trimesh.vertices.clear();
     trimesh.vertices.reserve(value["vertices"].Size() / 3);
 
-    for (rapidjson::Value::ConstValueIterator it = value["vertices"].Begin(); it != value["vertices"].End(); ++it)
+    for (rapidjson::Value::ConstValueIterator it = value["vertices"].Begin(); it != value["vertices"].End();)
     {
         Vector vertex;
         if (!it->IsNumber())
         {
+            RAVELOG_WARN("failed to deserialize json trimesh vertex");
             return false;
         }
         vertex.x = it->GetDouble();
@@ -2962,6 +2966,7 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
 
         if (!it->IsNumber())
         {
+            RAVELOG_WARN("failed to deserialize json trimesh vertex");
             return false;
         }
         vertex.y = it->GetDouble();
@@ -2969,6 +2974,7 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
 
         if (!it->IsNumber())
         {
+            RAVELOG_WARN("failed to deserialize json trimesh vertex");
             return false;
         }
         vertex.z = it->GetDouble();
@@ -2977,7 +2983,13 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
         trimesh.vertices.push_back(vertex);
     }
 
-    return RaveDeserializeJSON(value["indices"], trimesh.indices);
+    if (!RaveDeserializeJSON(value["indices"], trimesh.indices))
+    {
+        RAVELOG_WARN("failed to deserialize json trimesh indices");
+        return false;
+    }
+
+    return true;
 }
 
 inline bool RaveDeserializeJSON(const rapidjson::Value &value, IkParameterization& ikparam)

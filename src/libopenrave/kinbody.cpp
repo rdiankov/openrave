@@ -4762,7 +4762,7 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
         value.AddMember("links", linksValue, allocator);
     }
 
-    if (GetJoints().size() > 0)
+    if (GetJoints().size() + GetPassiveJoints().size() > 0)
     {
         rapidjson::Value jointsValue;
         RAVE_SERIALIZEJSON_CLEAR_ARRAY(jointsValue);
@@ -4771,19 +4771,12 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
             (*it)->SerializeJSON(jointValue, allocator, options);
             jointsValue.PushBack(jointValue, allocator);
         }
-        value.AddMember("joints", jointsValue, allocator);
-    }
-
-    if (GetPassiveJoints().size() > 0)
-    {
-        rapidjson::Value passiveJointsValue;
-        RAVE_SERIALIZEJSON_CLEAR_ARRAY(passiveJointsValue);
         FOREACHC(it, GetPassiveJoints()) {
             rapidjson::Value jointValue;
             (*it)->SerializeJSON(jointValue, allocator, options);
-            passiveJointsValue.PushBack(jointValue, allocator);
+            jointsValue.PushBack(jointValue, allocator);
         }
-        value.AddMember("passiveJoints", passiveJointsValue, allocator);
+        value.AddMember("joints", jointsValue, allocator);
     }
 
     std::vector<dReal> vdofvalues;
@@ -4798,60 +4791,109 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
 
 bool KinBody::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("id") || !RaveDeserializeJSON(value["id"], _id)) {
+    if (!InterfaceBase::DeserializeJSON(value))
+    {
         return false;
     }
 
-    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], _name)) {
+    if (!value.HasMember("id") || !RaveDeserializeJSON(value["id"], _id))
+    {
         return false;
     }
 
-    Transform transform;
-    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform)) {
+    std::string name;
+    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name))
+    {
         return false;
     }
-    SetTransform(transform);
+    SetName(name);
 
-    if (!value.HasMember("links")) {
-        return false;
-    } else {
-        if (value.IsArray()) {
-            _veclinks.resize(value["links"].Size());
-            for (size_t i = 0; i < value["links"].Size(); ++i) {
-                if (!_veclinks[i]->DeserializeJSON(value["links"][i])) {
-                    return false;
-                }
-            }
-        } else {
+    std::vector<KinBody::LinkInfoConstPtr> linkinfos;
+    std::vector<KinBody::JointInfoConstPtr> jointinfos;
+
+    if (value.HasMember("links"))
+    {
+        if (!value["links"].IsArray())
+        {
             return false;
+        }
+
+        linkinfos.reserve(value["links"].Size());
+        for (size_t i = 0; i < value["links"].Size(); ++i)
+        {
+            LinkInfoPtr linkinfo(new LinkInfo());
+            if (!linkinfo->DeserializeJSON(value["links"][i]))
+            {
+                return false;
+            }
+            linkinfos.push_back(linkinfo);
         }
     }
 
-    if (value.HasMember("joints")) {
-        if (value.IsArray()) {
-            _vecjoints.resize(value["joints"].Size());
-            for (size_t i = 0; i < value["joints"].Size(); ++i) {
-                if (!_vecjoints[i]->DeserializeJSON(value["joints"][i])) {
-                    return false;
-                }
-            }
-        } else {
+    if (value.HasMember("joints"))
+    {
+        if (!value["joints"].IsArray())
+        {
             return false;
+        }
+
+        jointinfos.reserve(value["joints"].Size());
+        for (size_t i = 0; i < value["joints"].Size(); ++i)
+        {
+            JointInfoPtr jointinfo(new JointInfo());
+            if (!jointinfo->DeserializeJSON(value["joints"][i]))
+            {
+                return false;
+            }
+            jointinfos.push_back(jointinfo);
         }
     }
 
-    if (value.HasMember("passiveJoints")) {
-        if (value.IsArray()) {
-            _vPassiveJoints.resize(value["passiveJoints"].Size());
-            for (size_t i = 0; i < value["passiveJoints"].Size(); ++i) {
-                if (!_vPassiveJoints[i]->DeserializeJSON(value["passiveJoints"][i])) {
-                    return false;
-                }
-            }
-        } else {
-            return false;
-        }
+    if (!Init(linkinfos, jointinfos, "")) {
+        return false;
     }
+
+    // Transform transform;
+    // if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform)) {
+    //     return false;
+    // }
+    // SetTransform(transform);
+
+    // if (value.HasMember("links")) {
+    //     if (!value["links"].IsArray()) {
+    //         return false;
+    //     }
+    //     _veclinks.resize(value["links"].Size());
+    //     for (size_t i = 0; i < value["links"].Size(); ++i) {
+    //         if (!_veclinks[i]->DeserializeJSON(value["links"][i])) {
+    //             return false;
+    //         }
+    //     }
+    // }
+
+    // if (value.HasMember("joints")) {
+    //     if (!value["joints"].IsArray()) {
+    //         return false;
+    //     }
+    //     _vecjoints.resize(value["joints"].Size());
+    //     for (size_t i = 0; i < value["joints"].Size(); ++i) {
+    //         if (!_vecjoints[i]->DeserializeJSON(value["joints"][i])) {
+    //             return false;
+    //         }
+    //     }
+    // }
+
+    // if (value.HasMember("passiveJoints")) {
+    //     if (!value["passiveJoints"].IsArray()) {
+    //         return false;
+    //     }
+    //     _vPassiveJoints.resize(value["passiveJoints"].Size());
+    //     for (size_t i = 0; i < value["passiveJoints"].Size(); ++i) {
+    //         if (!_vPassiveJoints[i]->DeserializeJSON(value["passiveJoints"][i])) {
+    //             return false;
+    //         }
+    //     }
+    // }
 
     return true;
 }

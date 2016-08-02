@@ -387,62 +387,77 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 bool KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
 {
     if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
+        RAVELOG_WARN("failed to deserialize json sid");
         return false;
     }
 
     if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name)) {
+        RAVELOG_WARN("failed to deserialize json name");
         return false;
     }
 
     if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform)) {
+        RAVELOG_WARN("failed to deserialize json transform");
         return false;
     }
 
     if (!value.HasMember("massTransform") || !RaveDeserializeJSON(value["massTransform"], massTransform)) {
+        RAVELOG_WARN("failed to deserialize json massTransform");
         return false;
     }
 
     if (!value.HasMember("mass") || !RaveDeserializeJSON(value["mass"], mass)) {
+        RAVELOG_WARN("failed to deserialize json mass");
         return false;
     }
 
     if (!value.HasMember("inertiaMoments") || !RaveDeserializeJSON(value["inertiaMoments"], inertiaMoments)) {
+        RAVELOG_WARN("failed to deserialize json inertiaMoments");
         return false;
     }
 
     if (value.HasMember("floatParameters")) {
         if (!RaveDeserializeJSON(value["floatParameters"], floatParameters)) {
+            RAVELOG_WARN("failed to deserialize json floatParameters");
             return false;
         }
     }
 
     if (value.HasMember("intParameters")) {
         if (!RaveDeserializeJSON(value["intParameters"], intParameters)) {
+            RAVELOG_WARN("failed to deserialize json intParameters");
             return false;
         }
     }
 
     if (value.HasMember("stringParameters")) {
         if (!RaveDeserializeJSON(value["stringParameters"], stringParameters)) {
+            RAVELOG_WARN("failed to deserialize json stringParameters");
             return false;
         }
     }
 
     if (value.HasMember("forcedAdjacentLinks")) {
         if (!RaveDeserializeJSON(value["forcedAdjacentLinks"], forcedAdjacentLinks)) {
+            RAVELOG_WARN("failed to deserialize json forcedAdjacentLinks");
             return false;
         }
     }
 
     if (value.HasMember("geometries")) {
         if (!value["geometries"].IsArray()) {
+            RAVELOG_WARN("failed to deserialize json geometries");
             return false;
         }
-        geometries.resize(value["geometries"].Size());
+        geometries.resize(0);
+        geometries.reserve(value["geometries"].Size());
         for (size_t i = 0; i < value["geometries"].Size(); ++i) {
-            if (!geometries[i]->DeserializeJSON(value["geometries"][i])) {
+            GeometryInfoPtr geometry(new GeometryInfo());
+            if (!geometry->DeserializeJSON(value["geometries"][i])) {
+                RAVELOG_WARN("failed to deserialize json geometries");
                 return false;
             }
+            geometries.push_back(geometry);
         }
     }
 
@@ -450,10 +465,12 @@ bool KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
     // extraGeometries
 
     if (!value.HasMember("isStatic") || !RaveDeserializeJSON(value["isStatic"], isStatic)) {
+        RAVELOG_WARN("failed to deserialize json isStatic");
         return false;
     }
 
     if (!value.HasMember("isEnabled") || !RaveDeserializeJSON(value["isEnabled"], isEnabled)) {
+        RAVELOG_WARN("failed to deserialize json isEnabled");
         return false;
     }
     return true;

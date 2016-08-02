@@ -72,6 +72,15 @@ public:
         return toPyObject(doc);
     }
 
+    bool DeserializeJSON(object obj)
+    {
+        rapidjson::Document doc;
+        if (!toRapidJSONValue(obj, doc, doc.GetAllocator())) {
+            return false;
+        }
+        return _xmlreadable->DeserializeJSON(doc);
+    }
+
     XMLReadablePtr GetXMLReadable() {
         return _xmlreadable;
     }
@@ -1150,6 +1159,7 @@ void init_openravepy_global()
     .def("GetXMLId", &PyXMLReadable::GetXMLId, DOXY_FN(XMLReadable, GetXMLId))
     .def("Serialize", &PyXMLReadable::Serialize, Serialize_overloads(args("options"), DOXY_FN(XMLReadable, Serialize)))
     .def("SerializeJSON", &PyXMLReadable::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(XMLReadable, SerializeJSON)))
+    .def("DeserializeJSON", &PyXMLReadable::DeserializeJSON, DOXY_FN(XMLReadable, DeserializeJSON))
     ;
 
     class_<PyPluginInfo, boost::shared_ptr<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
