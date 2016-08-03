@@ -236,6 +236,8 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+
+        ncheckmanipconstraints = 0;
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
@@ -936,7 +938,21 @@ public:
                     retmanip = _manipconstraintchecker->CheckManipConstraints2(outramps);
                 }
                 else {
-                    retmanip = _manipconstraintchecker->CheckManipConstraints3(outramps);
+                    // RAVELOG_DEBUG("CHECKMANIPCONSTRAINTS");
+                    // ParabolicRamp::CheckReturn retmanip3 = _manipconstraintchecker->CheckManipConstraints3(outramps);
+                    retmanip = _manipconstraintchecker->CheckManipConstraints4(outramps);
+                    // if (retmanip3.retcode != retmanip.retcode) {
+                    //     RAVELOG_WARN_FORMAT("retcode 0x%x != 0x%x", retmanip3.retcode%retmanip.retcode);
+                    // }
+                    // if (!ParabolicRamp::FuzzyEquals(retmanip3.fTimeBasedSurpassMult, retmanip.fTimeBasedSurpassMult, ParabolicRamp::EpsilonT)) {
+                    //     RAVELOG_WARN_FORMAT("fmult %.15e != %.15e", retmanip3.fTimeBasedSurpassMult%retmanip.fTimeBasedSurpassMult);
+                    // }
+                    // if (!ParabolicRamp::FuzzyEquals(retmanip3.fMaxManipSpeed, retmanip.fMaxManipSpeed, ParabolicRamp::EpsilonV)) {
+                    //     RAVELOG_WARN_FORMAT("max manip speed %.15e != %.15e", retmanip3.fMaxManipSpeed%retmanip.fMaxManipSpeed);
+                    // }
+                    // if (!ParabolicRamp::FuzzyEquals(retmanip3.fMaxManipAccel, retmanip.fMaxManipAccel, ParabolicRamp::EpsilonA)) {
+                    //     RAVELOG_WARN_FORMAT("max manip accel %.15e != %.15e", retmanip3.fMaxManipAccel%retmanip.fMaxManipAccel);
+                    // }
                 }
                 tcheckmanipend = utils::GetMicroTime();
                 checkmaniptime += 0.000001f*(float)(tcheckmanipend - tcheckmanipstart);
@@ -1772,8 +1788,8 @@ protected:
         int numslowdowns = 0;
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear; // gripper constraints enabled
         size_t nItersFromPrevSuccessful = 0;
-        size_t nCutoffIters = 10000;
-        dReal cutoffRatio = 0;
+        size_t nCutoffIters = 100;
+        dReal cutoffRatio = 1e-3;
         dReal score = 1;
         dReal currentBestScore = 1.0;
         uint32_t tshortcutstart = utils::GetMicroTime();
@@ -1859,6 +1875,25 @@ protected:
                 bool bsuccess = false;
                 size_t maxSlowdowns = 4; // will adjust this constant later
 
+                // {
+                //     if (_parameters->SetStateValues(x0) != 0) {
+                //         RAVELOG_VERBOSE("state setting error");
+                //         break;
+                //     }
+                //     _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
+                //     if (_parameters->SetStateValues(x1) != 0) {
+                //         RAVELOG_VERBOSE("state setting error");
+                //         break;
+                //     }
+                //     _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx1, vellimits, accellimits);                  
+                //     for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
+                //         dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                //         if (vellimits[j] < fminvel) {
+                //             vellimits[j] = fminvel;
+                //         }
+                //     }
+                // }
+                
                 tloopstart = utils::GetMicroTime();
                 size_t islowdowntry = 0;
                 for (islowdowntry = 0; islowdowntry < maxSlowdowns; ++islowdowntry) {
@@ -2013,8 +2048,7 @@ protected:
 
                         // Modifiy vellimits and accellimits
                         if (_bmanipconstraints && !!_manipconstraintchecker) {
-                            // Manipulator constraints is enabled. Time-based constraint violation
-                            // is likely because manipulator constraints.
+                            // Manipulator constraints is enabled. Time-based constraint violation is likely because manipulator constraints.
                             if (islowdowntry == 0) {
                                 // Try computing estimates of velocity and acceleration first before scaling down
                                 if (1) {// using the original procedure first
