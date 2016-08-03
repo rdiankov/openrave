@@ -418,8 +418,7 @@ public:
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) {
     }
 
-    virtual bool DeserializeJSON(const rapidjson::Value &value) {
-        return true;
+    virtual void DeserializeJSON(const rapidjson::Value &value) {
     }
 
 private:
@@ -2586,6 +2585,28 @@ const std::string& IkParameterization::GetName() const
 #define RAVE_SERIALIZEJSON_CLEAR_OBJECT(value) { do { value.SetObject(); } while (false); }
 #define RAVE_SERIALIZEJSON_CLEAR_ARRAY(value) { do { value.SetArray(); } while (false); }
 
+#define RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value) { \
+    if (!value.IsObject()) { \
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an object is expected", ORE_InvalidArguments); \
+    } \
+}
+#define RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value) { \
+    if (!value.IsArray()) { \
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an array is expected", ORE_InvalidArguments); \
+    } \
+}
+#define RAVE_DESERIALIZEJSON_REQUIRED(value, key, destination) { \
+    if (!value.HasMember(key)) { \
+        throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to misisng key \"%s\"", key, ORE_InvalidArguments); \
+    } \
+    RaveDeserializeJSON(value[key], destination); \
+}
+#define RAVE_DESERIALIZEJSON_OPTIONAL(value, key, destination) { \
+    if (value.HasMember(key)) { \
+        RaveDeserializeJSON(value[key], destination); \
+    } \
+}
+
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, bool v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int v);
 inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, double v);
@@ -2765,189 +2786,160 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, double &v);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, float &v);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::string &v);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, int &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, double &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, float &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::string &v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v);
 template <typename T1, typename T2>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p);
 template <typename T>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v);
 template <typename K, typename V>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m);
 template <typename T, std::size_t N>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a);
 template <typename T>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v);
 template <typename T>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh);
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh);
+inline void RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics);
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, bool &v)
 {
-    if (value.IsBool()) {
-        v = value.GetBool();
-        return true;
+    if (!value.IsBool()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a bool", ORE_InvalidArguments);
     }
-    return false;
+    v = value.GetBool();
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, int &v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, int &v)
 {
-    if (value.IsNumber() && !value.IsDouble()) {
-        v = value.GetInt();
-        return true;
+    if (!value.IsInt()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as an int", ORE_InvalidArguments);
     }
-    return true;
+    v = value.GetInt();
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, double &v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, double &v)
 {
-    if (value.IsNumber()) {
-        v = value.GetDouble();
-        return true;
+    if (!value.IsNumber()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a double", ORE_InvalidArguments);
     }
-    return false;
+    v = value.GetDouble();
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, float &v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, float &v)
 {
-    if (value.IsNumber()) {
-        v = static_cast<float>(value.GetDouble());
-        return true;
+    if (!value.IsNumber()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a float", ORE_InvalidArguments);
     }
-    return false;
+    v = static_cast<float>(value.GetDouble());
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::string &v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::string &v)
 {
-    if (value.IsString()) {
-        v = value.GetString();
-        return true;
+    if (!value.IsString()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a string", ORE_InvalidArguments);
     }
-    return false;
+    v = value.GetString();
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, uint8_t &v)
 {
-    if (value.IsUint()) {
-        v = value.GetUint();
-        return true;
+    if (!value.IsUint()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as an uint8_t", ORE_InvalidArguments);
     }
-    return false;
+    v = value.GetUint();
 }
 
 template <typename T1, typename T2>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::pair<T1, T2>& p)
 {
-    if (value.IsArray() && value.Size() == 2) {
-        return RaveDeserializeJSON(value[0], p.first) && RaveDeserializeJSON(value[1], p.second);
+    if (!value.IsArray() || value.Size() != 2) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a pair", ORE_InvalidArguments);
     }
-    return false;
+    RaveDeserializeJSON(value[0], p.first);
+    RaveDeserializeJSON(value[1], p.second);
 }
 
 template <typename T>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::vector<T>& v)
 {
-    if (value.IsArray()) {
-        v.resize(value.Size());
-        for (rapidjson::SizeType i = 0; i < value.Size(); ++i) {
-            if (!RaveDeserializeJSON(value[i], v[i])) {
-                return false;
-            }
-        }
-        return true;
+    if (!value.IsArray()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a vector", ORE_InvalidArguments);
     }
-    return false;
+    v.resize(value.Size());
+    for (rapidjson::SizeType i = 0; i < value.Size(); ++i) {
+        RaveDeserializeJSON(value[i], v[i]);
+    }
 }
 
 template <typename K, typename V>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, std::map<K, V>& m)
 {
-    if (value.IsObject()) {
-        m.clear();
-        for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
-            K k;
-            if (!RaveDeserializeJSON(it->name, k)) {
-                return false;
-            }
-            if (!RaveDeserializeJSON(it->value, m[k])) {
-                return false;
-            }
-        }
-        return true;
+    if (!value.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a map", ORE_InvalidArguments);
     }
-    return false;
+
+    m.clear();
+    for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
+        K k;
+        RaveDeserializeJSON(it->name, k);
+        RaveDeserializeJSON(it->value, m[k]);
+    }
 }
 
 template <typename T, std::size_t N>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, boost::array<T, N>& a)
 {
-    if (value.IsArray() && value.Size() <= N) {
-        for (rapidjson::SizeType i = 0; i < value.Size(); ++i) {
-            if (!RaveDeserializeJSON(value[i], a[i])) {
-                return false;
-            }
-        }
-        return true;
+    if (!value.IsArray() || value.Size() > N) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as an array", ORE_InvalidArguments);
     }
-    return false;
+
+    for (rapidjson::SizeType i = 0; i < value.Size(); ++i) {
+        RaveDeserializeJSON(value[i], a[i]);
+    }
 }
 
 template <typename T>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveVector<T>& v)
 {
-    if (value.IsArray()) {
-        if (value.Size() == 3)
-        {
-            return
-                RaveDeserializeJSON(value[0], v[0]) &&
-                RaveDeserializeJSON(value[1], v[1]) &&
-                RaveDeserializeJSON(value[2], v[2]);
-        }
-        else if (value.Size() == 4)
-        {
-            return
-                RaveDeserializeJSON(value[0], v[0]) &&
-                RaveDeserializeJSON(value[1], v[1]) &&
-                RaveDeserializeJSON(value[2], v[2]) &&
-                RaveDeserializeJSON(value[3], v[3]);
-        }
+    if (!value.IsArray() || (value.Size() != 3 && value.Size() != 4)) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveVector", ORE_InvalidArguments);
     }
-    return false;
+    RaveDeserializeJSON(value[0], v[0]);
+    RaveDeserializeJSON(value[1], v[1]);
+    RaveDeserializeJSON(value[2], v[2]);
+    if (value.Size() == 4)
+    {
+        RaveDeserializeJSON(value[3], v[3]);
+    }
 }
 
 template <typename T>
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, RaveTransform<T>& t)
 {
-    if (value.IsArray() && value.Size() == 7) {
-        return
-            RaveDeserializeJSON(value[0], t.rot[0]) &&
-            RaveDeserializeJSON(value[1], t.rot[1]) &&
-            RaveDeserializeJSON(value[2], t.rot[2]) &&
-            RaveDeserializeJSON(value[3], t.rot[3]) &&
-            RaveDeserializeJSON(value[4], t.trans[0]) &&
-            RaveDeserializeJSON(value[5], t.trans[1]) &&
-            RaveDeserializeJSON(value[6], t.trans[2]);
+    if (!value.IsArray() || value.Size() != 7) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveTransform", ORE_InvalidArguments);
     }
-    return false;
+    RaveDeserializeJSON(value[0], t.rot[0]);
+    RaveDeserializeJSON(value[1], t.rot[1]);
+    RaveDeserializeJSON(value[2], t.rot[2]);
+    RaveDeserializeJSON(value[3], t.rot[3]);
+    RaveDeserializeJSON(value[4], t.trans[0]);
+    RaveDeserializeJSON(value[5], t.trans[1]);
+    RaveDeserializeJSON(value[6], t.trans[2]);
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
 {
-    if (!value.IsObject() || !value.HasMember("vertices") || !value.HasMember("indices"))
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    if (!value.HasMember("vertices") || !value["vertices"].IsArray() || value["vertices"].Size() % 3 != 0)
     {
-        RAVELOG_WARN("failed to deserialize json trimesh");
-        return false;
-    }
-
-    if (!value["vertices"].IsArray() || value["vertices"].Size() % 3 != 0)
-    {
-        RAVELOG_WARN("failed to deserialize json trimesh vertices");
-        return false;
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", ORE_InvalidArguments);
     }
 
     trimesh.vertices.clear();
@@ -2956,101 +2948,52 @@ inline bool RaveDeserializeJSON(const rapidjson::Value &value, TriMesh& trimesh)
     for (rapidjson::Value::ConstValueIterator it = value["vertices"].Begin(); it != value["vertices"].End();)
     {
         Vector vertex;
-        if (!it->IsNumber())
-        {
-            RAVELOG_WARN("failed to deserialize json trimesh vertex");
-            return false;
-        }
-        vertex.x = it->GetDouble();
-        ++it;
-
-        if (!it->IsNumber())
-        {
-            RAVELOG_WARN("failed to deserialize json trimesh vertex");
-            return false;
-        }
-        vertex.y = it->GetDouble();
-        ++it;
-
-        if (!it->IsNumber())
-        {
-            RAVELOG_WARN("failed to deserialize json trimesh vertex");
-            return false;
-        }
-        vertex.z = it->GetDouble();
-        ++it;
-        
+        RaveDeserializeJSON(*(it++), vertex.x);
+        RaveDeserializeJSON(*(it++), vertex.y);
+        RaveDeserializeJSON(*(it++), vertex.z);
         trimesh.vertices.push_back(vertex);
     }
 
-    if (!RaveDeserializeJSON(value["indices"], trimesh.indices))
-    {
-        RAVELOG_WARN("failed to deserialize json trimesh indices");
-        return false;
-    }
-
-    return true;
+    RaveDeserializeJSON(value["indices"], trimesh.indices);
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, IkParameterization& ikparam)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, IkParameterization& ikparam)
 {
-    if (!value.IsObject() || !value.HasMember("type") || !value["type"].IsString())
-    {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    std::string type = value["type"].GetString();
+    std::string typestr;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr)
 
-    if (type == "Transform6D")
+    if (typestr == "Transform6D")
     {
         Transform transform;
-        if (!value.HasMember("rotate") || !RaveDeserializeJSON(value["rotate"], transform.rot))
-        {
-            return false;
-        }
-        if (!value.HasMember("translate") || !RaveDeserializeJSON(value["translate"], transform.trans))
-        {
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "rotate", transform.rot);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "translate", transform.trans);
         ikparam.SetTransform6D(transform);
     }
-    else if (type == "TranslationDirection5D")
+    else if (typestr == "TranslationDirection5D")
     {
         RAY ray;
-        if (!value.HasMember("translate") || !RaveDeserializeJSON(value["translate"], ray.pos))
-        {
-            return false;
-        }
-        if (!value.HasMember("direction") || !RaveDeserializeJSON(value["direction"], ray.dir))
-        {
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "translate", ray.pos);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "direction", ray.dir);
         ikparam.SetTranslationDirection5D(ray);
     }
-    return true;
+    else
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported IkParameterization type \"%s\"", typestr, ORE_InvalidArguments);
+    }
 }
 
-inline bool RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics)
+inline void RaveDeserializeJSON(const rapidjson::Value &value, SensorBase::CameraIntrinsics& intrinsics)
 {
-    if (value.IsObject() &&
-        value.HasMember("fx") &&
-        value.HasMember("fy") &&
-        value.HasMember("cx") &&
-        value.HasMember("cy") &&
-        value.HasMember("focalLength") &&
-        value.HasMember("distortionModel") &&
-        value.HasMember("distortionCoeffs"))
-    {
-        return
-            RaveDeserializeJSON(value["fx"], intrinsics.fx) &&
-            RaveDeserializeJSON(value["fy"], intrinsics.fy) &&
-            RaveDeserializeJSON(value["cx"], intrinsics.cx) &&
-            RaveDeserializeJSON(value["cy"], intrinsics.cy) &&
-            RaveDeserializeJSON(value["focalLength"], intrinsics.focal_length) &&
-            RaveDeserializeJSON(value["distortionModel"], intrinsics.distortion_model) &&
-            RaveDeserializeJSON(value["distortionCoeffs"], intrinsics.distortion_coeffs);
-    }
-    return false;
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "fx", intrinsics.fx);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "fy", intrinsics.fy);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "cx", intrinsics.cx);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "cy", intrinsics.cy);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "focalLength", intrinsics.focal_length);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "distortionModel", intrinsics.distortion_model);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "distortionCoeffs", intrinsics.distortion_coeffs);
 }
 
 } // end namespace OpenRAVE

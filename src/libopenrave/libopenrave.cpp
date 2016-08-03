@@ -2291,17 +2291,17 @@ void SensorBase::SensorGeometry::Serialize(BaseXMLWriterPtr writer, int options)
 void SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
     if( hardware_id.size() > 0 ) {
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "hardwareID", hardware_id);
     }
 }
 
-bool SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value &value)
+void SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("hardware_id") || !RaveDeserializeJSON(value["hardware_id"], hardware_id)) {
-        return false;
-    }
-    return true;
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "hardwareID", hardware_id);
 }
 
 void SensorBase::CameraGeomData::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -2346,6 +2346,8 @@ void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value &value, rapidjso
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, options);
+
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sensor", sensor_reference);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "targetRegion", target_region);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "cameraIntrinsics", intrinsics);
@@ -2353,6 +2355,22 @@ void SensorBase::CameraGeomData::SerializeJSON(rapidjson::Value &value, rapidjso
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "height", height);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "measurementTime", measurement_time);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gain", gain);
+}
+
+
+void SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value &value)
+{
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    SensorBase::SensorGeometry::DeserializeJSON(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "sensor", sensor_reference);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "targetRegion", target_region);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "cameraIntrinsics", intrinsics);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "width", width);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "height", height);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "measurementTime", measurement_time);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "gain", gain);
 }
 
 void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const

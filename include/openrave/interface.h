@@ -181,7 +181,7 @@ public:
         \endcode
      */
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-    virtual bool DeserializeJSON(const rapidjson::Value &value);
+    virtual void DeserializeJSON(const rapidjson::Value &value);
 
 protected:
     /// \brief The function to be executed for every command.

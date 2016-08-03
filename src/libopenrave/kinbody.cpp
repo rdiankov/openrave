@@ -159,81 +159,28 @@ void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "viscousFriction", viscousFriction);
 }
 
-bool ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value &value)
+void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("modelType") || !RaveDeserializeJSON(value["modelType"], modelType)) {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    if (!value.HasMember("assignedPowerRating") || !RaveDeserializeJSON(value["assignedPowerRating"], assignedPowerRating)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxSpeed") || !RaveDeserializeJSON(value["maxSpeed"], maxSpeed)) {
-        return false;
-    }
-
-    if (!value.HasMember("noLoadSpeed") || !RaveDeserializeJSON(value["noLoadSpeed"], noLoadSpeed)) {
-        return false;
-    }
-
-    if (!value.HasMember("stallTorque") || !RaveDeserializeJSON(value["stallTorque"], stallTorque)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxInstantaneousTorque") || !RaveDeserializeJSON(value["maxInstantaneousTorque"], maxInstantaneousTorque)) {
-        return false;
-    }
-
-    if (!value.HasMember("nominalSpeedTorquePoints") || !RaveDeserializeJSON(value["nominalSpeedTorquePoints"], nominalSpeedTorquePoints)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxSpeedTorquePoints") || !RaveDeserializeJSON(value["maxSpeedTorquePoints"], maxSpeedTorquePoints)) {
-        return false;
-    }
-
-    if (!value.HasMember("nominalTorque") || !RaveDeserializeJSON(value["nominalTorque"], nominalTorque)) {
-        return false;
-    }
-
-    if (!value.HasMember("rotorInertia") || !RaveDeserializeJSON(value["rotorInertia"], rotorInertia)) {
-        return false;
-    }
-
-    if (!value.HasMember("torqueConstant") || !RaveDeserializeJSON(value["torqueConstant"], torqueConstant)) {
-        return false;
-    }
-
-    if (!value.HasMember("nominalVoltage") || !RaveDeserializeJSON(value["nominalVoltage"], nominalVoltage)) {
-        return false;
-    }
-
-    if (!value.HasMember("speedConstant") || !RaveDeserializeJSON(value["speedConstant"], speedConstant)) {
-        return false;
-    }
-
-    if (!value.HasMember("startingCurrent") || !RaveDeserializeJSON(value["startingCurrent"], startingCurrent)) {
-        return false;
-    }
-
-    if (!value.HasMember("terminalResistance") || !RaveDeserializeJSON(value["terminalResistance"], terminalResistance)) {
-        return false;
-    }
-
-    if (!value.HasMember("gearRatio") || !RaveDeserializeJSON(value["gearRatio"], gearRatio)) {
-        return false;
-    }
-
-    if (!value.HasMember("coloumbFriction") || !RaveDeserializeJSON(value["coloumbFriction"], coloumbFriction)) {
-        return false;
-    }
-
-    if (!value.HasMember("viscousFriction") || !RaveDeserializeJSON(value["viscousFriction"], viscousFriction)) {
-        return false;
-    }
-
-    return true;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "modelType", modelType);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "assignedPowerRating", assignedPowerRating);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxSpeed", maxSpeed);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "noLoadSpeed", noLoadSpeed);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "stallTorque", stallTorque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxInstantaneousTorque", maxInstantaneousTorque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "nominalSpeedTorquePoints", nominalSpeedTorquePoints);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxSpeedTorquePoints", maxSpeedTorquePoints);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "nominalTorque", nominalTorque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "rotorInertia", rotorInertia);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "torqueConstant", torqueConstant);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "nominalVoltage", nominalVoltage);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "speedConstant", speedConstant);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "startingCurrent", startingCurrent);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "terminalResistance", terminalResistance);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "gearRatio", gearRatio);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "coloumbFriction", coloumbFriction);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "viscousFriction", viscousFriction);
 }
 
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _options(options), _pbody(pbody), _bRestoreOnDestructor(true)
@@ -4789,113 +4736,50 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
     InterfaceBase::SerializeJSON(value, allocator, options);
 }
 
-bool KinBody::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!InterfaceBase::DeserializeJSON(value))
-    {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    if (!value.HasMember("id") || !RaveDeserializeJSON(value["id"], _id))
-    {
-        return false;
-    }
+    InterfaceBase::DeserializeJSON(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "id", _id);
 
     std::string name;
-    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name))
-    {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
     SetName(name);
 
     std::vector<KinBody::LinkInfoConstPtr> linkinfos;
-    std::vector<KinBody::JointInfoConstPtr> jointinfos;
-
     if (value.HasMember("links"))
     {
-        if (!value["links"].IsArray())
-        {
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["links"]);
 
         linkinfos.reserve(value["links"].Size());
         for (size_t i = 0; i < value["links"].Size(); ++i)
         {
             LinkInfoPtr linkinfo(new LinkInfo());
-            if (!linkinfo->DeserializeJSON(value["links"][i]))
-            {
-                return false;
-            }
+            linkinfo->DeserializeJSON(value["links"][i]);
             linkinfos.push_back(linkinfo);
         }
     }
 
+    std::vector<KinBody::JointInfoConstPtr> jointinfos;
     if (value.HasMember("joints"))
     {
-        if (!value["joints"].IsArray())
-        {
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["joints"]);
 
         jointinfos.reserve(value["joints"].Size());
         for (size_t i = 0; i < value["joints"].Size(); ++i)
         {
             JointInfoPtr jointinfo(new JointInfo());
-            if (!jointinfo->DeserializeJSON(value["joints"][i]))
-            {
-                return false;
-            }
+            jointinfo->DeserializeJSON(value["joints"][i]);
             jointinfos.push_back(jointinfo);
         }
     }
 
-    if (!Init(linkinfos, jointinfos, "")) {
-        return false;
+    if (!Init(linkinfos, jointinfos, ""))
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, cannot initialize kinbody", ORE_InvalidArguments);
     }
-
-    // Transform transform;
-    // if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform)) {
-    //     return false;
-    // }
-    // SetTransform(transform);
-
-    // if (value.HasMember("links")) {
-    //     if (!value["links"].IsArray()) {
-    //         return false;
-    //     }
-    //     _veclinks.resize(value["links"].Size());
-    //     for (size_t i = 0; i < value["links"].Size(); ++i) {
-    //         if (!_veclinks[i]->DeserializeJSON(value["links"][i])) {
-    //             return false;
-    //         }
-    //     }
-    // }
-
-    // if (value.HasMember("joints")) {
-    //     if (!value["joints"].IsArray()) {
-    //         return false;
-    //     }
-    //     _vecjoints.resize(value["joints"].Size());
-    //     for (size_t i = 0; i < value["joints"].Size(); ++i) {
-    //         if (!_vecjoints[i]->DeserializeJSON(value["joints"][i])) {
-    //             return false;
-    //         }
-    //     }
-    // }
-
-    // if (value.HasMember("passiveJoints")) {
-    //     if (!value["passiveJoints"].IsArray()) {
-    //         return false;
-    //     }
-    //     _vPassiveJoints.resize(value["passiveJoints"].Size());
-    //     for (size_t i = 0; i < value["passiveJoints"].Size(); ++i) {
-    //         if (!_vPassiveJoints[i]->DeserializeJSON(value["passiveJoints"][i])) {
-    //             return false;
-    //         }
-    //     }
-    // }
-
-    return true;
 }
 
 void KinBody::serialize(std::ostream& o, int options) const

@@ -39,37 +39,36 @@ RobotBase::AttachedSensorInfo::AttachedSensorInfo() : XMLReadable("attachedsenso
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
+
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", _sensorname);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
-    _sensorgeometry->SerializeJSON(value, allocator, options);
+
+    if (!!_sensorgeometry) {
+        _sensorgeometry->SerializeJSON(value, allocator, options);
+    }
 }
 
-bool RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], _name)) {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", _sensorname);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", _linkname);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
 
-    if (!value.HasMember("type") || !RaveDeserializeJSON(value["type"], _sensorname)) {
-        return false;
+    // TODO(jsonserialization)
+    if (_sensorname == "base_pinhole_camera" || _sensorname == "BaseCamera") {
+        SensorBase::CameraGeomDataPtr camerageomdata(new SensorBase::CameraGeomData());
+        camerageomdata->DeserializeJSON(value);
+        _sensorgeometry = camerageomdata;
+    } else {
+        RAVELOG_WARN_FORMAT("sensor type \"%s\" not supported for json deserialization yet", _sensorname);
     }
-
-    if (!value.HasMember("linkName") || !RaveDeserializeJSON(value["linkName"], _linkname)) {
-        return false;
-    }
-
-    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], _trelative)) {
-        return false;
-    }
-
-    return _sensorgeometry->DeserializeJSON(value);
 }
 
 RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
@@ -180,9 +179,9 @@ void RobotBase::AttachedSensor::SerializeJSON(rapidjson::Value &value, rapidjson
     _info.SerializeJSON(value, allocator, options);
 }
 
-bool RobotBase::AttachedSensor::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::AttachedSensor::DeserializeJSON(const rapidjson::Value &value)
 {
-    return _info.DeserializeJSON(value);
+    _info.DeserializeJSON(value);
 }
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
@@ -2596,7 +2595,7 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     {
         rapidjson::Value manipulatorsValue;
         RAVE_SERIALIZEJSON_CLEAR_ARRAY(manipulatorsValue);
-        FOREACHC(it, GetLinks()) {
+        FOREACHC(it, GetManipulators()) {
             rapidjson::Value manipulatorValue;
             (*it)->SerializeJSON(manipulatorValue, allocator, options);
             manipulatorsValue.PushBack(manipulatorValue, allocator);
@@ -2607,7 +2606,7 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     {
         rapidjson::Value attachedSensorsValue;
         RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorsValue);
-        FOREACHC(it, GetLinks()) {
+        FOREACHC(it, GetAttachedSensors()) {
             rapidjson::Value attachedSensorValue;
             (*it)->SerializeJSON(attachedSensorValue, allocator, options);
             attachedSensorsValue.PushBack(attachedSensorValue, allocator);
@@ -2618,16 +2617,78 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robot", true);
 }
 
-bool RobotBase::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!KinBody::DeserializeJSON(value))
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    InterfaceBase::DeserializeJSON(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "id", _id);
+
+    std::string name;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
+    SetName(name);
+
+    std::vector<KinBody::LinkInfoConstPtr> linkinfos;
+    if (value.HasMember("links"))
     {
-        return false;
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["links"]);
+
+        linkinfos.reserve(value["links"].Size());
+        for (size_t i = 0; i < value["links"].Size(); ++i)
+        {
+            LinkInfoPtr linkinfo(new LinkInfo());
+            linkinfo->DeserializeJSON(value["links"][i]);
+            linkinfos.push_back(linkinfo);
+        }
     }
 
-    // TODO(jsonserialization)
+    std::vector<KinBody::JointInfoConstPtr> jointinfos;
+    if (value.HasMember("joints"))
+    {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["joints"]);
 
-    return false;
+        jointinfos.reserve(value["joints"].Size());
+        for (size_t i = 0; i < value["joints"].Size(); ++i)
+        {
+            JointInfoPtr jointinfo(new JointInfo());
+            jointinfo->DeserializeJSON(value["joints"][i]);
+            jointinfos.push_back(jointinfo);
+        }
+    }
+
+    std::vector<RobotBase::ManipulatorInfoConstPtr> manipulatorinfos;
+    if (value.HasMember("manipulators"))
+    {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["manipulators"]);
+
+        manipulatorinfos.reserve(value["manipulators"].Size());
+        for (size_t i = 0; i < value["manipulators"].Size(); ++i)
+        {
+            ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
+            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
+            manipulatorinfos.push_back(manipulatorinfo);
+        }
+    }
+
+    std::vector<RobotBase::AttachedSensorInfoConstPtr> attachedsensorinfos;
+    if (value.HasMember("attachedSensors"))
+    {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["attachedSensors"]);
+
+        attachedsensorinfos.reserve(value["attachedSensors"].Size());
+        for (size_t i = 0; i < value["attachedSensors"].Size(); ++i)
+        {
+            AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
+            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
+            attachedsensorinfos.push_back(attachedsensorinfo);
+        }
+    }
+
+    if (!Init(linkinfos, jointinfos, manipulatorinfos, attachedsensorinfos, ""))
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, cannot initialize robot", ORE_InvalidArguments);
+    }
 }
 
 const std::string& RobotBase::GetRobotStructureHash() const

@@ -169,12 +169,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isActive", isActive);
 
     // TODO(jsonserialization)
-    // if (!!_trajfollow) {
-    //     writer->WriteString("trajectory");
-    //     writer->StartObject();
-    //     _trajfollow->SerializeJSON(writer, options);
-    //     writer->EndObject();
-    // }
+    // _trajfollow
 
     if (mimic.size() > 0) {
         bool bfound = false;
@@ -215,136 +210,68 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
     }
 }
 
-bool KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
-        return false;
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
+
+    std::string typestr;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr);
+
+    if (typestr == "revolute")
+    {
+        type = JointRevolute;
+    }
+    else if (typestr == "prismatic")
+    {
+        type = JointPrismatic;
+    }
+    else
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported joint type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
-    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name)) {
-        return false;
-    }
-
-    if (value.HasMember("type")) {
-        std::string typestr;
-        if (!RaveDeserializeJSON(value["type"], typestr)) {
-            return false;
-        } else {
-            if (typestr == "revolute") {
-                type = JointRevolute;
-            } else if (typestr == "prismatic") {
-                type = JointPrismatic;
-            } else {
-                int typeint = boost::lexical_cast<int>(typestr);
-                type = static_cast<JointType>(typeint);
-            }
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "parentLinkName", parentLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "childLinkName", childLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "anchor", anchor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "axes", axes);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "currentValues", currentValues);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "resolutions", resolutions);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxVel", maxVel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "hardMaxVel", hardMaxVel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxAccel", maxAccel);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxTorque", maxTorque);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "maxInertia", maxInertia);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "weights", weights);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "offsets", offsets);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "lowerLimit", lowerLimit);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "upperLimit", upperLimit);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "isCircular", isCircular);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "isActive", isActive);
+    
+    boost::array<MimicInfoPtr, 3> newmimic;
+    if (value.HasMember("mimic"))
+    {
+        RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["mimic"]);
+        for (rapidjson::SizeType i = 0; i < value["mimic"].Size(); ++i) {
+            MimicInfoPtr mimicinfo(new MimicInfo());
+            mimicinfo->DeserializeJSON(value["mimic"][i]);
+            newmimic[i] = mimicinfo;
         }
     }
+    mimic = newmimic;
 
-    if (!value.HasMember("parentLinkName") || !RaveDeserializeJSON(value["parentLinkName"], parentLinkName)) {
-        return false;
-    }
-
-    if (!value.HasMember("childLinkName") || !RaveDeserializeJSON(value["childLinkName"], childLinkName)) {
-        return false;
-    }
-
-    if (!value.HasMember("anchor") || !RaveDeserializeJSON(value["anchor"], anchor)) {
-        return false;
-    }
-
-    if (!value.HasMember("axes") || !RaveDeserializeJSON(value["axes"], axes)) {
-        return false;
-    }
-
-    if (!value.HasMember("currentValues") || !RaveDeserializeJSON(value["currentValues"], currentValues)) {
-        return false;
-    }
-
-    if (!value.HasMember("resolutions") || !RaveDeserializeJSON(value["resolutions"], resolutions)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxVel") || !RaveDeserializeJSON(value["maxVel"], maxVel)) {
-        return false;
-    }
-
-    if (!value.HasMember("hardMaxVel") || !RaveDeserializeJSON(value["hardMaxVel"], hardMaxVel)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxAccel") || !RaveDeserializeJSON(value["maxAccel"], maxAccel)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxTorque") || !RaveDeserializeJSON(value["maxTorque"], maxTorque)) {
-        return false;
-    }
-
-    if (!value.HasMember("maxInertia") || !RaveDeserializeJSON(value["maxInertia"], maxInertia)) {
-        return false;
-    }
-
-    if (!value.HasMember("weights") || !RaveDeserializeJSON(value["weights"], weights)) {
-        return false;
-    }
-
-    if (!value.HasMember("offsets") || !RaveDeserializeJSON(value["offsets"], offsets)) {
-        return false;
-    }
-
-    if (!value.HasMember("lowerLimit") || !RaveDeserializeJSON(value["lowerLimit"], lowerLimit)) {
-        return false;
-    }
-
-    if (!value.HasMember("upperLimit") || !RaveDeserializeJSON(value["upperLimit"], upperLimit)) {
-        return false;
-    }
-
-    if (!value.HasMember("isCircular") || !RaveDeserializeJSON(value["isCircular"], isCircular)) {
-        return false;
-    }
-
-    if (!value.HasMember("isActive") || !RaveDeserializeJSON(value["isActive"], isActive)) {
-        return false;
-    }
-
-    if (value.HasMember("mimic")) {
-        if (value["mimic"].Size() > 3) {
-            return false;
-        }
-        for (size_t i = 0; i < value["mimic"].Size(); ++i) {
-            if (!mimic[i]->DeserializeJSON(value["mimic"][i])) {
-                return false;
-            }
-        }
-    }
-
-    if (value.HasMember("floatParameters")) {
-        if (!RaveDeserializeJSON(value["floatParameters"], floatParameters)) {
-            return false;
-        }
-    }
-
-    if (value.HasMember("intParameters")) {
-        if (!RaveDeserializeJSON(value["intParameters"], intParameters)) {
-            return false;
-        }
-    }
-
-    if (value.HasMember("stringParameters")) {
-        if (!RaveDeserializeJSON(value["stringParameters"], stringParameters)) {
-            return false;
-        }
-    }
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "floatParameters", floatParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "intParameters", intParameters);
+    RAVE_DESERIALIZEJSON_OPTIONAL(value, "stringParameters", stringParameters);
 
     if (value.HasMember("electricMotorActuator")) {
-        if (!electricMotorActuator->DeserializeJSON(value["electricMotorActuator"])) {
-            return false;
-        }
+        ElectricMotorActuatorInfoPtr info(new ElectricMotorActuatorInfo());
+        info->DeserializeJSON(value["electricMotorActuator"]);
+        electricMotorActuator = info;
     }
-
-    return true;
 }
 
 static void fparser_polyroots2(vector<dReal>& rawroots, const vector<dReal>& rawcoeffs)
@@ -1912,9 +1839,9 @@ void KinBody::Joint::SerializeJSON(rapidjson::Value &value, rapidjson::Document:
     _info.SerializeJSON(value, allocator, options);
 }
 
-bool KinBody::Joint::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::Joint::DeserializeJSON(const rapidjson::Value &value)
 {
-    return _info.DeserializeJSON(value);
+    _info.DeserializeJSON(value);
 }
 
 void KinBody::MimicInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
@@ -1923,13 +1850,11 @@ void KinBody::MimicInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "equations", _equations);
 }
 
-bool KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::MimicInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("equations") || !RaveDeserializeJSON(value["equations"], _equations)) {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    return true;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "equations", _equations);
 }
 
 }

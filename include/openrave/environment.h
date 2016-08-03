@@ -645,7 +645,7 @@ public:
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) = 0;
 
     /// \brief deserialize json into environment
-    virtual bool DeserializeJSON(const rapidjson::Value &value) = 0;
+    virtual void DeserializeJSON(const rapidjson::Value &value) = 0;
     
 protected:
     virtual const char* GetHash() const {

@@ -72,13 +72,11 @@ public:
         return toPyObject(doc);
     }
 
-    bool DeserializeJSON(object obj)
+    void DeserializeJSON(object obj)
     {
         rapidjson::Document doc;
-        if (!toRapidJSONValue(obj, doc, doc.GetAllocator())) {
-            return false;
-        }
-        return _xmlreadable->DeserializeJSON(doc);
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        _xmlreadable->DeserializeJSON(doc);
     }
 
     XMLReadablePtr GetXMLReadable() {

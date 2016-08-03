@@ -50,7 +50,7 @@ public:
     ElectricMotorActuatorInfo& operator=(const ElectricMotorActuatorInfo& other);
 
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-    virtual bool DeserializeJSON(const rapidjson::Value &value);
+    virtual void DeserializeJSON(const rapidjson::Value &value);
 
     std::string modelType; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
     std::string& model_type RAVE_DEPRECATED; ///< the type of actuator it is. Usually the motor model name is ok, but can include other info like gear box, etc
@@ -179,7 +179,7 @@ public:
         bool InitCollisionMesh(float fTessellation=1);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual bool DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
 
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
@@ -265,7 +265,7 @@ public:
         LinkInfo& operator=(const LinkInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual bool DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -433,7 +433,7 @@ public:
             virtual void serialize(std::ostream& o, int options) const;
 
             virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-            virtual bool DeserializeJSON(const rapidjson::Value &value);
+            virtual void DeserializeJSON(const rapidjson::Value &value);
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
             virtual void SetCollisionMesh(const TriMesh& mesh);
@@ -698,7 +698,7 @@ protected:
         virtual void serialize(std::ostream& o, int options) const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual bool DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
@@ -825,7 +825,7 @@ public:
         boost::array< std::string, 3>  _equations;         ///< the original equations
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual bool DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
     };
     typedef boost::shared_ptr<MimicInfo> MimicInfoPtr;
     typedef boost::shared_ptr<MimicInfo const> MimicInfoConstPtr;
@@ -878,7 +878,7 @@ public:
         virtual int GetDOF() const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual bool DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -1226,7 +1226,7 @@ public:
         virtual void serialize(std::ostream& o, int options) const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual bool DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value);
 
         /// @name Internal Hierarchy Methods
         //@{
@@ -2206,7 +2206,7 @@ private:
 
     /// \brief Serialize the kinbody as a JSON object.
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-    virtual bool DeserializeJSON(const rapidjson::Value &value);
+    virtual void DeserializeJSON(const rapidjson::Value &value);
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///

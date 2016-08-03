@@ -2513,49 +2513,41 @@ protected:
     }
 
     /// \brief deserialize json into environment
-    bool DeserializeJSON(const rapidjson::Value &value)
+    void DeserializeJSON(const rapidjson::Value &value)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
 
-        if (value.HasMember("unit")) {
-            if (!RaveDeserializeJSON(value["unit"], _unit)) {
-                return false;
-            }
-        }
+        RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "unit", _unit);
 
         _vecbodies.resize(0);
         if (value.HasMember("bodies")) {
-            if (!value["bodies"].IsArray()) {
-                return false;
-            }
+            RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["bodies"]);
+
             _vecbodies.reserve(value["bodies"].Size());
             for (size_t i = 0; i < value["bodies"].Size(); ++i)
             {
-                if (!value["bodies"][i].IsObject())
-                {
-                    return false;
-                }
-                if (!value["bodies"][i].HasMember("robot") || !value["bodies"][i]["robot"].GetBool())
+                RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value["bodies"][i]);
+
+                bool robot = false;
+                RAVE_DESERIALIZEJSON_OPTIONAL(value["bodies"][i], "robot", robot);
+
+                if (!robot)
                 {
                     KinBodyPtr body = RaveCreateKinBody(shared_from_this(), "");
-                    if (!body->DeserializeJSON(value["bodies"][i])) {
-                        return false;
-                    }
+                    body->DeserializeJSON(value["bodies"][i]);
                     _AddKinBody(body, false);
                 }
                 else
                 {
                     RobotBasePtr robot = RaveCreateRobot(shared_from_this(), "");
-                    if (!robot->DeserializeJSON(value["bodies"][i])) {
-                        return false;
-                    }
+                    robot->DeserializeJSON(value["bodies"][i]);
                     _AddRobot(robot, false);
                 }
                 
             }
         }
-
-        return true;
     }
 
     static bool _IsColladaURI(const std::string& uri)

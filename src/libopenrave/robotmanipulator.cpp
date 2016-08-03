@@ -37,45 +37,19 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjso
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gripperJointNames", _vGripperJointNames);
 }
 
-bool RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid)) {
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], _name)) {
-        return false;
-    }
-
-    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], _tLocalTool)) {
-        return false;
-    }
-
-    if (!value.HasMember("chuckingDirection") || !RaveDeserializeJSON(value["chuckingDirection"], _vChuckingDirection)) {
-        return false;
-    }
-
-    if (!value.HasMember("direction") || !RaveDeserializeJSON(value["direction"], _vdirection)) {
-        return false;
-    }
-
-    if (!value.HasMember("baseLinkName") || !RaveDeserializeJSON(value["baseLinkName"], _sBaseLinkName)) {
-        return false;
-    }
-
-    if (!value.HasMember("effectorLinkName") || !RaveDeserializeJSON(value["effectorLinkName"], _sEffectorLinkName)) {
-        return false;
-    }
-
-    if (!value.HasMember("iksolverType") || !RaveDeserializeJSON(value["iksolverType"], _sIkSolverXMLId)) {
-        return false;
-    }
-
-    if (!value.HasMember("gripperJointNames") || !RaveDeserializeJSON(value["gripperJointNames"], _vGripperJointNames)) {
-        return false;
-    }
-
-    return true;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _tLocalTool);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "chuckingDirection", _vChuckingDirection);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "direction", _vdirection);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "baseLinkName", _sBaseLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "effectorLinkName", _sEffectorLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "iksolverType", _sIkSolverXMLId);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "gripperJointNames", _vGripperJointNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
@@ -1263,9 +1237,9 @@ void RobotBase::Manipulator::SerializeJSON(rapidjson::Value &value, rapidjson::D
     _info.SerializeJSON(value, allocator, options);
 }
 
-bool RobotBase::Manipulator::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::Manipulator::DeserializeJSON(const rapidjson::Value &value)
 {
-    return _info.DeserializeJSON(value);
+    _info.DeserializeJSON(value);
 }
 
 ConfigurationSpecification RobotBase::Manipulator::GetArmConfigurationSpecification(const std::string& interpolation) const

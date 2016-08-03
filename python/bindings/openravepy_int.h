@@ -158,7 +158,7 @@ object toPyIkParameterization(const std::string& serializeddata);
 
 /// conversion between rapidjson value and pyobject
 object toPyObject(const rapidjson::Value& value);
-bool toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
+void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
 
 struct null_deleter {
     void operator()(void const *) const {
@@ -576,7 +576,7 @@ public:
     virtual void SetReadableInterface(const std::string& xmltag, object oreadable);
 
     virtual object SerializeJSON(object ooptions=object());
-    virtual bool DeserializeJSON(object obj);
+    virtual void DeserializeJSON(object obj);
 
     virtual string __repr__() {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());

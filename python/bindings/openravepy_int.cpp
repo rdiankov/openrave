@@ -61,40 +61,33 @@ object toPyObject(const rapidjson::Value& value)
     }
 }
 
-bool toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
+void toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator)
 {
     if (obj.ptr() == Py_None)
     {
         value.SetNull();
-        return true;
     }
-    if (PyBool_Check(obj.ptr()))
+    else if (PyBool_Check(obj.ptr()))
     {
         value.SetBool(obj.ptr() == Py_True);
-        return true;
     }
-    if (PyFloat_Check(obj.ptr()))
+    else if (PyFloat_Check(obj.ptr()))
     {
         value.SetDouble(PyFloat_AsDouble(obj.ptr()));
-        return true;
     }
-    if (PyInt_Check(obj.ptr()))
+    else if (PyInt_Check(obj.ptr()))
     {
         value.SetInt64(PyLong_AsLong(obj.ptr()));
-        return true;
     }
-    if (PyString_Check(obj.ptr()))
+    else if (PyString_Check(obj.ptr()))
     {
         value.SetString(PyString_AsString(obj.ptr()), PyString_GET_SIZE(obj.ptr()));
-        return true;
     }
-
-    if (PyUnicode_Check(obj.ptr()))
+    else if (PyUnicode_Check(obj.ptr()))
     {
         value.SetString(PyBytes_AsString(obj.ptr()), PyBytes_GET_SIZE(obj.ptr()));
-        return true;
     }
-    if (PyTuple_Check(obj.ptr()))
+    else if (PyTuple_Check(obj.ptr()))
     {
         boost::python::tuple t = boost::python::extract<boost::python::tuple>(obj);
         value.SetArray();
@@ -102,15 +95,11 @@ bool toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         {
             boost::python::object o = boost::python::extract<boost::python::object>(t[i]);
             rapidjson::Value elementValue;
-            if (!toRapidJSONValue(o, elementValue, allocator))
-            {
-                return false;
-            }
+            toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
         }
-        return true;
     }
-    if (PyList_Check(obj.ptr()))
+    else if (PyList_Check(obj.ptr()))
     {
         boost::python::list l = boost::python::extract<boost::python::list>(obj);
         value.SetArray();
@@ -118,15 +107,11 @@ bool toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
         {
             boost::python::object o = boost::python::extract<boost::python::object>(l[i]);
             rapidjson::Value elementValue;
-            if (!toRapidJSONValue(o, elementValue, allocator))
-            {
-                return false;
-            }
+            toRapidJSONValue(o, elementValue, allocator);
             value.PushBack(elementValue, allocator);
         }
-        return true;
     }
-    if (PyDict_Check(obj.ptr()))
+    else if (PyDict_Check(obj.ptr()))
     {
         boost::python::dict d = boost::python::extract<boost::python::dict>(obj);
         boost::python::object iterator = d.iteritems();
@@ -137,23 +122,19 @@ bool toRapidJSONValue(object &obj, rapidjson::Value &value, rapidjson::Document:
             boost::python::tuple kv = boost::python::extract<boost::python::tuple>(iterator.attr("next")());
             {
                 boost::python::object k = boost::python::extract<object>(kv[0]);
-                if (!toRapidJSONValue(k, keyValue, allocator))
-                {
-                    return false;
-                }
+                toRapidJSONValue(k, keyValue, allocator);
             }
             {
                 boost::python::object v = boost::python::extract<object>(kv[1]);
-                if (!toRapidJSONValue(v, valueValue, allocator))
-                {
-                    return false;
-                }
+                toRapidJSONValue(v, valueValue, allocator);
             }
             value.AddMember(keyValue, valueValue, allocator);
         }
-        return true;
     }
-    return false;
+    else
+    {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("unsupported python type"), ORE_InvalidArguments);
+    }
 }
 
 /// if set, will return all transforms are 1x7 vectors where first 4 compoonents are quaternion
@@ -575,13 +556,11 @@ object PyInterfaceBase::SerializeJSON(object ooptions)
     return toPyObject(doc);
 }
 
-bool PyInterfaceBase::DeserializeJSON(object obj)
+void PyInterfaceBase::DeserializeJSON(object obj)
 {
     rapidjson::Document doc;
-    if (!toRapidJSONValue(obj, doc, doc.GetAllocator())) {
-        return false;
-    }
-    return _pbase->DeserializeJSON(doc);
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    _pbase->DeserializeJSON(doc);
 }
 
 class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBase>
@@ -1844,13 +1823,11 @@ public:
         return toPyObject(doc);
     }
 
-    bool DeserializeJSON(object obj)
+    void DeserializeJSON(object obj)
     {
         rapidjson::Document doc;
-        if (!toRapidJSONValue(obj, doc, doc.GetAllocator())) {
-            return false;
-        }
-        return _penv->DeserializeJSON(doc);
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        _penv->DeserializeJSON(doc);
     }
 };
 

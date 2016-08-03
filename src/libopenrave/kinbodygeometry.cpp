@@ -379,132 +379,55 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modifiable", modifiable);
 }
 
-bool KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
 {
-    if (!value.IsObject() || !value.HasMember("type") || !value["type"].IsString())
-    {
-        RAVELOG_WARN("failed to deserialize json type");
-        return false;
-    }
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
-    std::string typestr = value["type"].GetString();
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
+
+    std::string typestr;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr);
 
     if (typestr == "box")
     {
         type = GT_Box;
-        if (!value.HasMember("halfExtents") || !RaveDeserializeJSON(value["halfExtents"], _vGeomData))
-        {
-            RAVELOG_WARN("failed to deserialize json box halfExtents");
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "halfExtents", _vGeomData);
     }
     else if (typestr == "container")
     {
         type = GT_Container;
-        if (!value.HasMember("outerExtents") || !RaveDeserializeJSON(value["outerExtents"], _vGeomData))
-        {
-            RAVELOG_WARN("failed to deserialize json container outerExtents");
-            return false;
-        }
-        if (!value.HasMember("innerExtents") || !RaveDeserializeJSON(value["innerExtents"], _vGeomData2))
-        {
-            RAVELOG_WARN("failed to deserialize json container innerExtents");
-            return false;
-        }
-        if (!value.HasMember("bottomCross") || !RaveDeserializeJSON(value["bottomCross"], _vGeomData3))
-        {
-            RAVELOG_WARN("failed to deserialize json container bottomCross");
-            return false;
-        }
-
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "outerExtents", _vGeomData);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "innerExtents", _vGeomData2);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "bottomCross", _vGeomData3);
     }
     else if (typestr == "sphere")
     {
         type = GT_Sphere;
-        if (!value.HasMember("radius") || !RaveDeserializeJSON(value["radius"], _vGeomData.x))
-        {
-            RAVELOG_WARN("failed to deserialize json sphere radius");
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData);
     }
     else if (typestr == "cylinder")
     {
         type = GT_Cylinder;
-        if (!value.HasMember("radius") || !RaveDeserializeJSON(value["radius"], _vGeomData.x))
-        {
-            RAVELOG_WARN("failed to deserialize json cylinder radius");
-            return false;
-        }
-        if (!value.HasMember("height") || !RaveDeserializeJSON(value["height"], _vGeomData.y))
-        {
-            RAVELOG_WARN("failed to deserialize json height radius");
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData.x);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "height", _vGeomData.y);
     }
     else if (typestr == "trimesh")
     {
         type = GT_TriMesh;
-        if (!value.HasMember("mesh") || !RaveDeserializeJSON(value["mesh"], mesh))
-        {
-            RAVELOG_WARN("failed to deserialize json trimesh mesh");
-            return false;
-        }
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", mesh);
     }
     else
     {
-        RAVELOG_WARN_FORMAT("Unknown geometry type: %s", typestr);
-        return false;
+        throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported geometry type \"%s\"", typestr, ORE_InvalidArguments);
     }
 
-    if (!value.HasMember("sid") || !RaveDeserializeJSON(value["sid"], sid))
-    {
-        RAVELOG_WARN("failed to deserialize json sid");
-        return false;
-    }
-
-    if (!value.HasMember("name") || !RaveDeserializeJSON(value["name"], name))
-    {
-        RAVELOG_WARN("failed to deserialize json name");
-        return false;
-    }
-
-    if (!value.HasMember("transform") || !RaveDeserializeJSON(value["transform"], transform))
-    {
-        RAVELOG_WARN("failed to deserialize json transform");
-        return false;
-    }
-
-    if (!value.HasMember("transparency") || !RaveDeserializeJSON(value["transparency"], transparency))
-    {
-        RAVELOG_WARN("failed to deserialize json transparency");
-        return false;
-    }
-
-    if (!value.HasMember("visible") || !RaveDeserializeJSON(value["visible"], visible))
-    {
-        RAVELOG_WARN("failed to deserialize json visible");
-        return false;
-    }
-
-    if (!value.HasMember("diffuseColor") || !RaveDeserializeJSON(value["diffuseColor"], diffuseColor))
-    {
-        RAVELOG_WARN("failed to deserialize json diffuseColor");
-        return false;
-    }
-
-    if (!value.HasMember("ambientColor") || !RaveDeserializeJSON(value["ambientColor"], ambientColor))
-    {
-        RAVELOG_WARN("failed to deserialize json ambientColor");
-        return false;
-    }
-
-    if (!value.HasMember("modifiable") || !RaveDeserializeJSON(value["modifiable"], modifiable))
-    {
-        RAVELOG_WARN("failed to deserialize json modifiable");
-        return false;
-    }
-
-    return true;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transparency", transparency);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "visible", visible);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "diffuseColor", diffuseColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "ambientColor", ambientColor);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "modifiable", modifiable);
 }
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
@@ -521,9 +444,9 @@ void KinBody::Link::Geometry::SerializeJSON(rapidjson::Value &value, rapidjson::
     _info.SerializeJSON(value, allocator, options);
 }
 
-bool KinBody::Link::Geometry::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::Link::Geometry::DeserializeJSON(const rapidjson::Value &value)
 {
-    return _info.DeserializeJSON(value);
+    _info.DeserializeJSON(value);
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
