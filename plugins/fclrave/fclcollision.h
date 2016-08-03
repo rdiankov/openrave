@@ -59,7 +59,7 @@ class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 public:
     class CollisionCallbackData {
 public:
-        CollisionCallbackData(std::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded = std::vector<KinBodyConstPtr>(), const std::vector<LinkConstPtr>& vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
+        CollisionCallbackData(tools::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded = std::vector<KinBodyConstPtr>(), const std::vector<LinkConstPtr>& vlinkexcluded = std::vector<LinkConstPtr>()) : _pchecker(pchecker), _report(report), _vbodyexcluded(vbodyexcluded), _vlinkexcluded(vlinkexcluded), bselfCollision(false), _bStopChecking(false), _bCollision(false)
         {
             _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -90,7 +90,7 @@ public:
             return _listcallbacks;
         }
 
-        std::shared_ptr<FCLCollisionChecker> _pchecker;
+        tools::shared_ptr<FCLCollisionChecker> _pchecker;
         fcl::CollisionRequest _request;
         fcl::CollisionResult _result;
         CollisionReportPtr _report;
@@ -106,7 +106,7 @@ public:
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
 
-    typedef std::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
+    typedef tools::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
 
     FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
         : OpenRAVE::CollisionCheckerBase(penv), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2"), _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
@@ -123,8 +123,8 @@ public:
         SETUP_STATISTICS(_statistics, _userdatakey, GetEnv()->GetId());
 
         // TODO : Consider removing these which could be more harmful than anything else
-        RegisterCommand("SetBroadphaseAlgorithm", std::bind(&FCLCollisionChecker::SetBroadphaseAlgorithmCommand, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
-        RegisterCommand("SetBVHRepresentation", std::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
+        RegisterCommand("SetBroadphaseAlgorithm", tools::bind(&FCLCollisionChecker::SetBroadphaseAlgorithmCommand, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
+        RegisterCommand("SetBVHRepresentation", tools::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
 
         RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
@@ -165,7 +165,7 @@ public:
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        std::shared_ptr<FCLCollisionChecker const> r = std::dynamic_pointer_cast<FCLCollisionChecker const>(preference);
+        tools::shared_ptr<FCLCollisionChecker const> r = tools::dynamic_pointer_cast<FCLCollisionChecker const>(preference);
         // We don't clone Kinbody's specific geometry group
         _fclspace->SetGeometryGroup(r->GetGeometryGroup());
         _fclspace->SetBVHRepresentation(r->GetBVHRepresentation());
@@ -262,41 +262,41 @@ public:
     BroadPhaseCollisionManagerPtr _CreateManagerFromBroadphaseAlgorithm(std::string const &algorithm)
     {
         if(algorithm == "Naive") {
-            return std::make_shared<fcl::NaiveCollisionManager>();
+            return tools::make_shared<fcl::NaiveCollisionManager>();
         } else if(algorithm == "SaP") {
-            return std::make_shared<fcl::SaPCollisionManager>();
+            return tools::make_shared<fcl::SaPCollisionManager>();
         } else if(algorithm == "SSaP") {
-            return std::make_shared<fcl::SSaPCollisionManager>();
+            return tools::make_shared<fcl::SSaPCollisionManager>();
         } else if(algorithm == "SpatialHashing") {
             throw OPENRAVE_EXCEPTION_FORMAT0("No spatial data provided, spatial hashing needs to be set up  with SetSpatialHashingBroadPhaseAlgorithm", OpenRAVE::ORE_InvalidArguments);
         } else if(algorithm == "IntervalTree") {
-            return std::make_shared<fcl::IntervalTreeCollisionManager>();
+            return tools::make_shared<fcl::IntervalTreeCollisionManager>();
         } else if(algorithm == "DynamicAABBTree") {
-            return std::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            return tools::make_shared<fcl::DynamicAABBTreeCollisionManager>();
         } else if(algorithm == "DynamicAABBTree1") {
-            std::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = std::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            tools::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = tools::make_shared<fcl::DynamicAABBTreeCollisionManager>();
             pmanager->tree_init_level = 1;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree2") {
-            std::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = std::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            tools::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = tools::make_shared<fcl::DynamicAABBTreeCollisionManager>();
             pmanager->tree_init_level = 2;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree3") {
-            std::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = std::make_shared<fcl::DynamicAABBTreeCollisionManager>();
+            tools::shared_ptr<fcl::DynamicAABBTreeCollisionManager> pmanager = tools::make_shared<fcl::DynamicAABBTreeCollisionManager>();
             pmanager->tree_init_level = 3;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree_Array") {
-            return std::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            return tools::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
         } else if(algorithm == "DynamicAABBTree1_Array") {
-            std::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = std::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            tools::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = tools::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
             pmanager->tree_init_level = 1;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree2_Array") {
-            std::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = std::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            tools::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = tools::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
             pmanager->tree_init_level = 2;
             return pmanager;
         } else if(algorithm == "DynamicAABBTree3_Array") {
-            std::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = std::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
+            tools::shared_ptr<fcl::DynamicAABBTreeCollisionManager_Array> pmanager = tools::make_shared<fcl::DynamicAABBTreeCollisionManager_Array>();
             pmanager->tree_init_level = 3;
             return pmanager;
         } else {
@@ -341,7 +341,7 @@ public:
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        FCLSpace::KinBodyInfoPtr pinfo = std::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        FCLSpace::KinBodyInfoPtr pinfo = tools::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
         }
@@ -684,8 +684,8 @@ public:
 
 
 private:
-    inline std::shared_ptr<FCLCollisionChecker> shared_checker() {
-        return std::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
+    inline tools::shared_ptr<FCLCollisionChecker> shared_checker() {
+        return tools::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
     }
 
     static bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
@@ -936,7 +936,7 @@ private:
     }
 
     int _options;
-    std::shared_ptr<FCLSpace> _fclspace;
+    tools::shared_ptr<FCLSpace> _fclspace;
     int _numMaxContacts;
     std::string _userdatakey;
     std::string _broadPhaseCollisionManagerAlgorithm; ///< broadphase algorithm to use to create a manager. tested: Naive, DynamicAABBTree2

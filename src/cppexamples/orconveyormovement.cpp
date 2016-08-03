@@ -38,7 +38,7 @@ public:
     ConveyorBeltModule(EnvironmentBasePtr penv, std::istream& is) : ModuleBase(penv)
     {
         __description = "Handles conveyor belt movement";
-        RegisterCommand("registerbody",std::bind(&ConveyorBeltModule::RegisterBody,this,_1,_2),"registers a body to be put into the environment");
+        RegisterCommand("registerbody",tools::bind(&ConveyorBeltModule::RegisterBody,this,_1,_2),"registers a body to be put into the environment");
         movevel = Vector(0,0.4,0);
         start = Vector(0.5,-1,0.6);
         _psampler = RaveCreateSpaceSampler(penv,"mt19937");
@@ -125,7 +125,7 @@ class ConveyorExample : public OpenRAVEExample
 {
 public:
     virtual void demothread(int argc, char ** argv) {
-        std::shared_ptr<void> handle = RaveRegisterInterface(PT_Module,"conveyorbelt",OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH,ConveyorBeltModule::create);
+        tools::shared_ptr<void> handle = RaveRegisterInterface(PT_Module,"conveyorbelt",OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH,ConveyorBeltModule::create);
 
         // load the environment
         string scenefilename = "robots/pr2-beta-static.zae";

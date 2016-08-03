@@ -61,7 +61,7 @@ public:
 
             // create the main openrave thread
             _bDestroyThread = false;
-            _thopenrave = boost::thread(std::bind(&OpenRAVEExample::_demothreadwrapper,this,argc,argv));
+            _thopenrave = boost::thread(tools::bind(&OpenRAVEExample::_demothreadwrapper,this,argc,argv));
 
             // start the viewer main loop
             _viewer->main(true);
@@ -100,7 +100,7 @@ private:
     }
 
     void _demothreadwrapper(int argc, char ** argv) {
-        std::shared_ptr<void> quitviewer((void*)NULL, std::bind(&OpenRAVEExample::quitviewer, this,_1));
+        tools::shared_ptr<void> quitviewer((void*)NULL, tools::bind(&OpenRAVEExample::quitviewer, this,_1));
         demothread(argc,argv);
     }
 

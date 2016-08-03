@@ -62,15 +62,15 @@ using namespace boost::placeholders;
 }
 
 namespace boost {
-// register std::shared_ptr
-//template <class T> inline T* get_pointer(const std::shared_ptr<T>& p){
+// register tools::shared_ptr
+//template <class T> inline T* get_pointer(const tools::shared_ptr<T>& p){
 //    return p.get();
 //}
-//template <class T> inline T* get_pointer(std::shared_ptr<T>& p){
+//template <class T> inline T* get_pointer(tools::shared_ptr<T>& p){
 //    return p.get();
 //}
 namespace python {
-template <class T> struct pointee< std::shared_ptr<T> >{
+template <class T> struct pointee< tools::shared_ptr<T> >{
     typedef T type;
 };
 }
@@ -570,10 +570,10 @@ public:
         _pbase->SetUserData(key, pdata._handle);
     }
     void SetUserData(object o) {
-        _pbase->SetUserData(std::string(), std::shared_ptr<UserData>(new PyUserObject(o)));
+        _pbase->SetUserData(std::string(), tools::shared_ptr<UserData>(new PyUserObject(o)));
     }
     void SetUserData(const std::string& key, object o) {
-        _pbase->SetUserData(key, std::shared_ptr<UserData>(new PyUserObject(o)));
+        _pbase->SetUserData(key, tools::shared_ptr<UserData>(new PyUserObject(o)));
     }
     bool RemoveUserData(const std::string& key) {
         return _pbase->RemoveUserData(key);

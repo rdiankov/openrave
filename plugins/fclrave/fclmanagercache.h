@@ -7,8 +7,8 @@
 
 namespace fclrave {
 
-typedef std::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
-typedef std::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
+typedef tools::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
+typedef tools::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
 
 struct EnvironmentState
 {
@@ -18,7 +18,7 @@ struct EnvironmentState
 /// \brief A broadphase collision manager together with cache data of the bodies it contains
 ///
 /// used to maintain the correct state of the broadphase manager
-class FCLCollisionManagerInstance : public std::enable_shared_from_this<FCLCollisionManagerInstance>
+class FCLCollisionManagerInstance : public tools::enable_shared_from_this<FCLCollisionManagerInstance>
 {
     ///< cache data of body that is managed
     struct KinBodyCache
@@ -525,8 +525,8 @@ private:
 #endif
 };
 
-typedef std::shared_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;
-typedef std::weak_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstanceWeakPtr;
+typedef tools::shared_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;
+typedef tools::weak_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstanceWeakPtr;
 
 } // end namespace fclrave
 

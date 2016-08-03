@@ -32,7 +32,7 @@ RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
     }
 }
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot, std::shared_ptr<RobotBase::Manipulator const> r)
+RobotBase::Manipulator::Manipulator(RobotBasePtr probot, tools::shared_ptr<RobotBase::Manipulator const> r)
 {
     *this = *r.get();
     __probot = probot;
@@ -206,7 +206,7 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     else {
         localgoal=goal;
     }
-    std::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
+    tools::shared_ptr< vector<dReal> > psolution(&solution, utils::null_deleter());
     return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, psolution) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, psolution);
 }
 
@@ -1019,7 +1019,7 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
 
             // check if any grabbed bodies are attached to this link
             FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                GrabbedConstPtr pgrabbed = std::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+                GrabbedConstPtr pgrabbed = tools::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
                 if( pgrabbed->_plinkrobot == *itlink ) {
                     if( vbodyexcluded.empty() ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));

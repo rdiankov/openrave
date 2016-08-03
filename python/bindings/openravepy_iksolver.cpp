@@ -79,7 +79,7 @@ protected:
         PyGILState_STATE gstate = PyGILState_Ensure();
         std::string errmsg;
         try {
-            RobotBase::ManipulatorPtr pmanip2 = std::const_pointer_cast<RobotBase::Manipulator>(pmanip);
+            RobotBase::ManipulatorPtr pmanip2 = tools::const_pointer_cast<RobotBase::Manipulator>(pmanip);
             res = fncallback(toPyArray(values), openravepy::toPyRobotManipulator(pmanip2,pyenv),toPyIkParameterization(ikparam));
         }
         catch(...) {
@@ -220,7 +220,7 @@ public:
         if( !fncallback ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("callback not specified"),ORE_InvalidArguments);
         }
-        return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,std::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3)));
+        return toPyUserData(_pIkSolver->RegisterCustomFilter(priority,tools::bind(&PyIkSolverBase::_CallCustomFilter,fncallback,_pyenv,_pIkSolver,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3)));
     }
 };
 

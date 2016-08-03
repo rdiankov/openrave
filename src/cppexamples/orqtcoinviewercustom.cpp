@@ -74,14 +74,14 @@ int main(int argc, char ** argv)
     EnvironmentBasePtr penv = RaveCreateEnvironment(); // create the main environment
     RaveSetDebugLevel(Level_Debug);
 
-    boost::thread thviewer(std::bind(SetViewer,penv,viewername));
+    boost::thread thviewer(tools::bind(SetViewer,penv,viewername));
     penv->Load(scenefilename); // load the scene
 
 
     UserDataPtr pregistration;
     while(!pregistration) {
         if( !pregistration && !!penv->GetViewer() ) {
-            pregistration = penv->GetViewer()->RegisterViewerThreadCallback(std::bind(ViewerCallback,penv->GetViewer()));
+            pregistration = penv->GetViewer()->RegisterViewerThreadCallback(tools::bind(ViewerCallback,penv->GetViewer()));
         }
         boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     }

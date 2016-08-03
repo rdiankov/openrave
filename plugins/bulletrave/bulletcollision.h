@@ -227,7 +227,7 @@ private:
     class SetFilterScope
     {
 public:
-        SetFilterScope(std::shared_ptr<btOpenraveDispatcher> dispatcher, btOverlappingPairCache* paircallback, btOverlapFilterCallback* filter) : _dispatcher(dispatcher), _paircallback(paircallback) {
+        SetFilterScope(tools::shared_ptr<btOpenraveDispatcher> dispatcher, btOverlappingPairCache* paircallback, btOverlapFilterCallback* filter) : _dispatcher(dispatcher), _paircallback(paircallback) {
             _paircallback->setOverlapFilterCallback(filter);
             _dispatcher->_poverlapfilt = filter;
         }
@@ -238,7 +238,7 @@ public:
         }
 
 private:
-        std::shared_ptr<btOpenraveDispatcher> _dispatcher;
+        tools::shared_ptr<btOpenraveDispatcher> _dispatcher;
         btOverlappingPairCache* _paircallback;
     };
 
@@ -293,7 +293,7 @@ public:
     };
 
     static BulletSpace::KinBodyInfoPtr GetCollisionInfo(KinBodyConstPtr pbody) {
-        return std::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletcollision"));
+        return tools::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletcollision"));
     }
 
     bool CheckCollisionP(btOverlapFilterCallback* poverlapfilt, CollisionReportPtr report)
@@ -598,7 +598,7 @@ public:
         rayToTrans.setOrigin(to);
         btCollisionWorld::ClosestRayResultCallback rayCallback(from,to);
         BulletSpace::KinBodyInfoPtr pinfo = GetCollisionInfo(plink->GetParent());
-        std::shared_ptr<BulletSpace::KinBodyInfo::LINK> plinkinfo = pinfo->vlinks.at(plink->GetIndex());
+        tools::shared_ptr<BulletSpace::KinBodyInfo::LINK> plinkinfo = pinfo->vlinks.at(plink->GetIndex());
         _world->rayTestSingle(rayFromTrans,rayToTrans,plinkinfo->obj.get(),plinkinfo->shape.get(),plinkinfo->obj->getWorldTransform(),rayCallback);
 
         bool bCollision = rayCallback.hasHit();
@@ -716,13 +716,13 @@ public:
             RAVELOG_DEBUG("CheckCollision: ray direction length is 1.0, note that only collisions within a distance of 1.0 will be checked\n");
         }
         // unfortunately, the bullet ray checker cannot handle disabled bodies properly, so have to move all of them away
-        list<std::shared_ptr<KinBody::KinBodyStateSaver> > listsavers;
+        list<tools::shared_ptr<KinBody::KinBodyStateSaver> > listsavers;
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
         Vector vnormdir = ray.dir*(1/RaveSqrt(ray.dir.lengthsqr3()));
         FOREACH(it,vbodies) {
             if( !(*it)->IsEnabled() ) {
-                listsavers.push_back(std::shared_ptr<KinBody::KinBodyStateSaver>(new KinBody::KinBodyStateSaver(*it)));
+                listsavers.push_back(tools::shared_ptr<KinBody::KinBodyStateSaver>(new KinBody::KinBodyStateSaver(*it)));
                 AABB ab = (*it)->ComputeAABB();
                 Transform t; t.trans = ray.pos-vnormdir*4*RaveSqrt(ab.extents.lengthsqr3());
                 (*it)->SetTransform(t);
@@ -797,14 +797,14 @@ public:
     }
 
 private:
-    std::shared_ptr<BulletSpace> bulletspace;
+    tools::shared_ptr<BulletSpace> bulletspace;
     int _options;
     std::string _userdatakey;
 
-    std::shared_ptr<btBroadphaseInterface> _broadphase;
-    std::shared_ptr<btDefaultCollisionConfiguration> _collisionConfiguration;
-    std::shared_ptr<btOpenraveDispatcher> _dispatcher;
-    std::shared_ptr<btCollisionWorld> _world;
+    tools::shared_ptr<btBroadphaseInterface> _broadphase;
+    tools::shared_ptr<btDefaultCollisionConfiguration> _collisionConfiguration;
+    tools::shared_ptr<btOpenraveDispatcher> _dispatcher;
+    tools::shared_ptr<btCollisionWorld> _world;
 
     LinkFilterCallback _linkcallback;
 };

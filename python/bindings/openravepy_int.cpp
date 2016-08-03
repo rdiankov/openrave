@@ -125,7 +125,7 @@ public:
     ViewerManager() {
         _bShutdown = false;
         _bInMain = false;
-        _threadviewer.reset(new boost::thread(std::bind(&ViewerManager::_RunViewerThread, this)));
+        _threadviewer.reset(new boost::thread(tools::bind(&ViewerManager::_RunViewerThread, this)));
     }
 
     virtual ~ViewerManager() {
@@ -437,7 +437,7 @@ class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBas
 {
 #if BOOST_VERSION < 103500
     boost::mutex _envmutex;
-    boost::list<std::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
+    boost::list<tools::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
 protected:
     EnvironmentBasePtr _penv;
@@ -448,19 +448,19 @@ protected:
             return PyInterfaceBasePtr();
         }
         switch(pinterface->GetInterfaceType()) {
-        case PT_Planner: return openravepy::toPyPlanner(std::static_pointer_cast<PlannerBase>(pinterface),shared_from_this());
-        case PT_Robot: return openravepy::toPyRobot(std::static_pointer_cast<RobotBase>(pinterface),shared_from_this());
-        case PT_SensorSystem: return openravepy::toPySensorSystem(std::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this());
-        case PT_Controller: return openravepy::toPyController(std::static_pointer_cast<ControllerBase>(pinterface),shared_from_this());
-        case PT_Module: return openravepy::toPyModule(std::static_pointer_cast<ModuleBase>(pinterface),shared_from_this());
-        case PT_IkSolver: return openravepy::toPyIkSolver(std::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this());
-        case PT_KinBody: return openravepy::toPyKinBody(std::static_pointer_cast<KinBody>(pinterface),shared_from_this());
-        case PT_PhysicsEngine: return openravepy::toPyPhysicsEngine(std::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this());
-        case PT_Sensor: return openravepy::toPySensor(std::static_pointer_cast<SensorBase>(pinterface),shared_from_this());
-        case PT_CollisionChecker: return openravepy::toPyCollisionChecker(std::static_pointer_cast<CollisionCheckerBase>(pinterface),shared_from_this());
-        case PT_Trajectory: return openravepy::toPyTrajectory(std::static_pointer_cast<TrajectoryBase>(pinterface),shared_from_this());
-        case PT_Viewer: return openravepy::toPyViewer(std::static_pointer_cast<ViewerBase>(pinterface),shared_from_this());
-        case PT_SpaceSampler: return openravepy::toPySpaceSampler(std::static_pointer_cast<SpaceSamplerBase>(pinterface),shared_from_this());
+        case PT_Planner: return openravepy::toPyPlanner(tools::static_pointer_cast<PlannerBase>(pinterface),shared_from_this());
+        case PT_Robot: return openravepy::toPyRobot(tools::static_pointer_cast<RobotBase>(pinterface),shared_from_this());
+        case PT_SensorSystem: return openravepy::toPySensorSystem(tools::static_pointer_cast<SensorSystemBase>(pinterface),shared_from_this());
+        case PT_Controller: return openravepy::toPyController(tools::static_pointer_cast<ControllerBase>(pinterface),shared_from_this());
+        case PT_Module: return openravepy::toPyModule(tools::static_pointer_cast<ModuleBase>(pinterface),shared_from_this());
+        case PT_IkSolver: return openravepy::toPyIkSolver(tools::static_pointer_cast<IkSolverBase>(pinterface),shared_from_this());
+        case PT_KinBody: return openravepy::toPyKinBody(tools::static_pointer_cast<KinBody>(pinterface),shared_from_this());
+        case PT_PhysicsEngine: return openravepy::toPyPhysicsEngine(tools::static_pointer_cast<PhysicsEngineBase>(pinterface),shared_from_this());
+        case PT_Sensor: return openravepy::toPySensor(tools::static_pointer_cast<SensorBase>(pinterface),shared_from_this());
+        case PT_CollisionChecker: return openravepy::toPyCollisionChecker(tools::static_pointer_cast<CollisionCheckerBase>(pinterface),shared_from_this());
+        case PT_Trajectory: return openravepy::toPyTrajectory(tools::static_pointer_cast<TrajectoryBase>(pinterface),shared_from_this());
+        case PT_Viewer: return openravepy::toPyViewer(tools::static_pointer_cast<ViewerBase>(pinterface),shared_from_this());
+        case PT_SpaceSampler: return openravepy::toPySpaceSampler(tools::static_pointer_cast<SpaceSamplerBase>(pinterface),shared_from_this());
         }
         return PyInterfaceBasePtr();
     }
@@ -1047,7 +1047,7 @@ public:
     }
     object ReadTrimeshURI(const std::string& filename)
     {
-        std::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshURI(std::shared_ptr<TriMesh>(),filename);
+        tools::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshURI(tools::shared_ptr<TriMesh>(),filename);
         if( !ptrimesh ) {
             return object();
         }
@@ -1055,7 +1055,7 @@ public:
     }
     object ReadTrimeshURI(const std::string& filename, object odictatts)
     {
-        std::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshURI(std::shared_ptr<TriMesh>(),filename,toAttributesList(odictatts));
+        tools::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshURI(tools::shared_ptr<TriMesh>(),filename,toAttributesList(odictatts));
         if( !ptrimesh ) {
             return object();
         }
@@ -1064,7 +1064,7 @@ public:
 
     object ReadTrimeshData(const std::string& data, const std::string& formathint)
     {
-        std::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(std::shared_ptr<TriMesh>(),data,formathint);
+        tools::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(tools::shared_ptr<TriMesh>(),data,formathint);
         if( !ptrimesh ) {
             return object();
         }
@@ -1072,7 +1072,7 @@ public:
     }
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts)
     {
-        std::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(std::shared_ptr<TriMesh>(),data,formathint,toAttributesList(odictatts));
+        tools::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(tools::shared_ptr<TriMesh>(),data,formathint,toAttributesList(odictatts));
         if( !ptrimesh ) {
             return object();
         }
@@ -1187,7 +1187,7 @@ public:
         if( !fncallback ) {
             throw openrave_exception(_("callback not specified"));
         }
-        UserDataPtr p = _penv->RegisterBodyCallback(std::bind(&PyEnvironmentBase::_BodyCallback,shared_from_this(),fncallback,std::placeholders::_1,std::placeholders::_2));
+        UserDataPtr p = _penv->RegisterBodyCallback(tools::bind(&PyEnvironmentBase::_BodyCallback,shared_from_this(),fncallback,std::placeholders::_1,std::placeholders::_2));
         if( !p ) {
             throw openrave_exception(_("registration handle is NULL"));
         }
@@ -1199,7 +1199,7 @@ public:
         if( !fncallback ) {
             throw openrave_exception(_("callback not specified"));
         }
-        UserDataPtr p = _penv->RegisterCollisionCallback(std::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,std::placeholders::_1,std::placeholders::_2));
+        UserDataPtr p = _penv->RegisterCollisionCallback(tools::bind(&PyEnvironmentBase::_CollisionCallback,shared_from_this(),fncallback,std::placeholders::_1,std::placeholders::_2));
         if( !p ) {
             throw openrave_exception(_("registration handle is NULL"));
         }
@@ -1253,7 +1253,7 @@ public:
             _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
         }
         else {
-            _listenvlocks.push_back(std::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+            _listenvlocks.push_back(tools::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
         }
 #else
         _penv->GetMutex().lock();
@@ -1284,10 +1284,10 @@ public:
         bool bSuccess = false;
         PythonThreadSaver saver;
 #if BOOST_VERSION < 103500
-        std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+        tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
         if( !!lockenv->try_lock() ) {
             bSuccess = true;
-            _listenvlocks.push_back(std::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+            _listenvlocks.push_back(tools::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
         }
 #else
         if( _penv->GetMutex().try_lock() ) {
@@ -1301,10 +1301,10 @@ public:
     {
         bool bSuccess = false;
 #if BOOST_VERSION < 103500
-        std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+        tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
         if( !!lockenv->try_lock() ) {
             bSuccess = true;
-            _listenvlocks.push_back(std::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+            _listenvlocks.push_back(tools::shared_ptr<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
         }
 #else
         if( _penv->GetMutex().try_lock() ) {
@@ -1650,7 +1650,7 @@ public:
         _penv->SetUserData(pdata._handle);
     }
     void SetUserData(object o) {
-        _penv->SetUserData(std::shared_ptr<UserData>(new PyUserObject(o)));
+        _penv->SetUserData(tools::shared_ptr<UserData>(new PyUserObject(o)));
     }
     object GetUserData() const {
         return openravepy::GetUserData(_penv->GetUserData());
@@ -1699,12 +1699,12 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
 
 object GetUserData(UserDataPtr pdata)
 {
-    std::shared_ptr<PyUserObject> po = std::dynamic_pointer_cast<PyUserObject>(pdata);
+    tools::shared_ptr<PyUserObject> po = tools::dynamic_pointer_cast<PyUserObject>(pdata);
     if( !!po ) {
         return po->_o;
     }
     else {
-        SerializableDataPtr pserializable = std::dynamic_pointer_cast<SerializableData>(pdata);
+        SerializableDataPtr pserializable = tools::dynamic_pointer_cast<SerializableData>(pdata);
         if( !!pserializable ) {
             return object(PySerializableData(pserializable));
         }

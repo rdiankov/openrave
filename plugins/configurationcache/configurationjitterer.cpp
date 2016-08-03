@@ -46,7 +46,7 @@ public:
     dReal fCosAngleThresh; ///< the cos angle threshold
 };
 
-typedef std::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
+typedef tools::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {
@@ -62,21 +62,21 @@ By default will sample the robot's active DOFs. Parameters part of the interface
   [robotname] [samplername]\n\
 \n\
 ";
-        RegisterCommand("SetMaxJitter",std::bind(&ConfigurationJitterer::SetMaxJitterCommand,this,_1,_2),
+        RegisterCommand("SetMaxJitter",tools::bind(&ConfigurationJitterer::SetMaxJitterCommand,this,_1,_2),
                         "set a new max jitter");
-        RegisterCommand("SetMaxIterations",std::bind(&ConfigurationJitterer::SetMaxIterationsCommand,this,_1,_2),
+        RegisterCommand("SetMaxIterations",tools::bind(&ConfigurationJitterer::SetMaxIterationsCommand,this,_1,_2),
                         "set a new max iterations");
-        RegisterCommand("SetMaxLinkDistThresh",std::bind(&ConfigurationJitterer::SetMaxLinkDistThreshCommand,this,_1,_2),
+        RegisterCommand("SetMaxLinkDistThresh",tools::bind(&ConfigurationJitterer::SetMaxLinkDistThreshCommand,this,_1,_2),
                         "set a new max link dist threshold");
-        RegisterCommand("SetPerturbation",std::bind(&ConfigurationJitterer::SetPerturbationCommand,this,_1,_2),
+        RegisterCommand("SetPerturbation",tools::bind(&ConfigurationJitterer::SetPerturbationCommand,this,_1,_2),
                         "set a new perturbation");
-        RegisterCommand("SetResultOnRobot",std::bind(&ConfigurationJitterer::SetResultOnRobotCommand,this,_1,_2),
+        RegisterCommand("SetResultOnRobot",tools::bind(&ConfigurationJitterer::SetResultOnRobotCommand,this,_1,_2),
                         "set a new result on a robot");
-        RegisterCommand("SetNeighDistThresh",std::bind(&ConfigurationJitterer::SetNeighDistThreshCommand,this,_1,_2),
+        RegisterCommand("SetNeighDistThresh",tools::bind(&ConfigurationJitterer::SetNeighDistThreshCommand,this,_1,_2),
                         "sets the minimum distance that nodes can be with respect to each other for the cache");
-        RegisterCommand("SetConstraintToolDirection", std::bind(&ConfigurationJitterer::SetConstraintToolDirectionCommand,this,_1,_2),
+        RegisterCommand("SetConstraintToolDirection", tools::bind(&ConfigurationJitterer::SetConstraintToolDirectionCommand,this,_1,_2),
                         "constrains an axis of the manipulator around a cone. manipname + 7 values: vManipDir, vGlobalDir, fCosAngleThresh.");
-        RegisterCommand("SetManipulatorBias",std::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
+        RegisterCommand("SetManipulatorBias",tools::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
  //\n\
@@ -146,9 +146,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _neighdistthresh = 1;
 
         _UpdateLimits();
-        _limitscallback = _probot->RegisterChangeCallback(RobotBase::Prop_JointLimits, std::bind(&ConfigurationJitterer::_UpdateLimits,this));
+        _limitscallback = _probot->RegisterChangeCallback(RobotBase::Prop_JointLimits, tools::bind(&ConfigurationJitterer::_UpdateLimits,this));
         _UpdateGrabbed();
-        _grabbedcallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotGrabbed, std::bind(&ConfigurationJitterer::_UpdateGrabbed,this));
+        _grabbedcallback = _probot->RegisterChangeCallback(RobotBase::Prop_RobotGrabbed, tools::bind(&ConfigurationJitterer::_UpdateGrabbed,this));
 
         if( !!_cache ) {
             _SetCacheMaxDistance();

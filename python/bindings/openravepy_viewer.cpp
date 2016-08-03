@@ -156,7 +156,7 @@ public:
     PyViewerBase(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {
         _sig_thread_id = 0;
         if( !!_pviewer ) {
-            _viewercallback = _pviewer->RegisterViewerThreadCallback(std::bind(&PyViewerBase::_ThreadCallback,this));
+            _viewercallback = _pviewer->RegisterViewerThreadCallback(tools::bind(&PyViewerBase::_ThreadCallback,this));
         }
     }
     virtual ~PyViewerBase() {
@@ -233,7 +233,7 @@ public:
         if( !fncallback ) {
             throw openrave_exception(_("callback not specified"));
         }
-        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(std::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(tools::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
         if( !p ) {
             throw openrave_exception(_("no registration callback returned"));
         }
@@ -245,7 +245,7 @@ public:
         if( !fncallback ) {
             throw openrave_exception(_("callback not specified"));
         }
-        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(std::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
+        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(tools::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
         if( !p ) {
             throw openrave_exception(_("no registration callback returned"));
         }

@@ -158,7 +158,7 @@ PyInterfaceBasePtr toPyController(ControllerBasePtr pcontroller, PyEnvironmentBa
     // TODO this is a hack
     // unfortunately dynamic_pointer_cast will not work. The most ideal situation is to have MultiControllerBase registered as its own individual interface....
     else if( pcontroller->GetXMLId() == std::string("MultiController") ) {
-        return PyInterfaceBasePtr(new PyMultiControllerBase(std::static_pointer_cast<MultiControllerBase>(pcontroller), pyenv));
+        return PyInterfaceBasePtr(new PyMultiControllerBase(tools::static_pointer_cast<MultiControllerBase>(pcontroller), pyenv));
     }
     else {
         return PyInterfaceBasePtr(new PyControllerBase(pcontroller, pyenv));

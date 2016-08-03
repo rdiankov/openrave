@@ -23,41 +23,41 @@ public:
     BaseManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\nVery useful routines for manipulation planning and planning in general. The planners use analytical inverse kinematics and search based techniques. Most of the MoveX commands by default execute the plan on the current robot by calling :meth:`.RobotBase.GetController().SetPath`. This can be disabled by adding 'execute 0' to the command line";
-        RegisterCommand("Traj",std::bind(&BaseManipulation::Traj,this,_1,_2),
+        RegisterCommand("Traj",tools::bind(&BaseManipulation::Traj,this,_1,_2),
                         "Execute a trajectory from a file on the local filesystem");
-        RegisterCommand("GrabBody",std::bind(&BaseManipulation::GrabBody,this,_1,_2),
+        RegisterCommand("GrabBody",tools::bind(&BaseManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
-        RegisterCommand("ReleaseAll",std::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
+        RegisterCommand("ReleaseAll",tools::bind(&BaseManipulation::ReleaseAll,this,_1,_2),
                         "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
-        RegisterCommand("MoveHandStraight",std::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
+        RegisterCommand("MoveHandStraight",tools::bind(&BaseManipulation::MoveHandStraight,this,_1,_2),
                         "Move the active end-effector in a straight line until collision or IK fails. Parameters:\n\n\
 - steplength - the increments in workspace in which the robot tests for the next configuration.\n\n\
 - minsteps - The minimum number of steps that need to be taken in order for success to declared. If robot doesn't reach this number of steps, it fails.\n\n\
 - maxsteps - The maximum number of steps the robot should take.\n\n\
 - direction - The workspace direction to move end effector in.\n\n\
 Method wraps the WorkspaceTrajectoryTracker planner. For more details on parameters, check out its documentation.");
-        RegisterCommand("MoveManipulator",std::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
+        RegisterCommand("MoveManipulator",tools::bind(&BaseManipulation::MoveManipulator,this,_1,_2),
                         "Moves arm joints of active manipulator to a given set of joint values");
-        RegisterCommand("MoveActiveJoints",std::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
+        RegisterCommand("MoveActiveJoints",tools::bind(&BaseManipulation::MoveActiveJoints,this,_1,_2),
                         "Moves the current active joints to a specified goal destination:\n\n\
 - maxiter - The maximum number of iterations on the internal planner.\n\
 - maxtries - The maximum number of times to restart the planner.\n\
 - steplength - See PlannerParameters::_fStepLength\n\n");
-        RegisterCommand("MoveToHandPosition",std::bind(&BaseManipulation::_MoveToHandPosition,this,_1,_2),
+        RegisterCommand("MoveToHandPosition",tools::bind(&BaseManipulation::_MoveToHandPosition,this,_1,_2),
                         "Move the manipulator's end effector to reach a set of 6D poses. Parameters:\n\n\
 - ");
-        RegisterCommand("MoveUnsyncJoints",std::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
+        RegisterCommand("MoveUnsyncJoints",tools::bind(&BaseManipulation::MoveUnsyncJoints,this,_1,_2),
                         "Moves the active joints to a position where the inactive (hand) joints can\n"
                         "fully move to their goal. This is necessary because synchronization with arm\n"
                         "and hand isn't guaranteed.\n"
                         "Options: handjoints savetraj planner");
-        RegisterCommand("JitterActive",std::bind(&BaseManipulation::JitterActive,this,_1,_2),
+        RegisterCommand("JitterActive",tools::bind(&BaseManipulation::JitterActive,this,_1,_2),
                         "Jitters the active DOF for a collision-free position.");
-        RegisterCommand("SetMinimumGoalPaths",std::bind(&BaseManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
+        RegisterCommand("SetMinimumGoalPaths",tools::bind(&BaseManipulation::SetMinimumGoalPathsCommand,this,_1,_2),
                         "Sets _minimumgoalpaths for all planner parameters.");
-        RegisterCommand("SetPostProcessing",std::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
+        RegisterCommand("SetPostProcessing",tools::bind(&BaseManipulation::SetPostProcessingCommand,this,_1,_2),
                         "Sets post processing parameters.");
-        RegisterCommand("SetRobot",std::bind(&BaseManipulation::SetRobotCommand,this,_1,_2),
+        RegisterCommand("SetRobot",tools::bind(&BaseManipulation::SetRobotCommand,this,_1,_2),
                         "Sets the robot.");
         _minimumgoalpaths=1;
     }
@@ -131,11 +131,11 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
     }
 protected:
 
-    inline std::shared_ptr<BaseManipulation> shared_problem() {
-        return std::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
+    inline tools::shared_ptr<BaseManipulation> shared_problem() {
+        return tools::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
     }
-    inline std::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return std::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
+    inline tools::shared_ptr<BaseManipulation const> shared_problem_const() const {
+        return tools::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -203,7 +203,7 @@ protected:
         Transform Tee;
 
         WorkspaceTrajectoryParametersPtr params(new WorkspaceTrajectoryParameters(GetEnv()));
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
         params->ignorefirstcollision = 0.1;     // 0.1**2 * 5 * 0.5 = 0.025 m
         string plannername = "workspacetrajectorytracker";
         params->_fStepLength = 0.01;
@@ -219,7 +219,7 @@ protected:
                 sinput >> minsteps;
             }
             else if( cmd == "outputtraj") {
-                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "maxsteps") {
                 sinput >> maxsteps;
@@ -354,7 +354,7 @@ protected:
         string strtrajfilename;
         bool bExecute = true;
         int nMaxTries = 2;     // max tries for the planner
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
 
         int nMaxJitterIterations = 1000;
         RRTParametersPtr params(new RRTParameters());
@@ -401,7 +401,7 @@ protected:
             }
         }
         else if( cmd == "outputtraj" ) {
-            pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+            pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
         }
         else if( cmd == "maxiter" ) {
             sinput >> params->_nMaxIterations;
@@ -459,7 +459,7 @@ protected:
             std::list<KinBodyPtr> listCheckBodies;
             listCheckBodies.push_back(robot);
             planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params, listCheckBodies, 0xffffffff));
-            params->_checkpathvelocityconstraintsfn = std::bind(&planningutils::DynamicsCollisionConstraint::Check,dynamics,_1,_2,_3,_4,_5,_6,_7,_8);
+            params->_checkpathvelocityconstraintsfn = tools::bind(&planningutils::DynamicsCollisionConstraint::Check,dynamics,_1,_2,_3,_4,_5,_6,_7,_8);
         }
         if( _sPostProcessingParameters.size() > 0 ) {
             params->_sPostProcessingParameters = _sPostProcessingParameters;
@@ -580,7 +580,7 @@ protected:
 
         string strtrajfilename;
         bool bExecute = true;
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
 
         Vector vconstraintaxis, vconstraintpos;
         int affinedofs = 0;
@@ -622,7 +622,7 @@ protected:
                 listgoals.back().SetRotation3D(q);
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "matrix" ) {
                 TransformMatrix m;
@@ -772,9 +772,9 @@ protected:
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");
             robot->SetActiveDOFValues(params->vinitialconfig); // have to set the initial configuraiton!
-            std::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,tConstraintTaskFrame, vconstraintfreedoms,constrainterrorthresh));
+            tools::shared_ptr<CM::GripperJacobianConstrains<double> > pconstraints(new CM::GripperJacobianConstrains<double>(robot->GetActiveManipulator(),tConstraintTargetWorldFrame,tConstraintTaskFrame, vconstraintfreedoms,constrainterrorthresh));
             pconstraints->_distmetricfn = params->_distmetricfn;
-            params->_neighstatefn = std::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,std::placeholders::_1,std::placeholders::_2);
+            params->_neighstatefn = tools::bind(&CM::GripperJacobianConstrains<double>::RetractionConstraint,pconstraints,std::placeholders::_1,std::placeholders::_2);
             // use linear interpolation!
             params->_sPostProcessingPlanner = "shortcut_linear";
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
@@ -811,7 +811,7 @@ protected:
             }
         }
         goalsampler.SetSamplingProb(goalsampleprob);
-        params->_samplegoalfn = std::bind((bool (planningutils::ManipulatorIKGoalSampler::*)(std::vector<dReal>&))&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,std::placeholders::_1);
+        params->_samplegoalfn = tools::bind((bool (planningutils::ManipulatorIKGoalSampler::*)(std::vector<dReal>&))&planningutils::ManipulatorIKGoalSampler::Sample,&goalsampler,std::placeholders::_1);
 
         if( params->vgoalconfig.size() == 0 ) {
             RAVELOG_WARN("failed to find goal\n");
@@ -896,7 +896,7 @@ protected:
         vector<int> vhandjoints;
         vector<dReal> vhandgoal;
         bool bExecute = true;
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
         int nMaxTries=1;
         int maxdivision=10;
         int nMaxJitterIterations = 1000;
@@ -911,7 +911,7 @@ protected:
                 sinput >> strsavetraj;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "handjoints" ) {
                 int dof = 0;
@@ -987,7 +987,7 @@ protected:
     {
         RAVELOG_DEBUG("Starting JitterActive...\n");
         bool bExecute = true, bOutputFinal=false;
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
         int nMaxJitterIterations=5000;
         dReal fJitter=0.03f;
@@ -1008,7 +1008,7 @@ protected:
                 sinput >> fJitter;
             }
             else if( cmd == "outputtraj" ) {
-                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
             }
             else if( cmd == "outputfinal" ) {
                 bOutputFinal = true;

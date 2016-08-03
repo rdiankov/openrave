@@ -30,13 +30,13 @@ If \ref ControllerBase::SetPath is called and the trajectory finishes, then the 
 2. ControllerBase::SetDesired is called.\n\n\
 3. ControllerBase::Reset is called resetting everything\n\n\
 If SetDesired is called, only joint values will be set at every timestep leaving the transformation alone.\n";
-        RegisterCommand("Pause",std::bind(&IdealController::_Pause,this,_1,_2),
+        RegisterCommand("Pause",tools::bind(&IdealController::_Pause,this,_1,_2),
                         "pauses the controller from reacting to commands ");
-        RegisterCommand("SetCheckCollisions",std::bind(&IdealController::_SetCheckCollisions,this,_1,_2),
+        RegisterCommand("SetCheckCollisions",tools::bind(&IdealController::_SetCheckCollisions,this,_1,_2),
                         "If set, will check if the robot gets into a collision during movement");
-        RegisterCommand("SetThrowExceptions",std::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
+        RegisterCommand("SetThrowExceptions",tools::bind(&IdealController::_SetThrowExceptions,this,_1,_2),
                         "If set, will throw exceptions instead of print warnings. Format is:\n\n  [0/1]");
-        RegisterCommand("SetEnableLogging",std::bind(&IdealController::_SetEnableLogging,this,_1,_2),
+        RegisterCommand("SetEnableLogging",tools::bind(&IdealController::_SetEnableLogging,this,_1,_2),
                         "If set, will write trajectories to disk");
         _fCommandTime = 0;
         _fSpeed = 1;
@@ -67,7 +67,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
                 _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            std::weak_ptr<IdealController> wptr = weak_controller();
+            tools::weak_ptr<IdealController> wptr = weak_controller();
             _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,[wptr](){ utils::sptr_from(wptr)->_SetJointLimits(); } );
             _SetJointLimits();
 
@@ -412,13 +412,13 @@ private:
         return !!is;
     }
 
-    inline std::shared_ptr<IdealController> shared_controller() {
-        return std::dynamic_pointer_cast<IdealController>(shared_from_this());
+    inline tools::shared_ptr<IdealController> shared_controller() {
+        return tools::dynamic_pointer_cast<IdealController>(shared_from_this());
     }
-    inline std::shared_ptr<IdealController const> shared_controller_const() const {
-        return std::dynamic_pointer_cast<IdealController const>(shared_from_this());
+    inline tools::shared_ptr<IdealController const> shared_controller_const() const {
+        return tools::dynamic_pointer_cast<IdealController const>(shared_from_this());
     }
-    inline std::weak_ptr<IdealController> weak_controller() {
+    inline tools::weak_ptr<IdealController> weak_controller() {
         return shared_controller();
     }
 
@@ -536,7 +536,7 @@ private:
         int offset;
         int robotlinkindex;
         KinBodyPtr pbody;
-        std::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
+        tools::shared_ptr<Transform> trelativepose; ///< relative pose of body with link when grabbed. if it doesn't exist, then do not pre-transform the pose
     };
     std::vector<GrabBody> _vgrabbodylinks;
     dReal _fCommandTime;
@@ -554,7 +554,7 @@ private:
     CollisionReportPtr _report;
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
-    std::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
+    tools::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
     boost::mutex _mutex;
 };
 

@@ -82,6 +82,12 @@
 
 namespace openravepy {
 
+#ifdef OPENRAVE_USE_CXX11
+namespace tools = std;
+#else
+namespace tools = boost;
+#endif
+
 using namespace boost::python;
 
 inline boost::python::object ConvertStringToUnicode(const std::string& s)
@@ -94,12 +100,12 @@ class PyVoidHandle
 public:
     PyVoidHandle() {
     }
-    PyVoidHandle(std::shared_ptr<void> handle) : _handle(handle) {
+    PyVoidHandle(tools::shared_ptr<void> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    std::shared_ptr<void> _handle;
+    tools::shared_ptr<void> _handle;
 };
 
 class PyVoidHandleConst
@@ -107,12 +113,12 @@ class PyVoidHandleConst
 public:
     PyVoidHandleConst() {
     }
-    PyVoidHandleConst(std::shared_ptr<void const> handle) : _handle(handle) {
+    PyVoidHandleConst(tools::shared_ptr<void const> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    std::shared_ptr<void const> _handle;
+    tools::shared_ptr<void const> _handle;
 };
 
 template <typename T>

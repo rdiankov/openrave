@@ -23,7 +23,7 @@ protected:
     class BaseLaser2DXMLReader : public BaseXMLReader
     {
 public:
-        BaseLaser2DXMLReader(std::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {
+        BaseLaser2DXMLReader(tools::shared_ptr<BaseLaser2DSensor> psensor) : _psensor(psensor) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -113,14 +113,14 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        std::shared_ptr<BaseLaser2DSensor> _psensor;
+        tools::shared_ptr<BaseLaser2DSensor> _psensor;
         stringstream ss;
     };
 
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseLaser2DXMLReader(std::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseLaser2DXMLReader(tools::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
     }
 
     BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -129,11 +129,11 @@ public:
 .. image:: ../../../images/interface_baselaser.jpg\n\
   :width: 400\n\
 ";
-        RegisterCommand("render",std::bind(&BaseLaser2DSensor::_Render,this,std::placeholders::_1,std::placeholders::_2),
+        RegisterCommand("render",tools::bind(&BaseLaser2DSensor::_Render,this,std::placeholders::_1,std::placeholders::_2),
                         "Set rendering of the plots (1 or 0).");
-        RegisterCommand("collidingbodies",std::bind(&BaseLaser2DSensor::_CollidingBodies,this,std::placeholders::_1,std::placeholders::_2),
+        RegisterCommand("collidingbodies",tools::bind(&BaseLaser2DSensor::_CollidingBodies,this,std::placeholders::_1,std::placeholders::_2),
                         "Returns the ids of the bodies that the laser beams have hit. The order is the same as the returned laser points.");
-        //        RegisterCommand("GatherData",std::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
+        //        RegisterCommand("GatherData",tools::bind(&BaseLaser2DSensor::_CollidingBodies,this,_1,_2),
         //                        "Controls whether to gather all laser data, or delete the old one after every new scan.");
         _pgeom.reset(new LaserGeomData());
         _pdata.reset(new LaserSensorData());
@@ -308,7 +308,7 @@ public:
     {
         if( psensordata->GetType() == ST_Laser ) {
             boost::mutex::scoped_lock lock(_mutexdata);
-            *std::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
+            *tools::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
         return false;
@@ -344,7 +344,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
-        std::shared_ptr<BaseLaser2DSensor const> r = std::dynamic_pointer_cast<BaseLaser2DSensor const>(preference);
+        tools::shared_ptr<BaseLaser2DSensor const> r = tools::dynamic_pointer_cast<BaseLaser2DSensor const>(preference);
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -358,7 +358,7 @@ public:
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Laser );
-        *_pgeom = *std::static_pointer_cast<LaserGeomData const>(pgeometry);
+        *_pgeom = *tools::static_pointer_cast<LaserGeomData const>(pgeometry);
         _Reset();
     }
 
@@ -429,8 +429,8 @@ protected:
         }
     }
 
-    std::shared_ptr<LaserGeomData> _pgeom;
-    std::shared_ptr<LaserSensorData> _pdata;
+    tools::shared_ptr<LaserGeomData> _pgeom;
+    tools::shared_ptr<LaserSensorData> _pdata;
     vector<int> _databodyids;     ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
 
@@ -454,7 +454,7 @@ protected:
     class BaseSpinningLaser2DXMLReader : public BaseLaser2DXMLReader
     {
 public:
-        BaseSpinningLaser2DXMLReader(std::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {
+        BaseSpinningLaser2DXMLReader(tools::shared_ptr<BaseSpinningLaser2DSensor> psensor) : BaseLaser2DXMLReader(psensor), _bProcessing(false) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -475,7 +475,7 @@ public:
         virtual bool endElement(const string& name)
         {
             if( _bProcessing ) {
-                std::shared_ptr<BaseSpinningLaser2DSensor> psensor = std::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
+                tools::shared_ptr<BaseSpinningLaser2DSensor> psensor = tools::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(_psensor);
 
                 if( name == "spinaxis" ) {
                     ss >> psensor->_vGeomSpinAxis.x >> psensor->_vGeomSpinAxis.y >> psensor->_vGeomSpinAxis.z;
@@ -512,7 +512,7 @@ public:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(std::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(tools::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
     }
 
     BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {
@@ -557,7 +557,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         BaseLaser2DSensor::Clone(preference,cloningoptions);
-        std::shared_ptr<BaseSpinningLaser2DSensor const> r = std::dynamic_pointer_cast<BaseSpinningLaser2DSensor const>(preference);
+        tools::shared_ptr<BaseSpinningLaser2DSensor const> r = tools::dynamic_pointer_cast<BaseSpinningLaser2DSensor const>(preference);
         _fGeomSpinSpeed = r->_fGeomSpinSpeed;
         _vGeomSpinAxis = r->_vGeomSpinAxis;
         _vGeomSpinPos = r->_vGeomSpinPos;

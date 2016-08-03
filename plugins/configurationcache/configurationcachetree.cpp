@@ -1142,13 +1142,13 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _setgrabbedbodies.insert(_vgrabbedbodies.begin(), _vgrabbedbodies.end());
 
     if (_envupdates) {
-        _handleBodyAddRemove = _penv->RegisterBodyCallback(std::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, std::placeholders::_1, std::placeholders::_2));
+        _handleBodyAddRemove = _penv->RegisterBodyCallback(tools::bind(&ConfigurationCache::_UpdateAddRemoveBodies, this, std::placeholders::_1, std::placeholders::_2));
 
         _penv->GetBodies(_vnewenvbodies);
         FOREACHC(itbody, _vnewenvbodies) {
             if( *itbody != pstaterobot && !pstaterobot->IsGrabbing(*itbody) ) {
                 KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
-                pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, std::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
+                pinfo->_changehandle = (*itbody)->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, tools::bind(&ConfigurationCache::_UpdateUntrackedBody, this, *itbody));
                 (*itbody)->SetUserData(_userdatakey, pinfo);
                 _listCachedData.push_back(pinfo);
             }
@@ -1187,8 +1187,8 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
     _insertiondistancemult = 0.5;
 
 
-    _handleJointLimitChange = pstaterobot->RegisterChangeCallback(KinBody::Prop_JointLimits, std::bind(&ConfigurationCache::_UpdateRobotJointLimits, this));
-    _handleGrabbedChange = pstaterobot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, std::bind(&ConfigurationCache::_UpdateRobotGrabbed, this));
+    _handleJointLimitChange = pstaterobot->RegisterChangeCallback(KinBody::Prop_JointLimits, tools::bind(&ConfigurationCache::_UpdateRobotJointLimits, this));
+    _handleGrabbedChange = pstaterobot->RegisterChangeCallback(KinBody::Prop_RobotGrabbed, tools::bind(&ConfigurationCache::_UpdateRobotGrabbed, this));
 
     // distance has to be computed in the same way as CacheTreeNode.GetDistance()
     // otherwise, distances larger than this value could be inserted into the tree
@@ -1370,7 +1370,7 @@ void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
                 RAVELOG_DEBUG_FORMAT("%s %s %d","Updating add/remove bodies"%pbody->GetName()%action);
             }
             KinBodyCachedDataPtr pinfo(new KinBodyCachedData());
-            pinfo->_changehandle = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, std::bind(&ConfigurationCache::_UpdateUntrackedBody, this, pbody));
+            pinfo->_changehandle = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry|KinBody::Prop_LinkEnable|KinBody::Prop_LinkTransforms, tools::bind(&ConfigurationCache::_UpdateUntrackedBody, this, pbody));
             pbody->SetUserData(_userdatakey, pinfo);
             _listCachedData.push_back(pinfo);
         }

@@ -284,11 +284,11 @@ void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 /// \brief The information of a currently grabbed body.
-class Grabbed : public UserData, public std::enable_shared_from_this<Grabbed>
+class Grabbed : public UserData, public tools::enable_shared_from_this<Grabbed>
 {
 public:
     Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
-        _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, std::bind(&Grabbed::UpdateCollidingLinks, this));
+        _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, tools::bind(&Grabbed::UpdateCollidingLinks, this));
         _plinkrobot->GetRigidlyAttachedLinks(_vattachedlinks);
     }
     virtual ~Grabbed() {
@@ -356,7 +356,7 @@ public:
         std::map<KinBody::LinkConstPtr, int>::iterator itnoncolliding;
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
         FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
-            std::shared_ptr<Grabbed const> pgrabbed = std::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+            tools::shared_ptr<Grabbed const> pgrabbed = tools::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
             if( !!pothergrabbedbody && pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
@@ -389,7 +389,7 @@ public:
 
         std::set<KinBodyConstPtr> _setgrabbed;
         FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
-            std::shared_ptr<Grabbed const> pgrabbed = std::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+            tools::shared_ptr<Grabbed const> pgrabbed = tools::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             KinBodyConstPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
             if( !!pothergrabbedbody ) {
                 _setgrabbed.insert(pothergrabbedbody);
@@ -426,8 +426,8 @@ private:
     std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
 };
 
-typedef std::shared_ptr<Grabbed> GrabbedPtr;
-typedef std::shared_ptr<Grabbed const> GrabbedConstPtr;
+typedef tools::shared_ptr<Grabbed> GrabbedPtr;
+typedef tools::shared_ptr<Grabbed const> GrabbedConstPtr;
 
 /// -1 v1 is smaller than v2
 // 0 two vectors are equivalent

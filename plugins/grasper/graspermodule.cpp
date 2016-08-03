@@ -66,15 +66,15 @@ public:
     GrasperModule(EnvironmentBasePtr penv, std::istream& sinput)  : ModuleBase(penv), errfile(NULL) {
         using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
-        RegisterCommand("Grasp",std::bind(&GrasperModule::_GraspCommand,this,_1,_2),
+        RegisterCommand("Grasp",tools::bind(&GrasperModule::_GraspCommand,this,_1,_2),
                         "Performs a grasp and returns contact points");
-        RegisterCommand("GraspThreaded",std::bind(&GrasperModule::_GraspThreadedCommand,this,_1,_2),
+        RegisterCommand("GraspThreaded",tools::bind(&GrasperModule::_GraspThreadedCommand,this,_1,_2),
                         "Parllelizes the computation of the grasp planning and force closure. Number of threads can be specified with 'numthreads'.");
-        RegisterCommand("ComputeDistanceMap",std::bind(&GrasperModule::_ComputeDistanceMapCommand,this,_1,_2),
+        RegisterCommand("ComputeDistanceMap",tools::bind(&GrasperModule::_ComputeDistanceMapCommand,this,_1,_2),
                         "Computes a distance map around a particular point in space");
-        RegisterCommand("GetStableContacts",std::bind(&GrasperModule::_GetStableContactsCommand,this,_1,_2),
+        RegisterCommand("GetStableContacts",tools::bind(&GrasperModule::_GetStableContactsCommand,this,_1,_2),
                         "Returns the stable contacts as defined by the closing direction");
-        RegisterCommand("ConvexHull",std::bind(&GrasperModule::_ConvexHullCommand,this,_1,_2),
+        RegisterCommand("ConvexHull",tools::bind(&GrasperModule::_ConvexHullCommand,this,_1,_2),
                         "Given a point cloud, returns information about its convex hull like normal planes, vertex indices, and triangle indices. Computed planes point outside the mesh, face indices are not ordered, triangles point outside the mesh (counter-clockwise)");
     }
     virtual ~GrasperModule() {
@@ -146,7 +146,7 @@ public:
         params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetDirection();
 
         std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
-        std::shared_ptr<CollisionCheckerMngr> pcheckermngr;
+        tools::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
         string cmd;
         while(!sinput.eof()) {
@@ -534,7 +534,7 @@ public:
         }
 
         vector<double> vconvexplanes;
-        std::shared_ptr< vector<int> > vconvexfaces;
+        tools::shared_ptr< vector<int> > vconvexfaces;
         if( bReturnFaces || bReturnTriangles ) {
             vconvexfaces.reset(new vector<int>);
         }
@@ -668,8 +668,8 @@ public:
         Transform transfinal;
         vector<dReal> finalshape;
     };
-    typedef std::shared_ptr<GraspParametersThread> GraspParametersThreadPtr;
-    typedef std::shared_ptr<WorkerParameters> WorkerParametersPtr;
+    typedef tools::shared_ptr<GraspParametersThread> GraspParametersThreadPtr;
+    typedef tools::shared_ptr<WorkerParameters> WorkerParametersPtr;
 
     virtual bool _GraspThreadedCommand(std::ostream& sout, std::istream& sinput)
     {
@@ -802,9 +802,9 @@ public:
 
         _bContinueWorker = true;
         // start worker threads
-        vector<std::shared_ptr<boost::thread> > listthreads(numthreads);
+        vector<tools::shared_ptr<boost::thread> > listthreads(numthreads);
         FOREACH(itthread,listthreads) {
-            itthread->reset(new boost::thread(std::bind(&GrasperModule::_WorkerThread,this,worker_params,pcloneenv)));
+            itthread->reset(new boost::thread(tools::bind(&GrasperModule::_WorkerThread,this,worker_params,pcloneenv)));
         }
 
         _listGraspResults.clear();
@@ -878,7 +878,7 @@ public:
         EnvironmentBasePtr pcloneenv = penv->CloneSelf(Clone_Bodies|Clone_Simulation);
         {
             EnvironmentMutex::scoped_lock lock(pcloneenv->GetMutex());
-            std::shared_ptr<CollisionCheckerMngr> pcheckermngr(new CollisionCheckerMngr(pcloneenv, worker_params->collisionchecker));
+            tools::shared_ptr<CollisionCheckerMngr> pcheckermngr(new CollisionCheckerMngr(pcloneenv, worker_params->collisionchecker));
             PlannerBasePtr planner = RaveCreatePlanner(pcloneenv,"Grasper");
             RobotBasePtr probot = pcloneenv->GetRobot(_robot->GetName());
             string strsavetraj;
@@ -1582,7 +1582,7 @@ protected:
             *itpoint++ = v.z;
         }
 
-        analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,std::shared_ptr< vector<int> >(),6);
+        analysis.volume = _ComputeConvexHull(vpoints,vconvexplanes,tools::shared_ptr< vector<int> >(),6);
         if( vconvexplanes.size() == 0 ) {
             return analysis;
         }
@@ -1601,7 +1601,7 @@ protected:
     /// Computes the convex hull of a set of points
     /// \param vpoints a set of points each of dimension dim
     /// \param vconvexplaces the places of the convex hull, dimension is dim+1
-    virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, std::shared_ptr< vector<int> > vconvexfaces, int dim)
+    virtual double _ComputeConvexHull(const vector<double>& vpoints, vector<double>& vconvexplanes, tools::shared_ptr< vector<int> > vconvexfaces, int dim)
     {
         boost::mutex::scoped_lock lock(s_QhullMutex);
         vconvexplanes.resize(0);

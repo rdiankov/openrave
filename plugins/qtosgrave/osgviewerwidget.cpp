@@ -293,10 +293,10 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     setLayout(grid);
 
     //  Sets pickhandler
-    _picker = new OSGPickHandler(std::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), std::bind(&ViewerWidget::UpdateFromOSG,this));
+    _picker = new OSGPickHandler(tools::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), tools::bind(&ViewerWidget::UpdateFromOSG,this));
     _osgview->addEventHandler(_picker);
 
-    _keyhandler = new OpenRAVEKeyboardEventHandler(std::bind(&ViewerWidget::HandleOSGKeyDown, this, _1, _2));
+    _keyhandler = new OpenRAVEKeyboardEventHandler(tools::bind(&ViewerWidget::HandleOSGKeyDown, this, _1, _2));
     _osgview->addEventHandler(_keyhandler);
 
     // initialize the environment
@@ -864,7 +864,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, i
 KinBodyItemPtr ViewerWidget::_GetItemFromName(const std::string& name)
 {
     KinBodyPtr pbody = _penv->GetKinBody(name);
-    KinBodyItemPtr pitem = std::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
+    KinBodyItemPtr pitem = tools::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
     return pitem;
 }
 
@@ -881,7 +881,7 @@ KinBodyItemPtr ViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
             if( !pitem ) {
                 RAVELOG_WARN("trying to use a deleted item\n");
             }
-            return std::dynamic_pointer_cast<KinBodyItem>(pitem);
+            return tools::dynamic_pointer_cast<KinBodyItem>(pitem);
         }
     }
 
@@ -1012,7 +1012,7 @@ void ViewerWidget::_InitializeLights(int nlights)
 //    FOREACH(itbody,vecbodies) {
 //        BOOST_ASSERT( !!itbody->pbody );
 //        KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-//        KinBodyItemPtr pitem = std::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
+//        KinBodyItemPtr pitem = tools::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
 //        if (!!pitem) {
 //            pitem->UpdateFromOSG();
 //        }

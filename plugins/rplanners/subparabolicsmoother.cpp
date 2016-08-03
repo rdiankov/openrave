@@ -92,7 +92,7 @@ public:
         }
 
         uint32_t basetime = utils::GetMilliTime();
-        TrajectoryTimingParametersConstPtr parameters = std::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
+        TrajectoryTimingParametersConstPtr parameters = tools::dynamic_pointer_cast<TrajectoryTimingParameters const>(GetParameters());
 
         vector<ParabolicRamp::Vector> path;
         path.reserve(ptraj->GetNumWaypoints());

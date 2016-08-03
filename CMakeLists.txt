@@ -58,8 +58,11 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 if( OPT_CXX11 )
+  message(STATUS "Compiling with c++11 enabled")
   set(OPENRAVE_USE_CXX11 1)
   add_definitions("-DOPENRAVE_USE_CXX11")
+else()
+  set(OPENRAVE_USE_CXX11 0)
 endif()
 
 if(OPT_DOUBLE_PRECISION)

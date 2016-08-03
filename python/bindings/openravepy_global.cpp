@@ -1090,7 +1090,7 @@ void init_openravepy_global()
     ;
 
     //boost::python::register_ptr_to_python< UserDataPtr >();
-    class_<UserData, std::shared_ptr<UserData> >("UserData", DOXY_CLASS(UserData))
+    class_<UserData, tools::shared_ptr<UserData> >("UserData", DOXY_CLASS(UserData))
     ;
 
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");

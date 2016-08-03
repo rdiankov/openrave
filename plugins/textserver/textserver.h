@@ -241,14 +241,14 @@ private:
         struct sockaddr_in client_address;
         bool bInit;
     };
-    typedef std::shared_ptr<Socket> SocketPtr;
-    typedef std::shared_ptr<Socket const> SocketConstPtr;
+    typedef tools::shared_ptr<Socket> SocketPtr;
+    typedef tools::shared_ptr<Socket const> SocketConstPtr;
 
     /// \param in is the data passed from the network
     /// \param out is the return data that will be passed to the client
-    /// \param std::shared_ptr<void> is a pointer to a void that willl be passed to the worker thread function
-    typedef std::function<bool (istream&, ostream&, std::shared_ptr<void>&)> OpenRaveNetworkFn;
-    typedef std::function<bool (std::shared_ptr<istream>, std::shared_ptr<void>)> OpenRaveWorkerFn;
+    /// \param tools::shared_ptr<void> is a pointer to a void that willl be passed to the worker thread function
+    typedef std::function<bool (istream&, ostream&, tools::shared_ptr<void>&)> OpenRaveNetworkFn;
+    typedef std::function<bool (tools::shared_ptr<istream>, tools::shared_ptr<void>)> OpenRaveWorkerFn;
 
     /// each network function has a function to intially processes the data on the socket function
     /// and one that is executed on the main worker thread to avoid multithreading data synchronization issues
@@ -272,51 +272,51 @@ public:
         _bWorking = false;
         bDestroying = false;
         __description=":Interface Author: Rosen Diankov\n\nSimple text-based server using sockets.";
-        mapNetworkFns["body_checkcollision"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvCheckCollision, this, _1, _2, _3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["body_getjoints"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyGetJointValues, this,_1, _2, _3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["body_destroy"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyDestroy,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["body_enable"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyEnable,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["body_getaabb"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyGetAABB,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["body_getaabbs"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyGetAABBs,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["body_getlinks"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyGetLinks,this,_1,_2,_3),OpenRaveWorkerFn(), true);
-        mapNetworkFns["body_getdof"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodyGetDOF,this,_1,_2,_3),OpenRaveWorkerFn(), true);
-        mapNetworkFns["body_settransform"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orKinBodySetTransform,this,_1,_2,_3),OpenRaveWorkerFn(), false);
-        mapNetworkFns["body_setjoints"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodySetJointValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["body_setjointtorques"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orBodySetJointTorques,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["close"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvClose,this,_1,_2,_3), OpenRaveWorkerFn(),false);
-        mapNetworkFns["createrobot"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvCreateRobot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["createbody"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvCreateKinBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["createmodule"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvCreateModule,this,_1,_2,_3), std::bind(&SimpleTextServer::worEnvCreateModule,this,_1,_2), true);
-        mapNetworkFns["env_dstrprob"] = RAVENETWORKFN(OpenRaveNetworkFn(), std::bind(&SimpleTextServer::worEnvDestroyProblem,this,_1,_2), false);
-        mapNetworkFns["env_getbodies"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvGetBodies,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["env_getrobots"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvGetRobots,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["env_getbody"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvGetBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["env_loadplugin"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvLoadPlugin,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["env_raycollision"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvRayCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["env_stepsimulation"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvStepSimulation,this,_1,_2,_3), std::bind(&SimpleTextServer::worEnvStepSimulation,this,_1,_2), false);
-        mapNetworkFns["env_triangulate"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvTriangulate,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["loadscene"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvLoadScene,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["plot"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["problem_sendcmd"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orProblemSendCommand,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_checkselfcollision"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotCheckSelfCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_controllersend"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotControllerSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_controllerset"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotControllerSet,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_getactivedof"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotGetActiveDOF,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_getdofvalues"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotGetDOFValues,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_getlimits"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotGetDOFLimits,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_getmanipulators"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotGetManipulators,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_getsensors"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotGetAttachedSensors,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_sensorsend"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotSensorSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_sensorconfigure"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotSensorConfigure,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_sensordata"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotSensorData,this,_1,_2,_3), OpenRaveWorkerFn(), true);
-        mapNetworkFns["robot_setactivedofs"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotSetActiveDOFs,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["robot_setactivemanipulator"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotSetActiveManipulator,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["robot_setdof"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orRobotSetDOFValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
-        mapNetworkFns["robot_traj"] = RAVENETWORKFN(OpenRaveNetworkFn(), std::bind(&SimpleTextServer::worRobotStartActiveTrajectory,this,_1,_2), false);
-        mapNetworkFns["render"] = RAVENETWORKFN(OpenRaveNetworkFn(), std::bind(&SimpleTextServer::worRender,this,_1,_2), false);
-        mapNetworkFns["setoptions"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvSetOptions,this,_1,_2,_3), std::bind(&SimpleTextServer::worSetOptions,this,_1,_2), false);
+        mapNetworkFns["body_checkcollision"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvCheckCollision, this, _1, _2, _3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["body_getjoints"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyGetJointValues, this,_1, _2, _3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["body_destroy"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyDestroy,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["body_enable"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyEnable,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["body_getaabb"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyGetAABB,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["body_getaabbs"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyGetAABBs,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["body_getlinks"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyGetLinks,this,_1,_2,_3),OpenRaveWorkerFn(), true);
+        mapNetworkFns["body_getdof"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodyGetDOF,this,_1,_2,_3),OpenRaveWorkerFn(), true);
+        mapNetworkFns["body_settransform"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orKinBodySetTransform,this,_1,_2,_3),OpenRaveWorkerFn(), false);
+        mapNetworkFns["body_setjoints"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodySetJointValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["body_setjointtorques"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orBodySetJointTorques,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["close"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvClose,this,_1,_2,_3), OpenRaveWorkerFn(),false);
+        mapNetworkFns["createrobot"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvCreateRobot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["createbody"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvCreateKinBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["createmodule"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvCreateModule,this,_1,_2,_3), tools::bind(&SimpleTextServer::worEnvCreateModule,this,_1,_2), true);
+        mapNetworkFns["env_dstrprob"] = RAVENETWORKFN(OpenRaveNetworkFn(), tools::bind(&SimpleTextServer::worEnvDestroyProblem,this,_1,_2), false);
+        mapNetworkFns["env_getbodies"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvGetBodies,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["env_getrobots"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvGetRobots,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["env_getbody"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvGetBody,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["env_loadplugin"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvLoadPlugin,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["env_raycollision"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvRayCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["env_stepsimulation"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvStepSimulation,this,_1,_2,_3), tools::bind(&SimpleTextServer::worEnvStepSimulation,this,_1,_2), false);
+        mapNetworkFns["env_triangulate"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvTriangulate,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["loadscene"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvLoadScene,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["plot"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvPlot,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["problem_sendcmd"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orProblemSendCommand,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_checkselfcollision"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotCheckSelfCollision,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_controllersend"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotControllerSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_controllerset"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotControllerSet,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_getactivedof"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotGetActiveDOF,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_getdofvalues"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotGetDOFValues,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_getlimits"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotGetDOFLimits,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_getmanipulators"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotGetManipulators,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_getsensors"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotGetAttachedSensors,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_sensorsend"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotSensorSend,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_sensorconfigure"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotSensorConfigure,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_sensordata"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotSensorData,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["robot_setactivedofs"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotSetActiveDOFs,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["robot_setactivemanipulator"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotSetActiveManipulator,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["robot_setdof"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orRobotSetDOFValues,this,_1,_2,_3), OpenRaveWorkerFn(), false);
+        mapNetworkFns["robot_traj"] = RAVENETWORKFN(OpenRaveNetworkFn(), tools::bind(&SimpleTextServer::worRobotStartActiveTrajectory,this,_1,_2), false);
+        mapNetworkFns["render"] = RAVENETWORKFN(OpenRaveNetworkFn(), tools::bind(&SimpleTextServer::worRender,this,_1,_2), false);
+        mapNetworkFns["setoptions"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvSetOptions,this,_1,_2,_3), tools::bind(&SimpleTextServer::worSetOptions,this,_1,_2), false);
         mapNetworkFns["test"] = RAVENETWORKFN(OpenRaveNetworkFn(), OpenRaveWorkerFn(), false);
-        mapNetworkFns["wait"] = RAVENETWORKFN(std::bind(&SimpleTextServer::orEnvWait,this,_1,_2,_3), OpenRaveWorkerFn(), true);
+        mapNetworkFns["wait"] = RAVENETWORKFN(tools::bind(&SimpleTextServer::orEnvWait,this,_1,_2,_3), OpenRaveWorkerFn(), true);
 
         string logfilename = RaveGetHomeDirectory() + string("/textserver.log");
         flog.open(logfilename.c_str());
@@ -402,8 +402,8 @@ public:
 #endif
 
         RAVELOG_DEBUG("text server listening on port %d\n",_nPort);
-        _servthread.reset(new boost::thread(std::bind(&SimpleTextServer::_listen_threadcb,this)));
-        _workerthread.reset(new boost::thread(std::bind(&SimpleTextServer::_worker_threadcb,this)));
+        _servthread.reset(new boost::thread(tools::bind(&SimpleTextServer::_listen_threadcb,this)));
+        _workerthread.reset(new boost::thread(tools::bind(&SimpleTextServer::_worker_threadcb,this)));
         bInitThread = true;
         return 0;
     }
@@ -472,11 +472,11 @@ public:
 
 private:
 
-    inline std::shared_ptr<SimpleTextServer> shared_server() {
-        return std::dynamic_pointer_cast<SimpleTextServer>(shared_from_this());
+    inline tools::shared_ptr<SimpleTextServer> shared_server() {
+        return tools::dynamic_pointer_cast<SimpleTextServer>(shared_from_this());
     }
-    inline std::shared_ptr<SimpleTextServer const> shared_server_const() const {
-        return std::dynamic_pointer_cast<SimpleTextServer const>(shared_from_this());
+    inline tools::shared_ptr<SimpleTextServer const> shared_server_const() const {
+        return tools::dynamic_pointer_cast<SimpleTextServer const>(shared_from_this());
     }
 
     // called from threads other than the main worker to wait until
@@ -547,7 +547,7 @@ private:
             }
 
             // start a new thread
-            _listReadThreads.push_back(std::shared_ptr<boost::thread>(new boost::thread(std::bind(&SimpleTextServer::_read_threadcb,shared_server(), psocket))));
+            _listReadThreads.push_back(tools::shared_ptr<boost::thread>(new boost::thread(tools::bind(&SimpleTextServer::_read_threadcb,shared_server(), psocket))));
             psocket.reset(new Socket());
         }
 
@@ -567,7 +567,7 @@ private:
                     flog << index++ << ": " << line << endl;
                 }
 
-                std::shared_ptr<istream> is(new stringstream(line));
+                tools::shared_ptr<istream> is(new stringstream(line));
                 *is >> cmd;
                 if( !*is ) {
                     RAVELOG_ERROR("Failed to get command\n");
@@ -580,7 +580,7 @@ private:
                 map<string, RAVENETWORKFN>::iterator itfn = mapNetworkFns.find(cmd);
                 if( itfn != mapNetworkFns.end() ) {
                     bool bCallWorker = true;
-                    std::shared_ptr<void> pdata;
+                    tools::shared_ptr<void> pdata;
 
                     // need to set w.args before pcmdend is modified
                     sout.str(""); sout.clear();
@@ -625,7 +625,7 @@ private:
                         BOOST_ASSERT(!!itfn->second.fnWorker);
                         is->clear();
                         is->seekg(inputpos);
-                        ScheduleWorker(std::bind(itfn->second.fnWorker,is,pdata));
+                        ScheduleWorker(tools::bind(itfn->second.fnWorker,is,pdata));
                     }
                 }
                 else {
@@ -644,8 +644,8 @@ private:
 
     int _nPort;     ///< port used for listening to incoming connections
 
-    std::shared_ptr<boost::thread> _servthread, _workerthread;
-    list<std::shared_ptr<boost::thread> > _listReadThreads;
+    tools::shared_ptr<boost::thread> _servthread, _workerthread;
+    list<tools::shared_ptr<boost::thread> > _listReadThreads;
 
     boost::mutex _mutexWorker;
     boost::condition _condWorker;
@@ -697,7 +697,7 @@ protected:
     }
 
     /// orRender - Render the new OpenRAVE scene
-    bool worRender(std::shared_ptr<istream> is, std::shared_ptr<void> pdata)
+    bool worRender(tools::shared_ptr<istream> is, tools::shared_ptr<void> pdata)
     {
         string cmd;
         while(1) {
@@ -726,7 +726,7 @@ protected:
     }
 
     /// orEnvSetOptions - Set physics simulation parameters,
-    bool orEnvSetOptions(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvSetOptions(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         string cmd;
         is >> cmd;
@@ -744,7 +744,7 @@ protected:
     {
         exit(0);
     }
-    bool worSetOptions(std::shared_ptr<istream> is, std::shared_ptr<void> pdata)
+    bool worSetOptions(tools::shared_ptr<istream> is, tools::shared_ptr<void> pdata)
     {
         string cmd;
         while(1) {
@@ -843,7 +843,7 @@ protected:
     }
 
     /// orEnvSetOptions - Set physics simulation parameters,
-    bool orEnvLoadScene(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvLoadScene(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         bool bClearScene=false;
         string filename;
@@ -870,7 +870,7 @@ protected:
     }
 
     /// robot = orEnvCreateRobot(name, xmlfile) - create a specific robot, return a robot handle (a robot is also a kinbody)
-    bool orEnvCreateRobot(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvCreateRobot(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         string robotname, xmlfile, robottype;
         is >> robotname >> xmlfile >> robottype;
@@ -892,7 +892,7 @@ protected:
         return true;
     }
 
-    bool orEnvCreateModule(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvCreateModule(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         string problemname;
         bool bDestroyDuplicates = true;
@@ -930,13 +930,13 @@ protected:
         return true;
     }
 
-    bool worEnvCreateModule(std::shared_ptr<istream> is, std::shared_ptr<void> pdata)
+    bool worEnvCreateModule(tools::shared_ptr<istream> is, tools::shared_ptr<void> pdata)
     {
-        GetEnv()->Add(std::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, true, std::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
+        GetEnv()->Add(tools::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->first, true, tools::static_pointer_cast< pair<ModuleBasePtr,string> >(pdata)->second);
         return true;
     }
 
-    bool worEnvDestroyProblem(std::shared_ptr<istream> is, std::shared_ptr<void> pdata)
+    bool worEnvDestroyProblem(tools::shared_ptr<istream> is, tools::shared_ptr<void> pdata)
     {
         int index = 0;
         *is >> index;
@@ -957,7 +957,7 @@ protected:
     }
 
     /// body = orEnvCreateKinBody(name, xmlfile) - create a specific kinbody
-    bool orEnvCreateKinBody(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvCreateKinBody(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         string bodyname, xmlfile;
         is >> bodyname >> xmlfile;
@@ -981,7 +981,7 @@ protected:
 
     // bodyid = orEnvGetBody(bodyname)
     // Returns the id of the body given its name
-    bool orEnvGetBody(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvGetBody(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         string bodyname;
         is >> bodyname;
@@ -1001,7 +1001,7 @@ protected:
         return true;
     }
 
-    bool orEnvGetRobots(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvGetRobots(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1016,7 +1016,7 @@ protected:
         return true;
     }
 
-    bool orEnvGetBodies(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvGetBodies(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1032,7 +1032,7 @@ protected:
     }
 
     /// values = orBodySetTransform(body, position, rotation) - returns the dof values of a kinbody
-    bool orKinBodySetTransform(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orKinBodySetTransform(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
@@ -1086,7 +1086,7 @@ protected:
     }
 
     /// orBodyDestroy(robot, indices, affinedofs, axis) - returns the dof values of a kinbody
-    bool orBodyDestroy(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyDestroy(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
@@ -1096,7 +1096,7 @@ protected:
         return GetEnv()->Remove(pbody);
     }
 
-    bool orBodyEnable(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyEnable(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         KinBodyPtr pbody = orMacroGetBody(is);
@@ -1113,7 +1113,7 @@ protected:
     }
 
     /// values = orBodyGetLinks(body) - returns the dof values of a kinbody
-    bool orBodyGetLinks(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyGetLinks(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1129,7 +1129,7 @@ protected:
         return true;
     }
 
-    bool orRobotControllerSend(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotControllerSend(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1144,7 +1144,7 @@ protected:
         return false;
     }
 
-    bool orRobotSensorSend(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotSensorSend(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1163,7 +1163,7 @@ protected:
         return probot->GetAttachedSensors().at(sensorindex)->GetSensor()->SendCommand(os,is);
     }
 
-    bool orRobotSensorConfigure(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotSensorConfigure(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1210,7 +1210,7 @@ protected:
         return true;
     }
 
-    bool orRobotSensorData(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotSensorData(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1227,7 +1227,7 @@ protected:
             return false;
         }
         SensorBasePtr psensor = probot->GetAttachedSensors().at(sensorindex)->GetSensor();
-        std::shared_ptr<SensorBase::SensorData> psensordata = psensor->CreateSensorData();
+        tools::shared_ptr<SensorBase::SensorData> psensordata = psensor->CreateSensorData();
 
         if( !psensordata ) {
             RAVELOG_ERROR("Robot %s, failed to create sensor %s data\n", probot->GetName().c_str(), probot->GetAttachedSensors().at(sensorindex)->GetName().c_str());
@@ -1244,7 +1244,7 @@ protected:
 
         switch(psensordata->GetType()) {
         case SensorBase::ST_Laser: {
-            std::shared_ptr<SensorBase::LaserSensorData> plaserdata = std::static_pointer_cast<SensorBase::LaserSensorData>(psensordata);
+            tools::shared_ptr<SensorBase::LaserSensorData> plaserdata = tools::static_pointer_cast<SensorBase::LaserSensorData>(psensordata);
             os << plaserdata->ranges.size() << " ";
             if( plaserdata->positions.size() != plaserdata->ranges.size() ) {
                 os << "1 ";
@@ -1280,14 +1280,14 @@ protected:
             break;
         }
         case SensorBase::ST_Camera: {
-            std::shared_ptr<SensorBase::CameraSensorData> pcameradata = std::static_pointer_cast<SensorBase::CameraSensorData>(psensordata);
+            tools::shared_ptr<SensorBase::CameraSensorData> pcameradata = tools::static_pointer_cast<SensorBase::CameraSensorData>(psensordata);
 
             if( psensor->GetSensorGeometry()->GetType() != SensorBase::ST_Camera ) {
                 RAVELOG_ERROR("sensor geometry not a camera type\n");
                 return false;
             }
 
-            SensorBase::CameraGeomDataConstPtr pgeom = std::static_pointer_cast<SensorBase::CameraGeomData const>(psensor->GetSensorGeometry());
+            SensorBase::CameraGeomDataConstPtr pgeom = tools::static_pointer_cast<SensorBase::CameraGeomData const>(psensor->GetSensorGeometry());
 
             if( (int)pcameradata->vimagedata.size() != pgeom->width*pgeom->height*3 ) {
                 RAVELOG_ERROR(str(boost::format("image data wrong size %d != %d\n")%pcameradata->vimagedata.size()%(pgeom->width*pgeom->height*3)));
@@ -1331,7 +1331,7 @@ protected:
         return true;
     }
 
-    bool orRobotControllerSet(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotControllerSet(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1356,7 +1356,7 @@ protected:
         return probot->SetController(pcontroller, dofindices,1);
     }
 
-    bool orEnvClose(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvClose(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         vector<int> ids = vector<int>((istream_iterator<int>(is)), istream_iterator<int>());
         if( ids.size() == 0 ) {
@@ -1370,7 +1370,7 @@ protected:
         return true;
     }
 
-    bool orEnvPlot(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvPlot(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         int id = _nNextFigureId++;
 
@@ -1466,7 +1466,7 @@ protected:
     }
 
     /// orRobotSetActiveDOFs(robot, indices, affinedofs, axis) - returns the dof values of a kinbody
-    bool orRobotSetActiveDOFs(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotSetActiveDOFs(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1511,7 +1511,7 @@ protected:
     }
 
     /// orRobotSetActiveManipulator(robot, manip) - returns the dof values of a kinbody
-    bool orRobotSetActiveManipulator(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotSetActiveManipulator(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1528,7 +1528,7 @@ protected:
         return true;
     }
 
-    bool orRobotCheckSelfCollision(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotCheckSelfCollision(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1542,7 +1542,7 @@ protected:
     }
 
     /// dofs = orRobotGetActiveDOF(body) - returns the active degrees of freedom of the robot
-    bool orRobotGetActiveDOF(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotGetActiveDOF(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1555,7 +1555,7 @@ protected:
     }
 
     /// dofs = orBodyGetAABB(body) - returns the number of active joints of the body
-    bool orBodyGetAABB(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyGetAABB(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1569,7 +1569,7 @@ protected:
     }
 
     /// values = orBodyGetLinks(body) - returns the dof values of a kinbody
-    bool orBodyGetAABBs(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyGetAABBs(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1586,7 +1586,7 @@ protected:
     }
 
     /// dofs = orBodyGetDOF(body) - returns the number of active joints of the body
-    bool orBodyGetDOF(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyGetDOF(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1599,7 +1599,7 @@ protected:
     }
 
     /// values = orBodyGetDOFValues(body, indices) - returns the dof values of a kinbody
-    bool orBodyGetJointValues(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodyGetJointValues(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1632,7 +1632,7 @@ protected:
     }
 
     /// values = orRobotGetDOFValues(body, indices) - returns the dof values of a kinbody
-    bool orRobotGetDOFValues(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotGetDOFValues(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1664,7 +1664,7 @@ protected:
     }
 
     /// [lower, upper] = orKinBodyGetDOFLimits(body) - returns the dof limits of a kinbody
-    bool orRobotGetDOFLimits(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotGetDOFLimits(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1685,7 +1685,7 @@ protected:
         return true;
     }
 
-    bool orRobotGetManipulators(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotGetManipulators(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1734,7 +1734,7 @@ protected:
         return true;
     }
 
-    bool orRobotGetAttachedSensors(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotGetAttachedSensors(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1766,7 +1766,7 @@ protected:
     }
 
     /// orBodySetJointValues(body, values, indices)
-    bool orBodySetJointValues(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodySetJointValues(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1839,7 +1839,7 @@ protected:
     }
 
     /// orBodySetJointTorques(body, values, indices)
-    bool orBodySetJointTorques(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orBodySetJointTorques(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1869,7 +1869,7 @@ protected:
     }
 
     /// orRobotSetDOFValues(body, values, indices)
-    bool orRobotSetDOFValues(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orRobotSetDOFValues(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -1938,7 +1938,7 @@ protected:
 
     /// orRobotStartActiveTrajectory(robot, jointvalues, timestamps, transformations)
     /// - starts a trajectory on the robot with the active degrees of freedom
-    bool worRobotStartActiveTrajectory(std::shared_ptr<istream> is, std::shared_ptr<void> pdata)
+    bool worRobotStartActiveTrajectory(tools::shared_ptr<istream> is, tools::shared_ptr<void> pdata)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         RobotBasePtr probot = orMacroGetRobot(*is);
@@ -2030,7 +2030,7 @@ protected:
     }
 
     /// [collision, bodycolliding] = orEnvCheckCollision(body) - returns whether a certain body is colliding with the scene
-    bool orEnvCheckCollision(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvCheckCollision(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -2102,7 +2102,7 @@ protected:
     /// every ray is 6 dims
     /// collision is a N dim vector that is 0 for non colliding rays and 1 for colliding rays
     /// info is a Nx6 vector where the first 3 columns are position and last 3 are normals
-    bool orEnvRayCollision(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvRayCollision(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
@@ -2149,7 +2149,7 @@ protected:
         return true;
     }
 
-    bool orEnvStepSimulation(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvStepSimulation(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         dReal timestep=0;
         bool bSync=true;
@@ -2162,7 +2162,7 @@ protected:
         return true;
     }
 
-    bool worEnvStepSimulation(std::shared_ptr<istream> is, std::shared_ptr<void> pdata)
+    bool worEnvStepSimulation(tools::shared_ptr<istream> is, tools::shared_ptr<void> pdata)
     {
         dReal timestep=0;
         bool bSync=true;
@@ -2173,7 +2173,7 @@ protected:
         return true;
     }
 
-    bool orEnvTriangulate(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvTriangulate(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
 
@@ -2207,7 +2207,7 @@ protected:
 
     // waits for rave to finish commands
     // if a robot id is specified, also waits for that robot's trajectory to finish
-    bool orEnvWait(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvWait(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         _SyncWithWorkerThread();
         RobotBasePtr probot;
@@ -2256,7 +2256,7 @@ protected:
     }
 
     /// sends a comment to the problem
-    bool orProblemSendCommand(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orProblemSendCommand(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         int problemid=0, dosync;
         bool bDoLock;
@@ -2294,7 +2294,7 @@ protected:
     }
 
     /// sends a comment to the problem
-    bool orEnvLoadPlugin(istream& is, ostream& os, std::shared_ptr<void>& pdata)
+    bool orEnvLoadPlugin(istream& is, ostream& os, tools::shared_ptr<void>& pdata)
     {
         string pluginname;
         is >> pluginname;

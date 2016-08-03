@@ -67,7 +67,7 @@ public:
     }
 
     virtual bool SimulationStep(dReal fElapsedTime) {
-        std::shared_ptr<FunctionUserData> p = std::dynamic_pointer_cast<FunctionUserData>(GetUserData());
+        tools::shared_ptr<FunctionUserData> p = tools::dynamic_pointer_cast<FunctionUserData>(GetUserData());
         bool ret = false;
         if( !!p ) {
             PyGILState_STATE gstate = PyGILState_Ensure();
@@ -88,7 +88,7 @@ public:
     }
 };
 
-std::shared_ptr<void> g_PythonBindingInterfaceHandle;
+tools::shared_ptr<void> g_PythonBindingInterfaceHandle;
 
 InterfaceBasePtr PythonBindingCreateInterface(EnvironmentBasePtr penv, std::istream& istream)
 {
@@ -99,7 +99,7 @@ InterfaceBasePtr RegisterSimulationFunction(int environmentid, boost::python::ob
 {
     ModuleBasePtr module = RaveCreateModule(RaveGetEnvironment(environmentid), "PythonBinding");
     if( !!module ) {
-        std::shared_ptr<FunctionUserData> p = std::dynamic_pointer_cast<FunctionUserData>(module->GetUserData());
+        tools::shared_ptr<FunctionUserData> p = tools::dynamic_pointer_cast<FunctionUserData>(module->GetUserData());
         p->simulationfn = simulationfn;
         module->GetEnv()->Add(module,true,"");
     }

@@ -25,7 +25,7 @@ using namespace std;
 namespace cppexamples {
 
 /// \brief builds up the configuration space of a robot and a door
-class DoorConfiguration : public std::enable_shared_from_this<DoorConfiguration>
+class DoorConfiguration : public tools::enable_shared_from_this<DoorConfiguration>
 {
     static dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
     {
@@ -193,26 +193,26 @@ public:
 
         _robotdistmetric.reset(new planningutils::SimpleDistanceMetric(_probot));
         _doordistmetric.reset(new planningutils::SimpleDistanceMetric(_ptarget));
-        params->_distmetricfn = std::bind(&DoorConfiguration::ComputeDistance,shared_from_this(),_1,_2);
-        params->_diffstatefn = std::bind(&DoorConfiguration::DiffState,shared_from_this(),_1,_2);
+        params->_distmetricfn = tools::bind(&DoorConfiguration::ComputeDistance,shared_from_this(),_1,_2);
+        params->_diffstatefn = tools::bind(&DoorConfiguration::DiffState,shared_from_this(),_1,_2);
 
         SpaceSamplerBasePtr pconfigsampler1 = RaveCreateSpaceSampler(_probot->GetEnv(),str(boost::format("robotconfiguration %s")%_probot->GetName()));
-        _robotsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler1,std::bind(&planningutils::SimpleDistanceMetric::Eval,_robotdistmetric,_1,_2), std::bind(&RobotBase::SubtractActiveDOFValues,_probot,_1,_2)));
+        _robotsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler1,tools::bind(&planningutils::SimpleDistanceMetric::Eval,_robotdistmetric,_1,_2), tools::bind(&RobotBase::SubtractActiveDOFValues,_probot,_1,_2)));
         SpaceSamplerBasePtr pconfigsampler2 = RaveCreateSpaceSampler(_probot->GetEnv(),str(boost::format("robotconfiguration %s")%_ptarget->GetName()));
-        _doorsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler2,std::bind(&planningutils::SimpleDistanceMetric::Eval,_doordistmetric,_1,_2), std::bind(&DoorConfiguration::SubtractStates,shared_from_this(),_1,_2)));
-        params->_samplefn = std::bind(&DoorConfiguration::Sample,shared_from_this(),_1);
+        _doorsamplefn.reset(new planningutils::SimpleNeighborhoodSampler(pconfigsampler2,tools::bind(&planningutils::SimpleDistanceMetric::Eval,_doordistmetric,_1,_2), tools::bind(&DoorConfiguration::SubtractStates,shared_from_this(),_1,_2)));
+        params->_samplefn = tools::bind(&DoorConfiguration::Sample,shared_from_this(),_1);
         params->_sampleneighfn.clear(); // won't be using it
 
-        params->_setstatefn = std::bind(&DoorConfiguration::SetState,shared_from_this(),_1);
-        params->_getstatefn = std::bind(&DoorConfiguration::GetState,shared_from_this(),_1);
-        params->_neighstatefn = std::bind(&DoorConfiguration::NeightState,shared_from_this(),_1,_2,_3);
+        params->_setstatefn = tools::bind(&DoorConfiguration::SetState,shared_from_this(),_1);
+        params->_getstatefn = tools::bind(&DoorConfiguration::GetState,shared_from_this(),_1);
+        params->_neighstatefn = tools::bind(&DoorConfiguration::NeightState,shared_from_this(),_1,_2,_3);
 
         std::list<KinBodyPtr> listCheckCollisions;
         listCheckCollisions.push_back(_probot);
         _collision.reset(new planningutils::LineCollisionConstraint(listCheckCollisions));
-        params->_checkpathconstraintsfn = std::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _1, _2, _3, _4);
+        params->_checkpathconstraintsfn = tools::bind(&planningutils::LineCollisionConstraint::Check,_collision,params, _1, _2, _3, _4);
 
-        _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, std::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));
+        _ikfilter = _pmanip->GetIkSolver()->RegisterCustomFilter(0, tools::bind(&DoorConfiguration::_CheckContinuityFilter, shared_from_this(), _1, _2, _3));
     }
 
     RobotBase::ManipulatorPtr _pmanip;
@@ -224,12 +224,12 @@ public:
     Transform _tmanipprev, _tmanipmidreal;
     UserDataPtr _ikfilter;
 
-    std::shared_ptr<planningutils::SimpleDistanceMetric> _robotdistmetric, _doordistmetric;
-    std::shared_ptr<planningutils::SimpleNeighborhoodSampler> _robotsamplefn, _doorsamplefn;
-    std::shared_ptr<planningutils::LineCollisionConstraint> _collision;
+    tools::shared_ptr<planningutils::SimpleDistanceMetric> _robotdistmetric, _doordistmetric;
+    tools::shared_ptr<planningutils::SimpleNeighborhoodSampler> _robotsamplefn, _doorsamplefn;
+    tools::shared_ptr<planningutils::LineCollisionConstraint> _collision;
 };
 
-typedef std::shared_ptr<DoorConfiguration> DoorConfigurationPtr;
+typedef tools::shared_ptr<DoorConfiguration> DoorConfigurationPtr;
 
 class PlanningDoorExample : public OpenRAVEExample
 {

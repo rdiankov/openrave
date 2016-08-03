@@ -23,15 +23,15 @@ public:
     DualManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
         using namespace std::placeholders;
         __description = ":Interface Author: Achint Aggarwal\n\nInterface for planners using more than one manipulator simultaneously.";
-        RegisterCommand("SetActiveManip",std::bind(&DualManipulation::SetActiveManip,this,_1,_2),
+        RegisterCommand("SetActiveManip",tools::bind(&DualManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");
-        RegisterCommand("GrabBody",std::bind(&DualManipulation::GrabBody,this,_1,_2),
+        RegisterCommand("GrabBody",tools::bind(&DualManipulation::GrabBody,this,_1,_2),
                         "Robot calls ::Grab on a body with its current manipulator");
-        RegisterCommand("ReleaseAll",std::bind(&DualManipulation::ReleaseAll,this,_1,_2),
+        RegisterCommand("ReleaseAll",tools::bind(&DualManipulation::ReleaseAll,this,_1,_2),
                         "Releases all grabbed bodies (RobotBase::ReleaseAllGrabbed).");
-        RegisterCommand("MoveAllJoints",std::bind(&DualManipulation::MoveAllJoints,this,_1,_2),
+        RegisterCommand("MoveAllJoints",tools::bind(&DualManipulation::MoveAllJoints,this,_1,_2),
                         "Moves the current active joints to a specified goal destination\n");
-        RegisterCommand("MoveBothHandsStraight",std::bind(&DualManipulation::MoveBothHandsStraight,this,_1,_2),
+        RegisterCommand("MoveBothHandsStraight",tools::bind(&DualManipulation::MoveBothHandsStraight,this,_1,_2),
                         "Move both the end-effectors in straight lines until collision or IK fails.");
     }
 
@@ -94,11 +94,11 @@ public:
     }
 protected:
 
-    inline std::shared_ptr<DualManipulation> shared_problem() {
-        return std::dynamic_pointer_cast<DualManipulation>(shared_from_this());
+    inline tools::shared_ptr<DualManipulation> shared_problem() {
+        return tools::dynamic_pointer_cast<DualManipulation>(shared_from_this());
     }
-    inline std::shared_ptr<DualManipulation const> shared_problem_const() const {
-        return std::dynamic_pointer_cast<DualManipulation const>(shared_from_this());
+    inline tools::shared_ptr<DualManipulation const> shared_problem_const() const {
+        return tools::dynamic_pointer_cast<DualManipulation const>(shared_from_this());
     }
 
     bool SetActiveManip(ostream& sout, istream& sinput)
@@ -183,7 +183,7 @@ protected:
     {
         string strtrajfilename;
         bool bExecute = true;
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
         int nMaxTries = 3;
         bool bSuccess=true;
 
@@ -216,7 +216,7 @@ protected:
                 sinput >> *it;
             }
             else if( cmd == "outputtraj" )
-                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
             else if( cmd == "maxiter" )
                 sinput >> params->_nMaxIterations;
             else if( cmd == "execute" )
@@ -282,15 +282,15 @@ protected:
 
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting DualArmConstrained function in planner parameters\n");
-            std::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
+            tools::shared_ptr<CM::DualArmManipulation<double> > dplanner(new CM::DualArmManipulation<double>(robot,pmanipA,pmanipI));
             dplanner->_distmetricfn = params->_distmetricfn;
-            params->_neighstatefn = std::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,std::placeholders::_1,std::placeholders::_2);
+            params->_neighstatefn = tools::bind(&CM::DualArmManipulation<double>::DualArmConstrained,dplanner,std::placeholders::_1,std::placeholders::_2);
             params->_nMaxIterations = 1000;
         }
 
-        std::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        tools::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
 
-        std::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
+        tools::shared_ptr<PlannerBase> rrtplanner = RaveCreatePlanner(GetEnv(),_strRRTPlannerName);
         if( !rrtplanner ) {
             RAVELOG_ERROR("failed to create BiRRTs\n");
             return false;
@@ -339,7 +339,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip1 = robot->GetManipulators().at(1);
 
         bool bIgnoreFirstCollision = true;
-        std::shared_ptr<ostream> pOutputTrajStream;
+        tools::shared_ptr<ostream> pOutputTrajStream;
         string cmd;
         while(!sinput.eof()) {
             sinput >> cmd;
@@ -350,7 +350,7 @@ protected:
             if( cmd == "minsteps" )
                 sinput >> minsteps;
             else if( cmd == "outputtraj")
-                pOutputTrajStream = std::shared_ptr<ostream>(&sout,utils::null_deleter());
+                pOutputTrajStream = tools::shared_ptr<ostream>(&sout,utils::null_deleter());
             else if( cmd == "maxsteps")
                 sinput >> maxsteps;
             else if( cmd == "stepsize")
@@ -404,7 +404,7 @@ protected:
         //robot->SetActiveDOFs(pmanip->GetArmIndices());
         planningutils::JitterActiveDOF(robot,100);     // try to jitter out, don't worry if it fails
 
-        std::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
+        tools::shared_ptr<Trajectory> ptraj(RaveCreateTrajectory(GetEnv(),robot->GetActiveDOF()));
         Trajectory::TPOINT point;
         vector<dReal> vPrevValues,v0Joints,v1Joints;
         bool bPrevInCollision = GetEnv()->CheckCollision(KinBodyConstPtr(robot))||robot->CheckSelfCollision();

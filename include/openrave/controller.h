@@ -139,8 +139,8 @@ public:
     virtual ControllerBasePtr GetController(int dof) const = 0;
 };
 
-typedef std::shared_ptr<MultiControllerBase> MultiControllerBasePtr;
-typedef std::shared_ptr<MultiControllerBase const> MultiControllerBaseConstPtr;
+typedef tools::shared_ptr<MultiControllerBase> MultiControllerBasePtr;
+typedef tools::shared_ptr<MultiControllerBase const> MultiControllerBaseConstPtr;
 
 } // end namespace OpenRAVE
 

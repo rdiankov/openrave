@@ -162,7 +162,7 @@ protected:
     UserDataPtr _changehandler; ///< tracks changes for the robot and re-initializes parameters
 };
 
-typedef std::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmootherPtr;
+typedef tools::shared_ptr<ActiveDOFTrajectorySmoother> ActiveDOFTrajectorySmootherPtr;
 
 /** \brief Retimer planner the trajectory points by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -202,7 +202,7 @@ protected:
     UserDataPtr _changehandler; ///< tracks changes for the robot and re-initializes parameters
 };
 
-typedef std::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimerPtr;
+typedef tools::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimerPtr;
 
 /** \brief Retime the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -254,7 +254,7 @@ protected:
     PlannerBasePtr _planner; ///< the planner is setup once in the constructor
 };
 
-typedef std::shared_ptr<AffineTrajectoryRetimer> AffineTrajectoryRetimerPtr;
+typedef tools::shared_ptr<AffineTrajectoryRetimer> AffineTrajectoryRetimerPtr;
 
 /** \brief Retime the trajectory points using all the positional data from the trajectory. <b>[multi-thread safe]</b>
 
@@ -469,10 +469,10 @@ protected:
     std::vector< std::pair<int, std::pair<dReal, dReal> > > _vtorquevalues; ///< cache for dof indices and the torque limits that the current torque should be in
     std::vector< int > _vdofindices;
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
-    std::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
+    tools::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
 };
 
-typedef std::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
+typedef tools::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
 
 /// \deprecated (13/05/29)
 class OPENRAVE_API LineCollisionConstraint
@@ -625,7 +625,7 @@ protected:
     bool _searchfreeparameters;
 };
 
-typedef std::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
+typedef tools::shared_ptr<ManipulatorIKGoalSampler> ManipulatorIKGoalSamplerPtr;
 
 } // planningutils
 } // OpenRAVE

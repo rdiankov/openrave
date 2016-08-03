@@ -262,7 +262,7 @@ public:
         if( !fncallback ) {
             throw openrave_exception(_("callback not specified"));
         }
-        UserDataPtr p = _pplanner->RegisterPlanCallback(std::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,std::placeholders::_1));
+        UserDataPtr p = _pplanner->RegisterPlanCallback(tools::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,std::placeholders::_1));
         if( !p ) {
             throw openrave_exception(_("no registration callback returned"));
         }

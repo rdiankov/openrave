@@ -33,9 +33,9 @@ public:
 :Interface Author:  Rosen Diankov\n\n\
 Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 ";
-        RegisterCommand("GetGoalIndex",std::bind(&RrtPlanner<Node>::GetGoalIndexCommand,this,_1,_2),
+        RegisterCommand("GetGoalIndex",tools::bind(&RrtPlanner<Node>::GetGoalIndexCommand,this,_1,_2),
                         "returns the goal index of the plan");
-        RegisterCommand("GetInitGoalIndices",std::bind(&RrtPlanner<Node>::GetInitGoalIndicesCommand,this,_1,_2),
+        RegisterCommand("GetInitGoalIndices",tools::bind(&RrtPlanner<Node>::GetInitGoalIndicesCommand,this,_1,_2),
                         "returns the start and goal indices");
         _filterreturn.reset(new ConstraintFilterReturn());
     }
@@ -255,11 +255,11 @@ protected:
     SpatialTree< Node > _treeForward;
     std::vector< NodeBase* > _vecInitialNodes;
 
-    inline std::shared_ptr<RrtPlanner> shared_planner() {
-        return std::dynamic_pointer_cast<RrtPlanner>(shared_from_this());
+    inline tools::shared_ptr<RrtPlanner> shared_planner() {
+        return tools::dynamic_pointer_cast<RrtPlanner>(shared_from_this());
     }
-    inline std::shared_ptr<RrtPlanner const> shared_planner_const() const {
-        return std::dynamic_pointer_cast<RrtPlanner const>(shared_from_this());
+    inline tools::shared_ptr<RrtPlanner const> shared_planner_const() const {
+        return tools::dynamic_pointer_cast<RrtPlanner const>(shared_from_this());
     }
 };
 
@@ -271,7 +271,7 @@ public:
         using namespace std::placeholders;
         __description += "Bi-directional RRTs. See\n\n\
 - J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
-        RegisterCommand("DumpTree", std::bind(&BirrtPlanner::_DumpTreeCommand,this,_1,_2),
+        RegisterCommand("DumpTree", tools::bind(&BirrtPlanner::_DumpTreeCommand,this,_1,_2),
                         "dumps the source and goal trees to $OPENRAVE_HOME/birrtdump.txt. The first N values are the DOF values, the last value is the parent index.\n\
 Some python code to display data::\n\
 \n\
@@ -647,7 +647,7 @@ public:
         __description = "Rosen's Basic RRT planner";
         _fGoalBiasProb = dReal(0.05);
         _bOneStep = false;
-        RegisterCommand("DumpTree", std::bind(&BasicRrtPlanner::_DumpTreeCommand,this,_1,_2),
+        RegisterCommand("DumpTree", tools::bind(&BasicRrtPlanner::_DumpTreeCommand,this,_1,_2),
                         "dumps the source and goal trees to $OPENRAVE_HOME/basicrrtdump.txt. The first N values are the DOF values, the last value is the parent index.\n");
     }
     virtual ~BasicRrtPlanner() {
@@ -897,7 +897,7 @@ public:
         return true;
     }
 protected:
-    std::shared_ptr<BasicRRTParameters> _parameters;
+    tools::shared_ptr<BasicRRTParameters> _parameters;
     dReal _fGoalBiasProb;
     bool _bOneStep;
     std::vector< std::vector<dReal> > _vecGoals;
@@ -985,7 +985,7 @@ public:
     }
 
 private:
-    std::shared_ptr<ExplorationParameters> _parameters;
+    tools::shared_ptr<ExplorationParameters> _parameters;
 
 };
 

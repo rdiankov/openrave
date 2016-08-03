@@ -31,12 +31,12 @@ public:
         std::vector< std::pair<Vector, Vector> > linkvelocities;
     };
 
-    std::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
-        std::shared_ptr<PhysicsData> pdata = std::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+    tools::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
+        tools::shared_ptr<PhysicsData> pdata = tools::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
         if( !pdata ) {
             // isn't initialized for some reason, this can happen during environment cloning
-            InitKinBody(std::const_pointer_cast<KinBody>(pbody)); // fixme
-            pdata = std::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
+            InitKinBody(tools::const_pointer_cast<KinBody>(pbody)); // fixme
+            pdata = tools::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
         }
         return pdata;
     }
@@ -133,7 +133,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         PhysicsEngineBase::Clone(preference,cloningoptions);
-        std::shared_ptr<GenericPhysicsEngine const> r = std::dynamic_pointer_cast<GenericPhysicsEngine const>(preference);
+        tools::shared_ptr<GenericPhysicsEngine const> r = tools::dynamic_pointer_cast<GenericPhysicsEngine const>(preference);
         _vgravity = r->_vgravity;
     }
 

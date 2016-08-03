@@ -345,7 +345,7 @@ protected:
     configurationcache::ConfigurationCachePtr _cache;
 };
 
-typedef std::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
+typedef tools::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
 
 } // end namespace configurationcachepy
 

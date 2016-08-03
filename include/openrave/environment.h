@@ -28,7 +28,7 @@ typedef boost::recursive_try_mutex EnvironmentMutex;
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
  */
-class OPENRAVE_API EnvironmentBase : public std::enable_shared_from_this<EnvironmentBase>
+class OPENRAVE_API EnvironmentBase : public tools::enable_shared_from_this<EnvironmentBase>
 {
 public:
     EnvironmentBase();
@@ -343,8 +343,8 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. Complex meshes and articulated meshes are all triangulated appropriately. See \ref supported_formats.
         \param atts Options to control the parsing process.
      */
-    virtual std::shared_ptr<TriMesh> ReadTrimeshURI(std::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual std::shared_ptr<TriMesh> ReadTrimeshFile(std::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
+    virtual tools::shared_ptr<TriMesh> ReadTrimeshURI(tools::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual tools::shared_ptr<TriMesh> ReadTrimeshFile(tools::shared_ptr<TriMesh> ptrimesh, const std::string& filename, const AttributesList& atts = AttributesList()) {
         return ReadTrimeshURI(ptrimesh,filename,atts);
     }
 
@@ -354,7 +354,7 @@ public:
         \param formathint is the hint to the underlying cad importer for the format of data
         \param atts Options to control the parsing process.
      */
-    virtual std::shared_ptr<TriMesh> ReadTrimeshData(std::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts = AttributesList()) = 0;
+    virtual tools::shared_ptr<TriMesh> ReadTrimeshData(tools::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts = AttributesList()) = 0;
 
     //@}
 

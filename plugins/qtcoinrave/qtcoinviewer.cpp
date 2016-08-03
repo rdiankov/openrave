@@ -56,15 +56,15 @@ void DeleteItemCallbackSafe(QtCoinViewerWeakPtr wpt, Item* pItem)
     }
 }
 
-#define ITEM_DELETER std::bind(DeleteItemCallbackSafe,weak_viewer(),std::placeholders::_1)
+#define ITEM_DELETER tools::bind(DeleteItemCallbackSafe,weak_viewer(),std::placeholders::_1)
 
 class ItemSelectionCallbackData : public UserData
 {
 public:
-    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, std::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, tools::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ItemSelectionCallbackData() {
-        std::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        tools::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredItemSelectionCallbacks.erase(_iterator);
@@ -74,17 +74,17 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ItemSelectionCallbackFn _callback;
 protected:
-    std::weak_ptr<QtCoinViewer> _pweakviewer;
+    tools::weak_ptr<QtCoinViewer> _pweakviewer;
 };
-typedef std::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
+typedef tools::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
 
 class ViewerImageCallbackData : public UserData
 {
 public:
-    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, std::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, tools::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerImageCallbackData() {
-        std::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        tools::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerImageCallbacks.erase(_iterator);
@@ -94,17 +94,17 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ViewerImageCallbackFn _callback;
 protected:
-    std::weak_ptr<QtCoinViewer> _pweakviewer;
+    tools::weak_ptr<QtCoinViewer> _pweakviewer;
 };
-typedef std::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
+typedef tools::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
 
 class ViewerThreadCallbackData : public UserData
 {
 public:
-    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, std::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, tools::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerThreadCallbackData() {
-        std::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
+        tools::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
             boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
@@ -114,9 +114,9 @@ public:
     list<UserDataWeakPtr>::iterator _iterator;
     ViewerBase::ViewerThreadCallbackFn _callback;
 protected:
-    std::weak_ptr<QtCoinViewer> _pweakviewer;
+    tools::weak_ptr<QtCoinViewer> _pweakviewer;
 };
-typedef std::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
+typedef tools::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
 
 static SoErrorCB* s_DefaultHandlerCB=NULL;
 void CustomCoinHandlerCB(const class SoError * error, void * data)
@@ -178,27 +178,27 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
   Separator {\n\
   DrawStyle { style LINES  lineWidth 2 }\n\
   }\n\n";
-    RegisterCommand("SetFiguresInCamera",std::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
+    RegisterCommand("SetFiguresInCamera",tools::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
-    RegisterCommand("SetFeedbackVisibility",std::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
+    RegisterCommand("SetFeedbackVisibility",tools::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
-    RegisterCommand("ShowWorldAxes",std::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
+    RegisterCommand("ShowWorldAxes",tools::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
-    RegisterCommand("Resize",std::bind(&QtCoinViewer::_CommandResize,this,_1,_2),
+    RegisterCommand("Resize",tools::bind(&QtCoinViewer::_CommandResize,this,_1,_2),
                     "Accepts width x height to resize internal video frame");
-    RegisterCommand("SaveBodyLinkToVRML",std::bind(&QtCoinViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
+    RegisterCommand("SaveBodyLinkToVRML",tools::bind(&QtCoinViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
                     "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
-    RegisterCommand("SetNearPlane", std::bind(&QtCoinViewer::_SetNearPlaneCommand, this, _1, _2),
+    RegisterCommand("SetNearPlane", tools::bind(&QtCoinViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
-    RegisterCommand("StartViewerLoop", std::bind(&QtCoinViewer::_StartViewerLoopCommand, this, _1, _2),
+    RegisterCommand("StartViewerLoop", tools::bind(&QtCoinViewer::_StartViewerLoopCommand, this, _1, _2),
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
-    RegisterCommand("Show", std::bind(&QtCoinViewer::_ShowCommand, this, _1, _2),
+    RegisterCommand("Show", tools::bind(&QtCoinViewer::_ShowCommand, this, _1, _2),
                     "executs the show directly");
-    RegisterCommand("TrackLink", std::bind(&QtCoinViewer::_TrackLinkCommand, this, _1, _2),
+    RegisterCommand("TrackLink", tools::bind(&QtCoinViewer::_TrackLinkCommand, this, _1, _2),
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
-    RegisterCommand("TrackManipulator", std::bind(&QtCoinViewer::_TrackManipulatorCommand, this, _1, _2),
+    RegisterCommand("TrackManipulator", tools::bind(&QtCoinViewer::_TrackManipulatorCommand, this, _1, _2),
                     "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, focalDistance");
-    RegisterCommand("SetTrackingAngleToUp", std::bind(&QtCoinViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
+    RegisterCommand("SetTrackingAngleToUp", tools::bind(&QtCoinViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
                     "sets a new angle to up");
 
     _fTrackAngleToUp = 0.3;
@@ -458,7 +458,7 @@ void QtCoinViewer::_mousemove_cb(SoEventCallback * node)
         if (!!pItem) {
             boost::mutex::scoped_lock lock(_mutexMessages);
 
-            KinBodyItemPtr pKinBody = std::dynamic_pointer_cast<KinBodyItem>(pItem);
+            KinBodyItemPtr pKinBody = tools::dynamic_pointer_cast<KinBodyItem>(pItem);
             KinBody::LinkPtr pSelectedLink;
             if( !!pKinBody ) {
                 pSelectedLink = pKinBody->GetLinkFromIv(node);
@@ -1248,9 +1248,9 @@ void QtCoinViewer::Reset()
     }
 }
 
-std::shared_ptr<void> QtCoinViewer::LockGUI()
+tools::shared_ptr<void> QtCoinViewer::LockGUI()
 {
-    std::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
+    tools::shared_ptr<boost::mutex::scoped_lock> lock(new boost::mutex::scoped_lock(_mutexGUI));
     while(!_bInIdleThread) {
         boost::this_thread::sleep(boost::posix_time::milliseconds(1));
     }
@@ -2514,7 +2514,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    KinBodyItemPtr pKinBody = std::dynamic_pointer_cast<KinBodyItem>(pItem);
+    KinBodyItemPtr pKinBody = tools::dynamic_pointer_cast<KinBodyItem>(pItem);
     KinBody::LinkPtr pSelectedLink;
     if( !!pKinBody ) {
         pSelectedLink = pKinBody->GetLinkFromIv(node);
@@ -2532,7 +2532,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
                 bSame = !_pMouseOverLink.expired() && KinBody::LinkPtr(_pMouseOverLink) == pSelectedLink;
             }
             if( bSame ) {
-                ItemSelectionCallbackDataPtr pdata = std::dynamic_pointer_cast<ItemSelectionCallbackData>(it->lock());
+                ItemSelectionCallbackDataPtr pdata = tools::dynamic_pointer_cast<ItemSelectionCallbackData>(it->lock());
                 if( !!pdata ) {
                     if( pdata->_callback(pSelectedLink,_vMouseSurfacePosition,_vMouseRayDirection) ) {
                         bProceedSelection = false;
@@ -2547,7 +2547,7 @@ bool QtCoinViewer::_HandleSelection(SoPath *path)
         return false;
     }
 
-    std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
+    tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(100000);
     if( !lockenv ) {
         _ivRoot->deselectAll();
         RAVELOG_WARN("failed to grab environment lock\n");
@@ -2670,13 +2670,13 @@ void QtCoinViewer::_deselect()
     }
 }
 
-std::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
+tools::shared_ptr<EnvironmentMutex::scoped_try_lock> QtCoinViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
 #if BOOST_VERSION >= 103500
-    std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+    tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
 #else
-    std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
 #endif
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
@@ -2830,7 +2830,7 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
         }
         FOREACH(it,listRegisteredViewerThreadCallbacks) {
-            ViewerThreadCallbackDataPtr pdata = std::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
+            ViewerThreadCallbackDataPtr pdata = tools::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
             if( !!pdata ) {
                 try {
                     pdata->_callback();
@@ -2918,7 +2918,7 @@ void QtCoinViewer::_VideoFrame()
         return;
     }
     FOREACH(it,listRegisteredViewerImageCallbacks) {
-        ViewerImageCallbackDataPtr pdata = std::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
+        ViewerImageCallbackDataPtr pdata = tools::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
         if( !!pdata ) {
             try {
                 pdata->_callback(memory,_nRenderWidth,_nRenderHeight,3);
@@ -2975,7 +2975,7 @@ void QtCoinViewer::UpdateFromModel()
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-        KinBodyItemPtr pitem = std::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
+        KinBodyItemPtr pitem = tools::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
 
         if( !!pitem ) {
             if( !pitem->GetBody() ) {
@@ -3008,10 +3008,10 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = std::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
+                        pitem = tools::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
                     }
                     else {
-                        pitem = std::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
+                        pitem = tools::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);
                     }
 
                     if( !!_pdragger && _pdragger->GetSelectedItem() == pitem ) {
@@ -3022,7 +3022,7 @@ void QtCoinViewer::UpdateFromModel()
                     _mapbodies[pbody] = pitem;
                 }
                 else {
-                    pitem = std::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
+                    pitem = tools::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData("qtcoinviewer"));
                     BOOST_ASSERT( _mapbodies.find(pbody) != _mapbodies.end() && _mapbodies[pbody] == pitem );
                 }
             }
@@ -3322,7 +3322,7 @@ void QtCoinViewer::RecordRealtimeVideo(bool on)
 
 void QtCoinViewer::ToggleSimulation(bool on)
 {
-    std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(200000);
+    tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironment(200000);
     if( !!lockenv ) {
         if( on ) {
             GetEnv()->StartSimulation(0.01f);
@@ -3870,7 +3870,7 @@ void QtCoinViewer::_SetNearPlane(dReal nearplane)
     RaveGetEnvironments(listenvironments);
     if( listenvironments.size() > 0 ) {
         _penv = listenvironments.front();
-        _openraveviewer = std::dynamic_pointer_cast<QtCoinViewer>(_penv->GetViewer());
+        _openraveviewer = tools::dynamic_pointer_cast<QtCoinViewer>(_penv->GetViewer());
         if( !!_openraveviewer ) {
             QTimer *timer = new QTimer(this);
             connect(timer, SIGNAL(timeout()), this, SLOT(Animate()));

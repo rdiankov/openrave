@@ -24,7 +24,7 @@ protected:
     class BaseCameraXMLReader : public BaseXMLReader
     {
 public:
-        BaseCameraXMLReader(std::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {
+        BaseCameraXMLReader(tools::shared_ptr<BaseCameraSensor> psensor) : _psensor(psensor) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -161,25 +161,25 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        std::shared_ptr<BaseCameraSensor> _psensor;
+        tools::shared_ptr<BaseCameraSensor> _psensor;
         stringstream ss;
     };
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseCameraXMLReader(std::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseCameraXMLReader(tools::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
         using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";
-        RegisterCommand("power",std::bind(&BaseCameraSensor::_Power,this,_1,_2), "deprecated");
-        RegisterCommand("render",std::bind(&BaseCameraSensor::_Render,this,_1,_2),"deprecated");
-        RegisterCommand("setintrinsic",std::bind(&BaseCameraSensor::_SetIntrinsic,this,_1,_2),
+        RegisterCommand("power",tools::bind(&BaseCameraSensor::_Power,this,_1,_2), "deprecated");
+        RegisterCommand("render",tools::bind(&BaseCameraSensor::_Render,this,_1,_2),"deprecated");
+        RegisterCommand("setintrinsic",tools::bind(&BaseCameraSensor::_SetIntrinsic,this,_1,_2),
                         "Set the intrinsic parameters of the camera (fx,fy,cx,cy).");
-        RegisterCommand("setdims",std::bind(&BaseCameraSensor::_SetDims,this,_1,_2),
+        RegisterCommand("setdims",tools::bind(&BaseCameraSensor::_SetDims,this,_1,_2),
                         "Set the dimensions of the image (width,height)");
-        RegisterCommand("SaveImage",std::bind(&BaseCameraSensor::_SaveImage,this,_1,_2),
+        RegisterCommand("SaveImage",tools::bind(&BaseCameraSensor::_SaveImage,this,_1,_2),
                         "Saves the next camera image to the given filename");
         _pgeom.reset(new CameraGeomData());
         _pdata.reset(new CameraSensorData());
@@ -259,13 +259,13 @@ public:
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
-        *_pgeom = *std::static_pointer_cast<CameraGeomData const>(pgeometry);
+        *_pgeom = *tools::static_pointer_cast<CameraGeomData const>(pgeometry);
         _Reset();
     }
 
     virtual bool SimulationStep(dReal fTimeElapsed)
     {
-        std::shared_ptr<CameraSensorData> pdata = _pdata;
+        tools::shared_ptr<CameraSensorData> pdata = _pdata;
 
         _RenderGeometry();
         if(( _pgeom->width > 0) &&( _pgeom->height > 0) && _bPower) {
@@ -292,7 +292,7 @@ public:
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
-            return SensorGeometryConstPtr(std::shared_ptr<CameraGeomData>(pgeom));
+            return SensorGeometryConstPtr(tools::shared_ptr<CameraGeomData>(pgeom));
         }
         return SensorGeometryConstPtr();
     }
@@ -300,7 +300,7 @@ public:
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
-            return SensorDataPtr(std::shared_ptr<CameraSensorData>(new CameraSensorData()));
+            return SensorDataPtr(tools::shared_ptr<CameraSensorData>(new CameraSensorData()));
         }
         return SensorDataPtr();
     }
@@ -310,7 +310,7 @@ public:
         if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
             boost::mutex::scoped_lock lock(_mutexdata);
             if( _pdata->vimagedata.size() > 0 ) {
-                *std::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
+                *tools::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
                 return true;
             }
         }
@@ -370,7 +370,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
-        std::shared_ptr<BaseCameraSensor const> r = std::dynamic_pointer_cast<BaseCameraSensor const>(preference);
+        tools::shared_ptr<BaseCameraSensor const> r = tools::dynamic_pointer_cast<BaseCameraSensor const>(preference);
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -436,8 +436,8 @@ protected:
         }
     }
 
-    std::shared_ptr<CameraGeomData> _pgeom;
-    std::shared_ptr<CameraSensorData> _pdata;
+    tools::shared_ptr<CameraGeomData> _pgeom;
+    tools::shared_ptr<CameraSensorData> _pdata;
 
     // more geom stuff
     vector<uint8_t> _vimagedata;

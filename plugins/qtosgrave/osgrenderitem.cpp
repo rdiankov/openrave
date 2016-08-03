@@ -230,8 +230,8 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _bReload = false;
     _bDrawStateChanged = false;
     _environmentid = pbody->GetEnvironmentId();
-    _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, std::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
-    _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, std::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
+    _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, tools::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
+    _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, tools::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
 }
 
 KinBodyItem::~KinBodyItem()
@@ -265,7 +265,7 @@ void KinBodyItem::Load()
 
         posglinkroot->addChild(posglinktrans);
 
-//        std::vector< std::shared_ptr<KinBody::Link> > vParentLinks;
+//        std::vector< tools::shared_ptr<KinBody::Link> > vParentLinks;
 //        porlink->GetParentLinks(vParentLinks);
 //        if( vParentLinks.size() > 0 ) {
 //            // need to set transform with respect to parent since osg transforms
@@ -632,7 +632,7 @@ bool KinBodyItem::UpdateFromOSG()
         }
     }
 
-    std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+    tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
     if( !!lockenv ) {
         _pbody->SetLinkTransformations(vtrans,_vjointvalues);
         _pbody->GetLinkTransformations(_vtrans,_vjointvalues);
@@ -665,7 +665,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        std::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+        tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
         if( !lockenv ) {
             return false;
         }

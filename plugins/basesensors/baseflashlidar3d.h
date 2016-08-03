@@ -23,7 +23,7 @@ protected:
     class BaseFlashLidar3DXMLReader : public BaseXMLReader
     {
 public:
-        BaseFlashLidar3DXMLReader(std::shared_ptr<BaseFlashLidar3DSensor> psensor) : _psensor(psensor) {
+        BaseFlashLidar3DXMLReader(tools::shared_ptr<BaseFlashLidar3DSensor> psensor) : _psensor(psensor) {
         }
 
         virtual ProcessElement startElement(const std::string& name, const AttributesList& atts)
@@ -109,7 +109,7 @@ public:
 
 protected:
         BaseXMLReaderPtr _pcurreader;
-        std::shared_ptr<BaseFlashLidar3DSensor> _psensor;
+        tools::shared_ptr<BaseFlashLidar3DSensor> _psensor;
         stringstream ss;
     };
 
@@ -123,7 +123,7 @@ public:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(std::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr)));
+        return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(tools::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr)));
     }
 
     BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
@@ -138,9 +138,9 @@ public:
 .. image:: ../../../images/interface_baseflashlidar.jpg\n\
   :width: 400\n\
 ";
-        RegisterCommand("render",std::bind(&BaseFlashLidar3DSensor::_Render,this,_1,_2),
+        RegisterCommand("render",tools::bind(&BaseFlashLidar3DSensor::_Render,this,_1,_2),
                         "Set rendering of the plots (1 or 0).");
-        RegisterCommand("collidingbodies",std::bind(&BaseFlashLidar3DSensor::_CollidingBodies,this,_1,_2),
+        RegisterCommand("collidingbodies",tools::bind(&BaseFlashLidar3DSensor::_CollidingBodies,this,_1,_2),
                         "Returns the ids of the bodies that the laser beams have hit.");
 
         _pgeom.reset(new BaseFlashLidar3DGeom());
@@ -324,7 +324,7 @@ public:
     {
         if( psensordata->GetType() == ST_Laser ) {
             boost::mutex::scoped_lock lock(_mutexdata);
-            *std::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
+            *tools::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
         return false;
@@ -360,7 +360,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
-        std::shared_ptr<BaseFlashLidar3DSensor const> r = std::dynamic_pointer_cast<BaseFlashLidar3DSensor const>(preference);
+        tools::shared_ptr<BaseFlashLidar3DSensor const> r = tools::dynamic_pointer_cast<BaseFlashLidar3DSensor const>(preference);
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         std::copy(&r->_iKK[0],&r->_iKK[4],&_iKK[0]);
@@ -424,8 +424,8 @@ protected:
         }
     }
 
-    std::shared_ptr<BaseFlashLidar3DGeom> _pgeom;
-    std::shared_ptr<LaserSensorData> _pdata;
+    tools::shared_ptr<BaseFlashLidar3DGeom> _pgeom;
+    tools::shared_ptr<LaserSensorData> _pdata;
     vector<int> _databodyids;     ///< if non 0, for each point in _data, specifies the body that was hit
     CollisionReportPtr _report;
     // more geom stuff

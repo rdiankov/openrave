@@ -34,7 +34,7 @@ public:
             else {
                 // post on all of them
                 for(int i = 0; i < widgets.size(); ++i) {
-                    QApplication::postEvent(widgets.at(i),new MyCallbackEvent(std::bind(&QtCameraViewer::_CreateImageWindow,this)));
+                    QApplication::postEvent(widgets.at(i),new MyCallbackEvent(tools::bind(&QtCameraViewer::_CreateImageWindow,this)));
                 }
             }
         }
@@ -43,7 +43,7 @@ public:
         QWidgetList widgets = QApplication::topLevelWidgets();
         // post on all of them
         for(int i = 0; i < widgets.size(); ++i) {
-            QApplication::postEvent(widgets.at(i),new MyCallbackEvent(std::bind(&QtCameraViewer::_DestroyImageWindow,_imagewindow)));
+            QApplication::postEvent(widgets.at(i),new MyCallbackEvent(tools::bind(&QtCameraViewer::_DestroyImageWindow,_imagewindow)));
         }
         _imagewindow.reset();
     }
@@ -75,9 +75,9 @@ protected:
     {
 public:
         QtImageWindow(SensorBasePtr psensor) : QWidget(NULL), _psensor(psensor) {
-            _pdata = std::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
-            _pdatanew = std::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
-            _pgeom = std::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry(SensorBase::ST_Camera));
+            _pdata = tools::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
+            _pdatanew = tools::static_pointer_cast<SensorBase::CameraSensorData>(_psensor->CreateSensorData(SensorBase::ST_Camera));
+            _pgeom = tools::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry(SensorBase::ST_Camera));
             if( !_pdata || !_pgeom ) {
                 throw openrave_exception(str(boost::format("QtImageWindow: failed to create sensor data for sensor %s")%_psensor->GetName()));
             }
@@ -116,7 +116,7 @@ public:
 private:
         QLabel *_label;
         SensorBasePtr _psensor;
-        std::shared_ptr<SensorBase::CameraSensorData> _pdatanew, _pdata;
+        tools::shared_ptr<SensorBase::CameraSensorData> _pdatanew, _pdata;
         SensorBase::CameraGeomDataConstPtr _pgeom;
 #if QT_VERSION < 0x040400 // qt4.4+
         vector<uint8_t> vimagedata;
@@ -132,12 +132,12 @@ private:
         }
     }
 
-    static void _DestroyImageWindow(std::shared_ptr<QtImageWindow> imagewindow)
+    static void _DestroyImageWindow(tools::shared_ptr<QtImageWindow> imagewindow)
     {
     }
 
     SensorBasePtr _psensor;
-    std::shared_ptr<QtImageWindow> _imagewindow;
+    tools::shared_ptr<QtImageWindow> _imagewindow;
     boost::mutex _mutex;
 };
 

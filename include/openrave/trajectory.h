@@ -262,10 +262,10 @@ public:
 
 protected:
     inline TrajectoryBasePtr shared_trajectory() {
-        return std::static_pointer_cast<TrajectoryBase>(shared_from_this());
+        return tools::static_pointer_cast<TrajectoryBase>(shared_from_this());
     }
     inline TrajectoryBaseConstPtr shared_trajectory_const() const {
-        return std::static_pointer_cast<TrajectoryBase const>(shared_from_this());
+        return tools::static_pointer_cast<TrajectoryBase const>(shared_from_this());
     }
 
 private:

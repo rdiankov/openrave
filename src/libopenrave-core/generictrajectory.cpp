@@ -84,7 +84,7 @@ public:
             _vintegraloffsets.resize(0);
             _spec = spec;
             // order the groups based on computation order
-            stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),std::bind(&GenericTrajectory::SortGroups,this,_1,_2));
+            stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),tools::bind(&GenericTrajectory::SortGroups,this,_1,_2));
             _timeoffset = -1;
             FOREACH(itgroup,_spec._vgroups) {
                 if( itgroup->name == "deltatime" ) {
@@ -332,7 +332,7 @@ public:
     void Swap(TrajectoryBasePtr rawtraj)
     {
         OPENRAVE_ASSERT_OP(GetXMLId(),==,rawtraj->GetXMLId());
-        std::shared_ptr<GenericTrajectory> traj = std::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
+        tools::shared_ptr<GenericTrajectory> traj = tools::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
         _spec.Swap(traj->_spec);
         _vderivoffsets.swap(traj->_vderivoffsets);
         _vddoffsets.swap(traj->_vddoffsets);
@@ -469,22 +469,22 @@ protected:
         const string& interpolation = _spec._vgroups[i].interpolation;
         int nNeedNeighboringInfo = 0;
         if( interpolation == "previous" ) {
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
         }
         else if( interpolation == "next" ) {
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
         }
         else if( interpolation == "linear" ) {
             if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
                 stringstream ss(_spec._vgroups[i].name.substr(14));
                 int niktype=0;
                 ss >> niktype;
-                _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
                 // TODO add validation for ikparam until
             }
             else {
-                _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = std::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
             }
             nNeedNeighboringInfo = 2;
         }
@@ -493,38 +493,38 @@ protected:
                 stringstream ss(_spec._vgroups[i].name.substr(14));
                 int niktype=0;
                 ss >> niktype;
-                _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
                 // TODO add validation for ikparam until
             }
             else {
-                _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = std::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
             }
             nNeedNeighboringInfo = 3;
         }
         else if( interpolation == "cubic" ) {
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-            _vgroupvalidators[i] = std::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
             nNeedNeighboringInfo = 3;
         }
         else if( interpolation == "quartic" ) {
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-            _vgroupvalidators[i] = std::bind(&GenericTrajectory::_ValidateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2);
             nNeedNeighboringInfo = 3;
         }
         else if( interpolation == "quintic" ) {
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-            _vgroupvalidators[i] = std::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
             nNeedNeighboringInfo = 3;
         }
         else if( interpolation == "sextic" ) {
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-            _vgroupvalidators[i] = std::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
             nNeedNeighboringInfo = 3;
         }
         else if( interpolation == "" ) {
             // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
-            _vgroupinterpolators[i] = std::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
         }
 
 

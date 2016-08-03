@@ -40,8 +40,8 @@ public:
         // optional
         std::vector<dReal> _vConfigJerkLimit;
     };
-    typedef std::shared_ptr<GroupInfo> GroupInfoPtr;
-    typedef std::shared_ptr<GroupInfo const> GroupInfoConstPtr;
+    typedef tools::shared_ptr<GroupInfo> GroupInfoPtr;
+    typedef tools::shared_ptr<GroupInfo const> GroupInfoConstPtr;
 
 public:
     TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
@@ -233,42 +233,42 @@ public:
                     {
                         // if _parameters->_hastimestamps, then use this for double checking that times are feasible
                         if( igrouptype == 0 ) {
-                            _listmintimefns.push_back(std::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
+                            _listmintimefns.push_back(tools::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
                         }
                         else if( igrouptype == 1 ) {
-                            _listmintimefns.push_back(std::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
+                            _listmintimefns.push_back(tools::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
                         }
                         else if( igrouptype == 2 ) {
-                            _listmintimefns.push_back(std::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
+                            _listmintimefns.push_back(tools::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
                         }
                     }
 
                     if( igrouptype == 0 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(std::bind(&TrajectoryRetimer::_CheckJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                            _listcheckvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_CheckJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                         }
                         else {
-                            _listvelocityfns.push_back(std::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                            _listvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                         }
-                        _listwritefns.push_back(std::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                        _listwritefns.push_back(tools::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                     }
                     else if( igrouptype == 1 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(std::bind(&TrajectoryRetimer::_CheckAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                            _listcheckvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_CheckAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                         }
                         else {
-                            _listvelocityfns.push_back(std::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                            _listvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                         }
-                        _listwritefns.push_back(std::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                        _listwritefns.push_back(tools::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                     }
                     else if( igrouptype == 2 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(std::bind(&TrajectoryRetimer::_CheckIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                            _listcheckvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_CheckIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                         }
                         else {
-                            _listvelocityfns.push_back(std::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                            _listvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                         }
-                        _listwritefns.push_back(std::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                        _listwritefns.push_back(tools::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                     }
 
                     gpos.interpolation = posinterpolation;
@@ -471,7 +471,7 @@ protected:
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
-    std::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
+    tools::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
 
     // caching
     ConfigurationSpecification _cachedoldspec, _cachednewspec; ///< the configuration specification that the cached structures have been set for

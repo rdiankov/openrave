@@ -635,7 +635,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
-    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, std::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, tools::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj)
@@ -700,7 +700,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
     }
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
-    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, std::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
+    _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, tools::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
 PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps)
@@ -716,7 +716,7 @@ PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool 
         return PS_HasSolution;
     }
 
-    TrajectoryTimingParametersPtr parameters = std::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
+    TrajectoryTimingParametersPtr parameters = tools::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     if( parameters->_hastimestamps != hastimestamps ) {
         parameters->_hastimestamps = hastimestamps;
         if( !_planner->InitPlan(_robot,parameters) ) {
@@ -932,9 +932,9 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
                     ss >> vaxis.x >> vaxis.y >> vaxis.z;
                 }
                 robot = pbody;
-                listsetfunctions.push_back(std::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
-                listgetfunctions.push_back(std::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
-                listdistfunctions.push_back(std::bind(_ComputeTransformBodyDistance, _1, _2, pbody, itgroup->offset,affinedofs,vaxis));
+                listsetfunctions.push_back(tools::bind(_SetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
+                listgetfunctions.push_back(tools::bind(_GetTransformBody,_1,pbody,itgroup->offset,affinedofs,vaxis));
+                listdistfunctions.push_back(tools::bind(_ComputeTransformBodyDistance, _1, _2, pbody, itgroup->offset,affinedofs,vaxis));
             }
         }
         else if( itgroup->name.size() >= 14 && itgroup->name.substr(0,14) == "ikparam_values" ) {
@@ -955,15 +955,15 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         }
     }
 
-    std::shared_ptr<PlannerStateSaver> statesaver;
+    tools::shared_ptr<PlannerStateSaver> statesaver;
     if( bsmooth ) {
         if( listsetfunctions.size() > 0 ) {
-            params->_setstatevaluesfn = std::bind(_SetAffineState,boost::ref(listsetfunctions), _1, _2);
-            params->_getstatefn = std::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
-            params->_distmetricfn = std::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
+            params->_setstatevaluesfn = tools::bind(_SetAffineState,boost::ref(listsetfunctions), _1, _2);
+            params->_getstatefn = tools::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
+            params->_distmetricfn = tools::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-            std::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
-            params->_checkpathvelocityconstraintsfn = std::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+            tools::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
+            params->_checkpathvelocityconstraintsfn = tools::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn));
         }
     }
@@ -975,7 +975,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         params->_checkpathvelocityconstraintsfn.clear();
     }
 
-    params->_diffstatefn = std::bind(diffstatefn,_1,_2,vrotaxes);
+    params->_diffstatefn = tools::bind(diffstatefn,_1,_2,vrotaxes);
 
     params->_hastimestamps = hastimestamps;
     params->_sExtraParameters = plannerparameters;
@@ -1058,7 +1058,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         _parameters = parameters;
     }
     else {
-        parameters = std::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
+        parameters = tools::dynamic_pointer_cast<TrajectoryTimingParameters>(_parameters);
     }
 
 
@@ -1123,7 +1123,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
 
     if( bInitPlan ) {
         using namespace std::placeholders;
-        parameters->_diffstatefn = std::bind(diffstatefn,_1,_2,vrotaxes);
+        parameters->_diffstatefn = tools::bind(diffstatefn,_1,_2,vrotaxes);
     }
     if( parameters->_hastimestamps != hastimestamps ) {
     parameters->_hastimestamps = hastimestamps;

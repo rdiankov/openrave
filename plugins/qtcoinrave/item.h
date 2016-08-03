@@ -28,7 +28,7 @@ enum ViewGeometry {
 };
 
 /// Encapsulate the Inventor rendering of an Item
-class Item : public std::enable_shared_from_this<Item>, public OpenRAVE::UserData
+class Item : public tools::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
     Item(QtCoinViewerPtr viewer);
@@ -103,7 +103,7 @@ public:
 protected:
 
     // Instance Data
-    std::weak_ptr<QtCoinViewer> _viewer;
+    tools::weak_ptr<QtCoinViewer> _viewer;
     string _name;
 
     SoSeparator*   _ivRoot;               //!< root of Inventor data hierarchy
@@ -111,9 +111,9 @@ protected:
     SoSwitch*      _ivGeom;               //!< item geometry hierarchy
     SoTransparencyType* _ivTransparency;
 };
-typedef std::shared_ptr<Item> ItemPtr;
-typedef std::weak_ptr<Item> ItemWeakPtr;
-typedef std::shared_ptr<Item const> ItemConstPtr;
+typedef tools::shared_ptr<Item> ItemPtr;
+typedef tools::weak_ptr<Item> ItemWeakPtr;
+typedef tools::shared_ptr<Item const> ItemConstPtr;
 
 class KinBodyItem : public Item
 {
@@ -125,10 +125,10 @@ protected:
         KinBody::LinkWeakPtr plink;
     };
 
-    inline std::shared_ptr<KinBodyItem> shared_kinbody() {
-        return std::dynamic_pointer_cast<KinBodyItem>(shared_from_this());
+    inline tools::shared_ptr<KinBodyItem> shared_kinbody() {
+        return tools::dynamic_pointer_cast<KinBodyItem>(shared_from_this());
     }
-    inline std::weak_ptr<KinBodyItem> weak_kinbody() {
+    inline tools::weak_ptr<KinBodyItem> weak_kinbody() {
         return shared_kinbody();
     }
 
@@ -204,8 +204,8 @@ protected:
     UserDataPtr _geometrycallback, _drawcallback;
 };
 
-typedef std::shared_ptr<KinBodyItem> KinBodyItemPtr;
-typedef std::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
+typedef tools::shared_ptr<KinBodyItem> KinBodyItemPtr;
+typedef tools::shared_ptr<KinBodyItem const> KinBodyItemConstPtr;
 
 class RobotItem : public KinBodyItem
 {
@@ -238,8 +238,8 @@ private:
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
     RobotBasePtr _probot;
 };
-typedef std::shared_ptr<RobotItem> RobotItemPtr;
-typedef std::shared_ptr<RobotItem const> RobotItemConstPtr;
+typedef tools::shared_ptr<RobotItem> RobotItemPtr;
+typedef tools::shared_ptr<RobotItem const> RobotItemConstPtr;
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
