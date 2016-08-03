@@ -88,7 +88,11 @@ endif()
 link_directories(${OPENRAVE_LINK_DIRS})
 
 add_executable(openrave ${openrave_SOURCES})
-set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -std=c++11 -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
+if( OPENRAVE_USE_CXX11 )
+  set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -std=c++11 -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
+else()
+  set_target_properties(openrave PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS} -DOPENRAVE_CORE_DLL" OUTPUT_NAME openrave${OPENRAVE_BIN_SUFFIX})
+endif()
 
 add_dependencies(openrave libopenrave libopenrave-core)
 

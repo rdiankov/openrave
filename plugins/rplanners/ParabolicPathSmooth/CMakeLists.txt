@@ -5,5 +5,7 @@ add_dependencies(ParabolicPathSmooth interfacehashes_target)
 target_link_libraries(ParabolicPathSmooth libopenrave)
 
 add_executable(testparabolicramp testparabolicramp.cpp)
+if( OPENRAVE_USE_CXX11 )
 set_target_properties(testparabolicramp PROPERTIES COMPILE_FLAGS "-std=c++11")
+endif()
 target_link_libraries(testparabolicramp ParabolicPathSmooth libopenrave ${LOG4CXX_LIBRARIES})
