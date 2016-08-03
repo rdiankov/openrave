@@ -29,9 +29,16 @@
 #include <istream>
 #include <vector>
 
+#ifdef OPENRAVE_USE_CXX11
+#include <memory>
+#include <functional>
+#else
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/function.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/pointer_cast.hpp>
+#endif
 #include <boost/assert.hpp>
 
 #include <time.h>
@@ -53,6 +60,30 @@ inline void usleep(unsigned long microseconds) {
 
 namespace OpenRAVE {
 namespace utils {
+
+#ifdef OPENRAVE_USE_CXX11
+typedef boost::shared_ptr shared_ptr;
+typedef boost::weak_ptr weak_ptr;
+typedef boost::static_pointer_cast static_pointer_cast;
+typedef boost::dynamic_pointer_cast dynamic_pointer_cast;
+typedef boost::const_pointer_cast const_pointer_cast;
+typedef boost::make_shared make_shared;
+typedef boost::enable_shared_from_this enable_shared_from_this;
+typedef boost::bind bind;
+typedef boost::ref ref;
+typedef boost::cref cref;
+#else
+typedef std::shared_ptr shared_ptr;
+typedef std::weak_ptr weak_ptr;
+typedef std::static_pointer_cast static_pointer_cast;
+typedef std::dynamic_pointer_cast dynamic_pointer_cast;
+typedef std::const_pointer_cast const_pointer_cast;
+typedef std::make_shared make_shared;
+typedef std::enable_shared_from_this enable_shared_from_this;
+typedef std::bind bind;
+typedef std::ref ref;
+typedef std::cref cref;
+#endif
 
 #ifdef _WIN32
 inline uint32_t GetMilliTime()

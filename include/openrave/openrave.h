@@ -20,7 +20,10 @@
 #ifndef OPENRAVE_H
 #define OPENRAVE_H
 
+// Boost either has its placeholders in the boost:: namespace or automatically open boost::placeholders depending on the version
 #define BOOST_BIND_NO_PLACEHOLDERS
+
+
 
 #ifndef OPENRAVE_DISABLE_ASSERT_HANDLER
 #define BOOST_ENABLE_ASSERT_HANDLER
@@ -33,6 +36,7 @@
 #include <memory>
 
 #include <stdint.h>
+
 
 #ifdef _MSC_VER
 

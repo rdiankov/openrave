@@ -51,10 +51,16 @@ option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects c
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
+option(OPT_CXX11 "Use c++11" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if( OPT_CXX11 )
+  set(OPENRAVE_USE_CXX11 1)
+  add_definitions("-DOPENRAVE_USE_CXX11")
+endif()
 
 if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
@@ -196,7 +202,11 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall")
 endif()
 
-set(OPENRAVE_EXPORT_CXXFLAGS "-std=c++11")
+set(OPENRAVE_EXPORT_CXXFLAGS)
+
+if( OPENRAVE_USE_CXX11 )
+  set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -std=c++11")
+endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with

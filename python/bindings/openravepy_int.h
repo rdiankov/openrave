@@ -43,6 +43,8 @@
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/bind/placeholders.hpp>
+// Due to a bug in boost 1.61.0 boost::placeholders are not accessible to exception_translator when using BOOST_BIND_NO_PLACEHOLDERS
+using namespace boost::placeholders;
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
@@ -56,7 +58,7 @@
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave", msgid)
 
 #define CHECK_POINTER(p) { \
-        if( !(p) ) { throw openrave_exception(boost::str(boost::format(_("[%s:%d]: invalid pointer"))%__PRETTY_FUNCTION__%__LINE__)); } \
+    if( !(p) ) { throw openrave_exception(boost::str(boost::format(_("[%s:%d]: invalid pointer"))%__PRETTY_FUNCTION__%__LINE__)); } \
 }
 
 namespace boost {

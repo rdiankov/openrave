@@ -16,6 +16,8 @@
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #include <boost/bind/placeholders.hpp>
+// Due to a bug in boost 1.61.0 boost::placeholders are not accessible to exception_translator when using BOOST_BIND_NO_PLACEHOLDERS_
+using namespace boost::placeholders;
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
