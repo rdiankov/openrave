@@ -70,7 +70,7 @@ namespace boost {
 //    return p.get();
 //}
 namespace python {
-template <class T> struct pointee< tools::shared_ptr<T> >{
+template <class T> struct pointee< openravepy::tools::shared_ptr<T> >{
     typedef T type;
 };
 }

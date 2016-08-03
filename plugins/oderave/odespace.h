@@ -19,7 +19,7 @@
 //#include <boost/thread/tss.hpp>
 
 // manages a space of ODE objects
-class ODESpace : public tools::enable_shared_from_this<ODESpace>
+class ODESpace : public OpenRAVE::tools::enable_shared_from_this<ODESpace>
 {
     static void DummySetParam(dJointID id, int param, dReal)
     {
@@ -37,7 +37,7 @@ class ODESpace : public tools::enable_shared_from_this<ODESpace>
     //        }
     //#endif
     //    }
-    inline tools::weak_ptr<ODESpace> weak_space() {
+    inline OpenRAVE::tools::weak_ptr<ODESpace> weak_space() {
         return shared_from_this();
     }
 
@@ -74,7 +74,7 @@ public:
 
 public:
     // information about the kinematics of the body
-    class KinBodyInfo : public tools::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
+    class KinBodyInfo : public OpenRAVE::tools::enable_shared_from_this<KinBodyInfo>, public OpenRAVE::UserData
     {
 public:
         struct LINK
@@ -135,7 +135,7 @@ public:
             std::string bodylinkname; // for debugging purposes
         };
 
-        KinBodyInfo(tools::shared_ptr<ODEResources> ode) : _ode(ode)
+        KinBodyInfo(OpenRAVE::tools::shared_ptr<ODEResources> ode) : _ode(ode)
         {
             jointgroup = dJointGroupCreate(0);
             space = dHashSpaceCreate(_ode->space);
@@ -209,24 +209,24 @@ public:
         KinBodyWeakPtr _pbody;         ///< body associated with this structure
         int nLastStamp;
 
-        vector<tools::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
+        vector<OpenRAVE::tools::shared_ptr<LINK> > vlinks;         ///< if body is disabled, then geom is static (it can't be connected to a joint!)
         vector<OpenRAVE::dReal> _vdofbranches;
 
         ///< the pointer to this Link is the userdata
         vector<dJointID> vjoints;
         vector<dJointFeedback> vjointfeedback;
         OpenRAVE::UserDataPtr _geometrycallback, _staticcallback;
-        tools::weak_ptr<ODESpace> _odespace;
+        OpenRAVE::tools::weak_ptr<ODESpace> _odespace;
 
         dSpaceID space;                             ///< space that contanis all the collision objects of this chain
         dJointGroupID jointgroup;
 
 private:
-        tools::shared_ptr<ODEResources> _ode;
+        OpenRAVE::tools::shared_ptr<ODEResources> _ode;
     };
 
-    typedef tools::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
-    typedef tools::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef OpenRAVE::tools::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef OpenRAVE::tools::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
     ODESpace(EnvironmentBasePtr penv, const std::string& userdatakey, bool bUsingPhysics) : _penv(penv), _userdatakey(userdatakey), _bUsingPhysics(bUsingPhysics)
@@ -284,7 +284,7 @@ private:
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
-        tools::shared_ptr<boost::mutex::scoped_lock> lockode;
+        OpenRAVE::tools::shared_ptr<boost::mutex::scoped_lock> lockode;
         if( blockode ) {
             lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
         }
@@ -297,7 +297,7 @@ private:
             pinfo.reset(new KinBodyInfo(_ode));
         }
         pinfo->Reset();
-        pinfo->_pbody = tools::const_pointer_cast<KinBody>(pbody);
+        pinfo->_pbody = OpenRAVE::tools::const_pointer_cast<KinBody>(pbody);
         pinfo->_odespace = weak_space();
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         pinfo->vjoints.reserve(pbody->GetJoints().size()+pbody->GetPassiveJoints().size());
@@ -306,7 +306,7 @@ private:
 
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
-            tools::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
+            OpenRAVE::tools::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK());
             pinfo->vlinks.push_back(link);
             link->body = dBodyCreate(GetWorld());
 
@@ -478,8 +478,8 @@ private:
             }
         }
 
-        tools::weak_ptr<ODESpace> wkspace = weak_space();
-        tools::weak_ptr<KinBody const> wkbody(pbody);
+        OpenRAVE::tools::weak_ptr<ODESpace> wkspace = weak_space();
+        OpenRAVE::tools::weak_ptr<KinBody const> wkbody(pbody);
         pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, [wkspace, wkbody](){ return OpenRAVE::utils::sptr_from(wkspace)->_ResetKinBodyCallback(wkbody); });
         if( _bUsingPhysics ) {
             pinfo->_staticcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkStatic|KinBody::Prop_LinkDynamics, [wkspace, wkbody](){ return OpenRAVE::utils::sptr_from(wkspace)->_ResetKinBodyCallback(wkbody); });
@@ -500,7 +500,7 @@ private:
             _penv->GetBodies(vbodies);
             FOREACH(itbody, vbodies) {
                 KinBodyConstPtr pbody(*itbody);
-                KinBodyInfoPtr pinfo = tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+                KinBodyInfoPtr pinfo = OpenRAVE::tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
                 if( !!pinfo ) {
                     InitKinBody(pbody,pinfo);
                 }
@@ -611,11 +611,11 @@ private:
     JointSetFn _jointset[12];
 
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) {
-        return tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        return OpenRAVE::tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }
 
     std::pair<KinBodyInfoPtr, bool> GetCreateInfo(KinBodyConstPtr pbody, bool blockode=true) {
-        KinBodyInfoPtr pinfo = tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        KinBodyInfoPtr pinfo = OpenRAVE::tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
         bool bcreated = false;
         if( !pinfo ) {
             pinfo = InitKinBody(pbody, KinBodyInfoPtr(), blockode);
@@ -627,7 +627,7 @@ private:
     }
 
 private:
-    dGeomID _CreateODEGeomFromGeometryInfo(dSpaceID space, tools::shared_ptr<KinBodyInfo::LINK> link, const KinBody::GeometryInfo& info)
+    dGeomID _CreateODEGeomFromGeometryInfo(dSpaceID space, OpenRAVE::tools::shared_ptr<KinBodyInfo::LINK> link, const KinBody::GeometryInfo& info)
     {
         dGeomID odegeom = NULL;
         switch(info._type) {
@@ -687,7 +687,7 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
-            tools::shared_ptr<boost::mutex::scoped_lock> lockode;
+            OpenRAVE::tools::shared_ptr<boost::mutex::scoped_lock> lockode;
             if( block ) {
                 lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
             }
@@ -713,20 +713,20 @@ private:
         }
     }
 
-    void _ResetKinBodyCallback(tools::weak_ptr<KinBody const> _pbody)
+    void _ResetKinBodyCallback(OpenRAVE::tools::weak_ptr<KinBody const> _pbody)
     {
         KinBodyConstPtr pbody(_pbody);
         std::pair<KinBodyInfoPtr, bool> infocreated = GetCreateInfo(pbody);
         if( !infocreated.second ) {
             // only init if the body was not just created
-            BOOST_ASSERT(tools::shared_ptr<ODESpace>(infocreated.first->_odespace) == shared_from_this());
+            BOOST_ASSERT(OpenRAVE::tools::shared_ptr<ODESpace>(infocreated.first->_odespace) == shared_from_this());
             BOOST_ASSERT(infocreated.first->GetBody()==pbody);
             InitKinBody(pbody,infocreated.first);
         }
     }
 
     EnvironmentBasePtr _penv;
-    tools::shared_ptr<ODEResources> _ode;
+    OpenRAVE::tools::shared_ptr<ODEResources> _ode;
     std::string _userdatakey;
     std::string _geometrygroup;
     SynchronizeCallbackFn _synccallback;

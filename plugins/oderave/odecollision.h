@@ -31,7 +31,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     class CollisionCallbackData
     {
 public:
-        CollisionCallbackData(tools::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
+        CollisionCallbackData(OpenRAVE::tools::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -86,7 +86,7 @@ public:
             return _vactivelinks.at(linkindex)>0;
         }
 
-        tools::shared_ptr<ODECollisionChecker> _pchecker;
+        OpenRAVE::tools::shared_ptr<ODECollisionChecker> _pchecker;
         CollisionReportPtr _report;
         KinBodyConstPtr _pbody;
         KinBody::LinkConstPtr _plink;
@@ -103,11 +103,11 @@ private:
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
     };
 
-    inline tools::shared_ptr<ODECollisionChecker> shared_checker() {
-        return tools::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
+    inline OpenRAVE::tools::shared_ptr<ODECollisionChecker> shared_checker() {
+        return OpenRAVE::tools::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
     }
-    inline tools::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
-        return tools::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
+    inline OpenRAVE::tools::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
+        return OpenRAVE::tools::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
     }
 
 public:
@@ -119,7 +119,7 @@ public:
         _nMaxStartContacts = 32;
         _nMaxContacts = 255;     // this is a weird ODE threshold for the new tri-tri collision checker
         __description = ":Interface Author: Rosen Diankov\n\nOpen Dynamics Engine collision checker (fast, but inaccurate for triangle meshes)";
-        RegisterCommand("SetMaxContacts",tools::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,std::placeholders::_1,std::placeholders::_2),
+        RegisterCommand("SetMaxContacts",OpenRAVE::tools::bind(&ODECollisionChecker::_SetMaxContactsCommand, this,std::placeholders::_1,std::placeholders::_2),
                         str(boost::format("sets the maximum contacts that can be returned by the checker (limit is %d)")%_nMaxContacts));
 #ifndef ODE_USE_MULTITHREAD
         if( !_bnotifiedmessage ) {
@@ -144,7 +144,7 @@ public:
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        tools::shared_ptr<ODECollisionChecker const > r = tools::dynamic_pointer_cast<ODECollisionChecker const>(preference);
+        OpenRAVE::tools::shared_ptr<ODECollisionChecker const > r = OpenRAVE::tools::dynamic_pointer_cast<ODECollisionChecker const>(preference);
         _odespace->SetGeometryGroup(r->GetGeometryGroup());
         _options = r->_options;
         _nMaxStartContacts = r->_nMaxStartContacts;
@@ -191,7 +191,7 @@ public:
 
     virtual bool InitKinBody(KinBodyPtr pbody)
     {
-        ODESpace::KinBodyInfoPtr pinfo = tools::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        ODESpace::KinBodyInfoPtr pinfo = OpenRAVE::tools::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _odespace->InitKinBody(pbody);
@@ -1340,7 +1340,7 @@ private:
 
     int _options;
     dGeomID geomray;     // used for all ray tests
-    tools::shared_ptr<ODESpace> _odespace;
+    OpenRAVE::tools::shared_ptr<ODESpace> _odespace;
     size_t _nMaxStartContacts, _nMaxContacts;
     std::string _userdatakey;
     CollisionReport _report;
