@@ -1875,24 +1875,24 @@ protected:
                 bool bsuccess = false;
                 size_t maxSlowdowns = 4; // will adjust this constant later
 
-                // {
-                //     if (_parameters->SetStateValues(x0) != 0) {
-                //         RAVELOG_VERBOSE("state setting error");
-                //         break;
-                //     }
-                //     _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
-                //     if (_parameters->SetStateValues(x1) != 0) {
-                //         RAVELOG_VERBOSE("state setting error");
-                //         break;
-                //     }
-                //     _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx1, vellimits, accellimits);                  
-                //     for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
-                //         dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
-                //         if (vellimits[j] < fminvel) {
-                //             vellimits[j] = fminvel;
-                //         }
-                //     }
-                // }
+                if (0) {
+                    if (_parameters->SetStateValues(x0) != 0) {
+                        RAVELOG_VERBOSE("state setting error");
+                        break;
+                    }
+                    _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx0, vellimits, accellimits);
+                    if (_parameters->SetStateValues(x1) != 0) {
+                        RAVELOG_VERBOSE("state setting error");
+                        break;
+                    }
+                    _manipconstraintchecker->GetMaxVelocitiesAccelerations(dx1, vellimits, accellimits);                  
+                    for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
+                        dReal fminvel = max(RaveFabs(dx0[j]), RaveFabs(dx1[j]));
+                        if (vellimits[j] < fminvel) {
+                            vellimits[j] = fminvel;
+                        }
+                    }
+                }
                 
                 tloopstart = utils::GetMicroTime();
                 size_t islowdowntry = 0;

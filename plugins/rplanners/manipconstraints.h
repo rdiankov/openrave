@@ -521,7 +521,7 @@ public:
         dReal multiplier = 0.92;
         int retcode = 0;
         dReal maxmanipspeed = RaveSqrt(maxactualmanipspeed2), maxmanipaccel = RaveSqrt(maxactualmanipaccel2);
-        dReal maxallowedmult = 0.9;
+        dReal maxallowedmult = 0.92;
         if (_maxmanipspeed > 0 && maxmanipspeed > _maxmanipspeed) {
             retcode = CFO_CheckTimeBasedConstraints;
 
@@ -613,7 +613,7 @@ public:
         dReal reductionFactor = 0.9;
         dReal multiplier = 0.92;
         int retcode = 0;
-        dReal maxallowedmult = 0.9;
+        dReal maxallowedmult = 0.92;
 
         // RAVELOG_WARN_FORMAT("itramp1 = %d", (itramp1 - outramps.begin()));
 
