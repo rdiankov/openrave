@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <atomic>
 
 namespace OpenRAVE {
 InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
@@ -42,8 +43,8 @@ void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
             __mapUserData[key] = data;
         }
         else {
-            olduserdata = it->second;
-            it->second = data;
+            olduserdata = std::atomic_load_explicit(&it->second, std::memory_order_acquire);
+            std::atomic_store_explicit(&it->second, data, std::memory_order_release);
         }
     }
     olduserdata.reset();
@@ -55,23 +56,22 @@ UserDataPtr InterfaceBase::GetUserData(const std::string& key) const
     if( it == __mapUserData.end() ) {
         return UserDataPtr();
     }
-    return it->second;
+    return std::atomic_load_explicit(&it->second, std::memory_order_acquire);
 }
 
 bool InterfaceBase::RemoveUserData(const std::string& key) const
 {
     // have to destroy the userdata pointer outside the lock, otherwise can get into a deadlock
-    UserDataPtr olduserdata;
     tbb::concurrent_unordered_map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
     if( it == __mapUserData.end() ) {
         return false;
     }
-    olduserdata = it->second;
-    {
-        boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
-        __mapUserData.unsafe_erase(it);
-    }
-    olduserdata.reset();
+    std::atomic_store_explicit(&it->second, UserDataPtr(), std::memory_order_acquire);
+// it is not safe to try to remove the pointer so we just atomically reset it
+//    {
+//        boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+//        __mapUserData.unsafe_erase(it);
+//    }
     return true;
 }
 
