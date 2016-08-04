@@ -27,7 +27,7 @@ BodyConfiguration [robot name] [sampler name]\n\n\
 The sampler needs to return values in the range [0,1]. Default sampler is 'mt19937'.\n\
 By default will sample the entire body space, can use 'SetDOFs' command to set a new set of dof indices\n\
 ";
-        RegisterCommand("SetDOFs",boost::bind(&BodyConfigurationSampler::SetDOFsCommand,this,_1,_2),
+        RegisterCommand("SetDOFs",tools::bind(&BodyConfigurationSampler::SetDOFsCommand,this,std::placeholders::_1,std::placeholders::_2),
                         "set new indices to sample from.");
         string name;
         sinput >> name;

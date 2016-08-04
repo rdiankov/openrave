@@ -15,6 +15,9 @@
 #include "configurationcachetree.h"
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
+#include <boost/bind/placeholders.hpp>
+// Due to a bug in boost 1.61.0 boost::placeholders are not accessible to exception_translator when using BOOST_BIND_NO_PLACEHOLDERS_
+using namespace boost::placeholders;
 #include <boost/python.hpp>
 #include <boost/python/exception_translator.hpp>
 #include <boost/python/docstring_options.hpp>
@@ -329,10 +332,10 @@ public:
             return object(); // didn't find anything
         }
         else {
-           return boost::python::make_tuple(toPyArray(nn.first), nn.second);
+            return boost::python::make_tuple(toPyArray(nn.first), nn.second);
         }
     }
-    
+
     dReal ComputeDistance(object oconfi, object oconff) {
         return _cache->ComputeDistance(ExtractArray<dReal>(oconfi), ExtractArray<dReal>(oconff));
     }
@@ -342,7 +345,7 @@ protected:
     configurationcache::ConfigurationCachePtr _cache;
 };
 
-typedef boost::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
+typedef tools::shared_ptr<PyConfigurationCache> PyConfigurationCachePtr;
 
 } // end namespace configurationcachepy
 

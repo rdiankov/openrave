@@ -51,10 +51,19 @@ option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects c
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
+option(OPT_CXX11 "Use c++11" ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if( OPT_CXX11 )
+  message(STATUS "Compiling with c++11 enabled")
+  set(OPENRAVE_USE_CXX11 1)
+  add_definitions("-DOPENRAVE_USE_CXX11")
+else()
+  set(OPENRAVE_USE_CXX11 0)
+endif()
 
 if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
@@ -81,6 +90,7 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
 include(InstallSymlink)
+#include(FindIntl)
 
 find_package(PkgConfig) # pkg_check_modules
 
@@ -197,6 +207,10 @@ endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
 
+if( OPENRAVE_USE_CXX11 )
+  set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -std=c++11")
+endif()
+
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
@@ -304,7 +318,7 @@ if(NOT MSVC71 AND NOT MSVC80)
   if( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
     set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
   endif()
-  set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
+  set(Boost_ADDITIONAL_VERSIONS "105300" "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
   find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
 else()
   # have to rely on local boost and a hack

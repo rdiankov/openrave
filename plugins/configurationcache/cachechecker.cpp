@@ -22,35 +22,36 @@ class CacheCollisionChecker : public CollisionCheckerBase
 public:
     CacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput) : CollisionCheckerBase(penv)
     {
-        RegisterCommand("TrackRobotState",boost::bind(&CacheCollisionChecker::_TrackRobotStateCommand,this,_1,_2),
+        using namespace std::placeholders;
+        RegisterCommand("TrackRobotState",tools::bind(&CacheCollisionChecker::_TrackRobotStateCommand,this,_1,_2),
                         "set up the cache to track a body state. [bodyname affinedofs]");
-        RegisterCommand("GetTrackedRobot",boost::bind(&CacheCollisionChecker::_GetTrackedRobotCommand,this,_1,_2),
+        RegisterCommand("GetTrackedRobot",tools::bind(&CacheCollisionChecker::_GetTrackedRobotCommand,this,_1,_2),
                         "get the robot being tracked by the collisionchecker");
-        RegisterCommand("GetCacheStatistics",boost::bind(&CacheCollisionChecker::_GetCacheStatisticsCommand,this,_1,_2),
+        RegisterCommand("GetCacheStatistics",tools::bind(&CacheCollisionChecker::_GetCacheStatisticsCommand,this,_1,_2),
                         "get the cache statistics: cachecollisions, cachehits");
-        RegisterCommand("GetSelfCacheStatistics",boost::bind(&CacheCollisionChecker::_GetSelfCacheStatisticsCommand,this,_1,_2),
+        RegisterCommand("GetSelfCacheStatistics",tools::bind(&CacheCollisionChecker::_GetSelfCacheStatisticsCommand,this,_1,_2),
                         "get the self collision cache statistics: selfcachecollisions, selfcachehits");
-        RegisterCommand("SetSelfCacheParameters",boost::bind(&CacheCollisionChecker::_SetSelfCacheParametersCommand,this,_1,_2),
+        RegisterCommand("SetSelfCacheParameters",tools::bind(&CacheCollisionChecker::_SetSelfCacheParametersCommand,this,_1,_2),
                         "set the self collision cache parameters: collisionthreshold, freespacethreshold, insertiondistancemultiplier, base");
-        RegisterCommand("SetCacheParameters",boost::bind(&CacheCollisionChecker::_SetCacheParametersCommand,this,_1,_2),
+        RegisterCommand("SetCacheParameters",tools::bind(&CacheCollisionChecker::_SetCacheParametersCommand,this,_1,_2),
                         "set the collision cache parameters: collisionthreshold, freespacethreshold, insertiondistancemultiplier, base");
-        RegisterCommand("ValidateCache",boost::bind(&CacheCollisionChecker::_ValidateCacheCommand,this,_1,_2),
+        RegisterCommand("ValidateCache",tools::bind(&CacheCollisionChecker::_ValidateCacheCommand,this,_1,_2),
                         "test the validity of the cache");
-        RegisterCommand("ValidateSelfCache",boost::bind(&CacheCollisionChecker::_ValidateSelfCacheCommand,this,_1,_2),
+        RegisterCommand("ValidateSelfCache",tools::bind(&CacheCollisionChecker::_ValidateSelfCacheCommand,this,_1,_2),
                         "test the validity of the self collision cache");
-        RegisterCommand("ResetCache",boost::bind(&CacheCollisionChecker::_ResetCacheCommand,this,_1,_2),
+        RegisterCommand("ResetCache",tools::bind(&CacheCollisionChecker::_ResetCacheCommand,this,_1,_2),
                         "reset collision cache");
-        RegisterCommand("ResetSelfCache",boost::bind(&CacheCollisionChecker::_ResetSelfCacheCommand,this,_1,_2),
+        RegisterCommand("ResetSelfCache",tools::bind(&CacheCollisionChecker::_ResetSelfCacheCommand,this,_1,_2),
                         "reset self collision cache");
-        RegisterCommand("UpdateCollisionConfigurations",boost::bind(&CacheCollisionChecker::_UpdateCollisionConfigurationsCommand,this,_1,_2),
+        RegisterCommand("UpdateCollisionConfigurations",tools::bind(&CacheCollisionChecker::_UpdateCollisionConfigurationsCommand,this,_1,_2),
                         "remove all nodes in collision with this body. [bodyname]");
-        RegisterCommand("UpdateFreeConfigurations",boost::bind(&CacheCollisionChecker::_UpdateFreeConfigurationsCommand,this,_1,_2),
+        RegisterCommand("UpdateFreeConfigurations",tools::bind(&CacheCollisionChecker::_UpdateFreeConfigurationsCommand,this,_1,_2),
                         "remove all free nodes that overlap with this body. [bodyname]");
-        RegisterCommand("SaveCache",boost::bind(&CacheCollisionChecker::_SaveCacheCommand,this,_1,_2),
+        RegisterCommand("SaveCache",tools::bind(&CacheCollisionChecker::_SaveCacheCommand,this,_1,_2),
                         "save self collision cache");
-        RegisterCommand("LoadCache",boost::bind(&CacheCollisionChecker::_LoadCacheCommand,this,_1,_2),
+        RegisterCommand("LoadCache",tools::bind(&CacheCollisionChecker::_LoadCacheCommand,this,_1,_2),
                         "load self collision cache");
-        RegisterCommand("GetCacheTimes",boost::bind(&CacheCollisionChecker::_GetCacheTimesCommand,this,_1,_2),
+        RegisterCommand("GetCacheTimes",tools::bind(&CacheCollisionChecker::_GetCacheTimesCommand,this,_1,_2),
                         "get the cache times: insert, query, collision checking, load");
         std::string collisionname="ode";
         sinput >> collisionname;
@@ -148,7 +149,7 @@ public:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        boost::shared_ptr<CacheCollisionChecker const> clone = boost::dynamic_pointer_cast<CacheCollisionChecker const> (preference);
+        tools::shared_ptr<CacheCollisionChecker const> clone = tools::dynamic_pointer_cast<CacheCollisionChecker const> (preference);
 
         DestroyEnvironment();
 
@@ -404,7 +405,7 @@ protected:
 
             _SetParams();
         }
-        
+
         // check if a selfcache for this robot exists on this disk
         std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
         if (fulldirname != "" && _selfcache->GetNumKnownNodes() == 0) {
@@ -430,7 +431,7 @@ protected:
         _dofindices = _probot->GetActiveDOFIndices();
 
         // callback that resets cache when the robot's DOF are changed
-        _handleRobotDOFChange = _probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&CacheCollisionChecker::_UpdateRobotDOF, this));
+        _handleRobotDOFChange = _probot->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, tools::bind(&CacheCollisionChecker::_UpdateRobotDOF, this));
 
         return true;
     }

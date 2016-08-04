@@ -44,7 +44,7 @@ enum SerializationOptions
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
  */
-class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
+class OPENRAVE_API InterfaceBase : public tools::enable_shared_from_this<InterfaceBase>
 {
 public:
 
@@ -245,7 +245,7 @@ private:
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
 
 #ifdef USE_TBB
-    typedef tbb::concurrent_unordered_map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveHashCompare> CMDMAP;
+    typedef tbb::concurrent_unordered_map<std::string, tools::shared_ptr<InterfaceCommand>, CaseInsensitiveHashCompare> CMDMAP;
 #else
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
 #endif

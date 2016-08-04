@@ -7,7 +7,7 @@
 #include <string>
 
 #include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 
 #include <signal.h>
 
@@ -61,7 +61,7 @@ public:
 
             // create the main openrave thread
             _bDestroyThread = false;
-            _thopenrave = boost::thread(boost::bind(&OpenRAVEExample::_demothreadwrapper,this,argc,argv));
+            _thopenrave = boost::thread(tools::bind(&OpenRAVEExample::_demothreadwrapper,this,argc,argv));
 
             // start the viewer main loop
             _viewer->main(true);
@@ -100,7 +100,7 @@ private:
     }
 
     void _demothreadwrapper(int argc, char ** argv) {
-        boost::shared_ptr<void> quitviewer((void*)NULL, boost::bind(&OpenRAVEExample::quitviewer, this,_1));
+        tools::shared_ptr<void> quitviewer((void*)NULL, tools::bind(&OpenRAVEExample::quitviewer, this,_1));
         demothread(argc,argv);
     }
 

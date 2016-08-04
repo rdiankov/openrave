@@ -44,10 +44,10 @@
 
 #endif
 
-//#define INTERFACE_PREDELETER boost::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
+//#define INTERFACE_PREDELETER tools::bind(&RaveDatabase::_InterfaceDestroyCallbackShared,shared_from_this(),_1)
 
 #define INTERFACE_PREDELETER boost::function<void(void const*)>()
-#define INTERFACE_POSTDELETER(name, plugin) boost::bind(&RaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name, plugin)
+#define INTERFACE_POSTDELETER(name, plugin) tools::bind(&RaveDatabase::_InterfaceDestroyCallbackSharedPost,shared_from_this(),name, plugin)
 
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
@@ -61,14 +61,14 @@ const char s_filesep = '/';
 namespace OpenRAVE {
 
 /// \brief database of interfaces from plugins
-class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
+class RaveDatabase : public tools::enable_shared_from_this<RaveDatabase>
 {
     struct RegisteredInterface : public UserData
     {
-        RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, boost::shared_ptr<RaveDatabase> database) : _type(type), _name(name), _createfn(createfn), _database(database) {
+        RegisteredInterface(InterfaceType type, const std::string& name, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn, tools::shared_ptr<RaveDatabase> database) : _type(type), _name(name), _createfn(createfn), _database(database) {
         }
         virtual ~RegisteredInterface() {
-            boost::shared_ptr<RaveDatabase> database = _database.lock();
+            tools::shared_ptr<RaveDatabase> database = _database.lock();
             if( !!database ) {
                 boost::mutex::scoped_lock lock(database->_mutex);
                 database->_listRegisteredInterfaces.erase(_iterator);
@@ -78,17 +78,17 @@ class RaveDatabase : public boost::enable_shared_from_this<RaveDatabase>
         InterfaceType _type;
         std::string _name;
         boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> _createfn;
-        std::list< boost::weak_ptr<RegisteredInterface> >::iterator _iterator;
+        std::list< tools::weak_ptr<RegisteredInterface> >::iterator _iterator;
 protected:
-        boost::weak_ptr<RaveDatabase> _database;
+        tools::weak_ptr<RaveDatabase> _database;
     };
-    typedef boost::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
+    typedef tools::shared_ptr<RegisteredInterface> RegisteredInterfacePtr;
 
 public:
-    class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
+    class Plugin : public UserData, public tools::enable_shared_from_this<Plugin>
     {
 public:
-        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false), _bInitializing(true) {
+        Plugin(tools::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false), _bInitializing(true) {
         }
         virtual ~Plugin() {
             Destroy();
@@ -117,7 +117,7 @@ public:
                     if( pfnDestroyPlugin != NULL ) {
                         pfnDestroyPlugin();
                     }
-                    boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
+                    tools::shared_ptr<RaveDatabase> pdatabase = _pdatabase.lock();
                     if( !!pdatabase ) {
                         pdatabase->_QueueLibraryDestruction(plibrary);
                     }
@@ -292,7 +292,7 @@ protected:
             }
         }
 
-        boost::weak_ptr<RaveDatabase> _pdatabase;
+        tools::weak_ptr<RaveDatabase> _pdatabase;
         std::set<pair< InterfaceType, string> > _setBadInterfaces;         ///< interfaces whose hash is wrong and shouldn't be tried for this plugin
         string ppluginname;
 
@@ -310,8 +310,8 @@ protected:
 
         friend class RaveDatabase;
     };
-    typedef boost::shared_ptr<Plugin> PluginPtr;
-    typedef boost::shared_ptr<Plugin const> PluginConstPtr;
+    typedef tools::shared_ptr<Plugin> PluginPtr;
+    typedef tools::shared_ptr<Plugin const> PluginConstPtr;
     friend class Plugin;
 
     RaveDatabase() : _bShutdown(false) {
@@ -362,7 +362,7 @@ protected:
 
     virtual bool Init(bool bLoadAllPlugins)
     {
-        _threadPluginLoader.reset(new boost::thread(boost::bind(&RaveDatabase::_PluginLoaderThread, this)));
+        _threadPluginLoader.reset(new boost::thread(tools::bind(&RaveDatabase::_PluginLoaderThread, this)));
         std::vector<std::string> vplugindirs;
 #ifdef _WIN32
         const char* delim = ";";
@@ -494,7 +494,7 @@ protected:
             }
 
             // have to copy in order to allow plugins to register stuff inside their creation methods
-            std::list< boost::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
+            std::list< tools::weak_ptr<RegisteredInterface> > listRegisteredInterfaces;
             list<PluginPtr> listplugins;
             {
                 boost::mutex::scoped_lock lock(_mutex);
@@ -1030,7 +1030,7 @@ protected:
     list<PluginPtr> _listplugins;
     mutable boost::mutex _mutex;     ///< changing plugin database
     std::list<void*> _listDestroyLibraryQueue;
-    std::list< boost::weak_ptr<RegisteredInterface> > _listRegisteredInterfaces;
+    std::list< tools::weak_ptr<RegisteredInterface> > _listRegisteredInterfaces;
     std::list<std::string> _listplugindirs;
 
     /// \name plugin loading
@@ -1038,7 +1038,7 @@ protected:
     mutable boost::mutex _mutexPluginLoader;     ///< specifically for loading shared objects
     boost::condition _condLoaderHasWork;
     std::list<PluginPtr> _listPluginsToLoad;
-    boost::shared_ptr<boost::thread> _threadPluginLoader;
+    tools::shared_ptr<boost::thread> _threadPluginLoader;
     bool _bShutdown;
     //@}
 };

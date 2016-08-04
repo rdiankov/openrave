@@ -52,6 +52,7 @@
 #include <set>
 #include <string>
 #include <stdexcept>
+#include <memory>
 
 // apparently there's a problem with higher versions of C++
 #if __cplusplus > 199711L || defined(__GXX_EXPERIMENTAL_CXX0X__)
@@ -78,7 +79,14 @@
 #define IS_PYTHONOBJECT_NONE(o) (!!(o))
 #endif
 
+
 namespace openravepy {
+
+#ifdef OPENRAVE_USE_CXX11
+namespace tools = std;
+#else
+namespace tools = boost;
+#endif
 
 using namespace boost::python;
 
@@ -92,12 +100,12 @@ class PyVoidHandle
 public:
     PyVoidHandle() {
     }
-    PyVoidHandle(boost::shared_ptr<void> handle) : _handle(handle) {
+    PyVoidHandle(tools::shared_ptr<void> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    boost::shared_ptr<void> _handle;
+    tools::shared_ptr<void> _handle;
 };
 
 class PyVoidHandleConst
@@ -105,12 +113,12 @@ class PyVoidHandleConst
 public:
     PyVoidHandleConst() {
     }
-    PyVoidHandleConst(boost::shared_ptr<void const> handle) : _handle(handle) {
+    PyVoidHandleConst(tools::shared_ptr<void const> handle) : _handle(handle) {
     }
     void Close() {
         _handle.reset();
     }
-    boost::shared_ptr<void const> _handle;
+    tools::shared_ptr<void const> _handle;
 };
 
 template <typename T>
@@ -276,6 +284,13 @@ struct exception_translator
 //
 //template <class T> struct pintee< boost::shared_ptr<const T> >{
 //     typedef T type;
+//};
+//
+//boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();
+
+
+//template <class T> struct pintee< boost::shared_ptr<const T> >{
+//    typedef T type;
 //};
 //
 //boost::python::register_ptr_to_python< boost::shared_ptr<const my_class> >();

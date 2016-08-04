@@ -42,7 +42,7 @@ public:
     int _properties;
     boost::function<void()> _callback;
 protected:
-    boost::weak_ptr<KinBody const> _pweakbody;
+    tools::weak_ptr<KinBody const> _pweakbody;
 };
 
 class CallFunctionAtDestructor
@@ -58,7 +58,7 @@ protected:
     boost::function<void()> _fn;
 };
 
-typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
+typedef tools::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
 ElectricMotorActuatorInfo::ElectricMotorActuatorInfo()
 {
@@ -112,7 +112,7 @@ KinBody::KinBodyStateSaver::~KinBodyStateSaver()
     }
 }
 
-void KinBody::KinBodyStateSaver::Restore(boost::shared_ptr<KinBody> body)
+void KinBody::KinBodyStateSaver::Restore(tools::shared_ptr<KinBody> body)
 {
     _RestoreKinBody(!body ? _pbody : body);
 }
@@ -127,7 +127,7 @@ void KinBody::KinBodyStateSaver::SetRestoreOnDestructor(bool restore)
     _bRestoreOnDestructor = restore;
 }
 
-void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbody)
+void KinBody::KinBodyStateSaver::_RestoreKinBody(tools::shared_ptr<KinBody> pbody)
 {
     if( !pbody ) {
         return;
@@ -395,7 +395,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
 void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
 {
     // need to call _PostprocessChangedParameters at the very end, even if exception occurs
-    CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
+    CallFunctionAtDestructor callfn(tools::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
     FOREACHC(itlink, _veclinks) {
         std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
         if( geomname.size() == 0 ) {
@@ -3388,7 +3388,7 @@ void KinBody::_ComputeInternalInformation()
             }
         }
         // fill Mimic::_vmimicdofs, check that there are no circular dependencies between the mimic joints
-        std::map<Mimic::DOFFormat, boost::shared_ptr<Mimic> > mapmimic;
+        std::map<Mimic::DOFFormat, tools::shared_ptr<Mimic> > mapmimic;
         for(int ijoints = 0; ijoints < 2; ++ijoints) {
             vector<JointPtr>& vjoints = ijoints ? _vPassiveJoints : _vecjoints;
             int jointindex=0;
@@ -3422,14 +3422,14 @@ void KinBody::_ComputeInternalInformation()
         while(bchanged) {
             bchanged = false;
             FOREACH(itmimic,mapmimic) {
-                boost::shared_ptr<Mimic> mimic = itmimic->second;
+                tools::shared_ptr<Mimic> mimic = itmimic->second;
                 Mimic::DOFHierarchy h;
                 h.dofformatindex = 0;
                 FOREACH(itdofformat,mimic->_vdofformat) {
                     if( mapmimic.find(*itdofformat) == mapmimic.end() ) {
                         continue; // this is normal, just means that the parent is a regular dof
                     }
-                    boost::shared_ptr<Mimic> mimicparent = mapmimic[*itdofformat];
+                    tools::shared_ptr<Mimic> mimicparent = mapmimic[*itdofformat];
                     FOREACH(itmimicdof, mimicparent->_vmimicdofs) {
                         if( mimicparent->_vdofformat[itmimicdof->dofformatindex] == itmimic->first ) {
                             JointPtr pjoint = itmimic->first.GetJoint(shared_kinbody());
@@ -4159,7 +4159,7 @@ void KinBody::_ComputeInternalInformation()
                 listRegisteredCallbacks = _vlistRegisteredCallbacks.at(index); // copy since it can be changed
             }
             FOREACH(it,listRegisteredCallbacks) {
-                ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+                ChangeCallbackDataPtr pdata = tools::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
                 if( !!pdata ) {
                     pdata->_callback();
                 }
@@ -4183,7 +4183,7 @@ bool KinBody::IsAttached(KinBodyConstPtr pbody) const
 
 void KinBody::GetAttached(std::set<KinBodyPtr>&setAttached) const
 {
-    setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+    setAttached.insert(tools::const_pointer_cast<KinBody>(shared_kinbody_const()));
     FOREACHC(itbody,_listAttachedBodies) {
         KinBodyPtr pattached = itbody->lock();
         if( !!pattached && setAttached.insert(pattached).second ) {
@@ -4356,7 +4356,7 @@ public:
         }
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
-                boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
+                tools::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
@@ -4378,7 +4378,7 @@ private:
         CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
-            boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
+            tools::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
         }
         _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {
@@ -4563,7 +4563,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
                 listRegisteredCallbacks = _vlistRegisteredCallbacks.at(index); // copy since it can be changed
             }
             FOREACH(it,listRegisteredCallbacks) {
-                ChangeCallbackDataPtr pdata = boost::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
+                ChangeCallbackDataPtr pdata = tools::dynamic_pointer_cast<ChangeCallbackData>(it->lock());
                 if( !!pdata ) {
                     pdata->_callback();
                 }

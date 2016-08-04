@@ -20,7 +20,7 @@ namespace OpenRAVE {
 InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
 {
     RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
-    RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2),
+    RegisterCommand("help",tools::bind(&InterfaceBase::_GetCommandHelp,this,std::placeholders::_1,std::placeholders::_2),
                     "display help commands.");
 }
 
@@ -100,7 +100,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
     if( !sinput ) {
         throw openrave_exception(_("invalid command"),ORE_InvalidArguments);
     }
-    boost::shared_ptr<InterfaceCommand> interfacecmd;
+    tools::shared_ptr<InterfaceCommand> interfacecmd;
     {
         boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
         CMDMAP::iterator it = __mapCommands.find(cmd);
@@ -132,7 +132,7 @@ void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::I
     if( __mapCommands.find(cmdname) != __mapCommands.end() ) {
         throw openrave_exception(str(boost::format(_("command '%s' already registered"))%cmdname),ORE_InvalidArguments);
     }
-    __mapCommands[cmdname] = boost::shared_ptr<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
+    __mapCommands[cmdname] = tools::shared_ptr<InterfaceCommand>(new InterfaceCommand(fncmd, strhelp));
 }
 
 void InterfaceBase::UnregisterCommand(const std::string& cmdname)

@@ -314,15 +314,15 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         _parameters.reset();
         Destroy();
         _robot = pbase;
-        boost::shared_ptr<RAStarParameters> parameters(new RAStarParameters());
+        tools::shared_ptr<RAStarParameters> parameters(new RAStarParameters());
         parameters->copy(pparams);
 
         RobotBase::RobotStateSaver savestate(_robot);
 
         if( !parameters->_goalfn )
-            parameters->_goalfn = boost::bind(&SimpleGoalMetric::Eval,boost::shared_ptr<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),_1);
+            parameters->_goalfn = tools::bind(&SimpleGoalMetric::Eval,boost::shared_ptr<SimpleGoalMetric>(new SimpleGoalMetric(_robot)),std::placeholders::_1);
         if( !parameters->_costfn )
-            parameters->_costfn = boost::bind(&SimpleCostMetric::Eval,boost::shared_ptr<SimpleCostMetric>(new SimpleCostMetric(_robot)),_1);
+            parameters->_costfn = tools::bind(&SimpleCostMetric::Eval,boost::shared_ptr<SimpleCostMetric>(new SimpleCostMetric(_robot)),std::placeholders::_1);
 
         _vSampleConfig.resize(GetDOF());
         _jointIncrement.resize(GetDOF());
@@ -606,7 +606,7 @@ private:
         return _parameters->GetDOF();
     }
 
-    boost::shared_ptr<RAStarParameters> _parameters;
+    tools::shared_ptr<RAStarParameters> _parameters;
     SpatialTree _spatialtree;
     BinarySearchTree<Node*, dReal> _sortedtree;       // sorted by decreasing value
 

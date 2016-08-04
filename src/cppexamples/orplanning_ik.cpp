@@ -10,7 +10,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 
 #include "orexample.h"
 

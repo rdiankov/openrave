@@ -36,7 +36,8 @@ public:
     };
 
 public:
-    IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc) {
+    IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, tools::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc) {
+        using namespace std::placeholders;
         OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(IkReal));
 
         _bEmptyTransform6D = false;
@@ -44,7 +45,7 @@ public:
         uint32_t ikfastversion = 0;
         sversion >> std::hex >> ikfastversion;
         if( ikfastversion & 0x10000000 ) {
-            _bEmptyTransform6D = true;
+        _bEmptyTransform6D = true;
         }
 
         _fRefineWithJacobianInverseAllowedError = -1;
@@ -59,33 +60,33 @@ public:
         _kinematicshash = ikfunctions->_GetKinematicsHash();
         __description = ":Interface Author: Rosen Diankov\n\nAn OpenRAVE wrapper for the ikfast generated files.\nIf 6D IK is used, will check if the end effector and other independent links are in collision before manipulator link collisions. If they are, the IK will terminate with failure immediately.\nBecause checking collisions is the slowest part of the IK, the custom filter function run before collision checking.";
         _ikthreshold = 1e-4;
-        RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
+        RegisterCommand("SetIkThreshold",tools::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
-        RegisterCommand("SetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_SetJacobianRefineCommand,this,_1,_2),
+        RegisterCommand("SetJacobianRefine",tools::bind(&IkFastSolver<IkReal>::_SetJacobianRefineCommand,this,_1,_2),
                         "sets the allowed workspace error, if ik solver returns above that, then use jacobian inverse to refine.");
-        RegisterCommand("SetDefaultIncrements",boost::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
+        RegisterCommand("SetDefaultIncrements",tools::bind(&IkFastSolver<IkReal>::_SetDefaultIncrementsCommand,this,_1,_2),
                         "Specify four values (2 pairs). Each pair is the free increment for revolute joint and second is the number of segment to divide free prismatic joints. The first pair is for structural free joints, the second pair is for solutions where axes align");
-        RegisterCommand("GetFreeIndices",boost::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
+        RegisterCommand("GetFreeIndices",tools::bind(&IkFastSolver<IkReal>::_GetFreeIndicesCommand,this,_1,_2),
                         "returns the free increments for all the free joints.");
-        RegisterCommand("SetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_SetFreeIncrementsCommand,this,_1,_2),
+        RegisterCommand("SetFreeIncrements",tools::bind(&IkFastSolver<IkReal>::_SetFreeIncrementsCommand,this,_1,_2),
                         "sets the free increments for all the free joints");
-        RegisterCommand("GetFreeIncrements",boost::bind(&IkFastSolver<IkReal>::_GetFreeIncrementsCommand,this,_1,_2),
+        RegisterCommand("GetFreeIncrements",tools::bind(&IkFastSolver<IkReal>::_GetFreeIncrementsCommand,this,_1,_2),
                         "returns the free increments for all the free joints.");
-        RegisterCommand("GetSolutionIndices",boost::bind(&IkFastSolver<IkReal>::_GetSolutionIndicesCommand,this,_1,_2),
+        RegisterCommand("GetSolutionIndices",tools::bind(&IkFastSolver<IkReal>::_GetSolutionIndicesCommand,this,_1,_2),
                         "**Can only be called by a custom filter during a Solve function call.** Gets the indices of the current solution being considered. if large-range joints wrap around, (index>>16) holds the index. So (index&0xffff) is unique to robot link pose, while (index>>16) describes the repetition.");
-        RegisterCommand("GetRobotLinkStateRepeatCount", boost::bind(&IkFastSolver<IkReal>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
+        RegisterCommand("GetRobotLinkStateRepeatCount", tools::bind(&IkFastSolver<IkReal>::_GetRobotLinkStateRepeatCountCommand,this,_1,_2),
                         "**Can only be called by a custom filter during a Solve function call.**. Returns 1 if the filter was called already with the same robot link positions, 0 otherwise. This is useful in saving computation. ");
     }
     virtual ~IkFastSolver() {
     }
 
-    inline boost::shared_ptr<IkFastSolver<IkReal> > shared_solver() {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
+    inline tools::shared_ptr<IkFastSolver<IkReal> > shared_solver() {
+        return tools::dynamic_pointer_cast<IkFastSolver<IkReal> >(shared_from_this());
     }
-    inline boost::shared_ptr<IkFastSolver<IkReal> const> shared_solver_const() const {
-        return boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
+    inline tools::shared_ptr<IkFastSolver<IkReal> const> shared_solver_const() const {
+        return tools::dynamic_pointer_cast<IkFastSolver<IkReal> const>(shared_from_this());
     }
-    inline boost::weak_ptr<IkFastSolver<IkReal> > weak_solver() {
+    inline tools::weak_ptr<IkFastSolver<IkReal> > weak_solver() {
         return shared_solver();
     }
 
@@ -97,6 +98,7 @@ public:
 
     bool _SetJacobianRefineCommand(ostream& sout, istream& sinput)
     {
+#ifdef OPENRAVE_HAS_LAPACK
         sinput >> _fRefineWithJacobianInverseAllowedError;
         _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
         int nMaxIterations=-1;
@@ -104,8 +106,11 @@ public:
         if( !!sinput && nMaxIterations >= 0 ) {
             _jacobinvsolver.SetMaxIterations(nMaxIterations);
         }
-        
+
         return true;
+#else
+        return false;
+#endif
     }
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
@@ -248,7 +253,8 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s not found in robot"), pmanip->GetName(), ORE_InvalidArguments);
         }
 
-        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
+        tools::weak_ptr< IkFastSolver<IkReal> > wksolver = weak_solver();
+        _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,[wksolver](){ return utils::sptr_from(wksolver)->SetJointLimits(); });
 
         if( _nTotalDOF != (int)pmanip->GetArmIndices().size() ) {
             RAVELOG_ERROR(str(boost::format("ik %s configured with different number of joints than robot manipulator (%d!=%d)\n")%GetXMLId()%pmanip->GetArmIndices().size()%_nTotalDOF));
@@ -309,7 +315,7 @@ public:
             _jacobinvsolver.Init(*pmanip);
         }
 #endif
-        
+
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -384,7 +390,7 @@ public:
             if( (!_bCheckEndEffectorEnvCollision || !_bCheckEndEffectorSelfCollision) && !_callbackhandle ) {
                 _InitSavers();
                 // have to register a handle if we're ignoring end effector collisions
-                _callbackhandle = _probot->GetEnv()->RegisterCollisionCallback(boost::bind(&StateCheckEndEffector::_CollisionCallback,this,_1,_2));
+                _callbackhandle = _probot->GetEnv()->RegisterCollisionCallback(tools::bind(&StateCheckEndEffector::_CollisionCallback,this,std::placeholders::_1,std::placeholders::_2));
             }
         }
 
@@ -521,7 +527,7 @@ protected:
         bool _bCheckEndEffectorEnvCollision, _bCheckEndEffectorSelfCollision, _bCheckSelfCollision, _bDisabled;
     };
 
-    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, tools::shared_ptr< std::vector<dReal> > result)
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
@@ -552,7 +558,7 @@ protected:
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, boost::shared_ptr< std::vector<dReal> > result)
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, tools::shared_ptr< std::vector<dReal> > result)
     {
         std::vector<dReal> q0local = q0; // copy in case result points to q0
         if( !!result ) {
@@ -597,7 +603,7 @@ protected:
         std::vector<IkReal> vfree(_vfreeparams.size());
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),filteroptions,ikreturn,boost::ref(stateCheck)), _vFreeInc);
+        IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, q0, tools::bind(&IkFastSolver::_SolveSingle,shared_solver(), tools::ref(param),tools::ref(vfree),tools::ref(q0),filteroptions,ikreturn,tools::ref(stateCheck)), _vFreeInc);
         if( !!ikreturn ) {
             ikreturn->_action = retaction;
         }
@@ -616,7 +622,7 @@ protected:
         std::vector<IkReal> vfree(_vfreeparams.size());
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
-        IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(vikreturns), boost::ref(stateCheck)), _vFreeInc);
+        IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), tools::bind(&IkFastSolver::_SolveAll,shared_solver(), param,tools::ref(vfree),filteroptions,tools::ref(vikreturns), tools::ref(stateCheck)), _vFreeInc);
         if( retaction & IKRA_Quit ) {
             return false;
         }
@@ -703,7 +709,7 @@ protected:
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         IkSolverBase::Clone(preference, cloningoptions);
-        boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
+        tools::shared_ptr< IkFastSolver<IkReal> const > r = tools::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
 
         _pmanip.reset();
         _cblimits.reset();
@@ -716,7 +722,8 @@ protected:
             if( !!probot ) {
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(rmanip->GetName());
                 _pmanip = pmanip;
-                _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
+                tools::weak_ptr< IkFastSolver<IkReal> > wksolver = weak_solver();
+                _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,[wksolver]() { return utils::sptr_from(wksolver)->SetJointLimits(); });
 
                 if( !!pmanip ) {
                     pmanip->GetChildLinks(_vchildlinks);
@@ -1170,7 +1177,7 @@ protected:
                 // have to search over all the free parameters of the solution!
                 vsolfree.resize(iksol.GetFree().size());
                 std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
-                res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, boost::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), boost::ref(iksol), boost::ref(textra), boost::ref(sol), boost::ref(vravesol), boost::ref(bestsolution), boost::ref(param), boost::ref(stateCheck), boost::ref(paramnewglobal)), vFreeInc);
+                res = ComposeSolution(iksol.GetFree(), vsolfree, 0, q0, tools::bind(&IkFastSolver::_ValidateSolutionSingle,shared_solver(), tools::ref(iksol), tools::ref(textra), tools::ref(sol), tools::ref(vravesol), tools::ref(bestsolution), tools::ref(param), tools::ref(stateCheck), tools::ref(paramnewglobal)), vFreeInc);
             }
             else {
                 vsolfree.resize(0);
@@ -1201,6 +1208,7 @@ protected:
 
     void _CheckRefineSolution(const IkParameterization& param, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
     {
+#ifdef OPENRAVE_HAS_LAPACK
         IkParameterization paramnew = manip.GetIkParameterization(param,false);
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
@@ -1216,8 +1224,9 @@ protected:
                 }
             }
         }
+#endif
     }
-                
+
 
     /// validate a solution
     /// \param paramnewglobal[out]
@@ -1293,7 +1302,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 _CheckRefineSolution(param, *pmanip, itravesol->first);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1333,7 +1342,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(vravesol,false);
                 _CheckRefineSolution(param, *pmanip, vravesol);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1347,7 +1356,7 @@ protected:
         CollisionReport report;
         CollisionReportPtr ptempreport;
         if( IS_DEBUGLEVEL(Level_Verbose) || paramnewglobal.GetType() == IKP_TranslationDirection5D ) { // 5D is necessary for tracking end effector collisions
-            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
+            ptempreport = tools::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             // check for self collisions
@@ -1360,7 +1369,7 @@ protected:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
-                if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                if( paramnewglobal.GetType() == IKP_Transform6D ) { // || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     // if gripper is colliding, solutions will always fail, so completely stop solution process
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
@@ -1497,7 +1506,7 @@ protected:
             // figure out a way to do short-curcuit the code to check the final solutions
             list<IkReturnPtr> listtestikreturns;
             listtestikreturns.swap(listlocalikreturns);
-            FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
+            FOREACH(ittestreturn, listtestikreturns) { //itravesol, vravesols) {
                 IkReturnPtr localret = *ittestreturn;
                 _vsolutionindices.resize(0);
                 FOREACH(it, localret->_mapdata["solutionindices"]) {
@@ -1590,7 +1599,7 @@ protected:
                     // have to search over all the free parameters of the solution!
                     vsolfree.resize(iksol.GetFree().size());
                     std::vector<dReal> vFreeInc(_GetFreeIncFromIndices(iksol.GetFree()));
-                    IkReturnAction retaction = ComposeSolution(iksol.GetFree(), vsolfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), boost::ref(param), boost::ref(iksol), boost::ref(vsolfree), filteroptions, boost::ref(sol), boost::ref(vikreturns), boost::ref(stateCheck)), vFreeInc);
+                    IkReturnAction retaction = ComposeSolution(iksol.GetFree(), vsolfree, 0, vector<dReal>(), tools::bind(&IkFastSolver::_ValidateSolutionAll,shared_solver(), tools::ref(param), tools::ref(iksol), tools::ref(vsolfree), filteroptions, tools::ref(sol), tools::ref(vikreturns), tools::ref(stateCheck)), vFreeInc);
                     if( retaction & IKRA_Quit) {
                         return retaction;
                     }
@@ -1653,7 +1662,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 _CheckRefineSolution(param, *pmanip, itravesol->first);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1693,7 +1702,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(vravesol,false);
                 _CheckRefineSolution(param, *pmanip, vravesol);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1707,7 +1716,7 @@ protected:
         CollisionReport report;
         CollisionReportPtr ptempreport;
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
+            ptempreport = tools::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
@@ -1719,7 +1728,7 @@ protected:
             stateCheck.SetEnvironmentCollisionState();
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
-                if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
+                if( paramnewglobal.GetType() == IKP_Transform6D ) { // || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
                         if( paramnewglobal.GetType() == IKP_Transform6D ) {
                             // 6D so end effector is determined
@@ -1975,7 +1984,7 @@ protected:
     UserDataPtr _cblimits;
     std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;
     std::vector<int> _vchildlinkindices; ///< indices of the links at _vchildlinks
-    boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > _ikfunctions;
+    tools::shared_ptr<ikfast::IkFastFunctions<IkReal> > _ikfunctions;
     std::vector<dReal> _vFreeInc;
     dReal _fFreeIncRevolute; ///< default increment for revolute joints
     dReal _fFreeIncPrismaticNum; ///< default number of segments to divide a free slider axis
@@ -1988,8 +1997,10 @@ protected:
     dReal _ikthreshold; ///< workspace distance threshold sanity checking between desired workspace goal and the workspace position with the returned ik values.
     dReal _fRefineWithJacobianInverseAllowedError; ///< if > 0, then use jacobian inverse numerical method to refine the results until workspace error drops down this much. By default it is disabled (=-1)
 
+#ifdef OPENRAVE_HAS_LAPACK
     ikfastsolvers::JacobianInverseSolver<double> _jacobinvsolver; ///< jacobian inverse solver if _fRefineWithJacobianInverseAllowedError is > 0
-    
+#endif
+
     //@{
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters) since the filters themselves can potentially call into this ik solver.
     std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
@@ -1997,18 +2008,18 @@ protected:
     //@}
 
     bool _bEmptyTransform6D; ///< if true, then the iksolver has been built with identity of the manipulator transform. Only valid for Transform6D IKs.
-    
+
 };
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, tools::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
 
 {
     return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc));
 }
 #endif
 
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, tools::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
 {
     return IkSolverBasePtr(new IkFastSolver<double>(penv,sinput,ikfunctions,vfreeinc));
 }

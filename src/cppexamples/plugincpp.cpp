@@ -39,7 +39,7 @@
  */
 #include <openrave/openrave.h>
 #include <openrave/plugin.h>
-#include <boost/bind.hpp>
+#include <functional>
 
 using namespace std;
 using namespace OpenRAVE;
@@ -52,8 +52,8 @@ public:
     MyModule(EnvironmentBasePtr penv) : ModuleBase(penv)
     {
         __description = "A very simple plugin.";
-        RegisterCommand("numbodies",boost::bind(&MyModule::NumBodies,this,_1,_2),"returns bodies");
-        RegisterCommand("load",boost::bind(&MyModule::Load, this,_1,_2),"loads a given file");
+        RegisterCommand("numbodies",tools::bind(&MyModule::NumBodies,this,_1,_2),"returns bodies");
+        RegisterCommand("load",tools::bind(&MyModule::Load, this,_1,_2),"loads a given file");
     }
     virtual ~MyModule() {
     }

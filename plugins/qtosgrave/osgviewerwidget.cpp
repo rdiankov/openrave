@@ -273,6 +273,7 @@ private:
 
 ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown, double metersinunit) : QWidget(), _onKeyDown(onKeyDown)
 {
+    using namespace std::placeholders;
     setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
 
     _userdatakey = userdatakey;
@@ -292,27 +293,27 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     setLayout(grid);
 
     //  Sets pickhandler
-    _picker = new OSGPickHandler(boost::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&ViewerWidget::UpdateFromOSG,this));
+    _picker = new OSGPickHandler(tools::bind(&ViewerWidget::HandleRayPick, this, _1, _2, _3), tools::bind(&ViewerWidget::UpdateFromOSG,this));
     _osgview->addEventHandler(_picker);
 
-    _keyhandler = new OpenRAVEKeyboardEventHandler(boost::bind(&ViewerWidget::HandleOSGKeyDown, this, _1, _2));
+    _keyhandler = new OpenRAVEKeyboardEventHandler(tools::bind(&ViewerWidget::HandleOSGKeyDown, this, _1, _2));
     _osgview->addEventHandler(_keyhandler);
 
     // initialize the environment
     _osgSceneRoot = new osg::Group();
     {
-        _osgFigureRoot = new osg::Group();
-        osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
-        //stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT_AND_BACK));
-        //stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
-        //stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
-        //stateset->setMode(GL_NORMALIZE,osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
-        //stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
-        stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
-        stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
-        stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+    _osgFigureRoot = new osg::Group();
+    osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
+    //stateset->setAttribute(new osg::CullFace(osg::CullFace::FRONT_AND_BACK));
+    //stateset->setMode(GL_CULL_FACE, osg::StateAttribute::OFF);
+    //stateset->setAttributeAndModes(new osg::CullFace, osg::StateAttribute::OFF);
+    //stateset->setMode(GL_NORMALIZE,osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+    //stateset->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
+    stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
+    stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
+    stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
-        _osgFigureRoot->setStateSet(stateset);
+    _osgFigureRoot->setStateSet(stateset);
     }
 
     // create world axis
@@ -320,7 +321,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
 
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
-    
+
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
 
@@ -378,7 +379,7 @@ ViewerWidget::~ViewerWidget()
     }
     _selectedItem.reset();
 }
-    
+
 bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
@@ -418,7 +419,7 @@ void ViewerWidget::RestoreCursor()
         gw->getGLWidget()->setCursor(_currentCursor);
     }
 }
-    
+
 void ViewerWidget::ActivateSelection(bool active)
 {
     _bIsSelectiveActive = active;
@@ -730,7 +731,7 @@ void ViewerWidget::_UpdateHUDText()
 
 void ViewerWidget::SetNearPlane(double nearplane)
 {
-    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+    if( _osgview->getCamera()->getProjectionMatrix() (2,3) == 0 ) {
         // orthogonal
         double left, right, bottom, top, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
@@ -745,7 +746,7 @@ void ViewerWidget::SetNearPlane(double nearplane)
 
 double ViewerWidget::GetCameraNearPlane()
 {
-    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+    if( _osgview->getCamera()->getProjectionMatrix() (2,3) == 0 ) {
         // orthogonal
         double left, right, bottom, top, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
@@ -797,7 +798,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
 
     //view->addEventHandler( new osgViewer::StatsHandler );
 
-    _osgCameraManipulator = new OpenRAVETrackball(this);//osgGA::TrackballManipulator();//NodeTrackerManipulator();
+    _osgCameraManipulator = new OpenRAVETrackball(this); //osgGA::TrackballManipulator();//NodeTrackerManipulator();
     _osgCameraManipulator->setWheelZoomFactor(0.2);
     view->setCameraManipulator( _osgCameraManipulator.get() );
 
@@ -863,7 +864,7 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateHUDCamera( int x, int y, int w, i
 KinBodyItemPtr ViewerWidget::_GetItemFromName(const std::string& name)
 {
     KinBodyPtr pbody = _penv->GetKinBody(name);
-    KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
+    KinBodyItemPtr pitem = tools::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
     return pitem;
 }
 
@@ -880,7 +881,7 @@ KinBodyItemPtr ViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
             if( !pitem ) {
                 RAVELOG_WARN("trying to use a deleted item\n");
             }
-            return boost::dynamic_pointer_cast<KinBodyItem>(pitem);
+            return tools::dynamic_pointer_cast<KinBodyItem>(pitem);
         }
     }
 
@@ -1011,7 +1012,7 @@ void ViewerWidget::_InitializeLights(int nlights)
 //    FOREACH(itbody,vecbodies) {
 //        BOOST_ASSERT( !!itbody->pbody );
 //        KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-//        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
+//        KinBodyItemPtr pitem = tools::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
 //        if (!!pitem) {
 //            pitem->UpdateFromOSG();
 //        }

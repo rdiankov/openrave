@@ -76,15 +76,15 @@ public:
 
 #endif
 
-static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
+static tools::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
 
 class ViewerRecorder : public ModuleBase
 {
-    inline boost::shared_ptr<ViewerRecorder> shared_module() {
-        return boost::dynamic_pointer_cast<ViewerRecorder>(shared_from_this());
+    inline tools::shared_ptr<ViewerRecorder> shared_module() {
+        return tools::dynamic_pointer_cast<ViewerRecorder>(shared_from_this());
     }
-    inline boost::shared_ptr<ViewerRecorder const> shared_module_const() const {
-        return boost::dynamic_pointer_cast<ViewerRecorder const>(shared_from_this());
+    inline tools::shared_ptr<ViewerRecorder const> shared_module_const() const {
+        return tools::dynamic_pointer_cast<ViewerRecorder const>(shared_from_this());
     }
     struct VideoFrame
     {
@@ -100,7 +100,7 @@ class ViewerRecorder : public ModuleBase
     boost::mutex _mutexlibrary; // for video encoding library resources
     boost::condition _condnewframe;
     bool _bContinueThread, _bStopRecord;
-    boost::shared_ptr<boost::thread> _threadrecord;
+    tools::shared_ptr<boost::thread> _threadrecord;
 
     boost::multi_array<uint32_t,2> _vwatermarkimage;
     int _nFrameCount, _nVideoWidth, _nVideoHeight;
@@ -111,20 +111,21 @@ class ViewerRecorder : public ModuleBase
     UserDataPtr _callback;
     int _nUseSimulationTime; // 0 to record as is, 1 to record with respect to simulation, 2 to control simulation to viewer updates
     dReal _fSimulationTimeMultiplier; // how many times to make the simulation time faster
-    list<boost::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
-    boost::shared_ptr<VideoFrame> _frameLastAdded;
+    list<tools::shared_ptr<VideoFrame> > _listAddFrames, _listFinishedFrames;
+    tools::shared_ptr<VideoFrame> _frameLastAdded;
 
 public:
     ViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
     {
+        using namespace std::placeholders;
         __description = ":Interface Author: Rosen Diankov\n\nRecords the images produced from a viewer into video file. The recordings can be synchronized to real-time or simulation time, by default simulation time is used. Each instance can record only one file at a time. To record multiple files simultaneously, create multiple VideoRecorder instances";
-        RegisterCommand("Start",boost::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
+        RegisterCommand("Start",tools::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
                         "Starts recording a file, this will stop all previous recordings and overwrite any previous files stored in this location. Format::\n\n  Start [width] [height] [framerate] codec [codec] timing [simtime/realtime/controlsimtime[=timestepmult]] viewer [name]\\n filename [filename]\\n\n\nBecause the viewer and filenames can have spaces, the names are ready until a newline is encountered");
-        RegisterCommand("Stop",boost::bind(&ViewerRecorder::_StopCommand,this,_1,_2),
+        RegisterCommand("Stop",tools::bind(&ViewerRecorder::_StopCommand,this,_1,_2),
                         "Stops recording and saves the file. Format::\n\n  Stop\n\n");
-        RegisterCommand("GetCodecs",boost::bind(&ViewerRecorder::_GetCodecsCommand,this,_1,_2),
+        RegisterCommand("GetCodecs",tools::bind(&ViewerRecorder::_GetCodecsCommand,this,_1,_2),
                         "Return all the possible codecs, one codec per line:[video_codec id] [name]");
-        RegisterCommand("SetWatermark",boost::bind(&ViewerRecorder::_SetWatermarkCommand,this,_1,_2),
+        RegisterCommand("SetWatermark",tools::bind(&ViewerRecorder::_SetWatermarkCommand,this,_1,_2),
                         "Set a WxHx4 image as a watermark. Each color is an unsigned integer ordered as A|B|G|R. The origin should be the top left corner");
         _nFrameCount = _nVideoWidth = _nVideoHeight = 0;
         _framerate = 0;
@@ -152,18 +153,18 @@ public:
         _picture_size = 0;
         _outbuf_size = 0;
 #endif
-        _threadrecord.reset(new boost::thread(boost::bind(&ViewerRecorder::_RecordThread,this)));
+        _threadrecord.reset(new boost::thread(tools::bind(&ViewerRecorder::_RecordThread,this)));
     }
     virtual ~ViewerRecorder()
     {
-        RAVELOG_VERBOSE("~ViewerRecorder\n");
-        _bContinueThread = false;
-        _Reset();
-        {
-            boost::mutex::scoped_lock lock(_mutex);
-            _condnewframe.notify_all();
-        }
-        _threadrecord->join();
+    RAVELOG_VERBOSE("~ViewerRecorder\n");
+    _bContinueThread = false;
+    _Reset();
+    {
+        boost::mutex::scoped_lock lock(_mutex);
+        _condnewframe.notify_all();
+    }
+    _threadrecord->join();
     }
 
     virtual void Destroy() {
@@ -173,8 +174,9 @@ public:
 protected:
     bool _StartCommand(ostream& sout, istream& sinput)
     {
+        using namespace std::placeholders;
         if( !s_pVideoGlobalState ) {
-            s_pVideoGlobalState.reset(new VideoGlobalState());
+        s_pVideoGlobalState.reset(new VideoGlobalState());
         }
         try {
             ViewerBasePtr pviewer;
@@ -250,7 +252,7 @@ protected:
             else {
                 _frametime = (uint64_t)(1000000.0f/_framerate);
             }
-            _callback = pviewer->RegisterViewerImageCallback(boost::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
+            _callback = pviewer->RegisterViewerImageCallback(tools::bind(&ViewerRecorder::_ViewerImageCallback,shared_module(),_1,_2,_3,_4));
             BOOST_ASSERT(!!_callback);
             _bStopRecord = false;
             return !!_callback;
@@ -290,7 +292,7 @@ protected:
             return;
         }
         uint64_t timestamp = _nUseSimulationTime ? GetEnv()->GetSimulationTime() : utils::GetMicroTime();
-        boost::shared_ptr<VideoFrame> frame;
+        tools::shared_ptr<VideoFrame> frame;
 
         if( _listAddFrames.size() > 0 ) {
             BOOST_ASSERT( timestamp-_starttime >= _listAddFrames.back()->_timestamp-_starttime );
@@ -326,7 +328,7 @@ protected:
             // calls the environment lock, which might be taken if the environment is destroying the problem
             // therefore need to take it first
             while(_bContinueThread && !_bStopRecord) {
-                boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
+                tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
                 if( !!lockenv ) {
                     GetEnv()->StepSimulation(_fSimulationTimeMultiplier/_framerate);
                     break;
@@ -335,13 +337,13 @@ protected:
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
+    tools::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
     {
         // try to acquire the lock
 #if BOOST_VERSION >= 103500
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+        tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
 #else
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+        tools::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
 #endif
         uint64_t basetime = utils::GetMicroTime();
         while(utils::GetMicroTime()-basetime<timeout ) {
@@ -359,7 +361,7 @@ protected:
     void _RecordThread()
     {
         while(_bContinueThread) {
-            boost::shared_ptr<VideoFrame> frame;
+            tools::shared_ptr<VideoFrame> frame;
             uint64_t numstores=0;
             {
                 boost::mutex::scoped_lock lock(_mutex);
@@ -387,7 +389,7 @@ protected:
                         // not enough frames to predict what's coming next so wait
                         continue;
                     }
-                    list<boost::shared_ptr<VideoFrame> >::iterator itframe = _listAddFrames.begin(), itbest = _listAddFrames.end();
+                    list<tools::shared_ptr<VideoFrame> >::iterator itframe = _listAddFrames.begin(), itbest = _listAddFrames.end();
                     uint64_t bestdist = 0;
                     while(itframe != _listAddFrames.end()) {
                         uint64_t offset = (*itframe)->_timestamp - _starttime;
@@ -693,7 +695,7 @@ protected:
             if( fmt->video_codec != AV_CODEC_ID_NONE && !!fmt->name ) {
 #else
             if( fmt->video_codec != CODEC_ID_NONE && !!fmt->name ) {
-#endif            
+#endif
                 string mime_type;
                 if( !!fmt->mime_type ) {
                     mime_type = fmt->mime_type;

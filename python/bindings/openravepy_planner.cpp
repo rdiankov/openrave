@@ -133,7 +133,7 @@ public:
         {
             _paramswrite->_nMaxIterations = nMaxIterations;
         }
-        
+
         object CheckPathAllConstraints(object oq0, object oq1, object odq0, object odq1, dReal timeelapsed, IntervalType interval, uint32_t options=0xffff, bool filterreturn=false)
         {
             const std::vector<dReal> q0, q1, dq0, dq1;
@@ -262,7 +262,7 @@ public:
         if( !fncallback ) {
             throw openrave_exception(_("callback not specified"));
         }
-        UserDataPtr p = _pplanner->RegisterPlanCallback(boost::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,_1));
+        UserDataPtr p = _pplanner->RegisterPlanCallback(tools::bind(&PyPlannerBase::_PlanCallback,fncallback,_pyenv,std::placeholders::_1));
         if( !p ) {
             throw openrave_exception(_("no registration callback returned"));
         }

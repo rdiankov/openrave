@@ -9,7 +9,7 @@
 #include <vector>
 #include <sstream>
 #include <boost/thread/thread.hpp>
-#include <boost/bind.hpp>
+#include <functional>
 
 #include "orexample.h"
 
@@ -95,9 +95,9 @@ public:
         int numthreads = 2;
 
         // start worker threads
-        vector<boost::shared_ptr<boost::thread> > vthreads(numthreads);
+        vector<tools::shared_ptr<boost::thread> > vthreads(numthreads);
         for(size_t i = 0; i < vthreads.size(); ++i) {
-            vthreads[i].reset(new boost::thread(boost::bind(&MultithreadedPlanningExample::_PlanningThread,this,probot->GetName())));
+            vthreads[i].reset(new boost::thread(tools::bind(&MultithreadedPlanningExample::_PlanningThread,this,probot->GetName())));
         }
 
         while(IsOk()) {

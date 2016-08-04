@@ -40,14 +40,14 @@ public:
         // optional
         std::vector<dReal> _vConfigJerkLimit;
     };
-    typedef boost::shared_ptr<GroupInfo> GroupInfoPtr;
-    typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
+    typedef tools::shared_ptr<GroupInfo> GroupInfoPtr;
+    typedef tools::shared_ptr<GroupInfo const> GroupInfoConstPtr;
 
 public:
     TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nTrajectory re-timing without modifying any of the points. Overwrites the velocities and timestamps.";
-        _bmanipconstraints = false;        
+        _bmanipconstraints = false;
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
@@ -93,7 +93,7 @@ public:
             }
             _manipconstraintchecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
         }
-        
+
         return _SupportInterpolation();
     }
 
@@ -103,13 +103,14 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+        using namespace std::placeholders;
         // TODO there's a lot of info that is being recomputed which could be cached depending on the configurationspace of the incoming trajectory
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
         BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
         std::vector<ConfigurationSpecification::Group>::const_iterator itoldgrouptime = ptraj->GetConfigurationSpecification().FindCompatibleGroup("deltatime",false);
         if( _parameters->_hastimestamps && itoldgrouptime == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
-            RAVELOG_WARN("trajectory does not have timestamps, even though parameters say timestamps are needed\n");
-            return PS_Failed;
+        RAVELOG_WARN("trajectory does not have timestamps, even though parameters say timestamps are needed\n");
+        return PS_Failed;
         }
         size_t numpoints = ptraj->GetNumWaypoints();
         if( numpoints == 0 ) {
@@ -232,42 +233,42 @@ public:
                     {
                         // if _parameters->_hastimestamps, then use this for double checking that times are feasible
                         if( igrouptype == 0 ) {
-                            _listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
+                            _listmintimefns.push_back(tools::bind(&TrajectoryRetimer::_ComputeMinimumTimeJointValues,this,_listgroupinfo.back(),_1,_2,_3,_4));
                         }
                         else if( igrouptype == 1 ) {
-                            _listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
+                            _listmintimefns.push_back(tools::bind(&TrajectoryRetimer::_ComputeMinimumTimeAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3,_4));
                         }
                         else if( igrouptype == 2 ) {
-                            _listmintimefns.push_back(boost::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
+                            _listmintimefns.push_back(tools::bind(&TrajectoryRetimer::_ComputeMinimumTimeIk,this,_listgroupinfo.back(),iktype,_1,_2,_3,_4));
                         }
                     }
 
                     if( igrouptype == 0 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                            _listcheckvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_CheckJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                         }
                         else {
-                            _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                            _listvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_ComputeVelocitiesJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                         }
-                        _listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
+                        _listwritefns.push_back(tools::bind(&TrajectoryRetimer::_WriteJointValues,this,_listgroupinfo.back(),_1,_2,_3));
                     }
                     else if( igrouptype == 1 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                            _listcheckvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_CheckAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                         }
                         else {
-                            _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                            _listvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_ComputeVelocitiesAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                         }
-                        _listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
+                        _listwritefns.push_back(tools::bind(&TrajectoryRetimer::_WriteAffine,this,_listgroupinfo.back(),affinedofs,_1,_2,_3));
                     }
                     else if( igrouptype == 2 ) {
                         if( _parameters->_hasvelocities ) {
-                            _listcheckvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_CheckIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                            _listcheckvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_CheckIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                         }
                         else {
-                            _listvelocityfns.push_back(boost::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                            _listvelocityfns.push_back(tools::bind(&TrajectoryRetimer::_ComputeVelocitiesIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                         }
-                        _listwritefns.push_back(boost::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
+                        _listwritefns.push_back(tools::bind(&TrajectoryRetimer::_WriteIk,this,_listgroupinfo.back(),iktype,_1,_2,_3));
                     }
 
                     gpos.interpolation = posinterpolation;
@@ -430,7 +431,7 @@ protected:
     }
 
     virtual bool _SupportInterpolation() = 0;
-    
+
     /// \brief compute the minimum time to achieve the point. returns a mintime>=0 if successeeded, otherwise returns value < 0.
     virtual dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     /// \brief given the delta time, compute the velocities in the data
@@ -470,8 +471,8 @@ protected:
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;
-    boost::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
-    
+    tools::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
+
     // caching
     ConfigurationSpecification _cachedoldspec, _cachednewspec; ///< the configuration specification that the cached structures have been set for
     std::string _cachedposinterpolation;

@@ -41,7 +41,11 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </PlannerParameters> in %s"),buf.str(),ORE_InvalidArguments);
         }
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,utils::null_deleter()), pbuf.c_str(), ppsize);
+        try {
+            LocalXML::ParseXMLData(pp.shared_from_this(), pbuf.c_str(), ppsize);
+        } catch(tools::bad_weak_ptr& e) {
+            LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp, utils::null_deleter()), pbuf.c_str(), ppsize);
+        }
     }
 
     return I;
@@ -103,10 +107,11 @@ void PlannerBase::PlannerParameters::StateSaver::_Restore()
 
 PlannerBase::PlannerParameters::PlannerParameters() : XMLReadable("plannerparameters"), _fStepLength(0.04f), _nMaxIterations(0), _nMaxPlanningTime(0), _sPostProcessingPlanner(s_linearsmoother), _nRandomGeneratorSeed(0)
 {
+    using namespace std::placeholders;
     _diffstatefn = SubtractStates;
     _neighstatefn = AddStates;
     // have to add the default router
-    _checkpathconstraintsfn = boost::bind(&PlannerParameters::_CheckPathConstraintsOld, this, _1, _2, _3, _4);
+    _checkpathconstraintsfn = tools::bind(&PlannerParameters::_CheckPathConstraintsOld, this, _1, _2, _3, _4);
 
     //_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
     // should not verify initial path since coming from RRT. actually the linear smoother sometimes introduces small collisions due to the discrete nature of the collision checking, so also want to ignore those
@@ -184,7 +189,7 @@ PlannerBase::PlannerParameters& PlannerBase::PlannerParameters::operator=(const 
     return *this;
 }
 
-void PlannerBase::PlannerParameters::copy(boost::shared_ptr<PlannerParameters const> r)
+void PlannerBase::PlannerParameters::copy(tools::shared_ptr<PlannerParameters const> r)
 {
     *this = *r;
 }
@@ -321,7 +326,7 @@ bool PlannerBase::PlannerParameters::endElement(const std::string& name)
 {
     if( !!__pcurreader ) {
         if( __pcurreader->endElement(name) ) {
-            boost::shared_ptr<DummyXMLReader> pdummy = boost::dynamic_pointer_cast<DummyXMLReader>(__pcurreader);
+            tools::shared_ptr<DummyXMLReader> pdummy = tools::dynamic_pointer_cast<DummyXMLReader>(__pcurreader);
             if( !!pdummy ) {
                 if( pdummy->GetFieldName() == "_postprocessing" ) {
                     _sPostProcessingParameters = _sslocal->str();
@@ -431,6 +436,7 @@ int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>
 
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
+    using namespace tools::placeholders;
     // check if any of the links affected by the dofs beside the base link are static
     FOREACHC(itlink, robot->GetLinks()) {
         if( (*itlink)->IsStatic() ) {
@@ -442,16 +448,16 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     }
 
     using namespace planningutils;
-    _distmetricfn = boost::bind(&SimpleDistanceMetric::Eval,boost::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
-    _diffstatefn = boost::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
+    _distmetricfn = tools::bind(&SimpleDistanceMetric::Eval,tools::shared_ptr<SimpleDistanceMetric>(new SimpleDistanceMetric(robot)),_1,_2);
+    _diffstatefn = tools::bind(&RobotBase::SubtractActiveDOFValues,robot,_1,_2);
     SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(robot->GetEnv(),str(boost::format("robotconfiguration %s")%robot->GetName()));
     _listInternalSamplers.clear();
     _listInternalSamplers.push_back(pconfigsampler);
-    boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
-    _samplefn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
-    _sampleneighfn = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
-    _setstatevaluesfn = boost::bind(SetActiveDOFValuesParameters,robot, _1, _2);
-    _getstatefn = boost::bind(&RobotBase::GetActiveDOFValues,robot,_1);
+    tools::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,_distmetricfn, _diffstatefn));
+    _samplefn = tools::bind((bool (SimpleNeighborhoodSampler::*)(std::vector<dReal>&))&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
+    _sampleneighfn = tools::bind((bool (SimpleNeighborhoodSampler::*)(std::vector<dReal>&, const std::vector<dReal>&, dReal))&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
+    _setstatevaluesfn = tools::bind(SetActiveDOFValuesParameters,robot, _1, _2);
+    _getstatefn = tools::bind(&RobotBase::GetActiveDOFValues,robot,_1);
 
     robot->GetActiveDOFLimits(_vConfigLowerLimit,_vConfigUpperLimit);
     robot->GetActiveDOFVelocityLimits(_vConfigVelocityLimit);
@@ -461,12 +467,12 @@ void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
     robot->GetActiveDOFVelocities(_vInitialConfigVelocities); // necessary?
     _configurationspecification = robot->GetActiveConfigurationSpecification();
 
-    _neighstatefn = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
+    _neighstatefn = tools::bind(AddStatesWithLimitCheck, _1, _2, _3, boost::ref(_vConfigLowerLimit), boost::ref(_vConfigUpperLimit)); // probably ok... do we need to clamp limits?
 
     // have to do this last, disable timed constraints for default
     std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
-    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+    tools::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
+    _checkpathvelocityconstraintsfn = tools::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
 }
 
@@ -654,6 +660,7 @@ bool _CallNeighStateFns(const std::vector< std::pair<PlannerBase::PlannerParamet
 void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
 {
     using namespace planningutils;
+    using namespace std::placeholders;
     spec.Validate();
     std::vector< std::pair<DiffStateFn, int> > diffstatefns(spec._vgroups.size());
     std::vector< std::pair<DistMetricFn, int> > distmetricfns(spec._vgroups.size());
@@ -670,9 +677,9 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     int nMaxDOFForGroup = 0;
     std::vector< std::pair<int, int> > vgroupoffsets(spec._vgroups.size());
     for(size_t igroup = 0; igroup < spec._vgroups.size(); ++igroup) {
-        vgroupoffsets[igroup].first = spec._vgroups[igroup].offset;
-        vgroupoffsets[igroup].second = igroup;
-        nMaxDOFForGroup = max(nMaxDOFForGroup,spec._vgroups[igroup].dof);
+    vgroupoffsets[igroup].first = spec._vgroups[igroup].offset;
+    vgroupoffsets[igroup].second = igroup;
+    nMaxDOFForGroup = max(nMaxDOFForGroup,spec._vgroups[igroup].dof);
     }
 
     _listInternalSamplers.clear();
@@ -696,9 +703,9 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             FOREACH(itf,vweights2) {
                 *itf *= *itf;
             }
-            diffstatefns[isavegroup].first = boost::bind(&KinBody::SubtractDOFValues, pbody, _1, _2, dofindices);
+            diffstatefns[isavegroup].first = tools::bind(&KinBody::SubtractDOFValues, pbody, _1, _2, dofindices);
             diffstatefns[isavegroup].second = g.dof;
-            distmetricfns[isavegroup].first = boost::bind(_EvalJointDOFDistanceMetric, diffstatefns[isavegroup].first, _1, _2, vweights2);
+            distmetricfns[isavegroup].first = tools::bind(_EvalJointDOFDistanceMetric, diffstatefns[isavegroup].first, _1, _2, vweights2);
             distmetricfns[isavegroup].second = g.dof;
 
             SpaceSamplerBasePtr pconfigsampler = RaveCreateSpaceSampler(penv,str(boost::format("bodyconfiguration %s")%pbody->GetName()));
@@ -712,18 +719,18 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
                     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set body %s configuration to %s"),pbody->GetName()%ss.str(), ORE_Assert);
                 }
             }
-            boost::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first, diffstatefns[isavegroup].first));
-            samplefns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
+            tools::shared_ptr<SimpleNeighborhoodSampler> defaultsamplefn(new SimpleNeighborhoodSampler(pconfigsampler,distmetricfns[isavegroup].first, diffstatefns[isavegroup].first));
+            samplefns[isavegroup].first = tools::bind((bool (SimpleNeighborhoodSampler::*)(std::vector<dReal>&))&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1);
             samplefns[isavegroup].second = g.dof;
-            sampleneighfns[isavegroup].first = boost::bind(&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
+            sampleneighfns[isavegroup].first = tools::bind((bool (SimpleNeighborhoodSampler::*)(std::vector<dReal>&, const std::vector<dReal>&, dReal))&SimpleNeighborhoodSampler::Sample,defaultsamplefn,_1,_2,_3);
             sampleneighfns[isavegroup].second = g.dof;
-            setstatevaluesfns[isavegroup].first = boost::bind(SetDOFValuesIndicesParameters, pbody, _1, dofindices, _2);
+            setstatevaluesfns[isavegroup].first = tools::bind(SetDOFValuesIndicesParameters, pbody, _1, dofindices, _2);
             setstatevaluesfns[isavegroup].second = g.dof;
-            getstatefns[isavegroup].first = boost::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
+            getstatefns[isavegroup].first = tools::bind(&KinBody::GetDOFValues, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
             neighstatefns[isavegroup].second = g.dof;
             pbody->GetDOFLimits(v0,v1,dofindices);
-            neighstatefns[isavegroup].first = boost::bind(AddStatesWithLimitCheck, _1, _2, _3, v0, v1);
+            neighstatefns[isavegroup].first = tools::bind(AddStatesWithLimitCheck, _1, _2, _3, v0, v1);
             std::copy(v0.begin(),v0.end(), vConfigLowerLimit.begin()+g.offset);
             std::copy(v1.begin(),v1.end(), vConfigUpperLimit.begin()+g.offset);
             pbody->GetDOFVelocityLimits(v0,dofindices);
@@ -748,13 +755,13 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
             throw OPENRAVE_EXCEPTION_FORMAT(_("group %s not supported for for planner parameters configuration"),g.name,ORE_InvalidArguments);
         }
     }
-    _diffstatefn = boost::bind(_CallDiffStateFns,diffstatefns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
-    _distmetricfn = boost::bind(_CallDistMetricFns,distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
-    _samplefn = boost::bind(_CallSampleFns,samplefns, spec.GetDOF(), nMaxDOFForGroup, _1);
-    _sampleneighfn = boost::bind(_CallSampleNeighFns,sampleneighfns, distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2, _3);
-    _setstatevaluesfn = boost::bind(CallSetStateValuesFns,setstatevaluesfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
-    _getstatefn = boost::bind(CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
-    _neighstatefn = boost::bind(_CallNeighStateFns,neighstatefns, spec.GetDOF(), nMaxDOFForGroup, _1,_2,_3);
+    _diffstatefn = tools::bind(_CallDiffStateFns,diffstatefns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
+    _distmetricfn = tools::bind(_CallDistMetricFns,distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
+    _samplefn = tools::bind(_CallSampleFns,samplefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _sampleneighfn = tools::bind(_CallSampleNeighFns,sampleneighfns, distmetricfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2, _3);
+    _setstatevaluesfn = tools::bind(CallSetStateValuesFns,setstatevaluesfns, spec.GetDOF(), nMaxDOFForGroup, _1, _2);
+    _getstatefn = tools::bind(CallGetStateFns,getstatefns, spec.GetDOF(), nMaxDOFForGroup, _1);
+    _neighstatefn = tools::bind(_CallNeighStateFns,neighstatefns, spec.GetDOF(), nMaxDOFForGroup, _1,_2,_3);
     _vConfigLowerLimit.swap(vConfigLowerLimit);
     _vConfigUpperLimit.swap(vConfigUpperLimit);
     _vConfigVelocityLimit.swap(vConfigVelocityLimit);
@@ -763,8 +770,8 @@ void PlannerBase::PlannerParameters::SetConfigurationSpecification(EnvironmentBa
     _configurationspecification = spec;
     _getstatefn(vinitialconfig);
     // have to do this last, disable timed constraints for default
-    boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
-    _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+    tools::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
+    _checkpathvelocityconstraintsfn = tools::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 }
 
 void PlannerBase::PlannerParameters::Validate() const
@@ -827,7 +834,7 @@ void PlannerBase::PlannerParameters::Validate() const
                 RAVELOG_DEBUG_FORMAT("unequal states: %s",ss.str());
             }
         }
-        
+
         OPENRAVE_ASSERT_OP(dist,<=,1000*g_fEpsilon);
     }
     if( !!_diffstatefn && vstate.size() > 0 ) {
@@ -841,7 +848,7 @@ PlannerBase::PlannerProgress::PlannerProgress() : _iteration(0)
 {
 }
 
-class CustomPlannerCallbackData : public boost::enable_shared_from_this<CustomPlannerCallbackData>, public UserData
+class CustomPlannerCallbackData : public tools::enable_shared_from_this<CustomPlannerCallbackData>, public UserData
 {
 public:
     CustomPlannerCallbackData(const PlannerBase::PlanCallbackFn& callbackfn, PlannerBasePtr planner) : _callbackfn(callbackfn), _plannerweak(planner) {
@@ -858,7 +865,7 @@ public:
     std::list<UserDataWeakPtr>::iterator _iterator;
 };
 
-typedef boost::shared_ptr<CustomPlannerCallbackData> CustomPlannerCallbackDataPtr;
+typedef tools::shared_ptr<CustomPlannerCallbackData> CustomPlannerCallbackDataPtr;
 
 PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv)
 {
@@ -867,7 +874,7 @@ PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, pe
 bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
 {
     RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
-    boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
+    tools::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
     isParameters >> *localparams;
     localparams->Validate();
     return InitPlan(pbase,localparams);
@@ -895,11 +902,11 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
             }
         }
     }
-        
+
     // transfer the callbacks?
     list<UserDataPtr> listhandles;
     FOREACHC(it,__listRegisteredCallbacks) {
-        CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
+        CustomPlannerCallbackDataPtr pitdata = tools::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
         if( !!pitdata) {
             listhandles.push_back(__cachePostProcessPlanner->RegisterPlanCallback(pitdata->_callbackfn));
         }
@@ -923,7 +930,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)
 {
     FOREACHC(it,__listRegisteredCallbacks) {
-        CustomPlannerCallbackDataPtr pitdata = boost::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
+        CustomPlannerCallbackDataPtr pitdata = tools::dynamic_pointer_cast<CustomPlannerCallbackData>(it->lock());
         if( !!pitdata) {
             PlannerAction ret = pitdata->_callbackfn(progress);
             if( ret != PA_None ) {

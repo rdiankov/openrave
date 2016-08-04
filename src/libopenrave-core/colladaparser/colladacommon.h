@@ -99,7 +99,7 @@ public:
     std::vector<LinkBinding> _bindingLinkSIDs; ///< link bindings, SID for link, rigidbody, but URL for vmodel (node). same order as link indices
 };
 
-typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
+typedef tools::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
 
 /** Have to maintain a global DAE pointer that is only destroyed on OpenRAVE destruction. The reasons are:
 
@@ -110,9 +110,9 @@ typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
 /// \brief get the global DAE.
 ///
 /// \param clear is true, will attempt to reset any resolvers to defaults
-boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults=true);
+tools::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults=true);
 /// \brief reset the global DAE
-void SetGlobalDAE(boost::shared_ptr<DAE>);
+void SetGlobalDAE(tools::shared_ptr<DAE>);
 boost::mutex& GetGlobalDAEMutex();
 
 

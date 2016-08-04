@@ -29,9 +29,16 @@
 #include <istream>
 #include <vector>
 
+#ifdef OPENRAVE_USE_CXX11
+#include <memory>
+#include <functional>
+#else
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/function.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/pointer_cast.hpp>
+#endif
 #include <boost/assert.hpp>
 
 #include <time.h>
@@ -51,8 +58,33 @@ inline void usleep(unsigned long microseconds) {
 
 #include <bitset>
 
+
 namespace OpenRAVE {
 namespace utils {
+
+//#ifdef OPENRAVE_USE_CXX11
+//typedef boost::shared_ptr shared_ptr;
+//typedef boost::weak_ptr weak_ptr;
+//typedef boost::static_pointer_cast static_pointer_cast;
+//typedef boost::dynamic_pointer_cast dynamic_pointer_cast;
+//typedef boost::const_pointer_cast const_pointer_cast;
+//typedef boost::make_shared make_shared;
+//typedef boost::enable_shared_from_this enable_shared_from_this;
+//typedef boost::bind bind;
+//typedef boost::ref ref;
+//typedef boost::cref cref;
+//#else
+//typedef tools::shared_ptr shared_ptr;
+//typedef tools::weak_ptr weak_ptr;
+//typedef tools::static_pointer_cast static_pointer_cast;
+//typedef tools::dynamic_pointer_cast dynamic_pointer_cast;
+//typedef tools::const_pointer_cast const_pointer_cast;
+//typedef tools::make_shared make_shared;
+//typedef tools::enable_shared_from_this enable_shared_from_this;
+//typedef tools::bind bind;
+//typedef tools::ref ref;
+//typedef tools::cref cref;
+//#endif
 
 #ifdef _WIN32
 inline uint32_t GetMilliTime()
@@ -150,9 +182,9 @@ struct null_deleter
     }
 };
 
-template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
+template <class T> tools::shared_ptr<T> sptr_from(tools::weak_ptr<T> const& wpt)
 {
-    return boost::shared_ptr<T>(wpt); // throws on wpt.expired()
+    return tools::shared_ptr<T>(wpt); // throws on wpt.expired()
 }
 
 template<typename T>
@@ -212,7 +244,7 @@ inline std::string ConvertToLowerCase(const std::string & s)
     from http://stackoverflow.com/questions/5505965/fast-string-splitting-with-multiple-delimiters
 
    \param skipempty if true, then will skip empty strings. otherwise will insert them. use false when order of parameters is necessary.
-   
+
    Usage:
    \code
    std::vector<std::string> vstrings;

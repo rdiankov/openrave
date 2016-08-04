@@ -20,6 +20,7 @@
 #include <openrave/xmlreaders.h>
 #include <openrave/utils.h>
 
+
 namespace openravepy {
 
 PyRay::PyRay(object newpos, object newdir)
@@ -44,6 +45,7 @@ string PyRay::__str__() {
 object PyRay::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
+
 
 class PyXMLReadable
 {
@@ -997,6 +999,7 @@ string poseSerialization(object o)
     return ss.str();
 }
 
+
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveInitialize_overloads, pyRaveInitialize, 0, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(RaveFindLocalFile_overloads, OpenRAVE::RaveFindLocalFile, 1, 2)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InterpolateQuatSlerp_overloads, openravepy::InterpolateQuatSlerp, 3, 4)
@@ -1086,7 +1089,8 @@ void init_openravepy_global()
     .value("Uint32",SDT_Uint32)
     ;
 
-    class_<UserData, UserDataPtr >("UserData", DOXY_CLASS(UserData))
+    //boost::python::register_ptr_to_python< UserDataPtr >();
+    class_<UserData, tools::shared_ptr<UserData> >("UserData", DOXY_CLASS(UserData))
     ;
 
     class_< boost::shared_ptr< void > >("VoidPointer", "Holds auto-managed resources, deleting it releases its shared data.");

@@ -49,17 +49,17 @@ public:
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
     };
-    typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
-    typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
+    typedef tools::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
+    typedef tools::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
 
     /// \brief Defines a chain of joints for an arm and set of joints for a gripper. Simplifies operating with them.
-    class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
+    class OPENRAVE_API Manipulator : public tools::enable_shared_from_this<Manipulator>
     {
         Manipulator(RobotBasePtr probot, const ManipulatorInfo& info);
         Manipulator(const Manipulator &r);
 
         /// \brief can switch the underyling robot
-        Manipulator(RobotBasePtr probot, boost::shared_ptr<Manipulator const> r);
+        Manipulator(RobotBasePtr probot, tools::shared_ptr<Manipulator const> r);
 
 public:
         virtual ~Manipulator();
@@ -408,9 +408,9 @@ private:
         friend class ColladaReader;
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
-    typedef boost::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
-    typedef boost::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
+    typedef tools::shared_ptr<RobotBase::Manipulator> ManipulatorPtr;
+    typedef tools::shared_ptr<RobotBase::Manipulator const> ManipulatorConstPtr;
+    typedef tools::weak_ptr<RobotBase::Manipulator> ManipulatorWeakPtr;
 
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
@@ -429,11 +429,11 @@ public:
         std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
         SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
     };
-    typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
-    typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
+    typedef tools::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
+    typedef tools::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
 
     /// \brief Attaches a sensor to a link on the robot.
-    class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
+    class OPENRAVE_API AttachedSensor : public tools::enable_shared_from_this<AttachedSensor>
     {
 public:
         AttachedSensor(RobotBasePtr probot);
@@ -519,9 +519,9 @@ private:
         friend class ColladaReader;
         friend class RobotBase;
     };
-    typedef boost::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
-    typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
-    typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
+    typedef tools::shared_ptr<RobotBase::AttachedSensor> AttachedSensorPtr;
+    typedef tools::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
+    typedef tools::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
     
     /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
     ///
@@ -534,8 +534,8 @@ public:
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
         std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
     };
-    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
-    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
+    typedef tools::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
+    typedef tools::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
 
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
@@ -548,7 +548,7 @@ public:
         ///
         /// \param robot if set, will attempt to restore the stored state to the passed in body, otherwise will restore it for the original body.
         /// \throw openrave_exception if the passed in body is not compatible with the saved state, will throw
-        virtual void Restore(boost::shared_ptr<RobotBase> robot=boost::shared_ptr<RobotBase>());
+        virtual void Restore(tools::shared_ptr<RobotBase> robot=tools::shared_ptr<RobotBase>());
 
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
@@ -566,10 +566,10 @@ protected:
         Vector _vActiveManipLocalDirection;
         IkSolverBasePtr _pActiveManipIkSolver;
 private:
-        virtual void _RestoreRobot(boost::shared_ptr<RobotBase> robot);
+        virtual void _RestoreRobot(tools::shared_ptr<RobotBase> robot);
     };
 
-    typedef boost::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
+    typedef tools::shared_ptr<RobotStateSaver> RobotStateSaverPtr;
 
     virtual ~RobotBase();
 
@@ -1002,10 +1002,10 @@ protected:
     RobotBase(EnvironmentBasePtr penv);
 
     inline RobotBasePtr shared_robot() {
-        return boost::static_pointer_cast<RobotBase>(shared_from_this());
+        return tools::static_pointer_cast<RobotBase>(shared_from_this());
     }
     inline RobotBaseConstPtr shared_robot_const() const {
-        return boost::static_pointer_cast<RobotBase const>(shared_from_this());
+        return tools::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.

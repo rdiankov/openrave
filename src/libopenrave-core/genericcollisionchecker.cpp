@@ -29,7 +29,7 @@ public:
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        boost::shared_ptr<GenericCollisionChecker const > r = boost::dynamic_pointer_cast<GenericCollisionChecker const>(preference);
+        tools::shared_ptr<GenericCollisionChecker const > r = tools::dynamic_pointer_cast<GenericCollisionChecker const>(preference);
         _geometrygroup = r->_geometrygroup;
     }
 

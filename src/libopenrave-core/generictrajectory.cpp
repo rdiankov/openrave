@@ -69,8 +69,9 @@ public:
 
     void Init(const ConfigurationSpecification& spec)
     {
+        using namespace std::placeholders;
         if( _bInit  && _spec == spec ) {
-            // already init
+        // already init
         }
         else {
             BOOST_ASSERT(spec.GetDOF()>0 && spec.IsValid());
@@ -83,7 +84,7 @@ public:
             _vintegraloffsets.resize(0);
             _spec = spec;
             // order the groups based on computation order
-            stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),boost::bind(&GenericTrajectory::SortGroups,this,_1,_2));
+            stable_sort(_spec._vgroups.begin(),_spec._vgroups.end(),tools::bind(&GenericTrajectory::SortGroups,this,_1,_2));
             _timeoffset = -1;
             FOREACH(itgroup,_spec._vgroups) {
                 if( itgroup->name == "deltatime" ) {
@@ -331,7 +332,7 @@ public:
     void Swap(TrajectoryBasePtr rawtraj)
     {
         OPENRAVE_ASSERT_OP(GetXMLId(),==,rawtraj->GetXMLId());
-        boost::shared_ptr<GenericTrajectory> traj = boost::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
+        tools::shared_ptr<GenericTrajectory> traj = tools::dynamic_pointer_cast<GenericTrajectory>(rawtraj);
         _spec.Swap(traj->_spec);
         _vderivoffsets.swap(traj->_vderivoffsets);
         _vddoffsets.swap(traj->_vddoffsets);
@@ -450,6 +451,7 @@ protected:
     /// \brief called in order to initialize _vgroupinterpolators and _vgroupvalidators, _vderivoffsets, _vintegraloffsets
     void _InitializeGroupFunctions()
     {
+        using namespace std::placeholders;
         // first set sizes to 0
         _vgroupinterpolators.resize(0);
         _vgroupvalidators.resize(0);
@@ -464,118 +466,118 @@ protected:
         _vdddoffsets.resize(_spec.GetDOF(),-1);
         _vintegraloffsets.resize(_spec.GetDOF(),-1);
         for(size_t i = 0; i < _spec._vgroups.size(); ++i) {
-            const string& interpolation = _spec._vgroups[i].interpolation;
-            int nNeedNeighboringInfo = 0;
-            if( interpolation == "previous" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+        const string& interpolation = _spec._vgroups[i].interpolation;
+        int nNeedNeighboringInfo = 0;
+        if( interpolation == "previous" ) {
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolatePrevious,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+        }
+        else if( interpolation == "next" ) {
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+        }
+        else if( interpolation == "linear" ) {
+            if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                stringstream ss(_spec._vgroups[i].name.substr(14));
+                int niktype=0;
+                ss >> niktype;
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                // TODO add validation for ikparam until
             }
-            else if( interpolation == "next" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            else {
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
             }
-            else if( interpolation == "linear" ) {
-                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
-                    stringstream ss(_spec._vgroups[i].name.substr(14));
-                    int niktype=0;
-                    ss >> niktype;
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinearIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
-                    // TODO add validation for ikparam until
-                }
-                else {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateLinear,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                }
-                nNeedNeighboringInfo = 2;
+            nNeedNeighboringInfo = 2;
+        }
+        else if( interpolation == "quadratic" ) {
+            if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
+                stringstream ss(_spec._vgroups[i].name.substr(14));
+                int niktype=0;
+                ss >> niktype;
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
+                // TODO add validation for ikparam until
             }
-            else if( interpolation == "quadratic" ) {
-                if( _spec._vgroups[i].name.size() >= 14 && _spec._vgroups[i].name.substr(0,14) == "ikparam_values" ) {
-                    stringstream ss(_spec._vgroups[i].name.substr(14));
-                    int niktype=0;
-                    ss >> niktype;
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadraticIk,this,boost::ref(_spec._vgroups[i]),_1,_2,_3,static_cast<IkParameterizationType>(niktype));
-                    // TODO add validation for ikparam until
-                }
-                else {
-                    _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                    _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                }
-                nNeedNeighboringInfo = 3;
+            else {
+                _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+                _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateQuadratic,this,boost::ref(_spec._vgroups[i]),_1,_2);
             }
-            else if( interpolation == "cubic" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                nNeedNeighboringInfo = 3;
-            }
-            else if( interpolation == "quartic" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                nNeedNeighboringInfo = 3;
-            }
-            else if( interpolation == "quintic" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                nNeedNeighboringInfo = 3;
-            }
-            else if( interpolation == "sextic" ) {
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-                _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
-                nNeedNeighboringInfo = 3;
-            }
-            else if( interpolation == "" ) {
-                // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
-                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
-            }
+            nNeedNeighboringInfo = 3;
+        }
+        else if( interpolation == "cubic" ) {
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateCubic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            nNeedNeighboringInfo = 3;
+        }
+        else if( interpolation == "quartic" ) {
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateQuartic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            nNeedNeighboringInfo = 3;
+        }
+        else if( interpolation == "quintic" ) {
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateQuintic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            nNeedNeighboringInfo = 3;
+        }
+        else if( interpolation == "sextic" ) {
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            _vgroupvalidators[i] = tools::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
+            nNeedNeighboringInfo = 3;
+        }
+        else if( interpolation == "" ) {
+            // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
+            _vgroupinterpolators[i] = tools::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+        }
 
 
-            if( nNeedNeighboringInfo ) {
-                std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
-                if( itderiv == _spec._vgroups.end() ) {
+        if( nNeedNeighboringInfo ) {
+            std::vector<ConfigurationSpecification::Group>::const_iterator itderiv = _spec.FindTimeDerivativeGroup(_spec._vgroups[i]);
+            if( itderiv == _spec._vgroups.end() ) {
+                // don't throw an error here since it is unknown if the trajectory will be sampled
+                for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                    _vderivoffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
+                }
+            }
+            else {
+                for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                    _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
+                }
+                std::vector<ConfigurationSpecification::Group>::const_iterator itdd = _spec.FindTimeDerivativeGroup(*itderiv);
+                if( itdd == _spec._vgroups.end() ) {
                     // don't throw an error here since it is unknown if the trajectory will be sampled
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                        _vderivoffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
+                        _vddoffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
                     }
                 }
                 else {
                     for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                        _vderivoffsets[_spec._vgroups[i].offset+j] = itderiv->offset+j;
+                        _vddoffsets[_spec._vgroups[i].offset+j] = itdd->offset+j;
                     }
-                    std::vector<ConfigurationSpecification::Group>::const_iterator itdd = _spec.FindTimeDerivativeGroup(*itderiv);
-                    if( itdd == _spec._vgroups.end() ) {
+                    std::vector<ConfigurationSpecification::Group>::const_iterator itddd = _spec.FindTimeDerivativeGroup(*itdd);
+                    if( itddd == _spec._vgroups.end() ) {
                         // don't throw an error here since it is unknown if the trajectory will be sampled
                         for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                            _vddoffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
+                            _vdddoffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
                         }
                     }
                     else {
                         for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                            _vddoffsets[_spec._vgroups[i].offset+j] = itdd->offset+j;
+                            _vdddoffsets[_spec._vgroups[i].offset+j] = itddd->offset+j;
                         }
-                        std::vector<ConfigurationSpecification::Group>::const_iterator itddd = _spec.FindTimeDerivativeGroup(*itdd);
-                        if( itddd == _spec._vgroups.end() ) {
-                            // don't throw an error here since it is unknown if the trajectory will be sampled
-                            for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                                _vdddoffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
-                            }
-                        }
-                        else {
-                            for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                                _vdddoffsets[_spec._vgroups[i].offset+j] = itddd->offset+j;
-                            }
-                        }
-                    }
-                }
-                std::vector<ConfigurationSpecification::Group>::const_iterator itintegral = _spec.FindTimeIntegralGroup(_spec._vgroups[i]);
-                if( itintegral == _spec._vgroups.end() ) {
-                    // don't throw an error here since it is unknown if the trajectory will be sampled
-                    for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                        _vintegraloffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
-                    }
-                }
-                else {
-                    for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
-                        _vintegraloffsets[_spec._vgroups[i].offset+j] = itintegral->offset+j;
                     }
                 }
             }
+            std::vector<ConfigurationSpecification::Group>::const_iterator itintegral = _spec.FindTimeIntegralGroup(_spec._vgroups[i]);
+            if( itintegral == _spec._vgroups.end() ) {
+                // don't throw an error here since it is unknown if the trajectory will be sampled
+                for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                    _vintegraloffsets[_spec._vgroups[i].offset+j] = -nNeedNeighboringInfo;
+                }
+            }
+            else {
+                for(int j = 0; j < _spec._vgroups[i].dof; ++j) {
+                    _vintegraloffsets[_spec._vgroups[i].offset+j] = itintegral->offset+j;
+                }
+            }
+        }
         }
     }
 
@@ -866,7 +868,7 @@ protected:
                     dReal dd1 = _vtrajdata[_spec.GetDOF()+offset+ddoffset+i];
                     dReal c5 = (-0.5*dd0 + dd1*0.5)*ideltatime3 - (3*deriv0 + 3*deriv1)*ideltatime4 + px*6*ideltatime5;
                     dReal c4 = (1.5*dd0 - dd1)*ideltatime2 + (8*deriv0 + 7*deriv1)*ideltatime3 - px*15*ideltatime4;
-                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (- 6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
+                    dReal c3 = (-1.5*dd0 + dd1*0.5)*ideltatime + (-6*deriv0 - 4*deriv1)*ideltatime2 + px*10*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(c3 + deltatime*(c4 + deltatime*c5))));
                 }
             }
@@ -934,9 +936,9 @@ protected:
                     //dReal c6 = A[0]*b[0] + A[1]*b[1] + A[2]*b[2];
                     //dReal c5 = A[3]*b[0] + A[4]*b[1] + A[5]*b[2];
                     //dReal c4 = A[6]*b[0] + A[7]*b[1] + A[8]*b[2];
-                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (- ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
+                    dReal c6 = (-dd0 - dd1)*0.5*ideltatime4 + (-ddd0 + ddd1)/12.0*ideltatime3 + (-deriv0 + deriv1)*ideltatime5;
                     dReal c5 = (1.6*dd0 + 1.4*dd1)*ideltatime3 + (0.3*ddd0 - ddd1*0.2)*ideltatime2 + (3*deriv0 - 3*deriv1)*ideltatime4;
-                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (- 0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
+                    dReal c4 = (-1.5*dd0 - dd1)*ideltatime2 + (-0.375*ddd0 + ddd1*0.125)*ideltatime + (-2.5*deriv0 + 2.5*deriv1)*ideltatime3;
                     data[g.offset+i] = p0 + deltatime*(deriv0 + deltatime*(0.5*dd0 + deltatime*(ddd0/6.0 + deltatime*(c4 + deltatime*(c5 + deltatime*c6)))));
                 }
             }

@@ -35,11 +35,11 @@ public:
             return _pbody.lock();
         }
         KinBodyWeakPtr _pbody;
-        vector<boost::shared_ptr<PQP_Model> > vlinks;
+        vector<tools::shared_ptr<PQP_Model> > vlinks;
         int nLastStamp;
     };
-    typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
-    typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+    typedef tools::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
+    typedef tools::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
 
     CollisionCheckerPQP(EnvironmentBasePtr penv) : CollisionCheckerBase(penv)
     {
@@ -88,7 +88,7 @@ public:
 
     virtual bool _InitKinBody(KinBodyConstPtr pbody)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        KinBodyInfoPtr pinfo = tools::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
         if( !!pinfo && pinfo->GetBody() == pbody ) {
             return true;
@@ -96,14 +96,14 @@ public:
 
         pinfo.reset(new KinBodyInfo());
 
-        pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
+        pinfo->_pbody = tools::const_pointer_cast<KinBody>(pbody);
         pbody->SetUserData(_userdatakey, pinfo);
 
         PQP_REAL p1[3], p2[3], p3[3];
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
             const TriMesh& trimesh = (*itlink)->GetCollisionData();
-            boost::shared_ptr<PQP_Model> pm;
+            tools::shared_ptr<PQP_Model> pm;
             if( trimesh.indices.size() > 0 ) {
                 pm.reset(new PQP_Model());
                 pm->BeginModel(trimesh.indices.size()/3);
@@ -410,9 +410,9 @@ public:
         return false;
     }
 
-    boost::shared_ptr<PQP_Model> GetLinkModel(KinBody::LinkConstPtr plink)
+    tools::shared_ptr<PQP_Model> GetLinkModel(KinBody::LinkConstPtr plink)
     {
-        KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetUserData(_userdatakey));
+        KinBodyInfoPtr pinfo = tools::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetUserData(_userdatakey));
         BOOST_ASSERT( pinfo->GetBody() == plink->GetParent());
         return pinfo->vlinks.at(plink->GetIndex());
     }
@@ -552,8 +552,8 @@ private:
         if( !_IsActiveLink(link1->GetParent(),link1->GetIndex()) || !_IsActiveLink(link2->GetParent(),link2->GetIndex()) ) {
             return false;
         }
-        boost::shared_ptr<PQP_Model> m1 = GetLinkModel(link1);
-        boost::shared_ptr<PQP_Model> m2 = GetLinkModel(link2);
+        tools::shared_ptr<PQP_Model> m1 = GetLinkModel(link1);
+        tools::shared_ptr<PQP_Model> m2 = GetLinkModel(link2);
         bool bcollision = false;
         if( !m1 || !m2 ) {
             return false;

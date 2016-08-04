@@ -36,7 +36,7 @@ public:
     class ConveyorJoint : public Joint
     {
 public:
-        ConveyorJoint(const std::string& name, TrajectoryBasePtr trajfollow, boost::shared_ptr<KinBody::Mimic> mimic, bool bIsCircular, KinBodyPtr parent) : Joint(parent, KinBody::JointTrajectory) {
+        ConveyorJoint(const std::string& name, TrajectoryBasePtr trajfollow, tools::shared_ptr<KinBody::Mimic> mimic, bool bIsCircular, KinBodyPtr parent) : Joint(parent, KinBody::JointTrajectory) {
             _info._name = name;
             _info._vlowerlimit[0] = 0;
             _info._vupperlimit[0] = trajfollow->GetDuration();
@@ -57,7 +57,7 @@ public:
 public:
         ConveyorInfo() : XMLReadable("conveyorjoint"), _fLinkDensity(10), _bIsCircular(true), _bCreated(false) {
         }
-        boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
+        tools::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
         KinBody::LinkPtr _linkParent; ///< base link attached
         TrajectoryBasePtr _trajfollow; ///< trajectory to following in base link's coordinate system
         int _fLinkDensity; ///< number of links to create per unit of time in the trajectory
@@ -67,7 +67,7 @@ public:
 
         bool _bCreated;
     };
-    typedef boost::shared_ptr<ConveyorInfo> ConveyorInfoPtr;
+    typedef tools::shared_ptr<ConveyorInfo> ConveyorInfoPtr;
 
     class ConveyorXMLReader : public BaseXMLReader
     {
@@ -118,12 +118,12 @@ public:
         {
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) ) {
-                    xmlreaders::TrajectoryReaderPtr ptrajreader = boost::dynamic_pointer_cast<xmlreaders::TrajectoryReader>(_pcurreader);
+                    xmlreaders::TrajectoryReaderPtr ptrajreader = tools::dynamic_pointer_cast<xmlreaders::TrajectoryReader>(_pcurreader);
                     if( !!ptrajreader ) {
                         _cmdata->_trajfollow = ptrajreader->GetTrajectory();
                     }
                     else {
-                        xmlreaders::GeometryInfoReaderPtr pgeomreader = boost::dynamic_pointer_cast<xmlreaders::GeometryInfoReader>(_pcurreader);
+                        xmlreaders::GeometryInfoReaderPtr pgeomreader = tools::dynamic_pointer_cast<xmlreaders::GeometryInfoReader>(_pcurreader);
                         if( !!pgeomreader ) {
                             _cmdata->_listGeometries.push_back(*pgeomreader->GetGeometryInfo());
                         }
@@ -222,7 +222,7 @@ protected:
     virtual void _ComputeInternalInformation()
     {
         // create extra joints for each conveyor joint
-        ConveyorInfoPtr cmdata = boost::dynamic_pointer_cast<ConveyorInfo>(GetReadableInterface("conveyorjoint"));
+        ConveyorInfoPtr cmdata = tools::dynamic_pointer_cast<ConveyorInfo>(GetReadableInterface("conveyorjoint"));
         if( !!cmdata && !cmdata->_bCreated ) {
             if( !_pController ) {
                 _pController = RaveCreateController(GetEnv(), "IdealVelocityController");
@@ -234,14 +234,14 @@ protected:
             std::vector<dReal> vsampledata;
             Transform tparent = cmdata->_linkParent->GetTransform();
             for(int ichild = 0; ichild < numchildlinks; ++ichild, curtime += timestep) {
-                boost::shared_ptr<ConveyorLink> pchildlink(new ConveyorLink(str(boost::format("__moving__%s%d")%cmdata->_namebase%ichild), tparent, shared_kinbody()));
+                tools::shared_ptr<ConveyorLink> pchildlink(new ConveyorLink(str(boost::format("__moving__%s%d")%cmdata->_namebase%ichild), tparent, shared_kinbody()));
                 pchildlink->InitGeometries(cmdata->_listGeometries);
                 _veclinks.push_back(pchildlink);
 
-                boost::shared_ptr<KinBody::Mimic> mimic(new KinBody::Mimic());
+                tools::shared_ptr<KinBody::Mimic> mimic(new KinBody::Mimic());
                 *mimic = *cmdata->_mimic;
                 mimic->_equations[0] += str(boost::format(" +%.15e")%curtime); // have to add the offset inside the equations
-                boost::shared_ptr<ConveyorJoint> pchildjoint(new ConveyorJoint(pchildlink->GetName(), cmdata->_trajfollow, mimic, cmdata->_bIsCircular, shared_kinbody()));
+                tools::shared_ptr<ConveyorJoint> pchildjoint(new ConveyorJoint(pchildlink->GetName(), cmdata->_trajfollow, mimic, cmdata->_bIsCircular, shared_kinbody()));
                 _vecjoints.push_back(pchildjoint);
                 pchildjoint->_ComputeInternalInformation(cmdata->_linkParent, pchildlink, curtime);
             }

@@ -72,10 +72,12 @@ set( OpenRAVE_CORE_C_LIBRARIES ${OpenRAVE_C_LIBRARIES} openrave${OpenRAVE_LIBRAR
 
 if(@USE_OPENRAVEPY@)
   set( OpenRAVE_PYTHON_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY_VER_INSTALL_DIR@")
+  set( OpenRAVE_PYTHON_CXX_FLAGS "@OPENRAVEPY_EXPORT_CXXFLAGS")
   mark_as_advanced(OpenRAVE_PYTHON_DIR)
 endif()
 
 set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
+set( OpenRAVE_USE_CXX11 "@OPENRAVE_USE_CXX11@")
 
 if( WIN32 )
   # search for the boost version openrave was compiled with

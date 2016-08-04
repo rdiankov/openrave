@@ -74,7 +74,7 @@ bool KinBody::Link::IsVisible() const
     return false;
 }
 
-void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vParentLinks) const
+void KinBody::Link::GetParentLinks(std::vector< tools::shared_ptr<Link> >& vParentLinks) const
 {
     KinBodyConstPtr parent(_parent);
     vParentLinks.resize(_vParentLinks.size());
@@ -83,7 +83,7 @@ void KinBody::Link::GetParentLinks(std::vector< boost::shared_ptr<Link> >& vPare
     }
 }
 
-bool KinBody::Link::IsParentLink(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsParentLink(tools::shared_ptr<Link const> plink) const
 {
     return find(_vParentLinks.begin(),_vParentLinks.end(),plink->GetIndex()) != _vParentLinks.end();
 }
@@ -415,7 +415,7 @@ int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
     return it->second.size();
 }
 
-void KinBody::Link::SwapGeometries(boost::shared_ptr<Link>& link)
+void KinBody::Link::SwapGeometries(tools::shared_ptr<Link>& link)
 {
     _vGeometries.swap(link->_vGeometries);
     FOREACH(itgeom,_vGeometries) {
@@ -439,7 +439,7 @@ bool KinBody::Link::ValidateContactNormal(const Vector& position, Vector& normal
     return false;
 }
 
-void KinBody::Link::GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const
+void KinBody::Link::GetRigidlyAttachedLinks(std::vector<tools::shared_ptr<Link> >& vattachedlinks) const
 {
     KinBodyPtr parent(_parent);
     vattachedlinks.resize(0);
@@ -481,7 +481,7 @@ void KinBody::Link::SetStringParameters(const std::string& key, const std::strin
     GetParent()->_PostprocessChangedParameters(Prop_LinkCustomParameters);
 }
 
-bool KinBody::Link::IsRigidlyAttached(boost::shared_ptr<Link const> plink) const
+bool KinBody::Link::IsRigidlyAttached(tools::shared_ptr<Link const> plink) const
 {
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),plink->GetIndex()) != _vRigidlyAttachedLinks.end();
 }

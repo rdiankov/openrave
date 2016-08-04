@@ -51,8 +51,19 @@
 #include <set>
 #include <string>
 
+#ifdef BOOST_NO_CXX11_DECLTYPE
+
 #define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(typeof((v).rbegin())it = (v).rbegin(); it != (v).rend(); (it)++)
 #define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(); it != (v).end(); )
+
+#else
+
+#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACHR(it, v) for(decltype((v).rbegin()) it = (v).rbegin(); it != (v).rend(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
+
+#endif
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -301,7 +312,7 @@ bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, cons
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
-#include <boost/bind.hpp>
+#include <functional>
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/thread/thread.hpp>

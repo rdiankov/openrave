@@ -1122,9 +1122,10 @@ void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, KinBodyP
     RaveGetAffineDOFValuesFromVelocity(values.begin(), linearvel, angularvel, quatrotation, affinedofs, vaxis);
 }
 
-boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(EnvironmentBasePtr penv) const
+tools::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(EnvironmentBasePtr penv) const
 {
-    boost::shared_ptr<SetConfigurationStateFn> fn;
+    using namespace std::placeholders;
+    tools::shared_ptr<SetConfigurationStateFn> fn;
     Validate();
     std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> > setstatefns(_vgroups.size());
     string bodyname;
@@ -1133,9 +1134,9 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
     int nMaxDOFForGroup = 0;
     std::vector< std::pair<int, int> > vgroupoffsets(_vgroups.size());
     for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
-        vgroupoffsets[igroup].first = _vgroups[igroup].offset;
-        vgroupoffsets[igroup].second = igroup;
-        nMaxDOFForGroup = max(nMaxDOFForGroup,_vgroups[igroup].dof);
+    vgroupoffsets[igroup].first = _vgroups[igroup].offset;
+    vgroupoffsets[igroup].second = igroup;
+    nMaxDOFForGroup = max(nMaxDOFForGroup,_vgroups[igroup].dof);
     }
     std::sort(vgroupoffsets.begin(),vgroupoffsets.end());
     for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
@@ -1151,7 +1152,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( dofindices.size() == 0 ) {
                 OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
             }
-            setstatefns[isavegroup].first = boost::bind(SetDOFValuesIndicesParameters, pbody, _1, dofindices, _2);
+            setstatefns[isavegroup].first = tools::bind(SetDOFValuesIndicesParameters, pbody, _1, dofindices, _2);
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
@@ -1164,7 +1165,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( dofindices.size() == 0 ) {
                 OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
             }
-            setstatefns[isavegroup].first = boost::bind(SetDOFVelocitiesIndicesParameters, pbody, _1, dofindices, _2);
+            setstatefns[isavegroup].first = tools::bind(SetDOFVelocitiesIndicesParameters, pbody, _1, dofindices, _2);
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
@@ -1178,7 +1179,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( affinedofs & DOF_RotationAxis ) {
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
-            setstatefns[isavegroup].first = boost::bind(SetBodyTransformFromAffineDOFValues, _1, pbody, affinedofs, vaxis, _2);
+            setstatefns[isavegroup].first = tools::bind(SetBodyTransformFromAffineDOFValues, _1, pbody, affinedofs, vaxis, _2);
             setstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
@@ -1192,7 +1193,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             if( affinedofs & DOF_RotationAxis ) {
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
-            setstatefns[isavegroup].first = boost::bind(SetBodyVelocityFromAffineDOFVelocities, _1, pbody, affinedofs, vaxis, _2);
+            setstatefns[isavegroup].first = tools::bind(SetBodyVelocityFromAffineDOFVelocities, _1, pbody, affinedofs, vaxis, _2);
             setstatefns[isavegroup].second = g.dof;
         }
 //        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
@@ -1201,13 +1202,14 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
             throw OPENRAVE_EXCEPTION_FORMAT(_("group %s not supported for for planner parameters configuration"),g.name,ORE_InvalidArguments);
         }
     }
-    fn.reset(new SetConfigurationStateFn(boost::bind(CallSetStateValuesFns, setstatefns, GetDOF(), nMaxDOFForGroup, _1,0)));
+    fn.reset(new SetConfigurationStateFn(tools::bind(CallSetStateValuesFns, setstatefns, GetDOF(), nMaxDOFForGroup, _1,0)));
     return fn;
 }
 
-boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(EnvironmentBasePtr penv) const
+tools::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(EnvironmentBasePtr penv) const
 {
-    boost::shared_ptr<GetConfigurationStateFn> fn;
+    using namespace std::placeholders;
+    tools::shared_ptr<GetConfigurationStateFn> fn;
     Validate();
     std::vector< std::pair<GetConfigurationStateFn, int> > getstatefns(_vgroups.size());
     string bodyname;
@@ -1216,9 +1218,9 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
     int nMaxDOFForGroup = 0;
     std::vector< std::pair<int, int> > vgroupoffsets(_vgroups.size());
     for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
-        vgroupoffsets[igroup].first = _vgroups[igroup].offset;
-        vgroupoffsets[igroup].second = igroup;
-        nMaxDOFForGroup = max(nMaxDOFForGroup,_vgroups[igroup].dof);
+    vgroupoffsets[igroup].first = _vgroups[igroup].offset;
+    vgroupoffsets[igroup].second = igroup;
+    nMaxDOFForGroup = max(nMaxDOFForGroup,_vgroups[igroup].dof);
     }
     std::sort(vgroupoffsets.begin(),vgroupoffsets.end());
     for(size_t igroup = 0; igroup < _vgroups.size(); ++igroup) {
@@ -1235,7 +1237,7 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
                 OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
             }
             void (KinBody::*getdofvaluesptr)(std::vector<dReal>&, const std::vector<int>&) const = &KinBody::GetDOFValues;
-            getstatefns[isavegroup].first = boost::bind(getdofvaluesptr, pbody, _1, dofindices);
+            getstatefns[isavegroup].first = tools::bind(getdofvaluesptr, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "joint_velocities" ) {
@@ -1249,7 +1251,7 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
                 OPENRAVE_ASSERT_OP((int)dofindices.size(),==,pbody->GetDOF());
             }
             void (KinBody::*getdofvelocitiesptr)(std::vector<dReal>&, const std::vector<int>&) const = &KinBody::GetDOFVelocities;
-            getstatefns[isavegroup].first = boost::bind(getdofvelocitiesptr, pbody, _1, dofindices);
+            getstatefns[isavegroup].first = tools::bind(getdofvelocitiesptr, pbody, _1, dofindices);
             getstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 16 && g.name.substr(0,16) == "affine_transform" ) {
@@ -1263,7 +1265,7 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
             if( affinedofs & DOF_RotationAxis ) {
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
-            getstatefns[isavegroup].first = boost::bind(GetAffineDOFValuesFromBodyTransform, _1, pbody, affinedofs, vaxis);
+            getstatefns[isavegroup].first = tools::bind(GetAffineDOFValuesFromBodyTransform, _1, pbody, affinedofs, vaxis);
             getstatefns[isavegroup].second = g.dof;
         }
         else if( g.name.size() >= 17 && g.name.substr(0,17) == "affine_velocities" ) {
@@ -1277,7 +1279,7 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
             if( affinedofs & DOF_RotationAxis ) {
                 ss >> vaxis.x >> vaxis.y >> vaxis.z;
             }
-            getstatefns[isavegroup].first = boost::bind(GetAffineDOFVelocitiesFromBodyVelocity, _1, pbody, affinedofs, vaxis);
+            getstatefns[isavegroup].first = tools::bind(GetAffineDOFVelocitiesFromBodyVelocity, _1, pbody, affinedofs, vaxis);
             getstatefns[isavegroup].second = g.dof;
         }
 //        else if( g.name.size() >= 4 && g.name.substr(0,4) == "grabbody" ) {
@@ -1286,7 +1288,7 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
             throw OPENRAVE_EXCEPTION_FORMAT(_("group %s not supported for for planner parameters configuration"),g.name,ORE_InvalidArguments);
         }
     }
-    fn.reset(new GetConfigurationStateFn(boost::bind(CallGetStateFns,getstatefns, GetDOF(), nMaxDOFForGroup, _1)));
+    fn.reset(new GetConfigurationStateFn(tools::bind(CallGetStateFns,getstatefns, GetDOF(), nMaxDOFForGroup, _1)));
     return fn;
 }
 
@@ -1339,8 +1341,9 @@ static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget,
 
 void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
 {
+    using namespace std::placeholders;
     if( numpoints > 1 ) {
-        BOOST_ASSERT(targetstride != 0 && sourcestride != 0 );
+    BOOST_ASSERT(targetstride != 0 && sourcestride != 0 );
     }
     if( gsource.name == gtarget.name ) {
         BOOST_ASSERT(gsource.dof==gtarget.dof);
@@ -1476,15 +1479,15 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     targetrotationend = targetrotationstart+RaveGetAffineDOF(affinetarget&DOF_RotationMask);
                     if( affinetarget & DOF_RotationAxis ) {
                         if( affinesource & DOF_Rotation3D ) {
-                            rotconverterfn = boost::bind(ConvertDOFRotation_AxisFrom3D,_1,_2,targetaxis);
+                            rotconverterfn = tools::bind(ConvertDOFRotation_AxisFrom3D,_1,_2,targetaxis);
                         }
                         else if( affinesource & DOF_RotationQuat ) {
-                            rotconverterfn = boost::bind(ConvertDOFRotation_AxisFromQuat,_1,_2,targetaxis);
+                            rotconverterfn = tools::bind(ConvertDOFRotation_AxisFromQuat,_1,_2,targetaxis);
                         }
                     }
                     else if( affinetarget & DOF_Rotation3D ) {
                         if( affinesource & DOF_RotationAxis ) {
-                            rotconverterfn = boost::bind(ConvertDOFRotation_3DFromAxis,_1,_2,sourceaxis);
+                            rotconverterfn = tools::bind(ConvertDOFRotation_3DFromAxis,_1,_2,sourceaxis);
                         }
                         else if( affinesource & DOF_RotationQuat ) {
                             rotconverterfn = ConvertDOFRotation_3DFromQuat;
@@ -1492,7 +1495,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                     else if( affinetarget & DOF_RotationQuat ) {
                         if( affinesource & DOF_RotationAxis ) {
-                            rotconverterfn = boost::bind(ConvertDOFRotation_QuatFromAxis,_1,_2,sourceaxis);
+                            rotconverterfn = tools::bind(ConvertDOFRotation_QuatFromAxis,_1,_2,sourceaxis);
                         }
                         else if( affinesource & DOF_Rotation3D ) {
                             rotconverterfn = ConvertDOFRotation_QuatFrom3D;

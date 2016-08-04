@@ -50,7 +50,7 @@ Planner Parameters\n\
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
 
-        boost::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
+        tools::shared_ptr<WorkspaceTrajectoryParameters> parameters(new WorkspaceTrajectoryParameters(GetEnv()));
         parameters->copy(params);
         _robot = probot;
         _manip = _robot->GetActiveManipulator();
@@ -230,7 +230,7 @@ Planner Parameters\n\
             poutputtraj->Insert(poutputtraj->GetNumWaypoints(),_parameters->vinitialconfig,_parameters->_configurationspecification);
         }
 
-        UserDataPtr filterhandle = _manip->GetIkSolver()->RegisterCustomFilter(0,boost::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,_1,_2,_3));
+        UserDataPtr filterhandle = _manip->GetIkSolver()->RegisterCustomFilter(0,tools::bind(&WorkspaceTrajectoryTracker::_ValidateSolution,this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3));
         vector<dReal> vsolution;
         if( !_parameters->greedysearch ) {
             RAVELOG_ERROR("WorkspaceTrajectoryTracker::PlanPath - do not support non-greedy search\n");
@@ -418,7 +418,7 @@ protected:
     RobotBasePtr _robot;
     RobotBase::ManipulatorPtr _manip;
     CollisionReportPtr _report;
-    boost::shared_ptr<WorkspaceTrajectoryParameters> _parameters;
+    tools::shared_ptr<WorkspaceTrajectoryParameters> _parameters;
     dReal _fMaxCosDeviationAngle;
     int _filteroptions;
     vector<KinBody::LinkPtr> _vchildlinks;
