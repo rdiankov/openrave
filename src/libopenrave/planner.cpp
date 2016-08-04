@@ -41,7 +41,11 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </PlannerParameters> in %s"),buf.str(),ORE_InvalidArguments);
         }
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,utils::null_deleter()), pbuf.c_str(), ppsize);
+        try {
+            LocalXML::ParseXMLData(pp.shared_from_this(), pbuf.c_str(), ppsize);
+        } catch(tools::bad_weak_ptr& e) {
+            LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp, utils::null_deleter()), pbuf.c_str(), ppsize);
+        }
     }
 
     return I;
@@ -432,7 +436,7 @@ int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>
 
 void PlannerBase::PlannerParameters::SetRobotActiveJoints(RobotBasePtr robot)
 {
-    using namespace std::placeholders;
+    using namespace tools::placeholders;
     // check if any of the links affected by the dofs beside the base link are static
     FOREACHC(itlink, robot->GetLinks()) {
         if( (*itlink)->IsStatic() ) {
