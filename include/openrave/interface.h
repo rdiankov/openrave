@@ -22,9 +22,9 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
-#ifdef USE_TBB
-#include "tbb/concurrent_hash_map.h"
-#endif
+//#ifdef USE_TBB
+#include "tbb/concurrent_unordered_map.h"
+//#endif
 
 namespace OpenRAVE {
 
@@ -235,20 +235,20 @@ private:
     std::string __strxmlid; ///< \see GetXMLId
     EnvironmentBasePtr __penv; ///< \see GetEnv
 
-#ifdef USE_TBB
+    //#ifdef USE_TBB
     typedef tbb::concurrent_unordered_map<std::string, UserDataPtr> USERDATAMAP;
-#else
-    typedef std::map<std::string, UserDataPtr> USERDATAMAP;
-#endif
+    //#else
+    //    typedef std::map<std::string, UserDataPtr> USERDATAMAP;
+    //#endif
     mutable USERDATAMAP __mapUserData; ///< \see GetUserData
 
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
 
-    //#ifdef USE_TBB
-    typedef tbb::concurrent_unordered_map<std::string, tools::shared_ptr<InterfaceCommand>, CaseInsensitiveHashCompare> CMDMAP;
-//#else
-//    typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
-//#endif
+#ifdef USE_TBB
+    typedef tbb::concurrent_unordered_map<std::string, tools::shared_ptr<InterfaceCommand>, CaseInsensitiveHash, CaseInsensitiveEqual> CMDMAP;
+#else
+    typedef std::map<std::string, tools::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
+#endif
     CMDMAP __mapCommands; ///< all registered commands
 
 #ifdef RAVE_PRIVATE

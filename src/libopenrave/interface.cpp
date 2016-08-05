@@ -38,7 +38,7 @@ void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
 {
     UserDataPtr olduserdata;
     {
-        tbb::concurrent_unordered_map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
+        USERDATAMAP::iterator it = __mapUserData.find(key);
         if( it == __mapUserData.end() ) {
             __mapUserData[key] = data;
         }
@@ -52,7 +52,7 @@ void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
 
 UserDataPtr InterfaceBase::GetUserData(const std::string& key) const
 {
-    tbb::concurrent_unordered_map<std::string, UserDataPtr>::const_iterator it = __mapUserData.find(key);
+    USERDATAMAP::const_iterator it = __mapUserData.find(key);
     if( it == __mapUserData.end() ) {
         return UserDataPtr();
     }
@@ -62,7 +62,7 @@ UserDataPtr InterfaceBase::GetUserData(const std::string& key) const
 bool InterfaceBase::RemoveUserData(const std::string& key) const
 {
     // have to destroy the userdata pointer outside the lock, otherwise can get into a deadlock
-    tbb::concurrent_unordered_map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
+    USERDATAMAP::iterator it = __mapUserData.find(key);
     if( it == __mapUserData.end() ) {
         return false;
     }

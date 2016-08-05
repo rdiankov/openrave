@@ -98,9 +98,9 @@
 #define RAVE_DEPRECATED
 #endif
 
-#ifdef USE_TBB
+//#ifdef USE_TBB
 #include "tbb/concurrent_unordered_map.h"
-#endif
+//#endif
 
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
@@ -258,7 +258,7 @@ public:
     }
 };
 
-#ifdef USE_TBB
+//#ifdef USE_TBB
 class OPENRAVE_LOCAL CaseInsensitiveEqual {
 public:
 
@@ -293,7 +293,7 @@ private:
     mutable std::string _tmpUpperCaseBuffer;
     tbb::tbb_hash<std::string> _hasher;
 };
-#endif // OPENRAVE_USE_TBB
+//#endif // OPENRAVE_USE_TBB
 
 /// \brief base class for all user data
 class OPENRAVE_API UserData
