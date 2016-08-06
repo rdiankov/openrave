@@ -647,7 +647,7 @@ public:
                                 else {
                                     RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x!", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode);
                                 }
-                                _DumpTrajectory(ptraj, Level_Debug);
+                                _DumpTrajectory(ptraj, Level_Verbose);
                                 return PS_Failed;
                             }
                         }
@@ -843,26 +843,22 @@ public:
                         // due to epsilon inaccuracies, have to clamp the max accel depending on _vConfigAccelerationLimit
                         for(size_t idof = 0; idof < outramp.ramps.size(); ++idof) {
                             if( outramp.ramps[idof].a1 < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a1 > _parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a1 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a1%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a1 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a1 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             if( outramp.ramps[idof].a2 < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(-_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 + _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = -_parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
                             else if( outramp.ramps[idof].a2 > _parameters->_vConfigAccelerationLimit[idof] ) {
-                                RAVELOG_DEBUG_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e",
-                                                     GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, a2 changed: %15e -> %.15e, diff = %.15e", GetEnv()->GetId()%idof%outramp.ramps[idof].a2%(_parameters->_vConfigAccelerationLimit[idof])%(outramp.ramps[idof].a2 - _parameters->_vConfigAccelerationLimit[idof]));
                                 outramp.ramps[idof].a2 = _parameters->_vConfigAccelerationLimit[idof];
                                 bAccelChanged = true;
                             }
