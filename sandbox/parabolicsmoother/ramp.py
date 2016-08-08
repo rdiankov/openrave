@@ -844,7 +844,7 @@ class ParabolicCurvesND(object):
 
 
     def SetSegment(self, x0Vect_, x1Vect_, v0Vect_, v1Vect_, t):
-        t = ConvertFloatArrayToMPF(t)
+        t = ConvertFloatToMPF(t)
         assert(t >= 0)
 
         x0Vect = ConvertFloatArrayToMPF(x0Vect_)
@@ -856,7 +856,7 @@ class ParabolicCurvesND(object):
         curves = []
         for i in xrange(ndof):
             curve = ParabolicCurve()
-            curve.SetSegnment(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i])
+            curve.SetSegment(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], t)
             curves.append(curve)
 
         self.Initialize(curves)
