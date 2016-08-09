@@ -209,7 +209,7 @@ object ComputeSimpleSegmentation(object oMesh, boundingmesh::Real voxelSize, int
     boost::python::list result;
     typedef std::vector<std::shared_ptr<boundingmesh::Mesh> > SEGMENTATION;
     const SEGMENTATION& segmentation = segmenter.getSegmentation();
-    for(SEGMENTATION::iterator itpmesh = segmentation.begin(); itpmesh != segmentation.end(); ++itpmesh) {
+    for(SEGMENTATION::const_iterator itpmesh = segmentation.begin(); itpmesh != segmentation.end(); ++itpmesh) {
         if( !!*itpmesh ) {
             ExtractTriMesh(**itpmesh, openraveMesh);
             result.append(toPyTriMesh(openraveMesh));
@@ -250,7 +250,7 @@ object ComputeDownsamplingSegmentation(object oMesh, int minVoxelCount, int pass
     boost::python::list result;
     typedef std::vector<std::shared_ptr<boundingmesh::Mesh> > SEGMENTATION;
     const SEGMENTATION& segmentation = segmenter.getSegmentation();
-    for(SEGMENTATION::iterator itpmesh = segmentation.begin(); itpmesh != segmentation.end(); ++itpmesh) {
+    for(SEGMENTATION::const_iterator itpmesh = segmentation.begin(); itpmesh != segmentation.end(); ++itpmesh) {
         if( !!*itpmesh ) {
             ExtractTriMesh(**itpmesh, openraveMesh);
             result.append(toPyTriMesh(openraveMesh));
