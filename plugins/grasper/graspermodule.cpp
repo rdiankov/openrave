@@ -1649,7 +1649,7 @@ protected:
             RAVELOG_WARN_FORMAT("Qhull failed with error %s", qhull.qhullMessage());
             vconvexplanes.resize(0);
             if( !!vconvexfaces ) {
-              vconvexfaces->resize(0);
+                vconvexfaces->resize(0);
             }
             return 0;
         }
@@ -1694,7 +1694,7 @@ protected:
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
         }
-        const flags[]= "qhull Tv FA";
+        char flags[]= "qhull Tv FA";
 
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, errfile, errfile);
         if (!exitcode) {
