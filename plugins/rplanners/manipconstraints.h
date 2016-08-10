@@ -433,113 +433,11 @@ public:
     }
 
 
-    /// More heuristics to come!
+    // Check only the start and the end. Within one parabolic segment, manipaccel tends to increase
+    // or decrease monotonically and therefore, the maximum is occuring at either end. We can reduce
+    // computational load by only checking at both end instead of checking at every subdivided
+    // segment and still having the same result.
     ParabolicRampInternal::CheckReturn CheckManipConstraints3(const std::vector<ParabolicRampInternal::ParabolicRampND> &outramps) {
-        // RAVELOG_DEBUG("CHECKMANIPCONSTRAINTS3");
-        if (_maxmanipspeed <= 0 && _maxmanipaccel <= 0) {
-            return ParabolicRampInternal::CheckReturn(0);
-        }
-
-        Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
-        dReal maxactualmanipspeed2 = 0, maxactualmanipaccel2 = 0;
-        dReal firstviolatedaccel = -1;
-        int firstviolatedindex = 0;
-        int maxviolatedindex = 0;
-
-        FOREACHC(itramp, outramps) {
-            if (itramp->endTime <= g_fEpsilonLinear) {
-                // This one is too short so ignore it.
-                continue;
-            }
-
-            FOREACHC(itmanipinfo, _listCheckManips) {
-                KinBodyPtr probot = itmanipinfo->plink->GetParent();
-
-                itramp->Accel(0, ac);
-                qfillactive.resize(itmanipinfo->vuseddofindices.size());
-                _vfillactive.resize(itmanipinfo->vuseddofindices.size());
-                _afill.resize(probot->GetDOF());
-                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
-                    qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
-                    _vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
-                    _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
-                }
-
-                int endeffindex = itmanipinfo->plink->GetIndex();
-                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
-
-                // Set the robot to the new state
-                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->GetLinkVelocities(endeffvels);
-                probot->GetLinkAccelerations(_afill,endeffaccs);
-                endeffvellin = endeffvels.at(endeffindex).first;
-                endeffvelang = endeffvels.at(endeffindex).second;
-                endeffacclin = endeffaccs.at(endeffindex).first;
-                endeffaccang = endeffaccs.at(endeffindex).second;
-                Transform R = itmanipinfo->plink->GetTransform();
-
-                FOREACH(itpoint, itmanipinfo->checkpoints) {
-                    Vector point = R.rotate(*itpoint);
-
-                    if (_maxmanipspeed > 0) {
-                        Vector vpoint = endeffvellin + endeffvelang.cross(point);
-                        dReal actualmanipspeed2 = vpoint.lengthsqr3();
-                        // Keep record of the value only if it violates the bound
-                        if (actualmanipspeed2 > maxactualmanipspeed2) {
-                            maxactualmanipspeed2 = actualmanipspeed2;
-                        }
-                    }
-
-                    if (_maxmanipaccel > 0) {
-                        Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
-                        dReal actualmanipaccel2 = apoint.lengthsqr3();
-                        if (actualmanipaccel2 > (_maxmanipaccel*_maxmanipaccel)) {
-                            if ((firstviolatedaccel < 0) || (firstviolatedindex == itramp - outramps.begin())) {
-                                if (RaveSqrt(actualmanipaccel2) > firstviolatedaccel) {
-                                    firstviolatedaccel = RaveSqrt(actualmanipaccel2);
-                                    firstviolatedindex = itramp - outramps.begin();
-                                }
-                            }
-                            if (actualmanipaccel2 > maxactualmanipaccel2) {
-                                maxviolatedindex = itramp - outramps.begin();
-                            }
-                        }
-                        // RAVELOG_VERBOSE_FORMAT("actualmanipaccel = %.15e", RaveSqrt(actualmanipaccel2));
-                        if (actualmanipaccel2 > maxactualmanipaccel2) {
-                            maxactualmanipaccel2 = actualmanipaccel2;
-                        }
-                    }
-                }
-                // Finished iterating through all checkpoints
-            }
-            // Finished iterating through all manipulators
-        }
-        // Finished iterating through all ParabolicRampND
-
-        dReal reductionFactor = 0.9;
-        dReal multiplier = 0.92;
-        int retcode = 0;
-        dReal maxmanipspeed = RaveSqrt(maxactualmanipspeed2), maxmanipaccel = RaveSqrt(maxactualmanipaccel2);
-        dReal maxallowedmult = 0.92;
-        if (_maxmanipspeed > 0 && maxmanipspeed > _maxmanipspeed) {
-            retcode = CFO_CheckTimeBasedConstraints;
-
-            // If the actual max value is very close to the bound, the multiplier will be too large (too close to 1) to be useful.
-            reductionFactor = min(multiplier*_maxmanipspeed/maxmanipspeed, maxallowedmult);
-        }
-        if (_maxmanipaccel > 0 && maxmanipaccel > _maxmanipaccel) {
-            retcode = CFO_CheckTimeBasedConstraints;
-            reductionFactor = min(multiplier*_maxmanipaccel/maxmanipaccel, maxallowedmult);
-        }
-        RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxmanipspeed%maxmanipaccel);
-        RAVELOG_WARN_FORMAT("first violation = %.15e at %d, actualmax = %.15e at %d, outramps.size() = %d", firstviolatedaccel%firstviolatedindex%maxmanipaccel%maxviolatedindex%outramps.size());
-        return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxmanipspeed, maxmanipaccel);
-    }
-
-
-    // Check only the start and the end
-    ParabolicRampInternal::CheckReturn CheckManipConstraints4(const std::vector<ParabolicRampInternal::ParabolicRampND> &outramps) {
         if (_maxmanipspeed <= 0 && _maxmanipaccel <= 0) {
             return ParabolicRampInternal::CheckReturn(0);
         }
@@ -615,17 +513,19 @@ public:
         int retcode = 0;
         dReal maxallowedmult = 0.92;
 
-        // RAVELOG_WARN_FORMAT("itramp1 = %d", (itramp1 - outramps.begin()));
+        // RAVELOG_VERBOSE_FORMAT("itramp1 = %d", (itramp1 - outramps.begin()));
 
         if (itramp1 == outramps.end() - 1) {
             if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
                 retcode = CFO_CheckTimeBasedConstraints;       
-                // If the actual max value is very close to the bound, the multiplier will be too large (too close to 1) to be useful.
+                // If the actual max value is very close to the bound (i.e., almost not violating
+                // the bound), the multiplier will be too large (too close to 1) to be useful.
                 reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
             }
             if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
                 retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound, the multiplier will be too large (too close to 1) to be useful.
+                // If the actual max value is very close to the bound (i.e., almost not violating
+                // the bound), the multiplier will be too large (too close to 1) to be useful.
                 reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
             }
             RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
@@ -639,7 +539,7 @@ public:
                 break;
             }
         }
-        // RAVELOG_WARN_FORMAT("itramp2 = %d", (itramp2 - outramps.begin()));
+        // RAVELOG_VERBOSE_FORMAT("itramp2 = %d", (itramp2 - outramps.begin()));
         if (itramp2 != itramp1) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
@@ -697,13 +597,15 @@ public:
         }
         
         if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
-            retcode = CFO_CheckTimeBasedConstraints;       
-            // If the actual max value is very close to the bound, the multiplier will be too large (too close to 1) to be useful.
+            retcode = CFO_CheckTimeBasedConstraints;
+            // If the actual max value is very close to the bound (i.e., almost not violating
+            // the bound), the multiplier will be too large (too close to 1) to be useful.
             reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
         }
         if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
             retcode = CFO_CheckTimeBasedConstraints;
-            // If the actual max value is very close to the bound, the multiplier will be too large (too close to 1) to be useful.
+            // If the actual max value is very close to the bound (i.e., almost not violating
+            // the bound), the multiplier will be too large (too close to 1) to be useful.
             reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
         }
         RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
