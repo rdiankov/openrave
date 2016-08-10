@@ -27,6 +27,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/format.hpp>
 #include <boost/assert.hpp>
+#include <boost/make_shared.hpp>
 #include <boundingmesh.h>
 #include <memory>
 
@@ -195,6 +196,7 @@ object ComputeSimpleSegmentation(object oMesh, boundingmesh::Real voxelSize, int
     // create and load the mesh
     std::shared_ptr<boundingmesh::Mesh> pmesh = std::make_shared<boundingmesh::Mesh>();
     ExtractMesh(openraveMesh, *pmesh);
+    pmesh->closeHoles();
 
     // create the segmenter and set the options
     boundingmesh::SegmenterSimple segmenter;
@@ -218,7 +220,36 @@ object ComputeSimpleSegmentation(object oMesh, boundingmesh::Real voxelSize, int
     return result;
 }
 
-object ComputeDownsamplingSegmentation(object oMesh, int minVoxelCount, int passes=32, boundingmesh::Real maxConcavity=0.001, int heuristic=1, boundingmesh::Real alpha=0.05, boundingmesh::Real beta=0.05, boundingmesh::Real delta=0.05, boundingmesh::Real gamma=0.0005, int convexhullDownsampling=1, int planeDownsampling=4) {
+struct DownsamplingSegmentationParameters {
+
+    DownsamplingSegmentationParameters(int minVoxelCount=5000, int passes=32, boundingmesh::Real maxConcavity=0.001, int heuristic=1, boundingmesh::Real alpha=1, boundingmesh::Real beta=0.05, boundingmesh::Real delta=0.5, boundingmesh::Real gamma=0.0005, int convexhullDownsampling=1, int planeDownsampling=4) :
+        minVoxelCount(minVoxelCount),
+        passes(passes),
+        maxConcavity(maxConcavity),
+        heuristic(heuristic),
+        alpha(alpha),
+        beta(beta),
+        delta(delta),
+        gamma(gamma),
+        convexhullDownsampling(convexhullDownsampling),
+        planeDownsampling(planeDownsampling)
+    {
+    }
+
+    int minVoxelCount;
+    int passes;
+    boundingmesh::Real maxConcavity;
+    int heuristic;
+    boundingmesh::Real alpha;
+    boundingmesh::Real beta;
+    boundingmesh::Real delta;
+    boundingmesh::Real gamma;
+    int convexhullDownsampling;
+    int planeDownsampling;
+};
+typedef boost::shared_ptr<DownsamplingSegmentationParameters> DownsamplingSegmentationParametersPtr;
+
+object ComputeDownsamplingSegmentation(object oMesh, object downSamplingParameters=object()) {
 
     TriMesh openraveMesh;
 
@@ -229,19 +260,28 @@ object ComputeDownsamplingSegmentation(object oMesh, int minVoxelCount, int pass
     // create and load the mesh
     std::shared_ptr<boundingmesh::Mesh> pmesh = std::make_shared<boundingmesh::Mesh>();
     ExtractMesh(openraveMesh, *pmesh);
+    pmesh->closeHoles();
+
+    DownsamplingSegmentationParametersPtr params;
+    extract<DownsamplingSegmentationParametersPtr> get_params(downSamplingParameters);
+    if( !get_params.check() ) {
+        params = boost::make_shared<DownsamplingSegmentationParameters>();
+    } else {
+        params = get_params();
+    }
 
     // create the segmenter and set the options
     boundingmesh::SegmenterDownsampling segmenter;
-    segmenter.setMaxPasses(passes);
-    segmenter.setMaximumConcavity(maxConcavity);
-    segmenter.setHeuristic(heuristic);
-    segmenter.setAlpha(alpha);
-    segmenter.setBeta(beta);
-    segmenter.setDelta(delta);
-    segmenter.setGamma(gamma);
-    segmenter.setConvexhullDownsampling(convexhullDownsampling);
-    segmenter.setPlaneDownsampling(planeDownsampling);
-    segmenter.setMesh(pmesh, minVoxelCount);
+    segmenter.setMaxPasses(params->passes);
+    segmenter.setMaximumConcavity(params->maxConcavity);
+    segmenter.setHeuristic(params->heuristic);
+    segmenter.setAlpha(params->alpha);
+    segmenter.setBeta(params->beta);
+    segmenter.setDelta(params->delta);
+    segmenter.setGamma(params->gamma);
+    segmenter.setConvexhullDownsampling(params->convexhullDownsampling);
+    segmenter.setPlaneDownsampling(params->planeDownsampling);
+    segmenter.setMesh(pmesh, params->minVoxelCount);
 
     // do the actual computation
     segmenter.compute();
@@ -261,7 +301,7 @@ object ComputeDownsamplingSegmentation(object oMesh, int minVoxelCount, int pass
 
 BOOST_PYTHON_FUNCTION_OVERLOADS(ComputeBoundingMesh_overloads, ComputeBoundingMesh, 1, 7)
 BOOST_PYTHON_FUNCTION_OVERLOADS(ComputeSimpleSegmentation_overloads, ComputeSimpleSegmentation, 2,4)
-BOOST_PYTHON_FUNCTION_OVERLOADS(ComputeDownsamplingSegmentation_overloads, ComputeDownsamplingSegmentation, 2,11)
+BOOST_PYTHON_FUNCTION_OVERLOADS(ComputeDownsamplingSegmentation_overloads, ComputeDownsamplingSegmentation, 1,2)
 
 BOOST_PYTHON_MODULE(boundingmeshpy)
 {
@@ -288,6 +328,19 @@ BOOST_PYTHON_MODULE(boundingmeshpy)
     .value("Midpoint", boundingmesh::Midpoint)
     ;
 
+    class_<DownsamplingSegmentationParameters, DownsamplingSegmentationParametersPtr>("DownsamplingSegmentationParameters", init<>())
+    .def_readwrite("minVoxelCount", &DownsamplingSegmentationParameters::minVoxelCount)
+    .def_readwrite("passes", &DownsamplingSegmentationParameters::passes)
+    .def_readwrite("maxConcavity", &DownsamplingSegmentationParameters::maxConcavity)
+    .def_readwrite("heuristic", &DownsamplingSegmentationParameters::heuristic)
+    .def_readwrite("alpha", &DownsamplingSegmentationParameters::alpha)
+    .def_readwrite("beta", &DownsamplingSegmentationParameters::beta)
+    .def_readwrite("delta", &DownsamplingSegmentationParameters::delta)
+    .def_readwrite("gamma", &DownsamplingSegmentationParameters::gamma)
+    .def_readwrite("convexhullDownsampling", &DownsamplingSegmentationParameters::convexhullDownsampling)
+    .def_readwrite("planeDownsampling", &DownsamplingSegmentationParameters::planeDownsampling)
+    ;
+
     // does this have any use ?
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
 
@@ -312,17 +365,7 @@ BOOST_PYTHON_MODULE(boundingmeshpy)
                                             "Andre Gaschler & Quirin Fischer's convex segmentation algorithm"));
 
     def("ComputeDownsamplingSegmentation", ComputeDownsamplingSegmentation,
-        ComputeDownsamplingSegmentation_overloads(args("mesh",
-                                                       "minVoxelCount",
-                                                       "passes",
-                                                       "maxConcavity",
-                                                       "heuristic",
-                                                       "alpha",
-                                                       "beta",
-                                                       "gamma",
-                                                       "delta",
-                                                       "convexhullDownsampling",
-                                                       "planeDownsampling"),
+        ComputeDownsamplingSegmentation_overloads(args("mesh", "parameters"),
                                                   "Andre Gaschler & Quirin Fischer's convex segmentation algorithm"));
 
     scope().attr("__author__") = "Andre Gaschler, Quirin Fischer";
