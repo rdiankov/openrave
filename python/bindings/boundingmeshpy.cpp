@@ -31,6 +31,7 @@
 #include <boundingmesh.h>
 #include <memory>
 
+
 #define OPENRAVE_BININGS_PYARRAY
 #include "bindings.h"
 
@@ -129,6 +130,24 @@ bool WriteToFile(str pyfilename, object otrimesh) {
     return true;
 }
 
+
+object CloseHoles(object oMesh, int timeout) {
+    TriMesh openraveMesh;
+
+    if( !ExtractTriMesh(oMesh, openraveMesh) ) {
+        return object();
+    }
+
+    // create and load the mesh
+    boundingmesh::Mesh mesh;
+    ExtractMesh(openraveMesh, mesh);
+
+    mesh.closeHoles();
+
+    ExtractTriMesh(mesh, openraveMesh);
+    return toPyTriMesh(openraveMesh);
+}
+
 // note : boundingmesh::Real == double
 /// \param oMesh python object containing a PyTriMesh
 /// \param direction the direction in which the bounding mesh shoul grow
@@ -222,7 +241,7 @@ object ComputeSimpleSegmentation(object oMesh, boundingmesh::Real voxelSize, int
 
 struct DownsamplingSegmentationParameters {
 
-    DownsamplingSegmentationParameters(int minVoxelCount=5000, int passes=32, boundingmesh::Real maxConcavity=0.001, int heuristic=1, boundingmesh::Real alpha=1, boundingmesh::Real beta=0.05, boundingmesh::Real delta=0.5, boundingmesh::Real gamma=0.0005, int convexhullDownsampling=1, int planeDownsampling=4) :
+    DownsamplingSegmentationParameters(int minVoxelCount=5000, int passes=32, boundingmesh::Real maxConcavity=0.001, int heuristic=1, boundingmesh::Real alpha=1, boundingmesh::Real beta=0.05, boundingmesh::Real delta=0.5, boundingmesh::Real gamma=0.0005, int convexhullDownsampling=1, int planeDownsampling=4, int closeHolesTimeout=30) :
         minVoxelCount(minVoxelCount),
         passes(passes),
         maxConcavity(maxConcavity),
@@ -232,7 +251,8 @@ struct DownsamplingSegmentationParameters {
         delta(delta),
         gamma(gamma),
         convexhullDownsampling(convexhullDownsampling),
-        planeDownsampling(planeDownsampling)
+        planeDownsampling(planeDownsampling),
+        closeHolesTimeout(closeHolesTimeout)
     {
     }
 
@@ -246,8 +266,29 @@ struct DownsamplingSegmentationParameters {
     boundingmesh::Real gamma;
     int convexhullDownsampling;
     int planeDownsampling;
+    int closeHolesTimeout;
 };
 typedef boost::shared_ptr<DownsamplingSegmentationParameters> DownsamplingSegmentationParametersPtr;
+
+struct DownsamplingSegmentationParameters_pickle_suite : boost::python::pickle_suite
+{
+    static
+    boost::python::tuple
+    getinitargs(DownsamplingSegmentationParameters const& params)
+    {
+        return boost::python::make_tuple(params.minVoxelCount,
+                                         params.passes,
+                                         params.maxConcavity,
+                                         params.heuristic,
+                                         params.alpha,
+                                         params.beta,
+                                         params.delta,
+                                         params.gamma,
+                                         params.convexhullDownsampling,
+                                         params.planeDownsampling,
+                                         params.closeHolesTimeout);
+    }
+};
 
 object ComputeDownsamplingSegmentation(object oMesh, object downSamplingParameters=object()) {
 
@@ -329,6 +370,7 @@ BOOST_PYTHON_MODULE(boundingmeshpy)
     ;
 
     class_<DownsamplingSegmentationParameters, DownsamplingSegmentationParametersPtr>("DownsamplingSegmentationParameters", init<>())
+    .def(init<int, int, boundingmesh::Real, int, boundingmesh::Real, boundingmesh::Real, boundingmesh::Real, boundingmesh::Real, int, int, int>())
     .def_readwrite("minVoxelCount", &DownsamplingSegmentationParameters::minVoxelCount)
     .def_readwrite("passes", &DownsamplingSegmentationParameters::passes)
     .def_readwrite("maxConcavity", &DownsamplingSegmentationParameters::maxConcavity)
@@ -339,6 +381,8 @@ BOOST_PYTHON_MODULE(boundingmeshpy)
     .def_readwrite("gamma", &DownsamplingSegmentationParameters::gamma)
     .def_readwrite("convexhullDownsampling", &DownsamplingSegmentationParameters::convexhullDownsampling)
     .def_readwrite("planeDownsampling", &DownsamplingSegmentationParameters::planeDownsampling)
+    .def_readwrite("closeHolesTimeout", &DownsamplingSegmentationParameters::closeHolesTimeout)
+    .def_pickle(DownsamplingSegmentationParameters_pickle_suite())
     ;
 
     // does this have any use ?
@@ -346,6 +390,7 @@ BOOST_PYTHON_MODULE(boundingmeshpy)
 
     def("LoadFromFile", LoadFromFile);
     def("WriteToFile", WriteToFile);
+    def("CloseHoles", CloseHoles);
 
     def("ComputeBoundingMesh", ComputeBoundingMesh,
         ComputeBoundingMesh_overloads(args("mesh",
