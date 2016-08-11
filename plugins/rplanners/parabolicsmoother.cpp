@@ -2381,7 +2381,7 @@ protected:
         OPENRAVE_ASSERT_OP(endTime, >=, t);
         dReal dummyEndTime = endTime;
 
-        dReal cutofftime = 1.0;
+        dReal cutofftime = 0.75;
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         // CACHE
         std::vector<dReal> &vellimits = _cachevellimits, &accellimits = _cacheaccellimits;
