@@ -43,22 +43,26 @@ public:
     dReal EvalPos(dReal t) const;
     dReal EvalVel(dReal t) const;
     dReal EvalAcc(dReal t) const;
+    /// \brief Get the minimum and maximum values of the ramp occuring in [0, duration]
     void GetPeaks(dReal& bmin, dReal& bmax) const;
+    /// \brief Get the minimum and maximum values of the ramp occuring in [ta, tb]
     void GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const;
     void Initialize(dReal v0, dReal a, dReal dur, dReal x0=0);
     void PrintInfo(std::string name) const;
     void PrintInfo() const {
         PrintInfo("");
     }
+    /// \brief Set x0 to newx0 and updated related values correspondingly
     void SetInitialValue(dReal newx0);
+    /// \brief Set duration to newDuration and updated related values correspondingly
     void UpdateDuration(dReal newDuration);
 
-    // Cut the Ramp into two halves at time t. The left half is stored in the same Ramp. The right half is
-    // returned via remRamp
+    /// \brief Cut the Ramp into two halves at time t. The left half is stored in the same Ramp. The
+    /// right half is returned via remRamp
     void Cut(dReal t, Ramp &remRamp);
-    // Cut the Ramp into two halves at time t and keep the right half.
+    /// \brief Cut the Ramp into two halves at time t and keep the right half.
     void TrimFront(dReal t);
-    // Cut the Ramp into two halves at time t and keep the left half.
+    /// \brief Cut the Ramp into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
     // Members
@@ -95,21 +99,23 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
-    // Resize all vectors to zero and reset all dReal values to zero.
+    /// \brief Resize all vectors to zero and reset all dReal values to zero.
     void Reset();
     void SetConstant(dReal x0, dReal t=0);
-    // Set initial value of the Curve. Also the initial value of each ramp accordingly. Note that d
-    // will not be modified here.
+    /// \brief Set initial value of the Curve. Also the initial value of each ramp accordingly. Note
+    /// that d will not be modified here.
     void SetInitialValue(dReal newx0);
+    /// \brief Set the curve to contain one ramp connecting (x0, v0) and (x1, v1) in time t. Note
+    /// that this function assumes consistency of inputs.
     void SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dReal t);
     void SetZeroDuration(dReal _x0, dReal _v0);
 
-    // Cut the ParabolicCurve into two halves at time t. The left half is stored in the same
-    // ParabolicCurve. The right half is returned via remCurve
+    /// \brief Cut the ParabolicCurve into two halves at time t. The left half is stored in the same
+    /// ParabolicCurve. The right half is returned via remCurve
     void Cut(dReal t, ParabolicCurve &remCurve);
-    // Cut the ParabolicCurve into two halves at time t and keep the right half.
+    /// \brief Cut the ParabolicCurve into two halves at time t and keep the right half.
     void TrimFront(dReal t);
-    // Cut the ParabolicCurve into two halves at time t and keep the left half.
+    /// \brief Cut the ParabolicCurve into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
     // Members
@@ -119,7 +125,7 @@ public:
     dReal d;        // total displacement 'done' by this Curve. For example, EvalPos(duration) = x0 + d = x1.
     dReal v0;
     dReal v1;
-    std::vector<dReal> switchpointsList;
+    std::vector<dReal> switchpointsList; // containing all switch points including both ends.
     std::vector<Ramp> ramps;
 
 }; // end class ParabolicCurve
@@ -148,19 +154,19 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
-    // Resize all vectors to zero.
+    /// \brief Resize all vectors to zero.
     void Reset();
     void SetInitialValues(const std::vector<dReal>& _x0Vect);
     void SetConstant(const std::vector<dReal>& _x0Vect, dReal t=0);
     void SetSegment(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _x1Vect, const std::vector<dReal>& _v0Vect, const std::vector<dReal>& _v1Vect, dReal t);
     void SetZeroDuration(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _v0Vect);
 
-    // Cut the ParabolicCurvesND into two halves at time t. The left half is stored in the same
-    // ParabolicCurvesND. The right half is returned via remCurvesND
+    /// \brief Cut the ParabolicCurvesND into two halves at time t. The left half is stored in the
+    /// same ParabolicCurvesND. The right half is returned via remCurvesND
     void Cut(dReal t, ParabolicCurvesND &remCurvesND);
-    // Cut the ParabolicCurvesND into two halves at time t and keep the right half.
+    /// \brief Cut the ParabolicCurvesND into two halves at time t and keep the right half.
     void TrimFront(dReal t);
-    // Cut the ParabolicCurvesND into two halves at time t and keep the left half.
+    /// \brief Cut the ParabolicCurvesND into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
     void ToString(std::string &s) const;
