@@ -108,7 +108,7 @@ bool InterpolateArbitraryVelND(const std::vector<dReal>& x0Vect, const std::vect
     result = ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, tempcurvesnd, tryHarder);
     if (!result) {
         if (tryHarder) {
-            RAMP_OPTIM_PERROR("Interpolation with a fixed duration failed even when trying harder.");
+            RAMP_OPTIM_WARN("Interpolation with a fixed duration failed even when trying harder.");
         }
         return false;
     }
@@ -1002,6 +1002,15 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         dReal C2inv = 1/C2;
         a0 = (A2 + root)*C2inv;
         if (Abs(a0) > am) {
+            if (FuzzyZero(root, epsilon*epsilon)) {// This condition gives a1 = 0.
+                // The computed a0 is exceeding the bound and its corresponding a1 is
+                // zero. Therefore, we cannot fix this case. This is probably because the given
+                // duration is actually less than the minimum duration that it can get.
+                RAMP_OPTIM_PLOG("|a0| > am and a1 == 0: Unable to fix this case since the given duration is too short.");
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+                return false;
+            }
+            
             // a0 exceeds the bound, try making it stays at the bound.
             a0 = a0 > 0 ? am : -am;
             // Recalculate the related variable
@@ -1014,6 +1023,14 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         if (Abs(a0) <= epsilon) {
             a0 = 0;
             a1 = B2/C2;
+            if (Abs(a1) > am) {
+                // The computed a1 is exceeding the bound while a0 being zero. This is similar to
+                // the case above when |a0| > am and a1 == 0.
+                RAMP_OPTIM_PLOG("a0 == 0 and |a1| > am: Unable to fix this case since the given duration is too short.");
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+                return false;
+            }
+            
             root = C2*a0 - A2;
             // RAVELOG_DEBUG_FORMAT("case1: a0 = %.15e; a1 = %.15e", a0%a1);
         }
@@ -1220,6 +1237,9 @@ bool CalculateLeastUpperBoundInoperativeInterval(dReal x0, dReal x1, dReal v0, d
 
        (the inequalities are derived using Sympy). Finally, we have two solutions (for the total
        time) from each inequality. Then we select the maximum one.
+
+       Important note: position limits are not taken into account here. The calculated upper bound
+       may be invalidated because of position constraints.
      */
 
     dReal firstTerm = (v0 + v1)/am;
