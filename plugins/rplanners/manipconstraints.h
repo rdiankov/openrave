@@ -509,7 +509,7 @@ public:
         }
 
         dReal reductionFactor = 0.9;
-        dReal multiplier = 0.92;
+        dReal multiplier = 0.85;
         int retcode = 0;
         dReal maxallowedmult = 0.92;
 
