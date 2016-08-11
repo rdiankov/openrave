@@ -654,7 +654,7 @@ public:
                                 else {
                                     RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x!", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode);
                                 }
-                                _DumpTrajectory(ptraj, Level_Debug);
+                                _DumpTrajectory(ptraj, Level_Verbose);
                                 return PS_Failed;
                             }
                         }
@@ -1209,7 +1209,7 @@ protected:
          */
         std::stringstream shortcutprogress;
         std::string sep;
-        if (IS_DEBUGLEVEL(Level_Debug)) {
+        if (IS_DEBUGLEVEL(Level_Verbose)) {
             shortcutprogress << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             shortcutprogress << originalEndTime << " " << numIters;
         }
@@ -1623,7 +1623,7 @@ protected:
                 dReal diff = dummyEndTime - endTime;
                 RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numslowdowns%dummyEndTime%endTime%diff);
 
-                if (IS_DEBUGLEVEL(Level_Debug)) {
+                if (IS_DEBUGLEVEL(Level_Verbose)) {
                     // Write the progress
                     shortcutprogress << str(boost::format("\n%d %.15e %.15e %.15e %.15e")%iters%t1%t2%dummyEndTime%endTime);
 
@@ -1701,7 +1701,7 @@ protected:
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
         _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
 
-        if (IS_DEBUGLEVEL(Level_Debug)) {
+        if (IS_DEBUGLEVEL(Level_Verbose)) {
             std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
             std::ofstream f(shortcutprogressfilename.c_str());
             f << shortcutprogress.str();
@@ -1794,7 +1794,7 @@ protected:
          */
         std::stringstream shortcutprogress;
         std::string sep;
-        if (IS_DEBUGLEVEL(Level_Debug)) {
+        if (IS_DEBUGLEVEL(Level_Verbose)) {
             shortcutprogress << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             shortcutprogress << originalEndTime << " " << numIters;
         }
@@ -2259,8 +2259,8 @@ protected:
                 dReal diff = dummyEndTime - endTime;
                 RAVELOG_VERBOSE_FORMAT("env=%d: shortcut iter=%d/%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",GetEnv()->GetId()%iters%numIters%numslowdowns%dummyEndTime%endTime%diff);
 
-                // Record the progress if in debug level
-                if (IS_DEBUGLEVEL(Level_Debug)) {
+                // Record the progress if in Verbose level
+                if (IS_DEBUGLEVEL(Level_Verbose)) {
                     shortcutprogress << str(boost::format("\n%d %.15e %.15e %.15e %.15e")%iters%t1%t2%dummyEndTime%endTime);
 
                     sep = "\n";
@@ -2337,8 +2337,8 @@ protected:
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
         _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
 
-        // Record the progress if in debug level
-        if (IS_DEBUGLEVEL(Level_Debug)) {
+        // Record the progress if in Verbose level
+        if (IS_DEBUGLEVEL(Level_Verbose)) {
             std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
             std::ofstream f(shortcutprogressfilename.c_str());
             f << shortcutprogress.str();
