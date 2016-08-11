@@ -52,6 +52,21 @@ class ParabolicPath(object):
         return
 
     
+    def EvalPos(self, t):
+        index, remainder = self.FindParabolicCurvesNDIndex(t)
+        return self.curvesndVect[index].EvalPos(remainder)
+
+    
+    def EvalVel(self, t):
+        index, remainder = self.FindParabolicCurvesNDIndex(t)
+        return self.curvesndVect[index].EvalVel(remainder)
+    
+    
+    def EvalAcc(self, t):
+        index, remainder = self.FindParabolicCurvesNDIndex(t)
+        return self.curvesndVect[index].EvalAcc(remainder)
+
+    
     def FindParabolicCurvesNDIndex(self, t):
         t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
@@ -60,7 +75,7 @@ class ParabolicPath(object):
         if (t <= 0):
             index = 0
             remainder = 0
-        elif (t >= duration):
+        elif (t >= self.duration):
             index = len(self.curvesndVect) - 1
             remainder = self.curvesndVect[-1].duration
         else:
@@ -90,7 +105,7 @@ class ParabolicPath(object):
         tempCurvesND.Initialize(self.curvesndVect[i0].curves)
         tempCurvesND.TrimBack(rem0)
         if (tempCurvesND.duration > 0):
-            newCurvesNDVect.append(tempCurvesND)
+            newCurvesNDVect.append(deepcopy(tempCurvesND))
 
         for curvesnd in curvesndVectIn:
             newCurvesNDVect.append(deepcopy(curvesnd))
@@ -98,7 +113,7 @@ class ParabolicPath(object):
         tempCurvesND.Initialize(self.curvesndVect[i1].curves)
         tempCurvesND.TrimFront(rem1)
         if (tempCurvesND.duration > 0):
-            newCurvesNDVect.append(tempCurvesND)
+            newCurvesNDVect.append(deepcopy(tempCurvesND))
 
         for i in xrange(i1 + 1, len(self.curvesndVect)):
             newCurvesNDVect.append(self.curvesndVect[i])

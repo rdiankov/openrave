@@ -82,6 +82,20 @@ class Ramp(object):
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
         self.x1 = Add(self.x0, self.d)
+
+
+    def Initialize(self, v0, a, dur, x0=zero):
+        dur = ConvertFloatToMPF(dur)
+        assert(dur >= -epsilon)
+
+        self.x0 = ConvertFloatToMPF(x0)
+        self.v0 = ConvertFloatToMPF(v0)
+        self.a = ConvertFloatToMPF(a)
+        self.duration = dur
+
+        self.v1 = Add(self.v0, Mul(self.a, self.duration))
+        self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
+        self.x1 = Add(self.x0, self.d)
         
 
     def UpdateDuration(self, newDur):
@@ -93,6 +107,11 @@ class Ramp(object):
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
         self.x1 = Add(self.x0, self.d)
 
+        
+    def SetInitialValue(newx0):
+        self.x0 = ConvertFloatToMPF(newx0)
+        self.x1 = Add(self.x0, self.d)
+        
 
     def SetInitialValue(newx0):
         self.x0 = ConvertFloatToMPF(newx0)
@@ -240,7 +259,7 @@ class Ramp(object):
         elif (t >= self.duration):
             return
 
-        self.UpdateDuration(self.duration - t)
+        self.UpdateDuration(t)
         return
         
 
@@ -830,7 +849,7 @@ class ParabolicCurvesND(object):
 
 
     def SetSegment(self, x0Vect_, x1Vect_, v0Vect_, v1Vect_, t):
-        t = ConvertFloatArrayToMPF(t)
+        t = ConvertFloatToMPF(t)
         assert(t >= 0)
 
         x0Vect = ConvertFloatArrayToMPF(x0Vect_)
@@ -842,7 +861,7 @@ class ParabolicCurvesND(object):
         curves = []
         for i in xrange(ndof):
             curve = ParabolicCurve()
-            curve.SetSegnment(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i])
+            curve.SetSegment(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], t)
             curves.append(curve)
 
         self.Initialize(curves)

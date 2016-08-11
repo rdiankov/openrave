@@ -1310,7 +1310,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
 
     if( IS_DEBUGLEVEL(Level_Verbose) ) {
         int ran = RaveRandomInt()%10000;
-        string filename = str(boost::format("%s/.openrave/beforeretime-%d.xml")%RaveGetHomeDirectory()%ran);
+        string filename = str(boost::format("%s/beforeretime-%d.xml")%RaveGetHomeDirectory()%ran);
         RAVELOG_VERBOSE_FORMAT("Writing before retime traj to %s", filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -1319,7 +1319,10 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
 
     // This ensures that the beginning and final velocities will be preserved
     //RAVELOG_VERBOSE_FORMAT("env=%d, inserting point into %d with planner %s and parameters %s", robot->GetEnv()->GetId()%waypointindex%newplannername%plannerparameters);
-    RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")); // make sure velocities are set
+    // make sure velocities are set
+    if( !(RetimeActiveDOFTrajectory(trajinitial,robot,false,fmaxvelmult,fmaxaccelmult,newplannername,plannerparameters+std::string("<hasvelocities>1</hasvelocities>")) & PS_HasSolution) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("env=%d failed to retime init traj", robot->GetEnv()->GetId(), ORE_Assert);
+    }
 
     // retiming is done, now merge the two trajectories
     size_t nInitialNumWaypoints = trajinitial->GetNumWaypoints();

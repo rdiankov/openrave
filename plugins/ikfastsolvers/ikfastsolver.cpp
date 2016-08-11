@@ -97,6 +97,7 @@ public:
 
     bool _SetJacobianRefineCommand(ostream& sout, istream& sinput)
     {
+#ifdef OPENRAVE_HAS_LAPACK
         sinput >> _fRefineWithJacobianInverseAllowedError;
         _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
         int nMaxIterations=-1;
@@ -104,8 +105,11 @@ public:
         if( !!sinput && nMaxIterations >= 0 ) {
             _jacobinvsolver.SetMaxIterations(nMaxIterations);
         }
-        
+
         return true;
+#else
+        return false;
+#endif
     }
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
@@ -309,7 +313,7 @@ public:
             _jacobinvsolver.Init(*pmanip);
         }
 #endif
-        
+
         // get the joint limits
         RobotBase::RobotStateSaver saver(probot);
         probot->SetActiveDOFs(pmanip->GetArmIndices());
@@ -1201,6 +1205,7 @@ protected:
 
     void _CheckRefineSolution(const IkParameterization& param, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
     {
+#ifdef OPENRAVE_HAS_LAPACK
         IkParameterization paramnew = manip.GetIkParameterization(param,false);
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( _fRefineWithJacobianInverseAllowedError > 0 && ikworkspacedist > _fRefineWithJacobianInverseAllowedError*_fRefineWithJacobianInverseAllowedError ) {
@@ -1216,8 +1221,9 @@ protected:
                 }
             }
         }
+#endif
     }
-                
+
 
     /// validate a solution
     /// \param paramnewglobal[out]
@@ -1293,7 +1299,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 _CheckRefineSolution(param, *pmanip, itravesol->first);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1333,7 +1339,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(vravesol,false);
                 _CheckRefineSolution(param, *pmanip, vravesol);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1653,7 +1659,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(itravesol->first,false);
                 _CheckRefineSolution(param, *pmanip, itravesol->first);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1693,7 +1699,7 @@ protected:
                 }
                 probot->SetActiveDOFValues(vravesol,false);
                 _CheckRefineSolution(param, *pmanip, vravesol);
-                
+
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
                 paramnew = pmanip->GetIkParameterization(param,false);
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
@@ -1988,8 +1994,10 @@ protected:
     dReal _ikthreshold; ///< workspace distance threshold sanity checking between desired workspace goal and the workspace position with the returned ik values.
     dReal _fRefineWithJacobianInverseAllowedError; ///< if > 0, then use jacobian inverse numerical method to refine the results until workspace error drops down this much. By default it is disabled (=-1)
 
+#ifdef OPENRAVE_HAS_LAPACK
     ikfastsolvers::JacobianInverseSolver<double> _jacobinvsolver; ///< jacobian inverse solver if _fRefineWithJacobianInverseAllowedError is > 0
-    
+#endif
+
     //@{
     // cache for current Solve call. This has to be saved/restored if any user functions are called (like filters) since the filters themselves can potentially call into this ik solver.
     std::vector<unsigned int> _vsolutionindices; ///< holds the indices of the current solution, this is not multi-thread safe
@@ -1997,7 +2005,7 @@ protected:
     //@}
 
     bool _bEmptyTransform6D; ///< if true, then the iksolver has been built with identity of the manipulator transform. Only valid for Transform6D IKs.
-    
+
 };
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
