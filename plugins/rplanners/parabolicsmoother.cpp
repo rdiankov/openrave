@@ -215,10 +215,6 @@ public:
 
         // initialize workspace constraints on manipulators
         if(_bmanipconstraints ) {
-            // if( _parameters->_nMaxIterations == 250 ) {
-            //     _parameters->_nMaxIterations = 5000; // for testing.
-            // }
-
             if( !_manipconstraintchecker ) {
                 _manipconstraintchecker.reset(new ManipConstraintChecker(GetEnv()));
             }
@@ -467,7 +463,7 @@ public:
                 }
             }
 
-            RAVELOG_DEBUG_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
+            RAVELOG_VERBOSE_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
 
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -1816,7 +1812,7 @@ protected:
                                        // limits will succeed the next time.
         dReal fstarttimeaccelmult = 1.0;
 
-        dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // Real `MAGIC` happens here
+        dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult;
 
         int numslowdowns = 0;
         bool bExpectModifiedConfigurations = _parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear; // gripper constraints enabled
@@ -2349,9 +2345,9 @@ protected:
             RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
         }
 
-        RAVELOG_DEBUG_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
-        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
-        RAVELOG_DEBUG_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
+        RAVELOG_VERBOSE_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
+        RAVELOG_VERBOSE_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
+        RAVELOG_VERBOSE_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
 
         // std::string zerovelpointsstring = "";
         // sep = "[";

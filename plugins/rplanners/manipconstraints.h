@@ -497,9 +497,6 @@ public:
                         dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                         if (actualmanipaccel > maxactualmanipaccel) {
                             maxactualmanipaccel = actualmanipaccel;
-                            // if (maxactualmanipaccel > _maxmanipaccel) {
-                            //     maxviolatedindex = itramp1 - outramps.begin();
-                            // }
                         }
                     }
                 }
@@ -585,9 +582,6 @@ public:
                         dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
                         if (actualmanipaccel > maxactualmanipaccel) {
                             maxactualmanipaccel = actualmanipaccel;
-                            // if (maxactualmanipaccel > _maxmanipaccel) {
-                            //     maxviolatedindex = itramp2 - outramps.begin();
-                            // }
                         }
                     }
                 }
