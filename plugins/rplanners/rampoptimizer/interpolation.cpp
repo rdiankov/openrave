@@ -1076,6 +1076,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         }
 
         if (Abs(a0) <= epsilon) {
+            RAMP_OPTIM_PLOG("|a0| < epsilon");
             t0 = duration + dv3/a1;
             t1 = duration - t0;
             vp = vmNew;
@@ -1088,6 +1089,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
             curveOut.Initialize(ramps);
         }
         else if (Abs(a1) <= epsilon) {
+            RAMP_OPTIM_PLOG("|a1| < epsilon");
             t0 = dv2/a0;
             t1 = duration - t0;
             vp = vmNew;
@@ -1184,6 +1186,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         else {
             RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
             RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+            RAMP_OPTIM_PLOG("Calculated values: A = %.15e; B = %.15e; t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", A, B, t0, t1, vp, a0, a1);
             return false;
         }
     }

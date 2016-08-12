@@ -25,15 +25,15 @@ ParabolicCheckReturn CheckRamp(Ramp& ramp, dReal xmin, dReal xmax, dReal vm, dRe
     dReal bmin, bmax;
     ramp.GetPeaks(bmin, bmax);
     if ((bmin < xmin - epsilon) || (bmax > xmax + epsilon)) {
-        RAMP_OPTIM_WARN("PCR_XBoundViolated: bmin = %.15e; xmin = %.15e; bmax = %.15e; xmax = %.15e", bmin, xmin, bmax, xmax);
+        RAMP_OPTIM_WARN("PCR_XBoundViolated: bmin = %.15e; xmin = %.15e; diff@min = %.15e; bmax = %.15e; xmax = %.15e; diff@max = %.15e", bmin, xmin, (bmin - xmin), bmax, xmax, (xmax - bmax));
         return PCR_XBoundViolated;
     }
     if ((Abs(ramp.v0) > vm + epsilon) || (Abs(ramp.v1) > vm + epsilon)) {
-        RAMP_OPTIM_WARN("PCR_VBoundViolated: ramp.v0 = %.15e; ramp.v1 = %.15e; vm = %.15e", ramp.v0, ramp.v1, vm);
+        RAMP_OPTIM_WARN("PCR_VBoundViolated: ramp.v0 = %.15e; ramp.v1 = %.15e; vm = %.15e; diff@v0 = %.15e; diff@v1 = %.15e", ramp.v0, ramp.v1, vm, Abs(ramp.v0) - vm, Abs(ramp.v1) - vm);
         return PCR_VBoundViolated;
     }
     if (Abs(ramp.a) > am + epsilon) {
-        RAMP_OPTIM_WARN("PCR_ABoundViolated: ramp.a = %.15e; am = %.15e", ramp.a, am);
+        RAMP_OPTIM_WARN("PCR_ABoundViolated: ramp.a = %.15e; am = %.15e; diff = %.15e", ramp.a, am, Abs(ramp.a) - am);
         return PCR_ABoundViolated;
     }
     return PCR_Normal;
