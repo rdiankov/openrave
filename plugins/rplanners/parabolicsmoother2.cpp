@@ -54,8 +54,8 @@ public:
                 return ret0;
             }
 
-            curvesnd.EvalPos(curvesnd.duration, q1);
-            RampOptimizer::CheckReturn ret1 = feas->ConfigFeasible2(q1, curvesnd.v1Vect, options);
+            // curvesnd.EvalPos(curvesnd.duration, q1);
+            RampOptimizer::CheckReturn ret1 = feas->ConfigFeasible2(curvesnd.x1Vect, curvesnd.v1Vect, options);
             if (ret1.retcode != 0) {
                 return ret1;
             }
@@ -441,7 +441,7 @@ public:
         }
 
         // If the path is perfectly modeled, then ok. Otherwise, we have to verify it
-        if ((_parameters->verifyinitialpath) & bPathIsPerfectlyModeled) {
+        if (!_parameters->verifyinitialpath && bPathIsPerfectlyModeled) {
             // Disable verification
             FOREACH(itcurvesnd, parabolicpath.curvesndVect) {
                 FOREACH(itcheck, itcurvesnd->constraintCheckedVect) {
@@ -517,6 +517,8 @@ public:
             }
 
             // Insert the first waypoint
+            RAVELOG_DEBUG("Start inserting the first waypoint");
+            
             ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, parabolicpath.curvesndVect.front().x0Vect.begin(), posSpec, 1, GetEnv(), true);
             ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, parabolicpath.curvesndVect.front().v0Vect.begin(), velSpec, 1, GetEnv(), false);
             waypoints.at(waypointOffset) = 1;
@@ -555,17 +557,17 @@ public:
                         }
                         else {
                             frontCurvesND = curvesnd;
-                            frontCurvesND.Cut(fTrimEdgesTime, curvesnd);
+                            frontCurvesND.Cut(fTrimEdgesTime, curvesndTrimmed);
                             bTrimmedFront = true;
                         }
                     }
-                    else if (icurvesnd == parabolicpath.curvesndVect.size()) {
+                    else if (icurvesnd + 1 == parabolicpath.curvesndVect.size()) {
                         if (curvesnd.duration <= fTrimEdgesTime + g_fEpsilonLinear) {
                             // This final curvesnd is too short so ignore checking
                             bCheck = false;
                         }
                         else {
-                            curvesnd.Cut(fTrimEdgesTime, backCurvesND);
+                            curvesndTrimmed.Cut(curvesnd.duration - fTrimEdgesTime, backCurvesND);
                             bTrimmedBack = true;
                         }
                     }
@@ -947,7 +949,7 @@ protected:
             curvesnd.SetConstant(vWaypoints[0]);
             parabolicpath.AppendParabolicCurvesND(curvesnd);
         }
-        else {
+        else if (vWaypoints.size() > 1) {
             int options = CFO_CheckTimeBasedConstraints;
             if (!_parameters->verifyinitialpath) {
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
@@ -1068,10 +1070,9 @@ protected:
             // VectorToString(accellimits, s, "accellimits");
             // RAVELOG_WARN_FORMAT("%s", s);
 
-            curvesndOut.EvalPos(0, x0Vect);
-            curvesndOut.EvalVel(0, v0Vect);
+            x0Vect = curvesndOut.x0Vect;
+            v0Vect = curvesndOut.v0Vect;
 
-            dReal fPrevTime = 0;
             size_t iswitch = 1;
             size_t nswitches = curvesndOut.switchpointsList.size(); // switchpointsList includes zero.
             for (iswitch = 1; iswitch < nswitches; ++iswitch) {
@@ -1083,7 +1084,7 @@ protected:
 
                 // Check the segment between the two switch points
                 // RAVELOG_WARN_FORMAT("curvesndOut.switchpointsList.at(iswitch) = %.15e", curvesndOut.switchpointsList.at(iswitch));
-                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, curvesndOut.switchpointsList.at(iswitch) - fPrevTime, options, _cacheCurvesNDVect1);
+                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, curvesndOut.switchpointsList.at(iswitch) - curvesndOut.switchpointsList.at(iswitch - 1), options, _cacheCurvesNDVect1);
 
                 if (retseg.retcode != 0) {
                     break;
@@ -1095,7 +1096,6 @@ protected:
                 }
                 x0Vect.swap(x1Vect);
                 v0Vect.swap(v1Vect);
-                fPrevTime = curvesndOut.switchpointsList[iswitch];
             }
             if (retseg.retcode == 0) {
                 // Everything is fine. Stop iterating.
@@ -1121,7 +1121,7 @@ protected:
                 SerializeValues(ss, v0Vect);
                 ss << "]; v1 = [";
                 SerializeValues(ss, v1Vect);
-                ss << "]; deltatime=" << (curvesndOut.switchpointsList.at(iswitch) - fPrevTime);
+                ss << "]; deltatime=" << (curvesndOut.switchpointsList.at(iswitch) - curvesndOut.switchpointsList.at(iswitch - 1));
                 RAVELOG_WARN_FORMAT("Calling SegmentFeasibile2 between switchpoints %d and %d returned error 0x%x; %s giving up....", (iswitch - 1)%iswitch%retseg.retcode%ss.str());
                 return false;
             }
