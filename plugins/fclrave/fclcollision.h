@@ -551,18 +551,18 @@ public:
         } else {
             CollisionCallbackData query(shared_checker(), report, vbodyexcluded, vlinkexcluded);
             ADD_TIMING(_statistics);
-//            BODYMANAGERSMAP::iterator it0 = _bodymanagers.find(std::make_pair(pbody, (int)!!(_options & OpenRAVE::CO_ActiveDOFs)));
-//            BOOST_ASSERT(it0 != _bodymanagers.end());
-//
-//            std::set<int> setExcludeBodyIds; ///< any
-//            FOREACH(itbody, attachedBodies) {
-//                setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
-//            }
-//
-//            std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it1 = _envmanagers.find(setExcludeBodyIds);
-//            BOOST_ASSERT(it1 != _envmanagers.end());
-//            _bodymanager = it0->second;
-//            _envmanager = it1->second;
+            BODYMANAGERSMAP::iterator it0 = _bodymanagers.find(std::make_pair(pbody, (int)!!(_options & OpenRAVE::CO_ActiveDOFs)));
+            BOOST_ASSERT(it0 != _bodymanagers.end());
+
+            std::set<int> setExcludeBodyIds; ///< any
+            FOREACH(itbody, attachedBodies) {
+                setExcludeBodyIds.insert((*itbody)->GetEnvironmentId());
+            }
+
+            std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it1 = _envmanagers.find(setExcludeBodyIds);
+            BOOST_ASSERT(it1 != _envmanagers.end());
+            _bodymanager = it0->second;
+            _envmanager = it1->second;
             envManager->collide(bodyManager.get(), &query, &FCLCollisionChecker::CheckNarrowPhaseCollision);
             return query._bCollision;
         }
@@ -698,8 +698,8 @@ private:
             return true;     // don't test anymore
         }
 
-//        _o1 = o1;
-//        _o2 = o2;
+        _o1 = o1;
+        _o2 = o2;
         LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
 
         if( !plink1 || !plink2 ) {
@@ -946,8 +946,8 @@ private:
     std::map< std::set<int>, FCLCollisionManagerInstancePtr> _envmanagers;
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
 
-//    FCLCollisionManagerInstancePtr _bodymanager, _envmanager;
-//    fcl::CollisionObject* _o1, *_o2;
+    FCLCollisionManagerInstancePtr _bodymanager, _envmanager;
+    fcl::CollisionObject* _o1, *_o2;
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
     std::map<fcl::CollisionObject*, int> _currentlyused;
     std::map<fcl::CollisionObject*, std::map<int, int> > _usestatistics;
