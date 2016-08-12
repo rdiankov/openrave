@@ -43,7 +43,7 @@ Vector ConvertQuaternionFromFCL(fcl::Quaternion3f const &v) {
 }
 
 fcl::AABB ConvertAABBToFcl(const OpenRAVE::AABB& bv) {
-   return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
+    return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
 }
 
 
@@ -181,11 +181,13 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
-            bool is_consistent = (*itbody)->RemoveUserData(_userdatakey);
-            if( !is_consistent ) {
-                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
-            }
+//            bool is_consistent = (*itbody)->RemoveUserData(_userdatakey);
+//            if( !is_consistent ) {
+//                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
+//            }
         }
+        _currentpinfo.clear();
+        _cachedpinfo.clear();
         _setInitializedBodies.clear();
     }
 
@@ -224,9 +226,9 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
-                                   return itgeom->GetInfo();
-                               };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& {
+                    return itgeom->GetInfo();
+                };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -278,7 +280,8 @@ public:
         // if the attachedBodies callback is not set, we set it
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
 
-        pbody->SetUserData(_userdatakey, pinfo);
+        _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+        //pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -337,7 +340,8 @@ public:
             else {
                 RAVELOG_VERBOSE_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
                 // Set the current user data to use the KinBodyInfoPtr associated to groupname
-                pbody->SetUserData(_userdatakey, pinfo);
+                _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+                //pbody->SetUserData(_userdatakey, pinfo);
 
                 // Revoke the information inside the cache so that a potentially outdated object does not survive
                 _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
@@ -430,7 +434,12 @@ public:
 
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
-        return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(pbody->GetEnvironmentId());
+        if( it == _currentpinfo.end()) {
+            return KinBodyInfoPtr();
+        }
+        return it->second;
+        //return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }
 
 
@@ -442,11 +451,12 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
+            _currentpinfo.erase(pbody->GetEnvironmentId());
             _cachedpinfo.erase(pbody->GetEnvironmentId());
-            bool is_consistent = pbody->RemoveUserData(_userdatakey);
-            if( !is_consistent ) {
-                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
-            }
+//            bool is_consistent = pbody->RemoveUserData(_userdatakey);
+//            if( !is_consistent ) {
+//                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
+//            }
         }
     }
 
@@ -630,7 +640,7 @@ private:
     /// \brief controls whether the kinbody info is removed during the destructor
     class KinBodyInfoRemover
     {
-    public:
+public:
         KinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
             _bDoRemove = true;
         }
@@ -639,12 +649,12 @@ private:
                 _fn();
             }
         }
-    
+
         void ResetRemove() {
             _bDoRemove = false;
         }
-        
-    private:
+
+private:
         boost::function<void()> _fn;
         bool _bDoRemove;
     };
@@ -712,6 +722,7 @@ private:
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
+    std::map< int, KinBodyInfoPtr> _currentpinfo;
 };
 
 #ifdef RAVE_REGISTER_BOOST
