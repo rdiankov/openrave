@@ -81,23 +81,23 @@ ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, dReal xmin, dRea
         return PCR_VDiscrepancy;
     }
     if (!(FuzzyEquals(curve.x0, curve.ramps[0].x0, epsilon))) {
-        RAMP_OPTIM_WARN("PCR_VDiscrepancy: curve.x0 (%.15e) != curve.ramps[0].x0 (%.15e); diff = %.15e", curve.x0, curve.ramps[0].x0, (curve.x0 - curve.ramps[0].x0));
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: curve.x0 (%.15e) != curve.ramps[0].x0 (%.15e); diff = %.15e", curve.x0, curve.ramps[0].x0, (curve.x0 - curve.ramps[0].x0));
         return PCR_XDiscrepancy;
     }
     if (!(FuzzyEquals(curve.x0, x0, epsilon))) {
-        RAMP_OPTIM_WARN("PCR_VDiscrepancy: curve.x0 (%.15e) != x0 (%.15e); diff = %.15e", curve.x0, x0, (curve.x0 - x0));
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: curve.x0 (%.15e) != x0 (%.15e); diff = %.15e", curve.x0, x0, (curve.x0 - x0));
         return PCR_XDiscrepancy;
     }
     if (!(FuzzyEquals(curve.x1, curve.ramps[curve.ramps.size() - 1].x1, epsilon))) {
-        RAMP_OPTIM_WARN("PCR_VDiscrepancy: curve.x1 (%.15e) != curve.ramps[-1].x1 (%.15e); diff = %.15e", curve.x1, curve.ramps[curve.ramps.size() - 1].x1, (curve.x1 - curve.ramps[curve.ramps.size() - 1].x1));
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: curve.x1 (%.15e) != curve.ramps[-1].x1 (%.15e); diff = %.15e", curve.x1, curve.ramps[curve.ramps.size() - 1].x1, (curve.x1 - curve.ramps[curve.ramps.size() - 1].x1));
         return PCR_XDiscrepancy;
     }
     if (!(FuzzyEquals(curve.x1, x1, epsilon))) {
-        RAMP_OPTIM_WARN("PCR_VDiscrepancy: curve.x1 (%.15e) != x1 (%.15e); diff = %.15e", curve.x1, x1, (curve.x1 - x1));
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: curve.x1 (%.15e) != x1 (%.15e); diff = %.15e", curve.x1, x1, (curve.x1 - x1));
         return PCR_XDiscrepancy;
     }
     if (!(FuzzyEquals(curve.d, x1 - x0, epsilon))) {
-        RAMP_OPTIM_WARN("PCR_VDiscrepancy: curve.d (%.15e) != x1 - x0 (%.15e); diff = %.15e", curve.d, (x1 - x0), (curve.d - (x1 - x0)));
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: curve.d (%.15e) != x1 - x0 (%.15e); diff = %.15e", curve.d, (x1 - x0), (curve.d - (x1 - x0)));
         return PCR_XDiscrepancy;
     }
     return PCR_Normal;
