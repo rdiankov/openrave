@@ -644,7 +644,6 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
         switchpointsList.reserve(switchpointsList.size() + tempSwitchpointsList.size());
         switchpointsList.insert(switchpointsList.end(), tempSwitchpointsList.begin(), tempSwitchpointsList.end());
 
-        constraintCheckedVect.reserve(constraintCheckedVect.size() + curvesnd.constraintCheckedVect.size());
         constraintCheckedVect.insert(constraintCheckedVect.end(), curvesnd.constraintCheckedVect.begin(), curvesnd.constraintCheckedVect.end());
 
         if (constraintChecked) {
@@ -827,6 +826,7 @@ void ParabolicCurvesND::Reset() {
     switchpointsList.clear();
     curves.clear();
     constraintCheckedVect.clear();
+    constraintChecked = false;
     return;
 }
 

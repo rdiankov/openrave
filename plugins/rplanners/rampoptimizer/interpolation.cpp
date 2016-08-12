@@ -377,7 +377,7 @@ inline dReal SolveBrakeTime(dReal x, dReal v, dReal xbound) {
     dReal bt;
     bool res = SafeEqSolve(v, 2*(xbound - x), epsilon, 0, inf, bt);
     if (!res) {
-        RAMP_OPTIM_WARN("Cannot solve the brake time equation: %.15e*t - %.15e = 0 with t being in [0, inf)", v, 2*(xbound - x));
+        RAMP_OPTIM_PLOG("Cannot solve the brake time equation: %.15e*t - %.15e = 0 with t being in [0, inf)", v, 2*(xbound - x));
         bt = 0;
     }
     return bt;
@@ -390,7 +390,7 @@ inline dReal SolveBrakeAccel(dReal x, dReal v, dReal xbound) {
     dReal coeff1 = v*v;
     bool res = SafeEqSolve(coeff0, -coeff1, epsilon, -inf, inf, ba);
     if (!res) {
-        RAMP_OPTIM_WARN("Cannot solve the brake acceleration equation: %.15e*a + %.15e = 0 with a being in (-inf, inf)", coeff0, coeff1);
+        RAMP_OPTIM_PLOG("Cannot solve the brake acceleration equation: %.15e*a + %.15e = 0 with a being in (-inf, inf)", coeff0, coeff1);
         ba = 0;
     }
     return ba;
