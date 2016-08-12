@@ -141,7 +141,7 @@ protected:
                 }
             }
 
-            size_t maxSlowDownTries = 4;
+            size_t maxSlowDownTries = 10;
             for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
                 bSuccess = RampOptimizer::InterpolateArbitraryVelND(_v0pos, _v1pos, _v0vel, _v1vel, info->_vConfigLowerLimit, info->_vConfigUpperLimit, vellimits, accellimits, _curvesnd, false);
                 if (!bSuccess) {
