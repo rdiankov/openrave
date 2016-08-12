@@ -102,7 +102,6 @@ public:
         CollisionReportPtr _report;
         std::vector<KinBodyConstPtr> const& _vbodyexcluded;
         std::vector<LinkConstPtr> const& _vlinkexcluded;
-        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         bool bselfCollision;  ///< true if currently checking for self collision.
         bool _bStopChecking;  ///< if true, then stop the collision checking loop
@@ -165,7 +164,6 @@ public:
         CollisionReportPtr _report;
         std::vector<KinBodyConstPtr> const& _vbodyexcluded;
         std::vector<LinkConstPtr> const& _vlinkexcluded;
-        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         bool bselfCollision;  ///< true if currently checking for self collision.
         bool _bStopChecking;  ///< if true, then stop the collision checking loop
@@ -215,7 +213,6 @@ public:
         fcl::CollisionRequest _request;
         fcl::CollisionResult _result;
         CollisionReportPtr _report;
-        std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         Vector _origin;
         dReal _currentSquaredDistance;
