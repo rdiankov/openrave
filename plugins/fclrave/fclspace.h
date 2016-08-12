@@ -43,7 +43,7 @@ Vector ConvertQuaternionFromFCL(fcl::Quaternion3f const &v) {
 }
 
 fcl::AABB ConvertAABBToFcl(const OpenRAVE::AABB& bv) {
-   return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
+    return fcl::AABB(fcl::AABB(ConvertVectorToFCL(bv.pos)), ConvertVectorToFCL(bv.extents));
 }
 
 
@@ -83,10 +83,10 @@ public:
             void Reset() {
                 if( !!linkBV.second ) {
                     if( !!GetLink() ) {
-                        RAVELOG_VERBOSE_FORMAT("resetting link %s:%s col=0x%x", GetLink()->GetName()%GetLink()->GetParent()->GetName()%(uint64_t)linkBV.second.get());
+                        RAVELOG_INFO_FORMAT("resetting link %s:%s col=0x%x (env %d)", GetLink()->GetName()%GetLink()->GetParent()->GetName()%(uint64_t)linkBV.second.get()%GetLink()->GetParent()->GetEnv()->GetId());
                     }
                     else {
-                        RAVELOG_VERBOSE_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
+                        RAVELOG_INFO_FORMAT("resetting unknown link col=0x%x (env %d)", (uint64_t)linkBV.second.get()%GetLink()->GetParent()->GetEnv()->GetId());
                     }
                     linkBV.second->setUserData(nullptr); // reset the user data since someone can hold a ref to the collision object and continue using it
                 }
@@ -175,7 +175,7 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE("destroying fcl collision environment\n");
+        RAVELOG_INFO_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)\n", _penv->GetId()%_userdatakey);
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {
@@ -183,7 +183,7 @@ public:
             }
             bool is_consistent = (*itbody)->RemoveUserData(_userdatakey);
             if( !is_consistent ) {
-                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
+                RAVELOG_WARN_FORMAT("inconsistency detected with fclspace user data (kinbody %s) (env %d) (userdatakey %s)\n", (*itbody)->GetName()%_penv->GetId()%_userdatakey);
             }
         }
         _setInitializedBodies.clear();
@@ -224,9 +224,9 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
-                                   return itgeom->GetInfo();
-                               };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& {
+                    return itgeom->GetInfo();
+                };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -246,7 +246,7 @@ public:
             }
 
             if( link->vgeoms.size() == 0 ) {
-                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
+                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
             } else {
                 // create the bounding volume for the link
                 KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
@@ -329,13 +329,13 @@ public:
 
             KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
             if(!pinfo) {
-                RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+                RAVELOG_INFO_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
                 pinfo.reset(new KinBodyInfo);
                 pinfo->_geometrygroup = groupname;
                 InitKinBody(pbody, pinfo);
             }
             else {
-                RAVELOG_VERBOSE_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
+                RAVELOG_INFO_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
                 // Set the current user data to use the KinBodyInfoPtr associated to groupname
                 pbody->SetUserData(_userdatakey, pinfo);
 
@@ -436,7 +436,7 @@ public:
 
     void RemoveUserData(KinBodyConstPtr pbody) {
         if( !!pbody ) {
-            RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
+            RAVELOG_INFO(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
@@ -445,7 +445,7 @@ public:
             _cachedpinfo.erase(pbody->GetEnvironmentId());
             bool is_consistent = pbody->RemoveUserData(_userdatakey);
             if( !is_consistent ) {
-                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
+                RAVELOG_WARN_FORMAT("inconsistency detected with fclspace user data (body %s) (env %d) (userdatakey %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
             }
         }
     }
@@ -630,7 +630,7 @@ private:
     /// \brief controls whether the kinbody info is removed during the destructor
     class KinBodyInfoRemover
     {
-    public:
+public:
         KinBodyInfoRemover(const boost::function<void()>& fn) : _fn(fn) {
             _bDoRemove = true;
         }
@@ -639,12 +639,12 @@ private:
                 _fn();
             }
         }
-    
+
         void ResetRemove() {
             _bDoRemove = false;
         }
-        
-    private:
+
+private:
         boost::function<void()> _fn;
         bool _bDoRemove;
     };
@@ -652,7 +652,7 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        //RAVELOG_VERBOSE_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        //RAVELOG_INFO_FORMAT("Resetting current geometry for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() == 0 ) {
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
@@ -666,7 +666,7 @@ private:
     {
         KinBodyInfoPtr pinfo = _pinfo.lock();
         KinBodyPtr pbody = pinfo->GetBody();
-        //RAVELOG_VERBOSE_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
+        //RAVELOG_INFO_FORMAT("Resetting geometry groups for kinbody %s (in env %d, key %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
         if( !!pinfo && pinfo->_geometrygroup.size() > 0 ) {
             pinfo->nGeometryUpdateStamp++;
             KinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect

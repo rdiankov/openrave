@@ -207,7 +207,7 @@ public:
         if( !!ptrackingbody && _bTrackActiveDOF ) {
             std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(ptrackingbody->GetEnvironmentId());
             if( it == mapCachedBodies.end() ) {
-                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies", _lastSyncTimeStamp);
+                RAVELOG_WARN_FORMAT("%u tracking body not in current cached bodies (body %s) (env %d)", _lastSyncTimeStamp%ptrackingbody->GetName()%ptrackingbody->GetEnv()->GetId());
             }
             else {
                 FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(ptrackingbody); // necessary in case pinfos were swapped!
@@ -228,7 +228,7 @@ public:
 
             if( !pbody || pbody->GetEnvironmentId() == 0 ) {
                 // should happen when parts are removed
-                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName()));
+                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now (env %d)", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName())%(!pbody ? -1 : pbody->GetEnv()->GetId()));
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());

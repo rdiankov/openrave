@@ -125,7 +125,7 @@ public:
         RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::SetBroadphaseAlgorithmCommand, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
         RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
 
-        RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
+        RAVELOG_INFO_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
         std::string broadphasealg, bvhrepresentation;
         sinput >> broadphasealg >> bvhrepresentation;
@@ -138,7 +138,7 @@ public:
     }
 
     virtual ~FCLCollisionChecker() {
-        RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s destroyed in env %d", _userdatakey%GetEnv()->GetId());
+        RAVELOG_INFO_FORMAT("FCLCollisionChecker %s destroyed in env %d", _userdatakey%GetEnv()->GetId());
         DestroyEnvironment();
 
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
@@ -173,7 +173,7 @@ public:
         // We don't want to clone _bIsSelfCollisionChecker since a self collision checker can be created by cloning a environment collision checker
         _options = r->_options;
         _numMaxContacts = r->_numMaxContacts;
-        RAVELOG_VERBOSE(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
+        RAVELOG_INFO(str(boost::format("FCL User data cloning env %d into env %d") % r->GetEnv()->GetId() % GetEnv()->GetId()));
     }
 
     void SetNumMaxContacts(int numMaxContacts) {
@@ -321,7 +321,7 @@ public:
 
     virtual bool InitEnvironment()
     {
-        RAVELOG_VERBOSE(str(boost::format("FCL User data initializing %s in env %d") % _userdatakey % GetEnv()->GetId()));
+        RAVELOG_INFO(str(boost::format("FCL User data initializing %s in env %d") % _userdatakey % GetEnv()->GetId()));
         _bIsSelfCollisionChecker = false;
         vector<KinBodyPtr> vbodies;
         GetEnv()->GetBodies(vbodies);
@@ -333,7 +333,7 @@ public:
 
     virtual void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE(str(boost::format("FCL User data destroying %s in env %d") % _userdatakey % GetEnv()->GetId()));
+        RAVELOG_INFO(str(boost::format("FCL User data destroying %s in env %d") % _userdatakey % GetEnv()->GetId()));
         _fclspace->DestroyEnvironment();
     }
 
@@ -480,7 +480,7 @@ public:
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         if( !pcollLink ) {
-          return false;
+            return false;
         }
 
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, false);
@@ -510,7 +510,7 @@ public:
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         if( !pcollLink ) {
-          return false;
+            return false;
         }
 
         std::set<KinBodyConstPtr> attachedBodies;
@@ -874,11 +874,11 @@ private:
         if( !!link_raw ) {
             LinkConstPtr plink = link_raw->GetLink();
             if( !plink ) {
-                RAVELOG_WARN_FORMAT("The link %s was lost from fclspace", link_raw->bodylinkname);
+                RAVELOG_WARN_FORMAT("The link %s was lost from fclspace (env %d) (userdatakey %s)", link_raw->bodylinkname%GetEnv()->GetId()%_userdatakey);
             }
             return plink;
         }
-        RAVELOG_WARN("fcl collision object does not have a link attached");
+        RAVELOG_WARN("fcl collision object does not have a link attached (env %d) (userdatakey %s)", GetEnv()->GetId()%_userdatakey);
         return LinkConstPtr();
     }
 
