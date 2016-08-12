@@ -86,7 +86,7 @@ public:
                         RAVELOG_INFO_FORMAT("resetting link %s:%s col=0x%x (env %d)", GetLink()->GetName()%GetLink()->GetParent()->GetName()%(uint64_t)linkBV.second.get()%GetLink()->GetParent()->GetEnv()->GetId());
                     }
                     else {
-                        RAVELOG_INFO_FORMAT("resetting unknown link col=0x%x (env %d)", (uint64_t)linkBV.second.get()%GetLink()->GetParent()->GetEnv()->GetId());
+                        RAVELOG_INFO_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
                     }
                     linkBV.second->setUserData(nullptr); // reset the user data since someone can hold a ref to the collision object and continue using it
                 }
