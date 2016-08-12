@@ -180,6 +180,9 @@ public:
     /// \brief remove tracking of the body, return true if body was removed
     bool RemoveBody(KinBodyConstPtr pbody)
     {
+        if( !!pbody ) {
+            RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp%pbody->GetName());
+        }
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it != mapCachedBodies.end() ) {
             FOREACH(itcol, it->second.vcolobjs) {
@@ -348,7 +351,7 @@ public:
                 itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
-                //RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
+                RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
