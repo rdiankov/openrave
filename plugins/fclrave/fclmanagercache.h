@@ -181,7 +181,7 @@ public:
     bool RemoveBody(KinBodyConstPtr pbody)
     {
         if( !!pbody ) {
-            RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp%pbody->GetName());
+            RAVELOG_INFO_FORMAT("%u removing body %s", _lastSyncTimeStamp%pbody->GetName());
         }
         std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
         if( it != mapCachedBodies.end() ) {
@@ -231,7 +231,7 @@ public:
 
             if( !pbody || pbody->GetEnvironmentId() == 0 ) {
                 // should happen when parts are removed
-                RAVELOG_VERBOSE_FORMAT("%u manager contains invalid body %s, removing for now (env %d)", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName())%(!pbody ? -1 : pbody->GetEnv()->GetId()));
+                RAVELOG_INFO_FORMAT("%u manager contains invalid body %s, removing for now (env %d)", _lastSyncTimeStamp%(!pbody ? std::string() : pbody->GetName())%(!pbody ? -1 : pbody->GetEnv()->GetId()));
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -245,7 +245,7 @@ public:
             FCLSpace::KinBodyInfoPtr pnewinfo = _fclspace.GetInfo(pbody); // necessary in case pinfos were swapped!
             if( pinfo != pnewinfo ) {
                 // everything changed!
-                RAVELOG_VERBOSE_FORMAT("%u body %s entire KinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
+                RAVELOG_INFO_FORMAT("%u body %s entire KinBodyInfo changed", _lastSyncTimeStamp%pbody->GetName());
                 FOREACH(itcolobj, itcache->second.vcolobjs) {
                     if( !!itcolobj->get() ) {
                         pmanager->unregisterObject(itcolobj->get());
@@ -280,7 +280,7 @@ public:
             }
 
             if( pinfo->nLinkUpdateStamp != itcache->second.nLinkUpdateStamp ) {
-                RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed link %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
+                RAVELOG_INFO_FORMAT("%u body %s for cache changed link %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
                 // links changed
                 uint64_t newlinkmask = pbody->GetLinkEnableStatesMask();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
@@ -321,7 +321,7 @@ public:
             if( pinfo->nGeometryUpdateStamp != itcache->second.nGeometryUpdateStamp ) {
 
                 if( itcache->second.geometrygroup.size() == 0 || itcache->second.geometrygroup != pinfo->_geometrygroup ) {
-                    RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed geometry %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp);
+                    RAVELOG_INFO_FORMAT("%u body %s for cache changed geometry %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nGeometryUpdateStamp%itcache->second.nGeometryUpdateStamp);
                     // vcolobjs most likely changed
                     for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                         if( !!itcache->second.vcolobjs.at(ilink) ) {
@@ -351,7 +351,7 @@ public:
                 itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
-                RAVELOG_VERBOSE_FORMAT("%u body %s for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
+                RAVELOG_INFO_FORMAT("%u body %s for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pinfo->nLastStamp%itcache->second.nLastStamp);
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
