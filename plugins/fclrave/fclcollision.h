@@ -878,7 +878,7 @@ private:
             }
             return plink;
         }
-        RAVELOG_WARN("fcl collision object does not have a link attached (env %d) (userdatakey %s)", GetEnv()->GetId()%_userdatakey);
+        RAVELOG_WARN_FORMAT("fcl collision object does not have a link attached (env %d) (userdatakey %s)", GetEnv()->GetId()%_userdatakey);
         return LinkConstPtr();
     }
 
