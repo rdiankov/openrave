@@ -63,6 +63,19 @@ public:
     FCLCollisionManagerInstance(FCLSpace& fclspace, BroadPhaseCollisionManagerPtr pmanager) : _fclspace(fclspace), pmanager(pmanager) {
         _lastSyncTimeStamp = OpenRAVE::utils::GetMilliTime();
     }
+    ~FCLCollisionManagerInstance() {
+        if( _tmpbuffer.size() > 0 ) {
+            RAVELOG_WARN_FORMAT("_tmpbuffer has left over objects %d", _tmpbuffer.size());
+        }
+        _tmpbuffer.resize(0);
+        
+        pmanager->clear();
+        // should clear all vcolobjs notifying the destructor that manager has the objects unregistered
+        FOREACH(it, mapCachedBodies) {
+            it->second.vcolobjs.resize(0);
+        }
+        mapCachedBodies.clear();
+    }
 
     /// \brief sets up manager for body checking
     ///
