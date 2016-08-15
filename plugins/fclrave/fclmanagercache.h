@@ -178,28 +178,28 @@ public:
     }
 
     /// \brief ensures that pbody is being tracked inside the manager
-    void EnsureBody(KinBodyConstPtr pbody)
-    {
-        _tmpbuffer.resize(0);
-        std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
-        if( it == mapCachedBodies.end() ) {
-            std::vector<CollisionObjectPtr> vcolobjs;
-            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
-            uint64_t linkmask=0;
-            if( _AddBody(pbody, pinfo, vcolobjs, linkmask, false) ) { // new collision objects are already added to _tmpbuffer
-                mapCachedBodies[(pbody)->GetEnvironmentId()] = KinBodyCache(pbody, pinfo);
-                mapCachedBodies[(pbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
-                mapCachedBodies[(pbody)->GetEnvironmentId()].linkmask = linkmask;
-            }
-        }
-        if( _tmpbuffer.size() > 0 ) {
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-            SaveCollisionObjectDebugInfos();
-#endif
-            pmanager->registerObjects(_tmpbuffer); // bulk update
-        }
-
-    }
+//    void EnsureBody(KinBodyConstPtr pbody)
+//    {
+//        _tmpbuffer.resize(0);
+//        std::map<int, KinBodyCache>::iterator it = mapCachedBodies.find(pbody->GetEnvironmentId());
+//        if( it == mapCachedBodies.end() ) {
+//            std::vector<CollisionObjectPtr> vcolobjs;
+//            FCLSpace::KinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
+//            uint64_t linkmask=0;
+//            if( _AddBody(pbody, pinfo, vcolobjs, linkmask, false) ) { // new collision objects are already added to _tmpbuffer
+//                mapCachedBodies[(pbody)->GetEnvironmentId()] = KinBodyCache(pbody, pinfo);
+//                mapCachedBodies[(pbody)->GetEnvironmentId()].vcolobjs.swap(vcolobjs);
+//                mapCachedBodies[(pbody)->GetEnvironmentId()].linkmask = linkmask;
+//            }
+//        }
+//        if( _tmpbuffer.size() > 0 ) {
+//#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
+//            SaveCollisionObjectDebugInfos();
+//#endif
+//            pmanager->registerObjects(_tmpbuffer); // bulk update
+//        }
+//
+//    }
 
     /// \brief remove tracking of the body, return true if body was removed
     bool RemoveBody(KinBodyConstPtr pbody)
