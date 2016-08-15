@@ -293,11 +293,34 @@ bool Interpolate1DNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal 
 
     if (FuzzyEquals(d, dStraight, epsilon)) {
         // We can maximally accelerate/decelerate from v0 to v1.
+        /*
+           Consider for example the case when deltad = d - dStraight > 0 and deltad < epsilon. Since
+           we are estimating d to be dStraight instead, the computed x1 will be off by deltad (which
+           is in turn bounded by epsilon).
+
+           Let's consider the case when v1 > v0 > 0. If we are using the real value d instead, it is
+           equivalent to adding two ramps at the end. Each extra ramp has duration deltat / 2, the
+           first one going up from v1 to v' = v1 + am*deltat/2, the second one going down from v' to
+           v1. From deltad that we have, we can calculate the resulting deltat:
+
+                  deltad = v1*deltat + 0.25*am*deltat**2.
+
+           Therefore, deltat will be in the magnitude of around 2*|log10(epsilon)| which is really
+           too small.
+         */
         dReal a0 = dv > 0 ? am : -am;
         Ramp ramp0(v0, a0, dv/a0, x0);
         std::vector<Ramp> ramps(1);
         ramps[0] = ramp0;
         curveOut.Initialize(ramps);
+        ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, inf, am, x0, x1, v0, v1);
+        if (ret == PCR_Normal) {
+            return true;
+        }
+        else {
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; am = %.15e", x0, x1, v0, v1, am);
+            return false;
+        }
         return true;
     }
 
@@ -408,10 +431,10 @@ bool ImposeJointLimitFixedDuration(ParabolicCurve& curveIn, dReal xmin, dReal xm
         RAMP_OPTIM_PLOG("The input ParabolicCurve does not violate joint limits");
         return true;
     }
-    
+
     dReal duration = curveIn.duration;
     dReal x0 = curveIn.x0;
-    dReal x1 = curveIn.EvalPos(duration);
+    dReal x1 = curveIn.x1;
     dReal v0 = curveIn.v0;
     dReal v1 = curveIn.v1;
 
@@ -620,7 +643,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
                 return true;
             }
             else {
-                RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
+                RAMP_OPTIM_PLOG("Case: stationary trajectory. Finished stretching but the profile does not pass the check: ret = %d", ret);
                 RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                 return false;
             }
@@ -681,15 +704,46 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
     dReal durInverse = 1/duration;
     A = (v1 - v0)*durInverse;
     B = (2*d)*durInverse - (v0 + v1);
+
+    /*
+      A velocity profile having t = duration connecting (x0, v0) and (x1, v1) will have one ramp iff 
+              
+              x1 - x0 = dStraight
+                    d = 0.5*(v0 + v1)*duration
+                    
+      The above equation is actually equivalent to
+      
+                    B = 0.
+
+      Therefore, if B = 0 we can just interpolate the trajectory right away and return early.
+     */
+    if (FuzzyZero(B, epsilon)) {
+        Ramp ramp0(v0, A, duration, x0);
+        std::vector<Ramp> ramps(1);
+        ramps[0] = ramp0;
+        curveOut.Initialize(ramps);
+        ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
+        if (ret == PCR_Normal) {
+            return true;
+        }
+        else {
+            RAMP_OPTIM_PLOG("Case: B == 0. Finished stretching but the profile does not pass the check: ret = %d", ret);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+            return false;
+        }
+    }
+    
     dReal sum1 = -am - A;
     dReal sum2 = am - A;
     C = B/sum1;
     D = B/sum2;
 
     // RAMP_OPTIM_PLOG("A = %.15e; B = %.15e, C = %.15e, D = %.15e; sum1 = %.15e; sum2 = %.15e", A, B, C, D, sum1, sum2);
-    if ((Abs(A) <= epsilon) && (Abs(B) <= epsilon)) {
-        RAMP_OPTIM_PLOG("A and B are zero");
-        RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+    if (IS_DEBUGLEVEL(Level_Verbose)) {
+        if ((Abs(A) <= epsilon) && (Abs(B) <= epsilon)) {
+            RAMP_OPTIM_PLOG("A and B are zero");
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+        }
     }
 
     // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
@@ -866,12 +920,39 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
         t0 = 0.5*(i4l + i4u);
     }
 
-    // Here we need to take care of the cases when t0 has been rounded. In particular, we need to go
-    // back to the original formulae to calculated other related values (such as a1). Otherwise, it
-    // may cause discrepancies.
-    if (FuzzyZero(t0, epsilon) || FuzzyEquals(t0, duration, epsilon)) {
-        // t0 is either 0 or duration. This means the new trajectory will consist of only one
-        // Ramp. Since v0 and v1 are withint the limits, we are safe.
+
+    if (0) {
+        // Here we need to take care of the cases when t0 has been rounded. In particular, we need to go
+        // back to the original formulae to calculated other related values (such as a1). Otherwise, it
+        // may cause discrepancies.
+        if (FuzzyZero(t0, epsilon) || FuzzyEquals(t0, duration, epsilon)) {
+            // t0 is either 0 or duration. This means the new trajectory will consist of only one
+            // Ramp. Since v0 and v1 are withint the limits, we are safe.
+            Ramp ramp0(v0, A, duration, x0);
+            std::vector<Ramp> ramps(1);
+            ramps[0] = ramp0;
+            curveOut.Initialize(ramps);
+            ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
+            if (ret == PCR_Normal) {
+                return true;
+            }
+            else {
+                RAMP_OPTIM_PLOG("Case: either t0 or t1 is too small. Finished stretching but the profile does not pass the check: ret = %d", ret);
+                RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+                RAMP_OPTIM_PLOG("Calculated values: A = %.15e; B = %.15e; t0 = %.15e; t1 = %.15e; vp = %.15e; a0 = %.15e; a1 = %.15e", A, B, t0, t1, vp, a0, a1);
+                return false;
+            }
+        }
+    } // Old procedure which can cause large displacement discrepancy
+
+    /*
+      We skip rounding (to zero) of t0 and t1 here since
+      1. it can cause too large displacement discrepancy
+      2. the original reason for this rounding is just to prevent zero division when calculating
+      accelerations, a0 and a1. When t0 or t1 is very small (but non-zero), although it will result
+      in huge accelerations, those accelerations will be checked and limited to the bound anyway.
+     */
+    if (t0 == 0) {
         Ramp ramp0(v0, A, duration, x0);
         std::vector<Ramp> ramps(1);
         ramps[0] = ramp0;
@@ -881,13 +962,30 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
             return true;
         }
         else {
-            RAMP_OPTIM_PLOG("Finished stretching but the profile does not pass the check: ret = %d", ret);
+            RAMP_OPTIM_PLOG("Case: t0 == 0. Finished stretching but the profile does not pass the check: ret = %d", ret);
             RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
             return false;
         }
     }
-
+    
     t1 = duration - t0;
+
+    if (t1 == 0) {
+        Ramp ramp0(v0, A, duration, x0);
+        std::vector<Ramp> ramps(1);
+        ramps[0] = ramp0;
+        curveOut.Initialize(ramps);
+        ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
+        if (ret == PCR_Normal) {
+            return true;
+        }
+        else {
+            RAMP_OPTIM_PLOG("Case: t1 == 0. Finished stretching but the profile does not pass the check: ret = %d", ret);
+            RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
+            return false;
+        }
+    }    
+    
     a0 = A + B/t0;
     a1 = A - B/t1;
     vp = v0 + (a0*t0);
@@ -1010,7 +1108,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
                 RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                 return false;
             }
-            
+
             // a0 exceeds the bound, try making it stays at the bound.
             a0 = a0 > 0 ? am : -am;
             // Recalculate the related variable
@@ -1030,7 +1128,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
                 RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                 return false;
             }
-            
+
             root = C2*a0 - A2;
             // RAVELOG_DEBUG_FORMAT("case1: a0 = %.15e; a1 = %.15e", a0%a1);
         }
@@ -1108,7 +1206,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
                 RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                 return false;
             }
-            
+
             vp = vmNew;
             dReal tLastRamp = -dv3/a1;
             if (tLastRamp < 0) {
@@ -1116,7 +1214,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
                 RAMP_OPTIM_PLOG("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0, x1, v0, v1, vm, am, duration);
                 return false;
             }
-            
+
             if (t0 + tLastRamp > duration) {
                 // Final fix
                 if (A == 0) {
