@@ -280,6 +280,7 @@ public:
         // if the attachedBodies callback is not set, we set it
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
 
+        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
         _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
         //pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
@@ -329,6 +330,8 @@ public:
 
             poldinfo->nGeometryUpdateStamp += 1;
             _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
+
+            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
 
             KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
             if(!pinfo) {
@@ -434,6 +437,12 @@ public:
 
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
+        /*int envid = pbody->GetEnvironmentId();
+        if ( envid == 0 ) {
+            return KinBodyInfoPtr();
+        }*/
+        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+
         std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(pbody->GetEnvironmentId());
         if( it == _currentpinfo.end()) {
             return KinBodyInfoPtr();
@@ -451,6 +460,8 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
+            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+
             _currentpinfo.erase(pbody->GetEnvironmentId());
             _cachedpinfo.erase(pbody->GetEnvironmentId());
 //            bool is_consistent = pbody->RemoveUserData(_userdatakey);
