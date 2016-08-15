@@ -389,7 +389,7 @@ public:
             ptraj->GetWaypoints(0, ptraj->GetNumWaypoints(), waypoints, _parameters->_configurationspecification);
 
             // Iterate through all waypoints and remove the redundant (collinear) ones
-            dReal collinearThresh = g_fEpsilonLinear;//RampOptimizer::Sqr(10*RampOptimizer::epsilon);
+            dReal collinearThresh = 1e-14;//RampOptimizer::Sqr(10*RampOptimizer::epsilon);
             for (size_t iwaypoint = 0; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint) {
                 std::copy(waypoints.begin() + iwaypoint*_parameters->GetDOF(), waypoints.begin() + (iwaypoint + 1)*_parameters->GetDOF(), q.begin());
 
@@ -435,9 +435,7 @@ public:
             }
             RAVELOG_DEBUG_FORMAT("Finished initializing %s waypoints (via _SetMilestones)", itcompatposgroup->interpolation);
             RAVELOG_DEBUG_FORMAT("numwaypoints: %d -> %d", ptraj->GetNumWaypoints()%vWaypoints.size());
-            if (IS_DEBUGLEVEL(Level_Debug)) {
-                _DumpParabolicPath(parabolicpath);
-            }
+            _DumpParabolicPath(parabolicpath, Level_Verbose);
         }
 
         // If the path is perfectly modeled, then ok. Otherwise, we have to verify it
@@ -476,11 +474,11 @@ public:
                 }
             }
 
-            if (IS_DEBUGLEVEL(Level_Debug) && (numShortcuts > 0)) {
+            if (numShortcuts > 0) {
                 _DumpTrajectory(ptraj, Level_Verbose);
-                _DumpParabolicPath(parabolicpath);
+                _DumpParabolicPath(parabolicpath, Level_Verbose);
             }
-            
+
             ++_progress._iteration;
             if (_CallCallbacks(_progress) == PA_Interrupt) {
                 return PS_Interrupted;
@@ -518,7 +516,7 @@ public:
 
             // Insert the first waypoint
             RAVELOG_DEBUG("Start inserting the first waypoint");
-            
+
             ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, parabolicpath.curvesndVect.front().x0Vect.begin(), posSpec, 1, GetEnv(), true);
             ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, parabolicpath.curvesndVect.front().v0Vect.begin(), velSpec, 1, GetEnv(), false);
             waypoints.at(waypointOffset) = 1;
@@ -573,9 +571,10 @@ public:
                     }
 
                     _bUsePerturnation = false;
+                    std::vector<RampOptimizer::ParabolicCurvesND> curvesndVectOut;
                     if (bCheck) {
-                        // RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(curvesndTrimmed, 0xffff, curvesndVectOut);
-                        RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(curvesndTrimmed, 0xffff, tempCurvesNDVect);
+                        RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(curvesndTrimmed, 0xffff, curvesndVectOut);
+                        // RampOptimizer::CheckReturn checkret = _feasibilitychecker.Check2(curvesndTrimmed, 0xffff, tempCurvesNDVect);
 
                         if (checkret.retcode != 0) {
                             RAVELOG_DEBUG_FORMAT("env = %d: Check2 for ParabolicCurvesND %d/%d returns 0x%x", GetEnv()->GetId()%icurvesnd%(parabolicpath.curvesndVect.size())%checkret.retcode);
@@ -710,9 +709,7 @@ public:
 
             OPENRAVE_ASSERT_OP(RaveFabs(fExpectedDuration - _pdummytraj->GetDuration()), <, durationDiscrepancyThresh);
             RAVELOG_DEBUG_FORMAT("env = %d: after shortcutting %d times: parabolicpath waypoints = %d; traj waypoints = %d; traj duration = %.15e", GetEnv()->GetId()%numShortcuts%parabolicpath.curvesndVect.size()%_pdummytraj->GetNumWaypoints()%_pdummytraj->GetDuration());
-            if (IS_DEBUGLEVEL(Level_Debug)) {
-                _DumpParabolicPath(parabolicpath);
-            }
+            _DumpParabolicPath(parabolicpath, Level_Verbose);
 
             ptraj->Swap(_pdummytraj);
         }
@@ -1296,7 +1293,7 @@ protected:
 
                     RampOptimizer::CheckReturn retcheck(0);
                     iIterProgress += 0x10;
-                    
+
                     while (1) { // Start checking constraints. shortcutpath.curvesndVect will be filled in here.
                         if (_parameters->SetStateValues(shortcutCurvesND1.x1Vect) != 0) {
                             std::string x1string;
@@ -1504,37 +1501,24 @@ protected:
         return filename;
     }
 
-    // void _DumpParabolicPath(RampOptimizer::ParabolicPath &path) const {
-    //     uint32_t randnum;
-    //     if( !!_logginguniformsampler ) {
-    //         randnum = _logginguniformsampler->SampleSequenceOneUInt32();
-    //     }
-    //     else {
-    //         randnum = RaveRandomInt();
-    //     }
-    //     string filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
-    //     path.Save(filename);
-
-    //     RAVELOG_DEBUG_FORMAT("Wrote a parabolic path to %s (duration = %.15e)", filename%path.duration);
-    // }
-
-    void _DumpParabolicPath(RampOptimizer::ParabolicPath &path) const {
-        uint32_t randnum;
-        if( !!_logginguniformsampler ) {
-            randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+    void _DumpParabolicPath(RampOptimizer::ParabolicPath &path, DebugLevel level=Level_Verbose) const {
+        if (IS_DEBUGLEVEL(level)) {
+            uint32_t randnum;
+            if( !!_logginguniformsampler ) {
+                randnum = _logginguniformsampler->SampleSequenceOneUInt32();
+            }
+            else {
+                randnum = RaveRandomInt();
+            }
+            string filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
+            ofstream f(filename.c_str());
+            f << std::setprecision(RampOptimizer::epsilon);
+            path.Serialize(f);
+            RAVELOG_DEBUG_FORMAT("Wrote a parabolic path to %s (duration = %.15e)", filename%path.duration);
         }
-        else {
-            randnum = RaveRandomInt();
-        }
-        string filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%(randnum%1000));
-        ofstream f(filename.c_str());
-        f << std::setprecision(RampOptimizer::epsilon);
-        path.Serialize(f);
-
-        RAVELOG_DEBUG_FORMAT("Wrote a parabolic path to %s (duration = %.15e)", filename%path.duration);
     }
 
-    
+
     void VectorToString(const std::vector<dReal> &v, std::string &s, const char* name) {
         s = "";
         s += name;
@@ -1557,7 +1541,12 @@ protected:
     ConstraintFilterReturnPtr _constraintreturn;
     MyParabolicCurvesNDFeasibilityChecker _feasibilitychecker;
     boost::shared_ptr<ManipConstraintChecker2> _manipconstraintchecker;
-
+    
+    TrajectoryBasePtr _pdummytraj;
+    PlannerProgress _progress;
+    bool _bUsePerturnation;
+    bool _bmanipconstraints;
+    
     // Caching stuff
     // Used in PlanPath
     RampOptimizer::ParabolicPath _cacheparabolicpath;
@@ -1584,11 +1573,7 @@ protected:
 
     // Used in SegmentFeasible2
     RampOptimizer::ParabolicCurvesND _cacheCurvesNDSeg;
-
-    TrajectoryBasePtr _pdummytraj;
-    PlannerProgress _progress;
-    bool _bUsePerturnation;
-    bool _bmanipconstraints;
+    
 };
 
 PlannerBasePtr CreateParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput) {
