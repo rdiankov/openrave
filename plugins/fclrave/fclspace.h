@@ -151,6 +151,7 @@ public:
         OpenRAVE::UserDataPtr _geometrycallback; ///< handle for the callback called when the current geometry of the kinbody changed ( Prop_LinkGeometry )
         OpenRAVE::UserDataPtr _geometrygroupcallback; ///< handle for the callback called when some geometry group of one of the links of this kinbody changed ( Prop_LinkGeometryGroup )
         OpenRAVE::UserDataPtr _linkenablecallback; ///< handle for the callback called when some link enable status of this kinbody has changed so that the envManager is updated ( Prop_LinkEnable )
+        OpenRAVE::UserDataPtr _bodyremovedcallback; ///< handle for the callback called when the kinbody is removed from the environment, used in self-collision checkers ( Prop_BodyRemoved )
 
         std::string _geometrygroup; ///< name of the geometry group tracked by this kinbody info ; if empty, tracks the current geometries
     };
@@ -181,11 +182,9 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
-            bool is_consistent = (*itbody)->RemoveUserData(_userdatakey);
-            if( !is_consistent ) {
-                RAVELOG_WARN_FORMAT("inconsistency detected with fclspace user data (kinbody %s) (env %d) (userdatakey %s)\n", (*itbody)->GetName()%_penv->GetId()%_userdatakey);
-            }
         }
+        _currentpinfo.clear();
+        _cachedpinfo.clear();
         _setInitializedBodies.clear();
     }
 
@@ -224,9 +223,9 @@ public:
                 std::vector<KinBody::Link::GeometryPtr> const &geoms = (*itlink)->GetGeometries();
                 typedef boost::function<KinBody::GeometryInfo const& (KinBody::Link::GeometryPtr const&)> Func;
                 typedef boost::transform_iterator<Func, std::vector<KinBody::Link::GeometryPtr>::const_iterator> PtrGeomInfoIterator;
-                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom) -> KinBody::GeometryInfo const& {
-                                   return itgeom->GetInfo();
-                               };
+                Func getInfo = [] (KinBody::Link::GeometryPtr const &itgeom)->KinBody::GeometryInfo const& {
+                    return itgeom->GetInfo();
+                };
                 begingeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.begin(), getInfo));
                 endgeom = GeometryInfoIterator(PtrGeomInfoIterator(geoms.end(), getInfo));
             }
@@ -275,10 +274,12 @@ public:
         pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
         pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
 
-        // if the attachedBodies callback is not set, we set it
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
-        pbody->SetUserData(_userdatakey, pinfo);
+        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+        _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+        //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -327,6 +328,8 @@ public:
             poldinfo->nGeometryUpdateStamp += 1;
             _cachedpinfo[(pbody)->GetEnvironmentId()][poldinfo->_geometrygroup] = poldinfo;
 
+            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+
             KinBodyInfoPtr pinfo = _cachedpinfo[pbody->GetEnvironmentId()][groupname];
             if(!pinfo) {
                 RAVELOG_VERBOSE_FORMAT("FCLSpace : creating geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
@@ -336,8 +339,8 @@ public:
             }
             else {
                 RAVELOG_VERBOSE_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
-                // Set the current user data to use the KinBodyInfoPtr associated to groupname
-                pbody->SetUserData(_userdatakey, pinfo);
+                // Set the current info to use the KinBodyInfoPtr associated to groupname
+                _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
 
                 // Revoke the information inside the cache so that a potentially outdated object does not survive
                 _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
@@ -430,7 +433,17 @@ public:
 
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
-        return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        int envId = pbody->GetEnvironmentId();
+        if ( envId == 0 ) {
+            RAVELOG_WARN_FORMAT("body %s has invalid environment id", pbody->GetName());
+            return KinBodyInfoPtr();
+        }
+
+        std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(envId);
+        if( it == _currentpinfo.end() ) {
+            return KinBodyInfoPtr();
+        }
+        return it->second;
     }
 
 
@@ -442,31 +455,12 @@ public:
             if( !!pinfo ) {
                 pinfo->Reset();
             }
+            BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+
+            _currentpinfo.erase(pbody->GetEnvironmentId());
             _cachedpinfo.erase(pbody->GetEnvironmentId());
-            bool is_consistent = pbody->RemoveUserData(_userdatakey);
-            if( !is_consistent ) {
-                RAVELOG_WARN_FORMAT("inconsistency detected with fclspace user data (body %s) (env %d) (userdatakey %s)", pbody->GetName()%_penv->GetId()%_userdatakey);
-            }
         }
     }
-
-//    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK)
-//    {
-//        if( pLINK->nLastStamp != plink->GetParent()->GetUpdateStamp() ) {
-//            pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
-//            FOREACHC(itgeomcoll, pLINK->vgeoms) {
-//                CollisionObjectPtr pcoll = (*itgeomcoll).second;
-//                Transform pose = plink->GetTransform() * (*itgeomcoll).first;
-//                fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-//                fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
-//
-//                pcoll->setTranslation(newPosition);
-//                pcoll->setQuatRotation(newOrientation);
-//                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-//                pcoll->computeAABB();
-//            }
-//        }
-//    }
 
 
     const std::set<KinBodyConstPtr>& GetEnvBodies() const {
@@ -712,6 +706,7 @@ private:
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
+    std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
 };
 
 #ifdef RAVE_REGISTER_BOOST
