@@ -279,6 +279,7 @@ public:
 
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
         _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
+        //_cachedpinfo[pbody->GetEnvironmentId()] what to do with the cache?
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -434,6 +435,7 @@ public:
     {
         int envId = pbody->GetEnvironmentId();
         if ( envId == 0 ) {
+            RAVELOG_WARN_FORMAT("body %s has invalid environment id", pbody->GetName());
             return KinBodyInfoPtr();
         }
 
@@ -704,7 +706,7 @@ private:
 
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
-    std::map< int, KinBodyInfoPtr> _currentpinfo;
+    std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
 };
 
 #ifdef RAVE_REGISTER_BOOST
