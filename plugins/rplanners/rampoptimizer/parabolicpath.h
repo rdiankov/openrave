@@ -21,12 +21,14 @@ namespace OpenRAVE {
 namespace RampOptimizerInternal {
 
 struct CheckReturn {
-    CheckReturn(int retcode=0, dReal fmult=1.0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false) {
+    CheckReturn(int retcode=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
     }
 
     int retcode;
     dReal fTimeBasedSurpassMult;
     bool bDifferentVelocity;
+    dReal fMaxManipSpeed;
+    dReal fMaxManipAccel;
 };
 
 
