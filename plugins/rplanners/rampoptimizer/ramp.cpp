@@ -300,11 +300,11 @@ void ParabolicCurve::SetInitialValue(dReal newx0) {
 void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const {
     BOOST_ASSERT(t >= -epsilon);
     BOOST_ASSERT(t <= duration + epsilon);
-    if (t < epsilon) {
+    if (t <= 0) {
         index = 0;
         remainder = 0;
     }
-    else if (t > duration - epsilon) {
+    else if (t >= duration) {
         index = ((int) ramps.size()) - 1;
         remainder = ramps.back().duration;
     }
