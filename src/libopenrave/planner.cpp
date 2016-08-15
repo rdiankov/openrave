@@ -41,7 +41,11 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </PlannerParameters> in %s"),buf.str(),ORE_InvalidArguments);
         }
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,utils::null_deleter()), pbuf.c_str(), ppsize);
+        try {
+            LocalXML::ParseXMLData(pp.shared_from_this(), pbuf.c_str(), ppsize);
+        } catch(boost::bad_weak_ptr& e) {
+            LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp, utils::null_deleter()), pbuf.c_str(), ppsize);
+        }
     }
 
     return I;
@@ -827,7 +831,7 @@ void PlannerBase::PlannerParameters::Validate() const
                 RAVELOG_DEBUG_FORMAT("unequal states: %s",ss.str());
             }
         }
-        
+
         OPENRAVE_ASSERT_OP(dist,<=,1000*g_fEpsilon);
     }
     if( !!_diffstatefn && vstate.size() > 0 ) {
@@ -895,7 +899,7 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
             }
         }
     }
-        
+
     // transfer the callbacks?
     list<UserDataPtr> listhandles;
     FOREACHC(it,__listRegisteredCallbacks) {
