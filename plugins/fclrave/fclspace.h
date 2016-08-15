@@ -432,12 +432,12 @@ public:
 
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
-        int envid = pbody->GetEnvironmentId();
-        if ( envid == 0 ) {
+        int envId = pbody->GetEnvironmentId();
+        if ( envId == 0 ) {
             return KinBodyInfoPtr();
         }
 
-        std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(pbody->GetEnvironmentId());
+        std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(envId);
         if( it == _currentpinfo.end() ) {
             return KinBodyInfoPtr();
         }
