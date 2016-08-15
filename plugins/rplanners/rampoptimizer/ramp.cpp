@@ -228,7 +228,9 @@ void Ramp::TrimBack(dReal t) {
 ParabolicCurve::ParabolicCurve(std::vector<Ramp> rampsIn) {
     BOOST_ASSERT(!rampsIn.empty());
 
+    ramps.resize(0);
     ramps.reserve(rampsIn.size());
+    switchpointsList.resize(0);
     switchpointsList.reserve(rampsIn.size() + 1);
     d = 0.0;
     duration = 0.0;
@@ -310,7 +312,7 @@ void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const 
         index = 0;
         // Iterate through switchpointsList
         std::vector<dReal>::const_iterator it = switchpointsList.begin();
-        while (it != switchpointsList.end() && t > *it) {
+        while (it != switchpointsList.end() && t >= *it) {
             index++;
             it++;
         }

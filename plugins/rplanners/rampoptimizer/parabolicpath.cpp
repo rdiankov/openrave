@@ -343,7 +343,7 @@ void ParabolicPath::FindParabolicCurvesNDIndex(dReal t, int &index, dReal &remai
         index = 0;
         // Iterate through mainSwitchpoints
         std::vector<dReal>::const_iterator it = mainSwitchpoints.begin();
-        while (it != mainSwitchpoints.end() && t > *it) {
+        while (it != mainSwitchpoints.end() && t >= *it) {
             index++;
             it++;
         }
