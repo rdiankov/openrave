@@ -184,7 +184,7 @@ public:
                 }
             }
         }
-        
+
         if( !localchecker ) {     // take any collision checker
             std::map<InterfaceType, std::vector<std::string> > interfacenames;
             RaveGetLoadedInterfaces(interfacenames);
@@ -601,7 +601,7 @@ public:
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
-        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
         _CallBodyCallbacks(pbody, 1);
     }
 
@@ -637,7 +637,7 @@ public:
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
-        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
         _CallBodyCallbacks(robot, 1);
     }
 
@@ -700,6 +700,7 @@ public:
                 if( !!_pPhysicsEngine ) {
                     _pPhysicsEngine->RemoveKinBody(*it);
                 }
+                pbody->_PostprocessChangedParameters(KinBody::Prop_BodyRemoved);
                 RemoveEnvironmentId(pbody);
                 _vecbodies.erase(it);
                 _nBodiesModifiedStamp++;

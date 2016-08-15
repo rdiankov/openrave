@@ -112,6 +112,8 @@ public:
         Prop_RobotManipulatorSolver = 0x00400000,
         Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
         Prop_RobotGrabbed = 0x01000000, ///< [robot only] if grabbed bodies changed
+
+        Prop_BodyRemoved = 0x10000000, ///< if a KinBody is removed from the environment
     };
 
     /// \brief used for specifying the type of limit checking and the messages associated with it
@@ -153,7 +155,7 @@ public:
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
-        
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -794,9 +796,9 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
-        
+
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
-        
+
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -863,7 +865,7 @@ public:
         /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
         /// \return min and max of torque limits
         std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
-        
+
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
         }

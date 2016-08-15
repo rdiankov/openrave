@@ -151,6 +151,7 @@ public:
         OpenRAVE::UserDataPtr _geometrycallback; ///< handle for the callback called when the current geometry of the kinbody changed ( Prop_LinkGeometry )
         OpenRAVE::UserDataPtr _geometrygroupcallback; ///< handle for the callback called when some geometry group of one of the links of this kinbody changed ( Prop_LinkGeometryGroup )
         OpenRAVE::UserDataPtr _linkenablecallback; ///< handle for the callback called when some link enable status of this kinbody has changed so that the envManager is updated ( Prop_LinkEnable )
+        OpenRAVE::UserDataPtr _bodyremovedcallback; ///< handle for the callback called when the kinbody is removed from the environment, used in self-collision checkers ( Prop_BodyRemoved )
 
         std::string _geometrygroup; ///< name of the geometry group tracked by this kinbody info ; if empty, tracks the current geometries
     };
@@ -277,8 +278,8 @@ public:
         pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
         pinfo->_activeDOFsCallback = pbody->RegisterChangeCallback(KinBody::Prop_RobotActiveDOFs, boost::bind(&FCLSpace::_ResetActiveDOFsCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
 
-        // if the attachedBodies callback is not set, we set it
         pinfo->_bodyAttachedCallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyAttached, boost::bind(&FCLSpace::_ResetAttachedBodyCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<KinBodyInfo>(pinfo)));
+        pinfo->_bodyremovedcallback = pbody->RegisterChangeCallback(KinBody::Prop_BodyRemoved, boost::bind(&FCLSpace::RemoveUserData, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::bind(&OpenRAVE::utils::sptr_from<const KinBody>, boost::weak_ptr<const KinBody>(pbody))));
 
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
         _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
@@ -438,9 +439,9 @@ public:
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
         /*int envid = pbody->GetEnvironmentId();
-        if ( envid == 0 ) {
+           if ( envid == 0 ) {
             return KinBodyInfoPtr();
-        }*/
+           }*/
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
 
         std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(pbody->GetEnvironmentId());
@@ -454,7 +455,7 @@ public:
 
     void RemoveUserData(KinBodyConstPtr pbody) {
         if( !!pbody ) {
-            RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d : %s") % _penv->GetId() % pbody->GetName()));
+            RAVELOG_DEBUG_FORMAT("FCL User data removed from env %d : %s %d %x", _penv->GetId() % pbody->GetName() % pbody->GetEnvironmentId() % pbody.get());
             _setInitializedBodies.erase(pbody);
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
