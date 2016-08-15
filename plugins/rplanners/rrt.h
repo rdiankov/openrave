@@ -67,6 +67,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         _vecInitialNodes.resize(0);
         _sampleConfig.resize(params->GetDOF());
+        // TODO perhaps distmetricfn should take into number of revolutions of circular joints
         _treeForward.Init(shared_planner(), params->GetDOF(), params->_distmetricfn, params->_fStepLength, params->_distmetricfn(params->_vConfigLowerLimit, params->_vConfigUpperLimit));
         std::vector<dReal> vinitialconfig(params->GetDOF());
         for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
@@ -307,6 +308,7 @@ Some python code to display data::\n\
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
+        // TODO perhaps distmetricfn should take into number of revolutions of circular joints
         _treeBackward.Init(shared_planner(), _parameters->GetDOF(), _parameters->_distmetricfn, _parameters->_fStepLength, _parameters->_distmetricfn(_parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit));
 
         //read in all goals

@@ -83,7 +83,7 @@ public:
             void Reset() {
                 if( !!linkBV.second ) {
                     if( !!GetLink() ) {
-                        RAVELOG_VERBOSE_FORMAT("resetting link %s:%s col=0x%x", GetLink()->GetName()%GetLink()->GetParent()->GetName()%(uint64_t)linkBV.second.get());
+                        RAVELOG_VERBOSE_FORMAT("resetting link %s:%s col=0x%x (env %d)", GetLink()->GetParent()->GetName()%GetLink()->GetName()%(uint64_t)linkBV.second.get()%GetLink()->GetParent()->GetEnv()->GetId());
                     }
                     else {
                         RAVELOG_VERBOSE_FORMAT("resetting unknown link col=0x%x", (uint64_t)linkBV.second.get());
@@ -176,16 +176,12 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE("destroying fcl collision environment\n");
+        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)\n", _penv->GetId()%_userdatakey);
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {
                 pinfo->Reset();
             }
-//            bool is_consistent = (*itbody)->RemoveUserData(_userdatakey);
-//            if( !is_consistent ) {
-//                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
-//            }
         }
         _currentpinfo.clear();
         _cachedpinfo.clear();
@@ -249,7 +245,7 @@ public:
             }
 
             if( link->vgeoms.size() == 0 ) {
-                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries",pbody->GetName()%(*itlink)->GetName());
+                RAVELOG_WARN_FORMAT("Initializing link %s/%s with 0 geometries (env %d) (userdatakey %s)",pbody->GetName()%(*itlink)->GetName()%_penv->GetId()%_userdatakey);
             } else {
                 // create the bounding volume for the link
                 KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), *begingeom);
@@ -283,7 +279,6 @@ public:
 
         BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
         _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
-        //pbody->SetUserData(_userdatakey, pinfo);
         _setInitializedBodies.insert(pbody);
 
         //Do I really need to synchronize anything at that point ?
@@ -343,9 +338,8 @@ public:
             }
             else {
                 RAVELOG_VERBOSE_FORMAT("FCLSpace : switching to geometry %s for kinbody %s (id = %d) (env = %d)", groupname%pbody->GetName()%pbody->GetEnvironmentId()%_penv->GetId());
-                // Set the current user data to use the KinBodyInfoPtr associated to groupname
+                // Set the current info to use the KinBodyInfoPtr associated to groupname
                 _currentpinfo[pbody->GetEnvironmentId()] = pinfo;
-                //pbody->SetUserData(_userdatakey, pinfo);
 
                 // Revoke the information inside the cache so that a potentially outdated object does not survive
                 _cachedpinfo[(pbody)->GetEnvironmentId()].erase(groupname);
@@ -438,24 +432,22 @@ public:
 
     KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) const
     {
-        /*int envid = pbody->GetEnvironmentId();
-           if ( envid == 0 ) {
+        int envid = pbody->GetEnvironmentId();
+        if ( envid == 0 ) {
             return KinBodyInfoPtr();
-           }*/
-        BOOST_ASSERT(pbody->GetEnvironmentId() != 0);
+        }
 
         std::map< int, KinBodyInfoPtr >::const_iterator it = _currentpinfo.find(pbody->GetEnvironmentId());
-        if( it == _currentpinfo.end()) {
+        if( it == _currentpinfo.end() ) {
             return KinBodyInfoPtr();
         }
         return it->second;
-        //return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }
 
 
     void RemoveUserData(KinBodyConstPtr pbody) {
         if( !!pbody ) {
-            RAVELOG_DEBUG_FORMAT("FCL User data removed from env %d : %s %d %x", _penv->GetId() % pbody->GetName() % pbody->GetEnvironmentId() % pbody.get());
+            RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
             _setInitializedBodies.erase(pbody);
             KinBodyInfoPtr pinfo = GetInfo(pbody);
             if( !!pinfo ) {
@@ -465,30 +457,8 @@ public:
 
             _currentpinfo.erase(pbody->GetEnvironmentId());
             _cachedpinfo.erase(pbody->GetEnvironmentId());
-//            bool is_consistent = pbody->RemoveUserData(_userdatakey);
-//            if( !is_consistent ) {
-//                RAVELOG_WARN("inconsistency detected with fclspace user data\n");
-//            }
         }
     }
-
-//    void SynchronizeGeometries(LinkConstPtr plink, boost::shared_ptr<KinBodyInfo::LINK> pLINK)
-//    {
-//        if( pLINK->nLastStamp != plink->GetParent()->GetUpdateStamp() ) {
-//            pLINK->nLastStamp = plink->GetParent()->GetUpdateStamp();
-//            FOREACHC(itgeomcoll, pLINK->vgeoms) {
-//                CollisionObjectPtr pcoll = (*itgeomcoll).second;
-//                Transform pose = plink->GetTransform() * (*itgeomcoll).first;
-//                fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-//                fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
-//
-//                pcoll->setTranslation(newPosition);
-//                pcoll->setQuatRotation(newOrientation);
-//                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-//                pcoll->computeAABB();
-//            }
-//        }
-//    }
 
 
     const std::set<KinBodyConstPtr>& GetEnvBodies() const {

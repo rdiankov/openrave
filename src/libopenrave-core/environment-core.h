@@ -297,11 +297,13 @@ public:
     virtual void Reset()
     {
         // destruction order is *very* important, don't touch it without consultation
-        RAVELOG_DEBUG("resetting raveviewer\n");
         list<ViewerBasePtr> listViewers;
         GetViewers(listViewers);
-        FOREACH(itviewer, listViewers) {
-            (*itviewer)->Reset();
+        if( listViewers.size() > 0 ) {
+            RAVELOG_DEBUG("resetting raveviewer\n");   
+            FOREACH(itviewer, listViewers) {
+                (*itviewer)->Reset();
+            }
         }
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
