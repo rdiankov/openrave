@@ -24,6 +24,14 @@ if( CRLIBM_FOUND )
   add_dependencies(libopenrave check_libm_accuracy-native) # forces check to be run before libopenrave is compile
 endif()
 
+if( AABB_CONVEX_HULL )
+  if( QHULLCPP_FOUND )
+    set(openrave_libraries ${openrave_libraries} qhull_r qhullcpp)
+  else()
+    message(WARNING "libqhullcpp not found but required with flag AABB_CONVEX_HULL set")
+  endif()
+endif()
+
 set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}

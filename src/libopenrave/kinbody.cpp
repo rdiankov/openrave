@@ -4148,6 +4148,12 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
+#ifdef AABB_CACHING
+    FOREACH(itplink, GetLinks()) {
+        (*itplink)->_ResetAABB();
+    }
+#endif
+
     // notify any callbacks of the changes
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;
@@ -4357,6 +4363,9 @@ public:
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
                 boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
+#ifdef AABB_CACHING
+                _pbody->_veclinks[i]->_ResetAABB();
+#endif
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
@@ -4379,6 +4388,9 @@ private:
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
+#ifdef AABB_CACHING
+            _veclinks[i]->_ResetAABB();
+#endif
         }
         _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {
@@ -4553,6 +4565,14 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
         __hashkinematics.resize(0);
     }
+
+#ifdef AABB_CACHING
+    if( parameters & Prop_LinkTransforms ) {
+        FOREACH(itlink, GetLinks()) {
+            (*itlink)->_ResetAABB();
+        }
+    }
+#endif
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;
