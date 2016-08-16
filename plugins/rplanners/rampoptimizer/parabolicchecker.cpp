@@ -17,7 +17,7 @@ namespace OpenRAVE {
 
 namespace RampOptimizerInternal {
 
-ParabolicCheckReturn CheckRamp(Ramp& ramp, dReal xmin, dReal xmax, dReal vm, dReal am) {
+ParabolicCheckReturn CheckRamp(const Ramp& ramp, dReal xmin, dReal xmax, dReal vm, dReal am) {
     if (ramp.duration < -epsilon) {
         RAMP_OPTIM_WARN("PCR_NegativeDuration: ramp.duration = %.15e", ramp.duration);
         return PCR_NegativeDuration;
@@ -39,7 +39,7 @@ ParabolicCheckReturn CheckRamp(Ramp& ramp, dReal xmin, dReal xmax, dReal vm, dRe
     return PCR_Normal;
 }
 
-ParabolicCheckReturn CheckRamps(std::vector<Ramp>& rampsVector, dReal xmin, dReal xmax, dReal vm, dReal am) {
+ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& rampsVector, dReal xmin, dReal xmax, dReal vm, dReal am) {
     ParabolicCheckReturn ret = CheckRamp(rampsVector[0], xmin, xmax, vm, am);
     if (ret != PCR_Normal) {
         return ret;
@@ -59,7 +59,7 @@ ParabolicCheckReturn CheckRamps(std::vector<Ramp>& rampsVector, dReal xmin, dRea
     return PCR_Normal;
 }
 
-ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am, dReal x0, dReal x1, dReal v0, dReal v1) {
+ParabolicCheckReturn CheckParabolicCurve(const ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am, dReal x0, dReal x1, dReal v0, dReal v1) {
     ParabolicCheckReturn ret = CheckRamps(curve.ramps, xmin, xmax, vm, am);
     if (ret != PCR_Normal) {
         return ret;
@@ -103,7 +103,7 @@ ParabolicCheckReturn CheckParabolicCurve(ParabolicCurve& curve, dReal xmin, dRea
     return PCR_Normal;
 }
 
-ParabolicCheckReturn CheckParabolicCurvesND(ParabolicCurvesND& curvesnd, std::vector<dReal>& xminVect, std::vector<dReal>& xmaxVect, std::vector<dReal>& vmVect, std::vector<dReal>& amVect, std::vector<dReal>& x0Vect, std::vector<dReal>& x1Vect, std::vector<dReal>& v0Vect, std::vector<dReal>& v1Vect) {
+ParabolicCheckReturn CheckParabolicCurvesND(const ParabolicCurvesND& curvesnd, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect) {
     ParabolicCheckReturn ret;
     for (size_t i = 0; i < curvesnd.ndof; ++i) {
         ret = CheckParabolicCurve(curvesnd.curves[i], xminVect[i], xmaxVect[i], vmVect[i], amVect[i], x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i]);
