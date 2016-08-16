@@ -4,6 +4,8 @@ import ramp
 import matplotlib.pyplot as plt
 from pylab import ion
 ion()
+from os.path import isfile
+import openravepy as orpy
 
 import logging
 logging.basicConfig(format='[%(levelname)s] [%(name)s: %(funcName)s] %(message)s', level=logging.DEBUG)
@@ -199,3 +201,31 @@ def PlotData(index, prefix="/private/cache/openrave/", plot=True, fignum=1, ncol
         
     info['axes'] = axes
     return info
+
+
+def ConvertOpenRAVETrajToParabolicCurvesND(traj):
+    nwaypoints = traj.GetNumWaypoints()
+    spec = traj.GetConfigurationSpecification()
+    xgroup = spec.GetGroupFromName('joint_values')
+    xoffset = xgroup.offset
+    xdof = xgroup.dof
+    vgroup = spec.GetGroupFromName('joint_velocities')
+    voffset = vgroup.offset
+    vdof = vgroup.dof
+    deltatimegroup = spec.GetGroupFromName('deltatime')
+    toffset = deltatimegroup.offset
+
+    curvesnd = ramp.ParabolicCurvesND()
+    for iwaypoint in xrange(nwaypoints - 1):
+        x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
+        x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
+        v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]
+        v1 = traj.GetWaypoint(iwaypoint + 1)[voffset: voffset + vdof]
+        t = traj.GetWaypoint(iwaypoint + 1)[toffset]
+        temp = ramp.ParabolicCurvesND()
+        temp.SetSegment(x0, x1, v0, v1, t)
+        curvesnd.Append(temp)
+
+    return curvesnd
+
+    
