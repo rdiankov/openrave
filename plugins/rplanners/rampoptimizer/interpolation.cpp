@@ -124,7 +124,15 @@ bool InterpolateArbitraryVelND(const std::vector<dReal>& x0Vect, const std::vect
     RAMP_OPTIM_PLOG("Imposing joint limits successful");
 
     curvesndOut.Initialize(newCurves);
-    return true;
+
+    ParabolicCheckReturn ret = CheckParabolicCurvesND(curvesndOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+    if (ret == PCR_Normal) {
+        return true;
+    }
+    else {
+        RAMP_OPTIM_WARN("CheckParabolicCurvesND return retcode %d", ret);
+        return false;
+    }
 }
 
 
@@ -227,7 +235,15 @@ bool InterpolateNDFixedDuration(const std::vector<dReal>& x0Vect, const std::vec
     }
 
     curvesndOut.Initialize(curves);
-    return true;
+
+    ParabolicCheckReturn ret = CheckParabolicCurvesND(curvesndOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+    if (ret == PCR_Normal) {
+        return true;
+    }
+    else {
+        RAMP_OPTIM_WARN("CheckParabolicCurvesnd returns retcode %d", ret);
+        return false;
+    }
 }
 
 /*
@@ -255,7 +271,14 @@ bool Interpolate1D(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, P
         return false;
     }
     else {
-        return true;
+        ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
+        if (ret == PCR_Normal) {
+            return true;
+        }
+        else {
+            RAMP_OPTIM_WARN("CheckParabolicCurve returns retcode %d", ret);
+            return false;
+        }
     }
 }
 
@@ -390,7 +413,7 @@ bool ImposeVelocityLimit(ParabolicCurve& curve, dReal vm) {
     Ramp newRamp2(newVp, curve.ramps[1].a, curve.ramps[1].duration - t);
     ramps[2] = newRamp2;
 
-    curve.Initialize(ramps);
+    curve.Initialize(ramps);   
     RAMP_OPTIM_PLOG("Imposing velocity limits successful");
     return true;
 }
@@ -718,7 +741,24 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
       Therefore, if B = 0 we can just interpolate the trajectory right away and return early.
      */
     if (FuzzyZero(B, epsilon)) {
-        Ramp ramp0(v0, A, duration, x0);
+        /*
+          In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
+          reached from (x0, v0) using one ramp. We could have set the ramp acceleration to 
+           
+                  a = A := (v1 - v0)/duration. 
+
+          However, since there might be some discrepancy in the inputs, using the formula above may
+          give rise to discrepancy in displacement, in particular, x1 of the resulting ramp. We
+          might want to give more weight on displacement (giving higher priority to
+          displacement). Therefore, here we calculate the ramp acceleration using
+          
+                  a = (2/t^2)(x1 - x0 - v0*duration)
+
+          instead.
+         */
+        dReal a = 2*(x1 - x0 - v0*duration)/(duration*duration);
+        // Ramp ramp0(v0, A, duration, x0);
+        Ramp ramp0(v0, a, duration, x0);
         std::vector<Ramp> ramps(1);
         ramps[0] = ramp0;
         curveOut.Initialize(ramps);
