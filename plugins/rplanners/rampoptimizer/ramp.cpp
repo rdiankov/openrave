@@ -259,6 +259,7 @@ void ParabolicCurve::Append(ParabolicCurve curve) {
         duration = 0.0;
         switchpointsList.push_back(duration);
         x0 = curve.ramps[0].x0;
+        v0 = curve.ramps[0].v0;
     }
     prevLength = ramps.size();
     ramps.reserve(prevLength + sz);
