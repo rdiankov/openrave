@@ -1590,8 +1590,9 @@ protected:
                     else {
                         cacheZeroVelPoints.push_back(zeroVelPoints[index] - diff);
                     }
-                    zeroVelPoints = cacheZeroVelPoints;
                 }
+                // RAVELOG_DEBUG_FORMAT("zeroVelPoints.size(): %d -> %d", zeroVelPoints.size()%cacheZeroVelPoints.size());
+                zeroVelPoints = cacheZeroVelPoints;
 
                 // Keep track of the multipliers
                 fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
@@ -1648,6 +1649,7 @@ protected:
         }
         _DumpParabolicPath(parabolicpath, Level_Debug, fileindex, 1);
 
+        RAVELOG_VERBOSE_FORMAT("There are %d original waypoints that have not been shortcut yet", zeroVelPoints.size());
         if (zeroVelPoints.size() > 0) { // _SpecialShortcut
             dReal shortcutPoint = 0;
             int maxSpecialShortcutIters = 10;
@@ -1687,6 +1689,7 @@ protected:
 
         const dReal originalEndTime = parabolicpath.duration;
         dReal cutoffTime = 0.75; // we sample t0 and t1 in the range [t - cutoffTime, t + cutoffTime]
+        RAVELOG_DEBUG_FORMAT("focusing at t = %.15e (total duration = %.15e)", t%originalEndTime);
 
         std::vector<dReal> x0, x1, v0, v1;
         std::vector<RampOptimizer::ParabolicCurvesND> &curvesndVect = parabolicpath.curvesndVect; // just for convenience
@@ -1848,8 +1851,8 @@ protected:
             else {
                 cacheZeroVelPoints.push_back(zeroVelPoints[index] - diff);
             }
-            zeroVelPoints = cacheZeroVelPoints;
         }
+        zeroVelPoints = cacheZeroVelPoints;
         
         // Now replace the original trajectory segment by the shortcut
         parabolicpath.ReplaceSegment(t0, t1, shortcutCurvesNDVect1);
