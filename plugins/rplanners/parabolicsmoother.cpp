@@ -1384,7 +1384,7 @@ protected:
 
                         }
                         else {
-                            RAVELOG_DEBUG("new shortcut is aligned with boundary values after running Check2");
+                            RAVELOG_VERBOSE("new shortcut is aligned with boundary values after running Check2\n");
                         }
                         accumoutramps.insert(accumoutramps.end(), outramps.begin(), outramps.end());
                     }
