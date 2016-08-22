@@ -1380,17 +1380,15 @@ protected:
                             break;
                         }
 
-                        // If SegmentFeasible2 (called via Check2) is modifying the original
-                        // shortcutcurvesnd due to Jacobian projection constraints inside
-                        // CheckPathAllConstraints, then we have to reset vellimits and accellimits so
-                        // that they are above those of the modified trajectory.
-                        if (bExpectedModifiedConfigurations) {
-                            for (size_t icurvesnd = 0; icurvesnd + 1 < shortcutCurvesNDVect1.size(); ++icurvesnd) {
-                                for (size_t jdof = 0; jdof < shortcutCurvesNDVect1[icurvesnd].ndof; ++jdof) {
-                                    dReal fminvel = max(RaveFabs(shortcutCurvesNDVect1[icurvesnd].v0Vect[jdof]), RaveFabs(shortcutCurvesNDVect1[icurvesnd].v1Vect[jdof]));
-                                    if (vellimits[jdof] < fminvel) {
-                                        vellimits[jdof] = fminvel;
-                                    }
+                        // CheckPathAllConstraints (called viaSegmentFeasible2 inside Check2) may be
+                        // modifying the original shortcutcurvesnd due to constraints. Therefore, we
+                        // have to reset vellimits and accellimits so that they are above those of
+                        // the modified trajectory.
+                        for (size_t icurvesnd = 0; icurvesnd + 1 < shortcutCurvesNDVect1.size(); ++icurvesnd) {
+                            for (size_t jdof = 0; jdof < shortcutCurvesNDVect1[icurvesnd].ndof; ++jdof) {
+                                dReal fminvel = max(RaveFabs(shortcutCurvesNDVect1[icurvesnd].v0Vect[jdof]), RaveFabs(shortcutCurvesNDVect1[icurvesnd].v1Vect[jdof]));
+                                if (vellimits[jdof] < fminvel) {
+                                    vellimits[jdof] = fminvel;
                                 }
                             }
                         }
