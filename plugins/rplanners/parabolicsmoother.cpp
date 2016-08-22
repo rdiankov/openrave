@@ -1243,7 +1243,9 @@ protected:
         dReal score = 1;
         dReal currentBestScore = 1.0;
         dReal cutoffRatio = 0;//1e-3;
+#ifdef OPENRAVE_TIMING_DEBUGGING
         uint32_t tshortcutstart = utils::GetMicroTime();
+#endif
         int iters=0;
         for(iters=0; iters<numIters; iters++) {
             nItersFromPrevSuccessful += 1;
@@ -1818,8 +1820,13 @@ protected:
         dReal cutoffRatio = 1e-3;
         dReal score = 1;
         dReal currentBestScore = 1.0;
+#ifdef OPENRAVE_TIMING_DEBUGGING
         uint32_t tshortcutstart = utils::GetMicroTime();
+#endif
         int iters = 0;
+        // For special shortcut
+        dReal specialShortcutWeight = 0.1;
+        dReal specialShortcutCutoffTime = 0.75;
         for (iters = 0; iters < numIters; iters++) {
             nItersFromPrevSuccessful += 1;
             if (nItersFromPrevSuccessful > nCutoffIters) {
@@ -1827,10 +1834,21 @@ protected:
                 break;
             }
 
-            dReal t1 = rng->Rand()*endTime, t2 = rng->Rand()*endTime;
+            dReal t1, t2;
             if (iters == 0) {
                 t1 = 0;
                 t2 = endTime;
+            }
+            else if (_zerovelpoints.size() > 0 && rng->Rand() <= specialShortcutWeight) {
+                // Here we consider at an unshortcut zerovelpoint
+                size_t index = _uniformsampler->SampleSequenceOneUInt32()%_zerovelpoints.size();
+                dReal t = _zerovelpoints[index];
+                t1 = t - rng->Rand()*min(specialShortcutCutoffTime, t);
+                t2 = t + rng->Rand()*min(specialShortcutCutoffTime, endTime - t);
+            }
+            else {
+                t1 = rng->Rand()*endTime;
+                t2 = rng->Rand()*endTime;
             }
             if (t1 > t2) {
                 ParabolicRamp::Swap(t1, t2);
@@ -2340,7 +2358,7 @@ protected:
 #ifdef OPENRAVE_TIMING_DEBUGGING
         uint32_t tshortcutend = utils::GetMicroTime();
         dReal tshortcuttotal = 0.000001f*(float)(tshortcutend - tshortcutstart);
-
+#endif
         if (iters == numIters) {
             RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (normal exit), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
@@ -2350,6 +2368,7 @@ protected:
         else if (nItersFromPrevSuccessful > nCutoffIters) {
             RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
+#ifdef OPENRAVE_TIMING_DEBUGGING
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
         _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
 
@@ -2373,8 +2392,21 @@ protected:
         // }
         // RAVELOG_DEBUG_FORMAT("zerovelpoints = [%s];", zerovelpointsstring);
         if (1) {
-            for (size_t i = 0; i < _zerovelpoints.size(); ++i) {
-                bool _res = _SpecialShortcut(dynamicpath, _zerovelpoints[i], 10, this);
+            // Lastly, concentrate on the original waypoints that have not been shortcut yet.
+            dReal shortcutPoint = 0;
+            int maxSpecialShortcutIters = 10;
+            std::vector<dReal>::iterator itpoint = std::lower_bound(_zerovelpoints.begin(), _zerovelpoints.end(), shortcutPoint);
+            while (itpoint != _zerovelpoints.end()) {
+                shortcutPoint = *itpoint;
+                bool resSpecialShortcut = _SpecialShortcut(dynamicpath, shortcutPoint, maxSpecialShortcutIters, this);
+                if (!resSpecialShortcut) {
+                    // _zerovelpoints is not modified
+                    ++itpoint;
+                }
+                else {
+                    // The previous _SpecialShortcut was successful. _zerovelpoints was modified
+                    itpoint = std::lower_bound(_zerovelpoints.begin(), _zerovelpoints.end(), shortcutPoint);                    
+                }
             }
         }
         return shortcuts;
@@ -2550,7 +2582,7 @@ protected:
             _zerovelpoints.resize(writeindex);
         }
 
-        try {// Replace the original segments which the new one
+        try {// Replace the original segments with the new one
             if (i1 == i2) {
                 // The same ramp is being cut on both sides, so copy the ramp
                 ramps.insert(ramps.begin() + i1, ramps.at(i1));
