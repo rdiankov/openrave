@@ -1210,6 +1210,11 @@ protected:
         
         int iters = 0;
         for (iters = 0; iters < numIters; ++iters) {
+            if (tTotal < minTimeStep) {
+                RAVELOG_VERBOSE_FORMAT("env = %d; tTotal = %.15e is too short to continue shortcutting", GetEnv()->GetId()%tTotal);
+                break;
+            }
+            
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
             dReal t0, t1;
@@ -1236,10 +1241,10 @@ protected:
                 if (t0 > t1) {
                     RampOptimizer::Swap(t0, t1);
                 }
-                if (t1 - t0 < minTimeStep) {
-                    // The sampled t0 and t1 are too close to be useful.
-                    continue;
-                }
+            }
+            if (t1 - t0 < minTimeStep) {
+                // The sampled t0 and t1 are too close to be useful.
+                continue;
             }
             
             // Locate the ParabolicCurvesNDs where t0 and t1 fall in
