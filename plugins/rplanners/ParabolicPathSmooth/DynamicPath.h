@@ -42,8 +42,8 @@ struct CheckReturn
     int retcode; // one of CFO_X
     Real fTimeBasedSurpassMult; // if retcode == CFO_CheckTimeBasedConstraints, then the multiplier of |max|/|cur|
     bool bDifferentVelocity; ///< end in different velocity than desired
-    Real fMaxManipSpeed;
-    Real fMaxManipAccel;
+    Real fMaxManipSpeed; ///< if > 0, then the computed max manip speed that the return was invalid with
+    Real fMaxManipAccel; ///< if > 0, then the computed max manip accel that the return was invalid with
 };
 
 /** @brief A base class for a feasibility checker.
