@@ -35,10 +35,10 @@ PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::i
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
-bool bUseNewParabolicSmoother = true;
-
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
+    bool bUseNewParabolicSmoother = true;
+    
     switch(type) {
     case PT_Planner:
         if( interfacename == "rastar" || interfacename == "ra*" ) {
