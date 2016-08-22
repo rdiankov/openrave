@@ -271,6 +271,7 @@ class BoundingMeshModel(DatabaseGenerator):
                         selfgeometrygroup[ig]._meshcollision = boundingmesh
                 link.SetGroupGeometries('self', selfgeometrygroup)
                 link.SetGeometriesFromGroup('self')
+            self.robot.SetLinkGeometriesFromGroup('self')
 
     def getfilename(self, read = False):
         filename = 'boundingmesh.3f.pp'
@@ -355,53 +356,67 @@ class BoundingMeshModel(DatabaseGenerator):
         #raw_input('Press any key to exit : ')
 
     @staticmethod
+    def GetDefaultOptionvalues():
+        return {
+            'targetVerticesCount' : 600,
+            'maximumError' : 0.0001,
+            'direction' : 'Outward',
+            'metric' : 'ModifiedQEM',
+            'initialization' : 'DistancePrimitives',
+            'processes' : 1,
+            'skipLinks' : ''
+        }
+
+    @staticmethod
     def CreateOptionParser():
         parser = DatabaseGenerator.CreateOptionParser(useManipulator=False)
         parser.description = 'Computes a bounding mesh for each geometry.'
         parser.usage = 'openrave.py --database boundingmesh [options]'
+        options = GetDefaultOptionvalues()
         parser.add_option('--targetVerticesCount',
                           action='store',
                           type='int',
                           dest='targetVerticesCount',
-                          default=600,
+                          default=options['targetVerticesCount'],
                           help='Minimum number of vertices to be reached (default:%default)')
         parser.add_option('--maximumError',
                           action='store',
                           type='float',
                           dest='maximumError',
-                          default=0.0001,
+                          default=options['maximumError'],
                           help='Maximum error tolerated when bounding a mesh (default:%default)')
         parser.add_option('--direction',
                           action='store',
                           type='str',
                           dest='direction',
-                          default='Outward',
+                          default=options['direction'],
                           help='Direction in which the bounding mesh can extend, either Outward, Inward or Any (default:%default)')
         parser.add_option('--metric',
                           action='store',
                           type='str',
                           dest='metric',
-                          default='ModifiedQEM',
+                          default=options['metric'],
                           help='Error metric used by the algorithm, either ClassicQEM, ModifiedQEM, MinimizedConstant, Diagonalization or Average (default:%default)')
         parser.add_option('--initialization',
                           action='store',
                           type='str',
                           dest='initialization',
-                          default='DistancePrimitives',
+                          default=options['initialization'],
                           help="How to initialize the algorithm, either DistancePrimitives or Midpoint (default:%default)")
         parser.add_option('--processes',
                           action='store',
                           type='int',
                           dest='processes',
-                          default=1,
+                          default=options['processes'],
                           help='Comma separated list of link names whose meshes must be left intact')
         parser.add_option('--skipLinks',
                           action='store',
                           type='str',
                           dest='skipLinks',
-                          default='',
+                          default=options['skipLinks'],
                           help='Comma separated list of link names whose meshes must be left intact')
         return parser
+
 
     @staticmethod
     def RunFromParser(Model=None, parser=None, args=None, **kwargs):
