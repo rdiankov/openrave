@@ -248,9 +248,6 @@ ParabolicCurve::ParabolicCurve(std::vector<Ramp> rampsIn) {
 }
 
 void ParabolicCurve::Append(ParabolicCurve curve) {
-    // BOOST_ASSERT(!curve.IsEmpty());
-    // Users need to make sure that the displacement and velocity are continuous
-
     std::size_t prevLength = 0;
     std::size_t sz = curve.ramps.size();
     if (ramps.size() == 0) {
@@ -580,7 +577,7 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
         dVect.push_back(curves[i].d);
     }
 
-    // Manage switch points (later I will merge this for loop with the one above)
+    // Manage switch points
     switchpointsList = curves[0].switchpointsList;
     std::vector<dReal>::iterator it;
     for (size_t i = 0; i < ndof; i++) {
@@ -657,6 +654,8 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
 }
 
 void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
+    Reset();
+    
     ndof = curvesIn.size();
     // Here we need to check whether every curve has (roughly) the same duration
     ///////////////////
@@ -665,16 +664,9 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
         BOOST_ASSERT(FuzzyEquals(it->duration, minDur, epsilon));
         minDur = Min(minDur, it->duration);
     }
-    // Need to think about how to handle discrepancies in durations.
-
+    
     curves = curvesIn;
     duration = minDur;
-
-    x0Vect.resize(0);
-    x1Vect.resize(0);
-    dVect.resize(0);
-    v0Vect.resize(0);
-    v1Vect.resize(0);
 
     x0Vect.reserve(ndof);
     x1Vect.reserve(ndof);
@@ -756,7 +748,7 @@ void ParabolicCurvesND::EvalPos(dReal t, std::vector<dReal>& xVect) const {
         xVect = x0Vect;
         return;
     }
-    else if (t > duration) {
+    else if (t >= duration) {
         xVect = x1Vect;
         return;
     }

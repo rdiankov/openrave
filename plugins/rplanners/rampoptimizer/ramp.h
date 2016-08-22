@@ -52,9 +52,9 @@ public:
     void PrintInfo() const {
         PrintInfo("");
     }
-    /// \brief Set x0 to newx0 and updated related values correspondingly
+    /// \brief Set x0 to newx0 and updated related values accordingly
     void SetInitialValue(dReal newx0);
-    /// \brief Set duration to newDuration and updated related values correspondingly
+    /// \brief Set duration to newDuration and updated related values accordingly
     void UpdateDuration(dReal newDuration);
 
     /// \brief Cut the Ramp into two halves at time t. The left half is stored in the same Ramp. The
@@ -88,8 +88,11 @@ public:
     dReal EvalPos(dReal t) const;
     dReal EvalVel(dReal t) const;
     dReal EvalAcc(dReal t) const;
+    /// \brief Find the index of the ramp that t falls into and also compute the remainder.
     void FindRampIndex(dReal t, int& i, dReal& rem) const;
+    /// \brief Get the minimum and maximum values of the curve occuring in [0, duration]
     void GetPeaks(dReal& bmin, dReal& bmax) const;
+    /// \brief Get the minimum and maximum values of the curve occuring in [ta, tb]
     void GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const;
     void Initialize(std::vector<Ramp> ramps);
     bool IsEmpty() const {
@@ -101,6 +104,8 @@ public:
     }
     /// \brief Resize all vectors to zero and reset all dReal values to zero.
     void Reset();
+    /// \brief Set the curve to be a constant segment, i.e., having zero terminal velocities and
+    /// zero accelration.
     void SetConstant(dReal x0, dReal t=0);
     /// \brief Set initial value of the Curve. Also the initial value of each ramp accordingly. Note
     /// that d will not be modified here.
@@ -121,7 +126,7 @@ public:
     // Members
     dReal x0;
     dReal x1;
-    dReal duration;
+    dReal duration; // the total duration of the curve.
     dReal d;        // total displacement 'done' by this Curve. For example, EvalPos(duration) = x0 + d = x1.
     dReal v0;
     dReal v1;

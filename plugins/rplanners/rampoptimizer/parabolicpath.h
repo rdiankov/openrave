@@ -24,11 +24,11 @@ struct CheckReturn {
     CheckReturn(int retcode=0, dReal fmult=1.0, dReal fvel=0, dReal faccel=0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
     }
 
-    int retcode;
-    dReal fTimeBasedSurpassMult;
-    bool bDifferentVelocity;
-    dReal fMaxManipSpeed;
-    dReal fMaxManipAccel;
+    int retcode; // one of CFO_X defined in planner.h
+    dReal fTimeBasedSurpassMult; // if retcode == CFO_CheckTimeBasedConstraints, then the multiplier is set to (some factor)*|max|/|actual max|
+    bool bDifferentVelocity; // the segment ends with some velocity other than the desired value (resulting from modifications CheckPathAllConstraints)
+    dReal fMaxManipSpeed; // when > 0, the value is the computed max manip speed
+    dReal fMaxManipAccel; // when > 0, the value is the computed max manip accel
 };
 
 
