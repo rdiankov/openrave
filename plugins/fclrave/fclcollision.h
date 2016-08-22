@@ -340,7 +340,7 @@ public:
     virtual bool InitKinBody(OpenRAVE::KinBodyPtr pbody)
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        FCLSpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<FCLSpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
+        FCLSpace::KinBodyInfoPtr pinfo = _fclspace->GetInfo(pbody);
         if( !pinfo || pinfo->GetBody() != pbody ) {
             pinfo = _fclspace->InitKinBody(pbody);
         }
@@ -480,7 +480,7 @@ public:
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         if( !pcollLink ) {
-          return false;
+            return false;
         }
 
         BroadPhaseCollisionManagerPtr bodyManager = _GetBodyManager(pbody, false);
@@ -510,7 +510,7 @@ public:
         CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(plink);
 
         if( !pcollLink ) {
-          return false;
+            return false;
         }
 
         std::set<KinBodyConstPtr> attachedBodies;
@@ -874,11 +874,11 @@ private:
         if( !!link_raw ) {
             LinkConstPtr plink = link_raw->GetLink();
             if( !plink ) {
-                RAVELOG_WARN_FORMAT("The link %s was lost from fclspace", link_raw->bodylinkname);
+                RAVELOG_WARN_FORMAT("The link %s was lost from fclspace (env %d) (userdatakey %s)", link_raw->bodylinkname%GetEnv()->GetId()%_userdatakey);
             }
             return plink;
         }
-        RAVELOG_WARN("fcl collision object does not have a link attached");
+        RAVELOG_WARN_FORMAT("fcl collision object does not have a link attached (env %d) (userdatakey %s)", GetEnv()->GetId()%_userdatakey);
         return LinkConstPtr();
     }
 

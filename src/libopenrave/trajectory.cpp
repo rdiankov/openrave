@@ -67,8 +67,8 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     else {
         throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </trajectory> in %s"),buf.str(),ORE_InvalidArguments);
     }
-    xmlreaders::TrajectoryReader reader(GetEnv(),shared_trajectory());
-    LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
+    xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
+    LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
     return shared_from_this();
 }
 

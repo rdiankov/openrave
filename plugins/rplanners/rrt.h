@@ -67,6 +67,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         _vecInitialNodes.resize(0);
         _sampleConfig.resize(params->GetDOF());
+        // TODO perhaps distmetricfn should take into number of revolutions of circular joints
         _treeForward.Init(shared_planner(), params->GetDOF(), params->_distmetricfn, params->_fStepLength, params->_distmetricfn(params->_vConfigLowerLimit, params->_vConfigUpperLimit));
         std::vector<dReal> vinitialconfig(params->GetDOF());
         for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
@@ -307,6 +308,7 @@ Some python code to display data::\n\
         PlannerParameters::StateSaver savestate(_parameters);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
+        // TODO perhaps distmetricfn should take into number of revolutions of circular joints
         _treeBackward.Init(shared_planner(), _parameters->GetDOF(), _parameters->_distmetricfn, _parameters->_fStepLength, _parameters->_distmetricfn(_parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit));
 
         //read in all goals
@@ -380,6 +382,26 @@ Some python code to display data::\n\
             RAVELOG_VERBOSE_FORMAT("iter=%d, forward=%d, backward=%d", (iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
             ++iter;
 
+            // have to check callbacks at the beginning since code can continue
+            callbackaction = _CallCallbacks(progress);
+            if( callbackaction ==  PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+            else if( callbackaction == PA_ReturnWithAnySolution ) {
+                if( _vgoalpaths.size() > 0 ) {
+                    break;
+                }
+            }
+
+            if( _parameters->_nMaxPlanningTime > 0 ) {
+                uint32_t elapsedtime = utils::GetMilliTime()-basetime;
+                if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking", elapsedtime);
+                    break;
+                }
+            }
+
+            
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
@@ -477,15 +499,6 @@ Some python code to display data::\n\
             }
 
             progress._iteration = iter/3;
-            callbackaction = _CallCallbacks(progress);
-            if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
-            }
-            else if( callbackaction == PA_ReturnWithAnySolution ) {
-                if( _vgoalpaths.size() > 0 ) {
-                    break;
-                }
-            }
         }
 
         if( _vgoalpaths.size() == 0 ) {
@@ -832,7 +845,7 @@ public:
             if( !!bestGoalNode && _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_VERBOSE_FORMAT("time exceeded (%d) so breaking with bestdist=%f", elapsedtime%fBestGoalNodeDist);
+                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking with bestdist=%f", elapsedtime%fBestGoalNodeDist);
                     break;
                 }
             }
