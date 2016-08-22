@@ -1186,7 +1186,6 @@ protected:
         vellimits.resize(_parameters->_vConfigVelocityLimit.size());
         accellimits.resize(_parameters->_vConfigAccelerationLimit.size());
 
-        bool bExpectedModifiedConfigurations = _parameters->fCosManipAngleThresh > (-1 + g_fEpsilonLinear); // gripper constraint enabled
         int numSlowDowns = 0; // counts the number of times we slow down the trajectory (via vel/accel scaling) because of manip constraints
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // magic constant
         dReal fStartTimeVelMult = 1.0; // this is the multiplier for scaling down the *initial* velocity in each shortcut iteration. If manip constraints
