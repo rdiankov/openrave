@@ -71,7 +71,14 @@ bool InterpolateZeroVelND(const std::vector<dReal>& x0Vect, const std::vector<dR
         curves[i].SetInitialValue(x0Vect[i]);
     }
     curvesndOut.Initialize(curves);
-    return true;
+    ParabolicCheckReturn ret = CheckParabolicCurvesND(curvesndOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+    if (ret == PCR_Normal) {
+        return true;
+    }
+    else {
+        RAMP_OPTIM_WARN("CheckParabolicCurvesND return retcode %d", ret);
+        return false;
+    }
 }
 
 
@@ -89,7 +96,7 @@ bool InterpolateArbitraryVelND(const std::vector<dReal>& x0Vect, const std::vect
     // First independently interpolate each DOF to find the slowest DOF
     std::vector<ParabolicCurve> curves(ndof);
     dReal maxDuration = 0;
-    size_t maxIndex;
+    size_t maxIndex = 0;
     bool result;
     for (size_t i = 0; i < ndof; ++i) {
         result = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i], curves[i]);

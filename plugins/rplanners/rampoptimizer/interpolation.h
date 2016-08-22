@@ -65,7 +65,7 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
  */
 /// \brief Calculate the least upper bound of the inoperative interval(s), t, of the given
 /// trajectory. The value t is such that stretching the trajectory with a duration of greater
-/// than or equal to t will be successful.
+/// than or equal to t will be successful (considering only velocity and acceleration bounds).
 bool CalculateLeastUpperBoundInoperativeInterval(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, dReal& t);
 
 /// \brief Solve for a switchtime t0 \in [l, u]. For more detail, see comments in the implementation.
