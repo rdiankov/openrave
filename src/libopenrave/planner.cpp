@@ -41,7 +41,7 @@ std::istream& operator>>(std::istream& I, PlannerBase::PlannerParameters& pp)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </PlannerParameters> in %s"),buf.str(),ORE_InvalidArguments);
         }
         pp._plannerparametersdepth = 0;
-        LocalXML::ParseXMLData(PlannerBase::PlannerParametersPtr(&pp,utils::null_deleter()), pbuf.c_str(), ppsize);
+        LocalXML::ParseXMLData(pp, pbuf.c_str(), ppsize);
     }
 
     return I;
