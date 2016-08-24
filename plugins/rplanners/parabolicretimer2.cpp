@@ -158,7 +158,7 @@ protected:
                 _curvesndVect.reserve(1);
                 _curvesndVect.push_back(_curvesnd);
 
-                RampOptimizer::CheckReturn ret = _manipconstraintchecker->CheckManipConstraints2(_curvesndVect);
+                RampOptimizer::CheckReturn ret = _manipconstraintchecker->CheckManipConstraints3(_curvesndVect);
                 if (ret.retcode == 0) {
                     // Stop right away
                     break;
