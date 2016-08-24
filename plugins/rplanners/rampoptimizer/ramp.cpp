@@ -447,8 +447,30 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     }
     RAMP_OPTIM_ASSERT(t > 0);
 
-    Ramp ramp(_v0, (_v1 - _v0)/t, t, _x0);
+    /*
+      We want to compute an acceleration which is the most consistent with all the given
+      values. Assuming that x0, v0, and t are correct, such an acceleration is *the* solution to the
+      following minimization problem:
+      
+              minimize_a C(a) = (v0 + at - v1)^2 + (x0 + v0*t + 0.5*a*t^2)^2
+              (minimizing the discrepancies in displacement and velocity)
+
+      >>>> import sympy as sp
+      >>>> x0, x1, v0, v1, a, t = sp.symbols(['x0', 'x1', 'v0', 'v1', 'a', 't'])
+      >>>> C = (v0 + a*t - v1)**2 + (x0 + v0*t + 0.5*a*t*t - x1)**2
+      
+      We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly positive
+      (given that t > 0). Therefore, it always has a minimum and the minimum is at
+
+              a* = -(2*v0 + t*x0 + 2*v0*t^2)/(0.5*t^3 + 2*t)
+
+      >>>> sp.solve(sp.diff(C, a), a)
+     */
+    dReal tSqr = t*t;
+    dReal a = -(_v0*tSqr + t*(_x0 - _x1) + 2*(_v0 - _v1))/(t*(0.5*tSqr + 2));
+    Ramp ramp(_v0, a, t, _x0);
     RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
+    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
 
     std::vector<Ramp> _ramps(1);
     _ramps[0] = ramp;
