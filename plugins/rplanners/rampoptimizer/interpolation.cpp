@@ -71,9 +71,16 @@ bool InterpolateZeroVelND(const std::vector<dReal>& x0Vect, const std::vector<dR
         curves[i].SetInitialValue(x0Vect[i]);
     }
     curvesndOut.Initialize(curves);
-    // We don't need further check for curvesndOut since joint limits will never be violated (path
-    // geometry does not change) and velocity and acceleration limits are guaranteed to be respected
-    // from the checking in Interpolate1D.
+    std::vector<dReal> zeros(ndof);
+    std::fill(zeros.begin(), zeros.end(), 0);
+    ParabolicCheckReturn ret = CheckParabolicCurvesND(curvesndOut, std::vector<dReal>(), std::vector<dReal>(), vmVect, amVect, x0Vect, x1Vect, zeros, zeros);
+    if (ret == PCR_Normal) {
+        return true;
+    }
+    else {
+        RAMP_OPTIM_ASSERT(ret == PCR_Normal);
+        return false;
+    }
     return true;
 }
 
