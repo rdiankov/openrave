@@ -45,7 +45,7 @@ import os.path
 from os import makedirs
 from optparse import OptionParser
 from itertools import izip
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 import logging
 log = logging.getLogger('openravepy.' + __name__.split('.',2)[-1])
@@ -356,65 +356,56 @@ class BoundingMeshModel(DatabaseGenerator):
         #raw_input('Press any key to exit : ')
 
     @staticmethod
-    def GetDefaultOptionvalues():
-        return {
+    def CreateOptionParser():
+
+        defaultOptions = {
             'targetVerticesCount' : 600,
             'maximumError' : 0.0001,
             'direction' : 'Outward',
-            'metric' : 'ModifiedQEM',
+            'metric' : 'MinimizedConstant',
             'initialization' : 'DistancePrimitives',
-            'processes' : 1,
+            'processes' : cpu_count(),
             'skipLinks' : ''
         }
 
-    @staticmethod
-    def CreateOptionParser():
         parser = DatabaseGenerator.CreateOptionParser(useManipulator=False)
         parser.description = 'Computes a bounding mesh for each geometry.'
         parser.usage = 'openrave.py --database boundingmesh [options]'
-        options = GetDefaultOptionvalues()
         parser.add_option('--targetVerticesCount',
                           action='store',
                           type='int',
-                          dest='targetVerticesCount',
-                          default=options['targetVerticesCount'],
-                          help='Minimum number of vertices to be reached (default:%default)')
+                          default=defaultOptions['targetVerticesCount'],
+                          help='Minimum number of vertices to be reached (default: %default)')
         parser.add_option('--maximumError',
                           action='store',
                           type='float',
-                          dest='maximumError',
-                          default=options['maximumError'],
-                          help='Maximum error tolerated when bounding a mesh (default:%default)')
+                          default=defaultOptions['maximumError'],
+                          help='Maximum error tolerated when bounding a mesh (default: %default)')
         parser.add_option('--direction',
                           action='store',
-                          type='str',
-                          dest='direction',
-                          default=options['direction'],
-                          help='Direction in which the bounding mesh can extend, either Outward, Inward or Any (default:%default)')
+                          default=defaultOptions['direction'],
+                          choices=["Outward", "Inward", "Any"],
+                          help='Direction in which the bounding mesh can extend, either Outward, Inward or Any. (default: %default)')
         parser.add_option('--metric',
                           action='store',
-                          type='str',
-                          dest='metric',
-                          default=options['metric'],
-                          help='Error metric used by the algorithm, either ClassicQEM, ModifiedQEM, MinimizedConstant, Diagonalization or Average (default:%default)')
+                          default=defaultOptions['metric'],
+                          choices=["ClassicQEM", "ModifiedQEM", "MinimizedConstant", "Diagonalization", "Average"],
+                          help='Error metric used by the algorithm, either ClassicQEM, ModifiedQEM, MinimizedConstant, Diagonalization or Average (default: %default)')
         parser.add_option('--initialization',
                           action='store',
-                          type='str',
-                          dest='initialization',
-                          default=options['initialization'],
-                          help="How to initialize the algorithm, either DistancePrimitives or Midpoint (default:%default)")
+                          default=defaultOptions['initialization'],
+                          choices=["DistancePrimitives", "Midpoint"],
+                          help="How to initialize the algorithm, either DistancePrimitives or Midpoint (default: %default)")
         parser.add_option('--processes',
                           action='store',
                           type='int',
-                          dest='processes',
-                          default=options['processes'],
-                          help='Comma separated list of link names whose meshes must be left intact')
+                          default=defaultOptions['processes'],
+                          help='Number of threads used (default: %default)')
         parser.add_option('--skipLinks',
                           action='store',
                           type='str',
-                          dest='skipLinks',
-                          default=options['skipLinks'],
-                          help='Comma separated list of link names whose meshes must be left intact')
+                          default=defaultOptions['skipLinks'],
+                          help='')
         return parser
 
 
