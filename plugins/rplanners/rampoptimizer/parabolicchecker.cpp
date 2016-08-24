@@ -22,6 +22,22 @@ ParabolicCheckReturn CheckRamp(const Ramp& ramp, dReal xmin, dReal xmax, dReal v
         RAMP_OPTIM_WARN("PCR_NegativeDuration: ramp.duration = %.15e", ramp.duration);
         return PCR_NegativeDuration;
     }
+    dReal v1 = ramp.v0 + ramp.a*ramp.duration;
+    if (!FuzzyEquals(ramp.v1, v1, epsilon)) {
+        RAMP_OPTIM_WARN("PCR_VDiscrepancy: ramp.v1 = %.15e; computed v1 = %.15e", ramp.v1, v1);
+        return PCR_VDiscrepancy;
+    }
+    dReal d = ramp.duration*(ramp.v0 + 0.5*ramp.a*ramp.duration);
+    if (!FuzzyEquals(ramp.d, d, epsilon)) {
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: ramp.d = %.15e; computed d = %.15e", ramp.d, d);
+        return PCR_XDiscrepancy;
+    }
+    dReal x1 = ramp.x0 + d;
+    if (!FuzzyEquals(ramp.x1, x1, epsilon)) {
+        RAMP_OPTIM_WARN("PCR_XDiscrepancy: ramp.x1 = %.15e; computed x1 = %.15e", ramp.x1, x1);
+        return PCR_XDiscrepancy;
+    }
+    
     dReal bmin, bmax;
     ramp.GetPeaks(bmin, bmax);
     if ((bmin < xmin - epsilon) || (bmax > xmax + epsilon)) {
@@ -105,8 +121,17 @@ ParabolicCheckReturn CheckParabolicCurve(const ParabolicCurve& curve, dReal xmin
 
 ParabolicCheckReturn CheckParabolicCurvesND(const ParabolicCurvesND& curvesnd, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect) {
     ParabolicCheckReturn ret;
+    std::vector<dReal> xminVect_ = xminVect, xmaxVect_ = xmaxVect;
+    if (xminVect_.size() < curvesnd.ndof) {
+        xminVect_.resize(curvesnd.ndof);
+        std::fill(xminVect_.begin(), xminVect_.end(), -inf);
+    }
+    if (xmaxVect_.size() < curvesnd.ndof) {
+        xmaxVect_.resize(curvesnd.ndof);
+        std::fill(xmaxVect_.begin(), xmaxVect_.end(), inf);
+    }
     for (size_t i = 0; i < curvesnd.ndof; ++i) {
-        ret = CheckParabolicCurve(curvesnd.curves[i], xminVect[i], xmaxVect[i], vmVect[i], amVect[i], x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i]);
+        ret = CheckParabolicCurve(curvesnd.curves[i], xminVect_[i], xmaxVect_[i], vmVect[i], amVect[i], x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i]);
         if (ret != PCR_Normal) {
             return ret;
         }
