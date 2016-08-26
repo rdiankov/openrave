@@ -66,7 +66,7 @@ public:
                 _report.reset(new CollisionReport());
             }
 
-            // TODO : What happens if we have CO_AllGeometryContacts set and not CO_Contacts ?
+            // If we have CO_AllGeometryContacts set then we need to have CO_Contacts
             // TODO not sure what's happening with FCL's contact computation. is it really disabled?
             if( !!report && !!(_pchecker->GetCollisionOptions() & OpenRAVE::CO_Contacts) ) {
                 _request.num_max_contacts = _pchecker->GetNumMaxContacts();
@@ -214,6 +214,11 @@ public:
         }
 
         if( _options & OpenRAVE::CO_RayAnyHit ) {
+            return false;
+        }
+
+        if( (_options & OpenRAVE::CO_AllGeometryContacts) && !(_options & OpenRAVE::CO_Contacts)) {
+            _options &= ~OpenRAVE::CO_AllGeometryContacts;
             return false;
         }
 
@@ -789,7 +794,7 @@ private:
 
                 // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
                 // How comes that there are duplicated contacts points ?
-                if( _options & (OpenRAVE::CO_Contacts | OpenRAVE::CO_AllGeometryContacts) ) {
+                if( _options & OpenRAVE::CO_Contacts ) {
                     _reportcache.contacts.resize(numContacts);
                     for(size_t i = 0; i < numContacts; ++i) {
                         fcl::Contact const &c = pcb->_result.getContact(i);
@@ -811,11 +816,14 @@ private:
 
                 pcb->_report->plink1 = _reportcache.plink1;
                 pcb->_report->plink2 = _reportcache.plink2;
-                if( pcb->_report->contacts.size() == 0) {
-                    pcb->_report->contacts.swap(_reportcache.contacts);
-                } else {
-                    pcb->_report->contacts.reserve(pcb->_report->contacts.size() + numContacts);
-                    copy(_reportcache.contacts.begin(),_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
+
+                if( _options & OpenRAVE::CO_Contacts ) {
+                    if( pcb->_report->contacts.size() == 0) {
+                        pcb->_report->contacts.swap(_reportcache.contacts);
+                    } else {
+                        pcb->_report->contacts.reserve(pcb->_report->contacts.size() + numContacts);
+                        copy(_reportcache.contacts.begin(),_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
+                    }
                 }
 
                 if( _options & OpenRAVE::CO_AllLinkCollisions ) {
