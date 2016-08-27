@@ -751,27 +751,9 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
       Therefore, if B = 0 we can just interpolate the trajectory right away and return early.
      */
     if (FuzzyZero(B, epsilon)) {
-        /*
-          In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
-          reached from (x0, v0) using one ramp. We could have set the ramp acceleration to 
-           
-                  a = A := (v1 - v0)/duration. 
-
-          However, since there might be some discrepancy in the inputs, using the formula above may
-          give rise to discrepancy in displacement, in particular, x1 of the resulting ramp. We
-          might want to give more weight on displacement (giving higher priority to
-          displacement). Therefore, here we calculate the ramp acceleration using
-          
-                  a = (2/t^2)(x1 - x0 - v0*duration)
-
-          instead.
-         */
-        dReal a = 2*(x1 - x0 - v0*duration)/(duration*duration);
-        // Ramp ramp0(v0, A, duration, x0);
-        Ramp ramp0(v0, a, duration, x0);
-        std::vector<Ramp> ramps(1);
-        ramps[0] = ramp0;
-        curveOut.Initialize(ramps);
+        // In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
+        // reached from (x0, v0) using one ramp.
+        curveOut.SetSegment(x0, x1, v0, v1, duration);
         ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
         if (ret == PCR_Normal) {
             return true;
