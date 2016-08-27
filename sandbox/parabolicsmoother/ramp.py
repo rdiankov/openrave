@@ -1200,3 +1200,57 @@ def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
         curvesnd.Append(nextCurvesND)
 
     return curvesnd
+
+
+def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
+    """
+    Data format:
+
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 1 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 2 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+     :
+     :
+    
+    chunk N
+
+    For each ParabolicCurve:
+      ramp 0      ramp 1            ramp M
+    v0 a t x0 | v0 a t x0 | ... | v0 a t x0
+    
+    """
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    ndof = int(rawdata[0])
+    nlines_chunk = 2 + ndof
+
+    nchunks = len(rawdata)/nlines_chunk
+
+    curves = []
+    for idof in xrange(ndof):
+        curvedata = rawdata[(chunkindex*nlines_chunk) + 2 + idof]
+        curvedata = curvedata.strip().split(" ")
+        curve = ParabolicCurve()
+        nramps = len(curvedata)/4
+        for iramp in xrange(nramps):
+            v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
+            ramp = Ramp(v, a, t, x0)
+            nextCurve = ParabolicCurve([ramp])
+            curve.Append(nextCurve)
+        curves.append(curve)
+    curvesnd = ParabolicCurvesND(curves)
+
+    return curvesnd
