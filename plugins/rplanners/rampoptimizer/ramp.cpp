@@ -469,8 +469,16 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     dReal tSqr = t*t;
     dReal a = -(_v0*tSqr + t*(_x0 - _x1) + 2*(_v0 - _v1))/(t*(0.5*tSqr + 2));
     Ramp ramp(_v0, a, t, _x0);
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
+
+    /*
+      Here we use 2*epsilon instead because unfortunately inputs are sometimes so screwed up. One of
+      the main reasons might be in general the time interval used in the calculation (variable t)
+      can be very small (something close to epsilon) while other values (displacements/ velocities/
+      etc.) are generally around 1e-3 to 1e2. Calculations which require multiplying a value with t
+      and adding/subtracting then with others can ruin the precision quickly.    
+    */
+    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, 2*epsilon));
+    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, 2*epsilon));
 
     std::vector<Ramp> _ramps(1);
     _ramps[0] = ramp;
