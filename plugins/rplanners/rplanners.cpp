@@ -35,13 +35,20 @@ PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istrea
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
+    bool bUseOldRRTPlanner = false;
+    
     switch(type) {
     case PT_Planner:
         if( interfacename == "rastar" || interfacename == "ra*" ) {
             return CreateRandomizedAStarPlanner(penv,sinput);
         }
         else if( interfacename == "birrt") {
-            return InterfaceBasePtr(new BirrtPlanner(penv));
+            if (bUseOldRRTPlanner) {
+                return InterfaceBasePtr(new BirrtPlannerOld(penv));
+            }
+            else {
+                return InterfaceBasePtr(new BirrtPlanner(penv));
+            }
         }
         else if( interfacename == "rbirrt") {
             RAVELOG_WARN("rBiRRT is deprecated, use BiRRT\n");

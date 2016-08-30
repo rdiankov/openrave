@@ -401,7 +401,7 @@ Some python code to display data::\n\
                 }
             }
 
-            
+
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
@@ -740,7 +740,7 @@ public:
         _startindex = -1;
 
         int numfoundgoals = 0;
-        
+
         while(iter < _parameters->_nMaxIterations) {
             iter++;
             if( !!bestGoalNode && iter >= _parameters->_nMinIterations ) {
@@ -999,9 +999,500 @@ private:
 
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename Node>
+class RrtPlannerOld : public PlannerBase
+{
+public:
+
+    RrtPlannerOld(EnvironmentBasePtr penv) : PlannerBase(penv), _treeForward(0)
+    {
+        __description = "\
+:Interface Author:  Rosen Diankov\n\n\
+Uses the Rapidly-Exploring Random Trees Algorithm.\n\
+";
+        RegisterCommand("GetGoalIndex",boost::bind(&RrtPlannerOld<Node>::GetGoalIndexCommand,this,_1,_2),
+                        "returns the goal index of the plan");
+        RegisterCommand("GetInitGoalIndices",boost::bind(&RrtPlannerOld<Node>::GetInitGoalIndicesCommand,this,_1,_2),
+                        "returns the start and goal indices");
+    }
+    virtual ~RrtPlannerOld() {
+    }
+
+    virtual bool _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
+    {
+        params->Validate();
+        _goalindex = -1;
+        _startindex = -1;
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        if( !_uniformsampler ) {
+            _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        }
+        _robot = pbase;
+
+        _uniformsampler->SetSeed(params->_nRandomGeneratorSeed);
+        FOREACH(it, params->_listInternalSamplers) {
+            (*it)->SetSeed(params->_nRandomGeneratorSeed);
+        }
+
+        PlannerParameters::StateSaver savestate(params);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
+        if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
+            RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d %% %d != 0\n")%params->vinitialconfig.size()%params->GetDOF()));
+            return false;
+        }
+
+        _sampleConfig.resize(params->GetDOF());
+        _treeForward.Reset(shared_planner(), params->GetDOF());
+        _treeForward._fStepLength = params->_fStepLength;
+        _treeForward._distmetricfn = params->_distmetricfn;
+        std::vector<dReal> vinitialconfig(params->GetDOF());
+        _nNumInitialConfigurations = 0;
+        for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
+            std::copy(params->vinitialconfig.begin()+index,params->vinitialconfig.begin()+index+params->GetDOF(),vinitialconfig.begin());
+            if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
+                continue;
+            }
+            _treeForward.AddNode(-_nNumInitialConfigurations-1, vinitialconfig);
+            _nNumInitialConfigurations += 1;
+        }
+
+        if( _treeForward._nodes.size() == 0 && !params->_sampleinitialfn ) {
+            RAVELOG_WARN("no initial configurations\n");
+            return false;
+        }
+
+        return true;
+    }
+
+    // simple path optimization
+    virtual void _SimpleOptimizePath(list<Node*>& path, int numiterations)
+    {
+        if( path.size() <= 2 ) {
+            return;
+        }
+        PlannerParametersConstPtr params = GetParameters();
+
+        typename list<Node*>::iterator startNode, endNode;
+        if( !_filterreturn ) {
+            _filterreturn.reset(new ConstraintFilterReturn());
+        }
+        int dof = GetParameters()->GetDOF();
+        int nrejected = 0;
+        int i = numiterations;
+        while(i > 0 && nrejected < (int)path.size()+4 ) {
+            --i;
+
+            // pick a random node on the path, and a random jump ahead
+            int endIndex = 2+(_uniformsampler->SampleSequenceOneUInt32()%((int)path.size()-2));
+            int startIndex = _uniformsampler->SampleSequenceOneUInt32()%(endIndex-1);
+
+            startNode = path.begin();
+            advance(startNode, startIndex);
+            endNode = startNode;
+            advance(endNode, endIndex-startIndex);
+            nrejected++;
+
+            // check if the nodes can be connected by a straight line
+            _filterreturn->Clear();
+            if ( params->CheckPathAllConstraints((*startNode)->q, (*endNode)->q, std::vector<dReal>(), std::vector<dReal>(), 0, IT_Open, 0xffff|CFO_FillCheckedConfiguration, _filterreturn) != 0 ) {
+                if( nrejected++ > (int)path.size()+8 ) {
+                    break;
+                }
+                continue;
+            }
+
+            ++startNode;
+            OPENRAVE_ASSERT_OP(_filterreturn->_configurations.size()%dof,==,0);
+            for(std::vector<dReal>::iterator itvalues = _filterreturn->_configurations.begin(); itvalues != _filterreturn->_configurations.end(); itvalues += dof) {
+                int index = _treeForward.AddNode(0x80000000,std::vector<dReal>(itvalues,itvalues+dof));
+                path.insert(startNode, _treeForward._nodes.at(index));
+            }
+            // splice out in-between nodes in path
+            path.erase(startNode, endNode);
+            nrejected = 0;
+
+            if( path.size() <= 2 ) {
+                return;
+            }
+        }
+    }
+
+    bool GetGoalIndexCommand(std::ostream& os, std::istream& is)
+    {
+        os << _goalindex;
+        return !!os;
+    }
+
+    bool GetInitGoalIndicesCommand(std::ostream& os, std::istream& is)
+    {
+        os << _startindex << " " << _goalindex;
+        return !!os;
+    }
+
+protected:
+    RobotBasePtr _robot;
+    std::vector<dReal> _sampleConfig;
+    int _goalindex, _startindex;
+    SpaceSamplerBasePtr _uniformsampler;
+    int _nNumInitialConfigurations;
+    ConstraintFilterReturnPtr _filterreturn;
+
+    SpatialTreeOld< RrtPlannerOld<Node>, Node > _treeForward;
+
+    inline boost::shared_ptr<RrtPlannerOld> shared_planner() {
+        return boost::dynamic_pointer_cast<RrtPlannerOld>(shared_from_this());
+    }
+    inline boost::shared_ptr<RrtPlannerOld const> shared_planner_const() const {
+        return boost::dynamic_pointer_cast<RrtPlannerOld const>(shared_from_this());
+    }
+};
+
+class BirrtPlannerOld : public RrtPlannerOld<SimpleNodeOld>
+{
+public:
+    BirrtPlannerOld(EnvironmentBasePtr penv) : RrtPlannerOld<SimpleNodeOld>(penv), _treeBackward(1)
+    {
+        __description += "Bi-directional RRTs. See\n\n\
+- J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
+        RegisterCommand("DumpTree", boost::bind(&BirrtPlannerOld::_DumpTreeCommand,this,_1,_2),
+                        "dumps the source and goal trees to $OPENRAVE_HOME/birrtdump.txt. The first N values are the DOF values, the last value is the parent index.\n\
+Some python code to display data::\n\
+\n\
+  sourcetree=loadtxt(os.path.join(RaveGetHomeDirectory(),'sourcetree.txt'),delimiter=' ,')\n\
+  hs=env.plot3(sourcetree,5,[1,0,0])\n\
+  sourcedist = abs(sourcetree[:,0]-x[0]) + abs(sourcetree[:,1]-x[1])\n\
+  robot.SetActiveDOFValues(sourcetree[argmin(sourcedist)])\n\
+\n\
+");
+    }
+    virtual ~BirrtPlannerOld() {
+    }
+
+    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    {
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        _parameters.reset(new RRTParameters());
+        _parameters->copy(pparams);
+        if( !RrtPlannerOld<SimpleNodeOld>::_InitPlan(pbase,_parameters) ) {
+            _parameters.reset();
+            return false;
+        }
+
+        _fGoalBiasProb = dReal(0.01);
+        PlannerParameters::StateSaver savestate(_parameters);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
+        _treeBackward.Reset(shared_planner(), _parameters->GetDOF());
+        _treeBackward._fStepLength = _parameters->_fStepLength;
+        _treeBackward._distmetricfn = _parameters->_distmetricfn;
+
+        //read in all goals
+        if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
+            RAVELOG_ERROR("BirrtPlannerOld::InitPlan - Error: goals are improperly specified:\n");
+            _parameters.reset();
+            return false;
+        }
+
+        vector<dReal> vgoal(_parameters->GetDOF());
+        _vecGoals.resize(0);
+        for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
+            std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
+            if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
+                _treeBackward.AddNode(-static_cast<int>(_vecGoals.size())-1, vgoal);
+                _vecGoals.push_back(vgoal);
+            }
+            else {
+                RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
+                _vecGoals.push_back(std::vector<dReal>()); // have to push back dummy or else indices will be messed up
+            }
+        }
+
+        if( _treeBackward._nodes.size() == 0 && !_parameters->_samplegoalfn ) {
+            RAVELOG_WARN("no goals specified\n");
+            _parameters.reset();
+            return false;
+        }
+
+        if( _parameters->_nMaxIterations <= 0 ) {
+            _parameters->_nMaxIterations = 10000;
+        }
+
+        RAVELOG_DEBUG("BirrtPlannerOld::InitPlan - RRT Planner Initialized\n");
+        return true;
+    }
+
+    struct GOALPATH
+    {
+        GOALPATH() : startindex(-1), goalindex(-1), length(0) {
+        }
+        vector<dReal> qall;
+        int startindex, goalindex;
+        dReal length;
+    };
+
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    {
+        _goalindex = -1;
+        _startindex = -1;
+        if(!_parameters) {
+            RAVELOG_ERROR("BirrtPlannerOld::PlanPath - Error, planner not initialized\n");
+            return PS_Failed;
+        }
+
+        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        uint32_t basetime = utils::GetMilliTime();
+
+        // the main planning loop
+        PlannerParameters::StateSaver savestate(_parameters);
+        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+
+        SpatialTreeBaseOld* TreeA = &_treeForward;
+        SpatialTreeBaseOld* TreeB = &_treeBackward;
+        int iConnectedA=-1, iConnectedB=-1;
+        int iter = 0;
+
+        list<GOALPATH> listgoalpaths;
+        bool bSampleGoal = true;
+        PlannerProgress progress;
+        PlannerAction callbackaction=PA_None;
+        while(listgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
+            RAVELOG_VERBOSE_FORMAT("iter=%d, Aind=%d, Bind=%d", (iter/3)%iConnectedA%iConnectedB);
+            ++iter;
+
+            if( !!_parameters->_samplegoalfn ) {
+                vector<dReal> vgoal;
+                if( _parameters->_samplegoalfn(vgoal) ) {
+                    RAVELOG_VERBOSE(str(boost::format("inserting new goal %d")%_vecGoals.size()));
+                    _treeBackward.AddNode(-static_cast<int>(_vecGoals.size())-1,vgoal);
+                    _vecGoals.push_back(vgoal);
+                }
+            }
+            if( !!_parameters->_sampleinitialfn ) {
+                vector<dReal> vinitial;
+                if( _parameters->_sampleinitialfn(vinitial) ) {
+                    RAVELOG_VERBOSE(str(boost::format("inserting new initial %d")%_nNumInitialConfigurations));
+                    _treeForward.AddNode(-_nNumInitialConfigurations-1,vinitial);
+                    _nNumInitialConfigurations += 1;
+                }
+            }
+
+            _sampleConfig.resize(0);
+            if( (bSampleGoal || _uniformsampler->SampleSequenceOneReal() < _fGoalBiasProb) && _vecGoals.size() > 0 ) {
+                bSampleGoal = false;
+                // sample goal as early as possible
+                uint32_t bestgoalindex = -1;
+                for(size_t testiter = 0; testiter < _vecGoals.size()*3; ++testiter) {
+                    uint32_t sampleindex = _uniformsampler->SampleSequenceOneUInt32();
+                    uint32_t goalindex = sampleindex%_vecGoals.size();
+                    if( _vecGoals.at(goalindex).size() == 0 ) {
+                        continue; // dummy
+                    }
+                    // make sure goal is not already found
+                    bool bfound = false;
+                    FOREACHC(itgoalpath,listgoalpaths) {
+                        if( goalindex == (uint32_t)itgoalpath->goalindex ) {
+                            bfound = true;
+                            break;
+                        }
+                    }
+                    if( !bfound) {
+                        bestgoalindex = goalindex;
+                        break;
+                    }
+                }
+                if( bestgoalindex != uint32_t(-1) ) {
+                    _sampleConfig.resize(_parameters->GetDOF());
+                    std::copy(_vecGoals.at(bestgoalindex).begin(), _vecGoals.at(bestgoalindex).end(), _sampleConfig.begin());
+                }
+            }
+
+            if( _sampleConfig.size() == 0 ) {
+                if( !_parameters->_samplefn(_sampleConfig) ) {
+                    continue;
+                }
+            }
+
+            // extend A
+            ExtendType et = TreeA->Extend(_sampleConfig, iConnectedA);
+
+            // although check isn't necessary, having it improves running times
+            if( et == ET_Failed ) {
+                // necessary to increment iterator in case spaces are not connected
+                if( iter > 3*_parameters->_nMaxIterations ) {
+                    RAVELOG_WARN("iterations exceeded\n");
+                    break;
+                }
+                continue;
+            }
+
+            et = TreeB->Extend(TreeA->GetConfig(iConnectedA), iConnectedB);     // extend B toward A
+
+            if( et == ET_Connected ) {
+                // connected, process goal
+                listgoalpaths.push_back(GOALPATH());
+                _ExtractPath(listgoalpaths.back(),TreeA == &_treeForward ? iConnectedA : iConnectedB,TreeA == &_treeBackward ? iConnectedA : iConnectedB);
+                int goalindex = listgoalpaths.back().goalindex;
+                int startindex = listgoalpaths.back().startindex;
+                if( IS_DEBUGLEVEL(Level_Debug) ) {
+                    stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                    ss << "found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << listgoalpaths.back().length << ", values=[";
+                    for(int i = 0; i < _parameters->GetDOF(); ++i) {
+                        ss << listgoalpaths.back().qall.at(listgoalpaths.back().qall.size()-_parameters->GetDOF()+i) << ", ";
+                    }
+                    ss << "]";
+                    RAVELOG_DEBUG(ss.str());
+                }
+                if( listgoalpaths.size() >= _parameters->_minimumgoalpaths || listgoalpaths.size() >= _vecGoals.size() ) {
+                    break;
+                }
+                bSampleGoal = true;
+                // more goal requested, make sure to remove all the nodes pointing to the current found goal
+                _treeBackward.DeleteNodesWithParent(-goalindex-1);
+            }
+
+            swap(TreeA, TreeB);
+            iter += 3;
+            if( iter > 3*_parameters->_nMaxIterations ) {
+                RAVELOG_WARN("iterations exceeded\n");
+                break;
+            }
+
+            progress._iteration = iter/3;
+            callbackaction = _CallCallbacks(progress);
+            if( callbackaction ==  PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+            else if( callbackaction == PA_ReturnWithAnySolution ) {
+                if( listgoalpaths.size() > 0 ) {
+                    break;
+                }
+            }
+        }
+
+        if( listgoalpaths.size() == 0 ) {
+            RAVELOG_WARN("plan failed, %fs\n",0.001f*(float)(utils::GetMilliTime()-basetime));
+            return PS_Failed;
+        }
+
+        list<GOALPATH>::iterator itbest = listgoalpaths.begin();
+        FOREACH(itpath,listgoalpaths) {
+            if( itpath->length < itbest->length ) {
+                itbest = itpath;
+            }
+        }
+        _goalindex = itbest->goalindex;
+        _startindex = itbest->startindex;
+        if( ptraj->GetConfigurationSpecification().GetDOF() == 0 ) {
+            ptraj->Init(_parameters->_configurationspecification);
+        }
+        ptraj->Insert(ptraj->GetNumWaypoints(),itbest->qall,_parameters->_configurationspecification);
+        RAVELOG_DEBUG_FORMAT("plan success, iters=%d, path=%d points, computation time=%fs\n", progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        return _ProcessPostPlanners(_robot,ptraj);
+    }
+
+    virtual void _ExtractPath(GOALPATH& goalpath, int iConnectedForward, int iConnectedBackward)
+    {
+        list<SimpleNodeOld*> vecnodes;
+
+        // add nodes from the forward tree
+        SimpleNodeOld* pforward = _treeForward._nodes.at(iConnectedForward);
+        goalpath.startindex = -1;
+        while(1) {
+            vecnodes.push_front(pforward);
+            if(pforward->parent < 0) {
+                goalpath.startindex = -pforward->parent-1;
+                break;
+            }
+            pforward = _treeForward._nodes.at(pforward->parent);
+        }
+
+        // add nodes from the backward tree
+        goalpath.goalindex = -1;
+        SimpleNodeOld *pbackward = _treeBackward._nodes.at(iConnectedBackward);
+        while(1) {
+            vecnodes.push_back(pbackward);
+            if(pbackward->parent < 0) {
+                goalpath.goalindex = -pbackward->parent-1;
+                break;
+            }
+            pbackward = _treeBackward._nodes.at(pbackward->parent);
+        }
+
+        BOOST_ASSERT( goalpath.goalindex >= 0 && goalpath.goalindex < (int)_vecGoals.size() );
+        _SimpleOptimizePath(vecnodes,10);
+        int dof = _parameters->GetDOF();
+        goalpath.qall.resize(vecnodes.size()*dof);
+        list<SimpleNodeOld*>::iterator itprev = vecnodes.begin();
+        list<SimpleNodeOld*>::iterator itnext = itprev; itnext++;
+        goalpath.length = 0;
+        vector<dReal>::iterator itq = goalpath.qall.begin();
+        std::copy((*itprev)->q.begin(), (*itprev)->q.begin()+dof, itq);
+        itq += dof;
+        vector<dReal> vivel(dof,1.0);
+        for(size_t i = 0; i < vivel.size(); ++i) {
+            if( _parameters->_vConfigVelocityLimit.at(i) != 0 ) {
+                vivel[i] = 1/_parameters->_vConfigVelocityLimit.at(i);
+            }
+        }
+
+        while(itnext != vecnodes.end()) {
+            std::copy((*itnext)->q.begin(), (*itnext)->q.begin()+dof, itq);
+            itprev=itnext;
+            ++itnext;
+            itq += dof;
+        }
+
+        // take distance scaled with respect to velocities with the first and last points only!
+        // this is because rrt paths can initially be very complex but simplify down to something simpler.
+        std::vector<dReal> vdiff = vecnodes.front()->q;
+        _parameters->_diffstatefn(vdiff, vecnodes.back()->q);
+        for(size_t i = 0; i < vdiff.size(); ++i) {
+            goalpath.length += RaveFabs(vdiff.at(i))*vivel.at(i);
+        }
+    }
+
+    virtual PlannerParametersConstPtr GetParameters() const {
+        return _parameters;
+    }
+
+    virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
+        std::string filename = RaveGetHomeDirectory() + string("/birrtdump.txt");
+        getline(is, filename);
+        boost::trim(filename);
+        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        f << _treeForward._nodes.size() << "," << _treeBackward._nodes.size() << endl;
+        FOREACH(itnode,_treeForward._nodes) {
+            FOREACH(it,(*itnode)->q) {
+                f << *it << ",";
+            }
+            f << (*itnode)->parent << endl;
+        }
+        FOREACH(itnode,_treeBackward._nodes) {
+            FOREACH(it,(*itnode)->q) {
+                f << *it << ",";
+            }
+            f << (*itnode)->parent << endl;
+        }
+        return true;
+    }
+
+protected:
+    RRTParametersPtr _parameters;
+    SpatialTreeOld< RrtPlannerOld<SimpleNodeOld>, SimpleNodeOld > _treeBackward;
+    dReal _fGoalBiasProb;
+    std::vector< std::vector<dReal> > _vecGoals;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
 BOOST_TYPEOF_REGISTER_TYPE(BirrtPlanner::GOALPATH)
+BOOST_TYPEOF_REGISTER_TYPE(BirrtPlannerOld::GOALPATH)
 #endif
 
 #endif
