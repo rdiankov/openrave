@@ -655,7 +655,14 @@ private:
             _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
             _vCurrentLevelNodes[0].second = _ComputeDistance(_vCurrentLevelNodes[0].first->q, config);
             int nParentFound = _InsertRecursive(newnode, _vCurrentLevelNodes, _maxlevel, _fMaxLevelBound);
-            BOOST_ASSERT(nParentFound!=0);
+            if( nParentFound == 0 ) {
+                // could possibly happen with circulr joints, still need to take a look at correct fix (see #323)
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                FOREACHC(it, config) {
+                    ss << *it << ",";
+                }
+                throw OPENRAVE_EXCEPTION_FORMAT("Could not insert config=[%s] inside the cover tree, perhaps cover tree _maxdistance=%f is not enough from the root", ss.str()%_maxdistance, ORE_Assert);
+            }
             if( nParentFound < 0 ) {
                 return NodePtr();
             }
@@ -664,6 +671,13 @@ private:
         return newnode;
     }
 
+    /// \brief the recursive function that inserts a configuration into the cache tree
+    ///
+    /// \param[in] nodein the input node to insert
+    /// \param[in] vCurrentLevelNodes the tree nodes at "level" with the respecitve distances computed for them
+    /// \param[in] currentlevel the current level traversing
+    /// \param[in] fLevelBound pow(_base, level)
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to _mindistance
     int _InsertRecursive(NodePtr nodein, const std::vector< std::pair<NodePtr, dReal> >& vCurrentLevelNodes, int currentlevel, dReal fLevelBound)
     {
 #ifdef _DEBUG

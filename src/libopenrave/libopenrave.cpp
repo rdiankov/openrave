@@ -2477,9 +2477,10 @@ void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
 
 struct XMLREADERDATA
 {
-    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {
+    XMLREADERDATA(BaseXMLReader& reader, xmlParserCtxtPtr ctxt) : _reader(reader), _ctxt(ctxt) {
     }
-    BaseXMLReaderPtr _preader, _pdummy;
+    BaseXMLReader& _reader;
+    BaseXMLReaderPtr _pdummy;
     xmlParserCtxtPtr _ctxt;
 };
 
@@ -2501,7 +2502,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
         pdata->_pdummy->startElement(s,listatts);
     }
     else {
-        BaseXMLReader::ProcessElement pestatus = pdata->_preader->startElement(s, listatts);
+        BaseXMLReader::ProcessElement pestatus = pdata->_reader.startElement(s, listatts);
         if( pestatus != BaseXMLReader::PE_Support ) {
             // not handling, so create a temporary class to handle it
             pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
@@ -2520,7 +2521,7 @@ void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
         }
     }
     else {
-        if( pdata->_preader->endElement(s) ) {
+        if( pdata->_reader.endElement(s) ) {
             //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
             xmlStopParser(pdata->_ctxt);
         }
@@ -2534,7 +2535,7 @@ void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
         pdata->_pdummy->characters(string((const char*)ch, len));
     }
     else {
-        pdata->_preader->characters(string((const char*)ch, len));
+        pdata->_reader.characters(string((const char*)ch, len));
     }
 }
 
@@ -2560,7 +2561,7 @@ bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
     return true;
 }
 
-bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
+bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size)
 {
     static xmlSAXHandler s_DefaultSAXHandler = { 0};
     if( size <= 0 ) {
@@ -2589,8 +2590,8 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
     ctxt->sax = sax;
     xmlDetectSAX2(ctxt);
 
-    XMLREADERDATA reader(preader, ctxt);
-    ctxt->userData = &reader;
+    XMLREADERDATA readerdata(reader, ctxt);
+    ctxt->userData = &readerdata;
 
     xmlParseDocument(ctxt);
 
