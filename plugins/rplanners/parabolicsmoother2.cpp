@@ -125,13 +125,6 @@ public:
                                 dq1 = dq0;
                             }
                         }
-                        else {
-                            // No?. Hot fix?
-                            dReal iElapsedTime = 1/elapsedTime;
-                            for (size_t idof = 0; idof < curvesnd.ndof; ++idof) {
-                                dq1[idof] = 2*iElapsedTime*(q1[idof] - q0[idof]) - dq0[idof];
-                            }
-                        }
                     }
                 }
 
