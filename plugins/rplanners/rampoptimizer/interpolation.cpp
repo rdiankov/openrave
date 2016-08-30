@@ -41,8 +41,11 @@ bool InterpolateZeroVelND(const std::vector<dReal>& x0Vect, const std::vector<dR
             aMin = Min(aMin, amVect[i]/Abs(dVect[i]));
         }
     }
-    BOOST_ASSERT(vMin < inf);
-    BOOST_ASSERT(aMin < inf);
+    if (!(vMin < inf && aMin < inf)) {
+        // dVect is zero. This implies x0Vect = x1Vect.
+        curvesndOut.SetConstant(x0Vect);
+        return true;
+    }
 
     ParabolicCurve sdProfile;
     bool result = Interpolate1D(0, 1, 0, 0, vMin, aMin, sdProfile);
