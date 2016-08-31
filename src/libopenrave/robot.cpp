@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <stdexcept>
+
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
@@ -1026,11 +1028,16 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         return;
     }
 
+    if (_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()) {
+        throw std::out_of_range("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()");
+    }
+
     // go through all active joints
     size_t index = 0;
     for(; index < _vActiveDOFIndices.size(); ++index) {
+        // We already did range check above
         JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
-        q1.at(index) = pjoint->SubtractValue(q1.at(index),q2.at(index),_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+        q1[index] = pjoint->SubtractValue(q1[index],q2[index],_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
     }
 
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {

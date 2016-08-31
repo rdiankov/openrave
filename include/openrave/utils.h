@@ -212,7 +212,7 @@ inline std::string ConvertToLowerCase(const std::string & s)
     from http://stackoverflow.com/questions/5505965/fast-string-splitting-with-multiple-delimiters
 
    \param skipempty if true, then will skip empty strings. otherwise will insert them. use false when order of parameters is necessary.
-   
+
    Usage:
    \code
    std::vector<std::string> vstrings;
@@ -287,17 +287,15 @@ inline T ClampOnRange(T value, T min, T max)
 template <typename T>
 inline T NormalizeCircularAngle(T theta, T min, T max)
 {
+    T range = max-min;
+    BOOST_ASSERT(range>0);
     if (theta < min) {
-        T range = max-min;
-        BOOST_ASSERT(range>0);
         theta += range;
         while (theta < min) {
             theta += range;
         }
     }
     else if (theta > max) {
-        T range = max-min;
-        BOOST_ASSERT(range>0);
         theta -= range;
         while (theta > max) {
             theta -= range;
