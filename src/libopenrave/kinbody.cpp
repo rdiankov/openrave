@@ -896,14 +896,13 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
 {
     if( dofindices.size() == 0 ) {
         if (q1.size() != q2.size()) {
-            // Should I throw out_of range or something else?
-            throw std::out_of_range("q1.size() != q2.size()");
+            throw OPENRAVE_EXCEPTION_FORMAT0("q1.size() != q2.size()", ORE_InvalidArguments);
         }
 
         FOREACHC(itjoint,_vecjoints) {
             int dof = (*itjoint)->GetDOFIndex();
             if ( (dof + (*itjoint)->GetDOF()) > q1.size() ) {
-                throw std::out_of_range("Index ouf of bound in KinBody::SubtractDOFValues");
+                throw OPENRAVE_EXCEPTION_FORMAT0("Index ouf of bound in KinBody::SubtractDOFValues", ORE_InvalidArguments);
             }
             for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                 if( (*itjoint)->IsCircular(i) ) {
@@ -917,7 +916,7 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
     }
     else {
         if ( dofindices.size() > q1.size() || q1.size() != q2.size() ) {
-            throw std::out_of_range("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()");
+            throw OPENRAVE_EXCEPTION_FORMAT0("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()", ORE_InvalidArguments);
         }
 
         for(size_t i = 0; i < dofindices.size(); ++i) {
