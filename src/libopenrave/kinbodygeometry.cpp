@@ -17,6 +17,14 @@
 #include "libopenrave.h"
 #include <algorithm>
 
+#ifdef AABB_CONVEX_HULL
+#ifdef QHULLCPP_FOUND
+
+#include <libqhullcpp/Qhull.h>
+
+#endif // QHULLCPP_FOUND
+#endif // AABB_CONVEX_HULL
+
 namespace OpenRAVE {
 
 #define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */ \
@@ -160,6 +168,49 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
+#ifdef AABB_CONVEX_HULL
+///< \brief Computes the convex hull of the TriMesh contained in info and modify the TriMesh so that the vertices on the convex hull are at the beginning of the TriMesh
+void KinBody::Link::Geometry::ComputeExtremePointsIndices(KinBody::GeometryInfo& info)
+{
+    RAVELOG_DEBUG_FORMAT("Recomputing extreme points (vertices : %d, faces : %d, filenames : %s %s)", info._meshcollision.vertices.size()%info._meshcollision.indices.size()%info._filenamerender%info._filenamecollision);
+    if( info._meshcollision.vertices.size() == 0 ) {
+        return;
+    }
+
+#ifdef QHULLCPP_FOUND
+
+    int dim = 3;
+    int numPoints = info._meshcollision.vertices.size();
+
+    std::vector<coordT> qpoints(numPoints * dim);
+    std::vector<coordT>::iterator itcoord = qpoints.begin();
+    FOREACH(itvertex, info._meshcollision.vertices) {
+        *itcoord++ = itvertex->x;
+        *itcoord++ = itvertex->y;
+        *itcoord++ = itvertex->z;
+    }
+
+    const char* flags = "Tv Fx";     // option flags for qhull, see qh_opt.htm, output volume (FA)
+    orgQhull::Qhull qhull("", dim, numPoints, &qpoints[0], flags);
+
+    if( !qhull.qhullStatus() ) {
+        info._vextremePointsIndices.resize(0);
+        info._vextremePointsIndices.reserve(qhull.vertexCount());
+        for(orgQhull::QhullVertex vertex = qhull.beginVertex(); vertex != qhull.endVertex(); vertex = vertex.next()) {
+            BOOST_ASSERT( 0 <= vertex.point().id() && vertex.point().id() <= numPoints );
+            info._vextremePointsIndices.push_back(vertex.point().id());
+        }
+        qhull.clearQhullMessage();
+
+    } else {
+        RAVELOG_DEBUG_FORMAT("Error when computing convex hull with qhull : %s", qhull.qhullMessage());
+    }
+#else // QHULLCPP_FOUND
+    throw openrave_exception(str(boost::format("QHull c++ library (libqhullcpp) not found, cannot compute convex hull for AABB caching")));
+#endif // QHULLCPP_FOUND
+}
+#endif //AABB_CONVEX_HULL
+
 KinBody::GeometryInfo::GeometryInfo() : XMLReadable("geometry")
 {
     _vDiffuseColor = Vector(1,1,1);
@@ -285,6 +336,11 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 
 KinBody::Link::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
+#ifdef AABB_CONVEX_HULL
+    if( _info._type == GT_TriMesh && _info._vextremePointsIndices.size() == 0 ) {
+        KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
+    }
+#endif //AABB_CONVEX_HULL
 }
 
 bool KinBody::Link::Geometry::InitCollisionMesh(float fTessellation)
@@ -326,8 +382,40 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         ab.pos = tglobal.trans; //+(dReal)0.5*_info._vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
     case GT_TriMesh:
-        // just use _info._meshcollision
-        if( _info._meshcollision.vertices.size() > 0) {
+#ifdef AABB_CONVEX_HULL
+        if( _info._vextremePointsIndices.size() > 0 ) {
+            Vector vmin, vmax;
+            vmin = vmax = tglobal * _info._meshcollision.vertices.at(_info._vextremePointsIndices.at(0));
+            FOREACH(itind, _info._vextremePointsIndices) {
+                Vector v = tglobal * _info._meshcollision.vertices.at(*itind);
+                if( vmin.x > v.x ) {
+                    vmin.x = v.x;
+                }
+                if( vmin.y > v.y ) {
+                    vmin.y = v.y;
+                }
+                if( vmin.z > v.z ) {
+                    vmin.z = v.z;
+                }
+                if( vmax.x < v.x ) {
+                    vmax.x = v.x;
+                }
+                if( vmax.y < v.y ) {
+                    vmax.y = v.y;
+                }
+                if( vmax.z < v.z ) {
+                    vmax.z = v.z;
+                }
+            }
+            ab.extents = (dReal)0.5*(vmax-vmin);
+            ab.pos = (dReal)0.5*(vmax+vmin);
+        }
+        else {
+            ab.pos = tglobal.trans;
+        }
+#else // AABB_CONVEX_HULL not defined
+      // just use _info._meshcollision
+        if( _info._meshcollision.vertices.size() > 0 ) {
             Vector vmin, vmax; vmin = vmax = tglobal*_info._meshcollision.vertices.at(0);
             FOREACHC(itv, _info._meshcollision.vertices) {
                 Vector v = tglobal * *itv;
@@ -356,6 +444,7 @@ AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const
         else {
             ab.pos = tglobal.trans;
         }
+#endif // AABB_CONVEX_HULL
         break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("unknown geometry type %d"), _info._type, ORE_InvalidArguments);
@@ -382,6 +471,11 @@ void KinBody::Link::Geometry::SetCollisionMesh(const TriMesh& mesh)
     OPENRAVE_ASSERT_FORMAT0(_info._bModifiable, "geometry cannot be modified", ORE_Failed);
     LinkPtr parent(_parent);
     _info._meshcollision = mesh;
+#ifdef AABB_CONVEX_HULL
+    if( _info._type == GT_TriMesh ) {
+        KinBody::Link::Geometry::ComputeExtremePointsIndices(_info);
+    }
+#endif //AABB_CONVEX_HULL
     parent->_Update();
 }
 

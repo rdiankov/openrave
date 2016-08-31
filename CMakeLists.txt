@@ -201,8 +201,8 @@ set(OPENRAVE_EXPORT_CXXFLAGS)
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -O3 -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_DEBUG "-g3 -D_DEBUG")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -O3 -fno-omit-frame-pointer -DNDEBUG")
+  set(CMAKE_CXX_FLAGS_DEBUG "-g3 -fno-omit-frame-pointer -D_DEBUG")
 
   # the _GLIBCXX_DEBUG flag is very helpful in bounds checking for vector[] and iterators, however it requires all
   # libraries linking with openrave to use it
@@ -644,17 +644,37 @@ set(IVCON_LIBRARY ivcon)
 set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
 
 ## check qhull library
-check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
-check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
-if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
-  set(QHULL_FOUND 1)
+check_library_exists(qhull_r qh_new_qhull "" QHULL_REENTRANT_FOUND_LIB)
+check_include_file_cxx(libqhullcpp/Qhull.h HAVE_LIBQHULLCPP_QHULL_H)
+if( QHULL_REENTRANT_FOUND_LIB AND HAVE_LIBQHULLCPP_QHULL_H )
+  set(QHULLCPP_FOUND 1)
+  # TODO : Does this have any use ?
   set(QHULL_INCLUDE_DIR)
+  add_definitions(-DQHULLCPP_FOUND)
 else()
+  check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
+  check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
+  if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
+    set(QHULL_FOUND 1)
+    set(QHULL_INCLUDE_DIR)
+  else()
   # have to compile from sources
   message(STATUS "compiling local qhull library")
+  set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/qhull/src")
+  include_directories("${QHULL_INCLUDE_DIR}")
   add_subdirectory(3rdparty/qhull)
-  set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
-  set(QHULL_FOUND 1)
+  set(QHULLCPP_FOUND 1)
+  add_definitions(-DQHULLCPP_FOUND)
+  endif()
+endif()
+
+if( AABB_CACHING )
+  message(STATUS "AABB_CACHING set")
+  add_definitions(-DAABB_CACHING)
+  if( AABB_CONVEX_HULL AND QHULLCPP_FOUND )
+    message(STATUS "Using convex hulls to compute AABBs (can be slower)")
+    add_definitions(-DAABB_CONVEX_HULL)
+  endif()
 endif()
 
 ## check ANN library
@@ -758,6 +778,17 @@ else()
   set(CONVEXDECOMPOSITION_CFLAGS "")
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
+
+# Check if boundingmesh library is installed
+find_package(BoundingMesh CONFIG)
+if( BoundingMesh_FOUND )
+  set(BOUNDINGMESH_FOUND 1)
+endif()
+
+find_package(vhacd CONFIG)
+if( vhacd_FOUND )
+  set(VHACD_FOUND 1)
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
