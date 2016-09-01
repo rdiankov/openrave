@@ -66,6 +66,31 @@ std::string GetMD5HashString(const std::vector<uint8_t>&v)
     return hex_output;
 }
 
+std::string GetRandomAlphaNumericString(size_t length) {
+    static const char alphabet[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    std::string s;
+    s.reserve(length);
+    for (size_t i = 0; i < length; ++i) {
+        s += alphabet[rand() % (sizeof(alphabet) - 1)];
+    }
+    return s;
+}
+
+std::string GetRandomHexString(size_t length) {
+    static const char alphabet[] = "0123456789abcdef";
+
+    std::string s;
+    s.reserve(length);
+    for (size_t i = 0; i < length; ++i) {
+        s += alphabet[rand() % (sizeof(alphabet) - 1)];
+    }
+    return s;
+}
+
 bool PairStringLengthCompare(const std::pair<std::string, std::string>&p0, const std::pair<std::string, std::string>&p1)
 {
     return p0.first.size() > p1.first.size();

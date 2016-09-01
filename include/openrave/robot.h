@@ -37,8 +37,10 @@ public:
     {
 public:
         ManipulatorInfo();
-        virtual ~ManipulatorInfo() {
-        }
+        ManipulatorInfo(const ManipulatorInfo& other);
+        virtual ~ManipulatorInfo();
+
+        ManipulatorInfo& operator=(const ManipulatorInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
         virtual void DeserializeJSON(const rapidjson::Value &value);
@@ -46,13 +48,28 @@ public:
         /// \brief unique and constant scoped identifier
         std::string sid;
 
-        std::string _name;
-        std::string _sBaseLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
-        Transform _tLocalTool;
-        std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
-        Vector _vdirection;
-        std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
-        std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
+        std::string name;
+        std::string& _name RAVE_DEPRECATED;
+
+        std::string baseLinkName; ///< name of the base and effector links of the robot used to determine the chain
+        std::string& _sBaseLinkName RAVE_DEPRECATED;
+        std::string effectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
+        std::string& _sEffectorLinkName RAVE_DEPRECATED;
+
+        Transform transform;
+        Transform& _tLocalTool RAVE_DEPRECATED;
+
+        std::vector<dReal> chuckingDirection; ///< the normal direction to move joints for the hand to grasp something
+        std::vector<dReal>& _vChuckingDirection RAVE_DEPRECATED;
+
+        Vector direction; 
+        Vector& _vdirection RAVE_DEPRECATED;
+
+        std::string iksolverType; ///< xml id of the IkSolver interface to attach
+        std::string& _sIkSolverXMLId RAVE_DEPRECATED;
+
+        std::vector<std::string> gripperJointNames; ///< names of the gripper joints
+        std::vector<std::string> _vGripperJointNames RAVE_DEPRECATED;
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
@@ -427,8 +444,10 @@ private:
     {
 public:
         AttachedSensorInfo();
-        virtual ~AttachedSensorInfo() {
-        }
+        AttachedSensorInfo(const AttachedSensorInfo& other);
+        virtual ~AttachedSensorInfo();
+
+        AttachedSensorInfo& operator=(const AttachedSensorInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
         virtual void DeserializeJSON(const rapidjson::Value &value);
@@ -436,10 +455,18 @@ public:
         /// \brief unique and constant scoped identifier
         std::string sid;
 
-        std::string _name;
-        std::string _linkname; ///< the robot link that the sensor is attached to
-        Transform _trelative;         ///< relative transform of the sensor with respect to the attached link
-        std::string _sensorname; ///< name of the sensor interface to create, in other words the sensor type
+        std::string name;
+        std::string& _name RAVE_DEPRECATED;
+        
+        std::string linkName; ///< the robot link that the sensor is attached to
+        std::string& _linkname RAVE_DEPRECATED;
+
+        Transform transform; ///< relative transform of the sensor with respect to the attached link
+        Transform _trelative RAVE_DEPRECATED;
+        
+        std::string type; ///< name of the sensor interface to create, in other words the sensor type
+        std::string& _sensorname RAVE_DEPRECATED;
+
         SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;

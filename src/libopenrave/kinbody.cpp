@@ -552,16 +552,24 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
             throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once"), rawinfo->name, ORE_InvalidArguments);
         }
         setusednames.insert(rawinfo->name);
-
-        // check sid duplicates
-        if( setusedsids.find(rawinfo->sid) != setusedsids.end() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s sid %s is not unique"), rawinfo->name%rawinfo->sid, ORE_InvalidArguments);
-        }
-        setusedsids.insert(rawinfo->sid);
-
         LinkPtr plink(new Link(shared_kinbody()));
         plink->_info = *rawinfo;
         LinkInfo& info = plink->_info;
+
+        // check sid duplicates
+        if (info.sid == "") {
+            for (int retry = 0; retry < 3; ++retry) {
+                info.sid = utils::GetRandomAlphaNumericString(16);
+                if (setusedsids.find(info.sid) == setusedsids.end()) {
+                    break;
+                }
+            }
+        }
+        if( setusedsids.find(info.sid) != setusedsids.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s sid %s is not unique"), info.name%info.sid, ORE_InvalidArguments);
+        }
+        setusedsids.insert(info.sid);
+
         plink->_index = static_cast<int>(_veclinks.size());
         FOREACHC(itgeominfo,info.geometries) {
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
@@ -577,6 +585,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         _veclinks.push_back(plink);
     }
     setusednames.clear();
+    setusedsids.clear();
     _vecjoints.reserve(jointinfos.size());
     FOREACHC(itjointinfo, jointinfos) {
         JointInfoConstPtr rawinfo = *itjointinfo;
@@ -587,6 +596,21 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         JointPtr pjoint(new Joint(shared_kinbody(), rawinfo->type));
         pjoint->_info = *rawinfo;
         JointInfo& info = pjoint->_info;
+
+        // check sid duplicates
+        if (info.sid == "") {
+            for (int retry = 0; retry < 3; ++retry) {
+                info.sid = utils::GetRandomAlphaNumericString(16);
+                if (setusedsids.find(info.sid) == setusedsids.end()) {
+                    break;
+                }
+            }
+        }
+        if( setusedsids.find(info.sid) != setusedsids.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s sid %s is not unique"), info.name%info.sid, ORE_InvalidArguments);
+        }
+        setusedsids.insert(info.sid);
+
         for(size_t i = 0; i < info.mimic.size(); ++i) {
             if( !!info.mimic[i] ) {
                 pjoint->_vmimic[i].reset(new Mimic());

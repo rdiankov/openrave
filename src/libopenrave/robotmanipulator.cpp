@@ -18,8 +18,46 @@
 
 namespace OpenRAVE {
 
-RobotBase::ManipulatorInfo::ManipulatorInfo() : XMLReadable("manipulator"), _vdirection(0,0,1)
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+RobotBase::ManipulatorInfo::ManipulatorInfo() :
+    XMLReadable("manipulator"),
+    _name(name),
+    _sBaseLinkName(baseLinkName),
+    _sEffectorLinkName(effectorLinkName),
+    _tLocalTool(transform),
+    _vChuckingDirection(chuckingDirection),
+    direction(0,0,1),
+    _vdirection(direction),
+    _sIkSolverXMLId(iksolverType),
+    _vGripperJointNames(gripperJointNames)
 {
+}
+#pragma GCC diagnostic pop
+
+RobotBase::ManipulatorInfo::ManipulatorInfo(const RobotBase::ManipulatorInfo& other) : ManipulatorInfo()
+{
+    *this = other;
+}
+
+RobotBase::ManipulatorInfo::~ManipulatorInfo()
+{
+}
+
+RobotBase::ManipulatorInfo& RobotBase::ManipulatorInfo::operator=(const RobotBase::ManipulatorInfo& other)
+{
+    sid = other.sid;
+    name = other.name;
+    baseLinkName = other.baseLinkName;
+    effectorLinkName = other.effectorLinkName;
+    transform = other.transform;
+    chuckingDirection = other.chuckingDirection;
+    direction = other.direction;
+    iksolverType = other.iksolverType;
+    gripperJointNames = other.gripperJointNames;
+    return *this;
 }
 
 void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
@@ -27,14 +65,14 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value &value, rapidjso
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _tLocalTool);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "chuckingDirection", _vChuckingDirection);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "direction", _vdirection);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseLinkName", _sBaseLinkName);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "effectorLinkName", _sEffectorLinkName);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "iksolverType", _sIkSolverXMLId);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gripperJointNames", _vGripperJointNames);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "chuckingDirection", chuckingDirection);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "direction", direction);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "baseLinkName", baseLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "effectorLinkName", effectorLinkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "iksolverType", iksolverType);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "gripperJointNames", gripperJointNames);
 }
 
 void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value &value)
@@ -42,14 +80,14 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value &value)
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
     RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _tLocalTool);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "chuckingDirection", _vChuckingDirection);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "direction", _vdirection);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "baseLinkName", _sBaseLinkName);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "effectorLinkName", _sEffectorLinkName);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "iksolverType", _sIkSolverXMLId);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "gripperJointNames", _vGripperJointNames);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "chuckingDirection", chuckingDirection);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "direction", direction);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "baseLinkName", baseLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "effectorLinkName", effectorLinkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "iksolverType", iksolverType);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "gripperJointNames", gripperJointNames);
 }
 
 RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {

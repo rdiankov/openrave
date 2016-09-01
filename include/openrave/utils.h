@@ -272,6 +272,11 @@ OPENRAVE_API std::string GetMD5HashString(const std::string& s);
 /// \brief compute the md5 hash of an array
 OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
 
+/// \brief return a string of specified length consists of randomly selected alpha numeric characters
+OPENRAVE_API std::string GetRandomAlphaNumericString(size_t length);
+/// \brief return a string of specified length consists of randomly selected hex characters
+OPENRAVE_API std::string GetRandomHexString(size_t length);
+
 template<class T>
 inline T ClampOnRange(T value, T min, T max)
 {

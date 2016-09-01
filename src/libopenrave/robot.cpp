@@ -32,8 +32,38 @@ private:
     boost::function<void()> _fn;
 };
 
-RobotBase::AttachedSensorInfo::AttachedSensorInfo() : XMLReadable("attachedsensor")
+// the following constructor handles mapping from deprecated reference to the actual
+// member, so need to disable deprecation warnings
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+RobotBase::AttachedSensorInfo::AttachedSensorInfo() :
+    XMLReadable("attachedsensor"),
+    _name(name),
+    _linkname(linkName),
+    _trelative(transform),
+    _sensorname(type)
 {
+}
+#pragma GCC diagnostic pop
+
+RobotBase::AttachedSensorInfo::AttachedSensorInfo(const AttachedSensorInfo& other) : AttachedSensorInfo()
+{
+    *this = other;
+}
+
+RobotBase::AttachedSensorInfo::~AttachedSensorInfo()
+{
+}
+
+RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const RobotBase::AttachedSensorInfo& other)
+{
+    sid = other.sid;
+    name = other.name;
+    type = other.type;
+    linkName = other.linkName;
+    transform = other.transform;
+    _sensorgeometry = other._sensorgeometry;
+    return *this;
 }
 
 void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
@@ -41,10 +71,10 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "sid", sid);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", _name);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", _sensorname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", _linkname);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", _trelative);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", name);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", type);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", linkName);
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
 
     if (!!_sensorgeometry) {
         _sensorgeometry->SerializeJSON(value, allocator, options);
@@ -56,10 +86,10 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &valu
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
     RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", _name);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", _sensorname);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", _linkname);
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", _trelative);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "type", type);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", linkName);
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
 
     // TODO(jsonserialization)
     if (_sensorname == "base_pinhole_camera" || _sensorname == "BaseCamera") {
@@ -383,15 +413,75 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
     if( !KinBody::Init(linkinfos, jointinfos, uri) ) {
         return false;
     }
+
+    set<std::string> setusedsids;
+    set<std::string> setusednames;
+
     _vecManipulators.resize(0);
     FOREACHC(itmanipinfo, manipinfos) {
-        ManipulatorPtr newmanip(new Manipulator(shared_robot(),**itmanipinfo));
+        ManipulatorPtr newmanip;
+
+        // check name duplicates
+        if( setusednames.find((*itmanipinfo)->name) != setusednames.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s is declared more than once"), (*itmanipinfo)->name, ORE_InvalidArguments);
+        }
+        setusednames.insert((*itmanipinfo)->name);
+
+        // check sid duplicates
+        if ((*itmanipinfo)->sid == "") {
+            ManipulatorInfo info = **itmanipinfo;
+            for (int retry = 0; retry < 3; ++retry) {
+                info.sid = utils::GetRandomAlphaNumericString(16);
+                if (setusedsids.find(info.sid) == setusedsids.end()) {
+                    break;
+                }
+            }
+            newmanip.reset(new Manipulator(shared_robot(),info));
+        } else {
+            newmanip.reset(new Manipulator(shared_robot(),**itmanipinfo));
+        }
+
+        if( setusedsids.find(newmanip->GetInfo().sid) != setusedsids.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator %s sid %s is not unique"), newmanip->GetName()%newmanip->GetInfo().sid, ORE_InvalidArguments);
+        }
+        setusedsids.insert(newmanip->GetInfo().sid);
+
         _vecManipulators.push_back(newmanip);
         __hashrobotstructure.resize(0);
     }
+
+    setusednames.clear();
+    setusedsids.clear();
+    
     _vecSensors.resize(0);
     FOREACHC(itattachedsensorinfo, attachedsensorinfos) {
-        AttachedSensorPtr newattachedsensor(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
+        AttachedSensorPtr newattachedsensor;
+
+        // check name duplicates
+        if( setusednames.find((*itattachedsensorinfo)->name) != setusednames.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("attached sensor %s is declared more than once"), (*itattachedsensorinfo)->name, ORE_InvalidArguments);
+        }
+        setusednames.insert((*itattachedsensorinfo)->name);
+
+        // check sid duplicates
+        if ((*itattachedsensorinfo)->sid == "") {
+            AttachedSensorInfo info = **itattachedsensorinfo;
+            for (int retry = 0; retry < 3; ++retry) {
+                info.sid = utils::GetRandomAlphaNumericString(16);
+                if (setusedsids.find(info.sid) == setusedsids.end()) {
+                    break;
+                }
+            }
+            newattachedsensor.reset(new AttachedSensor(shared_robot(),info));
+        } else {
+            newattachedsensor.reset(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
+        }
+
+        if( setusedsids.find(newattachedsensor->GetInfo().sid) != setusedsids.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("attached sensor %s sid %s is not unique"), newattachedsensor->GetName()%newattachedsensor->GetInfo().sid, ORE_InvalidArguments);
+        }
+        setusedsids.insert(newattachedsensor->GetInfo().sid);
+
         _vecSensors.push_back(newattachedsensor);
         newattachedsensor->UpdateInfo(); // just in case
         __hashrobotstructure.resize(0);
