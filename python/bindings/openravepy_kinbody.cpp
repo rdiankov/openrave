@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
-#include <boost/static_assert.hpp>
 #include "openravepy_kinbody.h"
 
 namespace openravepy {
