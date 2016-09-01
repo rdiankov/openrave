@@ -104,13 +104,11 @@ void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
         }
         return;
     }
-    else if (a > 0) {
-        bmin = EvalPos(ta);
-        bmax = EvalPos(tb);
-    }
-    else {
-        bmin = EvalPos(tb);
-        bmax = EvalPos(ta);
+
+    bmin = EvalPos(ta);
+    bmax = EvalPos(tb);
+    if (bmin > bmax) {
+        Swap(bmin, bmax);
     }
 
     dReal tDeflection = -v0/a;
@@ -471,6 +469,10 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     Ramp ramp(_v0, a, t, _x0);
     RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
     RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
+    {
+        ramp.x1 = _x1;
+        ramp.v1 = _v1;
+    }
 
     std::vector<Ramp> _ramps(1);
     _ramps[0] = ramp;

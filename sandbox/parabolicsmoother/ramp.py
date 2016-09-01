@@ -162,19 +162,22 @@ class Ramp(object):
         
         if (FuzzyZero(self.a, epsilon)):
             if self.v0 > 0:
-                xmin = self.x0
-                xmax = self.EvalPos(self.duration)
+                xmin = self.EvalPos(ta)
+                xmax = self.EvalPos(tb)
             else:
-                xmin = self.EvalPos(self.duration)
-                xmax = self.x0
+                xmin = self.EvalPos(tb)
+                xmax = self.EvalPos(ta)
             return [xmin, xmax]
-        elif (self.a > 0):
-            xmin = self.x0
-            xmax = self.EvalPos(self.duration)
+
+        tempa = self.EvalPos(ta)
+        tempb = self.EvalPos(tb)
+        if (tempa < tempb):
+            xmin = tempa
+            xmax = tempb
         else:
-            xmin = self.EvalPos(self.duration)
-            xmax = self.x0            
-            
+            xmin = tempb
+            xmax = tempa
+        
         tDeflection = Neg(mp.fdiv(self.v0, self.a))
         if (tDeflection <= ta) or (tDeflection >= tb):
             return [xmin, xmax]
