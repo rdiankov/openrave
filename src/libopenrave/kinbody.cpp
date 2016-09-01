@@ -4695,6 +4695,7 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "id", GetID());
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "uri", GetURI());
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", GetName());
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", GetTransform());
 
