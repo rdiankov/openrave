@@ -287,17 +287,15 @@ inline T ClampOnRange(T value, T min, T max)
 template <typename T>
 inline T NormalizeCircularAngle(T theta, T min, T max)
 {
+    T range = max-min;
+    BOOST_ASSERT(range>0);
     if (theta < min) {
-        T range = max-min;
-        BOOST_ASSERT(range>0);
         theta += range;
         while (theta < min) {
             theta += range;
         }
     }
     else if (theta > max) {
-        T range = max-min;
-        BOOST_ASSERT(range>0);
         theta -= range;
         while (theta > max) {
             theta -= range;
