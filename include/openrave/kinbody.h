@@ -187,6 +187,11 @@ public:
         float _fTransparency; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable; ///< if true, object geometry can be dynamically modified (default is true)
+
+#ifdef AABB_CACHING
+        // TODO : would be more efficient to modify _meshcollision so that the first k vertices are the extreme points
+        std::vector<int> _vextremePointsIndices; ///< Number of points on the convex hull (placed first in _meshcollision)
+#endif
     };
     typedef boost::shared_ptr<GeometryInfo> GeometryInfoPtr;
     typedef boost::shared_ptr<GeometryInfo const> GeometryInfoConstPtr;
@@ -365,6 +370,11 @@ public:
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
+
+#ifdef AABB_CACHING
+            /// \brief Computes and sets the extreme points indices of the TriMesh contained in info
+            static void ComputeExtremePointsIndices(KinBody::GeometryInfo& info);
+#endif // AABB_CACHING
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
             friend class OpenRAVEXMLParser::LinkXMLReader;
@@ -548,6 +558,11 @@ protected:
         }
         virtual GeometryPtr GetGeometry(int index);
 
+#ifdef AABB_CACHING
+        /// \brief returns a list of the AABB of all the geometry objects in the world coordinate system
+        const std::vector<AABB>& GetGeometriesAABB() const;
+#endif
+
         /// \brief inits the current geometries with the new geometry info.
         ///
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
@@ -650,6 +665,12 @@ protected:
         /// \param parameterschanged if true, will
         virtual void _Update(bool parameterschanged=true);
 
+#ifdef AABB_CACHING
+        virtual void _ResetAABB() {
+          _bglobalAABBdirty = true;
+        }
+#endif
+
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
         LinkInfo _info; ///< parameter information of the link
@@ -664,6 +685,13 @@ private:
         std::vector<int> _vRigidlyAttachedLinks;         ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
         TriMesh _collision; ///< triangles for collision checking, triangles are always the triangulation
                             ///< of the body when it is at the identity transformation
+#ifdef AABB_CACHING
+        mutable bool _blocalAABBdirty; ///< if true, the local AABB needs to be recomputed before being used
+        mutable AABB _localAABB; ///< local AABB of the link, that is containing the _collision TriMesh, only set up if _blocalAABBdirty == false
+        mutable bool _bglobalAABBdirty;
+        mutable AABB _globalAABB;
+        mutable std::vector<AABB> _vGeometriesGlobalAABB;
+#endif // AABB_CACHING
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER

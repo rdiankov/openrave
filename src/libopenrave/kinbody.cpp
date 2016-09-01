@@ -895,27 +895,38 @@ void KinBody::SimulationStep(dReal fElapsedTime)
 void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& dofindices) const
 {
     if( dofindices.size() == 0 ) {
+        if (q1.size() != q2.size()) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("q1.size() != q2.size()", ORE_InvalidArguments);
+        }
+
         FOREACHC(itjoint,_vecjoints) {
             int dof = (*itjoint)->GetDOFIndex();
+            if ( (dof + (*itjoint)->GetDOF()) > q1.size() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("Index ouf of bound in KinBody::SubtractDOFValues", ORE_InvalidArguments);
+            }
             for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                 if( (*itjoint)->IsCircular(i) ) {
-                    q1.at(dof+i) = utils::NormalizeCircularAngle(q1.at(dof+i)-q2.at(dof+i),(*itjoint)->_vcircularlowerlimit.at(i), (*itjoint)->_vcircularupperlimit.at(i));
+                    q1[dof+i] = utils::NormalizeCircularAngle(q1[dof+i]-q2[dof+i],(*itjoint)->_vcircularlowerlimit.at(i), (*itjoint)->_vcircularupperlimit.at(i));
                 }
                 else {
-                    q1.at(dof+i) -= q2.at(dof+i);
+                    q1[dof+i] -= q2[dof+i];
                 }
             }
         }
     }
     else {
+        if ( dofindices.size() > q1.size() || q1.size() != q2.size() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()", ORE_InvalidArguments);
+        }
+
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
             if( pjoint->IsCircular(dofindices[i]-pjoint->GetDOFIndex()) ) {
                 int iaxis = dofindices[i]-pjoint->GetDOFIndex();
-                q1.at(i) = utils::NormalizeCircularAngle(q1.at(i)-q2.at(i), pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
+                q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
             }
             else {
-                q1.at(i) -= q2.at(i);
+                q1[i] -= q2[i];
             }
         }
     }
@@ -4148,6 +4159,12 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
+#ifdef AABB_CACHING
+    FOREACH(itplink, GetLinks()) {
+        (*itplink)->_ResetAABB();
+    }
+#endif
+
     // notify any callbacks of the changes
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;
@@ -4357,6 +4374,9 @@ public:
         ~TransformsSaver() {
             for(size_t i = 0; i < _pbody->_veclinks.size(); ++i) {
                 boost::static_pointer_cast<Link>(_pbody->_veclinks[i])->_info._t = vcurtrans.at(i);
+#ifdef AABB_CACHING
+                _pbody->_veclinks[i]->_ResetAABB();
+#endif
             }
             for(size_t i = 0; i < _pbody->_vecjoints.size(); ++i) {
                 for(int j = 0; j < _pbody->_vecjoints[i]->GetDOF(); ++j) {
@@ -4379,6 +4399,9 @@ private:
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
+#ifdef AABB_CACHING
+            _veclinks[i]->_ResetAABB();
+#endif
         }
         _nUpdateStampId++; // because transforms were modified
         for(size_t i = 0; i < _veclinks.size(); ++i) {
@@ -4553,6 +4576,14 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
         __hashkinematics.resize(0);
     }
+
+#ifdef AABB_CACHING
+    if( parameters & Prop_LinkTransforms ) {
+        FOREACH(itlink, GetLinks()) {
+            (*itlink)->_ResetAABB();
+        }
+    }
+#endif
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
     uint32_t index = 0;

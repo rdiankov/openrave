@@ -170,7 +170,7 @@ public:
     /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules. <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
-    /// \param shutdownthread 
+    /// \param shutdownthread
     virtual void StopSimulation(int shutdownthread=1) = 0;
 
     /// \brief Return true if inner simulation loop is executing. <b>[multi-thread safe]</b>
@@ -274,7 +274,7 @@ public:
 
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot. 
+        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot.
      */
     virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
@@ -441,6 +441,14 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout=0) const = 0;
 
+    /// \brief Retrieve published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBody(const std::string& name, KinBody::BodyState& bodystate, uint64_t timeout=0) = 0;
+
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
@@ -448,6 +456,22 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve joint values of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBodyJointValues returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve link's first transform of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBodiesLinkTransform0FromPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0) = 0;
 
     /// \brief Updates the published bodies that viewers and other programs listening in on the environment see.
     ///
@@ -640,7 +664,7 @@ public:
     inline int GetId() const {
         return __nUniqueId;
     }
-    
+
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;

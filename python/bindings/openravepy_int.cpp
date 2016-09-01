@@ -164,7 +164,7 @@ public:
                     }
                 }
             }
-                
+
             ViewerInfoPtr pinfo(new ViewerInfo());
             pinfo->_penv = penv;
             pinfo->_viewername = strviewer;
@@ -294,7 +294,7 @@ protected:
                     else {
                         ++itinfo;
                     }
-                    
+
                     if( !!pinfo->_pviewer ) {
                         if( listviewers.size() == 0 ) {
                             bShowViewer = pinfo->_bShowViewer;
@@ -307,7 +307,7 @@ protected:
             FOREACH(itaddviewer, listtempviewers) {
                 (*itaddviewer)->GetEnv()->AddViewer(*itaddviewer);
             }
-            
+
             ViewerBasePtr puseviewer;
             FOREACH(itviewer, listviewers) {
                 // double check if viewer is added to env
@@ -358,7 +358,7 @@ protected:
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
     std::list<ViewerInfoPtr> _listviewerinfos;
-    
+
     bool _bShutdown; ///< if true, shutdown everything
     bool _bInMain; ///< if true, viewer thread is running a main function
 };
@@ -532,7 +532,7 @@ public:
         _penv->Reset();
     }
     void Destroy() {
-        GetViewerManager()->RemoveViewersOfEnvironment(_penv);        
+        GetViewerManager()->RemoveViewersOfEnvironment(_penv);
         _penv->Destroy();
     }
 
@@ -1595,6 +1595,28 @@ public:
         _penv->UpdatePublishedBodies();
     }
 
+    object GetPublishedBody(const string &name, uint64_t timeout = 0)
+    {
+        KinBody::BodyState bodystate;
+        _penv->GetPublishedBody(name, bodystate, timeout);
+
+        boost::python::dict ostate;
+        ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
+        boost::python::list olinktransforms;
+        FOREACH(ittransform, bodystate.vectrans) {
+            olinktransforms.append(ReturnTransform(*ittransform));
+        }
+        ostate["linktransforms"] = olinktransforms;
+        ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+        ostate["name"] = ConvertStringToUnicode(bodystate.strname);
+        ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
+        ostate["updatestamp"] = bodystate.updatestamp;
+        ostate["environmentid"] = bodystate.environmentid;
+        ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
+        ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
+        return ostate;
+    }
+
     object GetPublishedBodies(uint64_t timeout=0)
     {
         std::vector<KinBody::BodyState> vbodystates;
@@ -1618,6 +1640,25 @@ public:
             ostates.append(ostate);
         }
         return ostates;
+    }
+
+    object GetPublishedBodyJointValues(const string &name, uint64_t timeout=0)
+    {
+        std::vector<dReal> jointValues;
+        _penv->GetPublishedBodyJointValues(name, jointValues, timeout);
+        return toPyArray(jointValues);
+    }
+
+    object GetPublishedBodiesLinkTransform0FromPrefix(const string &prefix, uint64_t timeout=0) {
+        std::vector< std::pair<std::string, Transform> > nameTransfPairs;
+        _penv->GetPublishedBodiesLinkTransform0FromPrefix(prefix, nameTransfPairs, timeout);
+
+        boost::python::dict ostate;
+        FOREACH(itpair, nameTransfPairs) {
+            ostate[itpair->first] = ReturnTransform(itpair->second);
+        }
+
+        return ostate;
     }
 
     object Triangulate(PyKinBodyPtr pbody)
@@ -1663,7 +1704,7 @@ public:
     object GetUnit() const{
         std::pair<std::string, dReal> unit = _penv->GetUnit();
         return boost::python::make_tuple(unit.first, unit.second);
-        
+
     }
 
     bool __eq__(PyEnvironmentBasePtr p) {
@@ -1816,7 +1857,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedBody, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodiesLinkTransform0FromPrefix_overloads, GetPublishedBodiesLinkTransform0FromPrefix, 1, 2)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -2088,7 +2132,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
                     .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                     .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
+                    .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBody)))
                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(args("timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodies)))
+                    .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
+                    .def("GetPublishedBodiesLinkTransform0FromPrefix",&PyEnvironmentBase::GetPublishedBodiesLinkTransform0FromPrefix, GetPublishedBodiesLinkTransform0FromPrefix_overloads(args("prefix", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodiesLinkTransform0FromPrefix)))
                     .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"), DOXY_FN(EnvironmentBase,Triangulate))
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))

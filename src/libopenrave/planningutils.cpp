@@ -219,13 +219,17 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
             }
         }
         else {
+            if (parameters->_vConfigUpperLimit.size() < newdof.size() || parameters->_vConfigLowerLimit.size() < newdof.size()) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("parameters->_vConfig size < newdof.size()", ORE_InvalidState);
+            }
+
             for(size_t i = 0; i < newdof.size(); ++i) {
                 newdof[i] = curdof[i]+*itperturbation;
-                if( newdof[i] > parameters->_vConfigUpperLimit.at(i) ) {
-                    newdof[i] = parameters->_vConfigUpperLimit.at(i);
+                if( newdof[i] > parameters->_vConfigUpperLimit[i] ) {
+                    newdof[i] = parameters->_vConfigUpperLimit[i];
                 }
-                else if( newdof[i] < parameters->_vConfigLowerLimit.at(i) ) {
-                    newdof[i] = parameters->_vConfigLowerLimit.at(i);
+                else if( newdof[i] < parameters->_vConfigLowerLimit[i] ) {
+                    newdof[i] = parameters->_vConfigLowerLimit[i];
                 }
             }
         }
@@ -310,13 +314,17 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 }
             }
             else {
+                if (parameters->_vConfigUpperLimit.size() < deltadof.size() || parameters->_vConfigLowerLimit.size() < deltadof.size()) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("parameters->_vConfig size < deltadof.size()", ORE_InvalidState);
+                }
+
                 for(size_t j = 0; j < deltadof.size(); ++j) {
                     newdof[j] = curdof[j] + deltadof2[j];
-                    if( newdof[j] > parameters->_vConfigUpperLimit.at(j) ) {
-                        newdof[j] = parameters->_vConfigUpperLimit.at(j);
+                    if( newdof[j] > parameters->_vConfigUpperLimit[j] ) {
+                        newdof[j] = parameters->_vConfigUpperLimit[j];
                     }
-                    else if( newdof[j] < parameters->_vConfigLowerLimit.at(j) ) {
-                        newdof[j] = parameters->_vConfigLowerLimit.at(j);
+                    else if( newdof[j] < parameters->_vConfigLowerLimit[j] ) {
+                        newdof[j] = parameters->_vConfigLowerLimit[j];
                     }
                 }
             }
@@ -354,13 +362,17 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
                 }
             }
             else {
+                if (parameters->_vConfigUpperLimit.size() < deltadof.size() || parameters->_vConfigLowerLimit.size() < deltadof.size()) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("parameters->_vConfig size < deltadof.size()", ORE_InvalidState);
+                }
+
                 for(size_t j = 0; j < deltadof.size(); ++j) {
                     newdof[j] = curdof[j] + deltadof[j];
-                    if( newdof[j] > parameters->_vConfigUpperLimit.at(j) ) {
-                        newdof[j] = parameters->_vConfigUpperLimit.at(j);
+                    if( newdof[j] > parameters->_vConfigUpperLimit[j] ) {
+                        newdof[j] = parameters->_vConfigUpperLimit[j];
                     }
-                    else if( newdof[j] < parameters->_vConfigLowerLimit.at(j) ) {
-                        newdof[j] = parameters->_vConfigLowerLimit.at(j);
+                    else if( newdof[j] < parameters->_vConfigLowerLimit[j] ) {
+                        newdof[j] = parameters->_vConfigLowerLimit[j];
                     }
                 }
             }
@@ -2295,8 +2307,11 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     params->_diffstatefn(dQ,q0);
     _vtempveldelta = dq1;
     if( _vtempveldelta.size() == q1.size() ) {
+        if ( _vtempveldelta.size() > dq0.size() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("_vtempveldelta.size() > dq0.size()", ORE_InvalidState);
+        }
         for(size_t i = 0; i < _vtempveldelta.size(); ++i) {
-            _vtempveldelta.at(i) -= dq0.at(i);
+            _vtempveldelta[i] -= dq0[i];
         }
     }
 
@@ -3052,14 +3067,14 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
     std::vector<int> vfreeindices((istream_iterator<int>(ssout)), istream_iterator<int>());
     if( (int)vfreeindices.size() != pmanip->GetIkSolver()->GetNumFreeParameters() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("free parameters from iksolver do not match", ORE_Assert);
-    }   
+    }
 
     // have to convert to roobt dof
     for(size_t i = 0; i < vfreeindices.size(); ++i) {
         vfreeindices[i] = pmanip->GetArmIndices().at(vfreeindices[i]); // have to convert to robot dof!
     }
     _probot->GetDOFWeights(_vfreeweights, vfreeindices);
-    
+
     // the halton sequence centers around 0.5, so make it center around vfreestart
     for(std::vector<dReal>::iterator it = _vfreestart.begin(); it != _vfreestart.end(); ++it) {
         *it -= 0.5;
@@ -3111,7 +3126,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         advance(itsample,isampleindex);
 
         SampleInfo& sampleinfo = *itsample;
-        
+
         int numRedundantSamplesForEEChecking = 0;
         if( (int)_pmanip->GetArmIndices().size() > sampleinfo._ikparam.GetDOF() ) {
             numRedundantSamplesForEEChecking = 40;
@@ -3244,14 +3259,14 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                         for(int jfree = 0; jfree < numfree; ++jfree) {
                             dist += _vfreeweights[jfree]*RaveFabs(sampleinfo._vfreesamples[isample*numfree+jfree] - 0.5);
                         }
-                        
+
                         sampleinfo._vcachedists[isample].first = isample;
                         sampleinfo._vcachedists[isample].second = dist;
                     }
                     std::sort(sampleinfo._vcachedists.begin(), sampleinfo._vcachedists.end(), ComparePriorityPair);
 #endif
                 }
-                
+
 #if 1
                 if( sampleinfo._vcachedists.size() > 0 ) {
                     int isample = sampleinfo._vcachedists.back().first;

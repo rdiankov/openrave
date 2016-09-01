@@ -1026,11 +1026,16 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         return;
     }
 
+    if (_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()", ORE_InvalidArguments);
+    }
+
     // go through all active joints
     size_t index = 0;
     for(; index < _vActiveDOFIndices.size(); ++index) {
+        // We already did range check above
         JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
-        q1.at(index) = pjoint->SubtractValue(q1.at(index),q2.at(index),_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+        q1[index] = pjoint->SubtractValue(q1[index],q2[index],_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
     }
 
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {
