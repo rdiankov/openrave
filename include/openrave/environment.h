@@ -441,6 +441,14 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout=0) const = 0;
 
+    /// \brief Retrieve published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBody(const std::string& name, KinBody::BodyState& bodystate, uint64_t timeout=0) = 0;
+
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
@@ -452,7 +460,7 @@ public:
     /// \brief Retrieve joint values of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
-    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBodyJointValues returns.
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0) = 0;

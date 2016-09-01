@@ -1595,6 +1595,28 @@ public:
         _penv->UpdatePublishedBodies();
     }
 
+    object GetPublishedBody(const string &name, uint64_t timeout = 0)
+    {
+        KinBody::BodyState bodystate;
+        _penv->GetPublishedBody(name, bodystate, timeout);
+
+        boost::python::dict ostate;
+        ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
+        boost::python::list olinktransforms;
+        FOREACH(ittransform, bodystate.vectrans) {
+            olinktransforms.append(ReturnTransform(*ittransform));
+        }
+        ostate["linktransforms"] = olinktransforms;
+        ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+        ostate["name"] = ConvertStringToUnicode(bodystate.strname);
+        ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
+        ostate["updatestamp"] = bodystate.updatestamp;
+        ostate["environmentid"] = bodystate.environmentid;
+        ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
+        ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
+        return ostate;
+    }
+
     object GetPublishedBodies(uint64_t timeout=0)
     {
         std::vector<KinBody::BodyState> vbodystates;
@@ -1835,6 +1857,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedBody, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodiesLinkTransform0FromPrefix_overloads, GetPublishedBodiesLinkTransform0FromPrefix, 1, 2)
@@ -2109,6 +2132,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
                     .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                     .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
+                    .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBody)))
                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(args("timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodies)))
                     .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
                     .def("GetPublishedBodiesLinkTransform0FromPrefix",&PyEnvironmentBase::GetPublishedBodiesLinkTransform0FromPrefix, GetPublishedBodiesLinkTransform0FromPrefix_overloads(args("prefix", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodiesLinkTransform0FromPrefix)))

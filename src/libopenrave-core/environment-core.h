@@ -1819,6 +1819,31 @@ public:
         return RaveGetDebugLevel();
     }
 
+    virtual void GetPublishedBody(const std::string &name, KinBody::BodyState& bodystate, uint64_t timeout=0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            for ( size_t x = 0; x < _vPublishedBodies.size(); ++x) {
+                if ( _vPublishedBodies[x].strname == name) {
+                    bodystate = _vPublishedBodies[x];
+                    return;
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            for ( size_t x = 0; x < _vPublishedBodies.size(); ++x) {
+                if ( _vPublishedBodies[x].strname == name) {
+                    bodystate = _vPublishedBodies[x];
+                    return;
+                }
+            }
+        }
+    }
+
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout)
     {
         if( timeout == 0 ) {
