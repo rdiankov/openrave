@@ -1864,7 +1864,6 @@ public:
                 else {
                     pjoint->_info._name = str(boost::format("dummy%d")%pjoint->jointindex);
                 }
-                pjoint->_info.sid = pdomjoint->getSid();
 
                 if( pjoint->_info._bIsActive ) {
                     pkinbody->_vecjoints.push_back(pjoint);
@@ -2671,7 +2670,6 @@ public:
                                     geominfo._vGeomData = vextents;
                                     geominfo._t = tlocalgeom;
                                     geominfo.sid = domgeom->getId();
-                                    geominfo.name = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2687,7 +2685,6 @@ public:
                                     geominfo._vGeomData.x = fradius;
                                     geominfo._t = tlocalgeom;
                                     geominfo.sid = domgeom->getId();
-                                    geominfo.name = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2708,7 +2705,6 @@ public:
                                     geominfo._vGeomData = vGeomData;
                                     geominfo._t = tlocalgeom;
                                     geominfo.sid = domgeom->getId();
-                                    geominfo.name = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2724,7 +2720,6 @@ public:
                                     geominfo._vGeomData = vextents;
                                     geominfo._t = tlocalgeom;
                                     geominfo.sid = domgeom->getId();
-                                    geominfo.name = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2738,7 +2733,6 @@ public:
                                     geominfo._vGeomData2 = vextents;
                                     geominfo._t = tlocalgeom;
                                     geominfo.sid = domgeom->getId();
-                                    geominfo.name = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2752,7 +2746,6 @@ public:
                                     geominfo._vGeomData3 = vextents;
                                     geominfo._t = tlocalgeom;
                                     geominfo.sid = domgeom->getId();
-                                    geominfo.name = domgeom->getId();
                                     bfoundgeom = true;
                                 }
                             }
@@ -2890,7 +2883,6 @@ public:
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::ManipulatorInfo manipinfo;
-                    manipinfo.sid = _ConvertToOpenRAVEName(name);
                     manipinfo._name = _ConvertToOpenRAVEName(name);
                     daeElementRef pframe_origin = tec->getChild("frame_origin");
                     daeElementRef pframe_tip = tec->getChild("frame_tip");
@@ -3021,7 +3013,6 @@ public:
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(pextra->getTechnique_array());
                 if( !!tec ) {
                     RobotBase::AttachedSensorPtr pattachedsensor(new RobotBase::AttachedSensor(probot));
-                    pattachedsensor->_info.sid = _ConvertToOpenRAVEName(name);
                     pattachedsensor->_info._name = _ConvertToOpenRAVEName(name);
                     daeElementRef pframe_origin = tec->getChild("frame_origin");
                     if( !!pframe_origin ) {

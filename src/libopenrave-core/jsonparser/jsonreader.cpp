@@ -49,6 +49,9 @@ namespace OpenRAVE {
 
 		rapidjson::Value::ValueIterator ResolveObject(std::string uri, std::map<std::string, rapidjson::Value::ValueIterator>& objectMap){
 			// use # instead of @
+
+			std::string scheme = GetScheme(uri);
+			uri = uri.substr(uri.find(scheme) + scheme.size());
 		    if(uri[0] == '#'){
 		        // in the same file
 		        // remove the first @ char
@@ -57,9 +60,16 @@ namespace OpenRAVE {
 		    }
 		    else{
 		    	int splitPos = uri.find('#');
-		    	std::string otherFilename = RaveFindLocalFile( uri.substr(0, splitPos-1)  );
-		    	std::string data = ReadFile(otherFilename);
-
+		    	std:;string data = "";
+		    	if(scheme == "file:"){
+		    		std::string otherFilename = RaveFindLocalFile( uri.substr(0, splitPos-1)  );
+			    	data = ReadFile(otherFilename);
+		    	}
+		    	else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end() ){
+		    		// TODO deal with openrave: or mujin:
+		    		
+		    	}
+		    	
 		    	if(data.size() == 0){
 		    		return rapidjson::Value::ValueIterator();
 		    	}
@@ -92,7 +102,7 @@ namespace OpenRAVE {
 				else if(uri[0] == '#'){
 					uri = filename + uri;
 				}
-				
+
 				if(body->RemoveMember("uri")){
 					rapidjson::Value key;
 					rapidjson::Value value(uri, d.GetAllocator());
@@ -154,7 +164,7 @@ namespace OpenRAVE {
 		}
 
 		std::string GetScheme(std::string uriorigin){
-			return uriorigin.substr(0, uriorigin.find(':'));
+			return uriorigin.substr(0, uriorigin.find(':')+1);
 		}
 
 		bool InitFromFile(const string& filename, const AttributesList& atts){
