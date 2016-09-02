@@ -465,6 +465,9 @@ public:
         }
         else if( _IsJSONFile(filename) ) {
             // TODO(jsonserialization)
+            if( RaveParseJSONFile(shared_from_this(), filename, atts) ){
+                return true;
+            }
         }
         else if( _IsXFile(filename) ) {
             RobotBasePtr robot;
@@ -2637,6 +2640,15 @@ protected:
             }
         }
         return false;
+    }
+
+    static bool _IsJSONURI(const std::string& uri)
+    {
+        string scheme, authority, path, query, fragment;
+        string s1, s3, s6, s8;
+        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
+        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
+        return bmatch && scheme.size() > 0 && _IsJSONFile(path); //scheme.size() > 0;
     }
 
     static bool _IsJSONFile(const std::string& filename)
