@@ -618,6 +618,15 @@ public:
                 }
             }
         }
+        if( pbody->GetID() == "" || !_CheckUniqueID(KinBodyConstPtr(pbody), false) ) {
+            for (int i = 0; i < 3; ++i) {
+                pbody->SetID(utils::GetRandomAlphaNumericString(16));
+                if (_CheckUniqueID(KinBodyConstPtr(pbody), false)) {
+                    break;
+                }
+            }
+            _CheckUniqueID(KinBodyConstPtr(pbody), true);
+        }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
             _vecbodies.push_back(pbody);
@@ -652,6 +661,15 @@ public:
                     break;
                 }
             }
+        }
+        if( robot->GetID() == "" || !_CheckUniqueID(KinBodyConstPtr(robot), false) ) {
+            for (int i = 0; i < 3; ++i) {
+                robot->SetID(utils::GetRandomAlphaNumericString(16));
+                if (_CheckUniqueID(KinBodyConstPtr(robot), false)) {
+                    break;
+                }
+            }
+            _CheckUniqueID(KinBodyConstPtr(robot), true);
         }
         {
             boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
@@ -2307,6 +2325,18 @@ protected:
         }
     }
 
+    virtual bool _CheckUniqueID(KinBodyConstPtr pbody, bool bDoThrow=false) const
+    {
+        FOREACHC(itbody,_vecbodies) {
+            if(( *itbody != pbody) &&( (*itbody)->GetID() == pbody->GetID()) ) {
+                if( bDoThrow ) {
+                    throw openrave_exception(str(boost::format(_("env=%d, body %s does not have unique id %s"))%GetId()%pbody->GetName()%pbody->GetID()));
+                }
+                return false;
+            }
+        }
+        return true;
+    }
     virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
     {
         FOREACHC(itbody,_vecbodies) {
