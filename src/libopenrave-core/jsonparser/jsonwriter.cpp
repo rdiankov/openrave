@@ -92,8 +92,7 @@ protected:
                 }
                 std::string id = (*it)->GetID();
                 if (id == "") {
-                    RAVELOG_WARN("kinbody has no id, need to generate a random one");
-                    id = utils::GetRandomAlphaNumericString(16);
+                    RAVELOG_WARN_FORMAT("kinbody %s has no id", (*it)->GetName());
                 }
                 RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "id", id);
 
@@ -126,13 +125,15 @@ protected:
                     size_t fragmentindex = uri.find_last_of('#');
                     if (fragmentindex != std::string::npos && fragmentindex != uri.size() - 1) {
                         uri = uri.substr(fragmentindex);
-                        RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", uri);
-                        RAVE_SERIALIZEJSON_ADDMEMBER(objectValue, _doc.GetAllocator(), "id", uri.substr(1));
                     } else {
-                        RAVELOG_WARN("id is not found in uri, need to generate a random one");
+                        RAVELOG_WARN_FORMAT("id is not found in uri %s for kinbody %s, need to generate a random one", uri%(*it)->GetName());
+                        uri = "#" + utils::GetRandomAlphaNumericString(16);                        
                     }
+                    RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", uri);
+                    RAVE_SERIALIZEJSON_ADDMEMBER(objectValue, _doc.GetAllocator(), "id", uri.substr(1));
                     objectsValue.PushBack(objectValue, _doc.GetAllocator());
                 } else {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", uri);
                     RAVELOG_WARN("external reference not yet supported");
                 }
 

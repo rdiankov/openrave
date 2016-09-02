@@ -571,10 +571,10 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         setusedchildsids.clear();
         FOREACH(itgeominfo,info.geometries) {
             // check name duplicates
-            // if( setusedchildnames.find((*itgeominfo)->name) != setusedchildnames.end() ) {
-            //     throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s is declared more than once"), (*itgeominfo)->name, ORE_InvalidArguments);
-            // }
-            // setusedchildnames.insert((*itgeominfo)->name);
+            if( setusedchildnames.find((*itgeominfo)->name) != setusedchildnames.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s is declared more than once"), (*itgeominfo)->name, ORE_InvalidArguments);
+            }
+            setusedchildnames.insert((*itgeominfo)->name);
 
             // check sid duplicates
             utils::InitializeUniqueAlphaNumericString((*itgeominfo)->sid, setusedchildsids);
