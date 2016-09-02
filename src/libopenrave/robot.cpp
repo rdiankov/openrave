@@ -1030,12 +1030,22 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         throw OPENRAVE_EXCEPTION_FORMAT0("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()", ORE_InvalidArguments);
     }
 
-    // go through all active joints
     size_t index = 0;
-    for(; index < _vActiveDOFIndices.size(); ++index) {
-        // We already did range check above
-        JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
-        q1[index] = pjoint->SubtractValue(q1[index],q2[index],_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+    if (_bAreAllJoints1DOFAndNonCircular) {
+        for (; index < _vActiveDOFIndices.size(); ++index) {
+            q1[index] -= q2[index];
+        }
+    } else {
+        // go through all active joints
+        for(; index < _vActiveDOFIndices.size(); ++index) {
+            // We already did range check above
+            JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
+            q1[index] = pjoint->SubtractValue(q1[index],q2[index],_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+        }
+    }
+
+    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+        return;
     }
 
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {

@@ -920,6 +920,9 @@ public:
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
         virtual int GetDOF() const;
 
+        /// \brief Return true if any of the joint axes has an identification at some of its lower and upper limits.
+        virtual bool IsCircular() const;
+
         /// \brief Return true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -2188,6 +2191,7 @@ protected:
     ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
     bool _bMakeJoinedLinksAdjacent;
+    bool _bAreAllJoints1DOFAndNonCircular; ///< SubtractActiveDOFValues can be faster if this is true
 private:
     mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;
