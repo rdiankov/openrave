@@ -358,7 +358,9 @@ static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
 /// is first used, and destroyed when the program quits or RaveDestroy is called.
 class RaveGlobal : private boost::noncopyable, public boost::enable_shared_from_this<RaveGlobal>, public UserData
 {
-    typedef std::map<std::string, CreateXMLReaderFn, CaseInsensitiveCompare> READERSMAP;
+    typedef std::map<std::string, CreateXMLReaderFn, CaseInsensitiveCompare> XMLREADERSMAP;
+    typedef XMLREADERSMAP READERSMAP;
+    typedef std::map<std::string, CreateJSONReaderFn, CaseInsensitiveCompare> JSONREADERSMAP;
 
     RaveGlobal()
     {
@@ -502,7 +504,8 @@ public:
         mapenvironments.clear();
         _mapenvironments.clear();
         _pdefaultsampler.reset();
-        _mapreaders.clear();
+        _mapxmlreaders.clear();
+        _mapjsonreaders.clear();
 
         // process the callbacks
         std::list<boost::function<void()> > listDestroyCallbacks;
@@ -633,15 +636,15 @@ public:
         XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
         {
             boost::mutex::scoped_lock lock(global->_mutexinternal);
-            _oldfn = global->_mapreaders[_type][_xmltag];
-            global->_mapreaders[_type][_xmltag] = fn;
+            _oldfn = global->_mapxmlreaders[_type][_xmltag];
+            global->_mapxmlreaders[_type][_xmltag] = fn;
         }
         virtual ~XMLReaderFunctionData()
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
                 boost::mutex::scoped_lock lock(global->_mutexinternal);
-                global->_mapreaders[_type][_xmltag] = _oldfn;
+                global->_mapxmlreaders[_type][_xmltag] = _oldfn;
             }
         }
 protected:
@@ -658,10 +661,49 @@ protected:
 
     const BaseXMLReaderPtr CallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
     {
-        READERSMAP::iterator it = _mapreaders[type].find(xmltag);
-        if( it == _mapreaders[type].end() ) {
+        XMLREADERSMAP::iterator it = _mapxmlreaders[type].find(xmltag);
+        if( it == _mapxmlreaders[type].end() ) {
             //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
             return BaseXMLReaderPtr();
+        }
+        return it->second(pinterface,atts);
+    }
+
+    class JSONReaderFunctionData : public UserData
+    {
+public:
+        JSONReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateJSONReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
+        {
+            boost::mutex::scoped_lock lock(global->_mutexinternal);
+            _oldfn = global->_mapjsonreaders[_type][_xmltag];
+            global->_mapjsonreaders[_type][_xmltag] = fn;
+        }
+        virtual ~JSONReaderFunctionData()
+        {
+            boost::shared_ptr<RaveGlobal> global = _global.lock();
+            if( !!global ) {
+                boost::mutex::scoped_lock lock(global->_mutexinternal);
+                global->_mapjsonreaders[_type][_xmltag] = _oldfn;
+            }
+        }
+protected:
+        CreateJSONReaderFn _oldfn;
+        boost::weak_ptr<RaveGlobal> _global;
+        InterfaceType _type;
+        std::string _xmltag;
+    };
+
+    UserDataPtr RegisterJSONReader(InterfaceType type, const std::string& xmltag, const CreateJSONReaderFn& fn)
+    {
+        return UserDataPtr(new JSONReaderFunctionData(type,xmltag,fn,shared_from_this()));
+    }
+
+    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
+    {
+        JSONREADERSMAP::iterator it = _mapjsonreaders[type].find(xmltag);
+        if( it == _mapjsonreaders[type].end() ) {
+            //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%xmltag),ORE_InvalidArguments);
+            return BaseJSONReaderPtr();
         }
         return it->second(pinterface,atts);
     }
@@ -1042,7 +1084,8 @@ private:
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
     boost::mutex _mutexinternal;
-    std::map<InterfaceType, READERSMAP > _mapreaders;
+    std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
+    std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
     std::map<IkParameterizationType,string> _mapikparameterization, _mapikparameterizationlower;
     std::map<int, EnvironmentBase*> _mapenvironments;
@@ -1312,6 +1355,16 @@ UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag,
 BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
 {
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
+}
+
+UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& xmltag, const CreateJSONReaderFn& fn)
+{
+    return RaveGlobal::instance()->RegisterJSONReader(type,xmltag,fn);
+}
+
+BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
+{
+    return RaveGlobal::instance()->CallJSONReader(type,xmltag,pinterface,atts);
 }
 
 std::string RaveFindLocalFile(const std::string& filename, const std::string& curdir)
