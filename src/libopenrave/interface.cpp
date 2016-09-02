@@ -136,7 +136,7 @@ void InterfaceBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::
         rapidjson::Value readableInterface;
         RAVE_SERIALIZEJSON_CLEAR_OBJECT(readableInterface);
 
-        RAVE_SERIALIZEJSON_ADDMEMBER(readableInterface, allocator, "name", it->first);
+        RAVE_SERIALIZEJSON_ADDMEMBER(readableInterface, allocator, "xmltag", it->first);
         it->second->SerializeJSON(readableInterface, allocator, options);
         readableInterfaces.PushBack(readableInterface, allocator);
     }
@@ -146,7 +146,25 @@ void InterfaceBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::
 
 void InterfaceBase::DeserializeJSON(const rapidjson::Value &value)
 {
-    // TOOD(jsonserialization)
+    RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
+
+    if (value.HasMember("readableInterfaces")) {
+        for (size_t i = 0; i < value["readableInterfaces"].Size(); ++i) {
+            RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value["readableInterfaces"][i]);
+
+            std::string xmltag;
+            RAVE_DESERIALIZEJSON_REQUIRED(value["readableInterfaces"][i], "xmltag", xmltag);
+
+            AttributesList atts;
+            BaseJSONReaderPtr preader = RaveCallJSONReader(GetInterfaceType(), xmltag, shared_from_this(), atts);
+            if( !!preader ) {
+                preader->DeserializeJSON(value["readableInterfaces"][i]);
+                if( !!preader->GetReadable() ) {
+                    SetReadableInterface(xmltag, preader->GetReadable());
+                }
+            }
+        }
+    }
 }
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
