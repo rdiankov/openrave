@@ -92,8 +92,8 @@ protected:
                 }
                 std::string id = (*it)->GetID();
                 if (id == "") {
+                    RAVELOG_WARN("kinbody has no id, need to generate a random one");
                     id = utils::GetRandomAlphaNumericString(16);
-                    // RAVELOG_WARN("kinbody has no id, need to generate a random one");
                 }
                 RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "id", id);
 

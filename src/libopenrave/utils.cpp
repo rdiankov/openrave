@@ -91,6 +91,17 @@ std::string GetRandomHexString(size_t length) {
     return s;
 }
 
+void InitializeUniqueAlphaNumericString(std::string &s, const std::set<std::string> &usedstrings) {
+    if (s == "") {
+        for (int retry = 0; retry < 3; ++retry) {
+            s = GetRandomAlphaNumericString(16);
+            if (usedstrings.find(s) == usedstrings.end()) {
+                break;
+            }
+        }
+    }
+}
+
 bool PairStringLengthCompare(const std::pair<std::string, std::string>&p0, const std::pair<std::string, std::string>&p1)
 {
     return p0.first.size() > p1.first.size();

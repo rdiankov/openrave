@@ -55,6 +55,7 @@ KinBody::LinkInfo::~LinkInfo()
 
 KinBody::LinkInfo& KinBody::LinkInfo::operator=(const KinBody::LinkInfo& other)
 {
+    sid = other.sid;
     geometries = other.geometries;
     extraGeometries = other.extraGeometries;
     name = other.name;

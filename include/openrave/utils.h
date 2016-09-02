@@ -276,6 +276,8 @@ OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
 OPENRAVE_API std::string GetRandomAlphaNumericString(size_t length);
 /// \brief return a string of specified length consists of randomly selected hex characters
 OPENRAVE_API std::string GetRandomHexString(size_t length);
+/// \brief when s is empty, initialize it with a unique alpha numeric string
+OPENRAVE_API void InitializeUniqueAlphaNumericString(std::string &s, const std::set<std::string> &usedstrings);
 
 template<class T>
 inline T ClampOnRange(T value, T min, T max)

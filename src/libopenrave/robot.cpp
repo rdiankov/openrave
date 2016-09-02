@@ -430,12 +430,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         // check sid duplicates
         if ((*itmanipinfo)->sid == "") {
             ManipulatorInfo info = **itmanipinfo;
-            for (int retry = 0; retry < 3; ++retry) {
-                info.sid = utils::GetRandomAlphaNumericString(16);
-                if (setusedsids.find(info.sid) == setusedsids.end()) {
-                    break;
-                }
-            }
+            utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
             newmanip.reset(new Manipulator(shared_robot(),info));
         } else {
             newmanip.reset(new Manipulator(shared_robot(),**itmanipinfo));
@@ -466,12 +461,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         // check sid duplicates
         if ((*itattachedsensorinfo)->sid == "") {
             AttachedSensorInfo info = **itattachedsensorinfo;
-            for (int retry = 0; retry < 3; ++retry) {
-                info.sid = utils::GetRandomAlphaNumericString(16);
-                if (setusedsids.find(info.sid) == setusedsids.end()) {
-                    break;
-                }
-            }
+            utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
             newattachedsensor.reset(new AttachedSensor(shared_robot(),info));
         } else {
             newattachedsensor.reset(new AttachedSensor(shared_robot(),**itattachedsensorinfo));
@@ -2713,7 +2703,12 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
 
     InterfaceBase::DeserializeJSON(value);
 
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "id", _id);
+    std::string id;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "id", id);
+    SetID(id);
+
+    std::string uri;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "uri", uri);
 
     std::string name;
     RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
@@ -2775,7 +2770,7 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
         }
     }
 
-    if (!Init(linkinfos, jointinfos, manipulatorinfos, attachedsensorinfos, ""))
+    if (!Init(linkinfos, jointinfos, manipulatorinfos, attachedsensorinfos, uri))
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, cannot initialize robot", ORE_InvalidArguments);
     }

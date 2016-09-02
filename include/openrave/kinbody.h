@@ -154,6 +154,7 @@ public:
         Prop_RobotGrabbed = 0x01000000, ///< [robot only] if grabbed bodies changed
 
         Prop_BodyRemoved = 0x10000000, ///< if a KinBody is removed from the environment
+        Prop_ID = 0x20000000, ///< id of the KinBody is changed
     };
 
     /// \brief used for specifying the type of limit checking and the messages associated with it
@@ -1619,6 +1620,9 @@ private:
     virtual const std::string& GetID() const {
         return _id;
     }
+
+    /// \brief Setthe id of the body
+    virtual void SetID(const std::string &newid);
 
     /// \brief Unique name of the robot.
     virtual const std::string& GetName() const {

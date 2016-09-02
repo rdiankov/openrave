@@ -546,6 +546,8 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     _veclinks.reserve(linkinfos.size());
     set<std::string> setusednames;
     set<std::string> setusedsids;
+    set<std::string> setusedchildnames;
+    set<std::string> setusedchildsids;
     FOREACHC(itlinkinfo, linkinfos) {
         LinkInfoConstPtr rawinfo = *itlinkinfo;
         if( setusednames.find(rawinfo->name) != setusednames.end() ) {
@@ -557,21 +559,30 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         LinkInfo& info = plink->_info;
 
         // check sid duplicates
-        if (info.sid == "") {
-            for (int retry = 0; retry < 3; ++retry) {
-                info.sid = utils::GetRandomAlphaNumericString(16);
-                if (setusedsids.find(info.sid) == setusedsids.end()) {
-                    break;
-                }
-            }
-        }
+        utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
         if( setusedsids.find(info.sid) != setusedsids.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("link %s sid %s is not unique"), info.name%info.sid, ORE_InvalidArguments);
         }
         setusedsids.insert(info.sid);
 
         plink->_index = static_cast<int>(_veclinks.size());
-        FOREACHC(itgeominfo,info.geometries) {
+
+        setusedchildnames.clear();
+        setusedchildsids.clear();
+        FOREACH(itgeominfo,info.geometries) {
+            // check name duplicates
+            // if( setusedchildnames.find((*itgeominfo)->name) != setusedchildnames.end() ) {
+            //     throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s is declared more than once"), (*itgeominfo)->name, ORE_InvalidArguments);
+            // }
+            // setusedchildnames.insert((*itgeominfo)->name);
+
+            // check sid duplicates
+            utils::InitializeUniqueAlphaNumericString((*itgeominfo)->sid, setusedchildsids);
+            if( setusedchildsids.find((*itgeominfo)->sid) != setusedchildsids.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s sid %s is not unique"), (*itgeominfo)->name%(*itgeominfo)->sid, ORE_InvalidArguments);
+            }
+            setusedchildsids.insert((*itgeominfo)->sid);
+
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
             if( geom->_info.mesh.vertices.size() == 0 ) { // try to avoid recomputing
                 geom->_info.InitCollisionMesh();
@@ -598,14 +609,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         JointInfo& info = pjoint->_info;
 
         // check sid duplicates
-        if (info.sid == "") {
-            for (int retry = 0; retry < 3; ++retry) {
-                info.sid = utils::GetRandomAlphaNumericString(16);
-                if (setusedsids.find(info.sid) == setusedsids.end()) {
-                    break;
-                }
-            }
-        }
+        utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
         if( setusedsids.find(info.sid) != setusedsids.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s sid %s is not unique"), info.name%info.sid, ORE_InvalidArguments);
         }
@@ -645,6 +649,15 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     }
     __struri = uri;
     return true;
+}
+
+void KinBody::SetID(const std::string &newid)
+{
+    OPENRAVE_ASSERT_OP(newid.size(), >, 0);
+    if( _id != newid ) {
+        _id = newid;
+        _PostprocessChangedParameters(Prop_ID);
+    }
 }
 
 void KinBody::SetName(const std::string& newname)
@@ -4767,7 +4780,12 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
 
     InterfaceBase::DeserializeJSON(value);
 
-    RAVE_DESERIALIZEJSON_REQUIRED(value, "id", _id);
+    std::string id;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "id", id);
+    SetID(id);
+
+    std::string uri;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "uri", uri);
 
     std::string name;
     RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
@@ -4801,7 +4819,7 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
         }
     }
 
-    if (!Init(linkinfos, jointinfos, ""))
+    if (!Init(linkinfos, jointinfos, uri))
     {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, cannot initialize kinbody", ORE_InvalidArguments);
     }
