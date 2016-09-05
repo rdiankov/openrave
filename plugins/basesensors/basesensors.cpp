@@ -30,6 +30,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_laser3d",BaseFlashLidar3DSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateXMLReader));
         s_listRegisteredReaders->push_back(RaveRegisterXMLReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateXMLReader));
+
+        s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateJSONReader));
+        s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateJSONReader));
     }
     switch(type) {
     case PT_Sensor:

@@ -164,11 +164,36 @@ protected:
         boost::shared_ptr<BaseCameraSensor> _psensor;
         stringstream ss;
     };
+class BaseCameraJSONReader : public BaseJSONReader
+    {
+public:
+        BaseCameraJSONReader() : BaseJSONReader() {
+        }
+        virtual ~BaseCameraJSONReader() {
+        }
+
+        virtual XMLReadablePtr GetReadable() {
+            return _pgeometry;
+        }
+
+        virtual void DeserializeJSON(const rapidjson::Value &value) {
+            _pgeometry.reset(new SensorBase::CameraGeomData());
+            _pgeometry->DeserializeJSON(value);
+        }
+protected:
+        boost::shared_ptr<SensorBase::SensorGeometry> _pgeometry;
+    };
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
+
+    static BaseJSONReaderPtr CreateJSONReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    {
+        return BaseJSONReaderPtr(new BaseCameraJSONReader());
+    }
+
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";

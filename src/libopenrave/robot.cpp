@@ -92,12 +92,13 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &valu
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
 
     // TODO(jsonserialization)
-    if (_sensorname == "base_pinhole_camera" || _sensorname == "BaseCamera") {
-        SensorBase::CameraGeomDataPtr camerageomdata(new SensorBase::CameraGeomData());
-        camerageomdata->DeserializeJSON(value);
-        _sensorgeometry = camerageomdata;
-    } else {
-        RAVELOG_WARN_FORMAT("sensor type \"%s\" not supported for json deserialization yet", _sensorname);
+
+    BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
+    if( !!preader ) {
+        preader->DeserializeJSON(value);
+        if( !!preader->GetReadable() ) {
+            _sensorgeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+        }
     }
 }
 

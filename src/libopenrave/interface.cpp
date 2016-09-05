@@ -155,8 +155,7 @@ void InterfaceBase::DeserializeJSON(const rapidjson::Value &value)
             std::string xmltag;
             RAVE_DESERIALIZEJSON_REQUIRED(value["readableInterfaces"][i], "xmltag", xmltag);
 
-            AttributesList atts;
-            BaseJSONReaderPtr preader = RaveCallJSONReader(GetInterfaceType(), xmltag, shared_from_this(), atts);
+            BaseJSONReaderPtr preader = RaveCallJSONReader(GetInterfaceType(), xmltag, shared_from_this(), AttributesList());
             if( !!preader ) {
                 preader->DeserializeJSON(value["readableInterfaces"][i]);
                 if( !!preader->GetReadable() ) {
