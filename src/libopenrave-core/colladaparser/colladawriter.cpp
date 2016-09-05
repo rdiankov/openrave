@@ -404,15 +404,15 @@ private:
         if( IsWrite("visual") ) {
             _visualScenesLib = daeSafeCast<domLibrary_visual_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_VISUAL_SCENES));
             _visualScenesLib->setId("vscenes");
+        }
 
-            if( IsWrite("geometry") ) {
-                _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
-                _geometriesLib->setId("geometries");
-                _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
-                _effectsLib->setId("effects");
-                _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
-                _materialsLib->setId("materials");
-            }
+        if( IsWrite("geometry") ) {
+            _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
+            _geometriesLib->setId("geometries");
+            _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
+            _effectsLib->setId("effects");
+            _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
+            _materialsLib->setId("materials");
         }
 
         _nodesLib = daeSafeCast<domLibrary_nodes>(_dom->add(COLLADA_ELEMENT_LIBRARY_NODES));
