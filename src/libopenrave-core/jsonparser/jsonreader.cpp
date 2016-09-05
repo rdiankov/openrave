@@ -175,7 +175,7 @@ namespace OpenRAVE {
 			return _InitPostOpen(atts);
 		}
 
-		bool Exact(){
+		bool Extract(){
 			std::string data = ReadFile(_filename);
 			if(data.size() == 0)
 			{
@@ -209,7 +209,7 @@ namespace OpenRAVE {
 		if(fullFilename.size() == 0 || ! reader.InitFromFile(fullFilename, atts)){
 			return false;
 		}
-		return reader.Exact();
+		return reader.Extract();
 	}
 
 	// bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts){
