@@ -187,12 +187,14 @@ public:
     std::vector<dReal> switchpointsList;
     std::vector<ParabolicCurve> curves;
 
-    // constraintCheckedVect contains the status of whether each ndSegment (a segment between two
-    // consecutive switch points) has been checked. Note that constraintCheckedVect.size() ==
-    // switchpointsList.size() - 1.
-    mutable std::vector<bool> constraintCheckedVect;
+    /// \brief constraintChecked indicates if this ParabolicCurvesND has been checked with all the
+    /// constraints. This is necessary because checkings of the same straight line segment with two
+    /// different interpolations, one with linear interpolation and the other with parabolic
+    /// interpolation, can disagree due to different discretization used with the each particular
+    /// interpolation (c.f. DynamicCollisionConstraints::Check). The idea is to use
+    /// constraintChecked as a flag to tell parabolicsmoother to trust the feasibility guaranteed
+    /// from linearsmoother.
     mutable bool constraintChecked;
-    // mutable int modified;
 
 }; // end class ParabolicCurversND
 

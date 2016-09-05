@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2016 Puttichai Lertkultanon <L.Puttichai@gmail.com>
+// Copyright (C) 2016 Puttichai Lertkultanon & Rosen Diankov
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -48,10 +48,8 @@ struct CurvesNDSection {
 /// checking the midpoints. Each consecutive pair of checking points will be equally spaced (in
 /// time).
 int CheckParabolicCurvesNDFeasibility(const ParabolicCurvesND& curvesnd, FeasibilityCheckerBase* feas, DistanceCheckerBase* dist, int maxiter, __attribute__((unused)) int options) {
-    for (std::vector<bool>::iterator itCheck = curvesnd.constraintCheckedVect.begin(); itCheck != curvesnd.constraintCheckedVect.end(); ++itCheck) {
-        *itCheck = true;
-    }
-
+    curvesnd.constraintChecked = true;
+    
     // Check boundary configurations
     int ret0 = feas->ConfigFeasible(curvesnd.x0Vect, curvesnd.v0Vect);
     if (ret0 != 0) {
@@ -232,9 +230,7 @@ ParabolicCurvesNDFeasibilityChecker::ParabolicCurvesNDFeasibilityChecker(Feasibi
 
 int ParabolicCurvesNDFeasibilityChecker::Check(const ParabolicCurvesND &curvesnd, int options) {
     if ((options & constraintmask) == constraintmask) {
-        for (std::vector<bool>::iterator itCheck = curvesnd.constraintCheckedVect.begin(); itCheck != curvesnd.constraintCheckedVect.end(); ++itCheck) {
-            *itCheck = true;
-        }
+        curvesnd.constraintChecked = true;
     }
     if (distance) {
         return CheckParabolicCurvesNDFeasibility(curvesnd, feas, distance, maxiter, options);
