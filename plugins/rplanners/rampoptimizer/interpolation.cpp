@@ -756,7 +756,12 @@ bool Interpolate1DFixedDuration(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm
     if (FuzzyZero(B, epsilon)) {
         // In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
         // reached from (x0, v0) using one ramp.
-        curveOut.SetSegment(x0, x1, v0, v1, duration);
+
+        dReal a = 2*(x1 - x0 - v0*duration)/(duration*duration); // giving priority to displacement and consistency between acceleration and displacement
+        Ramp ramp0(v0, a, duration, x0);
+        std::vector<Ramp> ramps(1);
+        ramps[0] = ramp0;
+        curveOut.Initialize(ramps);
         ParabolicCheckReturn ret = CheckParabolicCurve(curveOut, -inf, inf, vm, am, x0, x1, v0, v1);
         if (ret == PCR_Normal) {
             return true;
