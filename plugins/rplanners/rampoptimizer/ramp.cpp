@@ -467,9 +467,13 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     dReal tSqr = t*t;
     dReal a = -(_v0*tSqr + t*(_x0 - _x1) + 2*(_v0 - _v1))/(t*(0.5*tSqr + 2));
     Ramp ramp(_v0, a, t, _x0);
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
+    // RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
+    // RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
     {
+        /*
+          We force the boundary conditions to be exact since thess values should already have been
+          checked with constraints.
+         */
         ramp.x1 = _x1;
         ramp.v1 = _v1;
     }

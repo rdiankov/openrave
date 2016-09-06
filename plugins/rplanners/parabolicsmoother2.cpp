@@ -35,9 +35,6 @@ public:
 
             // Only set constraintCheckedVect to all true if all necessary constraints are checked
             if ((options & constraintmask) == constraintmask) {
-                FOREACH(itCheck, curvesnd.constraintCheckedVect) {
-                    *itCheck = true;
-                }
                 curvesnd.constraintChecked = true;
             }
             OPENRAVE_ASSERT_OP(tol.size(), ==, curvesnd.ndof);
@@ -113,7 +110,7 @@ public:
                         // Check elapsed time consistency
                         if (RaveFabs(newElapsedTime) > RampOptimizer::epsilon) {
                             // The new elapsed time is consistent with the data
-                            RAVELOG_VERBOSE_FORMAT("changing the segment elapsed time: %.15e -> %.15e; diff = %.15e", elapsedTime%newElapsedTime%(newElapsedTime - elapsedTime));
+                            // RAVELOG_VERBOSE_FORMAT("changing the segment elapsed time: %.15e -> %.15e; diff = %.15e", elapsedTime%newElapsedTime%(newElapsedTime - elapsedTime));
                             elapsedTime = newElapsedTime;
                             if (elapsedTime > g_fEpsilon) {
                                 dReal iElapsedTime = 1/elapsedTime;
@@ -227,6 +224,7 @@ public:
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
 
         _fileIndexMod = 10000; // for trajectory saving
+        _dumplevel = Level_Debug;
 #ifdef SMOOTHER_TIMING_DEBUG
         // Statistics
         _nCallsCheckManip = 0;
@@ -354,7 +352,6 @@ public:
                     if (isParabolic) {
                         if (!_parameters->verifyinitialpath) {
                             _cacheCurvesND.SetSegment(_cachex0Vect, _cachex1Vect, _cachev0Vect, _cachev1Vect, _cachetVect.at(0));
-                            _cacheCurvesND.constraintCheckedVect[0] = true;
                             _cacheCurvesND.constraintChecked = true;
                         }
                     }
@@ -438,13 +435,10 @@ public:
             // _DumpParabolicPath(parabolicpath, Level_Verbose);
         }
 
-        // If the path is perfectly modeled, then ok. Otherwise, we have to verify it
+        // Do not check constraints again if we already did
         if (!_parameters->verifyinitialpath && bPathIsPerfectlyModeled) {
             // Disable verification
             FOREACH(itcurvesnd, parabolicpath.curvesndVect) {
-                FOREACH(itcheck, itcurvesnd->constraintCheckedVect) {
-                    *itcheck = true;
-                }
                 itcurvesnd->constraintChecked = true;
             }
         }
@@ -597,7 +591,7 @@ public:
 #ifdef SMOOTHER_TIMING_DEBUG
                                     _tEndInterpolation = utils::GetMicroTime();
                                     _totalTimeInterpolation += 0.000001f*(float)(_tEndInterpolation - _tStartInterpolation);
-#endif        
+#endif
                                     if (result) {
                                         // Stretching is successful.
 
@@ -654,7 +648,7 @@ public:
                                     }
                                     ss << "]; v1 = [";
                                     separator = "";
-                                    FOREACHC(itvalue, curvesndTrimmed.v0Vect) {
+                                    FOREACHC(itvalue, curvesndTrimmed.v1Vect) {
                                         ss << separator << *itvalue;
                                         separator = ", ";
                                     }
@@ -826,6 +820,7 @@ public:
         }
         catch (const std::exception& ex) {
             RAVELOG_WARN_FORMAT("env = %d: CheckPathAllConstraints threw an exception: %s", GetEnv()->GetId()%ex.what());
+            return RampOptimizer::CheckReturn(0xffff);
         }
 
         // Configurations (between (q0, dq0) and (q1, dq1)) may have been modified inside
@@ -886,7 +881,6 @@ public:
                             return RampOptimizer::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
                         }
                     }
-                    _cacheCurvesNDSeg.constraintCheckedVect[0] = true;
                     _cacheCurvesNDSeg.constraintChecked = true;
 
                     curvesndVectOut.push_back(_cacheCurvesNDSeg);
@@ -911,7 +905,6 @@ public:
         if (curvesndVectOut.size() == 0) {
             // No previous modification.
             _cacheCurvesNDSeg.SetSegment(q0, q1, dq0, dq1, timeElapsed);
-            _cacheCurvesNDSeg.constraintCheckedVect[0] = true;
             _cacheCurvesNDSeg.constraintChecked = true;
             curvesndVectOut.push_back(_cacheCurvesNDSeg);
         }
@@ -958,7 +951,7 @@ protected:
         if (_zeroVelPoints.capacity() < vWaypoints.size()) {
             _zeroVelPoints.reserve(vWaypoints.size());
         }
-        
+
         size_t ndof = _parameters->GetDOF();
         parabolicpath.Clear();
 
@@ -971,6 +964,7 @@ protected:
         }
         else if (vWaypoints.size() > 1) {
             int options = CFO_CheckTimeBasedConstraints;
+            // options = options|CFO_FillCheckedConfiguration;
             if (!_parameters->verifyinitialpath) {
                 options = options & (~CFO_CheckEnvCollisions) & (~CFO_CheckSelfCollisions);
                 RAVELOG_VERBOSE_FORMAT("env = %d: Initial path verification is disabled using options = 0x%x", GetEnv()->GetId()%options);
@@ -1000,10 +994,12 @@ protected:
                     xmid = vNewWaypoints[iwaypoint];
                     if (_parameters->SetStateValues(xmid) != 0) {
                         RAVELOG_WARN_FORMAT("env = %d: Could not set values at waypoint %d/%d", GetEnv()->GetId()%iwaypoint%(vNewWaypoints.size()));
+                        return false;
                     }
 
                     if (!_parameters->_neighstatefn(xmid, xmidDelta, NSO_OnlyHardConstraints)) {
                         RAVELOG_WARN_FORMAT("env = %d: Failed to get the neightbor of waypoint %d/%d", GetEnv()->GetId()%iwaypoint%(vNewWaypoints.size()));
+                        return false;
                     }
 
                     // Check if xmid (computed from _neightstatefn) is far from what we expect
@@ -1024,6 +1020,7 @@ protected:
                             RAVELOG_WARN_FORMAT("env = %d: Too many consecutive expansions, waypoint %d/%d is bad", GetEnv()->GetId()%iwaypoint%(vNewWaypoints.size()));
                             return false;
                         }
+                        continue;
                     }
                     if (nConsecutiveExpansions > 0) {
                         nConsecutiveExpansions--;
@@ -1048,9 +1045,6 @@ protected:
                 }
 
                 if (!_parameters->verifyinitialpath && !vForceInitialChecking.at(iwaypoint)) {
-                    FOREACH(itCheck, curvesnd.constraintCheckedVect) {
-                        *itCheck = true;
-                    }
                     curvesnd.constraintChecked = true;
                 }
 
@@ -1157,8 +1151,8 @@ protected:
             fileindex = RaveRandomInt();
         }
         fileindex = fileindex%_fileIndexMod;
-        _DumpParabolicPath(parabolicpath, Level_Verbose, fileindex, 0); // save the trajectory before shortcutting (option = 0)
-        
+        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 0); // save the trajectory before shortcutting (option = 0)
+
         std::vector<RampOptimizer::ParabolicCurvesND> &curvesndVect = parabolicpath.curvesndVect; // just for convenience
 
         // Caching stuff
@@ -1182,7 +1176,7 @@ protected:
         int numSlowDowns = 0; // counts the number of times we slow down the trajectory (via vel/accel scaling) because of manip constraints
         dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // magic constant
         dReal fStartTimeVelMult = 1.0; // this is the multiplier for scaling down the *initial* velocity in each shortcut iteration. If manip constraints
-                                       // or dynamic constarints are used, then this will track the most recent successful multiplier. The idea is that if the
+                                       // or dynamic constraints are used, then this will track the most recent successful multiplier. The idea is that if the
                                        // recent successful multiplier is some low value, say 0.1, it is unlikely that using the full vel/accel limits, i.e.,
                                        // multiplier = 1.0, will succeed the next time
         dReal fStartTimeAccelMult = 1.0;
@@ -1199,14 +1193,14 @@ protected:
         dReal specialShortcutWeight = 0.1;      // if the sampled number is less than this weight, we sample t0 and t1 around a zerovelpoint
                                                 // (instead of randomly sample in the whole range) to try to shortcut and remove it.
         dReal specialShortcutCutoffTime = 0.75;
-        
+
         int iters = 0;
         for (iters = 0; iters < numIters; ++iters) {
             if (tTotal < minTimeStep) {
                 RAVELOG_VERBOSE_FORMAT("env = %d; tTotal = %.15e is too short to continue shortcutting", GetEnv()->GetId()%tTotal);
                 break;
             }
-            
+
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
             dReal t0, t1;
@@ -1238,7 +1232,7 @@ protected:
                 // The sampled t0 and t1 are too close to be useful.
                 continue;
             }
-            
+
             // Locate the ParabolicCurvesNDs where t0 and t1 fall in
             int i0 = std::upper_bound(parabolicpath.mainSwitchpoints.begin(), parabolicpath.mainSwitchpoints.end() - 1, t0) - parabolicpath.mainSwitchpoints.begin() - 1;
             int i1 = std::upper_bound(parabolicpath.mainSwitchpoints.begin(), parabolicpath.mainSwitchpoints.end() - 1, t1) - parabolicpath.mainSwitchpoints.begin() - 1;
@@ -1368,7 +1362,7 @@ protected:
 
                         if (retcheck.retcode != 0) {
                             // shortcut does not pass DynamicsCollisionConstraint::Check
-                            RAVELOG_DEBUG_FORMAT("env = %d: shortcut iter = %d/%d, shortcut does not pass Check2, retcode = 0x%x.\n", GetEnv()->GetId()%iters%numIters%retcheck.retcode);
+                            RAVELOG_DEBUG_FORMAT("env = %d: shortcut iter = %d/%d, iSlowDown = %d, shortcut does not pass Check2, retcode = 0x%x.\n", GetEnv()->GetId()%iters%numIters%iSlowDown%retcheck.retcode);
                             break;
                         }
 
@@ -1397,6 +1391,7 @@ protected:
 
                         // The interpolated segment passes constraints checking. Now see if it is modified such that it ends with different velocity.
                         if (retcheck.bDifferentVelocity && shortcutCurvesNDVect1.size() > 0) {
+                            RAVELOG_VERBOSE_FORMAT("env = %d: new shortcut is *not* aligned with boundary values after running Check2. Start fixing the last segment.", GetEnv()->GetId());
                             // Modification inside Check2 results in the shortcut trajectory not ending at the desired velocity v1.
                             dReal allowedStretchTime = (t1 - t0) - (shortcutCurvesND1.duration + minTimeStep); // the time that this segment is allowed to stretch out such that it is still a useful shortcut
 #ifdef SMOOTHER_TIMING_DEBUG
@@ -1421,11 +1416,20 @@ protected:
                             }
 
                             retcheck = _feasibilitychecker.Check2(shortcutCurvesND2, 0xffff, shortcutCurvesNDVect2);
-                            if (retcheck.retcode == 0) {
-                                // The final segment is now good
+                            if (retcheck.retcode != 0) {
+                                RAVELOG_VERBOSE_FORMAT("env = %d: final segment fixing failed. retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
+                            }
+                            else if (retcheck.bDifferentVelocity) {
+                                RAVELOG_WARN_FORMAT("env = %d: after final segment fixing, shortcutCurvesND2 does not end at the desired velocity", GetEnv()->GetId());
+                                retcheck.retcode = CFO_FinalValuesNotReached;
+                                break;
+                            }
+                            else {
+                                // Otherwise, this segment is good.
                                 RAVELOG_VERBOSE_FORMAT("env = %d: final velocity correction for the last segment successful", GetEnv()->GetId());
                                 shortcutCurvesNDVect1.pop_back();
-                                shortcutCurvesNDVect1.push_back(shortcutCurvesND2);
+                                // Append the checked curve to the end
+                                shortcutCurvesNDVect1.insert(shortcutCurvesNDVect1.end(), shortcutCurvesNDVect2.begin(), shortcutCurvesNDVect2.end());
                                 // Another consistency checking
                                 if (IS_DEBUGLEVEL(Level_Verbose)) {
                                     for (size_t icurvesnd = 0; icurvesnd + 1 < shortcutCurvesNDVect1.size(); ++icurvesnd) {
@@ -1437,25 +1441,9 @@ protected:
                                 }
                                 break;
                             }
-                            else if (retcheck.retcode == CFO_CheckTimeBasedConstraints) {
-                                RAVELOG_WARN_FORMAT("env = %d: final velocity correction failed, retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
-                                // Stop trying for now. Change retcheck.retcode so that it continues straight to the next iterations instead of trying to slow down
-                                retcheck.retcode = CFO_FinalValuesNotReached;
-                                break;
-                            }
-                            else if (retcheck.bDifferentVelocity) {
-                                RAVELOG_WARN_FORMAT("env = %d: after Check2, shortcutCurvesND2 does not end at the desired velocity", GetEnv()->GetId());
-                                retcheck.retcode = CFO_FinalValuesNotReached;
-                                break;
-                            }
-                            else {
-                                // The re-interpolated final segment failed from other constraints. Stop trying and just continue to the next iteration.
-                                break;
-                            }
-
                         }
                         else {
-                            RAVELOG_VERBOSE("env = %d: new shortcut is aligned with boundary values after running Check2");
+                            RAVELOG_VERBOSE_FORMAT("env = %d: new shortcut is aligned with boundary values after running Check2", GetEnv()->GetId());
                             break;
                         }
                     } while (0);
@@ -1655,7 +1643,7 @@ protected:
         else if (nItersFromPrevSuccessful > nCutoffIters) {
             RAVELOG_DEBUG_FORMAT("Finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", iters%nCutoffIters%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         }
-        _DumpParabolicPath(parabolicpath, Level_Verbose, fileindex, 1);
+        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 1);
 
         return numShortcuts;
     }
@@ -1775,7 +1763,8 @@ protected:
     RampOptimizer::ParabolicCurvesND _cacheCurvesNDSeg;
 
     uint32_t _fileIndexMod; // maximum number of trajectory indices allowed
-    
+    DebugLevel _dumplevel;
+
 #ifdef SMOOTHER_TIMING_DEBUG
     // Statistics
     size_t _nCallsCheckManip;
