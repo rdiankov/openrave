@@ -108,12 +108,7 @@ class Ramp(object):
         self.x1 = Add(self.x0, self.d)
 
         
-    def SetInitialValue(newx0):
-        self.x0 = ConvertFloatToMPF(newx0)
-        self.x1 = Add(self.x0, self.d)
-        
-
-    def SetInitialValue(newx0):
+    def SetInitialValue(self, newx0):
         self.x0 = ConvertFloatToMPF(newx0)
         self.x1 = Add(self.x0, self.d)
         
@@ -167,19 +162,22 @@ class Ramp(object):
         
         if (FuzzyZero(self.a, epsilon)):
             if self.v0 > 0:
-                xmin = self.x0
-                xmax = self.EvalPos(self.duration)
+                xmin = self.EvalPos(ta)
+                xmax = self.EvalPos(tb)
             else:
-                xmin = self.EvalPos(self.duration)
-                xmax = self.x0
+                xmin = self.EvalPos(tb)
+                xmax = self.EvalPos(ta)
             return [xmin, xmax]
-        elif (self.a > 0):
-            xmin = self.x0
-            xmax = self.EvalPos(self.duration)
+
+        tempa = self.EvalPos(ta)
+        tempb = self.EvalPos(tb)
+        if (tempa < tempb):
+            xmin = tempa
+            xmax = tempb
         else:
-            xmin = self.EvalPos(self.duration)
-            xmax = self.x0            
-            
+            xmin = tempb
+            xmax = tempa
+        
         tDeflection = Neg(mp.fdiv(self.v0, self.a))
         if (tDeflection <= ta) or (tDeflection >= tb):
             return [xmin, xmax]
@@ -374,7 +372,7 @@ class ParabolicCurve(object):
             for ramp in curve.ramps:
                 self.ramps.append(deepcopy(ramp))
                 # Update displacement
-                self.ramps[-1].x0 = self.ramps[-2].x1
+                self.ramps[-1].SetInitialValue(self.ramps[-2].x1)
                 d = Add(d, self.ramps[-1].d)                
                 dur = Add(dur, self.ramps[-1].duration)
                 self.switchpointsList.append(dur)
@@ -486,7 +484,7 @@ class ParabolicCurve(object):
         self.x0 = x0
         newx0 = x0
         for ramp in self.ramps:
-            ramp.x0 = newx0
+            ramp.SetInitialValue(newx0)
             newx0 = Add(newx0, ramp.d)
         self.x1 = Add(self.x0, self.d)
 
@@ -833,7 +831,7 @@ class ParabolicCurvesND(object):
 
 
     def SetConstant(self, x0Vect_, t):
-        t = ConvertFloatArrayToMPF(t)
+        t = ConvertFloatToMPF(t)
         assert(t >= 0)
         x0Vect = ConvertFloatArrayToMPF(x0Vect_)
         

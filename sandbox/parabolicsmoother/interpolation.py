@@ -47,8 +47,11 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
             vMin = min(vMin, vmVect[i]/Abs(dVect[i]))
             aMin = min(aMin, amVect[i]/Abs(dVect[i]))
 
-    assert(vMin < inf)
-    assert(aMin < inf)
+    if (not (vMin < inf and aMin < inf)):
+        # dVect is zero.
+        curvesnd = ParabolicCurvesND()
+        curvesnd.SetConstant(x0Vect_, 0)
+        return curvesnd
 
     if delta == zero:
         sdProfile = Interpolate1D(zero, one, zero, zero, vMin, aMin) # parabolic ramp (velocity profile sd(t))

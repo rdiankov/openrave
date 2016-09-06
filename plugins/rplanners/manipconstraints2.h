@@ -478,7 +478,7 @@ public:
                 // the bound), the multiplier will be too large (too close to 1) to be useful.
                 reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
             }
-            RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+            // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
             return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
 
@@ -546,7 +546,7 @@ public:
             // the bound), the multiplier will be too large (too close to 1) to be useful.
             reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
         }
-        RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+        // RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
         return RampOptimizerInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }
 

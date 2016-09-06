@@ -57,6 +57,15 @@ public:
         if( !!_puniformsampler ) {
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         }
+
+#ifdef LINEAR_SMOOTHER_DEBUG
+        _logginguniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
+        if( !!_logginguniformsampler ) {
+            _logginguniformsampler->SetSeed(utils::GetMicroTime());
+        }
+        
+        _fileindex = _logginguniformsampler->SampleSequenceOneUInt32()%1000;
+#endif
         return !!_puniformsampler;
     }
 
@@ -81,14 +90,40 @@ public:
 
         // subsample trajectory and add to list
         list< std::pair< vector<dReal>, dReal> > listpath;
+
+#ifdef LINEAR_SMOOTHER_DEBUG
+        TrajectoryBasePtr ptraj0 = RaveCreateTrajectory(GetEnv(), "");
+        TrajectoryBasePtr ptraj1 = RaveCreateTrajectory(GetEnv(), "");
+        TrajectoryBasePtr ptraj2 = RaveCreateTrajectory(GetEnv(), "");
+        ptraj0->Init(parameters->_configurationspecification);
+        ptraj1->Init(parameters->_configurationspecification);
+        ptraj2->Init(parameters->_configurationspecification);
+        ptraj0->Clone(ptraj, 0);
+        _DumpTrajectory(ptraj, Level_Verbose, 0);
+#endif
+        
         _SubsampleTrajectory(ptraj,listpath);
 
-        _OptimizePath(listpath);
-
+#ifdef LINEAR_SMOOTHER_DEBUG
         ptraj->Init(parameters->_configurationspecification);
         FOREACH(it, listpath) {
             ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
         }
+        ptraj1->Clone(ptraj, 0);
+        _DumpTrajectory(ptraj, Level_Verbose, 1);
+#endif
+        
+        _OptimizePath(listpath);
+
+#ifdef LINEAR_SMOOTHER_DEBUG
+        ptraj->Init(parameters->_configurationspecification);
+        FOREACH(it, listpath) {
+            ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
+        }
+        ptraj2->Clone(ptraj, 0);        
+        _DumpTrajectory(ptraj, Level_Verbose, 2);
+#endif
+        
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         if( parameters->_sPostProcessingPlanner.size() == 0 ) {
             // no other planner so at least retime
@@ -216,7 +251,7 @@ protected:
         std::copy(vtrajdata.begin(),vtrajdata.begin()+parameters->GetDOF(),q0.begin());
         listpath.push_back(make_pair(q0,dReal(0)));
         qcur = q0;
-        
+
         for(size_t ipoint = 1; ipoint < ptraj->GetNumWaypoints(); ++ipoint) {
             std::copy(vtrajdata.begin()+(ipoint)*parameters->GetDOF(),vtrajdata.begin()+(ipoint+1)*parameters->GetDOF(),q1.begin());
             dq = q1;            
@@ -258,7 +293,7 @@ protected:
                     continue;
                 }
                 dReal dist = parameters->_distmetricfn(listpath.back().first,qcur);
-                listpath.push_back(make_pair(qcur, dist));
+                listpath.push_back(make_pair(qcur, dist));                
                 mult = 1;
             }
             // always add the last point
@@ -273,12 +308,48 @@ protected:
         listpath.push_back(make_pair(q0,dist));
     }
 
+    std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level, int option)
+    {
+        if( IS_DEBUGLEVEL(level) ) {
+            std::string filename = _DumpTrajectory(traj, option);
+            RavePrintfA(str(boost::format("env=%d, wrote linearshortcutadvanced trajectory to %s")%GetEnv()->GetId()%filename), level);
+            return filename;
+        }
+        return std::string();
+    }
+
+    std::string _DumpTrajectory(TrajectoryBasePtr traj, int option)
+    {
+        string filename;
+        if (option == 0) {
+            filename = str(boost::format("%s/linearshortcutadvanced%d.initial.xml")%RaveGetHomeDirectory()%(_fileindex));
+        }
+        else if (option == 1) {
+            filename = str(boost::format("%s/linearshortcutadvanced%d.beforeshortcut.xml")%RaveGetHomeDirectory()%(_fileindex));
+        }
+        else if (option == 2) {
+            filename = str(boost::format("%s/linearshortcutadvanced%d.aftershortcut.xml")%RaveGetHomeDirectory()%(_fileindex));
+        }
+        else {
+            filename = str(boost::format("%s/linearshortcutadvanced%d.traj.xml")%RaveGetHomeDirectory()%(_fileindex));
+        }
+        ofstream f(filename.c_str());
+        f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
+        traj->serialize(f);
+        return filename;
+    }
+
     TrajectoryTimingParametersPtr _parameters;
     SpaceSamplerBasePtr _puniformsampler;
+#ifdef LINEAR_SMOOTHER_DEBUG
+    SpaceSamplerBasePtr _logginguniformsampler;
+#endif
     RobotBasePtr _probot;
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
     std::vector<dReal> _vtempdists;
+
+    uint32_t _fileindex; // for trajectory saving
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {

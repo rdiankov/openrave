@@ -104,13 +104,11 @@ void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
         }
         return;
     }
-    else if (a > 0) {
-        bmin = EvalPos(ta);
-        bmax = EvalPos(tb);
-    }
-    else {
-        bmin = EvalPos(tb);
-        bmax = EvalPos(ta);
+
+    bmin = EvalPos(ta);
+    bmax = EvalPos(tb);
+    if (bmin > bmax) {
+        Swap(bmin, bmax);
     }
 
     dReal tDeflection = -v0/a;
@@ -469,16 +467,16 @@ void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dRea
     dReal tSqr = t*t;
     dReal a = -(_v0*tSqr + t*(_x0 - _x1) + 2*(_v0 - _v1))/(t*(0.5*tSqr + 2));
     Ramp ramp(_v0, a, t, _x0);
-
-    /*
-      Here we use 2*epsilon instead because unfortunately inputs are sometimes so screwed up. One of
-      the main reasons might be in general the time interval used in the calculation (variable t)
-      can be very small (something close to epsilon) while other values (displacements/ velocities/
-      etc.) are generally around 1e-3 to 1e2. Calculations which require multiplying a value with t
-      and adding/subtracting then with others can ruin the precision quickly.    
-    */
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, 2*epsilon));
-    RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, 2*epsilon));
+    // RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
+    // RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
+    {
+        /*
+          We force the boundary conditions to be exact since thess values should already have been
+          checked with constraints.
+         */
+        ramp.x1 = _x1;
+        ramp.v1 = _v1;
+    }
 
     std::vector<Ramp> _ramps(1);
     _ramps[0] = ramp;
@@ -634,8 +632,6 @@ ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
         }
     }
 
-    constraintCheckedVect.resize(switchpointsList.size() - 1);
-    fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
     constraintChecked = false;
 }
 
@@ -673,8 +669,6 @@ void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
                                      // the same as the first switch point from tempSwitchpointsList
         switchpointsList.reserve(switchpointsList.size() + tempSwitchpointsList.size());
         switchpointsList.insert(switchpointsList.end(), tempSwitchpointsList.begin(), tempSwitchpointsList.end());
-
-        constraintCheckedVect.insert(constraintCheckedVect.end(), curvesnd.constraintCheckedVect.begin(), curvesnd.constraintCheckedVect.end());
 
         if (constraintChecked) {
             constraintChecked = constraintChecked && curvesnd.constraintChecked;
@@ -738,10 +732,7 @@ void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
         }
     }
 
-    constraintCheckedVect.resize(switchpointsList.size() - 1);
-    fill(constraintCheckedVect.begin(), constraintCheckedVect.end(), false);
     constraintChecked = false;
-    // std::cout << "INITIALIZATION WITH DURATION = " << duration << std::endl;
     return;
 }
 
@@ -850,7 +841,6 @@ void ParabolicCurvesND::Reset() {
     v0Vect.clear();
     switchpointsList.clear();
     curves.clear();
-    constraintCheckedVect.clear();
     constraintChecked = false;
     return;
 }
@@ -912,10 +902,12 @@ void ParabolicCurvesND::Cut(dReal t, ParabolicCurvesND &remCurvesND) {
     if (t <= 0) {
         remCurvesND.Initialize(curves);
         SetZeroDuration(x0Vect, v0Vect);
+        remCurvesND.constraintChecked = constraintChecked;
         return;
     }
     else if (t >= duration) {
         remCurvesND.SetZeroDuration(x1Vect, v1Vect);
+        remCurvesND.constraintChecked = constraintChecked;
         return;
     }
 
@@ -928,17 +920,22 @@ void ParabolicCurvesND::Cut(dReal t, ParabolicCurvesND &remCurvesND) {
 
     Initialize(leftHalf);
     remCurvesND.Initialize(rightHalf);
+    remCurvesND.constraintChecked = constraintChecked;
     return;
 }
 
 void ParabolicCurvesND::TrimFront(dReal t) {
     BOOST_ASSERT(t >= -epsilon);
     BOOST_ASSERT(t <= duration + epsilon);
+    
     if (t <= 0) {
         return;
     }
-    else if (t >= duration) {
+
+    bool checked = constraintChecked;
+    if (t >= duration) {
         SetZeroDuration(x1Vect, v1Vect);
+        constraintChecked = checked;
         return;
     }
 
@@ -949,17 +946,22 @@ void ParabolicCurvesND::TrimFront(dReal t) {
     }
 
     Initialize(newCurves);
+    constraintChecked = checked;
     return;
 }
 
 void ParabolicCurvesND::TrimBack(dReal t) {
     BOOST_ASSERT(t >= -epsilon);
     BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        SetZeroDuration(x0Vect, v0Vect);
+
+    if (t >= duration) {
         return;
     }
-    else if (t >= duration) {
+
+    bool checked = constraintChecked;
+    if (t <= 0) {
+        SetZeroDuration(x0Vect, v0Vect);
+        constraintChecked = checked;
         return;
     }
 
@@ -970,6 +972,7 @@ void ParabolicCurvesND::TrimBack(dReal t) {
     }
 
     Initialize(newCurves);
+    constraintChecked = checked;
     return;
 }
 

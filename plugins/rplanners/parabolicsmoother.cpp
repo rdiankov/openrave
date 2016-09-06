@@ -219,11 +219,11 @@ public:
             }
             _manipconstraintchecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
         }
-
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        _dumplevel = Level_Verbose;
         return !!_uniformsampler;
     }
 
@@ -237,6 +237,7 @@ public:
         ncheckmanipconstraints = 0;
 #endif
         BOOST_ASSERT(!!_parameters && !!ptraj);
+        
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
         }
@@ -261,7 +262,7 @@ public:
             f << *_parameters;
             RAVELOG_VERBOSE_FORMAT("saved parabolic parameters to %s", filename);
         }
-        _DumpTrajectory(ptraj, Level_Verbose);
+        _DumpTrajectory(ptraj, _dumplevel);
 
         // save velocities
         std::vector<KinBody::KinBodyStateSaverPtr> vstatesavers;
@@ -474,7 +475,7 @@ public:
 #ifdef OPENRAVE_TIMING_DEBUGGING
             RAVELOG_VERBOSE_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
 #endif
-            
+
             ++_progress._iteration;
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return PS_Interrupted;
@@ -904,25 +905,25 @@ public:
                     }
                 }
 
-               // // have to make sure that the last ramp's ending velocity is equal to db
-               // bool bDifferentVelocity = false;
-               // for(size_t idof = 0; idof < curvel.size(); ++idof) {
-               //     if( RaveFabs(curvel[idof]-db[idof])+g_fEpsilon > ParabolicRamp::EpsilonV ) {
-               //         bDifferentVelocity = true;
-               //         break;
-               //     }
-               // }
-               // if( bDifferentVelocity ) {
-               //     // see if last ramp's time can be modified to accomodate the velocity
-               //     ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
-               //     outramp.SetPosVelTime(outramp.x0, outramp.dx0, b, db, deltatime);
-               //     outramp.constraintchecked = 1;
-               //     outramps.push_back(outramp);
-               //     curtime = _constraintreturn->_configurationtimes[itime];
-               //     curpos.swap(newpos);
-               //     curvel.swap(newvel);
+                // // have to make sure that the last ramp's ending velocity is equal to db
+                // bool bDifferentVelocity = false;
+                // for(size_t idof = 0; idof < curvel.size(); ++idof) {
+                //     if( RaveFabs(curvel[idof]-db[idof])+g_fEpsilon > ParabolicRamp::EpsilonV ) {
+                //         bDifferentVelocity = true;
+                //         break;
+                //     }
+                // }
+                // if( bDifferentVelocity ) {
+                //     // see if last ramp's time can be modified to accomodate the velocity
+                //     ParabolicRamp::ParabolicRampND& outramp = outramps.at(outramps.size()-1);
+                //     outramp.SetPosVelTime(outramp.x0, outramp.dx0, b, db, deltatime);
+                //     outramp.constraintchecked = 1;
+                //     outramps.push_back(outramp);
+                //     curtime = _constraintreturn->_configurationtimes[itime];
+                //     curpos.swap(newpos);
+                //     curvel.swap(newvel);
 
-               // }
+                // }
             }
         }
 
@@ -983,7 +984,7 @@ protected:
         if( _zerovelpoints.capacity() < vpath.size() ) {
             _zerovelpoints.reserve(vpath.size());
         }
-        
+
         size_t numdof = _parameters->GetDOF();
         ramps.resize(0);
         if(vpath.size()==1) {
@@ -1100,7 +1101,7 @@ protected:
             size_t iswitch = 0;
             for(iswitch = 0; iswitch < vswitchtimes.size(); ++iswitch) {
                 ramp.Evaluate(vswitchtimes.at(iswitch), x1);
-                ramp.Derivative(vswitchtimes.at(iswitch), dx1);          
+                ramp.Derivative(vswitchtimes.at(iswitch), dx1);
                 retseg = SegmentFeasible2(x0, x1, dx0, dx1, vswitchtimes.at(iswitch) - fprevtime, options, outramps);
 //                        if( retseg.retcode == CFO_StateSettingError ) {
 //                            // there's a bug with the checker function. given that this ramp has been validated to be ok and we're just checking time based constraints, can pass it
@@ -1167,20 +1168,16 @@ protected:
         nchecks = 0;
         checktime = 0;
 #endif
-        
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            uint32_t fileindex;
-            if( !!_logginguniformsampler ) {
-                fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
-            }
-            else {
-                fileindex = RaveRandomInt();
-            }
-            fileindex = fileindex%10000; // to be used throughout the shortcutting process
-            _DumpDynamicPath(dynamicpath, Level_Verbose, fileindex, 0); // save the dynamicpath before shortcutting
+        uint32_t fileindex;
+        if( !!_logginguniformsampler ) {
+            fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
         }
+        else {
+            fileindex = RaveRandomInt();
+        }
+        fileindex = fileindex%10000; // to be used throughout the shortcutting process
+        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 0); // save the dynamicpath before shortcutting
 
-        
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         int shortcuts = 0;
         vector<dReal> rampStartTime(ramps.size());
@@ -1407,7 +1404,7 @@ protected:
                         checktime += 0.000001f*(float)(tcheckend - tcheckstart);
                         nchecks += 1;
 #endif
-                        
+
                         iIterProgress += 0x10;
                         if( retcheck.retcode != 0) {
                             break;
@@ -1450,7 +1447,7 @@ protected:
                             interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                             ninterpolations += 1;
 #endif
-                            
+
                             if( !res ) {
                                 RAVELOG_WARN("failed to SolveMinTime for different vel ramp\n");
                                 retcheck.retcode = CFO_FinalValuesNotReached;
@@ -1473,7 +1470,7 @@ protected:
                             checktime += 0.000001f*(float)(tcheckend - tcheckstart);
                             nchecks += 1;
 #endif
-                            
+
                             if (retcheck.retcode != 0) {
                                 RAVELOG_WARN_FORMAT("env=%d, the final SolveMinTime generated infeasible segment retcode = 0x%x", GetEnv()->GetId()%retcheck.retcode);
                                 // TODO probably never get here, so remove if not necessary
@@ -1719,7 +1716,7 @@ protected:
             RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
-        _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
+        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 1);
 
         if (IS_DEBUGLEVEL(Level_Verbose)) {
             std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
@@ -1745,18 +1742,16 @@ protected:
         nchecks = 0;
         checktime = 0;
 #endif
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            uint32_t fileindex;
-            if( !!_logginguniformsampler ) {
-                fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
-            }
-            else {
-                fileindex = RaveRandomInt();
-            }
-            fileindex = fileindex%10000; // to be used throughout the shortcutting process
-            _DumpDynamicPath(dynamicpath, Level_Verbose, fileindex, 0); // save the dynamicpath before shortcutting
+        uint32_t fileindex;
+        if( !!_logginguniformsampler ) {
+            fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
         }
-        
+        else {
+            fileindex = RaveRandomInt();
+        }
+        fileindex = fileindex%10000; // to be used throughout the shortcutting process
+        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 0); // save the dynamicpath before shortcutting
+
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;
         int shortcuts = 0;
         vector<dReal> rampStartTime(ramps.size());
@@ -1850,7 +1845,7 @@ protected:
                 t1 = 0;
                 t2 = endTime;
             }
-            else if ((_zerovelpoints.size() > 0 && rng->Rand() <= specialShortcutWeight) || (numIters - iters <= (int)_zerovelpoints.size())){
+            else if ((_zerovelpoints.size() > 0 && rng->Rand() <= specialShortcutWeight) || (numIters - iters <= (int)_zerovelpoints.size())) {
                 // We consider shortcutting around a zerovelpoint (the time instant of an original waypoint which has not been shortcut) when either
                 // - there are some zerovelpoints left and the random number falls below the threshold, or
                 // - there are some zerovelpoints left but there are not so many shortcut iterations left.
@@ -1965,7 +1960,7 @@ protected:
                     interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                     ninterpolations += 1;
 #endif
-                    
+
                     iIterProgress += 0x1000;
                     if (!res) {
                         // The initial interpolation failed. Continue to the next iteration.
@@ -2012,7 +2007,7 @@ protected:
                         checktime += 0.000001f*(float)(tcheckend - tcheckstart);
                         nchecks += 1;
 #endif
-                        
+
                         iIterProgress += 0x10;
 
                         if (retcheck.retcode != 0) {
@@ -2057,7 +2052,7 @@ protected:
                             interpolationtime += 0.000001f*(float)(tinterpend - tinterpstart);
                             ninterpolations += 1;
 #endif
-                            
+
                             if (!res) {
                                 RAVELOG_WARN_FORMAT("env = %d: failed to correct velocity discrepancy at the end of the segment", GetEnv()->GetId());
                                 retcheck.retcode = CFO_FinalValuesNotReached;
@@ -2080,7 +2075,7 @@ protected:
                             checktime += 0.000001f*(float)(tcheckend - tcheckstart);
                             nchecks += 1;
 #endif
-                            
+
                             if (retcheck.retcode == 0) {
                                 // The final segment is now good.
                                 RAVELOG_VERBOSE_FORMAT("env = %d: the final SolveMinTime generated feasible segment, inserting it to outramps", GetEnv()->GetId());
@@ -2224,7 +2219,7 @@ protected:
                 tloopend = utils::GetMicroTime();
                 slowdownlooptime += 0.000001f*(float)(tloopend - tloopstart);
 #endif
-                
+
                 if (!bsuccess) {
                     continue;
                 }
@@ -2383,7 +2378,6 @@ protected:
         }
 #ifdef OPENRAVE_TIMING_DEBUGGING
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
-        _DumpDynamicPath(dynamicpath, Level_Debug, fileindex, 1);
 
         // Record the progress if in Verbose level
         if (IS_DEBUGLEVEL(Level_Verbose)) {
@@ -2397,6 +2391,7 @@ protected:
         RAVELOG_VERBOSE_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
         RAVELOG_VERBOSE_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
 #endif
+        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 1);
         return shortcuts;
     }
 
@@ -2522,6 +2517,7 @@ protected:
     PlannerProgress _progress;
     bool _bUsePerturbation;
     bool _bmanipconstraints; /// if true, check workspace manip constraints
+    DebugLevel _dumplevel; ///< the loglevel that we start to dump trajectories for debugging
 
 #ifdef OPENRAVE_TIMING_DEBUGGING
     // for testing
@@ -2541,7 +2537,7 @@ protected:
     dReal checktime;
     uint32_t tcheckstart, tcheckend;
 #endif
-    
+
     std::vector<dReal> _zerovelpoints; ///< keeps track of the time instance of the original unshortcutted points of the original trajectory. Whenever we perform a shortcut, have to update this structure.
     bool _usingNewHeuristics;
 };

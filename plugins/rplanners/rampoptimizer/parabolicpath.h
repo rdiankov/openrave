@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2016 Puttichai Lertkultanon <L.Puttichai@gmail.com>
+// Copyright (C) 2016 Puttichai Lertkultanon & Rosen Diankov
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Lesser General Public License as published by the Free Software Foundation, either version 3
@@ -118,14 +118,6 @@ public:
     }
     bool IsValid();
 
-    /*
-      The following functions DO NOT check if the ParabolicCurvesND, ParabolicPath, etc. to be
-      appended, inserted, etc. to the existing one:
-      
-      1. respect the same bounds (joint values, velocities, and accelerations)
-      2. are compatible (having continuous velocity after the operation)
-     */
-
     /// \brief Append curvesndIn to curvesndVect and set related values (the appended curvesnd's
     /// initial and final values, x1Vect, etc.) accordingly.
     void AppendParabolicCurvesND(const ParabolicCurvesND &curvesndIn);
@@ -156,7 +148,6 @@ public:
     std::vector<dReal> xminVect, xmaxVect, vmVect, amVect;
     size_t ndof;
     std::vector<dReal> x0Vect, x1Vect, v0Vect, v1Vect;
-    // ParabolicCurvesND curvesnd;
     std::vector<ParabolicCurvesND> curvesndVect;
     std::vector<dReal> mainSwitchpoints; // switchpoints at which all DOFs switch. It includes both end points.
     dReal duration;
