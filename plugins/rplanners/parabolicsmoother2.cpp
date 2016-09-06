@@ -84,14 +84,14 @@ public:
             q1.resize(q0.size());
             dq1.resize(dq0.size());
             for (size_t iswitch = 1; iswitch < vswitchtimes.size(); ++iswitch) {
-                curvesnd.EvalPos(vswitchtimes.at(iswitch), q1);
-                dReal elapsedTime = vswitchtimes.at(iswitch) - vswitchtimes.at(iswitch - 1);
+                curvesnd.EvalPos(vswitchtimes[iswitch], q1);
+                dReal elapsedTime = vswitchtimes[iswitch] - vswitchtimes[iswitch - 1];
 
                 if (feas->NeedDerivativeForFeasibility()) {
                     // Due to constraints, configurations may be modified inside
                     // SegmentFeasible2. Therefore, dq1 might not be consistent with q0, q1, and
                     // dq0.
-                    curvesnd.EvalVel(vswitchtimes.at(iswitch), dq1); // original dq1
+                    curvesnd.EvalVel(vswitchtimes[iswitch], dq1); // original dq1
 
                     dReal expectedElapsedTime = 0;
                     dReal totalWeight = 0;
@@ -877,7 +877,35 @@ public:
                     if (bAccelChanged) {
                         RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckParabolicCurvesND(_cacheCurvesNDSeg, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit, curPos, newPos, curVel, newVel);
                         if (parabolicret != RampOptimizer::PCR_Normal) {
-                            RAVELOG_WARN_FORMAT("env = %d: the output ParabolicCuvresND becomes invalid (ret = %x) after fixing accelerations", GetEnv()->GetId()%parabolicret);
+                            std::stringstream ss;
+                            std::string separator = "";
+                            ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                            ss << "x0 = [";
+                            FOREACHC(itvalue, curPos) {
+                                ss << separator << *itvalue;
+                                separator = ", ";
+                            }
+                            ss << "]; x1 = [";
+                            separator = "";
+                            FOREACHC(itvalue, newPos) {
+                                ss << separator << *itvalue;
+                                separator = ", ";
+                            }
+                            ss << "]; v0 = [";
+                            separator = "";
+                            FOREACHC(itvalue, curVel) {
+                                ss << separator << *itvalue;
+                                separator = ", ";
+                            }
+                            ss << "]; v1 = [";
+                            separator = "";
+                            FOREACHC(itvalue, newVel) {
+                                ss << separator << *itvalue;
+                                separator = ", ";
+                            }
+                            ss << "]; deltatime = " << deltaTime;
+
+                            RAVELOG_WARN_FORMAT("env = %d: the output ParabolicCuvresND becomes invalid (ret = %x) after fixing accelerations. %s", GetEnv()->GetId()%parabolicret%ss.str());
                             return RampOptimizer::CheckReturn(CFO_CheckTimeBasedConstraints, 0.9);
                         }
                     }
@@ -988,7 +1016,7 @@ protected:
                 size_t iwaypoint = 0;
                 while (iwaypoint + 1 < vNewWaypoints.size()) {
                     for (size_t idof = 0; idof < ndof; ++idof) {
-                        xmidDelta.at(idof) = 0.5*(vNewWaypoints[iwaypoint + 1].at(idof) - vNewWaypoints[iwaypoint].at(idof));
+                        xmidDelta[idof] = 0.5*(vNewWaypoints[iwaypoint + 1][idof] - vNewWaypoints[iwaypoint][idof]);
                     }
 
                     xmid = vNewWaypoints[iwaypoint];
@@ -1005,7 +1033,7 @@ protected:
                     // Check if xmid (computed from _neightstatefn) is far from what we expect
                     dReal dist = 0;
                     for (size_t idof = 0; idof < ndof; ++idof) {
-                        dReal fExpected = 0.5*(vNewWaypoints[iwaypoint + 1].at(idof) + vNewWaypoints[iwaypoint].at(idof));
+                        dReal fExpected = 0.5*(vNewWaypoints[iwaypoint + 1][idof] + vNewWaypoints[iwaypoint][idof]);
                         dReal fError = fExpected - xmid[idof];
                         dist += fError*fError;
                     }
@@ -1075,8 +1103,6 @@ protected:
         vellimits = _parameters->_vConfigVelocityLimit;
         accellimits = _parameters->_vConfigAccelerationLimit;
 
-        std::string s;
-
         RampOptimizer::CheckReturn retseg(0);
         size_t numTries = 30;
         for (size_t itry = 0; itry < numTries; ++itry) {
@@ -1089,18 +1115,18 @@ protected:
             size_t iswitch = 1;
             size_t nswitches = curvesndOut.switchpointsList.size(); // switchpointsList includes zero.
             for (iswitch = 1; iswitch < nswitches; ++iswitch) {
-                curvesndOut.EvalPos(curvesndOut.switchpointsList.at(iswitch), x1Vect);
-                curvesndOut.EvalVel(curvesndOut.switchpointsList.at(iswitch), v1Vect);
+                curvesndOut.EvalPos(curvesndOut.switchpointsList[iswitch], x1Vect);
+                curvesndOut.EvalVel(curvesndOut.switchpointsList[iswitch], v1Vect);
 
                 // Check the segment between the two switch points
-                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, curvesndOut.switchpointsList.at(iswitch) - curvesndOut.switchpointsList.at(iswitch - 1), options, _cacheCurvesNDVect1);
+                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, curvesndOut.switchpointsList[iswitch] - curvesndOut.switchpointsList[iswitch - 1], options, _cacheCurvesNDVect1);
 
                 if (retseg.retcode != 0) {
                     break;
                 }
                 if (retseg.bDifferentVelocity) {
-                    // We should not have reached here.
                     RAVELOG_WARN("SegmentFeasible2 sets bDifferentVelocity to true");
+                    retseg.retcode = CFO_FinalValuesNotReached;
                     break;
                 }
                 x0Vect.swap(x1Vect);
@@ -1115,8 +1141,8 @@ protected:
                 // acceleration limits and try again.
                 RAVELOG_VERBOSE_FORMAT("env = %d: slowing down by %.15e since it is too fast, itry = %d", GetEnv()->GetId()%retseg.fTimeBasedSurpassMult%itry);
                 for (size_t j = 0; j < vellimits.size(); ++j) {
-                    vellimits.at(j) *= retseg.fTimeBasedSurpassMult;
-                    accellimits.at(j) *= retseg.fTimeBasedSurpassMult;
+                    vellimits[j] *= retseg.fTimeBasedSurpassMult;
+                    accellimits[j] *= retseg.fTimeBasedSurpassMult;
                 }
             }
             else {
@@ -1130,7 +1156,7 @@ protected:
                 SerializeValues(ss, v0Vect);
                 ss << "]; v1 = [";
                 SerializeValues(ss, v1Vect);
-                ss << "]; deltatime=" << (curvesndOut.switchpointsList.at(iswitch) - curvesndOut.switchpointsList.at(iswitch - 1));
+                ss << "]; deltatime=" << (curvesndOut.switchpointsList[iswitch] - curvesndOut.switchpointsList[iswitch - 1]);
                 RAVELOG_WARN_FORMAT("Calling SegmentFeasibile2 between switchpoints %d and %d returned error 0x%x; %s giving up....", (iswitch - 1)%iswitch%retseg.retcode%ss.str());
                 return false;
             }
