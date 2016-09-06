@@ -114,12 +114,13 @@ public:
 #endif
         
         _OptimizePath(listpath);
-
-#ifdef LINEAR_SMOOTHER_DEBUG
+        
         ptraj->Init(parameters->_configurationspecification);
         FOREACH(it, listpath) {
             ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
         }
+        
+#ifdef LINEAR_SMOOTHER_DEBUG        
         ptraj2->Clone(ptraj, 0);        
         _DumpTrajectory(ptraj, Level_Verbose, 2);
 #endif
@@ -293,7 +294,7 @@ protected:
                     continue;
                 }
                 dReal dist = parameters->_distmetricfn(listpath.back().first,qcur);
-                listpath.push_back(make_pair(qcur, dist));                
+                listpath.push_back(make_pair(qcur, dist));
                 mult = 1;
             }
             // always add the last point
@@ -343,13 +344,12 @@ protected:
     SpaceSamplerBasePtr _puniformsampler;
 #ifdef LINEAR_SMOOTHER_DEBUG
     SpaceSamplerBasePtr _logginguniformsampler;
+    uint32_t _fileindex;
 #endif
     RobotBasePtr _probot;
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
     std::vector<dReal> _vtempdists;
-
-    uint32_t _fileindex; // for trajectory saving
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
