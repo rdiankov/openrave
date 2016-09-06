@@ -224,7 +224,7 @@ public:
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
 
         _fileIndexMod = 10000; // for trajectory saving
-        _dumplevel = Level_Debug;
+        _dumplevel = Level_Verbose;
 #ifdef SMOOTHER_TIMING_DEBUG
         // Statistics
         _nCallsCheckManip = 0;
