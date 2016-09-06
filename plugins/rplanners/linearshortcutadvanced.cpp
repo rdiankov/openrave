@@ -58,14 +58,11 @@ public:
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
         }
 
-#ifdef LINEAR_SMOOTHER_DEBUG
         _logginguniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         if( !!_logginguniformsampler ) {
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
-        
         _fileindex = _logginguniformsampler->SampleSequenceOneUInt32()%1000;
-#endif
         return !!_puniformsampler;
     }
 
@@ -341,11 +338,9 @@ protected:
     }
 
     TrajectoryTimingParametersPtr _parameters;
-    SpaceSamplerBasePtr _puniformsampler;
-#ifdef LINEAR_SMOOTHER_DEBUG
-    SpaceSamplerBasePtr _logginguniformsampler;
+    SpaceSamplerBasePtr _puniformsampler, _logginguniformsampler;
     uint32_t _fileindex;
-#endif
+
     RobotBasePtr _probot;
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
