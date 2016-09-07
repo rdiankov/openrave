@@ -2846,7 +2846,22 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             *it *= fisteps;
         }
 
+        // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+        if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+            if( !!filterreturn ) {
+                filterreturn->_returncode = CFO_StateSettingError;
+            }
+            return CFO_StateSettingError;
+        }
+
         if( start > 0 ) {
+            // just in case, have to set the current values to _vtempconfig since neightstatefn expects the state to be set.
+            if( params->SetStateValues(_vtempconfig, 0) != 0 ) {
+                if( !!filterreturn ) {
+                    filterreturn->_returncode = CFO_StateSettingError;
+                }
+                return CFO_StateSettingError;
+            }
             if( !params->_neighstatefn(_vtempconfig, dQ,NSO_OnlyHardConstraints) ) {
                 if( !!filterreturn ) {
                     filterreturn->_returncode = CFO_StateSettingError;
