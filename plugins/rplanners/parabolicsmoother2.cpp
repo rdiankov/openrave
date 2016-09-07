@@ -1227,6 +1227,12 @@ protected:
                 break;
             }
 
+            nItersFromPrevSuccessful += 1;
+            if (nItersFromPrevSuccessful > nCutoffIters) {
+                // There has been no progress in the last nCutoffIters iterations. Stop right away.
+                break;
+            }
+
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
             dReal t0, t1;
