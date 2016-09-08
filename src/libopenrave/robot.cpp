@@ -1027,7 +1027,7 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     }
 
     OPENRAVE_ASSERT_OP(q1.size(),==,q2.size());
-    OPENRAVE_ASSERT (q1.size(), >=, _vActiveDOFIndices.size());
+    OPENRAVE_ASSERT_OP(q1.size(), >=, _vActiveDOFIndices.size());
     size_t index = 0;
     if (_bAreAllJoints1DOFAndNonCircular) {
         for (size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
