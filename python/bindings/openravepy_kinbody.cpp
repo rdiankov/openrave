@@ -413,53 +413,78 @@ public:
             info._linkname1 = boost::python::extract<std::string>(_linkname1);
         }
         info._vanchor = ExtractVector3(_vanchor);
+        
+        // We might be able to replace these exceptions with static_assert in C++11
         size_t num = len(_vaxes);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vaxes.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vaxes.at(i) = ExtractVector3(_vaxes[i]);
+            info._vaxes[i] = ExtractVector3(_vaxes[i]);
         }
+
         if( !IS_PYTHONOBJECT_NONE(_vcurrentvalues) ) {
             info._vcurrentvalues = ExtractArray<dReal>(_vcurrentvalues);
         }
+
         num = len(_vresolution);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vresolution.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vresolution.at(i) = boost::python::extract<dReal>(_vresolution[i]);
+            info._vresolution[i] = boost::python::extract<dReal>(_vresolution[i]);
         }
+
         num = len(_vmaxvel);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxvel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxvel.at(i) = boost::python::extract<dReal>(_vmaxvel[i]);
+            info._vmaxvel[i] = boost::python::extract<dReal>(_vmaxvel[i]);
         }
+
         num = len(_vhardmaxvel);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vhardmaxvel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vhardmaxvel.at(i) = boost::python::extract<dReal>(_vhardmaxvel[i]);
+            info._vhardmaxvel[i] = boost::python::extract<dReal>(_vhardmaxvel[i]);
         }
+
         num = len(_vmaxaccel);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxaccel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxaccel.at(i) = boost::python::extract<dReal>(_vmaxaccel[i]);
+            info._vmaxaccel[i] = boost::python::extract<dReal>(_vmaxaccel[i]);
         }
+
         num = len(_vmaxtorque);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxtorque.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxtorque.at(i) = boost::python::extract<dReal>(_vmaxtorque[i]);
+            info._vmaxtorque[i] = boost::python::extract<dReal>(_vmaxtorque[i]);
         }
+
         num = len(_vmaxinertia);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxinertia.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxinertia.at(i) = boost::python::extract<dReal>(_vmaxinertia[i]);
+            info._vmaxinertia[i] = boost::python::extract<dReal>(_vmaxinertia[i]);
         }
+
         num = len(_vweights);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vweights.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vweights.at(i) = boost::python::extract<dReal>(_vweights[i]);
+            info._vweights[i] = boost::python::extract<dReal>(_vweights[i]);
         }
+
         num = len(_voffsets);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._voffsets.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._voffsets.at(i) = boost::python::extract<dReal>(_voffsets[i]);
+            info._voffsets[i] = boost::python::extract<dReal>(_voffsets[i]);
         }
+
         num = len(_vlowerlimit);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vlowerlimit.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vlowerlimit.at(i) = boost::python::extract<dReal>(_vlowerlimit[i]);
+            info._vlowerlimit[i] = boost::python::extract<dReal>(_vlowerlimit[i]);
         }
+
         num = len(_vupperlimit);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vupperlimit.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vupperlimit.at(i) = boost::python::extract<dReal>(_vupperlimit[i]);
+            info._vupperlimit[i] = boost::python::extract<dReal>(_vupperlimit[i]);
         }
+
         if( !IS_PYTHONOBJECT_NONE(_trajfollow) ) {
             info._trajfollow = GetTrajectory(_trajfollow);
         }
@@ -2641,7 +2666,7 @@ public:
         return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
-        int num = len(state);
+        //int num = len(state);
         r._t = state[0];
         r._vGeomData = state[1][0];
         r._vGeomData2 = state[1][1];

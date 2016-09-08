@@ -1942,19 +1942,28 @@ protected:
                 transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
             }
             if( transformtype == "direction" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v = t.rotate(v);
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "point" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v = t*v;
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "quat" ) {
-                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                if (values.size() < 4) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 4", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2],values[3]);
                 v = quatMultiply(t.rot,v);
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2]; values[3] = v[3];
             }
             else if( transformtype == "ikparam" ) {
                 IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));
@@ -1983,19 +1992,28 @@ protected:
                 transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
             }
             if( transformtype == "direction" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v = quatRotate(quatMultiply(quatRotateDirection(Vector(0,0,1),v), t.rot), Vector(0,0,1));
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "point" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v += t.trans;
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "quat" ) {
-                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                if (values.size() < 4) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 4", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2],values[3]);
                 v = quatMultiply(v,t.rot);
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2]; values[3] = v[3];
             }
             else if( transformtype == "ikparam" ) {
                 IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));

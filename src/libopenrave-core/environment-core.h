@@ -300,7 +300,7 @@ public:
         list<ViewerBasePtr> listViewers;
         GetViewers(listViewers);
         if( listViewers.size() > 0 ) {
-            RAVELOG_DEBUG("resetting raveviewer\n");   
+            RAVELOG_DEBUG("resetting raveviewer\n");
             FOREACH(itviewer, listViewers) {
                 (*itviewer)->Reset();
             }
@@ -1831,6 +1831,92 @@ public:
                 throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
             }
             vbodies = _vPublishedBodies;
+        }
+    }
+
+    virtual bool GetPublishedBody(const std::string &name, KinBody::BodyState& bodystate, uint64_t timeout=0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    bodystate = _vPublishedBodies[ibody];
+                    return true;
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    bodystate = _vPublishedBodies[ibody];
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    virtual bool GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    jointValues = _vPublishedBodies[ibody].jointvalues;
+                    return true;
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    jointValues = _vPublishedBodies[ibody].jointvalues;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void GetPublishedBodyTransformsMatchingPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            nameTransfPairs.resize(0);
+            if( nameTransfPairs.capacity() < _vPublishedBodies.size() ) {
+                nameTransfPairs.reserve(_vPublishedBodies.size());
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
+                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+
+            nameTransfPairs.resize(0);
+            if( nameTransfPairs.capacity() < _vPublishedBodies.size() ) {
+                nameTransfPairs.reserve(_vPublishedBodies.size());
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
+                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                }
+            }
         }
     }
 
