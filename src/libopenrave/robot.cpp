@@ -2671,31 +2671,32 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
 {
     KinBody::SerializeJSON(value, allocator, options);
 
-    RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-
+    if ((options & (SO_StaticProperties | SO_DynamicProperties)) == 0 || (options & SO_StaticProperties) != 0)
     {
-        rapidjson::Value manipulatorsValue;
-        RAVE_SERIALIZEJSON_CLEAR_ARRAY(manipulatorsValue);
-        FOREACHC(it, GetManipulators()) {
-            rapidjson::Value manipulatorValue;
-            (*it)->SerializeJSON(manipulatorValue, allocator, options);
-            manipulatorsValue.PushBack(manipulatorValue, allocator);
+        {
+            rapidjson::Value manipulatorsValue;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(manipulatorsValue);
+            FOREACHC(it, GetManipulators()) {
+                rapidjson::Value manipulatorValue;
+                (*it)->SerializeJSON(manipulatorValue, allocator, options);
+                manipulatorsValue.PushBack(manipulatorValue, allocator);
+            }
+            value.AddMember("manipulators", manipulatorsValue, allocator);
         }
-        value.AddMember("manipulators", manipulatorsValue, allocator);
-    }
 
-    {
-        rapidjson::Value attachedSensorsValue;
-        RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorsValue);
-        FOREACHC(it, GetAttachedSensors()) {
-            rapidjson::Value attachedSensorValue;
-            (*it)->SerializeJSON(attachedSensorValue, allocator, options);
-            attachedSensorsValue.PushBack(attachedSensorValue, allocator);
+        {
+            rapidjson::Value attachedSensorsValue;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorsValue);
+            FOREACHC(it, GetAttachedSensors()) {
+                rapidjson::Value attachedSensorValue;
+                (*it)->SerializeJSON(attachedSensorValue, allocator, options);
+                attachedSensorsValue.PushBack(attachedSensorValue, allocator);
+            }
+            value.AddMember("attachedSensors", attachedSensorsValue, allocator);
         }
-        value.AddMember("attachedSensors", attachedSensorsValue, allocator);
-    }
 
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robot", true);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "robot", true);
+    }
 }
 
 void RobotBase::DeserializeJSON(const rapidjson::Value &value)

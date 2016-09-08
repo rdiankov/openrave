@@ -4731,47 +4731,69 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
 void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "id", GetID());
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "uri", GetURI());
+
+    std::string uri = GetURI();
+
+    if ((options & SO_StaticProperties) == 0)
+    {
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "id", GetID());
+    }
+    else
+    {
+        // use the portion after # in the uri as object id
+        size_t fragmentindex = uri.find_last_of('#');
+        if (fragmentindex != std::string::npos && fragmentindex != uri.size() - 1) {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "id", uri.substr(fragmentindex + 1));
+        }
+    }
+
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "name", GetName());
-    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", GetTransform());
 
+    if ((options & (SO_StaticProperties | SO_DynamicProperties)) == 0 || (options & SO_DynamicProperties) != 0)
     {
-        rapidjson::Value linksValue;
-        RAVE_SERIALIZEJSON_CLEAR_ARRAY(linksValue);
-        FOREACHC(it, GetLinks()) {
-            rapidjson::Value linkValue;
-            (*it)->SerializeJSON(linkValue, allocator, options);
-            linksValue.PushBack(linkValue, allocator);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "uri", uri);
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", GetTransform());
+
+        std::vector<dReal> vdofvalues;
+        GetDOFValues(vdofvalues);
+        if (vdofvalues.size() > 0)
+        {
+            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "dofValues", vdofvalues);
         }
-        value.AddMember("links", linksValue, allocator);
     }
 
-    if (GetJoints().size() + GetPassiveJoints().size() > 0)
+    if ((options & (SO_StaticProperties | SO_DynamicProperties)) == 0 || (options & SO_StaticProperties) != 0)
     {
-        rapidjson::Value jointsValue;
-        RAVE_SERIALIZEJSON_CLEAR_ARRAY(jointsValue);
-        FOREACHC(it, GetJoints()) {
-            rapidjson::Value jointValue;
-            (*it)->SerializeJSON(jointValue, allocator, options);
-            jointsValue.PushBack(jointValue, allocator);
+        {
+            rapidjson::Value linksValue;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(linksValue);
+            FOREACHC(it, GetLinks()) {
+                rapidjson::Value linkValue;
+                (*it)->SerializeJSON(linkValue, allocator, options);
+                linksValue.PushBack(linkValue, allocator);
+            }
+            value.AddMember("links", linksValue, allocator);
         }
-        FOREACHC(it, GetPassiveJoints()) {
-            rapidjson::Value jointValue;
-            (*it)->SerializeJSON(jointValue, allocator, options);
-            jointsValue.PushBack(jointValue, allocator);
+
+        if (GetJoints().size() + GetPassiveJoints().size() > 0)
+        {
+            rapidjson::Value jointsValue;
+            RAVE_SERIALIZEJSON_CLEAR_ARRAY(jointsValue);
+            FOREACHC(it, GetJoints()) {
+                rapidjson::Value jointValue;
+                (*it)->SerializeJSON(jointValue, allocator, options);
+                jointsValue.PushBack(jointValue, allocator);
+            }
+            FOREACHC(it, GetPassiveJoints()) {
+                rapidjson::Value jointValue;
+                (*it)->SerializeJSON(jointValue, allocator, options);
+                jointsValue.PushBack(jointValue, allocator);
+            }
+            value.AddMember("joints", jointsValue, allocator);
         }
-        value.AddMember("joints", jointsValue, allocator);
-    }
 
-    std::vector<dReal> vdofvalues;
-    GetDOFValues(vdofvalues);
-    if (vdofvalues.size() > 0)
-    {
-        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "dofValues", vdofvalues);
+        InterfaceBase::SerializeJSON(value, allocator, options);
     }
-
-    InterfaceBase::SerializeJSON(value, allocator, options);
 }
 
 void KinBody::DeserializeJSON(const rapidjson::Value &value)

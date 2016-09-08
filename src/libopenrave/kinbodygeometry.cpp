@@ -363,9 +363,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
 
     case GT_TriMesh:
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", "trimesh");
-        if (options == 0 || (options & SO_GeometryMesh) != 0) {
-            RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", mesh);
-        }
+        RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "mesh", mesh);
         break;
 
     default:

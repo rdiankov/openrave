@@ -78,66 +78,20 @@ protected:
 
             FOREACHC (it,listbodies) {
                 rapidjson::Value bodyValue;
-                bodyValue.SetObject();
+                (*it)->SerializeJSON(bodyValue, _doc.GetAllocator(), SO_DynamicProperties);
+                if (!_CheckForExternalWrite(*it))
+                {
+                    rapidjson::Value objectValue;
+                    (*it)->SerializeJSON(objectValue, _doc.GetAllocator(), SO_StaticProperties);
 
-                rapidjson::Value objectValue;
-                objectValue.SetObject();
+                    // get the id of the object and set it correctly in the instobject
+                    std::string id;
+                    RAVE_DESERIALIZEJSON_REQUIRED(objectValue, "id", id);
+                    RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", std::string("#") + id);
 
-                // serialize kinbody to json
-                (*it)->SerializeJSON(objectValue, _doc.GetAllocator(), 0);
-
-                // kinbody id becomes instobject id
-                if (objectValue.HasMember("id")) {
-                    objectValue.RemoveMember("id");
-                }
-                std::string id = (*it)->GetID();
-                if (id == "") {
-                    RAVELOG_WARN_FORMAT("kinbody %s has no id", (*it)->GetName());
-                }
-                RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "id", id);
-
-                // object itself does not need uri
-                std::string uri = (*it)->GetURI();
-                if (objectValue.HasMember("uri")) {
-                    objectValue.RemoveMember("uri");
-                }
-
-                // kinbody name is copied to instobject name
-                if (objectValue.HasMember("name")) {
-                    bodyValue.AddMember("name", rapidjson::Value(objectValue["name"], _doc.GetAllocator()).Move(), _doc.GetAllocator());
-                }
-
-                // kinbody transform becomes instobject transform
-                if (objectValue.HasMember("transform")) {
-                    bodyValue.AddMember("transform", objectValue["transform"].Move(), _doc.GetAllocator());
-                    objectValue.RemoveMember("transform");
-                }
-
-                // kinbody dofvalues becomes instobject dofvalues
-                if (objectValue.HasMember("dofValues")) {
-                    bodyValue.AddMember("dofValues", objectValue["dofValues"].Move(), _doc.GetAllocator());
-                    objectValue.RemoveMember("dofValues");
-                }
-                
-                // figure out if external reference is needed
-                if (!_CheckForExternalWrite(*it)) {
-                    // not doing external reference, need to figure out object id and set the correct uri
-                    size_t fragmentindex = uri.find_last_of('#');
-                    if (fragmentindex != std::string::npos && fragmentindex != uri.size() - 1) {
-                        uri = uri.substr(fragmentindex);
-                    } else {
-                        RAVELOG_WARN_FORMAT("id is not found in uri %s for kinbody %s, need to generate a random one", uri%(*it)->GetName());
-                        uri = "#" + utils::GetRandomAlphaNumericString(16);                        
-                    }
-                    RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", uri);
-                    RAVE_SERIALIZEJSON_ADDMEMBER(objectValue, _doc.GetAllocator(), "id", uri.substr(1));
                     objectsValue.PushBack(objectValue, _doc.GetAllocator());
-                } else {
-                    RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", uri);
-                    RAVELOG_WARN("external reference not yet supported");
                 }
 
-                // add instobject
                 bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
             }
 
@@ -187,19 +141,6 @@ void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const Attr
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(pbody);
-    // {
-    //     rapidjson::Value bodiesValue;
-    //     bodiesValue.SetArray();
-
-    //     {
-    //         rapidjson::Value bodyValue;
-    //         pbody->SerializeJSON(bodyValue, doc.GetAllocator(), 0);
-    //         bodiesValue.PushBack(bodyValue, doc.GetAllocator());
-    //     }
-
-    //     doc.AddMember("bodies", bodiesValue, doc.GetAllocator());
-    // }
-
     doc.Accept(writer);
 }
 
@@ -212,22 +153,6 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(listbodies);
-
-    // {
-    //     rapidjson::Value bodiesValue;
-    //     bodiesValue.SetArray();
-
-    //     if (listbodies.size() > 0) {
-    //         FOREACHC (it,listbodies) {
-    //             rapidjson::Value bodyValue;
-    //             (*it)->SerializeJSON(bodyValue, doc.GetAllocator(), 0);
-    //             bodiesValue.PushBack(bodyValue, doc.GetAllocator());
-    //         }
-    //     }
-
-    //     doc.AddMember("bodies", bodiesValue, doc.GetAllocator());
-    // }
-
     doc.Accept(writer);
 }
 
