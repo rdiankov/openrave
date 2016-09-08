@@ -2190,8 +2190,8 @@ protected:
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
-    bool _bMakeJoinedLinksAdjacent;
-    bool _bAreAllJoints1DOFAndNonCircular; ///< SubtractActiveDOFValues can be faster if this is true
+    bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
+    bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
 private:
     mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;

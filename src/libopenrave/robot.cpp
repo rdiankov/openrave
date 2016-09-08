@@ -1026,16 +1026,16 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         return;
     }
 
-    if (_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("_vActiveDOFIndices.size() > q1.size() || q1.size() != q2.size()", ORE_InvalidArguments);
-    }
-
+    OPENRAVE_ASSERT_OP(q1.size(),==,q2.size());
+    OPENRAVE_ASSERT (q1.size(), >=, _vActiveDOFIndices.size());
     size_t index = 0;
     if (_bAreAllJoints1DOFAndNonCircular) {
-        for (; index < _vActiveDOFIndices.size(); ++index) {
-            q1[index] -= q2[index];
+        for (size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            q1[i] -= q2[i];
         }
-    } else {
+        index = _vActiveDOFIndices.size();
+    }
+    else {
         // go through all active joints
         for(; index < _vActiveDOFIndices.size(); ++index) {
             // We already did range check above
