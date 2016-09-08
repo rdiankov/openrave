@@ -219,13 +219,13 @@ class InverseKinematicsModel(DatabaseGenerator):
                     geom.SetTransparency(tr)
                     
     _cachedKinematicsHash = None # manip.GetInverseKinematicsStructureHash() when the ik was built with
-    def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
+    def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None, checkpreemptfn=None):
         """
         :param robot: if not None, will use the robot's active manipulator
         :param manip: if not None, will the manipulator, takes precedence over robot
         :param forceikfast: if set will always force the ikfast solver
         :param freeindices: force the following freeindices on the ik solver
-        
+        :param checkpreemptfn: a function to check if ik generation should be canceled
         """
         self.ikfastproblem = None
         if manip is not None:
@@ -268,6 +268,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         self.forceikfast = forceikfast
         self.ikfeasibility = None # if not None, ik is NOT feasibile and contains the error message
         self.statistics = dict()
+        self._checkpreemptfn=checkpreemptfn
         
     def  __del__(self):
         if self.ikfastproblem is not None:
@@ -855,7 +856,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             except OSError:
                 pass
             
-            solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetInverseKinematicsStructureHash(self.iktype),precision=precision)
+            solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetInverseKinematicsStructureHash(self.iktype),precision=precision, checkpreemptfn=self._checkpreemptfn)
             solver.maxcasedepth = ikfastmaxcasedepth
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False

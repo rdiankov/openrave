@@ -588,6 +588,8 @@ if( NOT libpcrecpp_FOUND )
   message(STATUS "System pcre not found, using local from sources")
   # include the local pcre
   add_subdirectory(3rdparty/pcre-8.02)
+
+  set(libpcrecpp_FOUND 1)
 endif()
 
 if( OPT_COLLADA )
