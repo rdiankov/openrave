@@ -95,6 +95,10 @@ protected:
 
                     objectsValue.PushBack(objectValue, _doc.GetAllocator());
                 }
+                else
+                {
+                    // TODO: convert scheme to _vForceResolveOpenRAVEScheme
+                }
 
                 bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
             }
@@ -132,8 +136,6 @@ void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, con
 
     JSONWriter jsonwriter(atts, doc);
     jsonwriter.Write(penv);
-    // penv->SerializeJSON(doc, doc.GetAllocator(), 0);
-
     doc.Accept(writer);
 }
 

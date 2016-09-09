@@ -15,247 +15,292 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
-#include <rapidjson/filereadstream.h>
+#include <rapidjson/istreamwrapper.h>
 #include <string>
+#include <fstream>
+
 namespace OpenRAVE {
 
-	class JSONReader{
+    class JSONReader {
 
-	public:
+    public:
 
-		JSONReader(EnvironmentBasePtr penv): _penv(penv), _prefix(""){}
-		virtual ~JSONReader(){}
+        JSONReader(const AttributesList& atts, EnvironmentBasePtr penv): _penv(penv), _prefix("")
+        {
+            FOREACHC(itatt, atts) {
+                if (itatt->first == "prefix") {
+                    _prefix = itatt->second;
+                }
+                else if (itatt->first == "openravescheme")
+                {
+                    std::stringstream ss(itatt->second);
+                    _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+                }
+            }
+            if (_vOpenRAVESchemeAliases.size() == 0) {
+                _vOpenRAVESchemeAliases.push_back("openrave");
+            }
+        }
 
-		std::string ReadFile(std::string fullFilename){
-			std::ifstream fp;
-		    fp.open(fullFilename.c_str(), std::ifstream::in);
-		    std::string data;
-		    data = std::string((std::istreambuf_iterator<char>(fp)), std::istreambuf_iterator<char>());
-			return data;	
-		}
+        virtual ~JSONReader()
+        {
+        }
 
-		std::map<std::string, rapidjson::Value::ValueIterator> GetObjectMap(rapidjson::Document& d){
-			std::map<std::string, rapidjson::Value::ValueIterator> retMap;
-			
-			if(d.HasMember("objects")){
-				rapidjson::Value& objects = d["objects"];
-			    for(rapidjson::Value::ValueIterator itr = objects.Begin(); itr!=objects.End();++itr){
-			        std::string id = itr->FindMember("id")->value.GetString();
-			        retMap[id] = itr;
-			    }
-			}
-			return retMap;
-		}
+        // void AddFullURI(rapidjson::Document& d, rapidjson::Value::ValueIterator& body, std::string filename){
 
-		rapidjson::Value::ValueIterator ResolveObject(std::string uri, std::map<std::string, rapidjson::Value::ValueIterator>& objectMap){
-			// use # instead of @
+        //     if( body->HasMember("uri") ){
+        //         std::string uri = body->FindMember("uri")->value.GetString();
 
-			std::string scheme = GetScheme(uri);
-			uri = uri.substr(uri.find(scheme) + scheme.size());
-		    if(uri[0] == '#'){
-		        // in the same file
-		        // remove the first @ char
-		        std::string id = uri.substr(1);
-		        return objectMap[id];
-		    }
-		    else{
-		    	int splitPos = uri.find('#');
-		    	std:;string data = "";
-		    	if(scheme == "file:"){
-		    		std::string otherFilename = RaveFindLocalFile( uri.substr(0, splitPos-1)  );
-			    	data = ReadFile(otherFilename);
-		    	}
-		    	else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end() ){
-		    		// TODO deal with openrave: or mujin:
-		    	}
-		    	
-		    	if(data.size() == 0){
-		    		return rapidjson::Value::ValueIterator();
-		    	}
-		    	else{
+        //         if(uri.size() == 0 ){
+        //             return;
+        //         }
 
-		    		rapidjson::StringStream s(data.c_str());
-					rapidjson::Document d;
-					d.SetObject();
-					d.ParseStream(s);
-		    		std::map<std::string, rapidjson::Value::ValueIterator> otherObjectMap = GetObjectMap(d);
-		    		std::string id = uri.substr(splitPos+1);
-		    		return otherObjectMap[id];
-		    	}
-		    }
-		}
+        //         if(_prefix.size() > 0){
+        //             uri = _prefix + uri;
+        //         }
 
-		void AddFullURI(rapidjson::Document& d, rapidjson::Value::ValueIterator& body, std::string filename){
+        //         else if(uri[0] == '#'){
+        //             uri = filename + uri;
+        //         }
 
-			if( body->HasMember("uri") ){
-				std::string uri = body->FindMember("uri")->value.GetString();
+        //         if(body->RemoveMember("uri")){
+        //             rapidjson::Value key;
+        //             rapidjson::Value value(uri, d.GetAllocator());
+        //             key.SetString("uri", d.GetAllocator());
+        //             body->AddMember(key, value, d.GetAllocator());
+        //         }
+        //     }
+        // }
 
-				if(uri.size() == 0 ){
-					return;
-				}
+        bool InitFromFile(const string& filename)
+        {
+            _filename = filename;
+            return true;
+        }
 
-				if(_prefix.size() > 0){
-					uri = _prefix + uri;
-				}
+        bool Extract()
+        {
+            boost::shared_ptr<rapidjson::Document> doc = _OpenDocument(_filename);
 
-				else if(uri[0] == '#'){
-					uri = filename + uri;
-				}
+            RAVE_DESERIALIZEJSON_ENSURE_OBJECT(*doc);
+            if (doc->HasMember("bodies")) {
+                RAVE_DESERIALIZEJSON_ENSURE_ARRAY((*doc)["bodies"]);
 
-				if(body->RemoveMember("uri")){
-					rapidjson::Value key;
-					rapidjson::Value value(uri, d.GetAllocator());
-					key.SetString("uri", d.GetAllocator());
-					body->AddMember(key, value, d.GetAllocator());
-				}
-			}
-		}
+                for (rapidjson::Value::ValueIterator itr = (*doc)["bodies"].Begin(); itr != (*doc)["bodies"].End(); ++itr)
+                {
+                    _FillBody(*itr, doc->GetAllocator());
 
-		bool ApplyBodies(rapidjson::Document& d, std::string filename){
-			if(!d.HasMember("bodies")){
-		    	return false;
-		    }
-		   	std::map<std::string, rapidjson::Value::ValueIterator> objectMap = GetObjectMap(d);
+                    bool robot = false;
+                    RAVE_DESERIALIZEJSON_OPTIONAL(*itr, "robot", robot);
 
-		    rapidjson::Value& bodies = d["bodies"];
-		    for(rapidjson::Value::ValueIterator itr=bodies.Begin(); itr!=bodies.End(); ++itr)
-		    {
-		        if(itr->HasMember("uri")){
-		            std::string uri = itr->FindMember("uri")->value.GetString();
-		            rapidjson::Value::ValueIterator object = ResolveObject(uri, objectMap);
+                    if (robot) {
+                        _ExtractRobot(*itr);
+                    } else {
+                        _ExtractKinBody(*itr);
+                    }
+                    
+                }
+            }
+            return true;
+        }
 
-		            // add the object items into instobjects
-		            for(rapidjson::Value::MemberIterator memitr = object->MemberBegin(); memitr !=object->MemberEnd();++memitr){
-		                std::string keyname = memitr->name.GetString();
-		                rapidjson::Value key;
-		                key.SetString(keyname.c_str(), d.GetAllocator());
-		                rapidjson::Value value( memitr->value, d.GetAllocator() );
-		                itr->AddMember(key, value, d.GetAllocator());
-		            }
-		            AddFullURI(d, itr, filename);
-		            // set full uri to the uri path
-		        }
-		    }
-		    return true;
-		}
+    protected:
 
+        void _FillBody(rapidjson::Value &body, rapidjson::Document::AllocatorType& allocator)
+        {
+            RAVE_DESERIALIZEJSON_ENSURE_OBJECT(body);
 
-		bool _InitPreOpen(const AttributesList& atts){
+            std::string uri;
+            RAVE_DESERIALIZEJSON_REQUIRED(body, "uri", uri);
 
-			FOREACHC(itatt, atts){
-				if( itatt->first == "prefix"){
-					_prefix = itatt->second;
-				}
-				else if(itatt->first == "openravescheme")
-				{
-					 std::stringstream ss(itatt->second);
-	                _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-				}
-			}
-			if(_vOpenRAVESchemeAliases.size() == 0){
-				_vOpenRAVESchemeAliases.push_back("openrave");
-			}
-			return true;
-		}
+            rapidjson::Value::ValueIterator object = _ResolveObject(uri);
 
-		bool _InitPostOpen(const AttributesList& atts){
-			return true;
-		}
+            // add the object items into instobjects
+            for (rapidjson::Value::MemberIterator memitr = object->MemberBegin(); memitr != object->MemberEnd(); ++memitr) {
+                std::string keystr = memitr->name.GetString();
+                if (keystr != "" && !body.HasMember(keystr)) {
+                    rapidjson::Value key(keystr, allocator);
+                    rapidjson::Value value(memitr->value, allocator);
+                    body.AddMember(key, value, allocator);
+                }
+            }
+        }
 
-		std::string GetScheme(std::string uriorigin){
-			return uriorigin.substr(0, uriorigin.find(':')+1);
-		}
+        void _ExtractKinBody(const rapidjson::Value &value)
+        {
+            KinBodyPtr body = RaveCreateKinBody(_penv, "");
+            body->DeserializeJSON(value);
+            _penv->Add(body, false);
+        }
 
-		bool InitFromFile(const string& filename, const AttributesList& atts)
-		{
-			_InitPreOpen(atts);
+        void _ExtractRobot(const rapidjson::Value &value)
+        {
+            RobotBasePtr robot = RaveCreateRobot(_penv, "");
+            robot->DeserializeJSON(value);
+            _penv->Add(robot, false);
+        }
 
-			_filename = filename;
+        /// \brief get the scheme of the uri, e.g. file: or openrave:
+        void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
+        {
+            path = uri;
+            size_t hashindex = path.find_last_of('#');
+            if (hashindex != std::string::npos) {
+                fragment = path.substr(hashindex + 1);
+                path = path.substr(0, hashindex);
+            }
 
-			return _InitPostOpen(atts);
-		}
+            size_t colonindex = path.find_first_of(':');
+            if (colonindex != std::string::npos) {
+                scheme = path.substr(0, colonindex + 1);
+                path = path.substr(colonindex + 1);
+            }
+        }
 
-		bool Extract()
-		{
-			std::string data = ReadFile(_filename);
-			if(data.size() == 0)
-			{
-				return false;
-			}
-			rapidjson::StringStream s(data.c_str());
-			rapidjson::Document d;
-			d.SetObject();
-			d.ParseStream(s);
+        rapidjson::Value::ValueIterator _ResolveObject(const std::string &uri)
+        {
+            std::string scheme, path, fragment;
+            _ParseURI(uri, scheme, path, fragment);
 
-		    bool success = ApplyBodies(d, _filename);
+            boost::shared_ptr<rapidjson::Document> doc = _ResolveDocument(scheme, path);
+            if (!doc) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed resolve json document \"%s\"", uri, ORE_InvalidArguments);
+            }
+            return _ResolveObjectInDocument(doc, fragment);
+        }
 
-		    if(!success){
-		    	return false;
-		    }
-		    _penv->DeserializeJSON(d);
-			return true;
-		}
+        void _IndexObjectsInDocument(boost::shared_ptr<rapidjson::Document> doc)
+        {
+            if (doc->IsObject() && doc->HasMember("objects"))
+            {
+                RAVE_DESERIALIZEJSON_ENSURE_ARRAY((*doc)["objects"]);
 
-	private:
-		std::string _prefix;
-		std::string _filename;
-		EnvironmentBasePtr _penv;
-		std::vector<std::string> _vOpenRAVESchemeAliases;
-	};
-	bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts){
+                for (rapidjson::Value::ValueIterator itr = (*doc)["objects"].Begin(); itr != (*doc)["objects"].End(); ++itr)
+                {
+                    rapidjson::Value::MemberIterator id = itr->FindMember("id");
+                    if (id != itr->MemberEnd() && id->value.IsString()) {
+                        std::string idstr = id->value.GetString();
+                        if (idstr != "")
+                        {
+                            _objects[doc][idstr] = itr;
+                        }
+                    }
+                }
+            }
+        }
 
-		std::string fullFilename = RaveFindLocalFile(filename);
+        rapidjson::Value::ValueIterator _ResolveObjectInDocument(boost::shared_ptr<rapidjson::Document> doc, const std::string& id)
+        {
+            if (!!doc)
+            {
+                if (_objects.find(doc) == _objects.end())
+                {
+                    _IndexObjectsInDocument(doc);
+                }
+                if (_objects[doc].find(id) != _objects[doc].end())
+                {
+                    return _objects[doc][id];
+                }
+            }
+            throw OPENRAVE_EXCEPTION_FORMAT("failed resolve object \"%s\" in json document", id, ORE_InvalidArguments);
+        }
 
-		JSONReader reader(penv);
-		if(fullFilename.size() == 0 || ! reader.InitFromFile(fullFilename, atts)){
-			return false;
-		}
-		return reader.Extract();
-	}
+        /// \brief open and cache a json document using a uri
+        boost::shared_ptr<rapidjson::Document> _ResolveDocument(const std::string& scheme, const std::string& path)
+        {
+            if (scheme == "file:")
+            {
+                return _OpenDocument(RaveFindLocalFile(path));
+            }
+            else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
+            {
+                // TODO deal with openrave: or mujin:
+            }
+            return _docs[_filename];
+        }
 
-	// bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts){
+        /// \brief open and cache a json document
+        boost::shared_ptr<rapidjson::Document> _OpenDocument(const std::string& filename)
+        {
+            if (_docs.find(filename) != _docs.end()) {
+                return _docs[filename];
+            }
 
-	// 	std::string fullFilename = RaveFindLocalFile(filename);
+            std::ifstream ifs(filename.c_str());
+            rapidjson::IStreamWrapper isw(ifs);
+            boost::shared_ptr<rapidjson::Document> doc;
+            doc.reset(new rapidjson::Document);
+            rapidjson::ParseResult ok = doc->ParseStream(isw);
+            if (!ok) {
+                throw OPENRAVE_EXCEPTION_FORMAT("failed parse json document \"%s\"", filename, ORE_InvalidArguments);
+            }
 
-	// 	std::string data = ReadFile(fullFilename);
+            _docs[filename] = doc;
+            return doc;
+        }
 
-	// 	if(data.size() == 0){
-	// 		return false;
-	// 	}
-	// 	rapidjson::StringStream s(data.c_str());
-	// 	rapidjson::Document d;
-	// 	d.SetObject();
-	// 	d.ParseStream(s);
+        std::string _prefix;
+        std::string _filename;
+        EnvironmentBasePtr _penv;
+        std::vector<std::string> _vOpenRAVESchemeAliases;
+        std::map<std::string, boost::shared_ptr<rapidjson::Document> > _docs; ///< key is filename
+        std::map<boost::shared_ptr<rapidjson::Document>, std::map<std::string, rapidjson::Value::ValueIterator> > _objects; ///< key is pointer to doc
+    };
 
-	// 	bool success =ApplyBodies(d, filename);
+    bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts){
 
-	// 	if(! success){
-	// 		return false;
-	// 	}
-	// 	ppbody->DeserializeJSON(d);
-	// 	return true;
-	// }
-	// bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts){
+        std::string fullFilename = RaveFindLocalFile(filename);
+        JSONReader reader(atts, penv);
 
-	// 	std::string fullFilename = RaveFindLocalFile(filename);
+        if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
+            return false;
+        }
+        return reader.Extract();
+    }
 
-	// 	std::string data = ReadFile(fullFilename);
+    // bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts){
 
-	// 	if(data.size() == 0){
-	// 		return false;
-	// 	}
-	// 	rapidjson::StringStream s(data.c_str());
-	// 	rapidjson::Document d;
-	// 	d.SetObject();
-	// 	d.ParseStream(s);
+    //  std::string fullFilename = RaveFindLocalFile(filename);
 
-	// 	bool success =ApplyBodies(d, filename);
+    //  std::string data = ReadFile(fullFilename);
 
-	// 	if(! success){
-	// 		return false;
-	// 	}
+    //  if(data.size() == 0){
+    //      return false;
+    //  }
+    //  rapidjson::StringStream s(data.c_str());
+    //  rapidjson::Document d;
+    //  d.SetObject();
+    //  d.ParseStream(s);
 
-	// 	pprobot->DeserializeJSON(d);
-	// 	return true;
-	// }
+    //  bool success =ApplyBodies(d, filename);
+
+    //  if(! success){
+    //      return false;
+    //  }
+    //  ppbody->DeserializeJSON(d);
+    //  return true;
+    // }
+    // bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts){
+
+    //  std::string fullFilename = RaveFindLocalFile(filename);
+
+    //  std::string data = ReadFile(fullFilename);
+
+    //  if(data.size() == 0){
+    //      return false;
+    //  }
+    //  rapidjson::StringStream s(data.c_str());
+    //  rapidjson::Document d;
+    //  d.SetObject();
+    //  d.ParseStream(s);
+
+    //  bool success =ApplyBodies(d, filename);
+
+    //  if(! success){
+    //      return false;
+    //  }
+
+    //  pprobot->DeserializeJSON(d);
+    //  return true;
+    // }
 }

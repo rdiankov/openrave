@@ -2625,34 +2625,34 @@ const std::string& IkParameterization::GetName() const
 }
 
 #define RAVE_SERIALIZEJSON(value, allocator, ...) rapidjson::Value value; RaveSerializeJSON(value, allocator, ##__VA_ARGS__)
-#define RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, ...) { do { RAVE_SERIALIZEJSON(__v, allocator, ##__VA_ARGS__); value.PushBack(__v, allocator); } while(false); };
-#define RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, key, ...) { do { RAVE_SERIALIZEJSON(__v, allocator, ##__VA_ARGS__); value.AddMember(key, __v, allocator); } while(false); };
+#define RAVE_SERIALIZEJSON_PUSHBACK(value, allocator, ...) { do { RAVE_SERIALIZEJSON(__v, allocator, ##__VA_ARGS__); (value).PushBack(__v, allocator); } while(false); };
+#define RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, key, ...) { do { RAVE_SERIALIZEJSON(__v, allocator, ##__VA_ARGS__); (value).AddMember(key, __v, allocator); } while(false); };
 
-#define RAVE_SERIALIZEJSON_ENSURE_OBJECT(value) { if (!value.IsObject()) { value.SetObject(); } }
-#define RAVE_SERIALIZEJSON_ENSURE_ARRAY(value) { if (!value.IsArray()) { value.SetArray(); } }
+#define RAVE_SERIALIZEJSON_ENSURE_OBJECT(value) { if (!(value).IsObject()) { (value).SetObject(); } }
+#define RAVE_SERIALIZEJSON_ENSURE_ARRAY(value) { if (!(value).IsArray()) { (value).SetArray(); } }
 
-#define RAVE_SERIALIZEJSON_CLEAR_OBJECT(value) { do { value.SetObject(); } while (false); }
-#define RAVE_SERIALIZEJSON_CLEAR_ARRAY(value) { do { value.SetArray(); } while (false); }
+#define RAVE_SERIALIZEJSON_CLEAR_OBJECT(value) { do { (value).SetObject(); } while (false); }
+#define RAVE_SERIALIZEJSON_CLEAR_ARRAY(value) { do { (value).SetArray(); } while (false); }
 
 #define RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value) { \
-    if (!value.IsObject()) { \
+    if (!(value).IsObject()) { \
         throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an object is expected", ORE_InvalidArguments); \
     } \
 }
 #define RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value) { \
-    if (!value.IsArray()) { \
+    if (!(value).IsArray()) { \
         throw OPENRAVE_EXCEPTION_FORMAT0("failed deserialize json, an array is expected", ORE_InvalidArguments); \
     } \
 }
 #define RAVE_DESERIALIZEJSON_REQUIRED(value, key, destination) { \
-    if (!value.HasMember(key)) { \
+    if (!(value).HasMember(key)) { \
         throw OPENRAVE_EXCEPTION_FORMAT("failed deserialize json due to misisng key \"%s\"", key, ORE_InvalidArguments); \
     } \
-    RaveDeserializeJSON(value[key], destination); \
+    RaveDeserializeJSON((value)[key], destination); \
 }
 #define RAVE_DESERIALIZEJSON_OPTIONAL(value, key, destination) { \
-    if (value.HasMember(key)) { \
-        RaveDeserializeJSON(value[key], destination); \
+    if ((value).HasMember(key)) { \
+        RaveDeserializeJSON((value)[key], destination); \
     } \
 }
 
