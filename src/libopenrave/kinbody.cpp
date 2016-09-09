@@ -291,6 +291,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _environmentid = 0;
     _nNonAdjacentLinkCache = 0x80000000;
     _nUpdateStampId = 0;
+    _bAreAllJoints1DOFAndNonCircular = false;
 }
 
 KinBody::~KinBody()
@@ -1043,28 +1044,38 @@ void KinBody::SimulationStep(dReal fElapsedTime)
 
 void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& dofindices) const
 {
+    OPENRAVE_ASSERT_OP(q1.size(), ==, q2.size() );
+    if (_bAreAllJoints1DOFAndNonCircular) {
+        for(size_t i = 0; i < q1.size(); ++i) {
+            q1[i] -= q2[i];
+        }
+        return;
+    }
+
     if( dofindices.size() == 0 ) {
+        OPENRAVE_ASSERT_OP(q1.size(), ==, GetDOF() );
         FOREACHC(itjoint,_vecjoints) {
             int dof = (*itjoint)->GetDOFIndex();
             for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
                 if( (*itjoint)->IsCircular(i) ) {
-                    q1.at(dof+i) = utils::NormalizeCircularAngle(q1.at(dof+i)-q2.at(dof+i),(*itjoint)->_vcircularlowerlimit.at(i), (*itjoint)->_vcircularupperlimit.at(i));
+                    q1[dof+i] = utils::NormalizeCircularAngle(q1[dof+i]-q2[dof+i],(*itjoint)->_vcircularlowerlimit.at(i), (*itjoint)->_vcircularupperlimit.at(i));
                 }
                 else {
-                    q1.at(dof+i) -= q2.at(dof+i);
+                    q1[dof+i] -= q2[dof+i];
                 }
             }
         }
     }
     else {
+        OPENRAVE_ASSERT_OP(q1.size(), ==, dofindices.size() );
         for(size_t i = 0; i < dofindices.size(); ++i) {
             JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
             if( pjoint->IsCircular(dofindices[i]-pjoint->GetDOFIndex()) ) {
                 int iaxis = dofindices[i]-pjoint->GetDOFIndex();
-                q1.at(i) = utils::NormalizeCircularAngle(q1.at(i)-q2.at(i), pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
+                q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
             }
             else {
-                q1.at(i) -= q2.at(i);
+                q1[i] -= q2[i];
             }
         }
     }
@@ -4294,6 +4305,14 @@ void KinBody::_ComputeInternalInformation()
                 vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));
             }
             (*itlink)->_info.extraGeometries.insert(make_pair(selfgroup, vgeoms));
+        }
+    }
+
+    _bAreAllJoints1DOFAndNonCircular = true;
+    for (size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint) {
+        if (_vecjoints[ijoint]->GetDOF() != 1 || _vecjoints[ijoint]->IsCircular()) {
+            _bAreAllJoints1DOFAndNonCircular = false;
+            break;
         }
     }
 

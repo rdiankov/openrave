@@ -362,6 +362,11 @@ int KinBody::Joint::GetDOF() const
     return _info.GetDOF();
 }
 
+bool KinBody::Joint::IsCircular() const
+{
+    return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
+}
+
 bool KinBody::Joint::IsCircular(int iaxis) const
 {
     return static_cast<bool>(_info.isCircular.at(iaxis));

@@ -404,15 +404,15 @@ private:
         if( IsWrite("visual") ) {
             _visualScenesLib = daeSafeCast<domLibrary_visual_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_VISUAL_SCENES));
             _visualScenesLib->setId("vscenes");
+        }
 
-            if( IsWrite("geometry") ) {
-                _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
-                _geometriesLib->setId("geometries");
-                _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
-                _effectsLib->setId("effects");
-                _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
-                _materialsLib->setId("materials");
-            }
+        if( IsWrite("geometry") ) {
+            _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
+            _geometriesLib->setId("geometries");
+            _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
+            _effectsLib->setId("effects");
+            _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
+            _materialsLib->setId("materials");
         }
 
         _nodesLib = daeSafeCast<domLibrary_nodes>(_dom->add(COLLADA_ELEMENT_LIBRARY_NODES));
@@ -2209,11 +2209,13 @@ private:
                         daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
                         bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
                         bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
-                        string geomid = _GetExtraGeometryId(*itlink,itgeomgroup->first,igeom);
-                        igeom++;
-                        domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
-                        bind_instance_geometry->setAttribute("url", (string("#")+geomid).c_str());
-                        bind_instance_geometry->setAttribute("material", (string("#")+geomid+string("_mat")).c_str());
+                        if( IsWrite("geometry") ) {
+                            string geomid = _GetExtraGeometryId(*itlink,itgeomgroup->first,igeom);
+                            igeom++;
+                            domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
+                            bind_instance_geometry->setAttribute("url", (string("#")+geomid).c_str());
+                            bind_instance_geometry->setAttribute("material", (string("#")+geomid+string("_mat")).c_str());
+                        }
                     }
                 }
             }

@@ -440,7 +440,7 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout=0) const = 0;
-
+    
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
@@ -448,6 +448,33 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    /// \return true if name matches to a published body
+    virtual bool GetPublishedBody(const std::string& name, KinBody::BodyState& bodystate, uint64_t timeout=0) = 0;
+    
+    /// \brief Retrieve joint values of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBodyJointValues returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    /// \return true if name matches to a published body
+    virtual bool GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve body transform of all published bodies whose name matches prefix, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param prefix the prefix to match to the target names.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBodyTransformsMatchingPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0) = 0;
 
     /// \brief Updates the published bodies that viewers and other programs listening in on the environment see.
     ///
