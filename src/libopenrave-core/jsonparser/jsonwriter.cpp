@@ -87,6 +87,10 @@ protected:
                     // get the id of the object and set it correctly in the instobject
                     std::string id;
                     RAVE_DESERIALIZEJSON_REQUIRED(objectValue, "id", id);
+
+                    if (bodyValue.HasMember("uri")) {
+                        bodyValue.RemoveMember("uri");
+                    }
                     RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", std::string("#") + id);
 
                     objectsValue.PushBack(objectValue, _doc.GetAllocator());
@@ -132,6 +136,7 @@ void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, con
 
     doc.Accept(writer);
 }
+
 void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts)
 {
     std::ofstream ofstream(filename.c_str());

@@ -67,7 +67,6 @@ namespace OpenRAVE {
 		    	}
 		    	else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end() ){
 		    		// TODO deal with openrave: or mujin:
-		    		
 		    	}
 		    	
 		    	if(data.size() == 0){
@@ -167,7 +166,8 @@ namespace OpenRAVE {
 			return uriorigin.substr(0, uriorigin.find(':')+1);
 		}
 
-		bool InitFromFile(const string& filename, const AttributesList& atts){
+		bool InitFromFile(const string& filename, const AttributesList& atts)
+		{
 			_InitPreOpen(atts);
 
 			_filename = filename;
@@ -175,7 +175,8 @@ namespace OpenRAVE {
 			return _InitPostOpen(atts);
 		}
 
-		bool Extract(){
+		bool Extract()
+		{
 			std::string data = ReadFile(_filename);
 			if(data.size() == 0)
 			{

@@ -347,22 +347,20 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     if (forcedAdjacentLinks.size() > 0) {
         RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "forcedAdjacentLinks", forcedAdjacentLinks);
     }
-    if (options == 0 || (options & SO_Geometry) != 0) {
 
-        if (geometries.size() > 0) {
-            rapidjson::Value geometriesValue;
-            RAVE_SERIALIZEJSON_CLEAR_ARRAY(geometriesValue);
-            FOREACHC(it, geometries) {
-                rapidjson::Value geometryValue;
-                (*it)->SerializeJSON(geometryValue, allocator, options);
-                geometriesValue.PushBack(geometryValue, allocator);
-            }
-            value.AddMember("geometries", geometriesValue, allocator);
+    if (geometries.size() > 0) {
+        rapidjson::Value geometriesValue;
+        RAVE_SERIALIZEJSON_CLEAR_ARRAY(geometriesValue);
+        FOREACHC(it, geometries) {
+            rapidjson::Value geometryValue;
+            (*it)->SerializeJSON(geometryValue, allocator, options);
+            geometriesValue.PushBack(geometryValue, allocator);
         }
-
-        // TODO(jsonserialization)
-        // extraGeometries
+        value.AddMember("geometries", geometriesValue, allocator);
     }
+
+    // TODO(jsonserialization)
+    // extraGeometries
 
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isStatic", isStatic);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isEnabled", isEnabled);
