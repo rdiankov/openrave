@@ -98,13 +98,26 @@ namespace OpenRAVE {
                     } else {
                         _ExtractKinBody(*itr);
                     }
-                    
                 }
             }
             return true;
         }
 
     protected:
+
+        std::string _CanonicalizeURI(const std::string& uri)
+        {
+            std::string scheme, path, fragment;
+            _ParseURI(uri, scheme, path, fragment);
+
+            if (scheme == "" && path == "") {
+                return std::string("file:") + _filename + std::string("#") + fragment;
+            }
+
+            // TODO: fix other scheme.
+
+            return uri;
+        }
 
         void _FillBody(rapidjson::Value &body, rapidjson::Document::AllocatorType& allocator)
         {
@@ -124,6 +137,10 @@ namespace OpenRAVE {
                     body.AddMember(key, value, allocator);
                 }
             }
+
+            // fix the uri
+            body.RemoveMember("uri");
+            RAVE_SERIALIZEJSON_ADDMEMBER(body, allocator, "uri", _CanonicalizeURI(uri));
         }
 
         void _ExtractKinBody(const rapidjson::Value &value)
