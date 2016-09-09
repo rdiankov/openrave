@@ -454,11 +454,13 @@ public:
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaURI(filename) ) {
             if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
+                UpdatePublishedBodies();
                 return true;
             }
         }
         else if( _IsColladaFile(filename) ) {
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
+                UpdatePublishedBodies();
                 return true;
             }
         }
@@ -466,6 +468,7 @@ public:
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, true);
+                UpdatePublishedBodies();
                 return true;
             }
         }
@@ -473,12 +476,14 @@ public:
             KinBodyPtr pbody = ReadKinBodyURI(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
                 _AddKinBody(pbody,true);
+                UpdatePublishedBodies();
                 return true;
             }
         }
         else {
             if( _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename) ) {
                 if( OpenRAVEXMLParser::GetXMLErrorCount() == 0 ) {
+                    UpdatePublishedBodies();
                     return true;
                 }
             }
