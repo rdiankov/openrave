@@ -202,8 +202,17 @@ public:
     }
 
     bool _InitPlan() {
+        // _collectStats = true;
+        _collectStats = false;
+        _saveScene = false;
+        _useEarlyTermination = false;
+        
         if (_parameters->_nMaxIterations <= 0) {
             _parameters->_nMaxIterations = 100;
+        }
+
+        if (_parameters->_nMaxIterations == 250) {
+            _parameters->_nMaxIterations = 5000;
         }
 
         _bUsePerturnation = true;
@@ -222,6 +231,7 @@ public:
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(), "mt19937");
         }
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+        // _uniformsampler->SetSeed(0); // for testing
 
         _fileIndexMod = 10000; // for trajectory saving
         _dumplevel = Level_Verbose;
@@ -242,6 +252,10 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj) {
         BOOST_ASSERT(!!_parameters && !!ptraj);
 
+        if (_saveScene) {
+            GetEnv()->Save("/private/cache/openrave/parabolicshortcut.mujin.dae"); ///////////////////////////
+        }
+        
         // We need at least two waypoints for retiming.
         if (ptraj->GetNumWaypoints() < 2) {
             return PS_Failed;
@@ -462,7 +476,25 @@ public:
             // Perform shortcutting here
             int numShortcuts = 0;
             if (!!parameters->_setstatevaluesfn || !!parameters->_setstatefn) {
+                _tStartShortcut = utils::GetMicroTime();
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
+                _tEndShortcut = utils::GetMicroTime();
+                if (0) {//(parameters->_nMaxIterations > 100) {
+                    std::ofstream outfile;
+                    outfile.open("/private/cache/openrave/shortcuttime.parabolicsmoother2.txt", std::ios_base::app);
+                    outfile << str(boost::format("%d %f\n")%(parameters->_nMaxIterations)%(0.000001f*(float)(_tEndShortcut - _tStartShortcut)));
+                }
+                if (_collectStats && parameters->_nMaxIterations == 5000) {
+                    std::ofstream statfile;
+                    statfile.open("/private/cache/openrave/rrtstatistics_seed2.scene1.txt", std::ios_base::app);
+                    statfile << str(boost::format("%f %d %f ")%(0.000001f*(float)(_tEndShortcut - _tStartShortcut))%numShortcuts%parabolicpath.duration);
+                    if (_bmanipconstraints) {
+                        statfile << 1 << std::endl;
+                    }
+                    else {
+                        statfile << 0 << std::endl;
+                    }
+                }
                 if (numShortcuts < 0) {
                     return PS_Interrupted;
                 }
@@ -1227,10 +1259,12 @@ protected:
                 break;
             }
 
-            nItersFromPrevSuccessful += 1;
-            if (nItersFromPrevSuccessful > nCutoffIters) {
-                // There has been no progress in the last nCutoffIters iterations. Stop right away.
-                break;
+            if (_useEarlyTermination) {
+                nItersFromPrevSuccessful += 1;
+                if (nItersFromPrevSuccessful > nCutoffIters) {
+                    // There has been no progress in the last nCutoffIters iterations. Stop right away.
+                    break;
+                }
             }
 
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
@@ -1645,19 +1679,21 @@ protected:
                 tTotal = parabolicpath.duration;
                 RAVELOG_DEBUG_FORMAT("env = %d: shortcut iter = %d/%d successful, numSlowDowns = %d, tTotal = %.15e", GetEnv()->GetId()%iters%numIters%numSlowDowns%tTotal);
 
-                // Calculate the score
-                score = diff/nItersFromPrevSuccessful;
-                if (score > currentBestScore) {
-                    currentBestScore = score;
-                    iCurrentBestScore = 1.0/currentBestScore;
-                }
-                nItersFromPrevSuccessful = 0;
+                if (_useEarlyTermination) {
+                    // Calculate the score
+                    score = diff/nItersFromPrevSuccessful;
+                    if (score > currentBestScore) {
+                        currentBestScore = score;
+                        iCurrentBestScore = 1.0/currentBestScore;
+                    }
+                    nItersFromPrevSuccessful = 0;
 
-                if ((score*iCurrentBestScore < cutoffRatio) && (numShortcuts > 5)) {
-                    // We have already shortcut for a bit (numShortcuts > 5). The progress made in
-                    // this iteration is below the curoff ratio. If we continue, it is unlikely that
-                    // we will make much more progress. So stop here.
-                    break;
+                    if ((score*iCurrentBestScore < cutoffRatio) && (numShortcuts > 5)) {
+                        // We have already shortcut for a bit (numShortcuts > 5). The progress made in
+                        // this iteration is below the curoff ratio. If we continue, it is unlikely that
+                        // we will make much more progress. So stop here.
+                        break;
+                    }
                 }
             }
             catch (const std::exception &ex) {
@@ -1808,6 +1844,8 @@ protected:
     uint32_t _tStartInterpolation, _tEndInterpolation;;
 #endif
 
+    uint32_t _tStartShortcut, _tEndShortcut;
+    bool _collectStats, _saveScene, _useEarlyTermination;
 };
 
 PlannerBasePtr CreateParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput) {

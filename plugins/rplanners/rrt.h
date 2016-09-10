@@ -56,6 +56,12 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         FOREACH(it, params->_listInternalSamplers) {
             (*it)->SetSeed(params->_nRandomGeneratorSeed);
         }
+        // _seed = utils::GetMicroTime();
+        // _uniformsampler->SetSeed(_seed);
+        // FOREACH(it, params->_listInternalSamplers) {
+        //     (*it)->SetSeed(_seed);
+        // }
+
 
         PlannerParameters::StateSaver savestate(params);
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -261,6 +267,8 @@ protected:
     inline boost::shared_ptr<RrtPlanner const> shared_planner_const() const {
         return boost::dynamic_pointer_cast<RrtPlanner const>(shared_from_this());
     }
+
+    uint32_t _seed;
 };
 
 class BirrtPlanner : public RrtPlanner<SimpleNode>
@@ -303,6 +311,11 @@ Some python code to display data::\n\
             _parameters.reset();
             return false;
         }
+
+        // _collectStats = true;
+        _collectStats = false;
+        _saveScene = false;
+        RAVELOG_DEBUG_FORMAT("randomgeneratorseed = %d", _seed);
 
         _fGoalBiasProb = dReal(0.01);
         PlannerParameters::StateSaver savestate(_parameters);
@@ -356,6 +369,58 @@ Some python code to display data::\n\
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+        if (_saveScene) {
+            GetEnv()->Save("/private/cache/openrave/rrtscene.mujin.dae"); ////////////////////////////
+        }
+        
+        if (_collectStats) {
+            // Reinitialize trees to reset boost::pool
+
+            _vecInitialNodes.resize(0);
+            _sampleConfig.resize(_parameters->GetDOF());
+            // TODO perhaps distmetricfn should take into number of revolutions of circular joints
+            _treeForward.Init(shared_planner(), _parameters->GetDOF(), _parameters->_distmetricfn, _parameters->_fStepLength, _parameters->_distmetricfn(_parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit));
+            std::vector<dReal> vinitialconfig(_parameters->GetDOF());
+            for(size_t index = 0; index < _parameters->vinitialconfig.size(); index += _parameters->GetDOF()) {
+                std::copy(_parameters->vinitialconfig.begin()+index,_parameters->vinitialconfig.begin()+index+_parameters->GetDOF(),vinitialconfig.begin());
+                _filterreturn->Clear();
+                if( _parameters->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, CFO_FillCollisionReport, _filterreturn) != 0 ) {
+                    RAVELOG_DEBUG_FORMAT("initial configuration for rrt does not satisfy constraints: %s", _filterreturn->_report.__str__());
+                    continue;
+                }
+                _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig, _vecInitialNodes.size()));
+            }
+
+            if( _treeForward.GetNumNodes() == 0 && !_parameters->_sampleinitialfn ) {
+                RAVELOG_WARN("no initial configurations\n");
+                return PS_Failed;
+            }
+
+            vector<dReal> vgoal(_parameters->GetDOF());
+            _vecGoalNodes.resize(0);
+            _nValidGoals = 0;
+            for(size_t igoal = 0; igoal < _parameters->vgoalconfig.size(); igoal += _parameters->GetDOF()) {
+                std::copy(_parameters->vgoalconfig.begin()+igoal,_parameters->vgoalconfig.begin()+igoal+_parameters->GetDOF(),vgoal.begin());
+                if( _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
+                    _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
+                    _nValidGoals++;
+                }
+                else {
+                    RAVELOG_WARN(str(boost::format("goal %d fails constraints\n")%igoal));
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
+                    }
+                    _vecGoalNodes.push_back(NULL); // have to push back dummy or else indices will be messed up
+                }
+            }
+
+            if( _treeBackward.GetNumNodes() == 0 && !_parameters->_samplegoalfn ) {
+                RAVELOG_WARN("no goals specified\n");
+                _parameters.reset();
+                return PS_Failed;
+            }
+        }
+
         _goalindex = -1;
         _startindex = -1;
         if(!_parameters) {
@@ -519,6 +584,11 @@ Some python code to display data::\n\
         }
         ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
         RAVELOG_DEBUG_FORMAT("env=%d, plan success, iters=%d, path=%d points, computation time=%fs\n", GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+        if (_collectStats) {
+            std::ofstream statfile;
+            statfile.open("/private/cache/openrave/rrtstatistics_seed2.scene1.txt", std::ios_base::app);
+            statfile << str(boost::format("%d %d %d ")%_seed%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
+        }
         return _ProcessPostPlanners(_robot,ptraj);
     }
 
@@ -647,6 +717,8 @@ protected:
     std::vector< NodeBase* > _vecGoalNodes;
     size_t _nValidGoals; ///< num valid goals
     std::vector<GOALPATH> _vgoalpaths;
+
+    bool _collectStats, _saveScene;
 };
 
 class BasicRrtPlanner : public RrtPlanner<SimpleNode>

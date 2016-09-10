@@ -458,10 +458,19 @@ public:
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
                 if (!_usingNewHeuristics) {
+                    _tStartShortcut = utils::GetMicroTime();
                     numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
+                    _tEndShortcut = utils::GetMicroTime();
                 }
                 else {
+                    _tStartShortcut = utils::GetMicroTime();
                     numshortcuts = _Shortcut2(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
+                    _tEndShortcut = utils::GetMicroTime();
+                }
+                if (0){//(parameters->_nMaxIterations > 100) {
+                    std::ofstream outfile;
+                    outfile.open("/private/cache/openrave/shortcuttime.parabolicsmoother.txt", std::ios_base::app);
+                    outfile << str(boost::format("%d %f\n")%(parameters->_nMaxIterations)%(0.000001f*(float)(_tEndShortcut - _tStartShortcut)));
                 }
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
@@ -2540,6 +2549,8 @@ protected:
 
     std::vector<dReal> _zerovelpoints; ///< keeps track of the time instance of the original unshortcutted points of the original trajectory. Whenever we perform a shortcut, have to update this structure.
     bool _usingNewHeuristics;
+
+    uint32_t _tStartShortcut, _tEndShortcut;
 };
 
 

@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+#define LINEAR_SMOOTHER_DEBUG
+
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
@@ -27,7 +29,7 @@ public:
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
-    {
+    {      
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
@@ -46,6 +48,10 @@ public:
 
     bool _InitPlan()
     {
+        // _collectStats = true;
+        _collectStats = false;
+        _saveScene = false;
+        _parameters->_nMaxIterations = 5000;
         if( _parameters->_nMaxIterations <= 0 ) {
             _parameters->_nMaxIterations = 100;
         }
@@ -56,6 +62,7 @@ public:
         _puniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         if( !!_puniformsampler ) {
             _puniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
+            // _puniformsampler->SetSeed(0); // for testing
         }
 
         _logginguniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
@@ -73,6 +80,11 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         BOOST_ASSERT(!!_parameters && !!ptraj );
+
+        if (_saveScene) {
+            GetEnv()->Save("/private/cache/openrave/linearshortcutscene.mujin.dae"); ////////////////////////////////////////
+        }
+        
         if( ptraj->GetNumWaypoints() < 2 ) {
             return PS_Failed;
         }
@@ -101,6 +113,16 @@ public:
         
         _SubsampleTrajectory(ptraj,listpath);
 
+        if (_collectStats) {
+            std::ofstream statfile;
+            statfile.open("/private/cache/openrave/rrtstatistics_seed2.scene1.txt", std::ios_base::app);
+            dReal newDistance = 0;
+            FOREACHC(itlistpath, listpath) {
+                newDistance += itlistpath->second;
+            }
+            statfile << str(boost::format("%d %d %f ")%ptraj->GetNumWaypoints()%listpath.size()%newDistance);
+        }
+
 #ifdef LINEAR_SMOOTHER_DEBUG
         ptraj->Init(parameters->_configurationspecification);
         FOREACH(it, listpath) {
@@ -115,6 +137,16 @@ public:
         ptraj->Init(parameters->_configurationspecification);
         FOREACH(it, listpath) {
             ptraj->Insert(ptraj->GetNumWaypoints(),it->first);
+        }
+
+        if (_collectStats) {
+            std::ofstream statfile;
+            statfile.open("/private/cache/openrave/rrtstatistics_seed2.scene1.txt", std::ios_base::app);
+            dReal newDistance = 0;
+            FOREACHC(itlistpath, listpath) {
+                newDistance += itlistpath->second;
+            }
+            statfile << str(boost::format("%d %f ")%ptraj->GetNumWaypoints()%newDistance);
         }
         
 #ifdef LINEAR_SMOOTHER_DEBUG        
@@ -147,7 +179,9 @@ protected:
         int nrejected = 0;
         int iiter = parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
-        while(iiter > 0  && nrejected < (int)listpath.size()+4 && listpath.size() > 2 ) {
+        RAVELOG_DEBUG_FORMAT("maxiterations = %d", iiter);
+        // while(iiter > 0  && nrejected < (int)listpath.size()+4 && listpath.size() > 2 ) {
+        while( iiter > 0 && listpath.size() > 2 ) {
             --iiter;
 
             // pick a random node on the listpath, and a random jump ahead
@@ -345,6 +379,8 @@ protected:
     PlannerBasePtr _linearretimer;
     ConstraintFilterReturnPtr _filterreturn;
     std::vector<dReal> _vtempdists;
+
+    bool _collectStats, _saveScene;
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {

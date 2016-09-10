@@ -14,14 +14,15 @@ typedef std::vector<Real> Vector;
 #define PARABOLICWARN RAVELOG_WARN
 #define PARABOLIC_RAMP_ASSERT BOOST_ASSERT
 
+
 //tolerance for time
-const static Real EpsilonT = 1e-8;
+const static Real EpsilonT = 1e-10;//1e-8;
 //tolerance for position
-const static Real EpsilonX = 1e-8;
+const static Real EpsilonX = 1e-10;//1e-8;
 //tolerance for velocity
-const static Real EpsilonV = 1e-8;
+const static Real EpsilonV = 1e-10;//1e-8;
 //tolerance for acceleration, should be smaller since any checks involving it do not acrue much error...
-const static Real EpsilonA = 1e-9;
+const static Real EpsilonA = 1e-10;//1e-9;
 
 //can replace this with your favorite representation/tests of infinity
 const static Real Inf = 1e300;
