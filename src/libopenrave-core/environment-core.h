@@ -446,7 +446,16 @@ public:
 
     virtual bool LoadURI(const std::string& uri, const AttributesList& atts)
     {
-        return RaveParseColladaURI(shared_from_this(), uri, atts);
+        if ( _IsColladaURI(uri) ) {
+            return RaveParseColladaURI(shared_from_this(), uri, atts);
+        }
+        else if ( _IsJSONURI(uri) ) {
+            // TODO(jsonserialization)
+            return RaveParseJSONURI(shared_from_this(), uri, atts);
+        }
+
+        RAVELOG_WARN("load failed on uri %s\n", uri.c_str());
+        return false;
     }
 
     virtual bool Load(const std::string& filename, const AttributesList& atts)
@@ -508,6 +517,7 @@ public:
         }
         if( _IsJSONData(data) ) {
             // TODO(jsonserialization)
+            return RaveParseJSONData(shared_from_this(), data, atts);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
@@ -1175,8 +1185,18 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsJSONURI(filename) ) {
+            if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
+                return RobotBasePtr();
+            }
+        }
+        else if( _IsJSONFile(filename) ) {
+            if( !RaveParseJSONFile(shared_from_this(), robot, filename, atts) ) {
                 return RobotBasePtr();
             }
         }
@@ -1261,6 +1281,11 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsJSONData(data) ) {
+            if( !RaveParseJSONData(shared_from_this(), robot, data, atts) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( _IsXData(data) ) {
             // have to copy since it takes vector<char>
             std::vector<char> newdata(data.size()+1, 0);  // need a null-terminator
@@ -1318,8 +1343,18 @@ public:
                 return KinBodyPtr();
             }
         }
+        else if( _IsJSONURI(filename) ) {
+            if( !RaveParseJSONURI(shared_from_this(), body, filename, atts) ) {
+                return KinBodyPtr();
+            }
+        }
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
+                return KinBodyPtr();
+            }
+        }
+        else if( _IsJSONFile(filename) ) {
+            if( !RaveParseJSONFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
             }
         }
@@ -1402,6 +1437,11 @@ public:
                 return RobotBasePtr();
             }
         }
+        else if( _IsJSONData(data) ) {
+            if( !RaveParseJSONData(shared_from_this(), body, data, atts) ) {
+                return RobotBasePtr();
+            }
+        }
         else if( _IsXData(data) ) {
             // have to copy since it takes vector<char>
             std::vector<char> newdata(data.size()+1, 0);  // need a null-terminator
@@ -1465,18 +1505,28 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        bool bIsColladaURI=false, bIsColladaFile=false, bIsXFile = false;
+        bool bIsColladaURI = false;
+        bool bIsColladaFile = false;
+        bool bIsJSONURI = false;
+        bool bIsJSONFile = false;
+        bool bIsXFile = false;
         if( _IsColladaURI(filename) ) {
             bIsColladaURI = true;
         }
+        else if( _IsJSONURI(filename) ) {
+            bIsJSONURI = true;
+        }
         else if( _IsColladaFile(filename) ) {
             bIsColladaFile = true;
+        }
+        else if( _IsJSONFile(filename) ) {
+            bIsJSONFile = true;
         }
         else if( _IsXFile(filename) ) {
             bIsXFile = true;
         }
 
-        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsColladaFile||bIsXFile) ) {
+        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsJSONURI||bIsColladaFile||bIsJSONFile||bIsXFile) ) {
             if( type == PT_KinBody ) {
                 BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
                 KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
@@ -1485,8 +1535,18 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
+                else if( bIsJSONURI ) {
+                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
                 else if( bIsColladaFile ) {
                     if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsJSONFile ) {
+                    if( !RaveParseJSONFile(shared_from_this(), pbody, filename, atts) ) {
                         return InterfaceBasePtr();
                     }
                 }
@@ -1505,8 +1565,18 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
+                else if( bIsJSONURI ) {
+                    if( !RaveParseJSONURI(shared_from_this(), probot, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
                 else if( bIsColladaFile ) {
                     if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
+                        return InterfaceBasePtr();
+                    }
+                }
+                else if( bIsJSONFile ) {
+                    if( !RaveParseJSONFile(shared_from_this(), probot, filename, atts) ) {
                         return InterfaceBasePtr();
                     }
                 }
