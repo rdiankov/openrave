@@ -18,14 +18,15 @@ namespace OpenRAVE {
 
 namespace RampOptimizerInternal {
 
-////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Ramp
-Ramp::Ramp(dReal v0_, dReal a_, dReal dur_, dReal x0_)  {
-    BOOST_ASSERT(dur_ >= -epsilon);
+Ramp::Ramp(dReal v0_, dReal a_, dReal duration_, dReal x0_)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
 
     v0 = v0_;
     a = a_;
-    duration = dur_;
+    duration = duration_;
     x0 = x0_;
 
     v1 = v0 + (a*duration);
@@ -33,9 +34,11 @@ Ramp::Ramp(dReal v0_, dReal a_, dReal dur_, dReal x0_)  {
     x1 = x0 + d;
 }
 
-dReal Ramp::EvalPos(dReal t) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
+dReal Ramp::EvalPos(dReal t) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
+
     if (t <= 0) {
         return x0;
     }
@@ -43,12 +46,14 @@ dReal Ramp::EvalPos(dReal t) const {
         return x1;
     }
 
-    return t*(v0 + 0.5*a*t) + x0;
+    return x0 + t*(v0 + 0.5*a*t);
 }
 
-dReal Ramp::EvalVel(dReal t) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
+dReal Ramp::EvalVel(dReal t) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
+
     if (t <= 0) {
         return v0;
     }
@@ -59,42 +64,46 @@ dReal Ramp::EvalVel(dReal t) const {
     return v0 + (a*t);
 }
 
-dReal Ramp::EvalAcc(dReal t) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
+dReal Ramp::EvalAcc(dReal t) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
+
     return a;
 }
 
-void Ramp::GetPeaks(dReal& bmin, dReal& bmax) const {
-    GetPeaks(0, duration, bmin, bmax);
-    return;
+void Ramp::GetPeaks(dReal& bmin, dReal& bmax) const
+{
+    return GetPeaks(0, duration, bmin, bmax);
 }
 
-void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
-    if (ta > tb) {
+void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const
+{
+    if( ta > tb ) {
         GetPeaks(tb, ta, bmin, bmax);
+        return;
     }
 
-    if (ta < 0) {
+    if( ta < 0 ) {
         ta = 0;
     }
-    if (tb <= 0) {
+    if( tb <= 0 ) {
         bmin = x0;
         bmax = x0;
         return;
     }
 
-    if (tb > duration) {
+    if( tb > duration ) {
         tb = duration;
     }
-    if (ta >= duration) {
+    if( ta >= duration ) {
         bmin = x1;
         bmax = x1;
         return;
     }
 
-    if (FuzzyZero(a, epsilon)) {
-        if (v0 > 0) {
+    if( FuzzyZero(a, g_fRampEpsilon) ) {
+        if( v0 > 0 ) {
             bmin = EvalPos(ta);
             bmax = EvalPos(tb);
         }
@@ -105,29 +114,33 @@ void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
         return;
     }
 
-    bmin = EvalPos(ta);
-    bmax = EvalPos(tb);
-    if (bmin > bmax) {
-        Swap(bmin, bmax);
+    dReal curMin, curMax;
+    curMin = EvalPos(ta);
+    curMax = EvalPos(tb);
+    if( curMin > curMax ) {
+        Swap(curMin, curMax);
     }
 
-    dReal tDeflection = -v0/a;
-    if ((tDeflection <= ta) || (tDeflection >= tb)) {
+    dReal tDeflection = -v0/a; // the time when velocity crosses zero
+    if( (tDeflection <= ta) || (tDeflection >= tb) ) {
+        bmin = curMin;
+        bmax = curMax;
         return;
     }
 
     dReal xDeflection = EvalPos(tDeflection);
-    bmin = Min(bmin, xDeflection);
-    bmax = Max(bmax, xDeflection);
+    bmin = Min(curMin, xDeflection);
+    bmax = Max(curMax, xDeflection);
     return;
 }
 
-void Ramp::Initialize(dReal v0_, dReal a_, dReal dur_, dReal x0_) {
-    BOOST_ASSERT(dur_ >= -epsilon);
+void Ramp::Initialize(dReal v0_, dReal a_, dReal duration_, dReal x0_)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
 
     v0 = v0_;
     a = a_;
-    duration = dur_;
+    duration = duration_;
     x0 = x0_;
 
     v1 = v0 + (a*duration);
@@ -136,23 +149,24 @@ void Ramp::Initialize(dReal v0_, dReal a_, dReal dur_, dReal x0_) {
     return;
 }
 
-void Ramp::PrintInfo(std::string name) const {
-    std::cout << "Ramp information: " << name << std::endl;
-    std::cout << str(boost::format("  v0 = %.15e")%v0) << std::endl;
-    std::cout << str(boost::format("   a = %.15e")%a) << std::endl;
-    std::cout << str(boost::format("   t = %.15e")%duration) << std::endl;
-    std::cout << str(boost::format("  x0 = %.15e")%x0) << std::endl;
-    std::cout << str(boost::format("  v1 = %.15e")%v1) << std::endl;
-    std::cout << str(boost::format("   d = %.15e")%d) << std::endl;
-    std::cout << str(boost::format("  x1 = %.15e")%x1) << std::endl;
+void Ramp::SetInitialValue(dReal newx0)
+{
+    x0 = newx0;
+    x1 = x0 + d;
+    return;
 }
 
-void Ramp::UpdateDuration(dReal newDuration) {
-    BOOST_ASSERT(newDuration >= -epsilon);
-    if (newDuration < 0) {
-        newDuration = 0;
+void Ramp::UpdateDuration(dReal newDuration)
+{
+    OPENRAVE_ASSERT_OP(newDuration, >=, -g_fRampEpsilon);
+    if( newDuration < 0 ) {
+        duration = 0;
+        x1 = x0;
+        v1 = v0;
+        d = 0;
+        return;
     }
-    // Update the members accordinly
+
     duration = newDuration;
     v1 = v0 + (a*duration);
     d = duration*(v0 + 0.5*a*duration);
@@ -160,21 +174,28 @@ void Ramp::UpdateDuration(dReal newDuration) {
     return;
 }
 
-void Ramp::SetInitialValue(dReal newx0) {
-    x0 = newx0;
-    x1 = x0 + d;
-    return;
+void Ramp::Copy(Ramp& outRamp)
+{
+    x0 = outRamp.x0;
+    x1 = outRamp.x1;
+    v0 = outRamp.v0;
+    v1 = outRamp.v1;
+    a = outRamp.a;
+    duration = outRamp.duration;
+    d = outRamp.d;
 }
 
-void Ramp::Cut(dReal t, Ramp &remRamp) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        remRamp.Initialize(v0, a, duration, x0);
+void Ramp::Cut(dReal t, Ramp& remRamp)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        remRamp.Copy(this);
         Initialize(v0, 0, 0, x0);
         return;
     }
-    else if (t >= duration) {
+    else if( t >= duration ) {
         remRamp.Initialize(v1, 0, 0, x1);
         return;
     }
@@ -185,35 +206,35 @@ void Ramp::Cut(dReal t, Ramp &remRamp) {
     return;
 }
 
-void Ramp::TrimFront(dReal t) {
-    // Trim front, keep back
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
+void Ramp::TrimFront(dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
         return;
     }
-    else if (t >= duration) {
+    else if( t >= duration ) {
         Initialize(v1, 0, 0, x1);
         return;
     }
 
-    dReal remDuration = duration - t;
     dReal newx0 = EvalPos(t);
     dReal newv0 = EvalVel(t);
-
-    Initialize(newv0, a, remDuration, newx0);
+    Initialize(newv0, a, duration - t, newx0);
     return;
 }
 
-void Ramp::TrimBack(dReal t) {
-    // Trim back, keep front
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
+void Ramp::TrimBack(dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
         Initialize(v0, 0, 0, x0);
         return;
     }
-    else if (t >= duration) {
+    else if( t >= duration ) {
         return;
     }
 
@@ -221,288 +242,253 @@ void Ramp::TrimBack(dReal t) {
     return;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParabolicCurve
-ParabolicCurve::ParabolicCurve(std::vector<Ramp> rampsIn) {
-    BOOST_ASSERT(!rampsIn.empty());
+ParaboliCurve::ParabolicCurve(std::vector<Ramp>&rampsIn)
+{
+    OPENRAVE_ASSERT_OP(rampsIn.size(), >, 0);
 
-    ramps.resize(0);
-    ramps.reserve(rampsIn.size());
-    switchpointsList.resize(0);
-    switchpointsList.reserve(rampsIn.size() + 1);
-    d = 0.0;
-    duration = 0.0;
-    switchpointsList.push_back(duration);
-
-    for (std::size_t i = 0; i != rampsIn.size(); ++i) {
-        ramps.push_back(rampsIn[i]);
-        d = d + ramps.back().d;
-        duration = duration + ramps[i].duration;
-        switchpointsList.push_back(duration);
+    // This will invalidate rampsIn
+    _ramps.swap(rampsIn);
+    _switchpointsList.resize(0);
+    if( _switchpointsList.size() < _ramps.size() + 1 ) {
+        _switchpointsList.reserve(_ramps.size() + 1);
     }
-    v0 = rampsIn.front().v0;
-    v1 = rampsIn.back().v1;
-    SetInitialValue(rampsIn[0].x0);
-}
 
-void ParabolicCurve::Append(ParabolicCurve curve) {
-    std::size_t prevLength = 0;
-    std::size_t sz = curve.ramps.size();
-    if (ramps.size() == 0) {
-        switchpointsList.reserve(sz + 1);
-        d = 0.0;
-        duration = 0.0;
-        switchpointsList.push_back(duration);
-        x0 = curve.ramps[0].x0;
-        v0 = curve.ramps[0].v0;
-    }
-    prevLength = ramps.size();
-    ramps.reserve(prevLength + sz);
+    _d = 0;
+    _duration = 0;
+    _switchpointsList.push_back(_duration);
 
-    for (std::size_t i = 0; i != sz; ++i) {
-        ramps.push_back(curve.ramps[i]);
-        d = d + ramps.back().d;
-        duration = duration + ramps.back().duration;
-        switchpointsList.push_back(duration);
+    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
+        _d += itramp->d;
+        _duration += itramp->duration;
+        _switchpointsList.push_back(_duration);
     }
-    v1 = curve.v1;
-    SetInitialValue(x0);
+
+    // Call SetInitialValue to enforce consistency of position throughout the curve (i.e., enforcing
+    // ramps[i - 1].x1 = ramps[i].x0).
+    SetInitialValue(_ramps[0].x0);
     return;
 }
 
-void ParabolicCurve::Reset() {
-    x0 = 0;
-    x1 = 0;
-    duration = 0;
-    d = 0;
-    v0 = 0;
-    v1 = 0;
-    switchpointsList.clear();
-    ramps.clear();
-    return;
-}
-
-void ParabolicCurve::SetInitialValue(dReal newx0) {
-    x0 = newx0;
-    size_t nRamps = ramps.size();
-    for (size_t i = 0; i < nRamps; ++i) {
-        ramps[i].SetInitialValue(newx0);
-        newx0 = ramps[i].x1;
+void ParabolicCurve::Append(ParabolicCurve& curve)
+{
+    if( IsEmpty() ) {
+        // This will invalidate curve
+        _ramps.swap(curve._ramps);
+        _switchpointsList.swap(curve._switchpointsList);
+        _d = curve._d;
+        _duration = curve._duration;
+        return;
     }
-    x1 = x0 + d;
-    return;
+
+    if( _ramps.capacity() < _ramps.size() + curve._ramps.size() ) {
+        _ramps.reserve(_ramp.size() + curve._ramps.size());
+    }
+    if( _switchpointsList.capacity() < _switchpointsList.size() + curve._switchpointsList.size() - 1 ) {
+        _switchpointsList.reserve(_switchpointsList.size() + curve._switchpointsList.size() - 1);
+    }
+
+    curve.SetInitialValue(GetX1());
+    for (size_t i = 0; i < curve._ramps.size(); ++i) {
+        _ramps.push_back(curve._ramps[i]);
+        // The following is always valid since _switchpointsList.size() = _ramps.size() + 1. Instead
+        // of calculating new switch points by accumulating ramp durations, we add _duration to all
+        // switch points in curve._switchpointsList in order to reduce numerical error.
+        _switchpointsList.push_back(prevDuration + curve._switchpointsList[i + 1]);
+    }
+    _d += curve._d;
+    _duration = _switchpointsList.back();
 }
 
-void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
+
+void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
         index = 0;
         remainder = 0;
+        return;
     }
-    else if (t >= duration) {
-        index = ((int) ramps.size()) - 1;
-        remainder = ramps.back().duration;
+    else if( t >= _duration ) {
+        index = ((int) _ramps.size() - 1);
+        remainder = _ramps.back().duration;
+        return;
     }
     else {
-        index = 0;
-        // Iterate through switchpointsList
-        std::vector<dReal>::const_iterator it = switchpointsList.begin();
-        while (it != switchpointsList.end() && t >= *it) {
-            index++;
-            it++;
+        // Convention: if t lies exactly at a switch point between ramps[i] and ramps[i + 1], we
+        // return index = i + 1 and remainder = 0.
+        int index_ = 0;
+        std::vector<dReal>::const_iterator it = _switchpointsList.begin();
+        while( it != _switchpointsList.end() && t > *it) {
+            ++index_;
+            ++it;
         }
-        BOOST_ASSERT(index < (int)switchpointsList.size());
-        index = index - 1;
-        remainder = t - *(it - 1);
+        OPENRAVE_ASSERT_OP(index, <, (int)switchpointsList.size());
+        index = index_;
+        remainder = t - *it;
+        return;
     }
-    return;
 }
 
-void ParabolicCurve::Initialize(std::vector<Ramp> rampsIn) {
-    ramps.resize(0);
-    ramps.reserve(rampsIn.size());
-
-    switchpointsList.resize(0);
-    switchpointsList.reserve(rampsIn.size() + 1);
-
-    d = 0.0;
-    duration = 0.0;
-    switchpointsList.push_back(duration);
-    v0 = rampsIn.front().v0;
-    v1 = rampsIn.back().v1;
-
-    for (std::size_t i = 0; i != rampsIn.size(); ++i) {
-        ramps.push_back(rampsIn[i]);
-        d = d + ramps.back().d;
-        duration = duration + ramps[i].duration;
-        switchpointsList.push_back(duration);
-    }
-    SetInitialValue(rampsIn[0].x0);
-    return;
+void ParabolicCurve::GetPeaks(dReal& bmin, dReal& bmax) const
+{
+    return GetPeaks(0, _duration, bmin, bmax);
 }
 
-void ParabolicCurve::PrintInfo(std::string name) const {
-    std::cout << "ParabolicCurve information: " << name << std::endl;
-    std::cout << str(boost::format("  This parabolic curve consists of %d ramps")%(ramps.size())) << std::endl;
-    std::cout << str(boost::format("  v0 = %.15e")%(ramps[0].v0)) << std::endl;
-    std::cout << str(boost::format("   t = %.15e")%duration) << std::endl;
-    std::cout << str(boost::format("  x0 = %.15e")%x0) << std::endl;
-    std::cout << str(boost::format("  x1 = %.15e")%x1) << std::endl;
-    std::cout << str(boost::format("   d = %.15e")%d) << std::endl;
-    std::string swList = GenerateStringFromVector(switchpointsList);
-    swList = "  Switch points = " + swList;
-    std::cout << swList << std::endl;
-}
-
-dReal ParabolicCurve::EvalPos(dReal t) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        return x0;
-    }
-    else if (t >= duration) {
-        return x1;
-    }
-
-    int index;
-    dReal remainder;
-    FindRampIndex(t, index, remainder);
-    return ramps[index].EvalPos(remainder);
-}
-
-dReal ParabolicCurve::EvalVel(dReal t) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        return v0;
-    }
-    else if (t >= duration) {
-        return v1;
-    }
-
-    int index;
-    dReal remainder;
-    FindRampIndex(t, index, remainder);
-    return ramps[index].EvalVel(remainder);
-}
-
-dReal ParabolicCurve::EvalAcc(dReal t) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        return ramps[0].a;
-    }
-    else if (t >= duration) {
-        return ramps.back().a;
-    }
-
-    int index;
-    dReal remainder;
-    FindRampIndex(t, index, remainder);
-    return ramps[index].a;
-}
-
-void ParabolicCurve::GetPeaks(dReal& bmin, dReal& bmax) const {
-    GetPeaks(0, duration, bmin, bmax);
-    return;
-}
-
-void ParabolicCurve::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const {
-    bmin = inf;
-    bmax = -inf;
-    dReal temp1, temp2;
-    for (std::vector<Ramp>::const_iterator it = ramps.begin(); it != ramps.end(); ++it) {
-        it->GetPeaks(ta, tb, temp1, temp2);
-        if (temp1 < bmin) {
-            bmin = temp1;
+void ParabolicCurve::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const
+{
+    dReal curMin = g_fRampInf, curMax = -g_fRampInf;
+    dReal tempMin, tempMax;
+    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
+        itramp->GetPeaks(ta, tb, tempMin, tempMax);
+        if( tempMin < curMin ) {
+            curMin = tempMin;
         }
-        if (temp2 > bmax) {
-            bmax = temp2;
+        if( tempMax > curMax ) {
+            curMax = tempMax;
         }
     }
-    RAMP_OPTIM_ASSERT(bmin < inf);
-    RAMP_OPTIM_ASSERT(bmax > -inf);
+    bmin = curMin;
+    bmax = curMax;
     return;
 }
 
-void ParabolicCurve::SetConstant(dReal _x0, dReal t) {
-    if (t < 0) {
-        RAMP_OPTIM_WARN("Invalid time given: t = %.15e", t);
-    }
-    RAMP_OPTIM_ASSERT(t >= 0);
+void ParabolicCurve::Initialize(std::vector<Ramp>& rampsIn)
+{
+    // The same as in the constructor
+    OPENRAVE_ASSERT_OP(rampsIn.size(), >, 0);
 
-    Ramp ramp(0, 0, t, _x0);
-    std::vector<Ramp> _ramps(1);
-    _ramps[0] = ramp;
-    Initialize(_ramps);
+    // This will invalidate rampsIn
+    _ramps.swap(rampsIn);
+    _switchpointsList.resize(0);
+    if( _switchpointsList.size() < _ramps.size() + 1 ) {
+        _switchpointsList.reserve(_ramps.size() + 1);
+    }
+
+    _d = 0;
+    _duration = 0;
+    _switchpointsList.push_back(_duration);
+
+    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
+        _d += itramp->d;
+        _duration += itramp->duration;
+        _switchpointsList.push_back(_duration);
+    }
+
+    // Call SetInitialValue to enforce consistency of position throughout the curve (i.e., enforcing
+    // ramps[i - 1].x1 = ramps[i].x0).
+    SetInitialValue(_ramps[0].x0);
     return;
 }
 
-void ParabolicCurve::SetSegment(dReal _x0, dReal _x1, dReal _v0, dReal _v1, dReal t) {
-    if (t <= 0) {
-        RAMP_OPTIM_WARN("Invalid time given: t = %.15e", t);
+void ParabolicCurve::Reset()
+{
+    _ramps.clear();
+    _switchpointsList.clear();
+    _duration = 0;
+    _d = 0;
+    return;
+}
+
+void ParabolicCurve::SetConstant(dReal x0, dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    if( t < 0 ) {
+        t = 0;
     }
-    RAMP_OPTIM_ASSERT(t > 0);
+
+    std::vector<Ramp> ramps(1);
+    ramps[0].Initialize(0, 0, t, x0);
+    Initialize(ramps);
+    return;
+}
+
+void ParabolicCurve::SetInitialValue(dReal newx0)
+{
+    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
+        itramp->SetInitialValue(newx0);
+        newx0 += itramp->x1;
+    }
+    return;
+}
+
+void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    if( t < 0 ) {
+        t = 0;
+    }
 
     /*
-      We want to compute an acceleration which is the most consistent with all the given
-      values. Assuming that x0, v0, and t are correct, such an acceleration is *the* solution to the
-      following minimization problem:
-      
-              minimize_a C(a) = (v0 + at - v1)^2 + (x0 + v0*t + 0.5*a*t^2)^2
-              (minimizing the discrepancies in displacement and velocity)
+       There are two points to be noted.
 
-      >>>> import sympy as sp
-      >>>> x0, x1, v0, v1, a, t = sp.symbols(['x0', 'x1', 'v0', 'v1', 'a', 't'])
-      >>>> C = (v0 + a*t - v1)**2 + (x0 + v0*t + 0.5*a*t*t - x1)**2
-      
-      We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly positive
-      (given that t > 0). Therefore, it always has a minimum and the minimum is at
+       1. Normally, SetSegment will be called inside some check functions in parabolicsmoother after
+         the segment has been checked. Therefore, we store the given boundary conditions as is.
 
-              a* = -(2*v0 + t*x0 + 2*v0*t^2)/(0.5*t^3 + 2*t)
+       2. From 1. we therefore want to compute an acceleration which is the most consistent with all
+         the given values. Assuming that x0, v0, and t are always correct, we want to compute a such
+         that it minimizes differences between computed x1, v1, and actual x1, v1. That is
 
-      >>>> sp.solve(sp.diff(C, a), a)
+                 a* = argmin_a C(a) = (v0 + at - v1)^2 + (x0 + v0*t + 0.5*a*t^2)^2.
+
+         >>>> import sympy as sp
+         >>>> x0, x1, v0, v1, a, t = sp.symbols(['x0', 'x1', 'v0', 'v1', 'a', 't'])
+         >>>> C = (v0 + a*t - v1)**2 + (x0 + v0*t + 0.5*a*t*t - x1)**2
+
+         We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly
+         positive (given that t > 0). Therefore, it always has a minimum and the minimum is at
+
+                 a* = -(2*v0 + t*x0 + 2*v0*t^2)/(0.5*t^3 + 2*t).
+
+         >>>> sp.solve(sp.diff(C, a), a)
      */
     dReal tSqr = t*t;
-    dReal a = -(_v0*tSqr + t*(_x0 - _x1) + 2*(_v0 - _v1))/(t*(0.5*tSqr + 2));
-    Ramp ramp(_v0, a, t, _x0);
-    // RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.x1, _x1, epsilon));
-    // RAMP_OPTIM_ASSERT(FuzzyEquals(ramp.v1, _v1, epsilon));
-    {
-        /*
-          We force the boundary conditions to be exact since thess values should already have been
-          checked with constraints.
-         */
-        ramp.x1 = _x1;
-        ramp.v1 = _v1;
-    }
+    dReal a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
+    std::vector<Ramp> ramps(1);
 
-    std::vector<Ramp> _ramps(1);
-    _ramps[0] = ramp;
-    Initialize(_ramps);
+    // Directly assign values to avoid recalculation.
+    ramps[0].x0 = x0;
+    ramps[0].x1 = x1;
+    ramps[0].v0 = v0;
+    ramps[0].v1 = v1;
+    ramps[0].duration = t;
+    ramps[0].d = x1 - x0;
+    ramps[0].a = a;
+    Initialize(ramps);
     return;
 }
 
-void ParabolicCurve::SetZeroDuration(dReal _x0, dReal _v0) {
-    Ramp ramp(_v0, 0, 0, _x0);
-    std::vector<Ramp> _ramps(1);
-    _ramps[0] = ramp;
-    Initialize(_ramps);
+void ParabolicCurve::SetZeroDuration(dReal x0, dReal v0)
+{
+    std::vector<Ramp> ramps(1);
+    ramps[0].Initialize(v0, 0, 0, x0);
+    Initialize(ramps);
     return;
 }
 
-void ParabolicCurve::Cut(dReal t, ParabolicCurve &remCurve) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
+void ParabolicCurve::Swap(ParabolicCurve& anotherCurve)
+{
+    _ramp.swap(anotherCurve._ramps);
+    _switchpointsList.swap(anotherCurve._switchpointsList);
+    Swap(_d, anotherCurve._d);
+    Swap(_duration, anotherCurve._duration);
+}
 
-    if (t <= 0) {
-        remCurve.Initialize(ramps);
-        SetZeroDuration(x0, v0);
+void ParabolicCurve::Cut(dReal t, ParabolicCurve& remCurve)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        Swap(remCurve);
+        SetZeroDuration(remCurve.GetX0(), remCurve.GetV0());
         return;
     }
-    else if (t >= duration) {
-        remCurve.SetZeroDuration(x1, v1);
+    else if( t >= _duration ) {
+        remCurve.SetZeroDuration(GetX1(), GetV1());
         return;
     }
 
@@ -510,29 +496,64 @@ void ParabolicCurve::Cut(dReal t, ParabolicCurve &remCurve) {
     dReal remainder;
     FindRampIndex(t, index, remainder);
 
-    std::vector<Ramp> leftHalf(index + 1);
-    std::vector<Ramp> rightHalf(ramps.size() - index);
+    if( remainder == 0 ) {
+        // t is a switch point. No trimming required. Note also that index will always be greater
+        // than 0.
+        remCurve._ramps.resize(_ramps.size() - index);
+        std::copy(_ramps.begin() + index, _ramps.end(), remCurve._ramps.begin());
+        remCurve._d = remCurve.GetX1() - remCurve.GetX0();
 
-    std::copy(ramps.begin(), ramps.begin() + index + 1, leftHalf.begin());
-    std::copy(ramps.begin() + index, ramps.end(), rightHalf.begin());
+        remCurve._switchpointsList.resize(_switchpointsList.size() - index);
+        std::copy(_switchpointsList.begin() + index, _switchpointsList.end(), remCurve._switchpointsList.begin());
+        remCurve._switchpointsList[0] = 0;
+        for (std::vector<dReal>::iterator itsw = remCurve._switchpointsList.begin() + 1; itsw != remCurve._switchpointsList.end(); ++itsw) {
+            // Remove duration offset
+            *itsw -= _switchpointsList[index];
+        }
+        remCurve._duration = remCurve._switchpointsList.back();
 
-    leftHalf.back().TrimBack(remainder);
-    rightHalf.front().TrimFront(remainder);
-
-    Initialize(leftHalf);
-    remCurve.Initialize(rightHalf);
-    return;
-}
-
-void ParabolicCurve::TrimFront(dReal t) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-
-    if (t <= 0) {
+        _ramps.resize(index);
+        _switchpointsList.resize(index + 1);
+        _d = GetX1() - GetX0();
+        _duration = _switchpointsList.back();
         return;
     }
-    else if (t >= duration) {
-        SetZeroDuration(x1, v1);
+    else {
+        // Note that index will always be strictly less than _ramps.size().
+        remCurve._ramps.resize(_ramps.size() - index);
+        std::copy(_ramps.begin() + index, _ramps.end(), remCurve._ramps.begin());
+        remCurve._ramps.front().TrimFront(remainder);
+        remCurve._d = remCurve.GetX1() - remCurve.GetX0();
+
+        remCurve._switchpointsList.resize(_switchpointsList.size() - index);
+        std::copy(_switchpointsList.begin() + index, _switchpointsList.end(), remCurve._switchpointsList.begin());
+        remCurve._switchpointsList[0] = 0;
+        dReal durationOffset = _switchpointsList[index] + remainder;
+        for (std::vector<dReal>::iterator itsw = remCurve._switchpointsList.begin() + 1; itsw != remCurve._switchpointsList.end(); ++itsw) {
+            // Remove duration offset
+            *itsw -= durationOffset;
+        }
+        remCurve._duration = remCurve._switchpointsList.back();
+
+        _ramps.resize(index + 1);
+        _ramps.back().TrimBack(remainder);
+        _switchpointsList.resize(index + 2);
+        _switchpointsList.back() = _switchpointsList[_switchpointsList.size() - 2] + remainder;
+        _d = GetX1() - GetX0();
+        _duration = _switchpointsList.back();
+    }
+}
+
+void ParabolicCurve::TrimFront(dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        return;
+    }
+    else if( t >= duration ) {
+        SetZeroDuration(GetX1(), GetV1());
         return;
     }
 
@@ -541,22 +562,22 @@ void ParabolicCurve::TrimFront(dReal t) {
     FindRampIndex(t, index, remainder);
 
     std::vector<Ramp> rightHalf(ramps.size() - index);
-    std::copy(ramps.begin() + index, ramps.end(), rightHalf.begin());
+    std::copy(_ramps.begin() + index, _ramps.end(), rightHalf.begin());
     rightHalf.front().TrimFront(remainder);
-
     Initialize(rightHalf);
     return;
 }
 
-void ParabolicCurve::TrimBack(dReal t) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
+void ParabolicCurve::TrimBack(dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
 
-    if (t <= 0) {
-        SetZeroDuration(x0, v0);
+    if( t <= 0 ) {
+        SetZeroDuration(GetX0(), GetV0());
         return;
     }
-    else if (t >= duration) {
+    else if( t >= duration ) {
         return;
     }
 
@@ -564,463 +585,25 @@ void ParabolicCurve::TrimBack(dReal t) {
     dReal remainder;
     FindRampIndex(t, index, remainder);
 
-    std::vector<Ramp> leftHalf(index + 1);
-
-    std::copy(ramps.begin(), ramps.begin() + index + 1, leftHalf.begin());
-    leftHalf.back().TrimBack(remainder);
-
-    Initialize(leftHalf);
-    return;
-}
-
-
-////////////////////////////////////////////////////////////////////////////////
-// paraboliccurvesnd
-ParabolicCurvesND::ParabolicCurvesND(std::vector<ParabolicCurve> curvesIn) {
-    BOOST_ASSERT(!curvesIn.empty());
-
-    ndof = curvesIn.size();
-    // Here we need to check whether every curve has (roughly) the same duration
-    ///////////////////
-    dReal minDur = curvesIn[0].duration;
-    for (std::vector<ParabolicCurve>::const_iterator it = curvesIn.begin() + 1; it != curvesIn.end(); ++it) {
-        BOOST_ASSERT(FuzzyEquals(it->duration, minDur, epsilon));
-        minDur = Min(minDur, it->duration);
-    }
-    // Need to think about how to handle discrepancies in durations.
-
-    curves = curvesIn;
-    duration = minDur;
-
-    x0Vect.reserve(ndof);
-    x1Vect.reserve(ndof);
-    dVect.reserve(ndof);
-    v0Vect.reserve(ndof);
-    v1Vect.reserve(ndof);
-    for (size_t i = 0; i < ndof; ++i) {
-        x0Vect.push_back(curves[i].x0);
-        x1Vect.push_back(curves[i].x1);
-        v0Vect.push_back(curves[i].v0);
-        v1Vect.push_back(curves[i].v1);
-        dVect.push_back(curves[i].d);
-    }
-
-    // Manage switch points
-    switchpointsList = curves[0].switchpointsList;
-    std::vector<dReal>::iterator it;
-    for (size_t i = 0; i < ndof; i++) {
-        for (size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
-            // Iterate from the second element to the second last element (the first and the last
-            // switch points should be the same for every DOF)
-            it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
-            if (it == switchpointsList.end()) {
-                if (!FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
-                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
-                }
-            }
-            else if (it == switchpointsList.begin()) {
-                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon)) {
-                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
-                }
-            }
-            else {
-                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon) && !FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
-                    // Insert only non-redundant switch points
-                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
-                }
-            }
-        }
-    }
-
-    constraintChecked = false;
-}
-
-void ParabolicCurvesND::Append(ParabolicCurvesND curvesnd) {
-    BOOST_ASSERT(!curvesnd.IsEmpty());
-    // Users need to make sure that the displacement and velocity vectors are continuous
-
-    if (curves.empty()) {
-        curves = curvesnd.curves;
-        ndof = curves.size();
-        duration = curvesnd.duration;
-        x0Vect = curvesnd.x0Vect;
-        x1Vect = curvesnd.x1Vect;
-        dVect = curvesnd.dVect;
-        v0Vect = curvesnd.v0Vect;
-        v1Vect = curvesnd.v1Vect;
-        switchpointsList = curvesnd.switchpointsList;
+    if( remainder == 0 ) {
+        // Here index is strictly positive since the case when index == 0 and remainder == 0 would
+        // have been caught from if( t <= 0 ) above.
+        _ramps.resize(index);
+        _switchpointsList.resize(index + 1);
     }
     else {
-        BOOST_ASSERT(curvesnd.ndof == ndof);
-        dReal originalDur = duration;
-        duration = duration + curvesnd.duration;
-        for (size_t i = 0; i < ndof; i++) {
-            curves[i].Append(curvesnd.curves[i]);
-            v1Vect[i] = curvesnd.curves[i].v1;
-            x1Vect[i] = curves[i].x1;
-            dVect[i] = dVect[i] + curvesnd.curves[i].d;
-        }
-        std::vector<dReal> tempSwitchpointsList = curvesnd.switchpointsList;
-        // Add every element in tempSwitchpointsList by originalDur
-        for (std::vector<dReal>::iterator it = tempSwitchpointsList.begin(); it != tempSwitchpointsList.end(); ++it) {
-            *it += originalDur;
-        }
-        switchpointsList.pop_back(); // remove the last element of switchpointsList since it must be
-                                     // the same as the first switch point from tempSwitchpointsList
-        switchpointsList.reserve(switchpointsList.size() + tempSwitchpointsList.size());
-        switchpointsList.insert(switchpointsList.end(), tempSwitchpointsList.begin(), tempSwitchpointsList.end());
-
-        if (constraintChecked) {
-            constraintChecked = constraintChecked && curvesnd.constraintChecked;
-        }
+        _ramps.resize(index + 1);
+        _ramps.back().TrimBack(remainder);
+        _switchpointsList.resize(index + 2);
+        _switchpointsList.back() = _switchpointsList[_switchpointsList.size() - 2] + remainder;
     }
+    _d = GetX1() - GetX0();
+    _duration = _switchpointsList.back();
     return;
-}
-
-void ParabolicCurvesND::Initialize(std::vector<ParabolicCurve> curvesIn) {
-    Reset();
-    
-    ndof = curvesIn.size();
-    // Here we need to check whether every curve has (roughly) the same duration
-    ///////////////////
-    dReal minDur = curvesIn[0].duration;
-    for (std::vector<ParabolicCurve>::const_iterator it = curvesIn.begin() + 1; it != curvesIn.end(); ++it) {
-        BOOST_ASSERT(FuzzyEquals(it->duration, minDur, epsilon));
-        minDur = Min(minDur, it->duration);
-    }
-    
-    curves = curvesIn;
-    duration = minDur;
-
-    x0Vect.reserve(ndof);
-    x1Vect.reserve(ndof);
-    dVect.reserve(ndof);
-    v0Vect.reserve(ndof);
-    v1Vect.reserve(ndof);
-    for (size_t i = 0; i < ndof; ++i) {
-        x0Vect.push_back(curves[i].x0);
-        x1Vect.push_back(curves[i].x1);
-        v0Vect.push_back(curves[i].v0);
-        v1Vect.push_back(curves[i].v1);
-        dVect.push_back(curves[i].d);
-    }
-
-    // Manage switch points (later I will merge this for loop with the one above)
-    switchpointsList = curves[0].switchpointsList;
-    std::vector<dReal>::iterator it;
-    for (size_t i = 0; i < ndof; ++i) {
-        for (size_t j = 1; j != curves[i].switchpointsList.size() - 1; ++j) {
-            // Iterate from the second element to the second last element (the first and the last
-            // switch points should be the same for every DOF)
-            it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), curves[i].switchpointsList[j]);
-            if (it == switchpointsList.end()) {
-                if (!FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
-                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
-                }
-            }
-            else if (it == switchpointsList.begin()) {
-                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon)) {
-                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
-                }
-            }
-            else {
-                if (!FuzzyEquals(curves[i].switchpointsList[j], *it, epsilon) && !FuzzyEquals(curves[i].switchpointsList[j], *(it - 1), epsilon)) {
-                    // Insert only non-redundant switch points
-                    switchpointsList.insert(it, curves[i].switchpointsList[j]);
-                }
-            }
-        }
-    }
-
-    constraintChecked = false;
-    return;
-}
-
-void ParabolicCurvesND::SetInitialValues(const std::vector<dReal>& _x0Vect) {
-    RAMP_OPTIM_ASSERT(_x0Vect.size() == ndof);
-
-    x0Vect = _x0Vect;
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        curves[idof].SetInitialValue(x0Vect[idof]);
-        x1Vect[idof] = curves[idof].x1;
-    }
-    return;
-}
-
-void ParabolicCurvesND::PrintInfo(std::string name) const {
-    std::cout << "ParabolicCurvesND information: " << name << std::endl;
-    std::cout << str(boost::format("  This parabolic curve has %d DOFs")%ndof) << std::endl;
-    std::cout << str(boost::format("  t = %.15e")%duration) << std::endl;
-    std::string x0VectString = GenerateStringFromVector(x0Vect);
-    x0VectString = "  x0Vect = " + x0VectString;
-    std::cout << x0VectString << std::endl;
-    std::string x1VectString = GenerateStringFromVector(x1Vect);
-    x0VectString = "  x1Vect = " + x1VectString;
-    std::cout << x1VectString << std::endl;
-    std::string swList = GenerateStringFromVector(switchpointsList);
-    swList = "  Switch points = " + swList;
-    std::cout << swList << std::endl;
-}
-
-void ParabolicCurvesND::EvalPos(dReal t, std::vector<dReal>& xVect) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        xVect = x0Vect;
-        return;
-    }
-    else if (t >= duration) {
-        xVect = x1Vect;
-        return;
-    }
-
-    xVect.resize(ndof);
-    for (size_t i = 0; i < ndof; i++) {
-        xVect[i] = curves[i].EvalPos(t);
-    }
-    return;
-}
-
-void ParabolicCurvesND::EvalVel(dReal t, std::vector<dReal>& vVect) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        vVect = v0Vect;
-        return;
-    }
-    else if (t >= duration) {
-        vVect = v1Vect;
-        return;
-    }
-
-    vVect.resize(ndof);
-    for (size_t i = 0; i < ndof; i++) {
-        vVect[i] = curves[i].EvalVel(t);
-    }
-    return;
-}
-
-void ParabolicCurvesND::EvalAcc(dReal t, std::vector<dReal>& aVect) const {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t < 0) {
-        t = 0;
-    }
-    else if (t > duration) {
-        t = duration;
-    }
-
-    aVect.resize(ndof);
-    for (size_t i = 0; i < ndof; i++) {
-        aVect[i] = curves[i].EvalAcc(t);
-    }
-    return;
-}
-
-void ParabolicCurvesND::GetPeaks(std::vector<dReal>& bminVect, std::vector<dReal>& bmaxVect) const {
-    GetPeaks(0, duration, bminVect, bmaxVect);
-    return;
-}
-
-void ParabolicCurvesND::GetPeaks(dReal ta, dReal tb, std::vector<dReal>& bminVect, std::vector<dReal>& bmaxVect) const {
-    bminVect.resize(ndof);
-    bminVect.resize(ndof);
-    for (size_t i = 0; i < ndof; ++i) {
-        curves[i].GetPeaks(ta, tb, bminVect[i], bmaxVect[i]);
-    }
-    return;
-}
-
-void ParabolicCurvesND::Reset() {
-    ndof = 0;
-    duration = 0;
-    x0Vect.clear();
-    x1Vect.clear();
-    dVect.clear();
-    v1Vect.clear();
-    v0Vect.clear();
-    switchpointsList.clear();
-    curves.clear();
-    constraintChecked = false;
-    return;
-}
-
-void ParabolicCurvesND::SetConstant(const std::vector<dReal>& _x0Vect, dReal t) {
-    if (t < 0) {
-        RAMP_OPTIM_WARN("Invalid time given: t = %.15e", t);
-    }
-    RAMP_OPTIM_ASSERT(t >= 0);
-
-    ndof = _x0Vect.size();
-    std::vector<ParabolicCurve> _curves(ndof);
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        ParabolicCurve curve;
-        curve.SetConstant(_x0Vect[idof], t);
-        _curves[idof] = curve;
-    }
-
-    Initialize(_curves);
-    return;
-}
-
-void ParabolicCurvesND::SetSegment(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _x1Vect, const std::vector<dReal>& _v0Vect, const std::vector<dReal>& _v1Vect, dReal t) {
-    if (t <= 0) {
-        RAMP_OPTIM_WARN("Invalid time given: t = %.15e", t);
-    }
-    RAMP_OPTIM_ASSERT(t > 0);
-
-    ndof = _x0Vect.size();
-    std::vector<ParabolicCurve> _curves(ndof);
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        ParabolicCurve curve;
-        curve.SetSegment(_x0Vect[idof], _x1Vect[idof], _v0Vect[idof], _v1Vect[idof], t);
-        _curves[idof] = curve;
-    }
-
-    Initialize(_curves);
-    return;
-}
-
-void ParabolicCurvesND::SetZeroDuration(const std::vector<dReal>& _x0Vect, const std::vector<dReal>& _v0Vect) {
-    ndof = _x0Vect.size();
-    RAMP_OPTIM_ASSERT(_v0Vect.size() == ndof);
-
-    std::vector<ParabolicCurve> _curves(ndof);
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        ParabolicCurve curve;
-        curve.SetZeroDuration(_x0Vect[idof], _v0Vect[idof]);
-        _curves[idof] = curve;
-    }
-
-    Initialize(_curves);
-    return;
-}
-
-void ParabolicCurvesND::Cut(dReal t, ParabolicCurvesND &remCurvesND) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    if (t <= 0) {
-        remCurvesND.Initialize(curves);
-        SetZeroDuration(x0Vect, v0Vect);
-        remCurvesND.constraintChecked = constraintChecked;
-        return;
-    }
-    else if (t >= duration) {
-        remCurvesND.SetZeroDuration(x1Vect, v1Vect);
-        remCurvesND.constraintChecked = constraintChecked;
-        return;
-    }
-
-    std::vector<ParabolicCurve> leftHalf = curves;
-    std::vector<ParabolicCurve> rightHalf(ndof);
-
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        leftHalf[idof].Cut(t, rightHalf[idof]);
-    }
-
-    Initialize(leftHalf);
-    remCurvesND.Initialize(rightHalf);
-    remCurvesND.constraintChecked = constraintChecked;
-    return;
-}
-
-void ParabolicCurvesND::TrimFront(dReal t) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-    
-    if (t <= 0) {
-        return;
-    }
-
-    bool checked = constraintChecked;
-    if (t >= duration) {
-        SetZeroDuration(x1Vect, v1Vect);
-        constraintChecked = checked;
-        return;
-    }
-
-    std::vector<ParabolicCurve> newCurves = curves;
-
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        newCurves[idof].TrimFront(t);
-    }
-
-    Initialize(newCurves);
-    constraintChecked = checked;
-    return;
-}
-
-void ParabolicCurvesND::TrimBack(dReal t) {
-    BOOST_ASSERT(t >= -epsilon);
-    BOOST_ASSERT(t <= duration + epsilon);
-
-    if (t >= duration) {
-        return;
-    }
-
-    bool checked = constraintChecked;
-    if (t <= 0) {
-        SetZeroDuration(x0Vect, v0Vect);
-        constraintChecked = checked;
-        return;
-    }
-
-    std::vector<ParabolicCurve> newCurves = curves;
-
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        newCurves[idof].TrimBack(t);
-    }
-
-    Initialize(newCurves);
-    constraintChecked = checked;
-    return;
-}
-
-void ParabolicCurvesND::ToString(std::string &s) const {
-    s = str(boost::format("%d\n%.15e\n")%ndof%duration);
-    std::string separator;
-    std::string dummy;
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        separator = "";
-        for (std::vector<Ramp>::const_iterator itramp = curves[idof].ramps.begin(); itramp != curves[idof].ramps.end(); ++itramp) {
-            dummy = str(boost::format("%s%.15e %.15e %.15e %.15e")%separator%(itramp->v0)%(itramp->a)%(itramp->duration)%(itramp->x0));
-            s = s + dummy;
-            separator = " ";
-        }
-        s = s + "\n";
-    }
-    return;
-}
-
-void ParabolicCurvesND::Serialize(std::ostream &O) const {
-    O << ndof     << std::endl;
-    O << duration << std::endl;
-
-    std::string separator;
-    for (size_t idof = 0; idof < ndof; ++idof) {
-        separator = "";
-        for (std::vector<Ramp>::const_iterator itramp = curves[idof].ramps.begin(); itramp != curves[idof].ramps.end(); ++itramp) {
-            O << separator << itramp->v0;
-            separator = " ";
-            O << separator << itramp->a;
-            O << separator << itramp->duration;
-            O << separator << itramp->x0;
-        }
-        O << std::endl;
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-std::string GenerateStringFromVector(const std::vector<dReal>& vect) {
-    std::string s = "[ ";
-    std::string separator = "";
-    for (size_t i = 0; i < vect.size(); ++i) {
-        s = s + separator + str(boost::format("%.15e")%(vect[i]));
-        separator = ", ";
-    }
-    s = s + "]";
-    return s;
-}
+// 
 
 } // end namespace RampOptimizerInternal
 
