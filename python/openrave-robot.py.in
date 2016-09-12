@@ -62,7 +62,7 @@ if __name__ == "__main__":
                       help='if manipulator name is specified will return the sensor hash of the robot')
     (options, args) = parser.parse_args()
     RaveInitialize(False, DebugLevel.Fatal) # don't want any spurious text
-    RaveLoadPlugin('qtcoinrave') # optional for IV/VRML file reading
+    RaveLoadPlugin('qtcoinrave') # optional for IV/VRML file reading?
     env=Environment()
     env.StopSimulation() # don't want another thread distributing things
     try:

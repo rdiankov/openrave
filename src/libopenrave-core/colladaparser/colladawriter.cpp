@@ -404,15 +404,15 @@ private:
         if( IsWrite("visual") ) {
             _visualScenesLib = daeSafeCast<domLibrary_visual_scenes>(_dom->add(COLLADA_ELEMENT_LIBRARY_VISUAL_SCENES));
             _visualScenesLib->setId("vscenes");
+        }
 
-            if( IsWrite("geometry") ) {
-                _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
-                _geometriesLib->setId("geometries");
-                _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
-                _effectsLib->setId("effects");
-                _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
-                _materialsLib->setId("materials");
-            }
+        if( IsWrite("geometry") ) {
+            _geometriesLib = daeSafeCast<domLibrary_geometries>(_dom->add(COLLADA_ELEMENT_LIBRARY_GEOMETRIES));
+            _geometriesLib->setId("geometries");
+            _effectsLib = daeSafeCast<domLibrary_effects>(_dom->add(COLLADA_ELEMENT_LIBRARY_EFFECTS));
+            _effectsLib->setId("effects");
+            _materialsLib = daeSafeCast<domLibrary_materials>(_dom->add(COLLADA_ELEMENT_LIBRARY_MATERIALS));
+            _materialsLib->setId("materials");
         }
 
         _nodesLib = daeSafeCast<domLibrary_nodes>(_dom->add(COLLADA_ELEMENT_LIBRARY_NODES));
@@ -1009,13 +1009,13 @@ private:
                 std::string stractuator = str(boost::format("body%d_actuator%d")%_mapBodyIds[pbody->GetEnvironmentId()]%(*itjoint)->GetJointIndex());
                 std::string url = std::string("#") + stractuator;
                 instance_actuator->setAttribute("url",url.c_str());
-                
+
                 // add the motor actuator to the library
                 daeElementRef domactuator = _actuatorsLib->add("actuator");
                 domactuator->setAttribute("id", stractuator.c_str());
                 domactuator->setAttribute("type", "electric_motor");
                 BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(domactuator));
-                extrawriter->AddChild("gear_ratio")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->gear_ratio));
+                extrawriter->AddChild("model_type")->SetCharData(infoElectricMotor->model_type);
                 extrawriter->AddChild("terminal_resistance")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->terminal_resistance));
                 extrawriter->AddChild("starting_current")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->starting_current));
                 extrawriter->AddChild("speed_constant")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->speed_constant));
@@ -1024,15 +1024,26 @@ private:
                 extrawriter->AddChild("rotor_inertia")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->rotor_inertia));
                 extrawriter->AddChild("nominal_torque")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->nominal_torque));
                 extrawriter->AddChild("stall_torque")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->stall_torque));
+                extrawriter->AddChild("max_instantaneous_torque")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->max_instantaneous_torque));
                 extrawriter->AddChild("no_load_speed")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->no_load_speed));
                 extrawriter->AddChild("max_speed")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->max_speed));
                 extrawriter->AddChild("assigned_power_rating")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->assigned_power_rating));
-                std::stringstream ssspeed_torque_point; ssspeed_torque_point << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                FOREACHC(itpoint, infoElectricMotor->speed_torque_points) {
-                    ssspeed_torque_point << itpoint->first << " " << itpoint->second << " ";
+                std::stringstream ssnominal_speed_torque_point; ssnominal_speed_torque_point << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                FOREACHC(itpoint, infoElectricMotor->nominal_speed_torque_points) {
+                    ssnominal_speed_torque_point << itpoint->first << " " << itpoint->second << " ";
                 }
-                extrawriter->AddChild("speed_torque_point")->SetCharData(ssspeed_torque_point.str());
-                
+                extrawriter->AddChild("nominal_speed_torque_point")->SetCharData(ssnominal_speed_torque_point.str());
+
+                std::stringstream ssmax_speed_torque_point; ssmax_speed_torque_point << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                FOREACHC(itpoint, infoElectricMotor->max_speed_torque_points) {
+                    ssmax_speed_torque_point << itpoint->first << " " << itpoint->second << " ";
+                }
+                extrawriter->AddChild("max_speed_torque_point")->SetCharData(ssmax_speed_torque_point.str());
+
+                extrawriter->AddChild("gear_ratio")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->gear_ratio));
+
+                extrawriter->AddChild("coloumb_friction")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->coloumb_friction));
+                extrawriter->AddChild("viscous_friction")->SetCharData(boost::lexical_cast<std::string>(infoElectricMotor->viscous_friction));
             }
         }
 
@@ -1677,6 +1688,18 @@ private:
                 ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
                 ptec->add("box")->add("half_extents")->setCharData(ss.str());
                 break;
+            case GT_Container: {
+                daeElementRef pcontainer = ptec->add("container");
+                ss << geom->GetContainerOuterExtents().x << " " << geom->GetContainerOuterExtents().y << " " << geom->GetContainerOuterExtents().z;
+                pcontainer->add("outer_extents")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+                ss << geom->GetContainerInnerExtents().x << " " << geom->GetContainerInnerExtents().y << " " << geom->GetContainerInnerExtents().z;
+                pcontainer->add("inner_extents")->setCharData(ss.str());
+                ss.clear(); ss.str("");
+                ss << geom->GetContainerBottomCross().x << " " << geom->GetContainerBottomCross().y << " " << geom->GetContainerBottomCross().z;
+                pcontainer->add("bottom_cross")->setCharData(ss.str());
+                break;
+            }
             case GT_Sphere:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;
@@ -2178,6 +2201,25 @@ private:
                 link_collision_state->add("bool")->setCharData((*itlink)->IsEnabled() ? "true" : "false");
             }
         }
+        if( IsWrite("bind_instance_geometry") ) {
+            FOREACHC(itlink, pbody->GetLinks()) {
+                FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
+                    int igeom = 0;
+                    FOREACHC(itgeominfo, itgeomgroup->second) {
+                        daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
+                        bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
+                        bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
+                        if( IsWrite("geometry") ) {
+                            string geomid = _GetExtraGeometryId(*itlink,itgeomgroup->first,igeom);
+                            igeom++;
+                            domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
+                            bind_instance_geometry->setAttribute("url", (string("#")+geomid).c_str());
+                            bind_instance_geometry->setAttribute("material", (string("#")+geomid+string("_mat")).c_str());
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Set vector of four elements
@@ -2291,6 +2333,11 @@ private:
     virtual std::string _GetGeometryId(KinBody::LinkConstPtr plink, int igeom) {
         return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom);
     }
+
+    virtual std::string _GetExtraGeometryId(KinBody::LinkConstPtr plink, const std::string& groupname, int igeom) {
+        return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom%groupname);
+    }
+
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
         int index = pjoint->GetJointIndex();
         if( index < 0 ) {     // must be passive

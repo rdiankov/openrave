@@ -19,5 +19,10 @@
         <file>images/axes.png</file>
         <file>images/shadow.png</file>
         <file>images/no_edit.png</file>
+        <file>images/perspective.png</file>
+        <file>images/xyplane.png</file>
+        <file>images/xzplane.png</file>
+        <file>images/yzplane.png</file>
+        <file>images/rotation-icon.png</file>
     </qresource>
 </RCC>

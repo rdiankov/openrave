@@ -139,7 +139,7 @@ bool ExtractRay(object o, RAY& ray)
 class Ray_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyRay& r)
+    static boost::python::tuple getinitargs(const PyRay& r)
     {
         return boost::python::make_tuple(toPyVector3(r.r.pos),toPyVector3(r.r.dir));
     }
@@ -185,7 +185,7 @@ object toPyAABB(const AABB& ab)
 class AABB_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyAABB& ab)
+    static boost::python::tuple getinitargs(const PyAABB& ab)
     {
         return boost::python::make_tuple(toPyVector3(ab.ab.pos),toPyVector3(ab.ab.extents));
     }
@@ -266,7 +266,7 @@ object toPyTriMesh(const TriMesh& mesh)
 class TriMesh_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyTriMesh& r)
+    static boost::python::tuple getinitargs(const PyTriMesh& r)
     {
         return boost::python::make_tuple(r.vertices,r.indices);
     }
@@ -553,7 +553,7 @@ public:
 class ConfigurationSpecification_pickle_suite : public pickle_suite
 {
 public:
-    static tuple getinitargs(const PyConfigurationSpecification& pyspec)
+    static boost::python::tuple getinitargs(const PyConfigurationSpecification& pyspec)
     {
         std::stringstream ss;
         ss << pyspec._spec;
@@ -1215,7 +1215,8 @@ void init_openravepy_global()
     def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel,args("level"), DOXY_FN1(RaveSetDebugLevel));
     def("RaveGetDebugLevel",OpenRAVE::RaveGetDebugLevel,DOXY_FN1(RaveGetDebugLevel));
     def("RaveSetDataAccess",openravepy::pyRaveSetDataAccess,args("accessoptions"), DOXY_FN1(RaveSetDataAccess));
-    def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess,DOXY_FN1(RaveGetDataAccess));
+    def("RaveGetDataAccess",OpenRAVE::RaveGetDataAccess, DOXY_FN1(RaveGetDataAccess));
+    def("RaveGetDefaultViewerType", OpenRAVE::RaveGetDefaultViewerType, DOXY_FN1(RaveGetDefaultViewerType));
     def("RaveFindLocalFile",OpenRAVE::RaveFindLocalFile,RaveFindLocalFile_overloads(args("filename","curdir"), DOXY_FN1(RaveFindLocalFile)));
     def("RaveInvertFileLookup",openravepy::pyRaveInvertFileLookup,args("filename"), DOXY_FN1(RaveInvertFileLookup));
     def("RaveGetHomeDirectory",OpenRAVE::RaveGetHomeDirectory,DOXY_FN1(RaveGetHomeDirectory));

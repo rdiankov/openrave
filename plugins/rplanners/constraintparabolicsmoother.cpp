@@ -259,11 +259,11 @@ public:
         vector<dReal> vtrajpoints;
         ptraj->GetWaypoints(0,ptraj->GetNumWaypoints(),vtrajpoints,posspec);
 
-        ParabolicRamp::Vector tol = _parameters->_vConfigResolution;
-        FOREACH(it,tol) {
+        ParabolicRamp::RampFeasibilityChecker checker(this);
+        checker.tol = _parameters->_vConfigResolution;
+        FOREACH(it, checker.tol) {
             *it *= _parameters->_pointtolerance;
         }
-        ParabolicRamp::RampFeasibilityChecker checker(this,tol);
         checker.constraintsmask = CFO_CheckEnvCollisions|CFO_CheckSelfCollisions|CFO_CheckTimeBasedConstraints|CFO_CheckUserConstraints;
         RAVELOG_VERBOSE_FORMAT("minswitchtime = %f, steplength=%f\n",_parameters->minswitchtime%_parameters->_fStepLength);
 

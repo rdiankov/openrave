@@ -211,9 +211,10 @@ public:
     void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const
     {
         BOOST_ASSERT(_bInit);
-        BOOST_ASSERT(_timeoffset>=0);
-        BOOST_ASSERT(time >= -g_fEpsilon);
+        OPENRAVE_ASSERT_OP(_timeoffset,>=,0);
+        OPENRAVE_ASSERT_OP(time, >=, -g_fEpsilon);
         _ComputeInternal();
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
         if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             _VerifySampling();
         }

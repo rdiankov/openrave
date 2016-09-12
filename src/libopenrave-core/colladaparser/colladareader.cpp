@@ -423,6 +423,36 @@ public:
             return false;
         }
 
+        if( !!_dom->getAsset() ) {
+            if( !!_dom->getAsset()->getUp_axis() && !!_penv->GetPhysicsEngine() ) {
+                float f = -9.7979302;
+                if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_X_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(f,0,0));
+                }
+                else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Y_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(0,f,0));
+                }
+                else if( _dom->getAsset()->getUp_axis()->getValue() == UP_AXIS_Z_UP ) {
+                    _penv->GetPhysicsEngine()->SetGravity(Vector(0,0,f));
+                }
+            }
+        }
+
+        for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
+            domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            if( !pscene ) {
+                continue;
+            }
+            if( !!pscene->getTechnique_common() && !!pscene->getTechnique_common()->getGravity()) {
+                const domFloat3& domgravity = pscene->getTechnique_common()->getGravity()->getValue();
+                if( domgravity.getCount() == 3 ) {
+                    if( !!_penv->GetPhysicsEngine() ) {
+                        _penv->GetPhysicsEngine()->SetGravity(Vector(domgravity[0], domgravity[1], domgravity[2]));
+                    }
+                }
+            }
+        }
+
         //  parse each instance kinematics scene
         vector<std::string>  vprocessednodes;
         std::vector<KinematicsSceneBindings> allbindings(allscene->getInstance_kinematics_scene_array().getCount());
@@ -668,7 +698,7 @@ public:
                 }
             }
         }
-        
+
         RAVELOG_VERBOSE("collada read time %fs\n",(utils::GetNanoPerformanceTime()-starttime)*1e-9);
         return true;
     }
@@ -695,8 +725,8 @@ public:
 
     /// \extract robot from the scene
     ///
-    /// \param instanceArticulatdSystemId If not empty, will extract the first articulated_system whose id matches instanceArticulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(RobotBasePtr& probot, const std::string& instanceArticulatdSystemId=std::string())
+    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
+    bool Extract(RobotBasePtr& probot, const std::string& articulatdSystemId=std::string())
     {
         std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         domCOLLADA::domSceneRef allscene = _dom->getScene();
@@ -737,9 +767,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( instanceArticulatdSystemId.size() > 0 ) {
+                if( articulatdSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
                         continue;
                     }
                 }
@@ -762,9 +792,9 @@ public:
         if( !bSuccess ) {
             KinBodyPtr pbody = probot;
             FOREACH(it, listPossibleBodies) {
-                if( instanceArticulatdSystemId.size() > 0 ) {
+                if( articulatdSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = it->first->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
                         continue;
                     }
                 }
@@ -802,8 +832,8 @@ public:
 
     /// \extract a kinbody from the scene
     ///
-    /// \param instanceArticulatdSystemId If not empty, will extract the first articulated_system whose id matches instanceArticulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(KinBodyPtr& pbody, const std::string& instanceArticulatdSystemId=std::string())
+    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
+    bool Extract(KinBodyPtr& pbody, const std::string& articulatdSystemId=std::string())
     {
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
@@ -834,9 +864,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( instanceArticulatdSystemId.size() > 0 ) {
+                if( articulatdSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
                         continue;
                     }
                 }
@@ -854,9 +884,9 @@ public:
             }
         }
         FOREACH(it, listPossibleBodies) {
-            if( instanceArticulatdSystemId.size() > 0 ) {
+            if( articulatdSystemId.size() > 0 ) {
                 xsAnyURI articulatedSystemURI = it->first->getUrl();
-                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != instanceArticulatdSystemId ) {
+                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
                     continue;
                 }
             }
@@ -994,9 +1024,17 @@ public:
 
         if( !!articulated_system->getMotion() ) {
             domInstance_articulated_systemRef ias_new = articulated_system->getMotion()->getInstance_articulated_system();
+            if( !ias_new ) {
+                RAVELOG_WARN_FORMAT("failed to get articulated_system of <motion> from %s", articulated_system->getId());
+                return false;
+            }
             if( !!articulated_system->getMotion()->getTechnique_common() ) {
                 for(size_t i = 0; i < articulated_system->getMotion()->getTechnique_common()->getAxis_info_array().getCount(); ++i) {
                     domMotion_axis_infoRef motion_axis_info = articulated_system->getMotion()->getTechnique_common()->getAxis_info_array()[i];
+                    if( !ias_new->getUrl().getElement() ) {
+                        RAVELOG_WARN("could not resolve ias_new\n");
+                        continue;
+                    }
                     // this should point to a kinematics axis_info
                     domKinematics_axis_infoRef kinematics_axis_info = daeSafeCast<domKinematics_axis_info>(daeSidRef(motion_axis_info->getAxis(), ias_new->getUrl().getElement()).resolve().elt);
                     if( !!kinematics_axis_info ) {
@@ -2038,8 +2076,8 @@ public:
     }
 
     /// Extract Geometry and apply the transformations of the node
-    /// \param pdomnode Node to extract the goemetry
-    /// \param plink    Link of the kinematics model
+    /// \param pdomnode  Node to extract the geometry
+    /// \param plink     Link of the kinematics model
     bool ExtractGeometries(const domNodeRef pdomnode, const Transform& tkinbodytrans, KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( !pdomnode ) {
@@ -2071,7 +2109,7 @@ public:
             }
 
             bhasgeometry |= ExtractGeometries(pdomnode->getNode_array()[i], tkinbodytrans, plink, bindings, vprocessednodes);
-            // Plink stayes the same for all children
+            // Plink stays the same for all children
             // replace pdomnode by child = pdomnode->getNode_array()[i]
             // hope for the best!
             // put everything in a subroutine in order to process pdomnode too!
@@ -2117,6 +2155,7 @@ public:
         decompose(tmnodegeom, tnodegeom, vscale);
         vscale *= _GetUnitScale(pdomnode, _fGlobalScale); // TODO should track the scale per each listGeometryInfos
 
+
         FOREACH(itgeominfo, listGeometryInfos) {
             //  Switch between different type of geometry PRIMITIVES
             Transform toriginal = itgeominfo->_t;
@@ -2124,6 +2163,11 @@ public:
             switch (itgeominfo->_type) {
             case GT_Box:
                 itgeominfo->_vGeomData *= vscale;
+                break;
+            case GT_Container:
+                itgeominfo->_vGeomData *= vscale;
+                itgeominfo->_vGeomData2 *= vscale;
+                itgeominfo->_vGeomData3 *= vscale;
                 break;
             case GT_Sphere:
                 itgeominfo->_vGeomData *= max(vscale.z, max(vscale.x, vscale.y));
@@ -2133,7 +2177,7 @@ public:
                 itgeominfo->_vGeomData.y *= vscale.z;
                 break;
             case GT_TriMesh:
-                itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(itgeominfo->_t).inverse() * tmnodegeom * TransformMatrix(toriginal));
+                itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(tmnodegeom * toriginal).inverse() * TransformMatrix(toriginal));
                 break;
             default:
                 RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
@@ -2271,7 +2315,7 @@ public:
         return true;
     }
 
-    /// Extract the Geometry in TRIGLE FANS and adds it to OpenRave
+    /// Extract the Geometry in TRIANGLE FANS and adds it to OpenRave
     /// \param  triRef  Array of triangle fans of the COLLADA's model
     /// \param  vertsRef    Array of vertices of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
@@ -2661,6 +2705,44 @@ public:
                                 }
                             }
                         }
+                        else if( name == "container" ) {
+                            daeElementRef pouter_extents = children[i]->getChild("outer_extents");
+                            if( !!pouter_extents ) {
+                                stringstream ss(pouter_extents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pinner_extents = children[i]->getChild("inner_extents");
+                            if( !!pinner_extents ) {
+                                stringstream ss(pinner_extents->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData2 = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                            daeElementRef pbottom_cross = children[i]->getChild("bottom_cross");
+                            if( !!pbottom_cross ) {
+                                stringstream ss(pbottom_cross->getCharData());
+                                Vector vextents;
+                                ss >> vextents.x >> vextents.y >> vextents.z;
+                                if( ss.eof() || !!ss ) {
+                                    geominfo._type = GT_Container;
+                                    geominfo._vGeomData3 = vextents;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
                         else if( name == "capsule" ) {
                             RAVELOG_WARN("capsule geometries are not supported");
                         }
@@ -2906,7 +2988,7 @@ public:
     {
         std::list< std::pair<RobotBase::AttachedSensorPtr, daeElementRef> > listSensorsToExtract; // accumulate a list of sensor/element pairs to call _ExtractSensor on. This has to be done after all sensors have been processed.
         std::map<std::string, std::string> mapSensorURLsToNames;
-        
+
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
             if( !pextra->getType() ) {
@@ -2944,7 +3026,7 @@ public:
                         }
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
-                    
+
                     probot->GetAttachedSensors().push_back(pattachedsensor);
                 }
                 else {
@@ -2952,20 +3034,20 @@ public:
                 }
             }
         }
-        
+
         FOREACH(itextract, listSensorsToExtract) {
             RobotBase::AttachedSensorPtr pattachedsensor = itextract->first;
             if( !pattachedsensor->psensor ) {
                 continue;
             }
-            
+
             // Create the custom XML reader to read in the data (determined by users)
             BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->psensor->GetXMLId(),pattachedsensor->psensor, AttributesList());
             if( !pcurreader ) {
                 pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
                 continue;
             }
-            
+
             if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
                 if( !!pcurreader->GetReadable() ) {
                     pattachedsensor->psensor->SetReadableInterface(pattachedsensor->psensor->GetXMLId(),pcurreader->GetReadable());
@@ -2974,7 +3056,7 @@ public:
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
         }
     }
-    
+
     /// \brief extract the robot manipulators
     void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
@@ -2997,7 +3079,9 @@ public:
                             pjoint = result.first;
                             pdomjoint = result.second;
                             if( !!pjoint && !!pdomjoint ) {
-                                listOrderedJoints.push_back(pjoint);
+                                if( find(probot->_vPassiveJoints.begin(), probot->_vPassiveJoints.end(), pjoint) == probot->_vPassiveJoints.end() ) { // don't allow passive joints!
+                                    listOrderedJoints.push_back(pjoint);
+                                }
                             }
                             else {
                                 RAVELOG_WARN(str(boost::format("failed to find joint %s in actuator %s\n")%pchild->getAttribute("joint")%name));
@@ -3049,7 +3133,7 @@ public:
         }
     }
 
-    /// \brief Extractan instance of a sensor without parsing its data
+    /// \brief Extract an instance of a sensor without parsing its data
     ///
     /// \return the newly created sensor
     std::pair<SensorBasePtr, daeElementRef> _ExtractCreateSensor(daeElementRef instance_sensor)
@@ -3104,7 +3188,10 @@ public:
         ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
         for(size_t ic = 0; ic < domactuator->getChildren().getCount(); ++ic) {
             daeElementRef pchild = domactuator->getChildren()[ic];
-            if( pchild->getElementName() == string("gear_ratio") ) {
+            if( pchild->getElementName() == string("model_type") ) {
+                pinfo->model_type = pchild->getCharData();
+            }
+            else if( pchild->getElementName() == string("gear_ratio") ) {
                 pinfo->gear_ratio = boost::lexical_cast<dReal>(pchild->getCharData());
             }
             else if( pchild->getElementName() == string("assigned_power_rating") ) {
@@ -3118,6 +3205,9 @@ public:
             }
             else if( pchild->getElementName() == string("stall_torque") ) {
                 pinfo->stall_torque = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("max_instantaneous_torque") ) {
+                pinfo->max_instantaneous_torque = boost::lexical_cast<dReal>(pchild->getCharData());
             }
             else if( pchild->getElementName() == string("nominal_torque") ) {
                 pinfo->nominal_torque = boost::lexical_cast<dReal>(pchild->getCharData());
@@ -3140,18 +3230,32 @@ public:
             else if( pchild->getElementName() == string("terminal_resistance") ) {
                 pinfo->terminal_resistance = boost::lexical_cast<dReal>(pchild->getCharData());
             }
-            else if( pchild->getElementName() == string("speed_torque_point") ) {
+            else if( pchild->getElementName() == string("coloumb_friction") ) {
+                pinfo->coloumb_friction = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("viscous_friction") ) {
+                pinfo->viscous_friction = boost::lexical_cast<dReal>(pchild->getCharData());
+            }
+            else if( pchild->getElementName() == string("nominal_speed_torque_point") ) {
                 std::stringstream ss(pchild->getCharData());
                 std::vector<dReal> vpoints((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
-                pinfo->speed_torque_points.resize(vpoints.size()/2);
+                pinfo->nominal_speed_torque_points.resize(vpoints.size()/2);
                 for(size_t ipoint = 0; ipoint < vpoints.size(); ipoint += 2) {
-                    pinfo->speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
+                    pinfo->nominal_speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
+                }
+            }
+            else if( pchild->getElementName() == string("max_speed_torque_point") ) {
+                std::stringstream ss(pchild->getCharData());
+                std::vector<dReal> vpoints((istream_iterator<dReal>(ss)), istream_iterator<dReal>());
+                pinfo->max_speed_torque_points.resize(vpoints.size()/2);
+                for(size_t ipoint = 0; ipoint < vpoints.size(); ipoint += 2) {
+                    pinfo->max_speed_torque_points[ipoint/2] = std::make_pair(vpoints[ipoint], vpoints[ipoint+1]);
                 }
             }
         }
         return pinfo;
     }
-    
+
 //    /// \brief Extract and parse an instance of a sensor
 //    bool _ExtractSensor(SensorBasePtr& psensor, daeElementRef instance_sensor)
 //    {
@@ -3415,6 +3519,9 @@ public:
         return false;
     }
     template <typename U> static domFloat resolveFloat(domCommon_float_or_paramRef paddr, const U& parent) {
+        if( !paddr ) {
+            return 0;
+        }
         if( !!paddr->getFloat() ) {
             return paddr->getFloat()->getValue();
         }
@@ -3839,10 +3946,13 @@ private:
         }
     }
 
-    static void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
+    void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
     {
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
             domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
+            if( !pscene ) {
+                continue;
+            }
             for(size_t imodel = 0; imodel < pscene->getInstance_physics_model_array().getCount(); ++imodel) {
                 domInstance_physics_modelRef ipmodel = pscene->getInstance_physics_model_array()[imodel];
                 domPhysics_modelRef pmodel = daeSafeCast<domPhysics_model> (ipmodel->getUrl().getElement().cast());
@@ -4018,6 +4128,8 @@ private:
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
                 if( !!tec ) {
+                    std::map< KinBody::LinkPtr, std::map< std::string, std::list< KinBody::GeometryInfo > > > mapGeometryGroups;
+                    std::map<string,domMaterialRef> mapmaterials;
                     for(size_t ic = 0; ic < tec->getContents().getCount(); ++ic) {
                         daeElementRef pelt = tec->getContents()[ic];
                         if( pelt->getElementName() == string("ignore_link_pair") ) {
@@ -4049,7 +4161,50 @@ private:
                             pbody->_vForcedAdjacentLinks.push_back(make_pair(plink0->GetName(),plink1->GetName()));
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
-                            RAVELOG_WARN("currently do not support bind_instance_geometry\n");
+
+                            // for now don't load since we don't have good way of updating the geometry throughout the system yet.
+                            
+//                            const std::string groupname = pelt->getAttribute("type");
+//                            if( groupname == "" ) {
+//                                RAVELOG_WARN("encountered an empty group name");
+//                            }
+//
+//                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+//                            KinBody::LinkPtr plink;
+//                            if( !!pdomlink ) {
+//                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+//                            }
+//                            else {
+//                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
+//                            }
+//                            if( !plink ) {
+//                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+//                                continue;
+//                            }
+//                            BOOST_ASSERT(plink->GetParent()==pbody);
+//
+//                            domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
+//                            if( !domgeom ) {
+//                                RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
+//                                continue;
+//                            }
+//
+//                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
+//                            if( !dommat ) {
+//                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+//                            } else {
+//                              mapmaterials["mat0"] = dommat;
+//                            }
+//
+//
+//                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
+//                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
+//                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
+//                                continue;
+//                            }
+//                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
+//                                itgeominfo->InitCollisionMesh();
+//                            }
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
@@ -4066,6 +4221,16 @@ private:
                             }
                             BOOST_ASSERT(plink->GetParent()==pbody);
                             resolveCommon_bool_or_param(pelt, referenceElt, plink->_info._bIsEnabled);
+                        }
+                    }
+                    FOREACH(itlinkgeomgroups, mapGeometryGroups) {
+                        FOREACH(itgeomgroup, itlinkgeomgroups->second) {
+                            std::vector<KinBody::GeometryInfoPtr> vgeometries;
+                            vgeometries.reserve(itgeomgroup->second.size());
+                            FOREACH(itgeominfo, itgeomgroup->second) {
+                                vgeometries.push_back(boost::make_shared<KinBody::GeometryInfo>(*itgeominfo));
+                            }
+                            itlinkgeomgroups->first->SetGroupGeometries(itgeomgroup->first, vgeometries);
                         }
                     }
                 }
@@ -4936,7 +5101,15 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
     if (!reader.InitFromData(pdata,atts)) {
         return false;
     }
-    return reader.Extract(pbody);
+
+    std::string articulatdSystemId;
+    FOREACHC(itatt, atts) {
+        if( itatt->first == "articulatdSystemId" ) {
+            articulatdSystemId = itatt->second;
+        }
+    }
+
+    return reader.Extract(pbody, articulatdSystemId);
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
@@ -4946,7 +5119,15 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
     if (!reader.InitFromData(pdata,atts)) {
         return false;
     }
-    return reader.Extract(probot);
+
+    std::string articulatdSystemId;
+    FOREACHC(itatt, atts) {
+        if( itatt->first == "articulatdSystemId" ) {
+            articulatdSystemId = itatt->second;
+        }
+    }
+
+    return reader.Extract(probot, articulatdSystemId);
 }
 
 // register for typeof (MSVC only)

@@ -165,6 +165,15 @@ private:
             VisibilityConstraintFunction& _vcf;
         };
 public:
+        static void GetAABBFromOBB(const OBB& obb, Vector& vMin, Vector& vMax)
+        {
+            vMax.x = fabsf(obb.right.x) * obb.extents.x + fabsf(obb.up.x) * obb.extents.y + fabsf(obb.dir.x) * obb.extents.z;
+            vMax.y = fabsf(obb.right.y) * obb.extents.x + fabsf(obb.up.y) * obb.extents.y + fabsf(obb.dir.y) * obb.extents.z;
+            vMax.z = fabsf(obb.right.z) * obb.extents.x + fabsf(obb.up.z) * obb.extents.y + fabsf(obb.dir.z) * obb.extents.z;
+            vMin = obb.pos - vMax;
+            vMax += obb.pos;
+        }
+
         VisibilityConstraintFunction(boost::shared_ptr<VisualFeedback> vf) : _vf(vf) {
             _report.reset(new CollisionReport());
 
@@ -174,14 +183,50 @@ public:
                 _vf->_target->SetTransform(Transform());
 
                 _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
-                FOREACHC(itlink, _vf->_target->GetLinks())
-                _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->GetCollisionData().ComputeAABB(),(*itlink)->GetTransform()));
-                _abTarget = _vf->_target->ComputeAABB();
+                FOREACHC(itlink, _vf->_target->GetLinks()) {
+                    if( (*itlink)->IsVisible() ) {
+                        _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->ComputeLocalAABB(),(*itlink)->GetTransform()));
+                    }
+                }
+
+                vector<AABB> vboxes;
+                if( _vTargetOBBs.size() > 0 ) {
+                    Vector vmin, vmax;
+                    GetAABBFromOBB(_vTargetOBBs.at(0), vmin, vmax);
+                    for(size_t iobb = 1; iobb < _vTargetOBBs.size(); ++iobb) {
+                        Vector vmin2, vmax2;
+                        GetAABBFromOBB(_vTargetOBBs.at(iobb), vmin2, vmax2);
+                        if( vmin.x > vmin2.x ) {
+                            vmin.x = vmin2.x;
+                        }
+                        if( vmin.y > vmin2.y ) {
+                            vmin.y = vmin2.y;
+                        }
+                        if( vmin.z > vmin2.z ) {
+                            vmin.z = vmin2.z;
+                        }
+                        if( vmax.x < vmax2.x ) {
+                            vmax.x = vmax2.x;
+                        }
+                        if( vmax.y < vmax2.y ) {
+                            vmax.y = vmax2.y;
+                        }
+                        if( vmax.z < vmax2.z ) {
+                            vmax.z = vmax2.z;
+                        }
+                    }
+
+                    _abTarget.pos = 0.5*(vmin + vmax);
+                    _abTarget.extents = vmax - _abTarget.pos;
+                    _abTarget.extents.x += 0.0001;
+                    _abTarget.extents.y += 0.0001;
+                    _abTarget.extents.z += 0.0001;
+                    vboxes.push_back(_abTarget);
+                }
+
+                // compute the AABB of _vTargetOBBs (could be different from _vf->_target->ComputeAABB())
+                //_abTarget = _vf->_target->ComputeAABB();
                 // have to increase its dimensions a little!
-                _abTarget.extents.x += 0.0001;
-                _abTarget.extents.y += 0.0001;
-                _abTarget.extents.z += 0.0001;
-                vector<AABB> vboxes; vboxes.push_back(_abTarget);
 
                 _ptargetbox = RaveCreateKinBody(_vf->_target->GetEnv());
                 _ptargetbox->InitFromBoxes(vboxes,true);
@@ -200,7 +245,7 @@ public:
             _ptargetbox->GetEnv()->Remove(_ptargetbox);
         }
 
-        virtual bool IsVisible()
+        virtual bool IsVisible(bool bcheckocclusion=true)
         {
             Transform ttarget = _vf->_target->GetTransform();
             TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
@@ -208,7 +253,7 @@ public:
                 RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
-            if( IsOccluded(tcamera) ) {
+            if( bcheckocclusion && IsOccluded(tcamera) ) {
                 return false;
             }
             return true;
@@ -253,8 +298,9 @@ public:
             _vf->_robot->GetActiveDOFValues(pNewSample);
             FOREACHC(itarm,_vf->_pmanip->GetArmIndices()) {
                 vector<int>::const_iterator itactive = find(_vf->_robot->GetActiveDOFIndices().begin(),_vf->_robot->GetActiveDOFIndices().end(),*itarm);
-                if( itactive != _vf->_robot->GetActiveDOFIndices().end() )
+                if( itactive != _vf->_robot->GetActiveDOFIndices().end() ) {
                     pNewSample.at((int)(itactive-_vf->_robot->GetActiveDOFIndices().begin())) = _vsolution.at((int)(itarm-_vf->_pmanip->GetArmIndices().begin()));
+                }
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
 
@@ -504,6 +550,15 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     void Destroy()
     {
+        _robot.reset();
+        _sensorrobot.reset();
+        _target.reset();
+        _psensor.reset();
+        _pmanip.reset();
+        _pcamerageom.reset();
+        _visibilitytransforms.clear();
+        _pconstraintfn.reset();
+        _preport.reset();
         ModuleBase::Destroy();
     }
 
@@ -512,6 +567,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         stringstream ss(args);
         string robotname;
         _fMaxVelMult=1;
+        _pconstraintfn.reset();
         ss >> robotname;
         _bIgnoreSensorCollision = false;
         string cmd;
@@ -599,8 +655,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 int numpoints=0;
                 sinput >> numpoints;
                 vector<dReal> vconvexdata(2*numpoints);
-                FOREACH(it, vconvexdata)
-                sinput >> *it;
+                FOREACH(it, vconvexdata) {
+                    sinput >> *it;
+                }
                 BOOST_ASSERT(vconvexdata.size() > 2 );
                 vector<Vector> vpoints;
                 Vector vprev,vprev2,v,vdir,vnorm,vcenter;
@@ -778,8 +835,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 int numtrans=0;
                 sinput >> numtrans;
                 vtransforms.resize(numtrans);
-                FOREACH(it,vtransforms)
-                sinput >> *it;
+                FOREACH(it,vtransforms) {
+                    sinput >> *it;
+                }
             }
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
@@ -805,7 +863,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     }
                 }
             }
-            else if( cmd == "sphere" ) {
+            else if( cmd == "sphere" || cmd == "invertsphere" ) {
                 if( !bSetTargetCenter && !!_target ) {
                     KinBody::KinBodyStateSaver saver(_target);
                     _target->SetTransform(Transform());
@@ -820,6 +878,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 FOREACH(it,vdists) {
                     sinput >> *it;
                 }
+                bool bInvert = cmd == "invertsphere";
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vtransforms.begin();
@@ -830,6 +889,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
                             itcamera->trans += vTargetLocalCenter;
+                            if( bInvert ) {
+                                *itcamera = itcamera->inverse();
+                            }
                             ++itcamera;
                         }
                     }
@@ -964,12 +1026,17 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
     bool ComputeVisibility(ostream& sout, istream& sinput)
     {
+        bool bcheckocclusion = true;
+        sinput >> bcheckocclusion;
+
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
 
-        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        sout << pconstraintfn->IsVisible();
+        if( !_pconstraintfn ) {
+            _pconstraintfn.reset(new VisibilityConstraintFunction(shared_problem()));
+        }
+        sout << _pconstraintfn->IsVisible(bcheckocclusion);
         return true;
     }
 
@@ -1346,7 +1413,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 protected:
     RobotBasePtr _robot, _sensorrobot;
     bool _bIgnoreSensorCollision; ///< if true will ignore any collisions with vf->_sensorrobot
-    KinBodyPtr _target;
+    KinBodyPtr _target; ///< the target to check visibility for. Only links that are visible are checked
     dReal _fMaxVelMult;
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
@@ -1357,6 +1424,8 @@ protected:
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
     CollisionReportPtr _preport;
+
+    boost::shared_ptr<VisibilityConstraintFunction> _pconstraintfn;
 
     vector<Vector> _vconvexplanes;     ///< the planes defining the bounding visibility region (posive is inside)
     Vector _vcenterconvex;     ///< center point on the z=1 plane of the convex region

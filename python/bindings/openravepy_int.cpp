@@ -116,9 +116,9 @@ class ViewerManager
     {
         EnvironmentBasePtr _penv;
         std::string _viewername;
-        bool _bShowViewer;
         ViewerBasePtr _pviewer; /// the created viewer
         boost::condition _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        bool _bShowViewer; ///< true if should show the viewer when initially created
     };
     typedef boost::shared_ptr<ViewerInfo> ViewerInfoPtr;
 public:
@@ -132,10 +132,38 @@ public:
         Destroy();
     }
 
-    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer)
+    /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
+    ///
+    /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
+    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists=true)
     {
         ViewerBasePtr pviewer;
         if( strviewer.size() > 0 ) {
+
+            if( bDoNotAddIfExists ) {
+                // check all existing viewers
+                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::list<ViewerInfoPtr>::iterator itviewer = _listviewerinfos.begin();
+                while(itviewer != _listviewerinfos.end() ) {
+                    if( (*itviewer)->_penv == penv ) {
+                        if( (*itviewer)->_viewername == strviewer ) {
+                            if( !!(*itviewer)->_pviewer ) {
+                                (*itviewer)->_pviewer->Show(bShowViewer);
+                            }
+                            return (*itviewer)->_pviewer;
+                        }
+
+                        // should remove the viewer so can re-add a new one
+                        if( !!(*itviewer)->_pviewer ) {
+                            (*itviewer)->_penv->Remove((*itviewer)->_pviewer);
+                        }
+                        itviewer = _listviewerinfos.erase(itviewer);
+                    }
+                    else {
+                        ++itviewer;
+                    }
+                }
+            }
 
             ViewerInfoPtr pinfo(new ViewerInfo());
             pinfo->_penv = penv;
@@ -190,6 +218,29 @@ public:
         return false;
     }
 
+    /// \brief if anything removed, returns true
+    bool RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
+    {
+        if( !penv ) {
+            return false;
+        }
+        bool bremoved = false;
+        {
+            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
+            while(itinfo != _listviewerinfos.end() ) {
+                if( (*itinfo)->_penv == penv ) {
+                    itinfo = _listviewerinfos.erase(itinfo);
+                    bremoved = true;
+                }
+                else {
+                    ++itinfo;
+                }
+            }
+        }
+        return bremoved;
+    }
+
     void Destroy() {
         _bShutdown = true;
         {
@@ -222,17 +273,28 @@ protected:
                     }
                 }
 
+                listtempviewers.clear(); // viewers to add to env once lock is released
                 listviewers.clear();
-                FOREACH(itinfo, _listviewerinfos) {
+                std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
+                while(itinfo != _listviewerinfos.end() ) {
                     ViewerInfoPtr pinfo = *itinfo;
                     if( !pinfo->_pviewer ) {
                         pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
-                        if( !!pinfo->_pviewer ) {
-                            pinfo->_penv->AddViewer(pinfo->_pviewer);
-                        }
-                        // notify other thread that viewer failed
+                        // have to notify other thread that viewer is present before the environment lock happens! otherwise we can get into deadlock between c++ and python
                         pinfo->_cond.notify_all();
+                        if( !!pinfo->_pviewer ) {
+                            listtempviewers.push_back(pinfo->_pviewer);
+                            ++itinfo;
+                        }
+                        else {
+                            // erase from _listviewerinfos
+                            itinfo = _listviewerinfos.erase(itinfo);
+                        }
                     }
+                    else {
+                        ++itinfo;
+                    }
+
                     if( !!pinfo->_pviewer ) {
                         if( listviewers.size() == 0 ) {
                             bShowViewer = pinfo->_bShowViewer;
@@ -241,7 +303,11 @@ protected:
                     }
                 }
             }
-            
+
+            FOREACH(itaddviewer, listtempviewers) {
+                (*itaddviewer)->GetEnv()->AddViewer(*itaddviewer);
+            }
+
             ViewerBasePtr puseviewer;
             FOREACH(itviewer, listviewers) {
                 // double check if viewer is added to env
@@ -292,7 +358,7 @@ protected:
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
     std::list<ViewerInfoPtr> _listviewerinfos;
-    
+
     bool _bShutdown; ///< if true, shutdown everything
     bool _bInMain; ///< if true, viewer thread is running a main function
 };
@@ -373,7 +439,6 @@ class PyEnvironmentBase : public boost::enable_shared_from_this<PyEnvironmentBas
     boost::mutex _envmutex;
     std::list<boost::shared_ptr<EnvironmentMutex::scoped_lock> > _listenvlocks, _listfreelocks;
 #endif
-    ViewerBasePtr _pviewer;
 protected:
     EnvironmentBasePtr _penv;
 
@@ -461,15 +526,14 @@ public:
 
     virtual ~PyEnvironmentBase()
     {
-        _pviewer.reset();
     }
 
     void Reset() {
         _penv->Reset();
     }
     void Destroy() {
+        GetViewerManager()->RemoveViewersOfEnvironment(_penv);
         _penv->Destroy();
-        GetViewerManager()->RemoveViewer(_pviewer);
     }
 
     PyEnvironmentBasePtr CloneSelf(int options)
@@ -998,6 +1062,23 @@ public:
         return toPyTriMesh(*ptrimesh);
     }
 
+    object ReadTrimeshData(const std::string& data, const std::string& formathint)
+    {
+        boost::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(boost::shared_ptr<TriMesh>(),data,formathint);
+        if( !ptrimesh ) {
+            return object();
+        }
+        return toPyTriMesh(*ptrimesh);
+    }
+    object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts)
+    {
+        boost::shared_ptr<TriMesh> ptrimesh = _penv->ReadTrimeshData(boost::shared_ptr<TriMesh>(),data,formathint,toAttributesList(odictatts));
+        if( !ptrimesh ) {
+            return object();
+        }
+        return toPyTriMesh(*ptrimesh);
+    }
+
     void Add(PyInterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") {
         _penv->Add(pinterface->GetInterfaceBase(), bAnonymous, cmdargs);
     }
@@ -1259,8 +1340,20 @@ public:
 
     bool SetViewer(const string &viewername, bool showviewer=true)
     {
-        _pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer);
-        return !!_pviewer;
+        ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+        return !(pviewer == NULL);
+    }
+
+    /// \brief sets the default viewer
+    bool SetDefaultViewer(bool showviewer=true)
+    {
+        std::string viewername = RaveGetDefaultViewerType();
+        if( viewername.size() > 0 ) {
+            ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+            return !!pviewer;
+        }
+
+        return false;
     }
 
     object GetViewer()
@@ -1527,6 +1620,51 @@ public:
         return ostates;
     }
 
+    object GetPublishedBody(const string &name, uint64_t timeout = 0)
+    {
+        KinBody::BodyState bodystate;
+        if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {
+            return object();
+        }
+
+        boost::python::dict ostate;
+        ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
+        boost::python::list olinktransforms;
+        FOREACH(ittransform, bodystate.vectrans) {
+            olinktransforms.append(ReturnTransform(*ittransform));
+        }
+        ostate["linktransforms"] = olinktransforms;
+        ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+        ostate["name"] = ConvertStringToUnicode(bodystate.strname);
+        ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
+        ostate["updatestamp"] = bodystate.updatestamp;
+        ostate["environmentid"] = bodystate.environmentid;
+        ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
+        ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
+        return ostate;
+    }
+
+    object GetPublishedBodyJointValues(const string &name, uint64_t timeout=0)
+    {
+        std::vector<dReal> jointValues;
+        if( !_penv->GetPublishedBodyJointValues(name, jointValues, timeout) ) {
+            return object();
+        }
+        return toPyArray(jointValues);
+    }
+
+    object GetPublishedBodyTransformsMatchingPrefix(const string &prefix, uint64_t timeout=0) {
+        std::vector< std::pair<std::string, Transform> > nameTransfPairs;
+        _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
+
+        boost::python::dict otransforms;
+        FOREACH(itpair, nameTransfPairs) {
+            otransforms[itpair->first] = ReturnTransform(itpair->second);
+        }
+
+        return otransforms;
+    }
+
     object Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
@@ -1567,10 +1705,10 @@ public:
         _penv->SetUnit(std::make_pair(unitname, unitmult));
     }
 
-    object GetUnit() const{
+    object GetUnit() const {
         std::pair<std::string, dReal> unit = _penv->GetUnit();
         return boost::python::make_tuple(unit.first, unit.second);
-        
+
     }
 
     bool __eq__(PyEnvironmentBasePtr p) {
@@ -1711,6 +1849,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetViewer_overloads, SetViewer, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetDefaultViewer_overloads, SetDefaultViewer, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinestrip_overloads, drawlinestrip, 2, 4)
@@ -1722,7 +1861,10 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedBody, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyTransformsMatchingPrefix_overloads, GetPublishedBodyTransformsMatchingPrefix, 1, 2)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -1880,6 +2022,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
         PyInterfaceBasePtr (PyEnvironmentBase::*readinterfacexmlfile2)(const string &,object) = &PyEnvironmentBase::ReadInterfaceURI;
         object (PyEnvironmentBase::*readtrimeshfile1)(const std::string&) = &PyEnvironmentBase::ReadTrimeshURI;
         object (PyEnvironmentBase::*readtrimeshfile2)(const std::string&,object) = &PyEnvironmentBase::ReadTrimeshURI;
+        object (PyEnvironmentBase::*readtrimeshdata1)(const std::string&,const std::string&) = &PyEnvironmentBase::ReadTrimeshData;
+        object (PyEnvironmentBase::*readtrimeshdata2)(const std::string&,const std::string&,object) = &PyEnvironmentBase::ReadTrimeshData;
         scope env = classenv
                     .def(init<optional<int> >(args("options")))
                     .def("Reset",&PyEnvironmentBase::Reset, DOXY_FN(EnvironmentBase,Reset))
@@ -1940,6 +2084,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("ReadTrimeshURI",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshFile",readtrimeshfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
                     .def("ReadTrimeshFile",readtrimeshfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshURI))
+                    .def("ReadTrimeshData",readtrimeshdata1,args("data", "formathint"), DOXY_FN(EnvironmentBase,ReadTrimeshData))
+                    .def("ReadTrimeshData",readtrimeshdata2,args("data","formathint","atts"), DOXY_FN(EnvironmentBase,ReadTrimeshData))
                     .def("Add", &PyEnvironmentBase::Add, Add_overloads(args("interface","anonymous","cmdargs"), DOXY_FN(EnvironmentBase,Add)))
                     .def("AddKinBody",addkinbody1,args("body"), DOXY_FN(EnvironmentBase,AddKinBody))
                     .def("AddKinBody",addkinbody2,args("body","anonymous"), DOXY_FN(EnvironmentBase,AddKinBody))
@@ -1976,6 +2122,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("LockPhysics",Lock1,args("lock"), "Locks the environment mutex.")
                     .def("LockPhysics",Lock2,args("lock","timeout"), "Locks the environment mutex with a timeout.")
                     .def("SetViewer",&PyEnvironmentBase::SetViewer,SetViewer_overloads(args("viewername","showviewer"), "Attaches the viewer and starts its thread"))
+                    .def("SetDefaultViewer",&PyEnvironmentBase::SetDefaultViewer,SetDefaultViewer_overloads(args("showviewer"), "Attaches the default viewer (controlled by environment variables and internal settings) and starts its thread"))
                     .def("GetViewer",&PyEnvironmentBase::GetViewer, DOXY_FN(EnvironmentBase,GetViewer))
                     .def("plot3",&PyEnvironmentBase::plot3,plot3_overloads(args("points","pointsize","colors","drawstyle"), DOXY_FN(EnvironmentBase,plot3 "const float; int; int; float; const float; int, bool")))
                     .def("drawlinestrip",&PyEnvironmentBase::drawlinestrip,drawlinestrip_overloads(args("points","linewidth","colors","drawstyle"), DOXY_FN(EnvironmentBase,drawlinestrip "const float; int; int; float; const float")))
@@ -1989,7 +2136,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
                     .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                     .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
+                    .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBody)))
                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(args("timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodies)))
+                    .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
+                    .def("GetPublishedBodyTransformsMatchingPrefix",&PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix, GetPublishedBodyTransformsMatchingPrefix_overloads(args("prefix", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix)))
                     .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"), DOXY_FN(EnvironmentBase,Triangulate))
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))

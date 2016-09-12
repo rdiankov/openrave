@@ -14,8 +14,7 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-import openravepy_int
-import openravepy_ext
+from . import openravepy_int, openravepy_ext
 import os.path
 from sys import platform as sysplatformname
 from sys import stdout
@@ -126,6 +125,7 @@ class OpenRAVEGlobalArguments:
     @staticmethod
     def addOptions(parser,testmode=True):
         from optparse import OptionGroup
+        from os import environ
         ogroup = OptionGroup(parser,"OpenRAVE Environment Options")
         ogroup.add_option('--loadplugin', action="append",type='string',dest='_loadplugins',default=[],
                           help='List all plugins and the interfaces they provide.')
@@ -134,7 +134,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--physics', action="store",type='string',dest='_physics',default=None,
                           help='physics engine to use (default=%default)')
         ogroup.add_option('--viewer', action="store",type='string',dest='_viewer',default=None,
-                          help='viewer to use (default=qtcoin)' )
+                          help='viewer to use (default=%s)'%environ.get('OPENRAVE_DEFAULT_VIEWER', openravepy_int.RaveGetDefaultViewerType()) )
         ogroup.add_option('--server', action="store",type='string',dest='_server',default=None,
                           help='server to use (default=None).')
         ogroup.add_option('--serverport', action="store",type='int',dest='_serverport',default=4765,
@@ -195,7 +195,8 @@ class OpenRAVEGlobalArguments:
                 if len(options._viewer) > 0:
                     viewername=options._viewer
             elif defaultviewer:
-                viewername='qtcoin'
+                from os import environ
+                viewername=environ.get('OPENRAVE_DEFAULT_VIEWER', openravepy_int.RaveGetDefaultViewerType())
             if returnviewer:
                 return viewername
             elif viewername is not None:
@@ -277,13 +278,14 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
         triindices = newindices
     return radius*numpy.array(vertices),triindices
 
-def DrawAxes(env,target,dist=1.0,linewidth=1,coloradd=None):
+def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     """draws xyz coordinate system around target.
 
     :param env: Environment
     :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
     :param dist: how far the lines extend from the origin
     :param linewidth: how thick the line is rendered in pixels
+    :param colormode: optionally override default color mode of rgb to cmy
     :param coloradd: an optional 3-element vector for 
     """
     if isinstance(target,basestring):
@@ -292,7 +294,10 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,coloradd=None):
         T = openravepy_int.matrixFromPose(target)
     else:
         T = numpy.array(target)
-    colors=numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]])
+    if colormode == 'cmy':
+        colors = numpy.array([[0,1,1],[0,1,1],[1,0,1],[1,0,1],[1,1,0],[1,1,0]])
+    else:
+        colors = numpy.array([[1,0,0],[1,0,0],[0,1,0],[0,1,0],[0,0,1],[0,0,1]])
     if coloradd is not None:
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
@@ -363,6 +368,12 @@ def DrawIkparam2(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationXAxisAngleZNorm4D:
         pos,angle = ikparam.GetTranslationXAxisAngleZNorm4D()
         T = openravepy_int.matrixFromAxisAngle([0,0,angle])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+    
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
+        pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
+        T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
         T[0:3,3] = pos
         return [DrawAxes(env,T,dist,linewidth,coloradd)]
     

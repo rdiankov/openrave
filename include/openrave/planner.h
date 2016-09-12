@@ -37,6 +37,7 @@ enum ConstraintFilterOptions
     CFO_CheckWithPerturbation=0x00010000, ///< when checking collisions, perturbs all the joint values a little and checks again. This forces the line to be away from grazing collisions.
     CFO_FillCheckedConfiguration=0x00020000, ///< if set, will fill \ref ConstraintFilterReturn::_configurations and \ref ConstraintFilterReturn::_configurationtimes
     CFO_FillCollisionReport=0x00040000, ///< if set, will fill \ref ConstraintFilterReturn::_report if in environment or self-collision
+    CFO_FinalValuesNotReached=0x40000000, ///< if set, then the final values of the interpolation have not been reached, although a close interpolation has been computed. This happens when manipulator constraints are used.
     CFO_StateSettingError=0x80000000, ///< error when the state setting function (or neighbor function) breaks
     CFO_RecommendedOptions = 0x0000ffff, ///< recommended options that all plugins should use by default
 };
@@ -62,6 +63,15 @@ enum PlannerAction
     PA_None=0, ///< no action
     PA_Interrupt=1, ///< interrupt the planner and return to user
     PA_ReturnWithAnySolution=2, ///< return quickly with any path
+};
+
+/// \brief options to supply to the _neighstatefn depending on how the neighbor should be computed.
+///
+/// The neighbor function takes a current position q and delta movement qdelta
+enum NeighborStateOptions
+{
+    NSO_GoalToInitial=1, ///< if set, then q is coming from a goal state, else it is coming from an initial state.
+    NSO_OnlyHardConstraints=2, ///< if set, then the new neighbor should be as close as possible to q+qdelta, otherwise can prioritize other constraints and only use q+qdelta as a hint. This is used in smoothers when the path is already determined and user just wants to verify that hard constraints are met only; do not modify q+qdelta unless hard constraints fail.
 };
 
 /// \brief Return values for the constraint validation function.
@@ -328,7 +338,7 @@ private:
             success = _neighstatefn(q,qdelta,fromgoal) -> q = Filter(q+qdelta)
             \param q the current state. In order to save computation, assumes this state is the currently set configuration.
             \param qdelta the delta to add
-            \param fromgoal 1 if q is coming from a goal state, 0 if it is coming from an initial state
+            \param options a set of flags from NeighborStateOptions
 
             In RRTs this is used for the extension operation. The new state is stored in the first parameter q.
             Note that the function can also add a filter to the final destination (like projecting onto a constraint manifold).
@@ -367,6 +377,9 @@ private:
         /// \brief maximum number of iterations before the planner gives up. If 0 or less, planner chooses best iterations.
         int _nMaxIterations;
 
+        /// \brief max planning time in ms. If 0, then there is no time limit
+        uint32_t _nMaxPlanningTime;
+        
         /// \brief Specifies the planner that will perform the post-processing path smoothing before returning.
         ///
         /// If empty, will not path smooth the returned trajectories (used to measure algorithm time)

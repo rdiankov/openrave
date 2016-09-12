@@ -50,6 +50,23 @@ class RunCollision(EnvironmentSetup):
                 assert(check==robot.CheckSelfCollision())
                 env.Remove(robot)
 
+    def test_collisioncaching2(self):
+        filenames = ['robots/barrettwam.robot.xml']
+        env=self.env
+        for filename in filenames:
+            env.Reset()
+            robot=env.ReadRobotURI(filename)
+            for i in range(4):
+                env.Add(robot)
+                lower,upper = robot.GetDOFLimits()
+                for i in range(4):
+                    v = random.rand()*(upper-lower)+lower
+                    robot.SetDOFValues(v)
+                    check=robot.CheckSelfCollision()
+                    robot.SetDOFValues(v)
+                    assert(check==robot.CheckSelfCollision())
+                env.Remove(robot)
+
     def test_selfcollision(self):
         with self.env:
             self.LoadEnv('data/lab1.env.xml')
@@ -64,6 +81,15 @@ class RunCollision(EnvironmentSetup):
             assert(not robot.CheckSelfCollision(report))
             assert(not target1.CheckSelfCollision())
             assert(self.env.CheckCollision(target1,report))
+
+    def test_attachedbodiescollision(self):
+        with self.env:
+            self.loadEnv('data/lab1.env.xml')
+            robot = env.GetRobot('BarrettWAM')
+            link1 = robot.GetLink('wam5')
+            link2 = robot.GetLink('wam6')
+            assert(env.CheckCollision(link1, link2))
+
 
     def test_selfcollision_joinxml(self):
         testrobot_xml="""<Robot>
@@ -247,6 +273,10 @@ class RunCollision(EnvironmentSetup):
 class test_ode(RunCollision):
     def __init__(self):
         RunCollision.__init__(self, 'ode')
+
+class test_fcl(RunCollision):
+    def __init__(self):
+        RunCollision.__init__(self, 'fcl_')
 
 # class test_bullet(RunCollision):
 #     def __init__(self):

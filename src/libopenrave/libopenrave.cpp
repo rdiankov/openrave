@@ -58,17 +58,23 @@ class ColorLayout : public Layout {
 public:
     DECLARE_LOG4CXX_OBJECT(ColorLayout)
     BEGIN_LOG4CXX_CAST_MAP()
-        LOG4CXX_CAST_ENTRY(ColorLayout)
-        LOG4CXX_CAST_ENTRY_CHAIN(Layout)
+    LOG4CXX_CAST_ENTRY(ColorLayout)
+    LOG4CXX_CAST_ENTRY_CHAIN(Layout)
     END_LOG4CXX_CAST_MAP()
 
     ColorLayout();
     ColorLayout(const LayoutPtr& layout);
     virtual ~ColorLayout();
 
-    virtual void activateOptions(helpers::Pool& p) { _layout->activateOptions(p); }
-    virtual void setOption(const LogString& option, const LogString& value) { _layout->setOption(option, value); }
-    virtual bool ignoresThrowable() const { return _layout->ignoresThrowable(); }
+    virtual void activateOptions(helpers::Pool& p) {
+        _layout->activateOptions(p);
+    }
+    virtual void setOption(const LogString& option, const LogString& value) {
+        _layout->setOption(option, value);
+    }
+    virtual bool ignoresThrowable() const {
+        return _layout->ignoresThrowable();
+    }
 
     virtual void format(LogString& output, const spi::LoggingEventPtr& event, helpers::Pool& pool) const;
 
@@ -469,6 +475,12 @@ public:
         }
         _vdbdirectories.push_back(_homedirectory);
 
+        _defaultviewertype.clear();
+        const char* pOPENRAVE_DEFAULT_VIEWER = std::getenv("OPENRAVE_DEFAULT_VIEWER");
+        if( !!pOPENRAVE_DEFAULT_VIEWER && strlen(pOPENRAVE_DEFAULT_VIEWER) > 0 ) {
+            _defaultviewertype = std::string(pOPENRAVE_DEFAULT_VIEWER);
+        }
+        
         _UpdateDataDirs();
         return 0;
     }
@@ -581,19 +593,23 @@ public:
     {
         int level = _nDebugLevel;
         if (_logger != NULL) {
-            const log4cxx::LevelPtr& levelptr = _logger->getLevel();
-            if (levelptr == log4cxx::Level::getFatal()) {
-                level = Level_Fatal;
-            } else if (levelptr == log4cxx::Level::getError()) {
-                level = Level_Error;
-            } else if (levelptr == log4cxx::Level::getWarn()) {
-                level = Level_Warn;
-            } else if (levelptr == log4cxx::Level::getInfo()) {
-                level = Level_Info;
-            } else if (levelptr == log4cxx::Level::getDebug()) {
-                level = Level_Debug;
-            } else if (levelptr == log4cxx::Level::getTrace()) {
+            if (_logger->isEnabledFor(log4cxx::Level::getTrace())) {
                 level = Level_Verbose;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getDebug())) {
+                level = Level_Debug;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getInfo())) {
+                level = Level_Info;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getWarn())) {
+                level = Level_Warn;
+            }
+            else if (_logger->isEnabledFor(log4cxx::Level::getError())) {
+                level = Level_Error;
+            }
+            else {
+                level = Level_Fatal;
             }
         }
         return level | (_nDebugLevel & ~Level_OutputMask);
@@ -817,6 +833,34 @@ protected:
         boost::mutex::scoped_lock lock(_mutexinternal);
         return _nDataAccessOptions;
     }
+    std::string GetDefaultViewerType() {
+        if( _defaultviewertype.size() > 0 ) {
+            return _defaultviewertype;
+        }
+        
+        // get the first viewer that can be loadable, with preferenace to qtosg, qtcoin
+        boost::shared_ptr<RaveDatabase> pdatabase = _pdatabase;
+        if( !!pdatabase ) {
+            if( pdatabase->HasInterface(PT_Viewer, "qtosg") ) {
+                return std::string("qtosg");
+            }
+
+            if( pdatabase->HasInterface(PT_Viewer, "qtcoin") ) {
+                return std::string("qtcoin");
+            }
+
+            // search for the first viewer found
+            std::map<InterfaceType, std::vector<std::string> > interfacenames;
+            pdatabase->GetLoadedInterfaces(interfacenames);
+            if( interfacenames.find(PT_Viewer) != interfacenames.end() ) {
+                if( interfacenames[PT_Viewer].size() > 0 ) {
+                    return interfacenames[PT_Viewer].at(0);
+                }
+            }
+        }
+
+        return std::string();
+    }
 
 protected:
     static void _create()
@@ -1004,6 +1048,7 @@ private:
     std::map<int, EnvironmentBase*> _mapenvironments;
     std::list<boost::function<void()> > _listDestroyCallbacks;
     std::string _homedirectory;
+    std::string _defaultviewertype; ///< the default viewer type from the environment variable OPENRAVE_DEFAULT_VIEWER
     std::vector<std::string> _vdbdirectories;
     int _nGlobalEnvironmentId;
     SpaceSamplerBasePtr _pdefaultsampler;
@@ -1026,6 +1071,12 @@ private:
 };
 
 #if OPENRAVE_LOG4CXX
+log4cxx::LevelPtr RaveGetVerboseLogLevel()
+{
+    static log4cxx::LevelPtr level(new log4cxx::Level(log4cxx::Level::TRACE_INT, LOG4CXX_STR("VERBOSE"), 7));
+    return level;
+}
+
 log4cxx::LoggerPtr RaveGetLogger()
 {
     return RaveGlobal::instance()->GetLogger();
@@ -1281,6 +1332,11 @@ void RaveSetDataAccess(int options)
 int RaveGetDataAccess()
 {
     return RaveGlobal::instance()->GetDataAccess();
+}
+
+std::string RaveGetDefaultViewerType()
+{
+    return RaveGlobal::instance()->GetDefaultViewerType();
 }
 
 const char *RaveGetLocalizedTextForDomain(const std::string& domainname, const char *msgid)
@@ -2047,7 +2103,7 @@ void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         }
 
         //uint64_t starttime1 = utils::GetMicroTime();
-        
+
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
         FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
@@ -2355,9 +2411,10 @@ void RaveXMLErrorFunc(void *ctx, const char *msg, ...)
 
 struct XMLREADERDATA
 {
-    XMLREADERDATA(BaseXMLReaderPtr preader, xmlParserCtxtPtr ctxt) : _preader(preader), _ctxt(ctxt) {
+    XMLREADERDATA(BaseXMLReader& reader, xmlParserCtxtPtr ctxt) : _reader(reader), _ctxt(ctxt) {
     }
-    BaseXMLReaderPtr _preader, _pdummy;
+    BaseXMLReader& _reader;
+    BaseXMLReaderPtr _pdummy;
     xmlParserCtxtPtr _ctxt;
 };
 
@@ -2379,7 +2436,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
         pdata->_pdummy->startElement(s,listatts);
     }
     else {
-        BaseXMLReader::ProcessElement pestatus = pdata->_preader->startElement(s, listatts);
+        BaseXMLReader::ProcessElement pestatus = pdata->_reader.startElement(s, listatts);
         if( pestatus != BaseXMLReader::PE_Support ) {
             // not handling, so create a temporary class to handle it
             pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
@@ -2398,7 +2455,7 @@ void DefaultEndElementSAXFunc(void *ctx, const xmlChar *name)
         }
     }
     else {
-        if( pdata->_preader->endElement(s) ) {
+        if( pdata->_reader.endElement(s) ) {
             //RAVEPRINT(L"%s size read %d\n", name, data->_ctxt->input->consumed);
             xmlStopParser(pdata->_ctxt);
         }
@@ -2412,7 +2469,7 @@ void DefaultCharactersSAXFunc(void *ctx, const xmlChar *ch, int len)
         pdata->_pdummy->characters(string((const char*)ch, len));
     }
     else {
-        pdata->_preader->characters(string((const char*)ch, len));
+        pdata->_reader.characters(string((const char*)ch, len));
     }
 }
 
@@ -2438,7 +2495,7 @@ bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
     return true;
 }
 
-bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
+bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size)
 {
     static xmlSAXHandler s_DefaultSAXHandler = { 0};
     if( size <= 0 ) {
@@ -2467,8 +2524,8 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size)
     ctxt->sax = sax;
     xmlDetectSAX2(ctxt);
 
-    XMLREADERDATA reader(preader, ctxt);
-    ctxt->userData = &reader;
+    XMLREADERDATA readerdata(reader, ctxt);
+    ctxt->userData = &readerdata;
 
     xmlParseDocument(ctxt);
 
@@ -2505,11 +2562,11 @@ using namespace log4cxx;
 
 IMPLEMENT_LOG4CXX_OBJECT(ColorLayout);
 
-ColorLayout::ColorLayout(): Layout()
+ColorLayout::ColorLayout() : Layout()
 {
 }
 
-ColorLayout::ColorLayout(const LayoutPtr& layout): Layout(), _layout(layout)
+ColorLayout::ColorLayout(const LayoutPtr& layout) : Layout(), _layout(layout)
 {
 }
 
@@ -2536,16 +2593,16 @@ LogString ColorLayout::_Colorize(const spi::LoggingEventPtr& event) const
 
     csi.reserve(32);
 
-    if (event->getLevel() == Level::getFatal()) {
+    if (event->getLevel()->isGreaterOrEqual(Level::getFatal())) {
         fg = OPENRAVECOLOR_FATALLEVEL;
-    } else if (event->getLevel() == Level::getError()) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getError())) {
         fg = OPENRAVECOLOR_ERRORLEVEL;
-    } else if (event->getLevel() == Level::getWarn()) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getWarn())) {
         fg = OPENRAVECOLOR_WARNLEVEL;
-    } else if (event->getLevel() == Level::getInfo()) {
-    } else if (event->getLevel() == Level::getDebug()) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getInfo())) {
+    } else if (event->getLevel()->isGreaterOrEqual(Level::getDebug())) {
         fg = OPENRAVECOLOR_DEBUGLEVEL;
-    } else if (event->getLevel() == Level::getTrace()) {
+    } else {
         fg = OPENRAVECOLOR_VERBOSELEVEL;
     }
 

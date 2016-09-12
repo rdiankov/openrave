@@ -324,7 +324,20 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
+        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
+        }
     }
+    _info._mapExtraGeometries.clear();
+    // have to reset the self group! cannot use geometries directly since we require exclusive access to the GeometryInfo objects
+    std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
+    vgeometryinfos.resize(_vGeometries.size());
+    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        *vgeometryinfos[i] = _vGeometries[i]->_info;
+    }
+    SetGroupGeometries("self", vgeometryinfos);
     _Update();
 }
 
@@ -334,8 +347,21 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     size_t i = 0;
     FOREACH(itinfo,geometries) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*itinfo));
+        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
+        }
         ++i;
     }
+    _info._mapExtraGeometries.clear();
+    // have to reset the self group!
+    std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
+    vgeometryinfos.resize(_vGeometries.size());
+    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        *vgeometryinfos[i] = _vGeometries[i]->_info;
+    }
+    SetGroupGeometries("self", vgeometryinfos);
     _Update();
 }
 
@@ -355,6 +381,10 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
     _vGeometries.resize(pvinfos->size());
     for(size_t i = 0; i < pvinfos->size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*pvinfos->at(i)));
+        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            _vGeometries[i]->InitCollisionMesh();
+        }
     }
     _Update();
 }
@@ -373,6 +403,7 @@ void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname,std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
 int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const

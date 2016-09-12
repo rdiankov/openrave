@@ -1,3 +1,8 @@
-add_library(ParabolicPathSmooth STATIC DynamicPath.cpp ParabolicRamp.cpp Timer.cpp DynamicPath.h ParabolicRamp.h Math.h Timer.h)
+add_library(ParabolicPathSmooth STATIC DynamicPath.cpp paraboliccommon.cpp pramp.cpp pramp.h ppramp.cpp ppramp.h plpramp.cpp plpramp.h ParabolicRamp.cpp Timer.cpp DynamicPath.h ParabolicRamp.h paraboliccommon.h Timer.h)
 set_target_properties(ParabolicPathSmooth PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 add_dependencies(ParabolicPathSmooth interfacehashes_target)
+
+target_link_libraries(ParabolicPathSmooth libopenrave)
+
+add_executable(testparabolicramp testparabolicramp.cpp)
+target_link_libraries(testparabolicramp ParabolicPathSmooth libopenrave ${LOG4CXX_LIBRARIES})

@@ -138,6 +138,11 @@ int KinBody::Joint::GetDOF() const
     return int(_info._type & 0xf);
 }
 
+bool KinBody::Joint::IsCircular() const
+{
+    return _info._bIsCircular[0] || _info._bIsCircular[1] || _info._bIsCircular[2];
+}
+
 bool KinBody::Joint::IsCircular(int iaxis) const
 {
     return static_cast<bool>(_info._bIsCircular.at(iaxis));
@@ -1002,6 +1007,186 @@ dReal KinBody::Joint::SubtractValue(dReal value1, dReal value2, int iaxis) const
 void KinBody::Joint::AddTorque(const std::vector<dReal>& pTorques)
 {
     GetParent()->GetEnv()->GetPhysicsEngine()->AddJointTorque(shared_from_this(), pTorques);
+}
+
+dReal KinBody::Joint::GetMaxTorque(int iaxis) const
+{
+    if( !_info._infoElectricMotor ) {
+        return _info._vmaxtorque.at(iaxis);
+    }
+    else {
+        if( _info._infoElectricMotor->max_speed_torque_points.size() > 0 ) {
+            if( _info._infoElectricMotor->max_speed_torque_points.size() == 1 ) {
+                // doesn't matter what the velocity is
+                return _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
+            }
+
+            dReal velocity = RaveFabs(GetVelocity(iaxis));
+            dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
+            if( IsRevolute(iaxis) ) {
+                revolutionsPerSecond /= 2*M_PI;
+            }
+
+            if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(0).first ) {
+                return _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
+            }
+
+            for(size_t i = 1; i < _info._infoElectricMotor->max_speed_torque_points.size(); ++i) {
+                if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(i).first ) {
+                    // linearly interpolate to get the desired torque
+                    dReal rps0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).first;
+                    dReal torque0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).second;
+                    dReal rps1 = _info._infoElectricMotor->max_speed_torque_points.at(i).first;
+                    dReal torque1 = _info._infoElectricMotor->max_speed_torque_points.at(i).second;
+                    if( rps1 - rps0 <= g_fEpsilonLinear ) {
+                        return torque1*_info._infoElectricMotor->gear_ratio;
+                    }
+
+                    return ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info._infoElectricMotor->gear_ratio;
+                }
+            }
+
+            // revolutionsPerSecond is huge, return the last point
+            return _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
+        }
+        else {
+            return _info._infoElectricMotor->max_instantaneous_torque*_info._infoElectricMotor->gear_ratio;
+        }
+    }
+}
+
+std::pair<dReal, dReal> KinBody::Joint::GetInstantaneousTorqueLimits(int iaxis) const
+{
+    if( !_info._infoElectricMotor ) {
+        return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
+    }
+    else {
+        if( _info._infoElectricMotor->max_speed_torque_points.size() > 0 ) {
+            dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->max_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
+            if( _info._infoElectricMotor->max_speed_torque_points.size() == 1 ) {
+                // doesn't matter what the velocity is
+                return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
+            }
+
+            dReal rawvelocity = GetVelocity(iaxis);
+            dReal velocity = RaveFabs(rawvelocity);
+            dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
+            if( IsRevolute(iaxis) ) {
+                revolutionsPerSecond /= 2*M_PI;
+            }
+
+            if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(0).first ) {
+                return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
+            }
+
+            for(size_t i = 1; i < _info._infoElectricMotor->max_speed_torque_points.size(); ++i) {
+                if( revolutionsPerSecond <= _info._infoElectricMotor->max_speed_torque_points.at(i).first ) {
+                    // linearly interpolate to get the desired torque
+                    dReal rps0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).first;
+                    dReal torque0 = _info._infoElectricMotor->max_speed_torque_points.at(i-1).second;
+                    dReal rps1 = _info._infoElectricMotor->max_speed_torque_points.at(i).first;
+                    dReal torque1 = _info._infoElectricMotor->max_speed_torque_points.at(i).second;
+
+                    dReal finterpolatedtorque;
+                    if( rps1 - rps0 <= g_fEpsilonLinear ) {
+                        finterpolatedtorque = torque1*_info._infoElectricMotor->gear_ratio;
+                    }
+                    else {
+                        finterpolatedtorque = ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info._infoElectricMotor->gear_ratio;
+                    }
+
+                    // due to back emf, the deceleration magnitude is less than acceleration?
+                    if( rawvelocity > 0 ) {
+                        return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else {
+                        return std::make_pair(-finterpolatedtorque, 0.9*finterpolatedtorque);
+                    }
+                }
+            }
+
+            // due to back emf, the deceleration magnitude is less than acceleration?
+            // revolutionsPerSecond is huge, return the last point
+            dReal f = _info._infoElectricMotor->max_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
+            if( rawvelocity > 0 ) {
+                return std::make_pair(-0.9*f, f);
+            }
+            else {
+                return std::make_pair(-f, 0.9*f);
+            }
+        }
+        else {
+            dReal f = _info._infoElectricMotor->max_instantaneous_torque*_info._infoElectricMotor->gear_ratio;
+            return std::make_pair(-f, f);
+        }
+    }
+}
+
+std::pair<dReal, dReal> KinBody::Joint::GetNominalTorqueLimits(int iaxis) const
+{
+    if( !_info._infoElectricMotor ) {
+        return std::make_pair(-_info._vmaxtorque.at(iaxis), _info._vmaxtorque.at(iaxis));
+    }
+    else {
+        if( _info._infoElectricMotor->nominal_speed_torque_points.size() > 0 ) {
+            dReal fMaxTorqueAtZeroSpeed = _info._infoElectricMotor->nominal_speed_torque_points.at(0).second*_info._infoElectricMotor->gear_ratio;
+            if( _info._infoElectricMotor->nominal_speed_torque_points.size() == 1 ) {
+                // doesn't matter what the velocity is
+                return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
+            }
+
+            dReal rawvelocity = GetVelocity(iaxis);
+            dReal velocity = RaveFabs(rawvelocity);
+            dReal revolutionsPerSecond = _info._infoElectricMotor->gear_ratio * velocity;
+            if( IsRevolute(iaxis) ) {
+                revolutionsPerSecond /= 2*M_PI;
+            }
+
+            if( revolutionsPerSecond <= _info._infoElectricMotor->nominal_speed_torque_points.at(0).first ) {
+                return std::make_pair(-fMaxTorqueAtZeroSpeed, fMaxTorqueAtZeroSpeed);
+            }
+
+            for(size_t i = 1; i < _info._infoElectricMotor->nominal_speed_torque_points.size(); ++i) {
+                if( revolutionsPerSecond <= _info._infoElectricMotor->nominal_speed_torque_points.at(i).first ) {
+                    // linearly interpolate to get the desired torque
+                    dReal rps0 = _info._infoElectricMotor->nominal_speed_torque_points.at(i-1).first;
+                    dReal torque0 = _info._infoElectricMotor->nominal_speed_torque_points.at(i-1).second;
+                    dReal rps1 = _info._infoElectricMotor->nominal_speed_torque_points.at(i).first;
+                    dReal torque1 = _info._infoElectricMotor->nominal_speed_torque_points.at(i).second;
+
+                    dReal finterpolatedtorque;
+                    if( rps1 - rps0 <= g_fEpsilonLinear ) {
+                        finterpolatedtorque = torque1*_info._infoElectricMotor->gear_ratio;
+                    }
+                    else {
+                        finterpolatedtorque = ((revolutionsPerSecond - rps0)/(rps1 - rps0)*(torque1-torque0) + torque0)*_info._infoElectricMotor->gear_ratio;
+                    }
+
+                    // due to back emf, the deceleration magnitude is less than acceleration?
+                    if( rawvelocity > 0 ) {
+                        return std::make_pair(-0.9*finterpolatedtorque, finterpolatedtorque);
+                    }
+                    else {
+                        return std::make_pair(-finterpolatedtorque, 0.9*finterpolatedtorque);
+                    }
+                }
+            }
+
+            // due to back emf, the deceleration magnitude is less than acceleration?
+            // revolutionsPerSecond is huge, return the last point
+            dReal f = _info._infoElectricMotor->nominal_speed_torque_points.back().second*_info._infoElectricMotor->gear_ratio;
+            if( rawvelocity > 0 ) {
+                return std::make_pair(-0.9*f, f);
+            }
+            else {
+                return std::make_pair(-f, 0.9*f);
+            }
+        }
+        else {
+            dReal f = _info._infoElectricMotor->nominal_torque*_info._infoElectricMotor->gear_ratio;
+            return std::make_pair(-f, f);
+        }
+    }
 }
 
 int KinBody::Joint::GetMimicJointIndex() const

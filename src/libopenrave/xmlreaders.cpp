@@ -219,6 +219,9 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     else if( _stricmp(type.c_str(), "trimesh") == 0 ) {
         _pgeom->_type = GT_TriMesh;
     }
+    else if( _stricmp(type.c_str(), "container") == 0 ) {
+        _pgeom->_type = GT_Container;
+    }
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
     }
@@ -365,6 +368,18 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
             }
 
             break;
+        case GT_Container:
+            if( xmlname == "outer_extents" ) {
+                _ss >> _pgeom->_vGeomData.x >> _pgeom->_vGeomData.y >> _pgeom->_vGeomData.z;
+            }
+            if( xmlname == "inner_extents" ) {
+                _ss >> _pgeom->_vGeomData2.x >> _pgeom->_vGeomData2.y >> _pgeom->_vGeomData2.z;
+            }
+            if( xmlname == "bottom_cross" ) {
+                _ss >> _pgeom->_vGeomData3.x >> _pgeom->_vGeomData3.y >> _pgeom->_vGeomData3.z;
+            }
+
+            break;
         case GT_Cylinder:
             if( xmlname == "radius") {
                 _ss >> _pgeom->_vGeomData.x;
@@ -460,7 +475,7 @@ BaseXMLReader::ProcessElement ElectricMotorActuatorInfoReader::startElement(cons
         return PE_Support;
     }
     
-    static boost::array<string, 13> tags = { { "gear_ratio", "assigned_power_rating", "max_speed", "no_load_speed", "stall_torque", "speed_torque_point", "nominal_torque", "rotor_inertia", "torque_constant", "nominal_voltage", "speed_constant", "starting_current", "terminal_resistance"} };
+    static boost::array<string, 18> tags = { { "gear_ratio", "assigned_power_rating", "max_speed", "no_load_speed", "stall_torque", "nominal_speed_torque_point", "max_speed_torque_point", "nominal_torque", "rotor_inertia", "torque_constant", "nominal_voltage", "speed_constant", "starting_current", "terminal_resistance", "coloumb_friction", "viscous_friction", "model_type", "max_instantaneous_torque", } };
     if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
         return PE_Support;
     }
@@ -483,8 +498,8 @@ bool ElectricMotorActuatorInfoReader::endElement(const std::string& xmlname)
     if( xmlname == "actuator" ) {
         return true;
     }
-    else if( xmlname == "gear_ratio" ) {
-        _ss >> _pinfo->gear_ratio;
+    else if( xmlname == "model_type" ) {
+        _ss >> _pinfo->model_type;
     }
     else if( xmlname == "assigned_power_rating" ) {
         _ss >> _pinfo->assigned_power_rating;
@@ -498,18 +513,34 @@ bool ElectricMotorActuatorInfoReader::endElement(const std::string& xmlname)
     else if( xmlname == "stall_torque" ) {
         _ss >> _pinfo->stall_torque;
     }
-    else if( xmlname == "speed_torque_point" ) {
+    else if( xmlname == "max_instantaneous_torque" ) {
+        _ss >> _pinfo->max_instantaneous_torque;
+    }
+    else if( xmlname == "nominal_speed_torque_point" ) {
         dReal speed=0, torque=0;
         _ss >> speed >> torque;
         // should be from increasing speed.
         size_t insertindex = 0;
-        while(insertindex < _pinfo->speed_torque_points.size()) {
-            if( speed < _pinfo->speed_torque_points.at(insertindex).first ) {
+        while(insertindex < _pinfo->nominal_speed_torque_points.size()) {
+            if( speed < _pinfo->nominal_speed_torque_points.at(insertindex).first ) {
                 break;
             }
             ++insertindex;
         }
-        _pinfo->speed_torque_points.insert(_pinfo->speed_torque_points.begin()+insertindex, make_pair(speed,torque));
+        _pinfo->nominal_speed_torque_points.insert(_pinfo->nominal_speed_torque_points.begin()+insertindex, make_pair(speed,torque));
+    }
+    else if( xmlname == "max_speed_torque_point" ) {
+        dReal speed=0, torque=0;
+        _ss >> speed >> torque;
+        // should be from increasing speed.
+        size_t insertindex = 0;
+        while(insertindex < _pinfo->max_speed_torque_points.size()) {
+            if( speed < _pinfo->max_speed_torque_points.at(insertindex).first ) {
+                break;
+            }
+            ++insertindex;
+        }
+        _pinfo->max_speed_torque_points.insert(_pinfo->max_speed_torque_points.begin()+insertindex, make_pair(speed,torque));
     }
     else if( xmlname == "nominal_torque" ) {
         _ss >> _pinfo->nominal_torque;
@@ -531,6 +562,15 @@ bool ElectricMotorActuatorInfoReader::endElement(const std::string& xmlname)
     }
     else if( xmlname == "terminal_resistance" ) {
         _ss >> _pinfo->terminal_resistance;
+    }
+    else if( xmlname == "gear_ratio" ) {
+        _ss >> _pinfo->gear_ratio;
+    }
+    else if( xmlname == "coloumb_friction" ) {
+        _ss >> _pinfo->coloumb_friction;
+    }
+    else if( xmlname == "viscous_friction" ) {
+        _ss >> _pinfo->viscous_friction;
     }
     else {
         RAVELOG_WARN_FORMAT("could not process tag %s", xmlname);

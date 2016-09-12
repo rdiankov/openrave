@@ -126,7 +126,7 @@ public:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
         _unit = std::make_pair("meter",1.0); //default unit settings
-            
+
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -169,11 +169,19 @@ public:
 
         // set a collision checker, don't call EnvironmentBase::CreateCollisionChecker
         CollisionCheckerBasePtr localchecker;
-        boost::array<string,3> checker_prefs = { { "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
-        FOREACH(itchecker,checker_prefs) {
-            localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
-            if( !!localchecker ) {
-                break;
+
+        const char* pOPENRAVE_DEFAULT_COLLISIONCHECKER = std::getenv("OPENRAVE_DEFAULT_COLLISIONCHECKER");
+        if( !!pOPENRAVE_DEFAULT_COLLISIONCHECKER && strlen(pOPENRAVE_DEFAULT_COLLISIONCHECKER) > 0 ) {
+            localchecker = RaveCreateCollisionChecker(shared_from_this(), std::string(pOPENRAVE_DEFAULT_COLLISIONCHECKER));
+        }
+
+        if( !localchecker ) {
+            boost::array<string,4> checker_prefs = { { "fcl_", "ode", "bullet", "pqp"}};     // ode takes priority since bullet has some bugs with deleting bodies
+            FOREACH(itchecker,checker_prefs) {
+                localchecker = RaveCreateCollisionChecker(shared_from_this(), *itchecker);
+                if( !!localchecker ) {
+                    break;
+                }
             }
         }
 
@@ -289,11 +297,13 @@ public:
     virtual void Reset()
     {
         // destruction order is *very* important, don't touch it without consultation
-        RAVELOG_DEBUG("resetting raveviewer\n");
         list<ViewerBasePtr> listViewers;
         GetViewers(listViewers);
-        FOREACH(itviewer, listViewers) {
-            (*itviewer)->Reset();
+        if( listViewers.size() > 0 ) {
+            RAVELOG_DEBUG("resetting raveviewer\n");
+            FOREACH(itviewer, listViewers) {
+                (*itviewer)->Reset();
+            }
         }
 
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -444,11 +454,13 @@ public:
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         if( _IsColladaURI(filename) ) {
             if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
+                UpdatePublishedBodies();
                 return true;
             }
         }
         else if( _IsColladaFile(filename) ) {
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
+                UpdatePublishedBodies();
                 return true;
             }
         }
@@ -456,6 +468,7 @@ public:
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, true);
+                UpdatePublishedBodies();
                 return true;
             }
         }
@@ -463,12 +476,14 @@ public:
             KinBodyPtr pbody = ReadKinBodyURI(KinBodyPtr(),filename,atts);
             if( !!pbody ) {
                 _AddKinBody(pbody,true);
+                UpdatePublishedBodies();
                 return true;
             }
         }
         else {
             if( _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename) ) {
                 if( OpenRAVEXMLParser::GetXMLErrorCount() == 0 ) {
+                    UpdatePublishedBodies();
                     return true;
                 }
             }
@@ -593,7 +608,7 @@ public:
         _pCurrentChecker->InitKinBody(pbody);
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
-        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
         _CallBodyCallbacks(pbody, 1);
     }
 
@@ -629,7 +644,7 @@ public:
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
-        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic);
+        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved);
         _CallBodyCallbacks(robot, 1);
     }
 
@@ -692,6 +707,7 @@ public:
                 if( !!_pPhysicsEngine ) {
                     _pPhysicsEngine->RemoveKinBody(*it);
                 }
+                pbody->_PostprocessChangedParameters(KinBody::Prop_BodyRemoved);
                 RemoveEnvironmentId(pbody);
                 _vecbodies.erase(it);
                 _nBodiesModifiedStamp++;
@@ -794,7 +810,7 @@ public:
         }
         _pPhysicsEngine = pengine;
         if( !_pPhysicsEngine ) {
-            RAVELOG_DEBUG("disabling physics\n");
+            RAVELOG_DEBUG_FORMAT("env %d, disabling physics for", GetId());
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(),"GenericPhysicsEngine");
             _SetDefaultGravity();
         }
@@ -1227,6 +1243,16 @@ public:
             }
             robot->__struri = preader->_filename;
         }
+
+        if( !!robot ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    robot->__struri = itatt->second;
+                }
+            }
+        }
+
         return robot;
     }
 
@@ -1357,6 +1383,15 @@ public:
                 return KinBodyPtr();
             }
             body->__struri = preader->_filename;
+        }
+
+        if( !!body ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    body->__struri = itatt->second;
+                }
+            }
         }
         return body;
     }
@@ -1510,7 +1545,39 @@ public:
         if( !ptrimesh ) {
             ptrimesh.reset(new TriMesh());
         }
-        if( !OpenRAVEXMLParser::CreateTriMeshData(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+        if( !OpenRAVEXMLParser::CreateTriMeshFromFile(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
+            ptrimesh.reset();
+        }
+        return ptrimesh;
+    }
+
+    virtual boost::shared_ptr<TriMesh> ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, const AttributesList& atts)
+    {
+        RaveVector<float> diffuseColor, ambientColor;
+        return _ReadTrimeshData(ptrimesh, data, formathint, diffuseColor, ambientColor, atts);
+    }
+
+    virtual boost::shared_ptr<TriMesh> _ReadTrimeshData(boost::shared_ptr<TriMesh> ptrimesh, const std::string& data, const std::string& formathint, RaveVector<float>& diffuseColor, RaveVector<float>& ambientColor, const AttributesList& atts)
+    {
+        if( data.size() == 0 ) {
+            return boost::shared_ptr<TriMesh>();
+        }
+
+        Vector vScaleGeometry(1,1,1);
+        float ftransparency;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scalegeometry" ) {
+                stringstream ss(itatt->second);
+                ss >> vScaleGeometry.x >> vScaleGeometry.y >> vScaleGeometry.z;
+                if( !ss ) {
+                    vScaleGeometry.z = vScaleGeometry.y = vScaleGeometry.x;
+                }
+            }
+        }
+        if( !ptrimesh ) {
+            ptrimesh.reset(new TriMesh());
+        }
+        if( !OpenRAVEXMLParser::CreateTriMeshFromData(data, formathint, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
         }
         return ptrimesh;
@@ -1772,6 +1839,92 @@ public:
         }
     }
 
+    virtual bool GetPublishedBody(const std::string &name, KinBody::BodyState& bodystate, uint64_t timeout=0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    bodystate = _vPublishedBodies[ibody];
+                    return true;
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    bodystate = _vPublishedBodies[ibody];
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    virtual bool GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    jointValues = _vPublishedBodies[ibody].jointvalues;
+                    return true;
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( _vPublishedBodies[ibody].strname == name) {
+                    jointValues = _vPublishedBodies[ibody].jointvalues;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void GetPublishedBodyTransformsMatchingPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0)
+    {
+        if( timeout == 0 ) {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            nameTransfPairs.resize(0);
+            if( nameTransfPairs.capacity() < _vPublishedBodies.size() ) {
+                nameTransfPairs.reserve(_vPublishedBodies.size());
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
+                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                }
+            }
+        }
+        else {
+            boost::timed_mutex::scoped_timed_lock lock(_mutexInterfaces, boost::get_system_time() + boost::posix_time::microseconds(timeout));
+            if (!lock.owns_lock()) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+            }
+
+            nameTransfPairs.resize(0);
+            if( nameTransfPairs.capacity() < _vPublishedBodies.size() ) {
+                nameTransfPairs.reserve(_vPublishedBodies.size());
+            }
+            for ( size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+                if ( strncmp(_vPublishedBodies[ibody].strname.c_str(), prefix.c_str(), prefix.size()) == 0 ) {
+                    nameTransfPairs.push_back(std::make_pair(_vPublishedBodies[ibody].strname, _vPublishedBodies[ibody].vectrans.at(0)));
+                }
+            }
+        }
+    }
+
     virtual void UpdatePublishedBodies(uint64_t timeout=0)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
@@ -1826,7 +1979,7 @@ public:
     {
         return _unit;
     }
-    
+
     virtual void SetUnit(std::pair<std::string, dReal> unit)
     {
         _unit = unit;
@@ -2293,7 +2446,7 @@ protected:
     void _SimulationThread()
     {
         int environmentid = RaveGetEnvironmentId(shared_from_this());
-        
+
         uint64_t nLastUpdateTime = utils::GetMicroTime();
         uint64_t nLastSleptTime = utils::GetMicroTime();
         RAVELOG_VERBOSE_FORMAT("starting simulation thread envid=%d", environmentid);
@@ -2523,7 +2676,7 @@ protected:
 
     vector<KinBody::BodyState> _vPublishedBodies;
     string _homedirectory;
-    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters 
+    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
 
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 

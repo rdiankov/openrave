@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2012-2014 Gustavo Puche, Rosen Diankov, OpenGrasp Team
+// Copyright (C) 2012-2016 Rosen Diankov, Gustavo Puche, OpenGrasp Team
 //
 // OpenRAVE Qt/OpenSceneGraph Viewer is licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,51 +74,92 @@ typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
 
 QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
 {
+    //
+    // initialize member variables
+    //
+
+    _qobjectTree = NULL;
+    _qdetailsTree = NULL;
+    _focalDistance = 0.0;
+    _fTrackAngleToUp = 0.3;
+    _pointerTypeGroup = NULL;
+    _posgWidget = NULL;
+    _nQuitMainLoop = 0;
+    _qactPerspectiveView = NULL;
+    _qactChangeViewtoXY = _qactChangeViewtoYZ = _qactChangeViewtoXZ = NULL;
+    //osg::setNotifyLevel(osg::DEBUG_FP);
     _userdatakey = std::string("qtosg") + boost::lexical_cast<std::string>(this);
-    int qtosgbuild = 0;
+    debugLevelDebugAct = NULL;
+    debugLevelVerboseAct = NULL;
+
+    //
+    // read viewer parameters
+    //
+
+    int qtosgbuild = 0; // not used
     bool bCreateStatusBar = true, bCreateMenu = true;
     int nAlwaysOnTopFlag = 0; // 1 - add on top flag (keep others), 2 - add on top flag (remove others)
     sinput >> qtosgbuild >> bCreateStatusBar >> bCreateMenu >> nAlwaysOnTopFlag;
 
-    _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
-    if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
-        _name += " (Development Version)";
-    }
-    else {
-        _name += " (Stable Release)";
+    //
+    // figure out window flags
+    //
+
+    if (nAlwaysOnTopFlag != 0) {
+        Qt::WindowFlags flags = Qt::Window | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::WindowStaysOnTopHint;
+        if (nAlwaysOnTopFlag == 1) {
+            flags |= windowFlags();
+        }
+        setWindowFlags(flags);
     }
 
-    setWindowTitle(_name.c_str());
-    if(  bCreateStatusBar ) {
+    //
+    // figure out window title
+    //
+
+    std::string name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
+    if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
+        name += " (Development Version)";
+    }
+    else {
+        name += " (Stable Release)";
+    }
+    setWindowTitle(name.c_str());
+
+    if(bCreateStatusBar) {
         statusBar()->showMessage(tr("Status Bar"));
     }
 
-    __description = ":Interface Author: Gustavo Puche, Rosen Diankov\n\nProvides a viewer based on Open Scene Graph.";
-//    RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera,this,_1,_2),
-//                    "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
-//    RegisterCommand("SetFeedbackVisibility",boost::bind(&QtOSGViewer::_SetFeedbackVisibility,this,_1,_2),
-//                    "Accepts 0/1 value that decides whether to render the cross hairs");
-//    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_SetFeedbackVisibility,this,_1,_2),
-//                    "Accepts 0/1 value that decides whether to render the cross hairs");
-//    RegisterCommand("Resize",boost::bind(&QtOSGViewer::_CommandResize,this,_1,_2),
-//                    "Accepts width x height to resize internal video frame");
-//    RegisterCommand("SaveBodyLinkToVRML",boost::bind(&QtOSGViewer::_SaveBodyLinkToVRMLCommand,this,_1,_2),
-//                    "Saves a body and/or a link to VRML. Format is::\n\n  bodyname linkindex filename\\n\n\nwhere linkindex >= 0 to save for a specific link, or < 0 to save all links");
-//    RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
-//                    "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
-//    RegisterCommand("StartViewerLoop", boost::bind(&QtOSGViewer::_StartViewerLoopCommand, this, _1, _2),
-//                    "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
-//    RegisterCommand("Show", boost::bind(&QtOSGViewer::_ShowCommand, this, _1, _2),
-//                    "executs the show directly");
-//    RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
-//                    "camera tracks the link maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
-//    RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
-//                    "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, _fTrackingRadius");
-//    RegisterCommand("SetTrackingAngleToUp", boost::bind(&QtOSGViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
-//                    "sets a new angle to up");
+    __description = ":Interface Author: Rosen Diankov, Gustavo Puche\n\nProvides a viewer based on OpenSceneGraph library. Currently tested with v3.4. Usage:\n\n\
+  - ESC to toggle between camera, selection, and joint modes.\n\
+  - Left Click to rotate (or select) object.\n\
+  - Middle (or Shift+Left, Left+Right) Click to pan.\n\
+  - Right Click to zoom.\n\
+  - (Shift+)ArrowKey for moving via keyboard.\n\
+  - In selection mode, Ctrl+Left Click to move object.\n\
+  - Press 's' and Left click on screen to center camera.\n\
+";
 
+    RegisterCommand("SetFiguresInCamera",boost::bind(&QtOSGViewer::_SetFiguresInCamera, this, _1, _2),
+                    "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+    RegisterCommand("SetItemVisualization",boost::bind(&QtOSGViewer::_SetItemVisualizationCommand, this, _1, _2),
+                    "sets the visualization mode of a kinbody/render item in the viewer");
+    RegisterCommand("ShowWorldAxes",boost::bind(&QtOSGViewer::_ShowWorldAxesCommand, this, _1, _2),
+                    "Accepts 0/1 value that decides whether to render the cross hairs");
+    RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
+                    "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
+    RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
+                    "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
+    RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
+                    "camera tracks the manipulator maintaining a specific relative transform: robotname, manipname, focalDistance");
+    RegisterCommand("SetTrackingAngleToUp", boost::bind(&QtOSGViewer::_SetTrackingAngleToUpCommand, this, _1, _2),
+                    "sets a new angle to up");
+    RegisterCommand("StartViewerLoop", boost::bind(&QtOSGViewer::_StartViewerLoopCommand, this, _1, _2),
+                    "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
+    RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
+                    "sets the viewer projection mode, perspective or orthogonal");
     _bLockEnvironment = true;
-    _InitGUI(bCreateStatusBar);
+    _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
 }
 
@@ -146,35 +187,32 @@ QtOSGViewer::~QtOSGViewer()
     _condUpdateModels.notify_all();
 }
 
-void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
+void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 {
     osg::ArgumentParser arguments(0, NULL);
 
-//    _qCentralWidget.reset(new QWidget());
-//    _qCentralWidget->adjustSize();
-//    _qCentralLayout = new QGridLayout;
-//    _qCentralLayout->addWidget(_posgWidget,0,0);
-//    _qCentralWidget->setLayout(_qCentralLayout);
-//    setCentralWidget(_qCentralWidget);
-
-    _posgWidget = new ViewerWidget(GetEnv());
+    _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second);
     setCentralWidget(_posgWidget);
 
-    // initialize the environment
-    _ivRoot = new osg::Group();
-    _ivRoot->ref();
+    _RepaintWidgets();
+    _posgWidget->SetFacesMode(false);
+    _posgWidget->SetLight(false);
 
     _qtree = new QTreeView;
 
     _CreateActions();
-    _CreateMenus();
-    _CreateToolsBar();
+
     if( bCreateStatusBar ) {
         _CreateStatusBar();
     }
-    _CreateDockWidgets();
 
-    resize(1024, 750);
+    if ( bCreateMenu ) {
+        _CreateMenus();
+        _CreateToolsBar();
+        _CreateDockWidgets();
+    }
+
+    resize(1024, 768);
 
     // toggle switches
     _bDisplayGrid = false;
@@ -186,7 +224,6 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
     _bDynSim = false;
     _bControl = true;
     _bGravity = true;
-    _bTimeElapsed = false;
     _bSensing = false;
     _bMemory = true;
     _bHardwarePlan = false;
@@ -194,6 +231,37 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar)
     _bManipTracking = false;
     _bAntialiasing = false;
     _viewGeometryMode = VG_RenderOnly;
+    _bRenderFiguresInCamera = true;
+    _bDisplayFeedBack = true;
+}
+
+bool QtOSGViewer::_HandleOSGKeyDown(int key)
+{
+    switch(key) {
+    case osgGA::GUIEventAdapter::KEY_Escape:
+        if( !!_pointerTypeGroup ) {
+            // toggle
+            int newcheckedid = _pointerTypeGroup->checkedId()-1;
+            int minchecked = -4, maxchecked = -2;
+            if( newcheckedid < minchecked || newcheckedid > maxchecked ) {
+                newcheckedid = maxchecked;
+            }
+            _pointerTypeGroup->button(newcheckedid)->setChecked(true);
+            _ProcessPointerGroupClicked(newcheckedid);
+            return true;
+//            //RAVELOG_INFO_FORMAT("checked id %d", _pointerTypeGroup->checkedId());
+//            //if( !!_pointerTypeGroup->checkedButton() ) {
+//                //_pointerTypeGroup->checkedButton()->setChecked(false);
+//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false));
+//            }
+//            else {
+//                // check one?
+//            }
+        }
+        break;
+    }
+
+    return false;
 }
 
 void QtOSGViewer::customEvent(QEvent * e)
@@ -252,7 +320,11 @@ void QtOSGViewer::_CreateActions()
 
     pubilshAct = new QAction(tr("Pubilsh Bodies Anytimes"), this);
 
-    printAct = new QAction(tr("Print Debug Output"), this);
+    debugLevelDebugAct = new QAction(tr("Debug Level (Debug)"), this);
+    connect(debugLevelDebugAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelDebug()));
+
+    debugLevelVerboseAct = new QAction(tr("Debug Level (Verbose)"), this);
+    connect(debugLevelVerboseAct, SIGNAL(triggered()), this, SLOT(_SetDebugLevelVerbose()));
 
     showAct = new QAction(tr("Show Framerate"), this);
 
@@ -273,68 +345,88 @@ void QtOSGViewer::_CreateActions()
     applyAct->setChecked(true);
 
     aboutAct = new QAction(tr("About"), this);
+    connect(aboutAct, SIGNAL(triggered()), this, SLOT(_ProcessAboutDialog()));
 
     pauseAct = new QAction(QIcon(":/images/pause.png"),tr("Pause"), this);
 
     puntAct = new QAction(QIcon(":/images/no_edit.png"),tr("Pointer"), this);
 
-    AxesAct = new QAction(QIcon(":/images/axes.png"),tr("Axes"), this);
-    AxesAct->setCheckable(true);
-    connect(AxesAct, SIGNAL(triggered()), this, SLOT(axes()));
+//    AxesAct = new QAction(QIcon(":/images/axes.png"),tr("Axes"), this);
+//    AxesAct->setCheckable(true);
+//    connect(AxesAct, SIGNAL(triggered()), this, SLOT(axes()));
 
     houseAct = new QAction(QIcon(":/images/house.png"),tr("Home"), this);
     connect(houseAct, SIGNAL(triggered()),this,SLOT(ResetViewToHome()));
 
-    smoothAct = new QAction(QIcon(":/images/smooth.png"),tr("Smooth"), this);
-    connect(smoothAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+    _qactChangeViewtoXY = new QAction(QIcon(":/images/xyplane.png"),tr("Show XY"), this);
+    connect(_qactChangeViewtoXY, SIGNAL(triggered()),this,SLOT(_ChangeViewToXY()));
 
-    flatAct = new QAction(QIcon(":/images/flat.png"),tr("Flat"), this);
-    connect(flatAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+    _qactChangeViewtoXZ = new QAction(QIcon(":/images/xzplane.png"),tr("Show XZ"), this);
+    connect(_qactChangeViewtoXZ, SIGNAL(triggered()),this,SLOT(_ChangeViewToXZ()));
 
-    lightAct = new QAction(QIcon(":/images/lighton.png"),tr("Light"), this);
-    lightAct->setCheckable(true);
-    connect(lightAct, SIGNAL(triggered()), this, SLOT(_ProcessLightChange()));
+    _qactChangeViewtoYZ = new QAction(QIcon(":/images/yzplane.png"),tr("Show YZ"), this);
+    connect(_qactChangeViewtoYZ, SIGNAL(triggered()),this,SLOT(_ChangeViewToYZ()));
+
+//    smoothAct = new QAction(QIcon(":/images/smooth.png"),tr("Smooth"), this);
+//    connect(smoothAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+//
+//    flatAct = new QAction(QIcon(":/images/flat.png"),tr("Flat"), this);
+//    connect(flatAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
+
+    _qactPerspectiveView = new QAction(QIcon(":/images/perspective.png"),tr("View Model"), this);
+    _qactPerspectiveView->setCheckable(true);
+    _qactPerspectiveView->setChecked(false);
+    connect(_qactPerspectiveView, SIGNAL(triggered()), this, SLOT(_ProcessPerspectiveViewChange()));
+
+//    lightAct = new QAction(QIcon(":/images/lightoff.png"),tr("Light"), this);
+//    lightAct->setCheckable(true);
+//    lightAct->setChecked(true);
+//    connect(lightAct, SIGNAL(triggered()), this, SLOT(_ProcessLightChange()));
 
     wireAct = new QAction(QIcon(":/images/wire.png"),tr("Wire"), this);
     connect(wireAct, SIGNAL(triggered()), this, SLOT(polygonMode()));
 
-    facesAct = new QAction(QIcon(":/images/faces.png"),tr("Cull face"), this);
-    facesAct->setCheckable(true);
-    connect(facesAct, SIGNAL(triggered()), this, SLOT(_ProcessFacesModeChange()));
+//    facesAct = new QAction(QIcon(":/images/faces.png"),tr("Cull face"), this);
+//    facesAct->setCheckable(true);
+//    facesAct->setChecked(true);
+//    connect(facesAct, SIGNAL(triggered()), this, SLOT(_ProcessFacesModeChange()));
 
-    bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Poligon"), this);
+    bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Polygon"), this);
     bboxAct->setCheckable(true);
     connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
-    connect(&_timer, SIGNAL(timeout()), this, SLOT(_Refresh()));
-    _timer.start(1000/60); // ms
+    connect(&_updateViewerTimer, SIGNAL(timeout()), this, SLOT(_UpdateViewerCallback()));
+    _updateViewerTimer.start(1000/60); // ms
 }
 
-void QtOSGViewer::_Refresh()
+void QtOSGViewer::_UpdateViewerCallback()
 {
-    _UpdateEnvironment(1.0/60.0);
-    //UpdateFromModel();
-    //  _posgWidget->update();
+    try {
+        _UpdateEnvironment(1.0/60.0);
+        //UpdateFromModel();
 
-    {
-        std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
         {
-            boost::mutex::scoped_lock lock(_mutexCallbacks);
-            listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
-        }
-        FOREACH(it,listRegisteredViewerThreadCallbacks) {
-            ViewerThreadCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
-            if( !!pdata ) {
-                try {
-                    pdata->_callback();
-                }
-                catch(const std::exception& e) {
-                    RAVELOG_ERROR(str(boost::format("Viewer Thread Callback Failed with error %s")%e.what()));
+            std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
+            {
+                boost::mutex::scoped_lock lock(_mutexCallbacks);
+                listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
+            }
+            FOREACH(it,listRegisteredViewerThreadCallbacks) {
+                ViewerThreadCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerThreadCallbackData>(it->lock());
+                if( !!pdata ) {
+                    try {
+                        pdata->_callback();
+                    }
+                    catch(const std::exception& e) {
+                        RAVELOG_ERROR(str(boost::format("Viewer Thread Callback Failed with error %s")%e.what()));
+                    }
                 }
             }
         }
     }
-
+    catch(const std::exception& ex) {
+        RAVELOG_ERROR_FORMAT("got an exception in the viewer thread: %s", ex.what());
+    }
 }
 
 void QtOSGViewer::_Reset()
@@ -348,7 +440,11 @@ void QtOSGViewer::_Reset()
         itbody->first->RemoveUserData(_userdatakey);
     }
     _mapbodies.clear();
-    objectTree->clear();
+
+    if (!!_qobjectTree) {
+        _qobjectTree->clear();
+    }
+
 
     {
         boost::mutex::scoped_lock lock(_mutexItems);
@@ -375,7 +471,8 @@ void QtOSGViewer::_CreateMenus()
 
     viewMenu->addAction(viewColAct);
     viewMenu->addAction(pubilshAct);
-    viewMenu->addAction(printAct);
+    viewMenu->addAction(debugLevelDebugAct);
+    viewMenu->addAction(debugLevelVerboseAct);
     viewMenu->addAction(showAct);
 
 //	animation = menuBar()->addMenu(tr("&Animation"));
@@ -396,26 +493,32 @@ void QtOSGViewer::_CreateMenus()
 
 void QtOSGViewer::LoadEnvironment()
 {
-    QString s = QFileDialog::getOpenFileName( this, "Load Environment", NULL,
-                                              "Env Files (*.xml);;COLLADA Files (*.dae)");
-
-    if( s.length() == 0 )
+    QString s = QFileDialog::getOpenFileName( _posgWidget, "Load Environment", QString(), "Env Files (*.xml);;COLLADA Files (*.dae|*.zae)");
+    if( s.length() == 0 ) {
         return;
+    }
 
     _Reset();
-    GetEnv()->Reset();
+    try {
+        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        GetEnv()->Reset();
 
-    GetEnv()->Load(s.toAscii().data());
+        GetEnv()->Load(s.toAscii().data());
 
-    RAVELOG_INFO("\n---------Refresh--------\n");
+        RAVELOG_INFO("\n---------Refresh--------\n");
 
-    //  Refresh the screen.
-    UpdateFromModel();
+        //  Refresh the screen.
+        UpdateFromModel();
 
-    RAVELOG_INFO("----> set home <----\n");
+        RAVELOG_INFO("----> set home <----\n");
 
-    //  Center object in window viewer
-    _posgWidget->SetHome();
+        //  Center object in window viewer
+        _posgWidget->SetHome();
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN_FORMAT("failed to load environment %s: %s", s.toAscii().data()%ex.what());
+    }
+
 }
 
 void QtOSGViewer::ImportEnvironment()
@@ -423,24 +526,34 @@ void QtOSGViewer::ImportEnvironment()
     QString s = QFileDialog::getOpenFileName( this, "Import Environment", NULL,
                                               "Env Files (*.xml);;COLLADA Files (*.dae)");
 
-    if( s.length() == 0 )
+    if( s.length() == 0 ) {
         return;
+    }
+    try {
+        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        GetEnv()->Load(s.toAscii().data());
 
-    GetEnv()->Load(s.toAscii().data());
-
-    //  Refresh the screen.
-    UpdateFromModel();
+        //  Refresh the screen.
+        UpdateFromModel();
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN_FORMAT("failed to import model %s: %s", s.toAscii().data()%ex.what());
+    }
 }
 
 void QtOSGViewer::SaveEnvironment()
 {
-    QString s = QFileDialog::getSaveFileName( this, "Save Environment", NULL,
-                                              "Env Files (*.xml);;COLLADA Files (*.dae)");
-
-    if( s.length() == 0 )
+    QString s = QFileDialog::getSaveFileName( this, "Save Environment", NULL, "Env Files (*.xml);;COLLADA Files (*.dae)");
+    if( s.length() == 0 ) {
         return;
-
-    GetEnv()->Save(s.toAscii().data());
+    }
+    try {
+        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        GetEnv()->Save(s.toAscii().data());
+    }
+    catch(const std::exception& ex) {
+        RAVELOG_WARN_FORMAT("failed to save to file %s: %s", s.toAscii().data()%ex.what());
+    }
 }
 
 void QtOSGViewer::ResetViewToHome()
@@ -448,36 +561,92 @@ void QtOSGViewer::ResetViewToHome()
     _posgWidget->ResetViewToHome();
 }
 
-void QtOSGViewer::_ProcessLightChange()
+void QtOSGViewer::_ProcessPerspectiveViewChange()
 {
-    if (lightAct->isChecked()) {
-        lightAct->setIcon(QIcon(":/images/lightoff.png"));
+    if( _qactPerspectiveView->isChecked() ) {
+        _qactPerspectiveView->setIcon(QIcon(":/images/bbox.png"));
     }
     else {
-        lightAct->setIcon(QIcon(":/images/lighton.png"));
+        _qactPerspectiveView->setIcon(QIcon(":/images/perspective.png"));
     }
-    _posgWidget->SetLight(!lightAct->isChecked());
+
+    _posgWidget->SetViewType(_qactPerspectiveView->isChecked());
 }
 
-void QtOSGViewer::_ProcessFacesModeChange()
+void QtOSGViewer::_ProcessAboutDialog()
 {
-    _posgWidget->SetFacesMode(!facesAct->isChecked());
+    QMessageBox msgBox;
+    msgBox.setText("OpenRAVE qtosg plugin");
+    msgBox.setInformativeText(__description.c_str());
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setDefaultButton(QMessageBox::Ok);
+    msgBox.exec();
 }
+
+void QtOSGViewer::_SetDebugLevelDebug()
+{
+    RaveSetDebugLevel(Level_Debug);
+}
+
+void QtOSGViewer::_SetDebugLevelVerbose()
+{
+    RaveSetDebugLevel(Level_Verbose);
+}
+
+void QtOSGViewer::_ChangeViewToXY()
+{
+    _UpdateCameraTransform(0);
+    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
+    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(0));
+    _Tcamera.trans.x = center.x();
+    _Tcamera.trans.y = center.y();
+    _Tcamera.trans.z = center.z()+_focalDistance;
+    _SetCameraTransform();
+}
+
+void QtOSGViewer::_ChangeViewToXZ()
+{
+    _UpdateCameraTransform(0);
+    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
+    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2));
+    _Tcamera.trans.x = center.x();
+    _Tcamera.trans.y = center.y()-_focalDistance;
+    _Tcamera.trans.z = center.z();
+    _SetCameraTransform();
+
+}
+
+void QtOSGViewer::_ChangeViewToYZ()
+{
+    _UpdateCameraTransform(0);
+    osg::Vec3d center = _posgWidget->GetSceneRoot()->getBound().center();
+    _Tcamera.rot = quatMultiply(quatFromAxisAngle(RaveVector<float>(0,0,1), float(M_PI/2)), quatFromAxisAngle(RaveVector<float>(1,0,0), float(M_PI/2)));
+    _Tcamera.trans.x = center.x()+_focalDistance;
+    _Tcamera.trans.y = center.y();
+    _Tcamera.trans.z = center.z();
+    _SetCameraTransform();
+
+}
+
+//void QtOSGViewer::_ProcessLightChange()
+//{
+//    if (lightAct->isChecked()) {
+//        lightAct->setIcon(QIcon(":/images/lightoff.png"));
+//    }
+//    else {
+//        lightAct->setIcon(QIcon(":/images/lighton.png"));
+//    }
+//    _posgWidget->SetLight(!lightAct->isChecked());
+//}
+
+//void QtOSGViewer::_ProcessFacesModeChange()
+//{
+//    _posgWidget->SetFacesMode(!facesAct->isChecked());
+//}
 
 void QtOSGViewer::polygonMode()
 {
-    if (smoothAct->isChecked())
-    {
-        _posgWidget->setPolygonMode(0);
-    }
-    else if (flatAct->isChecked())
-    {
-        _posgWidget->setPolygonMode(1);
-    }
-    else
-    {
-        _posgWidget->setPolygonMode(2);
-    }
+    _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
 }
 
 void QtOSGViewer::_ProcessBoundingBox()
@@ -487,31 +656,27 @@ void QtOSGViewer::_ProcessBoundingBox()
 
 void QtOSGViewer::axes()
 {
-    _posgWidget->DrawAxes(AxesAct->isChecked());
+    //?
+    //_posgWidget->DrawAxes(AxesAct->isChecked());
 }
 
 void QtOSGViewer::_ProcessPointerGroupClicked(int button)
 {
     switch (button) {
     case -2:
-        _posgWidget->DrawTrackball(false);
-        _posgWidget->SelectActive(true);
+        _posgWidget->ActivateSelection(false);
         break;
     case -3:
-        _posgWidget->DrawTrackball(true);
-        _posgWidget->SelectActive(false);
+        _posgWidget->SetDraggerMode("TranslateTrackballDragger");
+        _posgWidget->ActivateSelection(true);
         break;
     case -4:
-        _posgWidget->DrawBoundingBox(true);
-        _posgWidget->SelectActive(false);
-        break;
-    case -5:
-        _posgWidget->DrawAxes(true);
-        _posgWidget->SelectActive(false);
+        _posgWidget->SetDraggerMode("RotateCylinderDragger");
+        _posgWidget->ActivateSelection(true);
         break;
     default:
         RAVELOG_ERROR_FORMAT("pointerGroupClicked failure. Button %d pushed", button);
-        _posgWidget->SelectActive(false);
+        _posgWidget->ActivateSelection(false);
         break;
     }
 }
@@ -521,9 +686,9 @@ void QtOSGViewer::_ProcessDraggerGroupClicked(int button)
     RAVELOG_INFO_FORMAT("Dragger button clicked %d", button);
 }
 
-void QtOSGViewer::_RepaintWidgets(osg::ref_ptr<osg::Group> group)
+void QtOSGViewer::_RepaintWidgets()
 {
-    _posgWidget->SetSceneData(group);
+    _posgWidget->SetSceneData();
 }
 
 void QtOSGViewer::_CreateToolsBar()
@@ -554,48 +719,52 @@ void QtOSGViewer::_CreateToolsBar()
     QToolButton *pointerButton = new QToolButton;
     pointerButton->setCheckable(true);
     pointerButton->setChecked(true);
-    pointerButton->setIcon(QIcon(":/images/pointer.png"));
-
-    QToolButton *handButton = new QToolButton;
-    handButton->setCheckable(true);
-    handButton->setIcon(QIcon(":/images/hand.png"));
-
-    QToolButton *boundButton = new QToolButton;
-    boundButton->setCheckable(true);
-    boundButton->setIcon(QIcon(":/images/bbox.png"));
+    pointerButton->setIcon(QIcon(":/images/rotation-icon.png"));
 
     QToolButton *axesButton = new QToolButton;
     axesButton->setCheckable(true);
     axesButton->setIcon(QIcon(":/images/axes.png"));
 
-    pointerTypeGroup = new QButtonGroup;
-    pointerTypeGroup->addButton(pointerButton);
-    pointerTypeGroup->addButton(handButton);
-    pointerTypeGroup->addButton(boundButton);
-    pointerTypeGroup->addButton(axesButton);
+    QToolButton *rotationButton = new QToolButton;
+    rotationButton->setCheckable(true);
+    rotationButton->setIcon(QIcon(":/images/no_edit.png"));
+//
+//    QToolButton *handButton = new QToolButton;
+//    handButton->setCheckable(true);
+//    handButton->setIcon(QIcon(":/images/hand.png"));
 
-    connect(pointerTypeGroup, SIGNAL(buttonClicked(int)), this, SLOT(_ProcessPointerGroupClicked(int)));
 
-    shapeGroup = new QActionGroup(this);
-    smoothAct->setCheckable(true);
-    flatAct->setCheckable(true);
+    _pointerTypeGroup = new QButtonGroup();
+    _pointerTypeGroup->addButton(pointerButton);
+    _pointerTypeGroup->addButton(axesButton);
+    _pointerTypeGroup->addButton(rotationButton);
+    //_pointerTypeGroup->addButton(handButton);
+
+    connect(_pointerTypeGroup, SIGNAL(buttonClicked(int)), this, SLOT(_ProcessPointerGroupClicked(int)));
+
+    //shapeGroup = new QActionGroup(this);
+    //smoothAct->setCheckable(true);
+    //flatAct->setCheckable(true);
     wireAct->setCheckable(true);
-    shapeGroup->addAction(smoothAct);
-    shapeGroup->addAction(flatAct);
-    shapeGroup->addAction(wireAct);
-    smoothAct->setChecked(true);
-
+    //shapeGroup->addAction(smoothAct);
+    //shapeGroup->addAction(flatAct);
+    //shapeGroup->addAction(wireAct);
+    //smoothAct->setChecked(true);
 
     toolsBar->addWidget(pointerButton);
-    toolsBar->addWidget(handButton);
-    toolsBar->addWidget(boundButton);
     toolsBar->addWidget(axesButton);
+    toolsBar->addWidget(rotationButton);
+    //toolsBar->addWidget(handButton);
     toolsBar->addAction(houseAct);
-    toolsBar->addAction(lightAct);
-    toolsBar->addAction(smoothAct);
-    toolsBar->addAction(flatAct);
+    toolsBar->addAction(_qactChangeViewtoXY);
+    toolsBar->addAction(_qactChangeViewtoXZ);
+    toolsBar->addAction(_qactChangeViewtoYZ);
+    toolsBar->addAction(_qactPerspectiveView);
+    //toolsBar->addAction(lightAct);
+    //toolsBar->addAction(smoothAct);
+    //toolsBar->addAction(flatAct);
     toolsBar->addAction(wireAct);
-    toolsBar->addAction(facesAct);
+    //toolsBar->addAction(facesAct);
 }
 
 void QtOSGViewer::_CreateStatusBar()
@@ -608,9 +777,9 @@ void QtOSGViewer::_CreateDockWidgets()
     QDockWidget *dock = new QDockWidget(tr("Objects Tree"), this);
     dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
 
-    objectTree = _CreateObjectTree();
-
-    dock->setWidget(objectTree);
+    _qobjectTree = _CreateObjectTree();
+    dock->setWidget(_qobjectTree);
+    dock->hide();
 
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
@@ -620,10 +789,10 @@ void QtOSGViewer::_CreateDockWidgets()
 
     //  QListWidget *sensorList = new QListWidget(dock);
 
-    detailsTree = new QTreeWidget();
-    detailsTree->setHeaderLabel(QString("Properties"));
-    dock->setWidget(detailsTree);
-
+    _qdetailsTree = new QTreeWidget();
+    _qdetailsTree->setHeaderLabel(QString("Properties"));
+    dock->setWidget(_qdetailsTree);
+    dock->hide();
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 }
@@ -637,10 +806,12 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     std::string mass;
 
     //  Select robot in Viewers
-    _posgWidget->SelectRobot(item->text(0).toAscii().data());
+    _posgWidget->SelectItemFromName(item->text(0).toAscii().data());
 
     //  Clears details
-    detailsTree->clear();
+    if (!!_qdetailsTree) {
+        _qdetailsTree->clear();
+    }
 
     QList<QTreeWidgetItem*> items;
 
@@ -649,7 +820,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
             std::ostringstream strs;
 
             //  Set Title
-            detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            if (!!_qdetailsTree) {
+                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            }
 
             robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toAscii().data());
             link  = robot->GetLink(item->text(0).toAscii().data());
@@ -665,12 +838,16 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         }
         else {
             //  Set Title
-            detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            if (!!_qdetailsTree) {
+                _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+            }
         }
     }
     else {
         //  Set Title
-        detailsTree->setHeaderLabel(item->text(0).toAscii().data());
+        if (!!_qdetailsTree) {
+            _qdetailsTree->setHeaderLabel(item->text(0).toAscii().data());
+        }
         kinbody = GetEnv()->GetKinBody(item->text(0).toAscii().data());
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
             std::ostringstream strs;
@@ -682,7 +859,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
     }
 
     //  Add Items to details panel
-    detailsTree->insertTopLevelItems(0, items);
+    if (!!_qdetailsTree) {
+        _qdetailsTree->insertTopLevelItems(0, items);
+    }
 }
 
 QTreeWidget* QtOSGViewer::_CreateObjectTree()
@@ -700,10 +879,10 @@ QTreeWidget* QtOSGViewer::_CreateObjectTree()
 
 void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
 {
-    RAVELOG_VERBOSE("Begin _FillObjectTree....\n");    
+    RAVELOG_VERBOSE("Begin _FillObjectTree....\n");
     vector<KinBodyPtr> kinbodies;
     QList<QTreeWidgetItem*> items;
-    
+
     //  Clears tree
     treeWidget->clear();
     GetEnv()->GetBodies(kinbodies);
@@ -713,23 +892,23 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
         int nchild = -1;
 
         if( kinbodies[i]->GetLinks().size() > 0 ) {
-           //  Header 'Links'
-           items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Links"))));
-           nchild++;
-           FOREACHC(itlink, kinbodies[i]->GetLinks()) {
-               items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString((*itlink)->GetName().c_str()))));
-           }
+            //  Header 'Links'
+            items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Links"))));
+            nchild++;
+            FOREACHC(itlink, kinbodies[i]->GetLinks()) {
+                items[i]->child(nchild)->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString((*itlink)->GetName().c_str()))));
+            }
         }
 
         if (kinbodies[i]->GetJoints().size() > 0) {
             //  Header 'Joints'
             items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Joints"))));
             nchild++;
-            
+
             FOREACHC(itjoint, kinbodies[i]->GetJoints()) {
                 KinBody::JointConstPtr pjoint = *itjoint;
                 QTreeWidgetItem* pqjoint = new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pjoint->GetName().c_str())));
-                
+
                 //  Adds links of joints
                 pqjoint->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pjoint->GetFirstAttached()->GetName().c_str()))));
                 pqjoint->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pjoint->GetSecondAttached()->GetName().c_str()))));
@@ -744,7 +923,7 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
                 //  Header 'Sensors'
                 items[i]->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString("Sensors"))));
                 nchild++;
-                
+
                 FOREACHC(itattsensor, robot->GetAttachedSensors()) {
                     RobotBase::AttachedSensorPtr pattsensor = *itattsensor;
                     QTreeWidgetItem* pqattsensor = new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pattsensor->GetName().c_str())));
@@ -780,104 +959,253 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
     RAVELOG_VERBOSE("End _FillObjectTree....\n");
 }
 
-void QtOSGViewer::mouseDoubleClickEvent(QMouseEvent *e)
-{
-    RAVELOG_INFO("Press mouse: doubleClick: 0x%x", e->button());
-}
-
 void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
-//    SbVec3f pos = GetCamera()->position.getValue();
-//    _Tcamera.trans = RaveVector<float>(pos[0], pos[1], pos[2]);
-//
-//    SbVec3f axis;
-//    float fangle;
-//    GetCamera()->orientation.getValue(axis, fangle);
-//    _Tcamera.rot = quatFromAxisAngle(RaveVector<float>(axis[0],axis[1],axis[2]),fangle);
-//
-//    if( fTimeElapsed > 0 ) {
-//        // animate the camera if necessary
-//        bool bTracking=false;
-//        Transform tTrack;
-//        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
-//        if( !!ptrackinglink ) {
-//            bTracking = true;
-//            tTrack = ptrackinglink->GetTransform();
-//            tTrack.trans = ptrackinglink->ComputeAABB().pos;
-//        }
-//        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
-//        if( !!ptrackingmanip ) {
-//            bTracking = true;
-//            tTrack = ptrackingmanip->GetTransform();
-//        }
-//
-//        if( bTracking ) {
-//            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
-//            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
-//            vlookatdir -= vup*vup.dot3(vlookatdir);
-//            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
-//            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
-//            if( flookatlen > g_fEpsilon ) {
-//                vlookatdir *= 1/flookatlen;
-//            }
-//            else {
-//                vlookatdir = Vector(1,0,0);
-//            }
-//            vup -= vlookatdir*vlookatdir.dot3(vup);
-//            vup.normalize3();
-//
-//            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
-//            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
-//            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
-//            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
-//            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
-//            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
-//            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
-//
-//            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_fTrackingRadius;
-//
-//            if(1) {
-//                // PID animation
-//                float pconst = 0.02;
-//                float dconst = 0.2;
-//                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
-//                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
-//                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
-//
-//                pconst = 0.001;
-//                dconst = 0.04;
-//                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
-//                newquat += pconst*(vDestQuat - _Tcamera.rot);
-//                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
-//                newquat.normalize4();
-//                // have to make sure newquat's y vector aligns with vup
-//
-//                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
-//                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
-//                _Tcamera.trans = newtrans;
-//                _Tcamera.rot = newquat;
-//            }
-//            else {
-//                _Tcamera.trans = vDestPos;
-//                _Tcamera.rot = vDestQuat;
-//            }
-//            GetCamera()->position.setValue(_Tcamera.trans.x, _Tcamera.trans.y, _Tcamera.trans.z);
-//            GetCamera()->orientation.setValue(_Tcamera.rot.y, _Tcamera.rot.z, _Tcamera.rot.w, _Tcamera.rot.x);
-//        }
-//    }
-//
-//    int width = centralWidget()->size().width();
-//    int height = centralWidget()->size().height();
-//    _ivCamera->aspectRatio = (float)view1->size().width() / (float)view1->size().height();
-//
-//    _camintrinsics.fy = 0.5*height/RaveTan(0.5f*GetCamera()->heightAngle.getValue());
-//    _camintrinsics.fx = (float)width*_camintrinsics.fy/((float)height*GetCamera()->aspectRatio.getValue());
-//    _camintrinsics.cx = (float)width/2;
-//    _camintrinsics.cy = (float)height/2;
-//    _camintrinsics.focal_length = GetCamera()->nearDistance.getValue();
-//    _camintrinsics.distortion_model = "";
+    // set the viewport size correctly so we can draw stuff on the hud using window coordinates
+    int width = centralWidget()->size().width();
+    int height = centralWidget()->size().height();
+    _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
+
+    _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
+    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
+    if( !!ptrackball ) {
+        _focalDistance = ptrackball->getDistance();
+    }
+    else {
+        _focalDistance = 0;
+    }
+
+    if( fTimeElapsed > 0 ) {
+        // animate the camera if necessary
+        bool bTracking=false;
+        Transform tTrack;
+        KinBody::LinkPtr ptrackinglink = _ptrackinglink;
+        if( !!ptrackinglink ) {
+            bTracking = true;
+            tTrack = ptrackinglink->GetTransform()*_tTrackingLinkRelative;
+            //tTrack.trans = ptrackinglink->ComputeAABB().pos;
+        }
+        RobotBase::ManipulatorPtr ptrackingmanip=_ptrackingmanip;
+        if( !!ptrackingmanip ) {
+            bTracking = true;
+            tTrack = ptrackingmanip->GetTransform();
+        }
+
+        if( bTracking ) {
+
+            RaveVector<float> vup(0,0,1); // up vector that camera should always be oriented to
+            if( !!GetEnv()->GetPhysicsEngine() ) {
+                Vector vgravity = GetEnv()->GetPhysicsEngine()->GetGravity();
+                if( vgravity.lengthsqr3() > g_fEpsilon ) {
+                    vup = -vgravity*(1.0/RaveSqrt(vgravity.lengthsqr3()));
+                }
+            }
+            RaveVector<float> vlookatdir = _Tcamera.trans - tTrack.trans;
+            vlookatdir -= vup*vup.dot3(vlookatdir);
+            float flookatlen = sqrtf(vlookatdir.lengthsqr3());
+            vlookatdir = vlookatdir*cosf(_fTrackAngleToUp) + flookatlen*sinf(_fTrackAngleToUp)*vup; // flookatlen shouldn't change
+            if( flookatlen > g_fEpsilon ) {
+                vlookatdir *= 1/flookatlen;
+            }
+            else {
+                vlookatdir = Vector(1,0,0);
+            }
+            vup -= vlookatdir*vlookatdir.dot3(vup);
+            vup.normalize3();
+
+            //RaveVector<float> vcameradir = ExtractAxisFromQuat(_Tcamera.rot, 2);
+            //RaveVector<float> vToDesiredQuat = quatRotateDirection(vcameradir, vlookatdir);
+            //RaveVector<float> vDestQuat = quatMultiply(vToDesiredQuat, _Tcamera.rot);
+            //vDestQuat = quatMultiply(quatRotateDirection(ExtractAxisFromQuat(vDestQuat,1), vup), vDestQuat);
+            float angle = normalizeAxisRotation(vup, _Tcamera.rot).first;
+            RaveVector<float> vDestQuat = quatMultiply(quatFromAxisAngle(vup, -angle), quatRotateDirection(RaveVector<float>(0,1,0), vup));
+            //transformLookat(tTrack.trans, _Tcamera.trans, vup);
+
+            // focal distance is the tracking radius. ie how far from the coord system camera shoud be
+            RaveVector<float> vDestPos = tTrack.trans + ExtractAxisFromQuat(vDestQuat,2)*_focalDistance;
+
+            if(1) {
+                // PID animation
+                float pconst = 0.02;
+                float dconst = 0.2;
+                RaveVector<float> newtrans = _Tcamera.trans + fTimeElapsed*_tTrackingCameraVelocity.trans;
+                newtrans += pconst*(vDestPos - _Tcamera.trans); // proportional term
+                newtrans -= dconst*_tTrackingCameraVelocity.trans*fTimeElapsed; // derivative term (target is zero velocity)
+
+                pconst = 0.001;
+                dconst = 0.04;
+                RaveVector<float> newquat = _Tcamera.rot + fTimeElapsed*_tTrackingCameraVelocity.rot;
+                newquat += pconst*(vDestQuat - _Tcamera.rot);
+                newquat -= dconst*_tTrackingCameraVelocity.rot*fTimeElapsed;
+                newquat.normalize4();
+                // have to make sure newquat's y vector aligns with vup
+
+                _tTrackingCameraVelocity.trans = (newtrans-_Tcamera.trans)*(2/fTimeElapsed) - _tTrackingCameraVelocity.trans;
+                _tTrackingCameraVelocity.rot = (newquat-_Tcamera.rot)*(2/fTimeElapsed) - _tTrackingCameraVelocity.rot;
+                _Tcamera.trans = newtrans;
+                _Tcamera.rot = newquat;
+            }
+            else {
+                _Tcamera.trans = vDestPos;
+                _Tcamera.rot = vDestQuat;
+            }
+
+            _SetCameraTransform();
+        }
+    }
+
+    double fovy, aspectRatio, zNear, zFar;
+    _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+    int camwidth = _posgWidget->GetCamera()->getViewport()->width();
+    int camheight = _posgWidget->GetCamera()->getViewport()->height();
+
+    _camintrinsics.fy = 0.5*camheight/RaveTan(0.5f*fovy*M_PI/180.0);
+    _camintrinsics.fx = _camintrinsics.fy*float(camwidth)/(float)camheight/aspectRatio;
+    _camintrinsics.cx = (float)camwidth/2;
+    _camintrinsics.cy = (float)camheight/2;
+    _camintrinsics.focal_length = zNear;
+    _camintrinsics.distortion_model = "";
+}
+
+bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
+{
+    sinput >> _bRenderFiguresInCamera;
+    return !!sinput;
+}
+
+bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
+{
+    std::string itemname, visualizationmode;
+    sinput >> itemname >> visualizationmode;
+
+    FOREACH(it, _mapbodies) {
+        if( it->second->GetName() == itemname ) {
+            it->second->SetVisualizationMode(visualizationmode);
+        }
+    }
+    return !!sinput;
+}
+
+bool QtOSGViewer::_ShowWorldAxesCommand(ostream& sout, istream& sinput)
+{
+    // TODO
+    return true;
+}
+
+bool QtOSGViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
+{
+    dReal nearplane=0.01;
+    sinput >> nearplane;
+    if( !!sinput ) {
+        _posgWidget->SetNearPlane(nearplane);
+    }
+    return !!sinput;
+}
+
+bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
+{
+    bool bresetvelocity = true;
+    std::string bodyname, linkname;
+    float focalDistance = 0.0;
+    Transform tTrackingLinkRelative;
+    sinput >> bodyname >> linkname >> focalDistance >> bresetvelocity;
+    if( focalDistance > 0 ) {
+        _SetCameraDistanceToFocus(focalDistance);
+    }
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
+    if( !pbody ) {
+        return false;
+    }
+    _ptrackinglink = pbody->GetLink(linkname);
+    if( !!_ptrackinglink ) {
+        sinput >> tTrackingLinkRelative;
+        if( !!sinput ) {
+            _tTrackingLinkRelative = tTrackingLinkRelative;
+        }
+        else {
+            RAVELOG_WARN("failed to get tracking link relative trans\n");
+            _tTrackingLinkRelative = Transform(); // use the identity
+        }
+    }
+    if( bresetvelocity ) {
+        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    }
+    return !!_ptrackinglink;
+}
+
+bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
+{
+    bool bresetvelocity = true;
+    std::string robotname, manipname;
+    float focalDistance = 0.0;
+    sinput >> robotname >> manipname >> focalDistance >> bresetvelocity;
+    if( focalDistance > 0 ) {
+        // not sure if this is thread safe...
+        _SetCameraDistanceToFocus(focalDistance);
+    }
+    _ptrackinglink.reset();
+    _ptrackingmanip.reset();
+    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    RobotBasePtr probot = GetEnv()->GetRobot(robotname);
+    if( !probot ) {
+        return false;
+    }
+    _ptrackingmanip = probot->GetManipulator(manipname);
+    if( bresetvelocity ) {
+        _tTrackingCameraVelocity.trans = _tTrackingCameraVelocity.rot = Vector(); // reset velocity?
+    }
+    return !!_ptrackingmanip;
+}
+
+bool QtOSGViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
+{
+    sinput >> _fTrackAngleToUp;
+    return true;
+}
+
+bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
+{
+    if( !QApplication::instance() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("need a valid QApplication before viewer loop is run", ORE_InvalidState);
+    }
+
+    bool bcallmain = false;
+    sinput >> bcallmain;
+    _nQuitMainLoop = -1;
+    //_StartPlaybackTimer();
+    this->show();
+    if( bcallmain ) {
+        _posgWidget->SetHome();
+        QApplication::instance()->exec();
+    }
+    return true;
+}
+
+bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
+{
+    std::string projectionMode = "";
+    sinput >> projectionMode;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
+    return true;
+}
+
+void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
+{
+    if (projectionMode == "orthogonal")
+    {
+        _qactPerspectiveView->setChecked(true);
+        _posgWidget->SetViewType(true);
+    }
+    else
+    {
+        _qactPerspectiveView->setChecked(false);
+        _posgWidget->SetViewType(false);
+    }
 }
 
 int QtOSGViewer::main(bool bShow)
@@ -885,20 +1213,32 @@ int QtOSGViewer::main(bool bShow)
     if( !QApplication::instance() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("need a valid QApplication before viewer loop is run", ORE_InvalidState);
     }
+    _nQuitMainLoop = -1;
+    //_StartPlaybackTimer();
     if (bShow) {
-        this->show();
+        if( _nQuitMainLoop < 0 ) {
+            this->show();
+        }
     }
 
     UpdateFromModel();
     _posgWidget->SetHome();
-
-    QApplication::instance()->exec();
+    if( _nQuitMainLoop < 0 ) {
+        QApplication::instance()->exec();
+    }
+    SetEnvironmentSync(false);
     return 0;
 }
 
 void QtOSGViewer::quitmainloop()
 {
-
+    _nQuitMainLoop = 1;
+    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    if( !bGuiThread ) {
+        SetEnvironmentSync(false);
+    }
+    QApplication::instance()->exit(0);
+    _nQuitMainLoop = 2;
 }
 
 void QtOSGViewer::Show(int showtype)
@@ -931,14 +1271,49 @@ bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<fl
 {
     return false;
 }
+
+void QtOSGViewer::_SetCameraTransform()
+{
+    osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
+    if( !!ptrackball ) {
+        ptrackball->setDistance(_focalDistance);
+    }
+
+    // has to come after setting distance because internally orbit manipulator uses the distance to deduct view center
+    _posgWidget->GetCameraManipulator()->setByMatrix(GetMatrixFromRaveTransform(_Tcamera));
+
+    //osg::Vec3d eye, center, up;
+    //osg::Matrix::inverse(GetMatrixFromRaveTransform(_Tcamera)).getLookAt(eye, center, up, _focalDistance);
+    //_posgWidget->GetCameraManipulator()->setTransformation(eye, center, up);
+}
+
+void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
+{
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    _Tcamera = trans*trot;
+
+    if (focalDistance > 0) {
+        _focalDistance = focalDistance;
+    }
+
+    _SetCameraTransform();
+    _UpdateCameraTransform(0);
+}
+
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
-//  RAVELOG_INFO("[SetCamera]\n");
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
 }
-//void QtOSGViewer::SetCameraLookAt(const RaveVector<float>& lookat, const RaveVector<float>& campos, const RaveVector<float>& camup)
-//{
-//  RAVELOG_INFO("[SetCameraLookAt]\n");
-//}
+
+void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
+{
+    if (focalDistance > 0) {
+        _focalDistance = focalDistance;
+    }
+
+    _SetCameraTransform();
+    _UpdateCameraTransform(0);
+}
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 {
@@ -946,6 +1321,12 @@ RaveTransform<float> QtOSGViewer::GetCameraTransform() const
     // have to flip Z axis
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
     return _Tcamera*trot;
+}
+
+float QtOSGViewer::GetCameraDistanceToFocus() const
+{
+    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
+    return _focalDistance;
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
@@ -969,73 +1350,339 @@ SensorBase::CameraIntrinsics QtOSGViewer::GetCameraIntrinsics2() const
     return intr;
 }
 
+void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+    osg::ref_ptr<osg::Geometry> geometry(new osg::Geometry());
+
+    geometry->setVertexArray(vertices.get());
+    geometry->setColorArray(colors.get());
+    geometry->setColorBinding(colors->size() == vertices->size() ? osg::Geometry::BIND_PER_VERTEX : osg::Geometry::BIND_OVERALL);
+
+    geometry->addPrimitiveSet(new osg::DrawArrays(mode, 0, vertices->size()));
+    geometry->getOrCreateStateSet()->setAttribute(attribute, osg::StateAttribute::ON);
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    geometry->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    geode->addDrawable(geometry.get());
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
 GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+    }
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
+    (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
 {
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+        if (bhasalpha) {
+            (*vcolors)[i] = osg::Vec4f(colors[i * 4 + 0], colors[i * 4 + 1], colors[i * 4 + 2], colors[i * 4 + 3]);
+        }
+        else {
+            (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
+        }
+    }
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+    }
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
+    (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+        (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
+    }
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+    }
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
+    (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec3Array> vvertices = new osg::Vec3Array(numPoints);
+    osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(numPoints);
+    for(int i = 0; i < numPoints; ++i) {
+        (*vvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+        (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
+    }
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
 {
+    RAVELOG_WARN("drawarrow not implemented\n");
     return GraphHandlePtr();
+}
+
+void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+
+    osg::ref_ptr<osg::Box> box = new osg::Box();
+    box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
+    box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
+
+    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+    geode->addDrawable(sd);
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
 GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false)); // copies ref counts
     return GraphHandlePtr();
+}
+
+void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+    osg::ref_ptr<osg::Geometry> geometry(new osg::Geometry());
+
+    // make triangleMesh
+    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array(4);
+    (*vertices)[0] = GetOSGVec3(tplane*RaveVector<float>(-vextents.x, vextents.y, 0));
+    (*vertices)[1] = GetOSGVec3(tplane*RaveVector<float>(-vextents.x, -vextents.y, 0));
+    (*vertices)[2] = GetOSGVec3(tplane*RaveVector<float>(vextents.x, -vextents.y, 0));
+    (*vertices)[3] = GetOSGVec3(tplane*RaveVector<float>(vextents.x, vextents.y, 0));
+    geometry->setVertexArray(vertices.get());
+
+    osg::Vec2Array* texcoords = new osg::Vec2Array(4);
+    (*texcoords)[0].set(0,0);
+    (*texcoords)[1].set(0,1);
+    (*texcoords)[2].set(1,1);
+    (*texcoords)[3].set(1,0);
+    geometry->setTexCoordArray(0,texcoords);
+
+    geometry->addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+
+    osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(1);
+    (*osgcolors)[0] = osg::Vec4(1,1,1,1);
+    geometry->setColorArray(osgcolors.get());
+    geometry->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    geode->addDrawable(geometry.get());
+
+    bool bhasalpha = false;
+    // create the osg texture
+    size_t imagesize = vtexture.shape()[0]*vtexture.shape()[1]*vtexture.shape()[2];
+    if( imagesize > 0 ) {
+        uint8_t* vimagedata = new uint8_t[imagesize]; // Image class will take care of deleting
+        bhasalpha = vtexture.shape()[2] == 4;
+        GLint internalTextureFormat = vtexture.shape()[2]; // number of components in texture?
+        GLenum format = GL_RGBA;
+        switch( vtexture.shape()[2] ) {
+        case 1: format = GL_R; break;
+        case 2: format = GL_RG; break;
+        case 3: format = GL_RGB; break;
+        }
+
+        osg::ref_ptr<osg::Image> image;
+        uint8_t* pdst = vimagedata;
+        FOREACHC(ith,vtexture) {
+            FOREACHC(itw,*ith) {
+                FOREACHC(itp,*itw) {
+                    *pdst++ = (unsigned char)(255.0f*ClampOnRange(*itp,0.0f,1.0f));
+                }
+            }
+        }
+        image = new osg::Image();
+        image->setImage(vtexture.shape()[0], vtexture.shape()[1], 1, internalTextureFormat, format, GL_UNSIGNED_BYTE, vimagedata, osg::Image::USE_NEW_DELETE);
+
+        osg::ref_ptr<osg::Texture2D> tex = new osg::Texture2D;
+        tex->setImage(image);
+        osg::ref_ptr<osg::StateSet> stateOne = new osg::StateSet();
+
+        // Assign texture unit 0 of our new StateSet to the texture
+        // we just created and enable the texture.
+        stateOne->setTextureAttributeAndModes(0,tex,osg::StateAttribute::ON);
+        geode->setStateSet(stateOne);
+    }
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    geometry->getOrCreateStateSet()->setRenderingHint(bhasalpha ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
 GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
-//    void* pret = new SoSeparator();
-//    EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), (SoSeparator*)pret, tplane,vextents,vtexture));
-//    pmsg->callerexecute();
-
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
+void QtOSGViewer::_DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+    osg::ref_ptr<osg::Geometry> geometry(new osg::Geometry());
+
+    // make triangleMesh
+    geometry->setVertexArray(vertices.get());
+    geometry->addPrimitiveSet(osgindices.get());
+
+    geometry->setColorArray(colors.get());
+    geometry->setColorBinding(colors->size() == vertices->size() ? osg::Geometry::BIND_PER_VERTEX : osg::Geometry::BIND_OVERALL);
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    geometry->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    geode->addDrawable(geometry.get());
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+void QtOSGViewer::_SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices)
+{
+    BOOST_ASSERT(ppoints!=NULL);
+    int maxindex = -1;
+    osgindices->resizeElements(numTriangles*3);
+    if( pIndices != NULL ) {
+        for(int i = 0; i < 3*numTriangles; ++i) {
+            (*osgindices)[i] = pIndices[i];
+            if( maxindex < pIndices[i] ) {
+                maxindex = pIndices[i];
+            }
+        }
+    }
+    else {
+        maxindex = 3*numTriangles-1;
+        for(int i = 0; i < 3*numTriangles; ++i) {
+            (*osgindices)[i] = i;
+        }
+    }
+    osgvertices->resizeArray(maxindex+1);
+    for(int i = 0; i <= maxindex; ++i) {
+        (*osgvertices)[i] = osg::Vec3(ppoints[0], ppoints[1], ppoints[2]);
+        ppoints = (float*)((char*)ppoints + stride);
+    }
+}
 
 GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color)
 {
-    return GraphHandlePtr();
+    osg::ref_ptr<osg::Vec3Array> osgvertices = new osg::Vec3Array();
+    osg::ref_ptr<osg::DrawElementsUInt> osgindices = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES);
+    _SetTriangleMesh(ppoints, stride, pIndices, numTriangles, osgvertices, osgindices);
+
+    OSGSwitchPtr handle = _CreateGraphHandle();
+
+    osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(1);
+    (*osgcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
 {
+    osg::ref_ptr<osg::Vec3Array> osgvertices = new osg::Vec3Array();
+    osg::ref_ptr<osg::DrawElementsUInt> osgindices = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES);
+    _SetTriangleMesh(ppoints, stride, pIndices, numTriangles, osgvertices, osgindices);
 
+    bool bhasalpha = false;
+    osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(colors.size());
+    switch(colors.shape()[1]) {
+    case 1:
+        for(size_t i = 0; i < colors.shape()[0]; ++i) {
+            (*osgcolors)[i] = osg::Vec4f(colors[i][0], colors[i][0], colors[i][0], 1);
+        }
+        break;
+    case 4:
+        for(size_t i = 0; i < colors.shape()[0]; ++i) {
+            (*osgcolors)[i] = osg::Vec4(colors[i][0], colors[i][1], colors[i][2], colors[i][3]);
+        }
+        bhasalpha = true;
+        break;
+    case 3:
+        for(size_t i = 0; i < colors.shape()[0]; ++i) {
+            (*osgcolors)[i] = osg::Vec4(colors[i][0], colors[i][1], colors[i][2], 1);
+        }
+        break;
+    default:
+        RAVELOG_WARN_FORMAT("unsupported color dimension %d", colors.shape()[1]);
+        return GraphHandlePtr();
+    }
 
-    //    void* pret = new SoSeparator();
-    //    EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), (SoSeparator*)pret, ppoints, stride, pIndices, numTriangles, colors));
-    //    pmsg->callerexecute();
-
-    return GraphHandlePtr();
-}
-
-void QtOSGViewer::closegraph(void* handle)
-{
-
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_Deselect()
@@ -1045,7 +1692,7 @@ void QtOSGViewer::_Deselect()
 
 void QtOSGViewer::Reset()
 {
-
+    // TODO
 }
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
@@ -1064,12 +1711,11 @@ void QtOSGViewer::StopPlaybackTimer()
 
 void QtOSGViewer::SetSize(int w, int h)
 {
-    RAVELOG_VERBOSE("----->>>> ViewerSetSize(int w, int h)\n");
-
+    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h));
 }
 void QtOSGViewer::Move(int x, int y)
 {
-    RAVELOG_VERBOSE("----->>>> ViewerMove(int x, int y)\n");
+    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
 void QtOSGViewer::SetName(const string& ptitle)
@@ -1079,17 +1725,12 @@ void QtOSGViewer::SetName(const string& ptitle)
 
 bool QtOSGViewer::LoadModel(const string& filename)
 {
-    //    Debug
-//  RAVELOG_WARN("QtOSGViewer::LoadModel(pfilename)\n");
-
-    if( filename == "")
+    if( filename == "") {
         return false;
-
-    osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFile(filename);
-    osg::Node *node = loadedModel.get();
-
-    if (node != NULL) {
-        GetRoot()->addChild(node);
+    }
+    OSGNodePtr loadedModel = osgDB::readNodeFile(filename);
+    if (!!loadedModel) {
+        _posgWidget->GetSceneRoot()->addChild(loadedModel.get());
         return true;
     }
 
@@ -1176,10 +1817,10 @@ void QtOSGViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode));
+                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), boost::static_pointer_cast<RobotBase>(pbody), _viewGeometryMode), ITEM_DELETER);
                     }
                     else {
-                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode));
+                        pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(_posgWidget->GetSceneRoot(), _posgWidget->GetFigureRoot(), pbody, _viewGeometryMode), ITEM_DELETER);
                     }
                     newdata = true;
 
@@ -1187,8 +1828,8 @@ void QtOSGViewer::UpdateFromModel()
 //                    if( !!_pdragger && _pdragger->GetSelectedItem() == pitem ) {
 //                        _Deselect();
 //                    }
-
                     pitem->Load();
+
                     pbody->SetUserData(_userdatakey, pitem);
                     _mapbodies[pbody] = pitem;
                     newdata = true;
@@ -1229,7 +1870,7 @@ void QtOSGViewer::UpdateFromModel()
                 // TODO
                 //_pdragger.reset();
                 _pSelectedItem.reset();
-                //_ivRoot->deselectAll();
+                //_osgViewerRoot->deselectAll();
             }
 
             _mapbodies.erase(it++);
@@ -1249,11 +1890,13 @@ void QtOSGViewer::UpdateFromModel()
 //    }
 
     //  Repaint the scene created
-    _RepaintWidgets(GetRoot());
+    //_RepaintWidgets();
 
     if (newdata) {
-        //  Fill tree widget with robot and joints
-        _FillObjectTree(objectTree);
+        if (!!_qobjectTree) {
+            //  Fill tree widget with robot and joints
+            _FillObjectTree(_qobjectTree);
+        }
     }
 }
 
@@ -1310,7 +1953,7 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
 void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
 {
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn));
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
     _listGUIFunctions.push_back(pfn);
     if( block ) {
@@ -1330,8 +1973,17 @@ void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
     if( !bUpdate ) {
         // remove all messages in order to release the locks
         boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-        FOREACH(it,_listGUIFunctions) {
-            (*it)->SetFinished();
+        if( _listGUIFunctions.size() > 0 ) {
+            bool bnotify = false;
+            FOREACH(it,_listGUIFunctions) {
+                (*it)->SetFinished();
+                if( (*it)->IsBlocking() ) {
+                    bnotify = true;
+                }
+            }
+            if( bnotify ) {
+                _notifyGUIFunctionComplete.notify_all();
+            }
         }
         _listGUIFunctions.clear();
     }
@@ -1359,6 +2011,34 @@ void QtOSGViewer::EnvironmentSync()
     _condUpdateModels.wait(lock);
     if( !_bModelsUpdated ) {
         RAVELOG_WARNA("failed to update models from environment sync\n");
+    }
+}
+
+OSGSwitchPtr QtOSGViewer::_CreateGraphHandle()
+{
+    OSGSwitchPtr handle(new osg::Switch());
+    handle->setAllChildrenOn();
+    return handle;
+}
+
+void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
+{
+    _posgWidget->GetFigureRoot()->removeChild(handle);
+}
+
+void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
+{
+    // have to convert to smart pointers so that we can get exceptions thrown rather than dereferencing null pointers
+    SetMatrixTransform(*OSGMatrixTransformPtr(OSGTransformPtr(OSGNodePtr(handle->getChild(0))->asTransform())->asMatrixTransform()), t);
+}
+
+void QtOSGViewer::_SetGraphShow(OSGSwitchPtr handle, bool bShow)
+{
+    if (bShow) {
+        handle->setAllChildrenOn();
+    }
+    else {
+        handle->setAllChildrenOff();
     }
 }
 
