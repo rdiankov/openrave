@@ -134,10 +134,7 @@ protected:
         Vector v;
         while(1) {
             _psampler->SampleSequence(_tempsamples,4,IT_Closed);
-            v.x = 2*_tempsamples.at(0)-1;
-            v.y = 2*_tempsamples.at(0)-1;
-            v.z = 2*_tempsamples.at(0)-1;
-            v.w = 2*_tempsamples.at(0)-1;
+            v.x = v.y = v.z = v.w = 2*_tempsamples[0]-1;
             dReal flen = v.lengthsqr4();
             if( flen > 1 ) {
                 continue;
@@ -156,8 +153,9 @@ protected:
             _range[i] = _upper[i] - _lower[i];
         }
         _viscircular.resize(0); _viscircular.resize(GetDOF(),0);
-        for(size_t i = 0; i < _probot->GetActiveDOFIndices().size(); ++i) {
-            int dof = _probot->GetActiveDOFIndices().at(i);
+        const std::vector<int>& activeDOFIndices = _probot->GetActiveDOFIndices();
+        for(size_t i = 0; i < activeDOFIndices.size(); ++i) {
+            int dof = activeDOFIndices[i];
             KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(dof);
             _viscircular[i] = pjoint->IsCircular(dof-pjoint->GetDOFIndex());
         }
