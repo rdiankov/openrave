@@ -22,7 +22,7 @@ namespace RampOptimizerInternal {
 // Ramp
 Ramp::Ramp(dReal v0_, dReal a_, dReal duration_, dReal x0_)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(duration_, >=, -g_fRampEpsilon);
 
     v0 = v0_;
     a = a_;
@@ -64,11 +64,8 @@ dReal Ramp::EvalVel(dReal t) const
     return v0 + (a*t);
 }
 
-dReal Ramp::EvalAcc(dReal t) const
+dReal Ramp::EvalAcc() const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
-
     return a;
 }
 
@@ -136,7 +133,7 @@ void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const
 
 void Ramp::Initialize(dReal v0_, dReal a_, dReal duration_, dReal x0_)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(duration_, >=, -g_fRampEpsilon);
 
     v0 = v0_;
     a = a_;
@@ -191,7 +188,7 @@ void Ramp::Cut(dReal t, Ramp& remRamp)
     OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
 
     if( t <= 0 ) {
-        remRamp.Copy(this);
+        remRamp.Copy(*this);
         Initialize(v0, 0, 0, x0);
         return;
     }
@@ -244,7 +241,7 @@ void Ramp::TrimBack(dReal t)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParabolicCurve
-ParaboliCurve::ParabolicCurve(std::vector<Ramp>&rampsIn)
+ParabolicCurve::ParabolicCurve(std::vector<Ramp>&rampsIn)
 {
     OPENRAVE_ASSERT_OP(rampsIn.size(), >, 0);
 
@@ -283,12 +280,13 @@ void ParabolicCurve::Append(ParabolicCurve& curve)
     }
 
     if( _ramps.capacity() < _ramps.size() + curve._ramps.size() ) {
-        _ramps.reserve(_ramp.size() + curve._ramps.size());
+        _ramps.reserve(_ramps.size() + curve._ramps.size());
     }
     if( _switchpointsList.capacity() < _switchpointsList.size() + curve._switchpointsList.size() - 1 ) {
         _switchpointsList.reserve(_switchpointsList.size() + curve._switchpointsList.size() - 1);
     }
 
+    dReal prevDuration = _duration;
     curve.SetInitialValue(GetX1());
     for (size_t i = 0; i < curve._ramps.size(); ++i) {
         _ramps.push_back(curve._ramps[i]);
@@ -301,6 +299,61 @@ void ParabolicCurve::Append(ParabolicCurve& curve)
     _duration = _switchpointsList.back();
 }
 
+dReal ParabolicCurve::EvalPos(dReal t) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        return _ramps.front().x0;
+    }
+    else if( t >= _duration ) {
+        return _ramps.back().x1;
+    }
+
+    int index;
+    dReal remainder;
+    FindRampIndex(t, index, remainder);
+    return _ramps[index].EvalPos(remainder);
+}
+
+dReal ParabolicCurve::EvalVel(dReal t) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        return _ramps.front().v0;
+    }
+    else if( t >= _duration ) {
+        return _ramps.back().v1;
+    }
+
+    int index;
+    dReal remainder;
+    FindRampIndex(t, index, remainder);
+    return _ramps[index].EvalVel(remainder);
+}
+
+dReal ParabolicCurve::EvalAcc(dReal t) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        return _ramps.front().a;
+    }
+    else if( t >= _duration ) {
+        return _ramps.back().a;
+    }
+
+    // Note that when t is at a switch point, the returned value is depending on the behavior of
+    // FindRampIndex.
+    int index;
+    dReal remainder;
+    FindRampIndex(t, index, remainder);
+    return _ramps[index].a;
+}
 
 void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const
 {
@@ -326,7 +379,7 @@ void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const
             ++index_;
             ++it;
         }
-        OPENRAVE_ASSERT_OP(index, <, (int)switchpointsList.size());
+        OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
         index = index_;
         remainder = t - *it;
         return;
@@ -408,7 +461,7 @@ void ParabolicCurve::SetConstant(dReal x0, dReal t)
 
 void ParabolicCurve::SetInitialValue(dReal newx0)
 {
-    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
+    for (std::vector<Ramp>::iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
         itramp->SetInitialValue(newx0);
         newx0 += itramp->x1;
     }
@@ -471,10 +524,16 @@ void ParabolicCurve::SetZeroDuration(dReal x0, dReal v0)
 
 void ParabolicCurve::Swap(ParabolicCurve& anotherCurve)
 {
-    _ramp.swap(anotherCurve._ramps);
+    _ramps.swap(anotherCurve._ramps);
     _switchpointsList.swap(anotherCurve._switchpointsList);
-    Swap(_d, anotherCurve._d);
-    Swap(_duration, anotherCurve._duration);
+    dReal temp;
+    temp = _d;
+    _d = anotherCurve._d;
+    anotherCurve._d = temp;
+
+    temp = _duration;
+    _duration = anotherCurve._duration;
+    anotherCurve._duration = temp;
 }
 
 void ParabolicCurve::Cut(dReal t, ParabolicCurve& remCurve)
@@ -552,7 +611,7 @@ void ParabolicCurve::TrimFront(dReal t)
     if( t <= 0 ) {
         return;
     }
-    else if( t >= duration ) {
+    else if( t >= _duration ) {
         SetZeroDuration(GetX1(), GetV1());
         return;
     }
@@ -561,7 +620,7 @@ void ParabolicCurve::TrimFront(dReal t)
     dReal remainder;
     FindRampIndex(t, index, remainder);
 
-    std::vector<Ramp> rightHalf(ramps.size() - index);
+    std::vector<Ramp> rightHalf(_ramps.size() - index);
     std::copy(_ramps.begin() + index, _ramps.end(), rightHalf.begin());
     rightHalf.front().TrimFront(remainder);
     Initialize(rightHalf);
@@ -577,7 +636,7 @@ void ParabolicCurve::TrimBack(dReal t)
         SetZeroDuration(GetX0(), GetV0());
         return;
     }
-    else if( t >= duration ) {
+    else if( t >= _duration ) {
         return;
     }
 
@@ -603,7 +662,418 @@ void ParabolicCurve::TrimBack(dReal t)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// 
+// RampND
+RampND::RampND(size_t ndof)
+{
+    OPENRAVE_ASSERT_OP(ndof, >, 0);
+    _ndof = ndof;
+    _data.resize(6*_ndof + 1);
+    constraintChecked = false;
+}
+
+RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    if( t < 0 ) {
+        t = 0;
+    }
+
+    _ndof = x0Vect.size();
+    OPENRAVE_ASSERT_OP(x1Vect.size(), ==, _ndof);
+    OPENRAVE_ASSERT_OP(v0Vect.size(), ==, _ndof);
+    OPENRAVE_ASSERT_OP(v1Vect.size(), ==, _ndof);
+    // Acceleration and displacement vectors are optional
+    if( aVect.size() > 0 ) {
+        OPENRAVE_ASSERT_OP(aVect.size(), ==, _ndof);
+    }
+    if( dVect.size() > 0 ) {
+        OPENRAVE_ASSERT_OP(dVect.size(), ==, _ndof);
+    }
+
+    _data.resize(6*_ndof + 1);
+
+    std::copy(x0Vect.begin(), x0Vect.end(), _data.begin());
+    std::copy(x1Vect.begin(), x1Vect.end(), _data.begin() + _ndof);
+    std::copy(v0Vect.begin(), v0Vect.end(), _data.begin() + 2*_ndof);
+    std::copy(v1Vect.begin(), v1Vect.end(), _data.begin() + 3*_ndof);
+
+    if( aVect.size() == 0 ) {
+        if( t == 0 ) {
+            std::fill(_data.begin() + 4*_ndof, _data.begin() + 5*_ndof, 0);
+        }
+        else {
+            // Calculating accelerations using the same procedure as in ParabolicCurve::SetSegment.
+            dReal tSqr = t*t;
+            for (size_t idof = 0; idof < _ndof; ++idof) {
+                _data[4*_ndof + idof] = -(v0Vect[idof]*tSqr + t*(x0Vect[idof] - x1Vect[idof]) + 2*(v0Vect[idof] - v1Vect[idof]))/(t*(0.5*tSqr + 2));
+            }
+        }
+    }
+    else {
+        std::copy(aVect.begin(), aVect.end(), _data.begin() + 4*_ndof);
+    }
+
+    if( dVect.size() == 0 ) {
+        if( t == 0 ) {
+            std::fill(_data.begin() + 5*_ndof, _data.begin() + 6*_ndof, 0);
+        }
+        else {
+            for (size_t idof = 0; idof < _ndof; ++idof) {
+                _data[5*_ndof + idof] = x1Vect[idof] - x0Vect[idof];
+            }
+        }
+    }
+    else {
+        std::copy(dVect.begin(), dVect.end(), _data.begin() + 5*_ndof);
+    }
+
+    constraintChecked = false;
+}
+
+void RampND::EvalPos(dReal t, std::vector<dReal>& xVect) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _data.back() + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        GetX0Vect(xVect);
+        return;
+    }
+    else if( t >= GetDuration() ) {
+        GetX1Vect(xVect);
+        return;
+    }
+
+    xVect.resize(_ndof);
+    for (size_t idof = 0; idof < _ndof; ++idof) {
+        xVect[idof] = GetX0At(idof) + t*(GetV0At(idof) + 0.5*t*GetAAt(idof));
+    }
+    return;
+}
+
+void RampND::EvalVel(dReal t, std::vector<dReal>& vVect) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _data.back() + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        GetV0Vect(vVect);
+        return;
+    }
+    else if( t >= GetDuration() ) {
+        GetV1Vect(vVect);
+        return;
+    }
+
+    vVect.resize(_ndof);
+    for (size_t idof = 0; idof < _ndof; ++idof) {
+        vVect[idof] = GetV0At(idof) + t*GetAAt(idof);
+    }
+    return;
+}
+
+void RampND::EvalAcc(std::vector<dReal>& aVect) const
+{
+    GetAVect(aVect);
+    return;
+}
+
+void RampND::SetConstant(const std::vector<dReal>& xVect, const dReal t)
+{
+    OPENRAVE_ASSERT_OP(xVect.size(), ==, _ndof);
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    size_t offset = _ndof;
+    std::copy(xVect.begin(), xVect.end(), _data.begin()); // x0Vect
+    std::copy(xVect.begin(), xVect.end(), _data.begin() + _ndof); // x1Vect
+    offset += _ndof;
+    std::fill(_data.begin() + offset, _data.end() - 1, 0); // v0Vect, v1Vect, aVect, dVect
+    _data.back() = t; // duration
+    return;
+}
+
+void RampND::SetInitialPosition(const std::vector<dReal>& xVect)
+{
+    OPENRAVE_ASSERT_OP(xVect.size(), ==, _ndof);
+    std::copy(xVect.begin(), xVect.end(), _data.begin()); // x0Vect
+    for (size_t idof = 0; idof < _ndof; ++idof) {
+        _data[_ndof + idof] = GetX0At(idof) + GetDAt(idof);
+    }
+    return;
+}
+
+void RampND::Cut(dReal t, RampND& remRampND)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _data.back() + g_fRampEpsilon);
+    if( remRampND._ndof != _ndof ) {
+        remRampND.Initialize(_ndof);
+    }
+
+    remRampND.constraintChecked = constraintChecked;
+
+    if( t <= 0 || t >= _data.back() ) {
+        std::copy(_data.begin() + _ndof, _data.begin() + 2*_ndof, remRampND._data.begin()); // position
+        std::copy(_data.begin() + _ndof, _data.begin() + 2*_ndof, remRampND._data.begin() + _ndof);
+
+        std::copy(_data.begin() + 3*_ndof, _data.begin() + 4*_ndof, remRampND._data.begin() + 2*_ndof); // velocity
+        std::copy(_data.begin() + 3*_ndof, _data.begin() + 4*_ndof, remRampND._data.begin() + 3*_ndof);
+
+        std::copy(_data.begin() + 4*_ndof, _data.begin() + 5*_ndof, remRampND._data.begin() + 4*_ndof); // acceleration
+        std::fill(remRampND._data.begin() + 5*_ndof, remRampND._data.begin() + 6*_ndof, 0); // displacement
+
+        remRampND._data.back() = 0;
+
+        if( t <= 0 ) {
+            _data.swap(remRampND._data);
+        }
+        return;
+    }
+    else {
+        std::vector<dReal> temp(_ndof); // temporary value holder
+        EvalPos(t, temp);
+        std::copy(temp.begin(), temp.end(), _data.begin() + _ndof);
+        std::copy(temp.begin(), temp.end(), remRampND._data.begin());
+
+        EvalVel(t, temp); // changing of x1 does not affect velocity calculation
+        std::copy(temp.begin(), temp.end(), _data.begin() + 3*_ndof);
+        std::copy(temp.begin(), temp.end(), remRampND._data.begin() + 2*_ndof);
+
+        EvalAcc(temp);
+        std::copy(temp.begin(), temp.end(), remRampND._data.begin() + 4*_ndof);
+
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            remRampND._data[5*_ndof + idof] = remRampND.GetX1At(idof) - remRampND.GetX0At(idof);
+        }
+
+        remRampND._data.back() = _data.back() - t;
+        _data.back() = t;
+        return;
+    }
+}
+
+void RampND::TrimFront(dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _data.back() + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        return;
+    }
+    else if( t >= _data.back() ) {
+        std::copy(_data.begin() + _ndof, _data.begin() + 2*_ndof, _data.begin()); // replace x0 by x1
+        std::copy(_data.begin() + 3*_ndof, _data.begin() + 4*_ndof, _data.begin() + 2*_ndof); // replace v0 by v1
+        std::fill(_data.begin() + 5*_ndof, _data.begin() + 6*_ndof, 0); // displacement
+        _data.back() = 0; // duration
+        return;
+    }
+    else {
+        std::vector<dReal> temp(_ndof); // temporary value holder
+        EvalPos(t, temp);
+        std::copy(temp.begin(), temp.end(), _data.begin()); // update x0
+
+        EvalVel(t, temp); // changing of x0 does not affect velocity calculation
+        std::copy(temp.begin(), temp.end(), _data.begin() + 2*_ndof); // update v0
+
+        // update d
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            _data[5*_ndof + idof] = GetX1At(idof) - GetX0At(idof);
+        }
+
+        _data.back() = _data.back() - t;
+        return;
+    }
+}
+
+void RampND::TrimBack(dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _data.back() + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        std::copy(_data.begin(), _data.begin() + _ndof, _data.begin() + _ndof); // replace x1 by x0
+        std::copy(_data.begin() + 2*_ndof, _data.begin() + 3*_ndof, _data.begin() + 3*_ndof); // replace v1 by v0
+        std::fill(_data.begin() + 5*_ndof, _data.begin() + 6*_ndof, 0); // displacement
+        _data.back() = 0; // duration
+        return;
+    }
+    else if( t >= _data.back() ) {
+        return;
+    }
+    else {
+        std::vector<dReal> temp(_ndof); // temporary value holder
+        EvalPos(t, temp);
+        std::copy(temp.begin(), temp.end(), _data.begin() + _ndof); // update x1
+
+        EvalVel(t, temp); // changing of x0 does not affect velocity calculation
+        std::copy(temp.begin(), temp.end(), _data.begin() + 3*_ndof); // update v1
+
+        // update d
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            _data[5*_ndof + idof] = GetX1At(idof) - GetX0At(idof);
+        }
+
+        _data.back() = t;
+        return;
+    }
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// ParabolicPath
+void ParabolicPath::AppendRampND(RampND& rampndIn)
+{
+    if( _rampnds.capacity() < _rampnds.size() + 1 ) {
+        _rampnds.reserve(_rampnds.size() + 1);
+    }
+    _rampnds.push_back(rampndIn);
+
+    if( _switchpointsList.capacity() < _switchpointsList.size() + 1 ) {
+        _switchpointsList.reserve(_switchpointsList.size() + 1);
+    }
+    _switchpointsList.push_back(_duration + rampndIn.GetDuration());
+
+    _duration = _switchpointsList.back();
+}
+
+void ParabolicPath::EvalPos(dReal t, std::vector<dReal>& xVect) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+}
+
+void ParabolicPath::EvalVel(dReal t, std::vector<dReal>& vVect) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+}
+
+void ParabolicPath::EvalAcc(dReal t, std::vector<dReal>& aVect) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+}
+
+void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
+
+    if( t <= 0 ) {
+        index = 0;
+        remainder = 0;
+        return;
+    }
+    else if( t >= _duration ) {
+        index = ((int)_rampnds.size() - 1);
+        remainder = _rampnds.back().GetDuration();
+        return;
+    }
+    else {
+        // Convention: if t lies exactly at a switch point between rampsnd[i] and rampsnd[i + 1], we
+        // return index = i + 1 and remainder = 0.
+        int index_ = 0;
+        std::vector<dReal>::const_iterator it = _switchpointsList.begin();
+        while ( it != _switchpointsList.end() && t > *it ) {
+            ++index_;
+            ++it;
+        }
+        OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
+        index = index_;
+        remainder = t - *it;
+        return;
+    }
+}
+
+void ParabolicPath::Initialize(const RampND& rampndIn)
+{
+    _rampnds.resize(0);
+    _rampnds.reserve(1);
+    _rampnds.push_back(rampndIn);
+
+    _switchpointsList.resize(2);
+    _switchpointsList[0] = 0;
+    _switchpointsList[1] = _duration + rampndIn.GetDuration();
+
+    _duration = _switchpointsList.back();
+}
+
+void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>& rampndVect)
+{
+    OPENRAVE_ASSERT_OP(t0, <, t1);
+    OPENRAVE_ASSERT_OP(rampndVect.size(), >, 0);
+    if( t0 == 0 && t1 == _duration ) {
+        _rampnds = rampndVect;
+        _duration = 0;
+        _switchpointsList.resize(0);
+        _switchpointsList.reserve(rampndVect.size() + 1);
+        _switchpointsList.push_back(_duration);
+        for (size_t irampnd = 0; irampnd < rampndVect.size(); ++irampnd) {
+            _duration += _rampnds[irampnd].GetDuration();
+            _switchpointsList.push_back(_duration);
+        }
+        return;
+    }
+
+    int index0, index1;
+    dReal rem0, rem1;
+    FindRampNDIndex(t0, index0, rem0);
+    FindRampNDIndex(t1, index1, rem1);
+
+    /*
+      Idea: First resize _rampnds to prepare for inserting rampndVect into it. Imaging dividing
+      _rampnds into three segments where the middle part is to be replaced by rampndVect. Next move
+      the right segment towards the end of _rampnds. Finally, we replace the middle segment with
+      rampndVect.
+     */
+
+    // Carefully resize the container
+    size_t prevSize = _rampnds.size();
+    size_t leftPartLength = rem0 == 0 ? index0 : (index0 + 1);
+    size_t rightPartLength = t1 == _duration ? 0 : (prevSize - index1);
+    size_t newSize = leftPartLength + rampndVect.size() + rightPartLength;
+
+    if( prevSize < newSize ) {
+        // The new size is greater than the current value so we can resize the container right away.
+        _rampnds.resize(newSize);
+        for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
+            _rampnds[newSize - 1 - irampnd] = _rampnds[prevSize - 1 - irampnd];
+        }
+
+        _rampnds[index0].TrimBack(rem0);
+        if( rightPartLength > 0 ) {
+            _rampnds[index1].TrimFront(rem1);
+        }
+        std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
+        return;
+    }
+    else if( prevSize == newSize ) {
+        // No resizing required.
+        _rampnds[index0].TrimBack(rem0);
+        if( rightPartLength > 0 ) {
+            _rampnds[index1].TrimFront(rem1);
+        }
+        std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
+        return;
+    }
+    else {
+        // The new size is less than the current value so we need to move RampNDs first before
+        // resizing.
+        for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
+            _rampnds[newSize - rightPartLength + irampnd] = _rampnds[prevSize - rightPartLength + irampnd];
+        }
+        _rampnds.resize(newSize);
+
+        _rampnds[index0].TrimBack(rem0);
+        if( rightPartLength > 0 ) {
+            _rampnds[index1].TrimFront(rem1);
+        }
+        std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
+        return;
+    }    
+}
+
+void ParabolicPath::Serialize(std::ostream& O) const
+{
+
+}
 
 } // end namespace RampOptimizerInternal
 
