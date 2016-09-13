@@ -28,7 +28,7 @@
  *
  ***************************************************************************/
 
-#include "newparaboliccommon.h"
+#include "paraboliccommon.h"
 
 namespace OpenRAVE {
 

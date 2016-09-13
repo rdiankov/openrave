@@ -37,7 +37,7 @@ inline int IsInf(dReal x)
 
 inline bool IsFinite(dReal x)
 {
-    return OpenRAVE::RaveFabs(x) < Inf;
+    return OpenRAVE::RaveFabs(x) < g_fRampInf;
 }
 
 inline dReal Sqr(dReal x)
@@ -90,36 +90,54 @@ inline void Swap(dReal& x,dReal& y)
     dReal temp = x; x = y; y = temp;
 }
 
-inline void LinearCombination(dReal a, const std::vector<dReal>& v1, dReal b, const std::vector<dReal>& v2, std::vector<dReal>& v3)
+inline void LinearCombination(dReal a, const std::vector<dReal>& v1, dReal b, const std::vector<dReal>& v2, std::vector<dReal>& res)
 {
     // Users need to make sure all input vector dimensions are compatible
-    if (v3.size() != v1.size()) {
-        v3.resize(v1.size());
+    if (res.size() != v1.size()) {
+        res.resize(v1.size());
     }
     for (size_t i = 0; i < v1.size(); ++i) {
-        v3[i] = a*v1[i] + b*v2[i];
+        res[i] = a*v1[i] + b*v2[i];
     }
 }
 
+/// \brief Compute res = v1 + v2
 inline void AddVector(const std::vector<dReal>& v1, const std::vector<dReal>& v2, std::vector<dReal>& res)
 {
     // Users need to make sure all input vector dimensions are compatible
-    if (v3.size() != v1.size()) {
-        v3.resize(v1.size());
+    if (res.size() != v1.size()) {
+        res.resize(v1.size());
     }
     for (size_t i = 0; i < v1.size(); ++i) {
         res[i] = v1[i] + v2[i];
     }
 }
 
+/// \brief Compute v1 += v2
+inline void AddVector2(std::vector<dReal>& v1, const std::vector<dReal>& v2)
+{
+    for (size_t i = 0; i < v1.size(); ++i) {
+        v1[i] += v2[i];
+    }
+}
+
+/// \brief Compute res = v1 - v2
 inline void SubtractVector(const std::vector<dReal>& v1, const std::vector<dReal>& v2, std::vector<dReal>& res)
 {
     // Users need to make sure all input vector dimensions are compatible
-    if (v3.size() != v1.size()) {
-        v3.resize(v1.size());
+    if (res.size() != v1.size()) {
+        res.resize(v1.size());
     }
     for (size_t i = 0; i < v1.size(); ++i) {
         res[i] = v1[i] - v2[i];
+    }
+}
+
+/// \brief Compute v1 -= v2
+inline void SubtractVector2(std::vector<dReal>& v1, const std::vector<dReal>& v2)
+{
+    for (size_t i = 0; i < v1.size(); ++i) {
+        v1[i] -= v2[i];
     }
 }
 
