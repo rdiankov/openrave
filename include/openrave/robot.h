@@ -462,7 +462,7 @@ public:
         std::string& _linkname RAVE_DEPRECATED;
 
         Transform transform; ///< relative transform of the sensor with respect to the attached link
-        Transform _trelative RAVE_DEPRECATED;
+        Transform& _trelative RAVE_DEPRECATED;
         
         std::string type; ///< name of the sensor interface to create, in other words the sensor type
         std::string& _sensorname RAVE_DEPRECATED;
