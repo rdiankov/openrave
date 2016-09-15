@@ -437,6 +437,17 @@ void ParabolicCurve::Initialize(std::vector<Ramp>& rampsIn)
     return;
 }
 
+void ParabolicCurve::Initialize(Ramp& rampIn)
+{
+    _ramps.resize(1);
+    _ramps[0] = rampIn;
+    _switchpointsList.resize(2);
+    _switchpointsList[0] = 0;
+    _switchpointsList[1] = rampIn.duration;
+    _d = rampIn.d;
+    _duration = rampIn.duration;
+}
+
 void ParabolicCurve::Reset()
 {
     _ramps.clear();
@@ -778,6 +789,14 @@ void RampND::EvalAcc(std::vector<dReal>& aVect) const
     return;
 }
 
+void RampND::Initialize(size_t ndof)
+{
+    constraintChecked = false;
+    _ndof = ndof;
+    _data.resize(6*_ndof + 1);
+    std::fill(_data.begin(), _data.end(), 0);
+}
+
 void RampND::SetConstant(const std::vector<dReal>& xVect, const dReal t)
 {
     OPENRAVE_ASSERT_OP(xVect.size(), ==, _ndof);
@@ -1018,10 +1037,10 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
     FindRampNDIndex(t1, index1, rem1);
 
     /*
-      Idea: First resize _rampnds to prepare for inserting rampndVect into it. Imaging dividing
-      _rampnds into three segments where the middle part is to be replaced by rampndVect. Next move
-      the right segment towards the end of _rampnds. Finally, we replace the middle segment with
-      rampndVect.
+       Idea: First resize _rampnds to prepare for inserting rampndVect into it. Imaging dividing
+       _rampnds into three segments where the middle part is to be replaced by rampndVect. Next move
+       the right segment towards the end of _rampnds. Finally, we replace the middle segment with
+       rampndVect.
      */
 
     // Carefully resize the container
@@ -1067,7 +1086,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         }
         std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
         return;
-    }    
+    }
 }
 
 void ParabolicPath::Serialize(std::ostream& O) const

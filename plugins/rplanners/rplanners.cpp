@@ -28,17 +28,22 @@ PlannerBasePtr CreateConstraintParabolicSmoother(EnvironmentBasePtr penv, std::i
 
 namespace rplanners {
 PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+#ifdef NEWPARABOLICSMOOTHER
 PlannerBasePtr CreateParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput);
+#endif
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+#ifdef NEWPARABOLICSMOOTHER
 PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
+#endif
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
 }
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
+#ifdef NEWPARABOLICSMOOTHER
     bool bUseNewParabolicSmoother = true;
-    
+#endif
     switch(type) {
     case PT_Planner:
         if( interfacename == "rastar" || interfacename == "ra*" ) {
@@ -67,16 +72,21 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return rplanners::CreateLinearTrajectoryRetimer(penv,sinput);
         }
         else if( interfacename == "parabolictrajectoryretimer" ) {
+#ifdef NEWPARABOLICSMOOTHER
             if (!bUseNewParabolicSmoother) {
                 return rplanners::CreateParabolicTrajectoryRetimer(penv,sinput);
             }
             else {
                 return rplanners::CreateParabolicTrajectoryRetimer2(penv,sinput);
             }
+#endif
+            return rplanners::CreateParabolicTrajectoryRetimer(penv,sinput);
         }
+#ifdef NEWPARABOLICSMOOTHER
         else if( interfacename == "parabolictrajectoryretimer2" ) {
             return rplanners::CreateParabolicTrajectoryRetimer2(penv,sinput);
         }
+#endif
         else if( interfacename == "cubictrajectoryretimer" ) {
             return rplanners::CreateCubicTrajectoryRetimer(penv,sinput);
         }
@@ -87,16 +97,21 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return CreateLinearSmoother(penv,sinput);
         }
         else if( interfacename == "parabolicsmoother" ) {
+#ifdef NEWPARABOLICSMOOTHER
             if (!bUseNewParabolicSmoother) {
                 return rplanners::CreateParabolicSmoother(penv,sinput);
             }
             else {
                 return rplanners::CreateParabolicSmoother2(penv,sinput);
             }
+#endif
+            return rplanners::CreateParabolicSmoother(penv,sinput);
         }
+#ifdef NEWPARABOLICSMOOTHER
         else if( interfacename == "parabolicsmoother2" ) {
             return rplanners::CreateParabolicSmoother2(penv,sinput);
         }
+#endif
         else if( interfacename == "constraintparabolicsmoother" ) {
             return CreateConstraintParabolicSmoother(penv,sinput);
         }
@@ -117,12 +132,16 @@ void GetPluginAttributesValidated(PLUGININFO& info)
     info.interfacenames[PT_Planner].push_back("shortcut_linear");
     info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
+#ifdef NEWPARABOLICSMOOTHER
     info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer2");
+#endif
     info.interfacenames[PT_Planner].push_back("CubicTrajectoryRetimer");
     info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
     info.interfacenames[PT_Planner].push_back("LinearSmoother");
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
+#ifdef NEWPARABOLICSMOOTHER
     info.interfacenames[PT_Planner].push_back("ParabolicSmoother2");
+#endif
     info.interfacenames[PT_Planner].push_back("ConstraintParabolicSmoother");
 }
 

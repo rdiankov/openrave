@@ -113,6 +113,10 @@ public:
     /// because _ramps will be swapped with rampsIn.
     void Initialize(std::vector<Ramp>& rampsIn);
 
+    void Initialize(Ramp& rampIn);
+
+    void PrepareRampsVector(size_t nramps);
+
     /// \brief Return true if no ramp is stored in this curve. Return true otherwise.
     bool IsEmpty() const
     {
@@ -155,9 +159,19 @@ public:
         return _ramps;
     }
 
+    inline const Ramp& GetRamp(size_t index) const
+    {
+        return _ramps[index];
+    }
+
     inline const std::vector<dReal>& GetSwitchPointsList() const
     {
         return _switchpointsList;
+    }
+
+    inline const dReal& GetSwitchPoint(size_t index) const
+    {
+        return _switchpointsList[index];
     }
 
     /// \brief Get the total duration of the curve
@@ -209,8 +223,21 @@ private:
 
 class RampND {
 public:
-    RampND();
+    RampND() {
+        constraintChecked = false;
+    }
     RampND(size_t ndof);
+
+    /**
+       \brief Initialize RampND to hold the given values. There can be X different initializations
+       as follows:
+
+       1. All values (x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, t) are given.
+
+       2. Only some values are given: x0Vect, x1Vect, v0Vect, v1Vect, t are given. The acceleration
+          will be calculated to minimize the sum of square of errors between computed x1, v1 and the
+          given x1, v1.
+     */
     RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, const dReal t);
     ~RampND() {
     }
@@ -226,7 +253,7 @@ public:
 
     /// \brief Initialize rampnd for storing ndof segment.
     void Initialize(size_t ndof);
-
+    
     /// \brief Initialize rampnd from boundary values.
     void Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, const dReal t);
 
@@ -250,7 +277,7 @@ public:
     {
         return _ndof;
     }
-    
+
     /// Before calling Get functions, users need to make sure that _data has been
     /// initialized beforehand.
     inline const dReal& GetX0At(int idof) const
@@ -322,6 +349,124 @@ public:
     {
         res.resize(_ndof);
         std::copy(_data.begin() + offset, _data.begin() + offset + _ndof, res.begin());
+        return;
+    }
+
+    /// Value setting
+    inline void SetDuration(dReal t)
+    {
+        OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+        _data.back() = t;
+        return;
+    }
+
+    // Set values by giving a vector
+    inline void SetX0Vect(const std::vector<dReal>& xVect)
+    {
+        return _SetData(xVect, 0);
+    }
+
+    inline void SetX1Vect(const std::vector<dReal>& xVect)
+    {
+        return _SetData(xVect, _ndof);
+    }
+
+    inline void SetV0Vect(const std::vector<dReal>& vVect)
+    {
+        return _SetData(vVect, 2*_ndof);
+    }
+
+    inline void SetV1Vect(const std::vector<dReal>& vVect)
+    {
+        return _SetData(vVect, 3*_ndof);
+    }
+
+    inline void SetAVect(const std::vector<dReal>& aVect)
+    {
+        return _SetData(aVect, 4*_ndof);
+    }
+
+    inline void SetDVect(const std::vector<dReal>& dVect)
+    {
+        return _SetData(dVect, 5*_ndof);
+    }
+
+    inline void _SetData(const std::vector<dReal>& valueVect, int offset)
+    {
+        OPENRAVE_ASSERT_OP(valueVect.size(), ==, _ndof);
+        std::copy(valueVect.begin(), valueVect.end(), _data.begin() + offset);
+        return;
+    }
+
+    // Get/Set value by giving a pointer to the first element in the vector. Users need to make sure
+    // that the given iterator is pointing to a vector of dimension consistent with _ndof
+
+    // These functions may not be that useful. Will see later if we should remove them.
+    inline void GetX0Vect(std::vector<dReal>::const_iterator& it) const
+    {
+        it = _data.begin();
+    }
+
+    inline void GetX1Vect(std::vector<dReal>::const_iterator& it) const
+    {
+        it = _data.begin() + _ndof;
+    }
+
+    inline void GetV0Vect(std::vector<dReal>::const_iterator& it) const
+    {
+        it = _data.begin() + 2*_ndof;
+    }
+
+    inline void GetV1Vect(std::vector<dReal>::const_iterator& it) const
+    {
+        it = _data.begin() + 3*_ndof;
+    }
+
+    inline void GetAVect(std::vector<dReal>::const_iterator& it) const
+    {
+        it = _data.begin() + 4*_ndof;
+    }
+
+    inline void GetDVect(std::vector<dReal>::const_iterator& it) const
+    {
+        it = _data.begin() + 5*_ndof;
+    }
+    
+    inline void SetX0Vect(std::vector<dReal>::const_iterator it)
+    {
+        return _SetData(it, 0);
+    }
+
+    inline void SetX1Vect(std::vector<dReal>::const_iterator it)
+    {
+        return _SetData(it, _ndof);
+    }
+
+    inline void SetV0Vect(std::vector<dReal>::const_iterator it)
+    {
+        return _SetData(it, 2*_ndof);
+    }
+
+    inline void SetV1Vect(std::vector<dReal>::const_iterator it)
+    {
+        return _SetData(it, 3*_ndof);
+    }
+
+    inline void SetAVect(std::vector<dReal>::const_iterator it)
+    {
+        return _SetData(it, 4*_ndof);
+    }
+
+    inline void SetDVect(std::vector<dReal>::const_iterator it)
+    {
+        return _SetData(it, 5*_ndof);
+    }
+
+    inline void _SetData(std::vector<dReal>::const_iterator it, int offset)
+    {
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            *(_data.begin() + offset + idof) = *(it + idof);
+        }
         return;
     }
 

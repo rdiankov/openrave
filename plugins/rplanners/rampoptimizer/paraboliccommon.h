@@ -121,6 +121,14 @@ inline void AddVector2(std::vector<dReal>& v1, const std::vector<dReal>& v2)
     }
 }
 
+/// \brief Compute v1 += a*v2
+inline void AddVector3(std::vector<dReal>& v1, dReal a, const std::vector<dReal>& v2)
+{
+    for (size_t i = 0; i < v1.size(); ++i) {
+        v1[i] += a*v2[i];
+    }
+}
+    
 /// \brief Compute res = v1 - v2
 inline void SubtractVector(const std::vector<dReal>& v1, const std::vector<dReal>& v2, std::vector<dReal>& res)
 {
@@ -138,6 +146,22 @@ inline void SubtractVector2(std::vector<dReal>& v1, const std::vector<dReal>& v2
 {
     for (size_t i = 0; i < v1.size(); ++i) {
         v1[i] -= v2[i];
+    }
+}
+
+/// \brief Compute v1 -= a*v2
+inline void SubTractVector3(std::vector<dReal>& v1, dReal a, const std::vector<dReal>& v2)
+{
+    for (size_t i = 0; i < v1.size(); ++i) {
+        v1[i] -= a*v2[i];
+    }
+}
+
+/// \brief void Multiply the vector by the given constant
+inline void ScaleVector(std::vector<dReal>& v, dReal scale)
+{
+    for (size_t i = 0; i < v.size(); ++i) {
+        v[i] *= scale;
     }
 }
 
