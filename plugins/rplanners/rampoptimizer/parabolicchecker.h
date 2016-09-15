@@ -26,10 +26,9 @@ enum ParabolicCheckReturn {
     PCR_XBoundViolated = 2,
     PCR_VBoundViolated = 3,
     PCR_ABoundViolated = 4,
-    PCR_VDiscontinuous = 5,
-    PCR_XDiscrepancy = 6,
-    PCR_VDiscrepancy = 7,
-    PCR_DurationDiscrepancy = 8,
+    PCR_XDiscrepancy = 5,
+    PCR_VDiscrepancy = 6,
+    PCR_DurationDiscrepancy = 7,
 };
 
 /// \brief Calculate the maximum and minimum displacement occuring betweeb time 0 and t given (x0, x1, v0, v1, a)
@@ -43,7 +42,7 @@ ParabolicCheckReturn CheckSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal 
 ParabolicCheckReturn CheckRamp(const Ramp& ramp, dReal xmin, dReal xmax, dReal vm, dReal am);
 
 /// \brief Call CheckRamp to check each ramp and check velocity continuity between consecutive ramps
-ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dReal xmax, dReal vm, dReal am);
+ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dReal xmax, dReal vm, dReal am, dReal x0, dReal x1, dReal v0, dReal v1);
 
 /// \brief Check a RampND
 ParabolicCheckReturn CheckRampND(const RampND& rampnd, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect);

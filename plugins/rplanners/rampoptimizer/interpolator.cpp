@@ -12,9 +12,11 @@
 // You should have received a copy of the GNU Lesser General Public License along with this program.
 // If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
-#include "interpolator.h"
 #include <math.h>
 #include <openrave/mathextra.h>
+
+#include "interpolator.h"
+#include "parabolicchecker.h"
 
 namespace OpenRAVE {
 
@@ -46,7 +48,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
 
     // Cache
     ParabolicCurve& curve = _cacheCurve;
-    std::vector<dReal>& vVect = _cacheV0Vect, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& v0Vect = _cacheV0Vect, v1Vect = _cacheV0Vect, aVect = _cacheAVect, dVect = _cacheDVect;
     
     SubtractVector(x1Vect, x0Vect, dVect); // total displacement
 
@@ -95,10 +97,10 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
 
         // The final velocity of the first RampND can be computed by scaling the total displacement
         // by the velocity of the sd-profile.
-        SubtractVector(x1Vect, x0Vect, vVect);
-        ScaleVector(vVect, curve.GetRamp(1).v0); // scaling        
-        rampndVectOut[0].SetV1Vect(vVect);
-        rampndVectOut[1].SetV0Vect(vVect);
+        SubtractVector(x1Vect, x0Vect, v0Vect);
+        ScaleVector(v0Vect, curve.GetRamp(1).v0); // scaling        
+        rampndVectOut[0].SetV1Vect(v0Vect);
+        rampndVectOut[1].SetV0Vect(v0Vect);
 
         // The same goes for acceleration.
         SubtractVector(x1Vect, x0Vect, aVect);
@@ -142,12 +144,12 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         rampndVectOut[2].SetX0Vect(dVect);
         
         // Compute the velocity at the end of the first RampND
-        SubtractVector(x1Vect, x0Vect, vVect); // displacement
-        ScaleVector(vVect, curve.GetRamp(1).v0);
-        rampndVectOut[0].SetV1Vect(vVect);
-        rampndVectOut[1].SetV0Vect(vVect);
-        rampndVectOut[1].SetV1Vect(vVect);
-        rampndVectOut[2].SetV0Vect(vVect);
+        SubtractVector(x1Vect, x0Vect, v0Vect); // displacement
+        ScaleVector(v0Vect, curve.GetRamp(1).v0);
+        rampndVectOut[0].SetV1Vect(v0Vect);
+        rampndVectOut[1].SetV0Vect(v0Vect);
+        rampndVectOut[1].SetV1Vect(v0Vect);
+        rampndVectOut[2].SetV0Vect(v0Vect);
 
         // Compute the acceleration of the first RampND
         SubtractVector(x1Vect, x0Vect, aVect); // displacement
@@ -158,7 +160,12 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     }
 
     {// Check RampNDs before returning
-
+        std::fill(v0Vect.begin(), v0Vect.end(), 0);
+        std::fill(v1Vect.begin(), v1Vect.end(), 0);
+        ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, std::vector<dReal>(), std::vector<dReal>(), vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+        if( ret != PCR_Normal ) {
+            return false;
+        }
     }
     return true;
 }
@@ -211,7 +218,10 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut);
 
     {// Check RampNDs before returning
-
+        ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+        if( ret != PCR_Normal ) {
+            return false;
+        }
     }
     return true;
 }
@@ -273,7 +283,10 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut);
     {// Check RampNDs before returning
-
+        ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+        if( ret != PCR_Normal ) {
+            return false;
+        }
     }
     return true;
 }
@@ -301,7 +314,10 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
     }
 
     {// Check ParabolicCurve before returning
-
+        ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+        if( ret != PCR_Normal ) {
+            return false;
+        }
     }
     return true;
 }
@@ -358,7 +374,10 @@ bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal 
         _cacheRamp.Initialize(v0, a, dv/a, x0);
         curveOut.Initialize(_cacheRamp);
         {// Check curveOut before returning
-
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, g_fRampInf, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                return false;
+            }
         }
         return true;
     }
@@ -381,7 +400,7 @@ bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal 
     _cacheRampsVect[1].Initialize(_cacheRampsVect[0].v1, -a0, (vp - v1)*a0inv);
     curveOut.Initialize(_cacheRampsVect);
     {// Check curveOut before returning
-
+        // No need because we will check it outside
     }
     return true;
 }
@@ -412,7 +431,7 @@ bool ParabolicInterpolator::_ImposeVelocityLimit(ParabolicCurve& curve, dReal vm
 
     curve.Initialize(_cacheRampsVect);
     {// Check curve before returning
-
+        // No need because we will check it outside
     }
     return true;
 }
@@ -529,7 +548,11 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
 
     curve.Initialize(_cacheRampsVect);
     {// Check curve before returning
-
+        ParabolicCheckReturn ret = CheckRamps(curve.GetRamps(), xmin, xmax, vm, am, x0, x1, v0, v1);
+        if( ret != PCR_Normal ) {
+            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%duration%xmin%xmax%vm%am);
+            return false;
+        }
     }
     return true;
 }
@@ -611,7 +634,11 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
             ramps[0].Initialize(v0, 0, 0, x0);
             curveOut.Initialize(ramps);
             {// Check curveOut before returing
-
+                ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+                if( ret != PCR_Normal ) {
+                    RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                    return false;
+                }
             }
             return true;
         }
@@ -696,7 +723,11 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         ramps[0] = ramp0;
         curveOut.Initialize(ramps);
         {// Check curveOut before returning
-
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                return false;
+            }
         }
         return true;
     }
@@ -892,7 +923,11 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         ramps[0].Initialize(v0, A, duration, x0);
         curveOut.Initialize(ramps);
         {// Check curveOut before returning
-
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                return false;
+            }
         }
         return true;
     }
@@ -904,7 +939,11 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         ramps[0].Initialize(v0, A, duration, x0);
         curveOut.Initialize(ramps);
         {// Check curveOut before returning
-
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                return false;
+            }
         }
         return true;
     }
@@ -929,7 +968,11 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         ramps[1].Initialize(vp, a1, t1);
         curveOut.Initialize(ramps);
         {// Check curveOut before returning
-
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                return false;
+            }
         }
         return true;
     }
@@ -1181,7 +1224,11 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
 
         {// Check curveOut before returning
-
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+                return false;
+            }
         }
         return true;
     }

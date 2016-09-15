@@ -51,7 +51,7 @@ void _GetPeaks(dReal x0, dReal x1, dReal v0, dReal v1, dReal a, dReal t, dReal& 
     dReal xDeflection = x0 + tDeflection*(v0 + 0.5*a*tDeflection);
     bmin = Min(curMin, xDeflection);
     bmax = Max(curMax, xDeflection);
-    return;    
+    return;
 }
 
 ParabolicCheckReturn CheckSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal a, dReal d, dReal t, dReal xmin, dReal xmax, dReal vm, dReal am)
@@ -97,17 +97,31 @@ ParabolicCheckReturn CheckRamp(const Ramp& ramp, dReal xmin, dReal xmax, dReal v
     return CheckSegment(ramp.x0, ramp.x1, ramp.v0, ramp.v1, ramp.a, ramp.d, ramp.duration, xmin, xmax, vm, am);
 }
 
-ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dReal xmax, dReal vm, dReal am)
+ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dReal xmax, dReal vm, dReal am, dReal x0, dReal x1, dReal v0, dReal v1)
 {
+    // Check the first ramp
+    if( !FuzzyEquals(ramps[0].x0, x0, g_fRampEpsilon) ) {
+        RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[0].x0 = %.15e; x0 = %.15e; diff = %.15e", ramps[0].x0%x0%(ramps[0].x0 - x0));
+        return PCR_XDiscrepancy;
+    }
+    if( !FuzzyEquals(ramps[0].v0, x0, g_fRampEpsilon) ) {
+        RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: ramps[0].v0 = %.15e; v0 = %.15e; diff = %.15e", ramps[0].v0%v0%(ramps[0].v0 - v0));
+        return PCR_VDiscrepancy;
+    }
     ParabolicCheckReturn ret = CheckRamp(ramps[0], xmin, xmax, vm, am);
     if( ret != PCR_Normal ) {
         RAVELOG_WARN("ramps[0] does not pass CheckRamp");
         return ret;
     }
+    
     for (size_t iramp = 1; iramp < ramps.size(); ++iramp) {
+        if( !FuzzyEquals(ramps[iramp - 1].x1, ramps[iramp].x0, g_fRampEpsilon) ) {
+            RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[%d].x1 != ramps[%d].x0; %.15e != %.15e; diff = %.15e", (iramp - 1)%iramp%ramps[iramp - 1].x1%ramps[iramp].x0%(ramps[iramp - 1].x1 - ramps[iramp].x0));
+            return PCR_XDiscrepancy;
+        }
         if( !FuzzyEquals(ramps[iramp - 1].v1, ramps[iramp].v0, g_fRampEpsilon) ) {
-            RAVELOG_WARN_FORMAT("PCR_VDiscontinuous: ramps[%d].v1 != ramps[%d].v0; %.15e != %.15e; diff = %.15e", (iramp - 1)%iramp%ramps[iramp - 1].v1%ramps[iramp].v0%(ramps[iramp - 1].v1 - ramps[iramp].v0));
-            return PCR_VDiscontinuous;
+            RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: ramps[%d].v1 != ramps[%d].v0; %.15e != %.15e; diff = %.15e", (iramp - 1)%iramp%ramps[iramp - 1].v1%ramps[iramp].v0%(ramps[iramp - 1].v1 - ramps[iramp].v0));
+            return PCR_VDiscrepancy;
         }
         ret = CheckRamp(ramps[iramp], xmin, xmax, vm, am);
         if( ret != PCR_Normal ) {
@@ -115,16 +129,57 @@ ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dRea
             return ret;
         }
     }
+
+    // Check the last ramp
+    if( !FuzzyEquals(ramps[ramps.size() - 1].x1, x1, g_fRampEpsilon) ) {
+        RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[%d].x1 = %.15e; x1 = %.15e; diff = %.15e", (ramps.size() - 1)%ramps[ramps.size() - 1].x0%x0%(ramps[ramps.size() - 1].x0 - x0));
+        return PCR_XDiscrepancy;
+    }
+    if( !FuzzyEquals(ramps[ramps.size() - 1].v0, x0, g_fRampEpsilon) ) {
+        RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: ramps[%d].v1 = %.15e; v1 = %.15e; diff = %.15e", (ramps.size() - 1)%ramps[ramps.size() - 1].v0%v0%(ramps[ramps.size() - 1].v0 - v0));
+        return PCR_VDiscrepancy;
+    }
     return PCR_Normal;
 }
 
 ParabolicCheckReturn CheckRampND(const RampND& rampnd, const std::vector<dReal>& xminVect, const std::vector<dReal>& xmaxVect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect)
 {
-    for (size_t idof = 0; idof < rampnd.GetDOF(); ++idof) {
-        ParabolicCheckReturn ret = CheckSegment(rampnd.GetX0At(idof), rampnd.GetX1At(idof), rampnd.GetV0At(idof), rampnd.GetV1At(idof), rampnd.GetAAt(idof), rampnd.GetDAt(idof), rampnd.GetDuration(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof]);
-        if( ret != PCR_Normal ) {
-            RAVELOG_WARN_FORMAT("rampnd: idof = %d does not pass CheckSegment", idof);
-            return ret;
+    ParabolicCheckReturn ret;
+    // Sometimes we want to check without joint limits
+    if( xminVect.size() == 0 && xmaxVect.size() == 0 ) {
+        for (size_t idof = 0; idof < rampnd.GetDOF(); ++idof) {
+            ret = CheckSegment(rampnd.GetX0At(idof), rampnd.GetX1At(idof), rampnd.GetV0At(idof), rampnd.GetV1At(idof), rampnd.GetAAt(idof), rampnd.GetDAt(idof), rampnd.GetDuration(), -g_fRampInf, g_fRampInf, vmVect[idof], amVect[idof]);
+            if( ret != PCR_Normal ) {
+                RAVELOG_WARN_FORMAT("rampnd: idof = %d does not pass CheckSegment", idof);
+                return ret;
+            }
+        }
+    }
+    else if( xminVect.size() == 0 ) {
+        for (size_t idof = 0; idof < rampnd.GetDOF(); ++idof) {
+            ret = CheckSegment(rampnd.GetX0At(idof), rampnd.GetX1At(idof), rampnd.GetV0At(idof), rampnd.GetV1At(idof), rampnd.GetAAt(idof), rampnd.GetDAt(idof), rampnd.GetDuration(), -g_fRampInf, xmaxVect[idof], vmVect[idof], amVect[idof]);
+            if( ret != PCR_Normal ) {
+                RAVELOG_WARN_FORMAT("rampnd: idof = %d does not pass CheckSegment", idof);
+                return ret;
+            }
+        }
+    }
+    else if( xmaxVect.size() == 0 ) {
+        for (size_t idof = 0; idof < rampnd.GetDOF(); ++idof) {
+            ret = CheckSegment(rampnd.GetX0At(idof), rampnd.GetX1At(idof), rampnd.GetV0At(idof), rampnd.GetV1At(idof), rampnd.GetAAt(idof), rampnd.GetDAt(idof), rampnd.GetDuration(), xminVect[idof], g_fRampInf, vmVect[idof], amVect[idof]);
+            if( ret != PCR_Normal ) {
+                RAVELOG_WARN_FORMAT("rampnd: idof = %d does not pass CheckSegment", idof);
+                return ret;
+            }
+        }
+    }
+    else {
+        for (size_t idof = 0; idof < rampnd.GetDOF(); ++idof) {
+            ret = CheckSegment(rampnd.GetX0At(idof), rampnd.GetX1At(idof), rampnd.GetV0At(idof), rampnd.GetV1At(idof), rampnd.GetAAt(idof), rampnd.GetDAt(idof), rampnd.GetDuration(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof]);
+            if( ret != PCR_Normal ) {
+                RAVELOG_WARN_FORMAT("rampnd: idof = %d does not pass CheckSegment", idof);
+                return ret;
+            }
         }
     }
     return PCR_Normal;
@@ -152,7 +207,7 @@ ParabolicCheckReturn CheckRampNDs(const std::vector<RampND>& rampnds, const std:
     }
 
     // Check from the second RampND to the second from last RampND
-    for (size_t irampnd = 1; irampnd < nrampnds - 1; ++irampnd) {
+    for (size_t irampnd = 1; irampnd < nrampnds; ++irampnd) {
         for (size_t idof = 0; idof < ndof; ++idof) {
             // Check initial values
             if( !FuzzyEquals(rampnds[irampnd - 1].GetX1At(idof), rampnds[irampnd].GetX0At(idof), g_fRampEpsilon) ) {
@@ -172,16 +227,6 @@ ParabolicCheckReturn CheckRampNDs(const std::vector<RampND>& rampnds, const std:
 
     // Check the last RampND
     for (size_t idof = 0; idof < ndof; ++idof) {
-        // Check initial values
-        if( !FuzzyEquals(rampnds[nrampnds - 2].GetX1At(idof), rampnds[nrampnds - 1].GetX0At(idof), g_fRampEpsilon) ) {
-            RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: rampnds[%d].GetX1At(%d) = %.15e; rampnds[%d].GetX0At(%d) = %.15e; diff = %.15e", (nrampnds - 2)%idof%rampnds[nrampnds - 2].GetX1At(idof)%(nrampnds - 1)%idof%rampnds[nrampnds - 1].GetX0At(idof)%(rampnds[nrampnds - 2].GetX1At(idof) - rampnds[nrampnds - 1].GetX0At(idof)));
-            return PCR_XDiscrepancy;
-        }
-        if( !FuzzyEquals(rampnds[nrampnds - 2].GetV1At(idof), rampnds[nrampnds - 1].GetV0At(idof), g_fRampEpsilon) ) {
-            RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: rampnds[%d].GetV1At(%d) = %.15e; rampnds[%d].GetV0At(idof) = %.15e; diff = %.15e", (nrampnds - 2)%idof%rampnds[nrampnds - 2].GetV1At(idof)%(nrampnds - 1)%idof%rampnds[nrampnds - 1].GetV0At(idof)%(rampnds[nrampnds - 2].GetV1At(idof) - rampnds[nrampnds - 1].GetV0At(idof)));
-            return PCR_VDiscrepancy;
-        }
-
         // Check final values
         if( !FuzzyEquals(rampnds[nrampnds - 1].GetX1At(idof), x1Vect[idof], g_fRampEpsilon) ) {
             RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: rampnds[%d].GetX1At(%d) = %.15e; x1Vect[%d] = %.15e; diff = %.15e", (nrampnds - 1)%idof%rampnds[nrampnds - 1].GetX1At(idof)%idof%x1Vect[idof]%(rampnds[nrampnds - 1].GetX1At(idof) - x1Vect[idof]));
