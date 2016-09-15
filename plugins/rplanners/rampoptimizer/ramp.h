@@ -273,7 +273,7 @@ public:
     /// \brief Cut the rampnd into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
-    inline const size_t& GetDOF() const
+    inline size_t GetDOF() const
     {
         return _ndof;
     }
