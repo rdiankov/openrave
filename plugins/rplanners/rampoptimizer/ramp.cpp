@@ -797,6 +797,65 @@ void RampND::Initialize(size_t ndof)
     std::fill(_data.begin(), _data.end(), 0);
 }
 
+void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, dReal t)
+{
+    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
+    if( t < 0 ) {
+        t = 0;
+    }
+
+    _ndof = x0Vect.size();
+    OPENRAVE_ASSERT_OP(x1Vect.size(), ==, _ndof);
+    OPENRAVE_ASSERT_OP(v0Vect.size(), ==, _ndof);
+    OPENRAVE_ASSERT_OP(v1Vect.size(), ==, _ndof);
+    // Acceleration and displacement vectors are optional
+    if( aVect.size() > 0 ) {
+        OPENRAVE_ASSERT_OP(aVect.size(), ==, _ndof);
+    }
+    if( dVect.size() > 0 ) {
+        OPENRAVE_ASSERT_OP(dVect.size(), ==, _ndof);
+    }
+
+    _data.resize(6*_ndof + 1);
+
+    std::copy(x0Vect.begin(), x0Vect.end(), _data.begin());
+    std::copy(x1Vect.begin(), x1Vect.end(), _data.begin() + _ndof);
+    std::copy(v0Vect.begin(), v0Vect.end(), _data.begin() + 2*_ndof);
+    std::copy(v1Vect.begin(), v1Vect.end(), _data.begin() + 3*_ndof);
+
+    if( aVect.size() == 0 ) {
+        if( t == 0 ) {
+            std::fill(_data.begin() + 4*_ndof, _data.begin() + 5*_ndof, 0);
+        }
+        else {
+            // Calculating accelerations using the same procedure as in ParabolicCurve::SetSegment.
+            dReal tSqr = t*t;
+            for (size_t idof = 0; idof < _ndof; ++idof) {
+                _data[4*_ndof + idof] = -(v0Vect[idof]*tSqr + t*(x0Vect[idof] - x1Vect[idof]) + 2*(v0Vect[idof] - v1Vect[idof]))/(t*(0.5*tSqr + 2));
+            }
+        }
+    }
+    else {
+        std::copy(aVect.begin(), aVect.end(), _data.begin() + 4*_ndof);
+    }
+
+    if( dVect.size() == 0 ) {
+        if( t == 0 ) {
+            std::fill(_data.begin() + 5*_ndof, _data.begin() + 6*_ndof, 0);
+        }
+        else {
+            for (size_t idof = 0; idof < _ndof; ++idof) {
+                _data[5*_ndof + idof] = x1Vect[idof] - x0Vect[idof];
+            }
+        }
+    }
+    else {
+        std::copy(dVect.begin(), dVect.end(), _data.begin() + 5*_ndof);
+    }
+
+    constraintChecked = false;
+}
+
 void RampND::SetConstant(const std::vector<dReal>& xVect, const dReal t)
 {
     OPENRAVE_ASSERT_OP(xVect.size(), ==, _ndof);

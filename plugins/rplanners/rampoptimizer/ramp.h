@@ -360,6 +360,36 @@ public:
         return;
     }
 
+    inline dReal& SetX0At(int idof)
+    {
+        return _data[idof];
+    }
+
+    inline dReal& SetX1At(int idof)
+    {
+        return _data[_ndof + idof];
+    }
+
+    inline dReal& SetV0At(int idof)
+    {
+        return _data[2*_ndof + idof];
+    }
+
+    inline dReal& SetV1At(int idof)
+    {
+        return _data[3*_ndof + idof];
+    }
+
+    inline dReal& SetAAt(int idof)
+    {
+        return _data[4*_ndof + idof];
+    }
+
+    inline dReal& SetDAt(int idof)
+    {
+        return _data[5*_ndof + idof];
+    }
+    
     // Set values by giving a vector
     inline void SetX0Vect(const std::vector<dReal>& xVect)
     {
@@ -509,12 +539,25 @@ class ParabolicPath {
     /// rampnd.
     void ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>& rampndIn);
 
+    inline void Reset() {
+        _duration = 0;
+        _rampnds.resize(0);
+        _switchpointsList.resize(0);
+    }
+
     /// \brief Serialize the parabolicpath to stream for saving to file.
     void Serialize(std::ostream& O) const;
 
     inline const dReal& GetDuration() const
     {
         return _duration;
+    }
+
+    inline const RampND&
+    
+    inline const std::vector<RampND>& GetRampNDVect() const
+    {
+        return _rampnds;
     }
 
 private:
