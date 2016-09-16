@@ -432,34 +432,34 @@ public:
     // that the given iterator is pointing to a vector of dimension consistent with _ndof
 
     // These functions may not be that useful. Will see later if we should remove them.
-    inline void GetX0Vect(std::vector<dReal>::const_iterator& it) const
+    inline std::vector<dReal>::const_iterator GetX0Vect() const
     {
-        it = _data.begin();
+        return _data.begin();
     }
 
-    inline void GetX1Vect(std::vector<dReal>::const_iterator& it) const
+    inline std::vector<dReal>::const_iterator GetX1Vect() const
     {
-        it = _data.begin() + _ndof;
+        return _data.begin() + _ndof;
     }
 
-    inline void GetV0Vect(std::vector<dReal>::const_iterator& it) const
+    inline std::vector<dReal>::const_iterator GetV0Vect() const
     {
-        it = _data.begin() + 2*_ndof;
+        return _data.begin() + 2*_ndof;
     }
 
-    inline void GetV1Vect(std::vector<dReal>::const_iterator& it) const
+    inline std::vector<dReal>::const_iterator GetV1Vect() const
     {
-        it = _data.begin() + 3*_ndof;
+        return _data.begin() + 3*_ndof;
     }
 
-    inline void GetAVect(std::vector<dReal>::const_iterator& it) const
+    inline std::vector<dReal>::const_iterator GetAVect() const
     {
-        it = _data.begin() + 4*_ndof;
+        return  _data.begin() + 4*_ndof;
     }
 
-    inline void GetDVect(std::vector<dReal>::const_iterator& it) const
+    inline std::vector<dReal>::const_iterator GetDVect() const
     {
-        it = _data.begin() + 5*_ndof;
+        return _data.begin() + 5*_ndof;
     }
     
     inline void SetX0Vect(std::vector<dReal>::const_iterator it)
@@ -511,6 +511,7 @@ private:
 }; // end class RampND
 
 class ParabolicPath {
+public:
     ParabolicPath() {
         _duration = 0;
     }
@@ -553,8 +554,6 @@ class ParabolicPath {
         return _duration;
     }
 
-    inline const RampND&
-    
     inline const std::vector<RampND>& GetRampNDVect() const
     {
         return _rampnds;

@@ -33,6 +33,8 @@ public:
     ~ParabolicInterpolator() {
     }
 
+    void Initialize(size_t ndof);
+
     /// ND Trajectory
 
     /**

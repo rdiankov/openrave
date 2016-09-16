@@ -37,6 +37,21 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof)
     _cacheRampNDVect.resize(_ndof);
 }
 
+void ParabolicInterpolator::Initialize(size_t ndof)
+{
+    OPENRAVE_ASSERT_OP(ndof, >, 0);
+    _ndof = ndof;
+    _cacheVect.resize(_ndof);
+    _cacheX0Vect.resize(_ndof);
+    _cacheX1Vect.resize(_ndof);
+    _cacheV0Vect.resize(_ndof);
+    _cacheV1Vect.resize(_ndof);
+    _cacheAVect.resize(_ndof);
+    _cacheDVect.resize(_ndof);
+    _cacheCurvesVect.resize(_ndof);
+    _cacheRampNDVect.resize(_ndof);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ND Trajectory
 bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& vmVect, const std::vector<dReal>& amVect, std::vector<RampND>& rampndVectOut)
@@ -49,7 +64,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     // Cache
     ParabolicCurve& curve = _cacheCurve;
     std::vector<dReal>& v0Vect = _cacheV0Vect, v1Vect = _cacheV0Vect, aVect = _cacheAVect, dVect = _cacheDVect;
-    
+
     SubtractVector(x1Vect, x0Vect, dVect); // total displacement
 
     // Find the limiting velocity and acceleration (sdMax and sddMax when parameterizing the path
@@ -98,7 +113,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         // The final velocity of the first RampND can be computed by scaling the total displacement
         // by the velocity of the sd-profile.
         SubtractVector(x1Vect, x0Vect, v0Vect);
-        ScaleVector(v0Vect, curve.GetRamp(1).v0); // scaling        
+        ScaleVector(v0Vect, curve.GetRamp(1).v0); // scaling
         rampndVectOut[0].SetV1Vect(v0Vect);
         rampndVectOut[1].SetV0Vect(v0Vect);
 
@@ -142,7 +157,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         ScaleVector(dVect, -1); // now dVect contains positions at the second switch point
         rampndVectOut[1].SetX1Vect(dVect);
         rampndVectOut[2].SetX0Vect(dVect);
-        
+
         // Compute the velocity at the end of the first RampND
         SubtractVector(x1Vect, x0Vect, v0Vect); // displacement
         ScaleVector(v0Vect, curve.GetRamp(1).v0);
@@ -400,7 +415,7 @@ bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal 
     _cacheRampsVect[1].Initialize(_cacheRampsVect[0].v1, -a0, (vp - v1)*a0inv);
     curveOut.Initialize(_cacheRampsVect);
     {// Check curveOut before returning
-        // No need because we will check it outside
+     // No need because we will check it outside
     }
     return true;
 }
@@ -431,7 +446,7 @@ bool ParabolicInterpolator::_ImposeVelocityLimit(ParabolicCurve& curve, dReal vm
 
     curve.Initialize(_cacheRampsVect);
     {// Check curve before returning
-        // No need because we will check it outside
+     // No need because we will check it outside
     }
     return true;
 }
@@ -1464,7 +1479,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
         x0Vect[jdof] = curvesVectIn[jdof].EvalPos(0);
         v0Vect[jdof] = curvesVectIn[jdof].EvalVel(0);
     }
-    
+
     for (size_t iswitch = 1; iswitch < switchpointsList.size(); ++iswitch) {
         dReal dur = switchpointsList[iswitch] - switchpointsList[iswitch - 1];
         for (size_t jdof = 0; jdof < _ndof; ++jdof) {
@@ -1477,7 +1492,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
 
         x0Vect.swap(x1Vect);
         v0Vect.swap(v1Vect);
-    }    
+    }
 }
 
 } // end namespace RampOptimizerInternal
