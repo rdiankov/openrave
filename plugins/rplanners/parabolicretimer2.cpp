@@ -44,6 +44,7 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
         _interpolator.Initialize(_parameters->GetDOF());
+        _translationinterpolator.Initialize(3);
         _trajxmlid = ptraj->GetXMLId();
         return TrajectoryRetimer2::PlanPath(ptraj);
     }
@@ -482,7 +483,7 @@ protected:
             std::vector<dReal> vaccellimit(info->_vConfigAccelerationLimit.begin()+transoffset, info->_vConfigAccelerationLimit.begin()+transoffset+3);
             std::vector<dReal> vvellimit(info->_vConfigVelocityLimit.begin()+transoffset, info->_vConfigVelocityLimit.begin()+transoffset+3);
 
-            bool bSuccess = _interpolator.ComputeArbitraryVelNDTrajectory(xyz0, xyz1, xyzvelprev, xyzvel, vlowerlimit, vupperlimit, vvellimit, vaccellimit, _cacheRampNDVect, true);
+            bool bSuccess = _translationinterpolator.ComputeArbitraryVelNDTrajectory(xyz0, xyz1, xyzvelprev, xyzvel, vlowerlimit, vupperlimit, vvellimit, vaccellimit, _cacheRampNDVect, true);
             if( !bSuccess) {
                 RAVELOG_WARN("Failed to solve InterpolateArbitraryVelND for XYZ\n");
                 return -1;
@@ -624,6 +625,7 @@ protected:
 
             switch(iktype) {
             case IKP_Transform6D: {
+                _ikinterpolator.Initialize(4);
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetTransform6D().rot), ikparam.GetTransform6D().rot));
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -644,6 +646,7 @@ protected:
                 break;
             }
             case IKP_Rotation3D: {
+                _ikinterpolator.Initialize(1);
                 _v0pos.resize(1); _v0vel.resize(1); _v1pos.resize(1); _v1vel.resize(1); vmaxvel.resize(1); vmaxaccel.resize(1);
                 axisangle = axisAngleFromQuat(quatMultiply(quatInverse(ikparamprev.GetRotation3D()), ikparam.GetRotation3D()));
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -660,6 +663,7 @@ protected:
                 break;
             }
             case IKP_Translation3D:
+                _ikinterpolator.Initialize(3);
                 _v0pos.resize(3); _v0vel.resize(3); _v1pos.resize(3); _v1vel.resize(3); vmaxvel.resize(3); vmaxaccel.resize(3);
                 trans1 = ikparam.GetTranslation3D();
                 trans0 = ikparamprev.GetTranslation3D();
@@ -667,6 +671,7 @@ protected:
                 transindex = 0;
                 break;
             case IKP_TranslationDirection5D: {
+                _ikinterpolator.Initialize(4);
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 axisangle = ikparamprev.GetTranslationDirection5D().dir.cross(ikparam.GetTranslationDirection5D().dir);
                 if( axisangle.lengthsqr3() > g_fEpsilon ) {
@@ -690,6 +695,7 @@ protected:
                 break;
             }
             case IKP_TranslationXAxisAngleZNorm4D: {
+                _ikinterpolator.Initialize(4);
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationXAxisAngleZNorm4D().second,ikparamprev.GetTranslationXAxisAngleZNorm4D().second);
@@ -704,6 +710,7 @@ protected:
                 break;
             }
             case IKP_TranslationYAxisAngleXNorm4D: {
+                _ikinterpolator.Initialize(4);
                 _v0pos.resize(4); _v0vel.resize(4); _v1pos.resize(4); _v1vel.resize(4); vmaxvel.resize(4); vmaxaccel.resize(4);
                 _v0pos[0] = 0;
                 _v1pos[0] = utils::SubtractCircularAngle(ikparam.GetTranslationYAxisAngleXNorm4D().second,ikparamprev.GetTranslationYAxisAngleXNorm4D().second);
@@ -739,11 +746,11 @@ protected:
                 vupper[i] = 1000+RaveFabs(_v1pos[i]);
             }
 
-            bool success = _interpolator.ComputeNDTrajectoryFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, deltatime, vlower, vupper, vmaxvel, vmaxaccel, _cacheRampNDVect);
+            bool success = _ikinterpolator.ComputeNDTrajectoryFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, deltatime, vlower, vupper, vmaxvel, vmaxaccel, _cacheRampNDVect);
             if( !success) {
 #ifdef _DEBUG
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    success = _interpolator.ComputeNDTrajectoryFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, deltatime, vlower, vupper, vmaxvel, vmaxaccel, _cacheRampNDVect);
+                    success = _ikinterpolator.ComputeNDTrajectoryFixedDuration(_v0pos, _v1pos, _v0vel, _v1vel, deltatime, vlower, vupper, vmaxvel, vmaxaccel, _cacheRampNDVect);
                 }
 #endif
                 return false;
@@ -952,7 +959,7 @@ protected:
     }
 
     string _trajxmlid;
-    RampOptimizer::ParabolicInterpolator _interpolator;
+    RampOptimizer::ParabolicInterpolator _interpolator, _translationinterpolator, _ikinterpolator;
 
     // cache
     vector<dReal> _v0pos, _v0vel, _v1pos, _v1vel;
