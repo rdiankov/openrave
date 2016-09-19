@@ -1132,7 +1132,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
 
         // Final check on the accelerations
-        if( (Abs(a0) > am) || (Abs(a1) > am) ) {
+        if( (Abs(a0) > am + g_fRampEpsilon) || (Abs(a1) > am + g_fRampEpsilon) ) {
             RAVELOG_VERBOSE("Cannot fix accelration bounds violation");
             RAVELOG_VERBOSE_FORMAT("ParabolicCurve info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
             return false;
@@ -1460,6 +1460,8 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     switchpointsList.resize(0);
     switchpointsList.reserve(3*_ndof); // just an estimate of the maximum possible number of switch points
 
+    switchpointsList.push_back(0);
+    switchpointsList.push_back(curvesVectIn[0].GetDuration());
     for (size_t idof = 0; idof < _ndof; ++idof) {
         const std::vector<dReal>& swList = curvesVectIn[idof].GetSwitchPointsList();
         for (size_t jswitch = 1; jswitch < swList.size() - 1; ++jswitch) {
@@ -1486,7 +1488,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
             x1Vect[jdof] = curvesVectIn[jdof].EvalPos(switchpointsList[iswitch]);
             v1Vect[jdof] = curvesVectIn[jdof].EvalVel(switchpointsList[iswitch]);
             dVect[jdof] = x1Vect[jdof] - x0Vect[jdof];
-            aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*dur);
+            aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*(switchpointsList[iswitch] + switchpointsList[iswitch - 1]));
         }
         rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, dur);
 
