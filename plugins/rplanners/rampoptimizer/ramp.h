@@ -500,6 +500,8 @@ public:
         return;
     }
 
+    void Serialize(std::ostream& O) const;
+
     mutable bool constraintChecked;
 
 private:

@@ -375,13 +375,13 @@ void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const
         // return index = i + 1 and remainder = 0.
         int index_ = 0;
         std::vector<dReal>::const_iterator it = _switchpointsList.begin();
-        while( it != _switchpointsList.end() && t > *it) {
-            ++index_;
-            ++it;
+        while( it != _switchpointsList.end() && t >= *it) {
+            index_++;
+            it++;
         }
         OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
-        index = index_;
-        remainder = t - *it;
+        index = index_ - 1;
+        remainder = t - *(it - 1);
         return;
     }
 }
@@ -474,7 +474,7 @@ void ParabolicCurve::SetInitialValue(dReal newx0)
 {
     for (std::vector<Ramp>::iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
         itramp->SetInitialValue(newx0);
-        newx0 += itramp->x1;
+        newx0 += itramp->d;
     }
     return;
 }
@@ -738,6 +738,8 @@ RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vec
         std::copy(dVect.begin(), dVect.end(), _data.begin() + 5*_ndof);
     }
 
+    _data.back() = t;
+
     constraintChecked = false;
 }
 
@@ -852,6 +854,8 @@ void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dRea
     else {
         std::copy(dVect.begin(), dVect.end(), _data.begin() + 5*_ndof);
     }
+
+    _data.back() = t;
 
     constraintChecked = false;
 }
@@ -994,6 +998,16 @@ void RampND::TrimBack(dReal t)
         return;
     }
 }
+
+void RampND::Serialize(std::ostream& O) const
+{
+    std::string separator = "";
+    for (size_t i = 0; i < _data.size(); ++i) {
+        O << separator << _data[i];
+        separator = " ";
+    }
+    O << "\n";
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParabolicPath
 void ParabolicPath::AppendRampND(RampND& rampndIn)
@@ -1049,13 +1063,13 @@ void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
         // return index = i + 1 and remainder = 0.
         int index_ = 0;
         std::vector<dReal>::const_iterator it = _switchpointsList.begin();
-        while ( it != _switchpointsList.end() && t > *it ) {
-            ++index_;
-            ++it;
+        while ( it != _switchpointsList.end() && t >= *it ) {
+            index_++;
+            it++;
         }
         OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
-        index = index_;
-        remainder = t - *it;
+        index = index_ - 1;
+        remainder = t - *(it - 1);
         return;
     }
 }
@@ -1150,7 +1164,11 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
 
 void ParabolicPath::Serialize(std::ostream& O) const
 {
-
+    O << std::setprecision(g_nPrec);
+    for (std::vector<RampND>::const_iterator itrampnd = _rampnds.begin(); itrampnd != _rampnds.end(); ++itrampnd) {
+        itrampnd->Serialize(O);
+    }
+    return;
 }
 
 } // end namespace RampOptimizerInternal
