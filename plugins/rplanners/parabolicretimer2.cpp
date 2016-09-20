@@ -305,8 +305,8 @@ protected:
 
             FOREACHC(itrampnd, _cacheRampNDVect) {
                 for (int j = 0; j < info->gpos.dof; ++j) {
-                    *(ittargetdata + info->posindex + j) = itrampnd->GetX0At(j);
-                    *(ittargetdata + info->velindex + j) = itrampnd->GetV0At(j);
+                    *(ittargetdata + info->posindex + j) = itrampnd->GetX1At(j);
+                    *(ittargetdata + info->velindex + j) = itrampnd->GetV1At(j);
                 }
                 *(ittargetdata + info->timeindex) = itrampnd->GetDuration();
                 *(ittargetdata + info->waypointindex) = 1;
