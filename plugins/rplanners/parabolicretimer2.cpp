@@ -308,11 +308,11 @@ protected:
                     *(ittargetdata + info->posindex + j) = itrampnd->GetX0At(j);
                     *(ittargetdata + info->velindex + j) = itrampnd->GetV0At(j);
                 }
-                *(ittargetdata + info->timeindex) = 0;
+                *(ittargetdata + info->timeindex) = itrampnd->GetDuration();
                 *(ittargetdata + info->waypointindex) = 1;
                 ittargetdata += ndof;
             }
-            
+
             _vtrajpoints.at(_vtrajpoints.size() - ndof + info->waypointindex) = 1;
             info->ptraj->Insert(info->ptraj->GetNumWaypoints(), _vtrajpoints);
         }
@@ -756,7 +756,7 @@ protected:
                 return false;
             }
 
-            int ndof = info->ptraj->GetConfigurationSpecification().GetDOF(); 
+            int ndof = info->ptraj->GetConfigurationSpecification().GetDOF();
             bool bIncludeFirstPoint = false;
             if( info->ptraj->GetNumWaypoints() == 0 ) {
                 bIncludeFirstPoint = true;
