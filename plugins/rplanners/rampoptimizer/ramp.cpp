@@ -878,7 +878,7 @@ void RampND::SetInitialPosition(const std::vector<dReal>& xVect)
     OPENRAVE_ASSERT_OP(xVect.size(), ==, _ndof);
     std::copy(xVect.begin(), xVect.end(), _data.begin()); // x0Vect
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        _data[_ndof + idof] = GetX0At(idof) + GetDAt(idof);
+        SetX1At(idof) = GetX0At(idof) + GetDAt(idof);
     }
     return;
 }
@@ -1017,8 +1017,8 @@ void ParabolicPath::AppendRampND(RampND& rampndIn)
     }
     _rampnds.push_back(rampndIn);
 
-    if( _switchpointsList.capacity() < _switchpointsList.size() + 1 ) {
-        _switchpointsList.reserve(_switchpointsList.size() + 1);
+    if( _switchpointsList.capacity() < _rampnds.size() + 1 ) {
+        _switchpointsList.reserve(_rampnds.size() + 1);
     }
     _switchpointsList.push_back(_duration + rampndIn.GetDuration());
 
@@ -1082,7 +1082,7 @@ void ParabolicPath::Initialize(const RampND& rampndIn)
 
     _switchpointsList.resize(2);
     _switchpointsList[0] = 0;
-    _switchpointsList[1] = _duration + rampndIn.GetDuration();
+    _switchpointsList[1] = rampndIn.GetDuration();
 
     _duration = _switchpointsList.back();
 }
@@ -1131,10 +1131,9 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
 
         _rampnds[index0].TrimBack(rem0);
         if( rightPartLength > 0 ) {
-            _rampnds[index1].TrimFront(rem1);
+            _rampnds[newSize - rightPartLength].TrimFront(rem1);
         }
         std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
-        return;
     }
     else if( prevSize == newSize ) {
         // No resizing required.
@@ -1143,7 +1142,6 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
             _rampnds[index1].TrimFront(rem1);
         }
         std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
-        return;
     }
     else {
         // The new size is less than the current value so we need to move RampNDs first before
@@ -1155,11 +1153,12 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
 
         _rampnds[index0].TrimBack(rem0);
         if( rightPartLength > 0 ) {
-            _rampnds[index1].TrimFront(rem1);
+            _rampnds[newSize - rightPartLength].TrimFront(rem1);
         }
         std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
-        return;
     }
+
+    _UpdateMembers();
 }
 
 void ParabolicPath::Serialize(std::ostream& O) const
@@ -1169,6 +1168,19 @@ void ParabolicPath::Serialize(std::ostream& O) const
         itrampnd->Serialize(O);
     }
     return;
+}
+
+void ParabolicPath::_UpdateMembers()
+{
+    _switchpointsList.resize(0);
+    _switchpointsList.reserve(_rampnds.size() + 1);
+    _switchpointsList.push_back(0);
+
+    _duration = 0;
+    for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
+        _duration += _rampnds[irampnd].GetDuration();
+        _switchpointsList.push_back(_duration);
+    }
 }
 
 } // end namespace RampOptimizerInternal

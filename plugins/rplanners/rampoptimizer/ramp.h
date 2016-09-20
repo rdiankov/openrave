@@ -516,6 +516,8 @@ class ParabolicPath {
 public:
     ParabolicPath() {
         _duration = 0;
+        _switchpointsList.resize(0);
+        _switchpointsList.push_back(0);        
     }
     ~ParabolicPath() {
     }
@@ -545,13 +547,18 @@ public:
     inline void Reset() {
         _duration = 0;
         _rampnds.resize(0);
-        _switchpointsList.resize(0);
+        _switchpointsList.resize(1);
+        _switchpointsList[0] = 0;
     }
 
     /// \brief Serialize the parabolicpath to stream for saving to file.
     void Serialize(std::ostream& O) const;
 
-    inline const dReal& GetDuration() const
+    /// \brief To be called after some changes have been made to _rampnds in order to update
+    /// _switchpointsList and _duration accordingly.
+    void _UpdateMembers();
+
+    inline dReal GetDuration() const
     {
         return _duration;
     }
@@ -559,6 +566,16 @@ public:
     inline const std::vector<RampND>& GetRampNDVect() const
     {
         return _rampnds;
+    }
+
+    inline const std::vector<dReal>& GetSwitchPointsList() const
+    {
+        return _switchpointsList;
+    }
+
+    inline void TestFN()
+    {
+        _rampnds.pop_back();
     }
 
 private:
