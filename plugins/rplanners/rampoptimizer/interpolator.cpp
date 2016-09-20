@@ -263,6 +263,10 @@ bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<Para
     }
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
+        if( isPrevDurationSafe && idof == maxIndex ) {
+            RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
+            continue;
+        }
         if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
             return false;
         }
@@ -294,6 +298,22 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
         }
 
         _cacheCurvesVect[idof] = _cacheCurve;
+    }
+
+    RAVELOG_VERBOSE("Successfully computed ND trajectory with joint limits and fixed duration");
+    {
+        std::stringstream sss;
+        sss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+        sss << "x0 = [";
+        SerializeValues(sss, x0Vect);
+        sss << "]; x1 = [";
+        SerializeValues(sss, x1Vect);
+        sss << "]; v0 = [";
+        SerializeValues(sss, v0Vect);
+        sss << "]; v1 = [";
+        SerializeValues(sss, v1Vect);
+        sss << "];";
+        RAVELOG_VERBOSE(sss.str());
     }
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut);
@@ -751,6 +771,13 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     dReal sum2 = am - A;
     C = B/sum1;
     D = B/sum2;
+
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+        if( Abs(A) <= g_fRampEpsilon && Abs(B) <= g_fRampEpsilon ) {
+            RAVELOG_VERBOSE("A and B are zero");
+            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
+        }
+    }
 
     // Now we need to check a number of feasible intervals of tswitch1 induced by constraints on the
     // acceleration. Instead of having a class representing an interval, we use the interval bounds
