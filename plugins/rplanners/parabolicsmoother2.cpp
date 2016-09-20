@@ -790,6 +790,7 @@ public:
 
         if( timeElapsed <= g_fEpsilon ) {
             rampndVectOut.resize(1);
+            rampndVectOut[0].Initialize(_parameters->GetDOF());
             rampndVectOut[0].SetConstant(q0, 0);
             rampndVectOut[0].SetV0Vect(dq0);
             rampndVectOut[0].SetV1Vect(dq1);
@@ -979,6 +980,7 @@ protected:
         std::vector<RampOptimizer::RampND>& rampndVect = _cacheRampNDVect1;
         if( vWaypoints.size() == 1 ) {
             rampndVect.resize(1);
+            rampndVect[0].Initialize(_parameters->GetDOF());
             rampndVect[0].SetConstant(vWaypoints[0], 0);
             parabolicpath.Initialize(rampndVect[0]);
         }
