@@ -256,7 +256,7 @@ public:
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
 
         _fileIndexMod = 10000; // for trajectory saving
-        _dumplevel = Level_Verbose;
+        _dumplevel = Level_Debug;
 #ifdef SMOOTHER_TIMING_DEBUG
         // Statistics
         _nCallsCheckManip = 0;
@@ -827,7 +827,7 @@ public:
             OPENRAVE_ASSERT_OP(_constraintreturn->_configurations.size(), ==, _constraintreturn->_configurationtimes.size()*ndof);
 
             std::vector<dReal> curPos = q0, newPos(ndof);
-            std::vector<dReal> curVel = q1, newVel(ndof);
+            std::vector<dReal> curVel = dq0, newVel(ndof);
 
             std::vector<dReal>::const_iterator it = _constraintreturn->_configurations.begin();
             dReal curTime = 0;
@@ -1009,7 +1009,7 @@ protected:
                 while (iwaypoint + 1 < vNewWaypoints.size()) {
                     // xmidDelta is the difference between the expected middle point and the initial point
                     for (size_t idof = 0; idof < ndof; ++idof) {
-                        xmidDelta[idof] = 0.5*(vNewWaypoints[iwaypoint - 1][idof] - vNewWaypoints[iwaypoint][idof]);
+                        xmidDelta[idof] = 0.5*(vNewWaypoints[iwaypoint + 1][idof] - vNewWaypoints[iwaypoint][idof]);
                     }
 
                     xmid = vNewWaypoints[iwaypoint];
@@ -1026,7 +1026,7 @@ protected:
                     // Check if xmid is far from the expected point.
                     dReal dist = 0;
                     for (size_t idof = 0; idof < ndof; ++idof) {
-                        dReal fExpected = 0.5*(vNewWaypoints[iwaypoint - 1][idof] + vNewWaypoints[iwaypoint][idof]);
+                        dReal fExpected = 0.5*(vNewWaypoints[iwaypoint + 1][idof] + vNewWaypoints[iwaypoint][idof]);
                         dReal fError = fExpected - xmid[idof];
                         dist += fError*fError;
                     }
@@ -1101,21 +1101,42 @@ protected:
         vellimits = _parameters->_vConfigVelocityLimit;
         accellimits = _parameters->_vConfigAccelerationLimit;
 
+        // For debugging
+        std::stringstream sss;
+        sss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+        std::vector<dReal>& aVect = _cacheAVect1;
+        
         RampOptimizer::CheckReturn retseg(0);
         size_t numTries = 30; // number of times allowed to scale down vellimits and accellimits
         for (size_t itry = 0; itry < numTries; ++itry) {
             bool res = _interpolator.ComputeZeroVelNDTrajectory(x0VectIn, x1VectIn, vellimits, accellimits, rampndVectOut);
             BOOST_ASSERT(res);
 
+            size_t irampnd = 0;
             rampndVectOut[0].GetX0Vect(x0Vect);
             rampndVectOut[0].GetV0Vect(v0Vect);
+            FOREACHC(itrampnd, rampndVectOut) {
+                irampnd = itrampnd - rampndVectOut.begin();
 
-            size_t irampnd;
-            for (irampnd = 1; irampnd < rampndVectOut.size(); ++irampnd ) {
-                rampndVectOut[irampnd].GetX0Vect(x1Vect);
-                rampndVectOut[irampnd].GetV0Vect(v1Vect);
+                itrampnd->GetX1Vect(x1Vect);
+                itrampnd->GetV1Vect(v1Vect);
 
-                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, rampndVectOut[irampnd - 1].GetDuration(), options, _cacheRampNDVectOut1);
+                retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, itrampnd->GetDuration(), options, _cacheRampNDVectOut1);
+                if( 0 ) {
+                    sss.str("");
+                    sss.clear();
+                    sss << "x0 = [";
+                    SerializeValues(sss, x0Vect);
+                    sss << "]; x1 = [";
+                    SerializeValues(sss, x1Vect);
+                    sss << "]; v0 = [";
+                    SerializeValues(sss, v0Vect);
+                    sss << "]; v1 = [";
+                    SerializeValues(sss, v1Vect);
+                    sss << "];";
+                    RAVELOG_WARN(sss.str());
+                }
+                
                 if( retseg.retcode != 0 ) {
                     break;
                 }
@@ -1161,7 +1182,51 @@ protected:
     int _Shortcut(RampOptimizer::ParabolicPath& parabolicpath, int numIters, RampOptimizer::RandomNumberGeneratorBase* rng, dReal minTimeStep)
     {
         int numShortcuts = 0;
+
+        uint32_t fileindex;
+        if( !!_logginguniformsampler ) {
+            fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            fileindex = RaveRandomInt();
+        }
+        fileindex = fileindex%_fileIndexMod;
+        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 0);
+        
         return numShortcuts;
+    }
+
+    void _DumpParabolicPath(RampOptimizer::ParabolicPath& parabolicpath, DebugLevel level=Level_Verbose, uint32_t fileindex=10000, int option=-1) const
+    {
+        if( !IS_DEBUGLEVEL(level) ) {
+            return;
+        }
+        if( fileindex == 10000 ) {
+            // No particular index given. Randomly choose one.
+            if( !!_logginguniformsampler ) {
+                fileindex  = _logginguniformsampler->SampleSequenceOneUInt32();
+            }
+            else {
+                fileindex = RaveRandomInt();
+            }
+            fileindex = fileindex%_fileIndexMod;
+        }
+
+        std::string filename;
+        if( option == 0 ) {
+            filename = str(boost::format("%s/parabolicpath%d.beforeshortcut.xml")%RaveGetHomeDirectory()%fileindex);
+        }
+        else if( option == 1 ) {
+            filename = str(boost::format("%s/parabolicpath%d.aftershortcut.xml")%RaveGetHomeDirectory()%fileindex);
+        }
+        else {
+            filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%fileindex);
+        }
+        ofstream f(filename.c_str());
+        f << std::setprecision(RampOptimizer::g_nPrec);
+        parabolicpath.Serialize(f);
+        RAVELOG_DEBUG_FORMAT("Wrote a parabolicpath to %s (duration = %.15e)", filename%parabolicpath.GetDuration());
+        return;
     }
 
     std::string _DumpTrajectory(TrajectoryBasePtr ptraj, DebugLevel level)
@@ -1230,6 +1295,7 @@ protected:
     std::vector<dReal> _cacheX0Vect1, _cacheX1Vect1, _cacheV0Vect1, _cacheV1Vect1;
     std::vector<dReal> _cacheVellimits, _cacheAccelLimits; ///< stores current velocity and acceleration limits, also used in _Shortcut
     std::vector<RampOptimizer::RampND> _cacheRampNDVectOut1; ///< stores output from the check function, also used in _Shortcut
+    std::vector<dReal> _cacheAVect1; // for debugging
     
 #ifdef SMOOTHER_TIMING_DEBUG
     // Statistics
