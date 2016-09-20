@@ -549,7 +549,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                     for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
                         _cacheRampsVect[iramp] = _cacheCurve.GetRamp(iramp);
                     }
-                    _cacheRampsVect[0].Initialize(0, ba1, bt1, bx1);
+                    _cacheRampsVect.back().Initialize(0, ba1, bt1, bx1);
                 }
             }
         }
@@ -577,7 +577,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                         for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
                             _cacheRampsVect[iramp + 1] = _cacheCurve.GetRamp(iramp);
                         }
-                        _cacheRampsVect[_cacheRampsVect.size() - 1].Initialize(0, ba1, bt1);
+                        _cacheRampsVect.back().Initialize(0, ba1, bt1);
                     }
                 }
             }
