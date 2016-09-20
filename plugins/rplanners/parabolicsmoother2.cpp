@@ -86,15 +86,26 @@ public:
             size_t midIndex = _vsearchsegments.size()/2;
             std::swap(_vsearchsegments[0], _vsearchsegments[midIndex]); // put the mid point as the first point to be considered
 
-            if( _vswitchtimes.size() > 2 ) {
-                // Check at every switch time except at midIndex
-                for (size_t iswitch = 0; (iswitch != midIndex) && (iswitch < _vswitchtimes.size() - 2); ++iswitch) {
-                    switchtime = _vswitchtimes[_vsearchsegments[iswitch]];
-                    rampndVect[_vsearchsegments[iswitch]].GetX0Vect(_q0);
+            // if( _vswitchtimes.size() > 2 ) {
+            //     // Check at every switch time except at midIndex
+            //     for (size_t iswitch = 0; (iswitch != midIndex) && (iswitch < _vswitchtimes.size() - 2); ++iswitch) {
+            //         switchtime = _vswitchtimes[_vsearchsegments[iswitch]];
+            //         rampndVect[_vsearchsegments[iswitch]].GetX1Vect(_q1);
+            //         if( feas->NeedDerivativeForFeasibility() ) {
+            //             rampndVect[_vsearchsegments[iswitch]].GetV1Vect(_dq1);
+            //         }
+            //         RampOptimizer::CheckReturn retconf = feas->ConfigFeasible2(_q1, _dq1, options);
+            //         if( retconf.retcode != 0 ) {
+            //             return retconf;
+            //         }
+            //     }
+            if( rampndVect.size() > 1 ) {
+                for (size_t irampnd = 0; irampnd < rampndVect.size() - 1; ++irampnd) {
+                    rampndVect[irampnd].GetX1Vect(_q1);
                     if( feas->NeedDerivativeForFeasibility() ) {
-                        rampndVect[_vsearchsegments[iswitch]].GetV0Vect(_dq0);
+                        rampndVect[irampnd].GetV1Vect(_dq1);
                     }
-                    RampOptimizer::CheckReturn retconf = feas->ConfigFeasible2(_q0, _dq0, options);
+                    RampOptimizer::CheckReturn retconf = feas->ConfigFeasible2(_q1, _dq1, options);
                     if( retconf.retcode != 0 ) {
                         return retconf;
                     }
@@ -555,6 +566,11 @@ public:
             for (size_t irampnd = 0; irampnd < parabolicpath.GetRampNDVect().size(); ++irampnd) {
                 rampndTrimmed = parabolicpath.GetRampNDVect()[irampnd];
 
+                {
+                    RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRampND(rampndTrimmed, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit);
+                    OPENRAVE_ASSERT_OP(parabolicret, ==, RampOptimizer::PCR_Normal);
+                }
+
                 // tempRampNDVect will contain the finalized result of each RampND
                 tempRampNDVect.resize(1);
                 tempRampNDVect[0] = rampndTrimmed;
@@ -692,19 +708,16 @@ public:
                     }
                 }// Finished checking constraints
 
+                waypoints.resize(newSpec.GetDOF());
                 FOREACH(itrampnd, tempRampNDVect) {
                     fExpextedDuration += itrampnd->GetDuration();
-                    waypoints.resize(newSpec.GetDOF());
-                    std::vector<dReal>::iterator ittargetdata = waypoints.begin();
-
                     itrampnd->GetX1Vect(vConfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata, newSpec, vConfig.begin(), posSpec, 1, GetEnv(), true);
+                    ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, vConfig.begin(), posSpec, 1, GetEnv(), true);
                     itrampnd->GetV1Vect(vConfig);
-                    ConfigurationSpecification::ConvertData(ittargetdata, newSpec, vConfig.begin(), velSpec, 1, GetEnv(), false);
+                    ConfigurationSpecification::ConvertData(waypoints.begin(), newSpec, vConfig.begin(), velSpec, 1, GetEnv(), false);
 
-                    *(ittargetdata + timeOffset) = itrampnd->GetDuration();
-                    *(ittargetdata + waypointOffset) = 1; /////////////// Check this
-                    ittargetdata += newSpec.GetDOF();
+                    *(waypoints.begin() + timeOffset) = itrampnd->GetDuration();
+                    *(waypoints.begin() + waypointOffset) = 1;
                     _pdummytraj->Insert(_pdummytraj->GetNumWaypoints(), waypoints);
                 }                
 
