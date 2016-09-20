@@ -301,7 +301,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
     }
 
     RAVELOG_VERBOSE("Successfully computed ND trajectory with joint limits and fixed duration");
-    {
+    if( 0 ) {
         std::stringstream sss;
         sss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
         sss << "x0 = [";
@@ -312,6 +312,15 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
         SerializeValues(sss, v0Vect);
         sss << "]; v1 = [";
         SerializeValues(sss, v1Vect);
+        sss << "]; duration = " << duration;
+        sss << "; xminVect = [";
+        SerializeValues(sss, xminVect);
+        sss << "]; xmaxVect = [";
+        SerializeValues(sss, xmaxVect);
+        sss << "]; vmVect = [";
+        SerializeValues(sss, vmVect);
+        sss << "]; amVect = [";
+        SerializeValues(sss, amVect);
         sss << "];";
         RAVELOG_VERBOSE(sss.str());
     }
@@ -750,7 +759,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     if (FuzzyZero(B, g_fRampEpsilon)) {
         // In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
         // reached from (x0, v0) using one ramp.
-
+        // RAVELOG_VERBOSE("case B == 0: one-ramp trajectory");
         dReal a = 2*(x1 - x0 - v0*duration)/(duration*duration); // giving priority to displacement and consistency between
                                                                  // acceleration and displacement
         Ramp ramp0(v0, a, duration, x0);
@@ -1503,7 +1512,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     rampndVectOut.resize(switchpointsList.size() - 1);
-    std::vector<dReal>& x0Vect = _cacheX0Vect, x1Vect = _cacheX1Vect, v0Vect = _cacheV0Vect, v1Vect = _cacheV1Vect, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& x0Vect = _cacheX0Vect, x1Vect = _cacheX1Vect, v0Vect = _cacheV0Vect, v1Vect = _cacheV1Vect; //, aVect = _cacheAVect, dVect = _cacheDVect;
     for (size_t jdof = 0; jdof < _ndof; ++jdof) {
         x0Vect[jdof] = curvesVectIn[jdof].EvalPos(0);
         v0Vect[jdof] = curvesVectIn[jdof].EvalVel(0);
@@ -1514,10 +1523,12 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
         for (size_t jdof = 0; jdof < _ndof; ++jdof) {
             x1Vect[jdof] = curvesVectIn[jdof].EvalPos(switchpointsList[iswitch]);
             v1Vect[jdof] = curvesVectIn[jdof].EvalVel(switchpointsList[iswitch]);
-            dVect[jdof] = x1Vect[jdof] - x0Vect[jdof];
-            aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*(switchpointsList[iswitch] + switchpointsList[iswitch - 1]));
+            // dVect[jdof] = x1Vect[jdof] - x0Vect[jdof];
+            // aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*(switchpointsList[iswitch] + switchpointsList[iswitch - 1]));
         }
-        rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, dur);
+        // Their might be some numerical errors when evaluating positions and velocities and switch
+        // points. Therefore, to be safe, we compute anew the accelerations.
+        rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), std::vector<dReal>(), dur);
 
         x0Vect.swap(x1Vect);
         v0Vect.swap(v1Vect);
