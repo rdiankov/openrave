@@ -1252,3 +1252,51 @@ def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
     curvesnd = ParabolicCurvesND(curves)
 
     return curvesnd
+
+def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
+    """Data format
+    rampnd1
+    rampnd2
+    rampnd3
+      :
+      :
+
+    For each RampND:
+    rampnd data = [x0, x1, v0, v1, a, d, t]
+    len(data) = 6*ndof + 1
+    """
+
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    nrampnds = len(rawdata)
+    finalcurvesnd = ParabolicCurvesND()
+
+    # check soundness
+    ndof = int((len(rawdata[0].strip().split(" ")) - 1)/6)
+    for i in xrange(1, nrampnds):
+        assert( ndof == int((len(rawdata[i].strip().split(" ")) - 1)/6) )
+
+    for i in xrange(nrampnds):
+        data = rawdata[i].strip().split(" ")
+        data = [float(x) for x in data]
+        offset = 0
+        x0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        x1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        a = np.array(data[offset : offset + ndof])
+        offset += ndof
+        d = np.array(data[offset : offset + ndof])
+        offset += ndof
+        t = data[offset]
+
+        curvesnd = ParabolicCurvesND()
+        curvesnd.SetSegment(x0, x1, v0, v1, t)
+        finalcurvesnd.Append(curvesnd)
+
+    return finalcurvesnd
+        
