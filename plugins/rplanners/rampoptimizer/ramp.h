@@ -28,6 +28,12 @@ class Ramp {
 public:
     Ramp() {
     }
+    /**
+       \params v0_ initial velocity
+       \params a_ acceleration
+       \params duration_ duration of this ramp
+       \params x0_ initial displacement. If not given, will set to zero.
+     */
     Ramp(dReal v0_, dReal a_, dReal duration_, dReal x0_=0);
     ~Ramp() {
     }
@@ -154,21 +160,25 @@ public:
     /// \brief Cut the ParabolicCurve into two halves at time t and keep the left half.
     void TrimBack(dReal t);
 
+    /// \brief Return a constant reference to _ramps
     inline const std::vector<Ramp>& GetRamps() const
     {
         return _ramps;
     }
 
+    /// \brief Return a constant reference to Ramp of the given index
     inline const Ramp& GetRamp(size_t index) const
     {
         return _ramps[index];
     }
 
+    /// \brief Return a constant reference to _switchpointsList
     inline const std::vector<dReal>& GetSwitchPointsList() const
     {
         return _switchpointsList;
     }
 
+    /// \brief Return the switch point of the given index
     inline const dReal& GetSwitchPoint(size_t index) const
     {
         return _switchpointsList[index];
@@ -253,7 +263,7 @@ public:
 
     /// \brief Initialize rampnd for storing ndof segment.
     void Initialize(size_t ndof);
-    
+
     /// \brief Initialize rampnd from boundary values.
     void Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, const dReal t);
 
@@ -389,7 +399,7 @@ public:
     {
         return _data[5*_ndof + idof];
     }
-    
+
     // Set values by giving a vector
     inline void SetX0Vect(const std::vector<dReal>& xVect)
     {
@@ -454,14 +464,14 @@ public:
 
     inline std::vector<dReal>::const_iterator GetAVect() const
     {
-        return  _data.begin() + 4*_ndof;
+        return _data.begin() + 4*_ndof;
     }
 
     inline std::vector<dReal>::const_iterator GetDVect() const
     {
         return _data.begin() + 5*_ndof;
     }
-    
+
     inline void SetX0Vect(std::vector<dReal>::const_iterator it)
     {
         return _SetData(it, 0);
@@ -500,8 +510,18 @@ public:
         return;
     }
 
+    /// \brief Serialize this RampND by basically concatenating all entries in _data.
     void Serialize(std::ostream& O) const;
 
+    /**
+       constraintChecked indicates if this RampND has been checked with all the constraints. (This
+       parameter will be manipulated by the parabolicsmoother.)
+
+       This is neccessary because checkings of the same straight line path with two different
+       interpolation (i.e., linear and parabolic interpolation) can disagree due to different
+       discretization resolution. The idea is to use constraintChecked as a flag to tell the
+       parabolicsmoother to trust the feasibility guarantee from linearsmoother.
+     */
     mutable bool constraintChecked;
 
 private:
@@ -517,7 +537,7 @@ public:
     ParabolicPath() {
         _duration = 0;
         _switchpointsList.resize(0);
-        _switchpointsList.push_back(0);        
+        _switchpointsList.push_back(0);
     }
     ~ParabolicPath() {
     }
@@ -544,6 +564,8 @@ public:
     /// rampnd.
     void ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>& rampndIn);
 
+    /// \brief Reset this ParabolicPath. _switchpointsList will be reset to a vector of size 1,
+    /// containing zero.
     inline void Reset() {
         _duration = 0;
         _rampnds.resize(0);
@@ -571,11 +593,6 @@ public:
     inline const std::vector<dReal>& GetSwitchPointsList() const
     {
         return _switchpointsList;
-    }
-
-    inline void TestFN()
-    {
-        _rampnds.pop_back();
     }
 
 private:
