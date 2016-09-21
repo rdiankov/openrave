@@ -496,7 +496,7 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
          the given values. Assuming that x0, v0, and t are always correct, we want to compute a such
          that it minimizes differences between computed x1, v1, and actual x1, v1. That is
 
-                 a* = argmin_a C(a) = (v0 + at - v1)^2 + (x0 + v0*t + 0.5*a*t^2)^2.
+                 a* = argmin_a C(a) = (v0 + at - v1)^2 + (x0 + v0*t + 0.5*a*t^2 - x1)^2.
 
          >>>> import sympy as sp
          >>>> x0, x1, v0, v1, a, t = sp.symbols(['x0', 'x1', 'v0', 'v1', 'a', 't'])
@@ -505,7 +505,7 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
          We can see that C(a) is a *convex* parabola, i.e., the coefficient of a^2 is strictly
          positive (given that t > 0). Therefore, it always has a minimum and the minimum is at
 
-                 a* = -(2*v0 + t*x0 + 2*v0*t^2)/(0.5*t^3 + 2*t).
+                 a* = -(2*v0 + t*(x0 - x1) + 2*(v0 - v1)*t^2)/(0.5*t^3 + 2*t).
 
          >>>> sp.solve(sp.diff(C, a), a)
      */
