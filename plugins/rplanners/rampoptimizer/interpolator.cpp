@@ -196,6 +196,18 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     OPENRAVE_ASSERT_OP(vmVect.size(), ==, _ndof);
     OPENRAVE_ASSERT_OP(amVect.size(), ==, _ndof);
 
+    // Check inputs
+    for (size_t idof = 0; idof < _ndof; ++idof) {
+        OPENRAVE_ASSERT_OP(x0Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(x0Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(x1Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(x1Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(vmVect[idof], >, 0);
+        OPENRAVE_ASSERT_OP(Abs(v0Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(Abs(v1Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(amVect[idof], >, 0);
+    }
+
     // First compute the minimum trajectory duration for each joint.
     dReal maxDuration = 0;
     size_t maxIndex = 0;
@@ -233,17 +245,20 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     if( IS_DEBUGLEVEL(Level_Verbose) ) {// Debugging: check ParabolicCurves before conversion
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
+            OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
             if( ret != PCR_Normal ) {
                 RAVELOG_WARN("Failed before conversion to RampNDs");
                 return false;
             }
         }
+        RAVELOG_VERBOSE("CheckParabolicCurves successful");
     }
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
 
     {// Check RampNDs before returning
         ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+        OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
         if( ret != PCR_Normal ) {
             return false;
         }
@@ -298,6 +313,18 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
     OPENRAVE_ASSERT_OP(vmVect.size(), ==, _ndof);
     OPENRAVE_ASSERT_OP(amVect.size(), ==, _ndof);
 
+    // Check inputs
+    for (size_t idof = 0; idof < _ndof; ++idof) {
+        OPENRAVE_ASSERT_OP(x0Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(x0Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(x1Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(x1Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(vmVect[idof], >, 0);
+        OPENRAVE_ASSERT_OP(Abs(v0Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(Abs(v1Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
+        OPENRAVE_ASSERT_OP(amVect[idof], >, 0);
+    }
+
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( !Compute1DTrajectoryFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], vmVect[idof], amVect[idof], duration, _cacheCurve) ) {
             return false;
@@ -338,17 +365,20 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
     if( IS_DEBUGLEVEL(Level_Verbose) ){// Debugging: check ParabolicCurves before conversion
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
+            OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
             if( ret != PCR_Normal ) {
                 RAVELOG_WARN("Failed before conversion to RampNDs");
                 return false;
             }
         }
+        RAVELOG_VERBOSE("CheckParabolicCurves successful");
     }
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
     
     {// Check RampNDs before returning
         ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
+        OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
         if( ret != PCR_Normal ) {
             return false;
         }
@@ -1526,7 +1556,10 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
             // Since we already have t = 0 and t = duration in switchpointsList, it must point to
             // some value between *(switchpointsList.begin()) and *(switchpointsList.end() - 1)
             // (exclusive).
-            if( !FuzzyEquals(swList[jswitch], *it, g_fRampEpsilon) && !FuzzyEquals(swList[jswitch], *(it - 1), g_fRampEpsilon) ) {
+
+            // Note also that skipping some switchpoints which are closer to their neighbors than
+            // g_fRampEpsilon may introduce discrepancies greater than g_fRampEpsilon.
+            if( !(swList[jswitch] == *it) && !(swList[jswitch] == *(it - 1)) ) {
                 switchpointsList.insert(it, swList[jswitch]);
             }
         }
@@ -1553,7 +1586,8 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
                 temp1 = x0Vect[jdof] - x1Vect[jdof] + v0Vect[jdof]*dur;
                 temp2 = v0Vect[jdof] - v1Vect[jdof];
                 a = -(dur*temp1 + 2*temp2)/(dur*(0.5*durSqr + 2));
-                if( Sqr(temp1 + 0.5*durSqr*a) + Sqr(temp2 + a*dur) < Sqr(temp1 + 0.5*durSqr*aVect[jdof]) + Sqr(temp2 + aVect[jdof]*dur) ) {
+                // if( Sqr(temp1 + 0.5*durSqr*a) + Sqr(temp2 + a*dur) < Sqr(temp1 + 0.5*durSqr*aVect[jdof]) + Sqr(temp2 + aVect[jdof]*dur) ) {
+                if( Abs(temp1 + 0.5*durSqr*a) <= g_fRampEpsilon && Abs(temp2 + a*dur) <= g_fRampEpsilon ) {
                     // The recomputed acceleration gives smaller discrepancy
                     if( Abs(a) <= amVect[jdof] + g_fRampEpsilon ) {
                         aVect[jdof] = a;
