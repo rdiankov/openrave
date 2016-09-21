@@ -29,7 +29,15 @@ class ParabolicSmoother2 : public PlannerBase, public RampOptimizer::Feasibility
     class MyRampNDFeasibilityChecker : public RampOptimizer::RampNDFeasibilityChecker {
 public:
         MyRampNDFeasibilityChecker(RampOptimizer::FeasibilityCheckerBase* feas) : RampOptimizer::RampNDFeasibilityChecker(feas) {
+            _bHasParameters = false;
             _cacheRampNDVectIn.resize(1);
+        }
+
+        void SetParameters(PlannerParametersConstPtr params)
+        {
+            _bHasParameters = true;
+            _parameters.reset(new ConstraintTrajectoryTimingParameters());
+            _parameters->copy(params);
         }
 
         /// \brief A wrapper function for Check2.
@@ -51,6 +59,11 @@ public:
             OPENRAVE_ASSERT_OP(tol.size(), ==, rampndVect[0].GetDOF());
             for (size_t idof = 0; idof < tol.size(); ++idof) {
                 OPENRAVE_ASSERT_OP(tol[idof], >, 0);
+            }
+
+            bool bExpectedModifiedConfigurations = false;
+            if( _bHasParameters ) {
+                bExpectedModifiedConfigurations = (_parameters->fCosManipAngleThresh > -1 + g_fEpsilonLinear);
             }
 
             // Extract all switch points (including t = 0 and t = duration).
@@ -116,37 +129,40 @@ public:
 
                 if( feas->NeedDerivativeForFeasibility() ) {
                     rampndVect[iswitch - 1].GetV1Vect(_dq1);
-                    // Due to constraints, configurations along the segment may have been modified
-                    // (via CheckPathAllConstraints called from SegmentFeasible2). This may cause
-                    // _dq1 not being consistent with _q0, _q1, _dq0, and elapsedTime. So we check
-                    // consistency here as well as modify _dq1 and elapsedTime if necessary.
 
-                    expectedElapsedTime = 0;
-                    totalWeight = 0;
-                    for (size_t idof = 0; idof < _q0.size(); ++idof) {
-                        dReal avgVel = 0.5*(_dq0[idof] + _dq1[idof]);
-                        if( RaveFabs(avgVel) > g_fEpsilon ) {
-                            dReal fWeight = RaveFabs(_q1[idof] - _q0[idof]);
-                            expectedElapsedTime += fWeight*(_q1[idof] - _q0[idof])/avgVel;
-                            totalWeight += fWeight;
-                        }
-                    }
+                    if( bExpectedModifiedConfigurations ) {
+                        // Due to constraints, configurations along the segment may have been modified
+                        // (via CheckPathAllConstraints called from SegmentFeasible2). This may cause
+                        // _dq1 not being consistent with _q0, _q1, _dq0, and elapsedTime. So we check
+                        // consistency here as well as modify _dq1 and elapsedTime if necessary.
 
-                    if( totalWeight > g_fEpsilon ) {
-                        // Recompute elapsed time
-                        newElapsedTime = expectedElapsedTime/totalWeight;
-
-                        // Check elapsed time consistency
-                        if( RaveFabs(newElapsedTime) > RampOptimizer::g_fRampEpsilon ) {
-                            elapsedTime = newElapsedTime;
-                            if( elapsedTime > g_fEpsilon ) {
-                                iElapsedTime = 1/elapsedTime;
-                                for (size_t idof = 0; idof < _q0.size(); ++idof) {
-                                    _dq1[idof] = 2*iElapsedTime*(_q1[idof] - _q0[idof]) - _dq0[idof];
-                                }
+                        expectedElapsedTime = 0;
+                        totalWeight = 0;
+                        for (size_t idof = 0; idof < _q0.size(); ++idof) {
+                            dReal avgVel = 0.5*(_dq0[idof] + _dq1[idof]);
+                            if( RaveFabs(avgVel) > g_fEpsilon ) {
+                                dReal fWeight = RaveFabs(_q1[idof] - _q0[idof]);
+                                expectedElapsedTime += fWeight*(_q1[idof] - _q0[idof])/avgVel;
+                                totalWeight += fWeight;
                             }
-                            else {
-                                _dq1 = _dq0;
+                        }
+
+                        if( totalWeight > g_fEpsilon ) {
+                            // Recompute elapsed time
+                            newElapsedTime = expectedElapsedTime/totalWeight;
+
+                            // Check elapsed time consistency
+                            if( RaveFabs(newElapsedTime) > RampOptimizer::g_fRampEpsilon ) {
+                                elapsedTime = newElapsedTime;
+                                if( elapsedTime > g_fEpsilon ) {
+                                    iElapsedTime = 1/elapsedTime;
+                                    for (size_t idof = 0; idof < _q0.size(); ++idof) {
+                                        _dq1[idof] = 2*iElapsedTime*(_q1[idof] - _q0[idof]) - _dq0[idof];
+                                    }
+                                }
+                                else {
+                                    _dq1 = _dq0;
+                                }
                             }
                         }
                     }
@@ -192,6 +208,9 @@ public:
         }
 
 private:
+        ConstraintTrajectoryTimingParametersPtr _parameters;
+        bool _bHasParameters;
+
         // Cache
         std::vector<dReal> _vswitchtimes;
         std::vector<dReal> _q0, _q1, _dq0, _dq1;
@@ -236,6 +255,7 @@ public:
 
         _bUsePerturbation = true;
         _bmanipconstraints = (_parameters->manipname.size() > 0) && (_parameters->maxmanipspeed > 0 || _parameters->maxmanipaccel > 0);
+        _feasibilitychecker.SetParameters(GetParameters());
 
         _interpolator.Initialize(_parameters->GetDOF());
 
@@ -601,9 +621,9 @@ public:
                             bool bSuccess = false;
                             // Try to stretch the duration of the RampND in hopes of fixing constraints violation.
                             dReal newDuration = rampndTrimmed.GetDuration();
-                            newDuration += RampOptimizer::g_fRampEpsilon;
+                            newDuration += 5*RampOptimizer::g_fRampEpsilon;
                             dReal timeIncrement = 0.05*newDuration;
-                            size_t maxTries = 30;
+                            size_t maxTries = 4;
 
                             rampndTrimmed.GetX0Vect(x0Vect);
                             rampndTrimmed.GetX1Vect(x1Vect);
@@ -638,12 +658,12 @@ public:
                                 }
 
                                 // ComputeNDTrajectoryFixedDuration failed or Check2 failed.
-                                if( iDilate > 2 ) {
+                                if( iDilate > 1 ) {
                                     newDuration += timeIncrement;
                                 }
                                 else {
                                     // Start slowly
-                                    newDuration += RampOptimizer::g_fRampEpsilon;
+                                    newDuration += 5*RampOptimizer::g_fRampEpsilon;
                                 }
                             }
                             // Finished stretching.
@@ -1254,8 +1274,6 @@ protected:
         dReal tTotal = tOriginal; // keeps track of the latest trajectory duration
 
         std::vector<dReal>& vellimits = _cacheVellimits, &accellimits = _cacheAccelLimits;
-        // vellimits.resize(_parameters->_vConfigVelocityLimit.size());
-        // accellimits.resize(_parameters->_vConfigAccelerationLimit.size());
 
         // Various parameters for shortcutting
         int numSlowDowns = 0; // counts the number of times we slow down the trajectory (via vel/accel scaling) because of manip constraints
@@ -1267,8 +1285,8 @@ protected:
         dReal fStartTimeAccelMult = 1.0;
 
         // Parameters & variables for early shortcut termination
-        size_t nItersFromPrevSuccessful = 0; // keeps track of the most recent successful shortcut iteration
-        size_t nCutoffIters = 100;           // we stop shortcutting if no progress has been made in the past nCutoffIters iterations
+        size_t nItersFromPrevSuccessful = 0;        // keeps track of the most recent successful shortcut iteration
+        size_t nCutoffIters = min(100, numIters/2); // we stop shortcutting if no progress has been made in the past nCutoffIters iterations
 
         dReal score = 1.0;                   // if the current iteration is successful, we calculate a score
         dReal currentBestScore = 1.0;        // keeps track of the best shortcut score so far
