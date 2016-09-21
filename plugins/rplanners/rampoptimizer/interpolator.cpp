@@ -327,10 +327,12 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( !Compute1DTrajectoryFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], vmVect[idof], amVect[idof], duration, _cacheCurve) ) {
+            RAVELOG_VERBOSE_FORMAT("Computing 1D Trajectory with fixed duration for idof = %d failed", idof);
             return false;
         }
 
         if( !_ImposeJointLimitFixedDuration(_cacheCurve, xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof]) ) {
+            RAVELOG_VERBOSE_FORMAT("Cannot impose joint limit on idof = %d", idof);
             return false;
         }
 
@@ -955,6 +957,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         RAVELOG_VERBOSE("interval 2 and interval 4 intersect at a point, most likely because the given endTime is actually its minimum time.");
         // Make sure that the above statement is true.
         if( !Compute1DTrajectory(x0, x1, v0, v1, vm, am, curveOut) ) {
+            RAVELOG_VERBOSE("Compute1DTrajectory failed");
+            RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", x0%x1%v0%v1%vm%am%duration);
             return false; // what ?
         }
         else {
