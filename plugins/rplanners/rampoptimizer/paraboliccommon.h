@@ -9,7 +9,7 @@ namespace OpenRAVE {
 namespace RampOptimizerInternal {
 
 const static dReal g_fRampEpsilon = 1e-10; // tolerance for ramp computation & checking operation
-const static int g_nPrec = 10;             // precision when writing trajectories to files (needed to be consistent with g_fRampEpsilon)
+const static int g_nPrec = 12;             // precision when writing trajectories to files (needed to be consistent with g_fRampEpsilon)
 const static dReal g_fRampInf = 1e300;     // threshold for deciding if a number is infinite
 
 inline std::string GetDumpDirectory()
