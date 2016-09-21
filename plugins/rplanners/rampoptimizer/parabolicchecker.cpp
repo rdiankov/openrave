@@ -63,30 +63,36 @@ ParabolicCheckReturn CheckSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal 
     dReal v1_ = v0 + a*t;
     if( !FuzzyEquals(v1, v1_, g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_VDiscrepancy: v1 = %.15e; computed v1 = %.15e; diff = %.15e", v1%v1_%(v1 - v1_));
+        RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_VDiscrepancy;
     }
-    dReal d_ = t*(v0 + 0.5*a*t);
+    dReal d_ = x1 - x0;
     if( !FuzzyEquals(d, d_, g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: d = %.15e; computed d = %.15e; diff = %.15e", d%d_%(d - d_));
+        RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_XDiscrepancy;
     }
-    dReal x1_ = x0 + d;
+    dReal x1_ = x0 + t*(v0 + 0.5*a*t);
     if( !FuzzyEquals(x1, x1_, g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: x1 = %.15e; computed x1 = %.15e; diff = %.15e", x1%x1_%(x1 - x1_));
+        RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_XDiscrepancy;
     }
     dReal bmin, bmax;
     _GetPeaks(x0, x1, v0, v1, a, t, bmin, bmax);
     if( (bmin < xmin - g_fRampEpsilon) || (bmax > xmax + g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_XBoundViolated: xmin = %.15e; bmin = %.15e; diff@min = %.15e; xmax = %.15e; bmax = %.15e; diff@max = %.15e", xmin%bmin%(xmin - bmin)%xmax%bmax%(bmax - xmax));
+        RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_XBoundViolated;
     }
     if( (Abs(v0) > vm + g_fRampEpsilon) || (Abs(v1) > vm + g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_VBoundViolated: vm = %.15e; v0 = %.15e; v1 = %.15e; diff@v0 = %.15e; diff@v1 = %.15e", vm%v0%v1%(Abs(v0) - vm)%(Abs(v1) - vm));
+        RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_VBoundViolated;
     }
     if( Abs(a) > am + g_fRampEpsilon ) {
         RAVELOG_WARN_FORMAT("PCR_ABoundViolated: am = %.15e; a = %.15e; diff = %.15e", am%a%(Abs(a) - am));
+        RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_ABoundViolated;
     }
     return PCR_Normal;
@@ -203,6 +209,7 @@ ParabolicCheckReturn CheckRampNDs(const std::vector<RampND>& rampnds, const std:
     }
     ParabolicCheckReturn ret = CheckRampND(rampnds[0], xminVect, xmaxVect, vmVect, amVect);
     if( ret != PCR_Normal ) {
+        RAVELOG_WARN_FORMAT("rampnds[0] does not pass CheckRampND; retcode = %d", ret);
         return ret;
     }
 
@@ -221,6 +228,7 @@ ParabolicCheckReturn CheckRampNDs(const std::vector<RampND>& rampnds, const std:
         }
         ret = CheckRampND(rampnds[irampnd], xminVect, xmaxVect, vmVect, amVect);
         if( ret != PCR_Normal ) {
+            RAVELOG_WARN_FORMAT("rampnds[%d] does not pass CheckRampND; retcode = %d", irampnd%ret);
             return ret;
         }
     }
@@ -239,6 +247,7 @@ ParabolicCheckReturn CheckRampNDs(const std::vector<RampND>& rampnds, const std:
     }
     ret = CheckRampND(rampnds[nrampnds - 1], xminVect, xmaxVect, vmVect, amVect);
     if( ret != PCR_Normal ) {
+        RAVELOG_WARN_FORMAT("rampnds[%d] does not pass CheckRampND; retcode = %d", (nrampnds - 1)%ret);
         return ret;
     }
 
