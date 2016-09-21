@@ -230,7 +230,17 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 
     RAVELOG_VERBOSE("Imposing joint limits successful");
 
-    _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut);
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {// Debugging: check ParabolicCurves before conversion
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
+            if( ret != PCR_Normal ) {
+                RAVELOG_WARN("Failed before conversion to RampNDs");
+                return false;
+            }
+        }
+    }
+
+    _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
 
     {// Check RampNDs before returning
         ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
@@ -325,7 +335,18 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
         RAVELOG_VERBOSE(sss.str());
     }
 
-    _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut);
+    if( IS_DEBUGLEVEL(Level_Verbose) ){// Debugging: check ParabolicCurves before conversion
+        for (size_t idof = 0; idof < _ndof; ++idof) {
+            ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
+            if( ret != PCR_Normal ) {
+                RAVELOG_WARN("Failed before conversion to RampNDs");
+                return false;
+            }
+        }
+    }
+
+    _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
+    
     {// Check RampNDs before returning
         ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
         if( ret != PCR_Normal ) {
@@ -1490,7 +1511,7 @@ bool ParabolicInterpolator::_SolveForT0(dReal A, dReal B, dReal t, dReal l, dRea
     }
 }
 
-void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<ParabolicCurve>& curvesVectIn, std::vector<RampND>& rampndVectOut)
+void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<ParabolicCurve>& curvesVectIn, std::vector<RampND>& rampndVectOut, const std::vector<dReal>& amVect)
 {
     std::vector<dReal>& switchpointsList = _cacheSwitchpointsList;
     switchpointsList.resize(0);
@@ -1512,23 +1533,35 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     rampndVectOut.resize(switchpointsList.size() - 1);
-    std::vector<dReal>& x0Vect = _cacheX0Vect, x1Vect = _cacheX1Vect, v0Vect = _cacheV0Vect, v1Vect = _cacheV1Vect; //, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& x0Vect = _cacheX0Vect, x1Vect = _cacheX1Vect, v0Vect = _cacheV0Vect, v1Vect = _cacheV1Vect, aVect = _cacheAVect, dVect = _cacheDVect;
     for (size_t jdof = 0; jdof < _ndof; ++jdof) {
         x0Vect[jdof] = curvesVectIn[jdof].EvalPos(0);
         v0Vect[jdof] = curvesVectIn[jdof].EvalVel(0);
     }
 
+    bool bRecomputeAccel = (amVect.size() == _ndof);
+
     for (size_t iswitch = 1; iswitch < switchpointsList.size(); ++iswitch) {
         dReal dur = switchpointsList[iswitch] - switchpointsList[iswitch - 1];
+        dReal durSqr = dur*dur, a, temp1, temp2;
         for (size_t jdof = 0; jdof < _ndof; ++jdof) {
             x1Vect[jdof] = curvesVectIn[jdof].EvalPos(switchpointsList[iswitch]);
             v1Vect[jdof] = curvesVectIn[jdof].EvalVel(switchpointsList[iswitch]);
-            // dVect[jdof] = x1Vect[jdof] - x0Vect[jdof];
-            // aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*(switchpointsList[iswitch] + switchpointsList[iswitch - 1]));
+            dVect[jdof] = x1Vect[jdof] - x0Vect[jdof];
+            aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*(switchpointsList[iswitch] + switchpointsList[iswitch - 1]));
+            if( bRecomputeAccel ) {
+                temp1 = x0Vect[jdof] - x1Vect[jdof] + v0Vect[jdof]*dur;
+                temp2 = v0Vect[jdof] - v1Vect[jdof];
+                a = -(dur*temp1 + 2*temp2)/(dur*(0.5*durSqr + 2));
+                if( Sqr(temp1 + 0.5*durSqr*a) + Sqr(temp2 + a*dur) < Sqr(temp1 + 0.5*durSqr*aVect[jdof]) + Sqr(temp2 + aVect[jdof]*dur) ) {
+                    // The recomputed acceleration gives smaller discrepancy
+                    if( Abs(a) <= amVect[jdof] + g_fRampEpsilon ) {
+                        aVect[jdof] = a;
+                    }
+                }
+            }
         }
-        // Their might be some numerical errors when evaluating positions and velocities and switch
-        // points. Therefore, to be safe, we compute anew the accelerations.
-        rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), std::vector<dReal>(), dur);
+        rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, dur);
 
         x0Vect.swap(x1Vect);
         v0Vect.swap(v1Vect);

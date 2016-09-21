@@ -168,8 +168,16 @@ public:
     /**
        \brief Convert a vector of 1D trajectories (with equal durations; stored as ParabolicCurves)
        to a vector of RampNDs.
+
+       During ParabolicCurves evaluation, some small discrepancies might occur (small but large
+       enough to be caught by parabolicchecker), especially the acceleration values. So we
+       re-compute the accelration values to try to minimize those discrepancies. However, we also
+       need to make sure that our acceleration corrections are valid, i.e., the computed
+       acceleration must be within bounds. Therefore, we also take amVect as an *optional* argument
+       here. If given, we re-compute accelerations so as to minimize discrepancies. Otherwise, we
+       use the acceleration values evaluated from curvesVectIn.
      */
-    void _ConvertParabolicCurvesToRampNDs(const std::vector<ParabolicCurve>& curvesVectIn, std::vector<RampND>& rampndVectOut);
+    void _ConvertParabolicCurvesToRampNDs(const std::vector<ParabolicCurve>& curvesVectIn, std::vector<RampND>& rampndVectOut, const std::vector<dReal>& amVect=std::vector<dReal>());
 
     inline dReal SolveBrakeTime(dReal x, dReal v, dReal xbound) {
         dReal bt;
