@@ -599,15 +599,43 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
     assert(am > zero)
 
     if (newDuration < -epsilon):
+        log.info("duration = {0} is negative".format(newDuration))
         return ParabolicCurve()
     if (newDuration <= epsilon):
         # Check if this is a stationary trajectory
         if (FuzzyEquals(x0, x1, epsilon) and FuzzyEquals(v0, v1, epsilon)):
+            log.info("stationary trajectory")
             ramp0 = Ramp(v0, 0, 0, x0)
             newCurve = ParabolicCurve(ramp0)
             return newCurve
         else:
-            # newDuration is too short to any movement to be made
+            log.info("newDuration is too short for any movement to be made")
+            return ParabolicCurve()
+
+    # Correct small discrepancies if any
+    if (v0 > vm):
+        if FuzzyEquals(v0, vm, epsilon):
+            v0 = vm
+        else:
+            log.info("v0 > vm: {0} > {1}".format(v0, vm))
+            return ParabolicCurve()
+    elif (v0 < -vm):
+        if FuzzyEquals(v0, -vm, epsilon):
+            v0 = -vm
+        else:
+            log.info("v0 < -vm: {0} < {1}".format(v0, -vm))
+            return ParabolicCurve()
+    if (v1 > vm):
+        if FuzzyEquals(v1, vm, epsilon):
+            v1 = vm
+        else:
+            log.info("v1 > vm: {0} > {1}".format(v1, vm))
+            return ParabolicCurve()
+    elif (v1 < -vm):
+        if FuzzyEquals(v1, -vm, epsilon):
+            v1 = -vm
+        else:
+            log.info("v1 < -vm: {0} < {1}".format(v1, -vm))
             return ParabolicCurve()
 
     d = Sub(x1, x0)

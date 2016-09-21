@@ -510,7 +510,8 @@ class ParabolicCurve(object):
         if FuzzyZero(t, epsilon):
             a = 0
         else:
-            a = mp.fdiv(Sub(v1, v0), t)
+            tSqr = Sqr(t)
+            a = mp.fdiv(Neg(Sum([Mult(v0, tSqr), Mult(t, Sub(x0, x1)), Mult(2, Sub(v0, v1))])), Mult(t, Add(Mult(pointfive, tSqr), 2)))
         ramp0 = Ramp(v0, a, t, x0)
         self.Initialize([ramp0])
         return
