@@ -198,14 +198,34 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        OPENRAVE_ASSERT_OP(x0Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(x0Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(x1Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(x1Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(vmVect[idof], >, 0);
-        OPENRAVE_ASSERT_OP(Abs(v0Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(Abs(v1Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(amVect[idof], >, 0);
+        if( x0Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x0Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            return false;
+        }
+            
+        if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            return false;
+        }
+        
+        if( vmVect[idof] <= 0 ) {
+            RAVELOG_WARN_FORMAT("vmVect[%d] = %.15e is not positive", idof%vmVect[idof]);
+            return false;
+        }
+        if( amVect[idof] <= 0 ) {
+            RAVELOG_WARN_FORMAT("amVect[%d] = %.15e is not positive", idof%amVect[idof]);
+            return false;
+        }
+
+        if( v0Vect[idof] > vmVect[idof] + g_fRampEpsilon || v0Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v0Vect[idof]%vmVect[idof]);
+            return false;
+        }
+
+        if( v1Vect[idof] > vmVect[idof] + g_fRampEpsilon || v1Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v1Vect[idof]%vmVect[idof]);
+            return false;
+        }
     }
 
     // First compute the minimum trajectory duration for each joint.
@@ -315,14 +335,34 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
 
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        OPENRAVE_ASSERT_OP(x0Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(x0Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(x1Vect[idof], <=, xmaxVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(x1Vect[idof], >=, xminVect[idof] - g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(vmVect[idof], >, 0);
-        OPENRAVE_ASSERT_OP(Abs(v0Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(Abs(v1Vect[idof]), <=, vmVect[idof] + g_fRampEpsilon);
-        OPENRAVE_ASSERT_OP(amVect[idof], >, 0);
+        if( x0Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x0Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            return false;
+        }
+            
+        if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
+            return false;
+        }
+        
+        if( vmVect[idof] <= 0 ) {
+            RAVELOG_WARN_FORMAT("vmVect[%d] = %.15e is not positive", idof%vmVect[idof]);
+            return false;
+        }
+        if( amVect[idof] <= 0 ) {
+            RAVELOG_WARN_FORMAT("amVect[%d] = %.15e is not positive", idof%amVect[idof]);
+            return false;
+        }
+
+        if( v0Vect[idof] > vmVect[idof] + g_fRampEpsilon || v0Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("v0Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v0Vect[idof]%vmVect[idof]);
+            return false;
+        }
+
+        if( v1Vect[idof] > vmVect[idof] + g_fRampEpsilon || v1Vect[idof] < -vmVect[idof] - g_fRampEpsilon ) {
+            RAVELOG_WARN_FORMAT("v1Vect[%d] = %.15e exceeds the bounds; vm = %.15e", idof%v1Vect[idof]%vmVect[idof]);
+            return false;
+        }
     }
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
