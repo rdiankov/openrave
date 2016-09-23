@@ -19,7 +19,9 @@
 #include "rampoptimizer/parabolicchecker.h"
 #include "rampoptimizer/feasibilitychecker.h"
 #include "manipconstraints2.h"
-
+// #define SMOOTHER_TIMING_DEBUG
+// #define MEASURE_TIME_SMOOTHER
+// #define MEASURE_TIME_SHORTCUT_ONLY
 namespace rplanners {
 
 namespace RampOptimizer = RampOptimizerInternal;
@@ -296,6 +298,10 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+#ifdef MEASURE_TIME_SMOOTHER
+        uint32_t tstartsmoother = utils::GetMicroTime();
+#endif
+        int withmanipconstraints = _bmanipconstraints ? 1 : 0;
         BOOST_ASSERT(!!_parameters && !!ptraj);
 
         if( ptraj->GetNumWaypoints() < 2 ) {
@@ -515,10 +521,23 @@ public:
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return PS_Interrupted;
             }
-
+            
             int numShortcuts = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
+#ifdef MEASURE_TIME_SHORTCUT_ONLY
+                bool writeresult = true;
+                uint32_t tstartshortcut = utils::GetMicroTime();
+#endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
+#ifdef MEASURE_TIME_SHORTCUT_ONLY
+                uint32_t tendshortcut = utils::GetMicroTime();
+                std::ofstream fshortcut;
+                if( writeresult && parameters->_nMaxIterations == 250 ) {
+                    fshortcut.open("/private/cache/openrave/shortcuttime.parabolicsmoother2.shortcut.txt", std::ios_base::app);
+                    fshortcut << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                    fshortcut << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendshortcut - tstartshortcut) << std::endl;
+                }
+#endif
                 if( numShortcuts < 0 ) {
                     return PS_Interrupted;
                 }
@@ -772,6 +791,18 @@ public:
         RAVELOG_DEBUG_FORMAT("measured %d interpolations; total exectime = %.15e; time/iter = %.15e", _nCallsInterpolator%_totalTimeInterpolator%(_totalTimeInterpolator/_nCallsInterpolator));
         RAVELOG_DEBUG_FORMAT("measured %d checkmanips; total exectime = %.15e; time/iter = %.15e", _nCallsCheckManip%_totalTimeCheckManip%(_totalTimeCheckManip/_nCallsCheckManip));
 #endif
+#ifdef MEASURE_TIME_SMOOTHER
+        uint32_t tendsmoother = utils::GetMicroTime();
+        std::ofstream fsmoother;
+        if( parameters->_nMaxIterations == 250 ) {
+            fsmoother.open("/private/cache/openrave/shortcuttime.parabolicsmoother2.all.txt", std::ios_base::app);
+            fsmoother << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            fsmoother << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendsmoother - tstartsmoother) << std::endl;
+        }
+#endif
+        if( parameters->_nMaxIterations == 250 && _bmanipconstraints ) {
+            GetEnv()->Save("/private/cache/openrave/parabolicsmoother2.scene.mujin.dae");
+        }
         return _ProcessPostPlanners(RobotBasePtr(), ptraj);
     }
 
@@ -953,6 +984,7 @@ public:
         }
         else {
             // Try correcting acceleration bound violation if any
+            
         }
 
         if( rampndVectOut.size() == 0 ) {

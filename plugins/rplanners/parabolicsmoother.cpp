@@ -20,7 +20,9 @@
 
 #include "manipconstraints.h"
 #include "ParabolicPathSmooth/DynamicPath.h"
-
+// #define OPENRAVE_TIMING_DEBUGGING
+ #define MEASURE_TIME_SMOOTHER
+// #define MEASURE_TIME_SHORTCUT_ONLY
 namespace rplanners {
 
 namespace ParabolicRamp = ParabolicRampInternal;
@@ -233,6 +235,10 @@ public:
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
+#ifdef MEASURE_TIME_SMOOTHER
+        uint32_t tstartsmoother = utils::GetMicroTime();
+#endif
+        int withmanipconstraints = _bmanipconstraints ? 1 : 0;
 #ifdef OPENRAVE_TIMING_DEBUGGING
         ncheckmanipconstraints = 0;
 #endif
@@ -448,7 +454,7 @@ public:
             if( _CallCallbacks(_progress) == PA_Interrupt ) {
                 return PS_Interrupted;
             }
-
+            
             int numshortcuts=0;
             dReal dummyDur1 = 0, dummyDur2 = 0;
             FOREACH(itramp, dynamicpath.ramps) {
@@ -457,12 +463,25 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
+#ifdef MEASURE_TIME_SHORTCUT_ONLY
+                bool writeresult = false;
+                uint32_t tstartshortcut = utils::GetMicroTime();
+#endif
                 if (!_usingNewHeuristics) {
                     numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 }
                 else {
                     numshortcuts = _Shortcut2(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 }
+#ifdef MEASURE_TIME_SHORTCUT_ONLY
+                uint32_t tendshortcut = utils::GetMicroTime();
+                std::ofstream fshortcut;
+                if( writeresult && parameters->_nMaxIterations == 250 ) {
+                    fshortcut.open("/private/cache/openrave/shortcuttime.parabolicsmoother.shortcut.txt", std::ios_base::app);
+                    fshortcut << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                    fshortcut << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendshortcut - tstartshortcut) << std::endl;
+                }
+#endif
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
                 }
@@ -473,7 +492,7 @@ public:
             RAVELOG_DEBUG_FORMAT("after shortcutting: duration %.15e -> %.15e, diff = %.15e", dummyDur1%dummyDur2%(dummyDur1 - dummyDur2));
 
 #ifdef OPENRAVE_TIMING_DEBUGGING
-            RAVELOG_VERBOSE_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
+            RAVELOG_DEBUG_FORMAT("calling checkmanipconstraints %d times, using %.15e sec. = %.15e sec./call", ncheckmanipconstraints%checkmaniptime%(checkmaniptime/ncheckmanipconstraints));
 #endif
 
             ++_progress._iteration;
@@ -565,7 +584,7 @@ public:
                             dReal incr = 0.05*endTime;
                             // (Puttichai) now go up to 3.0 multiplier
                             // (Puttichai) try using an increment instead of a multiplier
-                            size_t maxIncrement = 30;
+                            size_t maxIncrement = 4;
                             for(size_t idilate = 0; idilate < maxIncrement; ++idilate ) {
                                 RAVELOG_VERBOSE_FORMAT("env=%d, ramp %d, idilate=%d/%d", GetEnv()->GetId()%irampindex%idilate%maxIncrement);
                                 tempramps1d.resize(0);
@@ -620,7 +639,7 @@ public:
                                     endTime += incr;
                                 }
                                 else {
-                                    endTime += ParabolicRamp::EpsilonT;
+                                    endTime += 5*ParabolicRamp::EpsilonT;
                                 }
                             }
                             if( !bSuccess ) {
@@ -755,6 +774,15 @@ public:
             }
         }
         //====================================================================================================
+#ifdef MEASURE_TIME_SMOOTHER
+        uint32_t tendsmoother = utils::GetMicroTime();
+        std::ofstream fsmoother;
+        if( parameters->_nMaxIterations == 250 ) {
+            fsmoother.open("/private/cache/openrave/shortcuttime.parabolicsmoother.all.txt", std::ios_base::app);
+            fsmoother << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+            fsmoother << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendsmoother - tstartsmoother) << std::endl;
+        }
+#endif
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
     }
 
@@ -2387,9 +2415,9 @@ protected:
             RAVELOG_DEBUG_FORMAT("shortcut progress is written to %s", shortcutprogressfilename);
         }
 
-        RAVELOG_VERBOSE_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
-        RAVELOG_VERBOSE_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
-        RAVELOG_VERBOSE_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
+        RAVELOG_DEBUG_FORMAT("measured %d slow-down loops, %.15e sec. = %.15e sec./loop", nslowdownloops%slowdownlooptime%(slowdownlooptime/nslowdownloops));
+        RAVELOG_DEBUG_FORMAT("measured %d interpolations, %.15e sec. = %.15e sec./interpolation", ninterpolations%interpolationtime%(interpolationtime/ninterpolations));
+        RAVELOG_DEBUG_FORMAT("measured %d checkings, %.15e sec. = %.15e sec./check", nchecks%checktime%(checktime/nchecks));
 #endif
         _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 1);
         return shortcuts;
