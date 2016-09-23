@@ -34,7 +34,6 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof)
     _cacheAVect.resize(_ndof);
     _cacheDVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
-    _cacheRampNDVect.resize(_ndof);
 }
 
 void ParabolicInterpolator::Initialize(size_t ndof)
@@ -49,7 +48,6 @@ void ParabolicInterpolator::Initialize(size_t ndof)
     _cacheAVect.resize(_ndof);
     _cacheDVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
-    _cacheRampNDVect.resize(_ndof);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -763,7 +761,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     // Cache vector
     std::vector<Ramp>& ramps = _cacheRampsVect2;
 
-    if( duration <= -g_fRampEpsilon ) {
+    if( duration <= g_fRampEpsilon ) {
         // Check if this is a stationary trajectory
         if( FuzzyEquals(x0, x1, g_fRampEpsilon) && FuzzyEquals(v0, v1, g_fRampEpsilon) ) {
             // This is actually a stationary trajectory
@@ -788,7 +786,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
 
     // Correct small and acceptable discrepancies in velocities (if any)
     if( v0 > vm ) {
-        if( FuzzyEquals(v0, vm, g_fRampEpsilon) ) {
+        if( v0 <= vm + g_fRampEpsilon ) {
             // Acceptable
             v0 = vm;
         }
@@ -798,7 +796,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
     }
     else if( v0 < -vm ) {
-        if( FuzzyEquals(v0, -vm, g_fRampEpsilon) ) {
+        if( v0 >= -vm - g_fRampEpsilon ) {
             // Acceptable
             v0 = -vm;
         }
@@ -809,7 +807,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     }
 
     if( v1 > vm ) {
-        if( FuzzyEquals(v1, vm, g_fRampEpsilon) ) {
+        if( v1 <= vm + g_fRampEpsilon ) {
             // Acceptable
             v1 = vm;
         }
@@ -819,7 +817,7 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         }
     }
     else if( v1 < -vm ) {
-        if( FuzzyEquals(v1, -vm, g_fRampEpsilon) ) {
+        if( v1 >= -vm - g_fRampEpsilon ) {
             // Acceptable
             v1 = -vm;
         }
@@ -853,8 +851,8 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
         // In this case the boundary conditions match the given duration, i.e., (x1, v1) can be
         // reached from (x0, v0) using one ramp.
         // RAVELOG_VERBOSE("case B == 0: one-ramp trajectory");
-        dReal a = 2*(x1 - x0 - v0*duration)/(duration*duration); // giving priority to displacement and consistency between
-                                                                 // acceleration and displacement
+        dReal a = 2*(x1 - x0 - v0*duration)*durInverse*durInverse; // giving priority to displacement and consistency between
+                                                                   // acceleration and displacement
         Ramp ramp0(v0, a, duration, x0);
         ramps.resize(1);
         ramps[0] = ramp0;
