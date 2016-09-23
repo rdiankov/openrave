@@ -961,7 +961,7 @@ void RampND::TrimFront(dReal t)
             _data[5*_ndof + idof] = GetX1At(idof) - GetX0At(idof);
         }
 
-        _data.back() = _data.back() - t;
+        _data.back() -= t;
         return;
     }
 }
@@ -1067,7 +1067,7 @@ void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
             index_++;
             it++;
         }
-        OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
+        // OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
         index = index_ - 1;
         remainder = t - *(it - 1);
         return;
