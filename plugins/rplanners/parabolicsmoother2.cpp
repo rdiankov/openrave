@@ -20,8 +20,7 @@
 #include "rampoptimizer/feasibilitychecker.h"
 #include "manipconstraints2.h"
 // #define SMOOTHER_TIMING_DEBUG
-// #define MEASURE_TIME_SMOOTHER
-// #define MEASURE_TIME_SHORTCUT_ONLY
+#define MEASURE_TIME_SMOOTHER
 namespace rplanners {
 
 namespace RampOptimizer = RampOptimizerInternal;
@@ -299,6 +298,7 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
 #ifdef MEASURE_TIME_SMOOTHER
+        uint32_t tstartshortcut, tendshortcut;
         uint32_t tstartsmoother = utils::GetMicroTime();
 #endif
         int withmanipconstraints = _bmanipconstraints ? 1 : 0;
@@ -524,19 +524,12 @@ public:
             
             int numShortcuts = 0;
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
-#ifdef MEASURE_TIME_SHORTCUT_ONLY
-                bool writeresult = true;
-                uint32_t tstartshortcut = utils::GetMicroTime();
+#ifdef MEASURE_TIME_SMOOTHER
+                tstartshortcut = utils::GetMicroTime();
 #endif
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
-#ifdef MEASURE_TIME_SHORTCUT_ONLY
-                uint32_t tendshortcut = utils::GetMicroTime();
-                std::ofstream fshortcut;
-                if( writeresult && parameters->_nMaxIterations == 250 ) {
-                    fshortcut.open("/private/cache/openrave/shortcuttime.parabolicsmoother2.shortcut.txt", std::ios_base::app);
-                    fshortcut << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-                    fshortcut << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendshortcut - tstartshortcut) << std::endl;
-                }
+#ifdef MEASURE_TIME_SMOOTHER
+                tendshortcut = utils::GetMicroTime();
 #endif
                 if( numShortcuts < 0 ) {
                     return PS_Interrupted;
@@ -797,7 +790,7 @@ public:
         if( parameters->_nMaxIterations == 250 ) {
             fsmoother.open("/private/cache/openrave/shortcuttime.parabolicsmoother2.all.txt", std::ios_base::app);
             fsmoother << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-            fsmoother << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendsmoother - tstartsmoother) << std::endl;
+            fsmoother << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendshortcut - tstartshortcut) << " " << 0.000001f*(float)(tendsmoother - tstartsmoother) << std::endl;
         }
 #endif
         if( parameters->_nMaxIterations == 250 && _bmanipconstraints ) {

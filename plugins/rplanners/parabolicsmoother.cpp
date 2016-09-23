@@ -22,7 +22,6 @@
 #include "ParabolicPathSmooth/DynamicPath.h"
 // #define OPENRAVE_TIMING_DEBUGGING
  #define MEASURE_TIME_SMOOTHER
-// #define MEASURE_TIME_SHORTCUT_ONLY
 namespace rplanners {
 
 namespace ParabolicRamp = ParabolicRampInternal;
@@ -236,6 +235,7 @@ public:
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
     {
 #ifdef MEASURE_TIME_SMOOTHER
+        uint32_t tstartshortcut, tendshortcut;
         uint32_t tstartsmoother = utils::GetMicroTime();
 #endif
         int withmanipconstraints = _bmanipconstraints ? 1 : 0;
@@ -463,9 +463,8 @@ public:
             if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 //numshortcuts = dynamicpath.Shortcut(parameters->_nMaxIterations,_feasibilitychecker,this, parameters->_fStepLength*0.99);
-#ifdef MEASURE_TIME_SHORTCUT_ONLY
-                bool writeresult = false;
-                uint32_t tstartshortcut = utils::GetMicroTime();
+#ifdef MEASURE_TIME_SMOOTHER
+                tstartshortcut = utils::GetMicroTime();
 #endif
                 if (!_usingNewHeuristics) {
                     numshortcuts = _Shortcut(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
@@ -473,14 +472,8 @@ public:
                 else {
                     numshortcuts = _Shortcut2(dynamicpath, parameters->_nMaxIterations,this, parameters->_fStepLength*0.99);
                 }
-#ifdef MEASURE_TIME_SHORTCUT_ONLY
-                uint32_t tendshortcut = utils::GetMicroTime();
-                std::ofstream fshortcut;
-                if( writeresult && parameters->_nMaxIterations == 250 ) {
-                    fshortcut.open("/private/cache/openrave/shortcuttime.parabolicsmoother.shortcut.txt", std::ios_base::app);
-                    fshortcut << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-                    fshortcut << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendshortcut - tstartshortcut) << std::endl;
-                }
+#ifdef MEASURE_TIME_SMOOTHER
+                tendshortcut = utils::GetMicroTime();
 #endif
                 if( numshortcuts < 0 ) {
                     return PS_Interrupted;
@@ -780,7 +773,7 @@ public:
         if( parameters->_nMaxIterations == 250 ) {
             fsmoother.open("/private/cache/openrave/shortcuttime.parabolicsmoother.all.txt", std::ios_base::app);
             fsmoother << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
-            fsmoother << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendsmoother - tstartsmoother) << std::endl;
+            fsmoother << withmanipconstraints << " " << parameters->_nMaxIterations << " " << 0.000001f*(float)(tendshortcut - tstartshortcut) << " " << 0.000001f*(float)(tendsmoother - tstartsmoother) << std::endl;
         }
 #endif
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);
