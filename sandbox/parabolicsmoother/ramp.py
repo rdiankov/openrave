@@ -511,7 +511,7 @@ class ParabolicCurve(object):
             a = 0
         else:
             tSqr = Sqr(t)
-            a = mp.fdiv(Neg(Sum([Mult(v0, tSqr), Mult(t, Sub(x0, x1)), Mult(2, Sub(v0, v1))])), Mult(t, Add(Mult(pointfive, tSqr), 2)))
+            a = mp.fdiv(Neg(Sum([Mul(v0, tSqr), Mul(t, Sub(x0, x1)), Mul(2, Sub(v0, v1))])), Mul(t, Add(Mul(pointfive, tSqr), 2)))
         ramp0 = Ramp(v0, a, t, x0)
         self.Initialize([ramp0])
         return
