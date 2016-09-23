@@ -212,8 +212,6 @@ private:
     std::vector<Ramp> _cacheRampsVect2; // for using in Compute1DTrajectoryFixedDuration
     ParabolicCurve _cacheCurve;
     std::vector<ParabolicCurve> _cacheCurvesVect;
-    RampND _cacheRampND;
-    std::vector<RampND> _cacheRampNDVect;
 };
 
 } // end namespace RampOptimizerInternal
