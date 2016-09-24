@@ -2450,7 +2450,7 @@ object PyKinBody::GetNonAdjacentLinks(int adjacentoptions) const
 
 void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 {
-    _pbody->SetAdjacentLinks(ilink0, ilink1);
+    _pbody->SetAdjacentLinks(linkindex0, linkindex1);
 }
 
 object PyKinBody::GetAdjacentLinks() const
