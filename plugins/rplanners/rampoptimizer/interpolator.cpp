@@ -61,7 +61,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
 
     // Cache
     ParabolicCurve& curve = _cacheCurve;
-    std::vector<dReal>& v0Vect = _cacheV0Vect, v1Vect = _cacheV0Vect, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& v0Vect = _cacheV0Vect, &v1Vect = _cacheV0Vect, &aVect = _cacheAVect, &dVect = _cacheDVect;
 
     SubtractVector(x1Vect, x0Vect, dVect); // total displacement
 
@@ -1608,7 +1608,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     rampndVectOut.resize(switchpointsList.size() - 1);
-    std::vector<dReal>& x0Vect = _cacheX0Vect, x1Vect = _cacheX1Vect, v0Vect = _cacheV0Vect, v1Vect = _cacheV1Vect, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &aVect = _cacheAVect, &dVect = _cacheDVect;
     for (size_t jdof = 0; jdof < _ndof; ++jdof) {
         x0Vect[jdof] = curvesVectIn[jdof].EvalPos(0);
         v0Vect[jdof] = curvesVectIn[jdof].EvalVel(0);
