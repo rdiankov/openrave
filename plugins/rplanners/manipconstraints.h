@@ -453,63 +453,60 @@ public:
         int retcode = 0;
         dReal maxallowedmult = 0.92;
 
+        std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp = outramps.begin();
+        FOREACHC(itmanipinfo, _listCheckManips) {
+            KinBodyPtr probot = itmanipinfo->plink->GetParent();
 
-        std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp1 = outramps.begin();
-        if (itramp1 != outramps.end()) {
-            FOREACHC(itmanipinfo, _listCheckManips) {
-                KinBodyPtr probot = itmanipinfo->plink->GetParent();
-
-                itramp1->Accel(0, ac);
-                qfillactive.resize(itmanipinfo->vuseddofindices.size());
-                _vfillactive.resize(itmanipinfo->vuseddofindices.size());
-                _afill.resize(probot->GetDOF());
-                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
-                    qfillactive[index] = itramp1->x0.at(itmanipinfo->vconfigindices.at(index));
-                    _vfillactive[index] = itramp1->dx0.at(itmanipinfo->vconfigindices.at(index));
-                    _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
-                }
-
-                int endeffindex = itmanipinfo->plink->GetIndex();
-                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
-
-                // Set the robot to the new state
-                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->GetLinkVelocities(endeffvels);
-                probot->GetLinkAccelerations(_afill,endeffaccs);
-                endeffvellin = endeffvels.at(endeffindex).first;
-                endeffvelang = endeffvels.at(endeffindex).second;
-                endeffacclin = endeffaccs.at(endeffindex).first;
-                endeffaccang = endeffaccs.at(endeffindex).second;
-                Transform R = itmanipinfo->plink->GetTransform();
-
-                FOREACH(itpoint, itmanipinfo->checkpoints) {
-                    Vector point = R.rotate(*itpoint);
-
-                    if (_maxmanipspeed > 0) {
-                        Vector vpoint = endeffvellin + endeffvelang.cross(point);
-                        dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
-                        if (actualmanipspeed > maxactualmanipspeed) {
-                            maxactualmanipspeed = actualmanipspeed;
-                        }
-                    }
-
-                    if (_maxmanipaccel > 0) {
-                        Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
-                        dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
-                        if (actualmanipaccel > maxactualmanipaccel) {
-                            maxactualmanipaccel = actualmanipaccel;
-                        }
-                    }
-                }
-                // Finished iterating through all checkpoints
+            itramp->Accel(0, ac);
+            qfillactive.resize(itmanipinfo->vuseddofindices.size());
+            _vfillactive.resize(itmanipinfo->vuseddofindices.size());
+            _afill.resize(probot->GetDOF());
+            for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
+                qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
+                _vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
+                _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
             }
-            // Finished iterating through all manipulators
 
-            // RAVELOG_VERBOSE_FORMAT("itramp1 = %d", (itramp1 - outramps.begin()));
+            int endeffindex = itmanipinfo->plink->GetIndex();
+            KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
 
+            // Set the robot to the new state
+            probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+            probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+            probot->GetLinkVelocities(endeffvels);
+            probot->GetLinkAccelerations(_afill,endeffaccs);
+            endeffvellin = endeffvels.at(endeffindex).first;
+            endeffvelang = endeffvels.at(endeffindex).second;
+            endeffacclin = endeffaccs.at(endeffindex).first;
+            endeffaccang = endeffaccs.at(endeffindex).second;
+            Transform R = itmanipinfo->plink->GetTransform();
+
+            FOREACH(itpoint, itmanipinfo->checkpoints) {
+                Vector point = R.rotate(*itpoint);
+
+                if (_maxmanipspeed > 0) {
+                    Vector vpoint = endeffvellin + endeffvelang.cross(point);
+                    dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
+                    if (actualmanipspeed > maxactualmanipspeed) {
+                        maxactualmanipspeed = actualmanipspeed;
+                    }
+                }
+
+                if (_maxmanipaccel > 0) {
+                    Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
+                    dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
+                    if (actualmanipaccel > maxactualmanipaccel) {
+                        maxactualmanipaccel = actualmanipaccel;
+                    }
+                }
+            }
+            // Finished iterating through all checkpoints
+        }
+        // Finished iterating through all manipulators
+
+        if( (itramp == outramps.end() - 1) && (itramp->endTime <= g_fEpsilonLinear) ) {
             if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
-                retcode = CFO_CheckTimeBasedConstraints;       
+                retcode = CFO_CheckTimeBasedConstraints;
                 // If the actual max value is very close to the bound (i.e., almost not violating
                 // the bound), the multiplier will be too large (too close to 1) to be useful.
                 reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
@@ -524,77 +521,73 @@ public:
             return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
 
-        std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp2 = --outramps.end();
-        if (itramp2 != itramp1) {
-            FOREACHC(itmanipinfo, _listCheckManips) {
-                KinBodyPtr probot = itmanipinfo->plink->GetParent();
+        itramp = outramps.end() - 1;
+        FOREACHC(itmanipinfo, _listCheckManips) {
+            KinBodyPtr probot = itmanipinfo->plink->GetParent();
 
-                itramp2->Accel(itramp2->endTime, ac);
-                qfillactive.resize(itmanipinfo->vuseddofindices.size());
-                _vfillactive.resize(itmanipinfo->vuseddofindices.size());
-                _afill.resize(probot->GetDOF());
-                for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
-                    qfillactive[index] = itramp2->x1.at(itmanipinfo->vconfigindices.at(index));
-                    _vfillactive[index] = itramp2->dx1.at(itmanipinfo->vconfigindices.at(index));
-                    _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
-                }
+            itramp->Accel(itramp->endTime, ac);
+            qfillactive.resize(itmanipinfo->vuseddofindices.size());
+            _vfillactive.resize(itmanipinfo->vuseddofindices.size());
+            _afill.resize(probot->GetDOF());
+            for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
+                qfillactive[index] = itramp->x1.at(itmanipinfo->vconfigindices.at(index));
+                _vfillactive[index] = itramp->dx1.at(itmanipinfo->vconfigindices.at(index));
+                _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
+            }
 
-                int endeffindex = itmanipinfo->plink->GetIndex();
-                KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
+            int endeffindex = itmanipinfo->plink->GetIndex();
+            KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation|KinBody::Save_LinkVelocities);
 
-                // Set the robot to the new state
-                probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
-                probot->GetLinkVelocities(endeffvels);
-                probot->GetLinkAccelerations(_afill,endeffaccs);
-                endeffvellin = endeffvels.at(endeffindex).first;
-                endeffvelang = endeffvels.at(endeffindex).second;
-                endeffacclin = endeffaccs.at(endeffindex).first;
-                endeffaccang = endeffaccs.at(endeffindex).second;
-                Transform R = itmanipinfo->plink->GetTransform();
+            // Set the robot to the new state
+            probot->SetDOFValues(qfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+            probot->SetDOFVelocities(_vfillactive, KinBody::CLA_CheckLimits, itmanipinfo->vuseddofindices);
+            probot->GetLinkVelocities(endeffvels);
+            probot->GetLinkAccelerations(_afill,endeffaccs);
+            endeffvellin = endeffvels.at(endeffindex).first;
+            endeffvelang = endeffvels.at(endeffindex).second;
+            endeffacclin = endeffaccs.at(endeffindex).first;
+            endeffaccang = endeffaccs.at(endeffindex).second;
+            Transform R = itmanipinfo->plink->GetTransform();
 
-                FOREACH(itpoint, itmanipinfo->checkpoints) {
-                    Vector point = R.rotate(*itpoint);
+            FOREACH(itpoint, itmanipinfo->checkpoints) {
+                Vector point = R.rotate(*itpoint);
 
-                    if (_maxmanipspeed > 0) {
-                        Vector vpoint = endeffvellin + endeffvelang.cross(point);
-                        dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
-                        // Keep record of the value only if it violates the bound
-                        if (actualmanipspeed > maxactualmanipspeed) {
-                            maxactualmanipspeed = actualmanipspeed;
-                        }
-                    }
-
-                    if (_maxmanipaccel > 0) {
-                        Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
-                        dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
-                        if (actualmanipaccel > maxactualmanipaccel) {
-                            maxactualmanipaccel = actualmanipaccel;
-                        }
+                if (_maxmanipspeed > 0) {
+                    Vector vpoint = endeffvellin + endeffvelang.cross(point);
+                    dReal actualmanipspeed = RaveSqrt(vpoint.lengthsqr3());
+                    // Keep record of the value only if it violates the bound
+                    if (actualmanipspeed > maxactualmanipspeed) {
+                        maxactualmanipspeed = actualmanipspeed;
                     }
                 }
-                // Finished iterating through all checkpoints
+
+                if (_maxmanipaccel > 0) {
+                    Vector apoint = endeffacclin + endeffvelang.cross(endeffvelang.cross(point)) + endeffaccang.cross(point);
+                    dReal actualmanipaccel = RaveSqrt(apoint.lengthsqr3());
+                    if (actualmanipaccel > maxactualmanipaccel) {
+                        maxactualmanipaccel = actualmanipaccel;
+                    }
+                }
             }
-            // Finished iterating through all manipulators
-            
-            if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
-            }
-            if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
-            }
-            RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-            // RAVELOG_WARN_FORMAT("maxviolatedindex = %d", maxviolatedindex);
-            return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
+            // Finished iterating through all checkpoints
         }
+        // Finished iterating through all manipulators
 
-        return ParabolicRampInternal::CheckReturn(0);
+        if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
+            retcode = CFO_CheckTimeBasedConstraints;
+            // If the actual max value is very close to the bound (i.e., almost not violating
+            // the bound), the multiplier will be too large (too close to 1) to be useful.
+            reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+        }
+        if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
+            retcode = CFO_CheckTimeBasedConstraints;
+            // If the actual max value is very close to the bound (i.e., almost not violating
+            // the bound), the multiplier will be too large (too close to 1) to be useful.
+            reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+        }
+        RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+        // RAVELOG_WARN_FORMAT("maxviolatedindex = %d", maxviolatedindex);
+        return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }
 
 private:
