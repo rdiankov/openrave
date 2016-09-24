@@ -832,8 +832,9 @@ void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dRea
         else {
             // Calculating accelerations using the same procedure as in ParabolicCurve::SetSegment.
             dReal tSqr = t*t;
+            dReal divMult = 1/(t*(0.5*tSqr + 2));
             for (size_t idof = 0; idof < _ndof; ++idof) {
-                _data[4*_ndof + idof] = -(v0Vect[idof]*tSqr + t*(x0Vect[idof] - x1Vect[idof]) + 2*(v0Vect[idof] - v1Vect[idof]))/(t*(0.5*tSqr + 2));
+                _data[4*_ndof + idof] = -(v0Vect[idof]*tSqr + t*(x0Vect[idof] - x1Vect[idof]) + 2*(v0Vect[idof] - v1Vect[idof]))*divMult;
             }
         }
     }

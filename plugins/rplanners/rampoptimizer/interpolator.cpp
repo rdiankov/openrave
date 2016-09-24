@@ -1619,6 +1619,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     for (size_t iswitch = 1; iswitch < switchpointsList.size(); ++iswitch) {
         dReal dur = switchpointsList[iswitch] - switchpointsList[iswitch - 1];
         dReal durSqr = dur*dur, a, temp1, temp2;
+        dReal divMult = 1/(dur*(0.5*durSqr + 2));
         for (size_t jdof = 0; jdof < _ndof; ++jdof) {
             x1Vect[jdof] = curvesVectIn[jdof].EvalPos(switchpointsList[iswitch]);
             v1Vect[jdof] = curvesVectIn[jdof].EvalVel(switchpointsList[iswitch]);
@@ -1627,7 +1628,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
             if( bRecomputeAccel ) {
                 temp1 = x0Vect[jdof] - x1Vect[jdof] + v0Vect[jdof]*dur;
                 temp2 = v0Vect[jdof] - v1Vect[jdof];
-                a = -(dur*temp1 + 2*temp2)/(dur*(0.5*durSqr + 2));
+                a = -(dur*temp1 + 2*temp2)*divMult;
                 // if( Sqr(temp1 + 0.5*durSqr*a) + Sqr(temp2 + a*dur) < Sqr(temp1 + 0.5*durSqr*aVect[jdof]) + Sqr(temp2 + aVect[jdof]*dur) ) {
                 if( Abs(temp1 + 0.5*durSqr*a) <= g_fRampEpsilon && Abs(temp2 + a*dur) <= g_fRampEpsilon ) {
                     // The recomputed acceleration gives smaller discrepancy
