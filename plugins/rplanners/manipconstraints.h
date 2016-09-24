@@ -448,7 +448,7 @@ public:
         dReal maxactualmanipspeed = 0, maxactualmanipaccel = 0;
         // int maxviolatedindex = -1;
 
-        dReal reductionFactor = 0.9;
+        dReal reductionFactor = 1;
         dReal multiplier = 0.85;
         int retcode = 0;
         dReal maxallowedmult = 0.92;
@@ -504,24 +504,6 @@ public:
                 }
                 // Finished iterating through all checkpoints
             }
-            // Finished iterating through all manipulators
-
-            // RAVELOG_VERBOSE_FORMAT("itramp1 = %d", (itramp1 - outramps.begin()));
-
-            if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
-                retcode = CFO_CheckTimeBasedConstraints;       
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
-            }
-            if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
-            }
-            RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-            return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
 
         std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp2 = --outramps.end();
@@ -575,26 +557,25 @@ public:
                 }
                 // Finished iterating through all checkpoints
             }
-            // Finished iterating through all manipulators
-            
-            if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
-            }
-            if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
-                retcode = CFO_CheckTimeBasedConstraints;
-                // If the actual max value is very close to the bound (i.e., almost not violating
-                // the bound), the multiplier will be too large (too close to 1) to be useful.
-                reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
-            }
-            RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
-            // RAVELOG_WARN_FORMAT("maxviolatedindex = %d", maxviolatedindex);
-            return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
         }
+        
+        // Finished iterating through all manipulators
 
-        return ParabolicRampInternal::CheckReturn(0);
+        if (_maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed) {
+            retcode = CFO_CheckTimeBasedConstraints;
+            // If the actual max value is very close to the bound (i.e., almost not violating
+            // the bound), the multiplier will be too large (too close to 1) to be useful.
+            reductionFactor = min(multiplier*_maxmanipspeed/maxactualmanipspeed, maxallowedmult);
+        }
+        if (_maxmanipaccel > 0 && maxactualmanipaccel > _maxmanipaccel) {
+            retcode = CFO_CheckTimeBasedConstraints;
+            // If the actual max value is very close to the bound (i.e., almost not violating
+            // the bound), the multiplier will be too large (too close to 1) to be useful.
+            reductionFactor = min(multiplier*_maxmanipaccel/maxactualmanipaccel, maxallowedmult);
+        }
+        RAVELOG_VERBOSE_FORMAT("Actual max: manipspeed = %.15e; manipaccel = %.15e", maxactualmanipspeed%maxactualmanipaccel);
+        // RAVELOG_WARN_FORMAT("maxviolatedindex = %d", maxviolatedindex);
+        return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }
 
 private:
