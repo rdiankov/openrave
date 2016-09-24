@@ -143,6 +143,11 @@ Real ParabolicRamp1D::Derivative(Real t) const
 
 Real ParabolicRamp1D::Accel(Real t) const
 {
+    // Sometimes a ParabolicRamp1D is used to store only one straight line segment. In that case
+    // when evaluating the acceleration, the correct value to return is a1.
+    if( tswitch1 == tswitch2 && tswitch2 == ttotal ) {
+        return a1;
+    }
     if(t < tswitch1) return a1;
     else if(t < tswitch2) return 0;
     else return a2;
