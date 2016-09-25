@@ -247,21 +247,21 @@ ParabolicCurve::ParabolicCurve(std::vector<Ramp>&rampsIn)
 
     // This will invalidate rampsIn
     _ramps.swap(rampsIn);
-    _switchpointsList.resize(0);
-    if( _switchpointsList.size() < _ramps.size() + 1 ) {
-        _switchpointsList.reserve(_ramps.size() + 1);
+    _switchpointsList.resize(_ramps.size() + 1);
+
+    dReal d = 0;
+    dReal duration = 0;
+    _switchpointsList[0] = duration;
+
+    int index = 1;
+    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp, ++index) {
+        d += itramp->d;
+        duration += itramp->duration;
+        _switchpointsList[index] = duration;
     }
-
-    _d = 0;
-    _duration = 0;
-    _switchpointsList.push_back(_duration);
-
-    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
-        _d += itramp->d;
-        _duration += itramp->duration;
-        _switchpointsList.push_back(_duration);
-    }
-
+    _d = d;
+    _duration = duration;
+    
     // Call SetInitialValue to enforce consistency of position throughout the curve (i.e., enforcing
     // ramps[i - 1].x1 = ramps[i].x0).
     SetInitialValue(_ramps[0].x0);
@@ -416,21 +416,21 @@ void ParabolicCurve::Initialize(std::vector<Ramp>& rampsIn)
 
     // This will invalidate rampsIn
     _ramps.swap(rampsIn);
-    _switchpointsList.resize(0);
-    if( _switchpointsList.size() < _ramps.size() + 1 ) {
-        _switchpointsList.reserve(_ramps.size() + 1);
+    _switchpointsList.resize(_ramps.size() + 1);
+
+    dReal d = 0;
+    dReal duration = 0;
+    _switchpointsList[0] = duration;
+
+    int index = 1;
+    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp, ++index) {
+        d += itramp->d;
+        duration += itramp->duration;
+        _switchpointsList[index] = duration;
     }
-
-    _d = 0;
-    _duration = 0;
-    _switchpointsList.push_back(_duration);
-
-    for (std::vector<Ramp>::const_iterator itramp = _ramps.begin(); itramp != _ramps.end(); ++itramp) {
-        _d += itramp->d;
-        _duration += itramp->duration;
-        _switchpointsList.push_back(_duration);
-    }
-
+    _d = d;
+    _duration = duration;
+    
     // Call SetInitialValue to enforce consistency of position throughout the curve (i.e., enforcing
     // ramps[i - 1].x1 = ramps[i].x0).
     SetInitialValue(_ramps[0].x0);
@@ -439,9 +439,13 @@ void ParabolicCurve::Initialize(std::vector<Ramp>& rampsIn)
 
 void ParabolicCurve::Initialize(Ramp& rampIn)
 {
-    _ramps.resize(1);
+    if( _ramps.size() != 1 ) {
+        _ramps.resize(1);
+    }
     _ramps[0] = rampIn;
-    _switchpointsList.resize(2);
+    if( _switchpointsList.size() != 2) {
+        _switchpointsList.resize(2);
+    }
     _switchpointsList[0] = 0;
     _switchpointsList[1] = rampIn.duration;
     _d = rampIn.d;
@@ -451,7 +455,8 @@ void ParabolicCurve::Initialize(Ramp& rampIn)
 void ParabolicCurve::Reset()
 {
     _ramps.clear();
-    _switchpointsList.clear();
+    _switchpointsList.resize(1);
+    _switchpointsList[0] = 0;
     _duration = 0;
     _d = 0;
     return;
@@ -464,9 +469,17 @@ void ParabolicCurve::SetConstant(dReal x0, dReal t)
         t = 0;
     }
 
-    std::vector<Ramp> ramps(1);
-    ramps[0].Initialize(0, 0, t, x0);
-    Initialize(ramps);
+    if( _ramps.size() != 1) {
+        _ramps.resize(1);
+    }
+    _ramps[0].Initialize(0, 0, t, x0);
+    _d = _ramps[0].d;
+    _duration = t;
+    if( _switchpointsList.size() != 2 ) {
+        _switchpointsList.resize(2);
+    }
+    _switchpointsList[0] = 0;
+    _switchpointsList[0] = t;
     return;
 }
 
@@ -511,25 +524,34 @@ void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
      */
     dReal tSqr = t*t;
     dReal a = -(v0*tSqr + t*(x0 - x1) + 2*(v0 - v1))/(t*(0.5*tSqr + 2));
-    std::vector<Ramp> ramps(1);
 
+    if( _ramps.size() != 1) {
+        _ramps.resize(1);
+    }
     // Directly assign values to avoid recalculation.
-    ramps[0].x0 = x0;
-    ramps[0].x1 = x1;
-    ramps[0].v0 = v0;
-    ramps[0].v1 = v1;
-    ramps[0].duration = t;
-    ramps[0].d = x1 - x0;
-    ramps[0].a = a;
-    Initialize(ramps);
+    const std::vector<Ramp>::iterator itramp = _ramps.begin();
+    itramp->x0 = x0;
+    itramp->x1 = x1;
+    itramp->v0 = v0;
+    itramp->v1 = v1;
+    itramp->duration = t;
+    itramp->d = x1 - x0;
+    itramp->a = a;
+
+    _d = itramp->d;
+    _duration = t;
     return;
 }
 
 void ParabolicCurve::SetZeroDuration(dReal x0, dReal v0)
 {
-    std::vector<Ramp> ramps(1);
-    ramps[0].Initialize(v0, 0, 0, x0);
-    Initialize(ramps);
+    if( _ramps.size() != 1 ) {
+        _ramps.resize(1);
+    }
+    _ramps[0].Initialize(v0, 0, 0, x0);
+
+    _d = _ramps[0].d;
+    _duration = _ramps[0].duration;
     return;
 }
 
@@ -1076,15 +1098,16 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
     OPENRAVE_ASSERT_OP(t0, <, t1);
     OPENRAVE_ASSERT_OP(rampndVect.size(), >, 0);
     if( t0 == 0 && t1 == _duration ) {
+        dReal duration = 0;
         _rampnds = rampndVect;
-        _duration = 0;
         _switchpointsList.resize(0);
         _switchpointsList.reserve(rampndVect.size() + 1);
-        _switchpointsList.push_back(_duration);
+        _switchpointsList.push_back(duration);
         for (size_t irampnd = 0; irampnd < rampndVect.size(); ++irampnd) {
-            _duration += _rampnds[irampnd].GetDuration();
-            _switchpointsList.push_back(_duration);
+            duration += _rampnds[irampnd].GetDuration();
+            _switchpointsList.push_back(duration);
         }
+        _duration = duration;
         return;
     }
 
@@ -1156,15 +1179,14 @@ void ParabolicPath::Serialize(std::ostream& O) const
 
 void ParabolicPath::_UpdateMembers()
 {
-    _switchpointsList.resize(0);
-    _switchpointsList.reserve(_rampnds.size() + 1);
-    _switchpointsList.push_back(0);
-
-    _duration = 0;
+    _switchpointsList.resize(_rampnds.size() + 1);
+    _switchpointsList[0] = 0;
+    dReal duration = 0;
     for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
-        _duration += _rampnds[irampnd].GetDuration();
-        _switchpointsList.push_back(_duration);
+        duration += _rampnds[irampnd].GetDuration();
+        _switchpointsList[irampnd + 1] = duration;
     }
+    _duration = duration;
 }
 
 } // end namespace RampOptimizerInternal

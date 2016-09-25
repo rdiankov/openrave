@@ -531,8 +531,8 @@ class ParabolicPath {
 public:
     ParabolicPath() {
         _duration = 0;
-        _switchpointsList.resize(0);
-        _switchpointsList.push_back(0);
+        _switchpointsList.resize(1);
+        _switchpointsList[0] = 0;
     }
     ~ParabolicPath() {
     }
