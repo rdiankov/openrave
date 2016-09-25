@@ -125,7 +125,7 @@ void Ramp::GetPeaks(dReal ta, dReal tb, dReal& bmin, dReal& bmax) const
         return;
     }
 
-    dReal xDeflection = EvalPos(tDeflection);
+    dReal xDeflection = x0 + 0.5*v0*tDeflection;
     bmin = Min(curMin, xDeflection);
     bmax = Max(curMax, xDeflection);
     return;

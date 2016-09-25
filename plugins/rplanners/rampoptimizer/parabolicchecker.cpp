@@ -48,7 +48,7 @@ void _GetPeaks(dReal x0, dReal x1, dReal v0, dReal v1, dReal a, dReal t, dReal& 
         return;
     }
 
-    dReal xDeflection = x0 + tDeflection*(v0 + 0.5*a*tDeflection);
+    dReal xDeflection = x0 + 0.5*v0*tDeflection;
     bmin = Min(curMin, xDeflection);
     bmax = Max(curMax, xDeflection);
     return;
@@ -66,12 +66,6 @@ ParabolicCheckReturn CheckSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal 
         RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
         return PCR_VDiscrepancy;
     }
-    // dReal d_ = x1 - x0;
-    // if( !FuzzyEquals(d, d_, g_fRampEpsilon) ) {
-    //     RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: d = %.15e; computed d = %.15e; diff = %.15e", d%d_%(d - d_));
-    //     RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; a = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%a%t%xmin%xmax%vm%am);
-    //     return PCR_XDiscrepancy;
-    // }
     dReal x1_ = x0 + t*(v0 + 0.5*a*t);
     if( !FuzzyEquals(x1, x1_, g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: x1 = %.15e; computed x1 = %.15e; diff = %.15e", x1%x1_%(x1 - x1_));
