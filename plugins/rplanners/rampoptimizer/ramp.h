@@ -343,7 +343,7 @@ public:
 
     inline const dReal& GetDuration() const
     {
-        return _data.back();
+        return _duration;
     }
 
     inline void GetX0Vect(std::vector<dReal>& xVect) const
@@ -382,7 +382,7 @@ public:
     inline void SetDuration(dReal t)
     {
         OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-        _data.back() = t;
+        _duration = t;
         return;
     }
 
@@ -522,10 +522,9 @@ public:
 
 private:
     size_t _ndof;
-    std::vector<dReal> _data; // a vector of size 5*_ndof + 1 containing the data of the following
-                              // order: x0Vect, x1Vect, v0Vect, v1Vect, aVect, t. We put the
-                              // duration at the back of the vector since when it is queried for the
-                              // duration we don't need to calculate the index.
+    dReal _duration;
+    std::vector<dReal> _data; // a vector of size 5*_ndof containing the data of the following
+                              // order: x0Vect, x1Vect, v0Vect, v1Vect, and aVect.
 }; // end class RampND
 
 class ParabolicPath {
