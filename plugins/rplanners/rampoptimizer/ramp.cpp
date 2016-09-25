@@ -653,10 +653,16 @@ void ParabolicCurve::TrimFront(dReal t)
     dReal remainder;
     FindRampIndex(t, index, remainder);
 
-    std::vector<Ramp> rightHalf(_ramps.size() - index);
-    std::copy(_ramps.begin() + index, _ramps.end(), rightHalf.begin());
-    rightHalf.front().TrimFront(remainder);
-    Initialize(rightHalf);
+    int rampssize = _ramps.size();
+    if( index > 0 ) {
+        for (int iramp = index; iramp < rampssize; ++iramp) {
+            _ramps[iramp - index] = _ramps[iramp];
+        }
+        _ramps.resize(rampssize - index);
+    }
+    _ramps[0].TrimFront(remainder);
+    _duration -= remainder;
+    SetInitialValue(_ramps[0].x0);
     return;
 }
 
