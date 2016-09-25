@@ -373,7 +373,7 @@ public:
                 if( tVect.at(0) > g_fEpsilonLinear ) {
                     ptraj->GetWaypoint(iwaypoint, x1Vect, posSpec);
                     ptraj->GetWaypoint(iwaypoint, v1Vect, velSpec);
-                    tempRampND.Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), std::vector<dReal>(), tVect[0]);
+                    tempRampND.Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), tVect[0]);
                     parabolicpath.AppendRampND(tempRampND);
                     x0Vect.swap(x1Vect);
                     v0Vect.swap(v1Vect);
@@ -406,7 +406,7 @@ public:
                     }
 
                     if( isParabolic ) {
-                        tempRampND.Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), std::vector<dReal>(), tVect[0]);
+                        tempRampND.Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), tVect[0]);
                         if( !_parameters->verifyinitialpath ) {
                             tempRampND.constraintChecked = true;
                         }
@@ -887,7 +887,7 @@ public:
                     }
 
                     // The computed next velocity is fine.
-                    _cacheRampNDSeg.Initialize(curPos, newPos, curVel, newVel, std::vector<dReal>(), std::vector<dReal>(), deltaTime);
+                    _cacheRampNDSeg.Initialize(curPos, newPos, curVel, newVel, std::vector<dReal>(), deltaTime);
 
                     // Now check the acceleration
                     bool bAccelChanged = false;
@@ -956,7 +956,7 @@ public:
         }
 
         if( rampndVectOut.size() == 0 ) {
-            _cacheRampNDSeg.Initialize(q0, q1, dq0, dq1, std::vector<dReal>(), std::vector<dReal>(), timeElapsed);
+            _cacheRampNDSeg.Initialize(q0, q1, dq0, dq1, std::vector<dReal>(), timeElapsed);
             // Now check the acceleration
             bool bAccelChanged = false;
             for (size_t idof = 0; idof < ndof; ++idof) {

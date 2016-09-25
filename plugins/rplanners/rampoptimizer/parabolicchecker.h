@@ -35,7 +35,7 @@ enum ParabolicCheckReturn {
 void _GetPeaks(dReal x0, dReal x1, dReal v0, dReal v1, dReal a, dReal t, dReal& bmin, dReal& bmax);
 
 /// \brief Check if all input values are consistent
-ParabolicCheckReturn CheckSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal a, dReal d, dReal t, dReal xmin, dReal xmax, dReal vm, dReal am);
+ParabolicCheckReturn CheckSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal a, dReal t, dReal xmin, dReal xmax, dReal vm, dReal am);
 
 /// \brief Check if the ramp violates joint limits, velocity constraint, or acceleration
 /// constraint. Also check if the duration is negative.

@@ -29,7 +29,6 @@ namespace RampOptimizerInternal {
 #define DATA_OFFSET_V0 2
 #define DATA_OFFSET_V1 3
 #define DATA_OFFSET_A 4
-#define DATA_OFFSET_D 5 // to be removed
 
 #define IT_X0_BEGIN(data, ndof) ((data).begin() + DATA_OFFSET_X0*ndof)
 #define IT_X0_END(data, ndof) ((data).begin() + DATA_OFFSET_X0*ndof + ndof)
@@ -41,8 +40,6 @@ namespace RampOptimizerInternal {
 #define IT_V1_END(data, ndof) ((data).begin() + DATA_OFFSET_V1*ndof + ndof)
 #define IT_A_BEGIN(data, ndof) ((data).begin() + DATA_OFFSET_A*ndof)
 #define IT_A_END(data, ndof) ((data).begin() + DATA_OFFSET_A*ndof + ndof)
-#define IT_D_BEGIN(data, ndof) ((data).begin() + DATA_OFFSET_D*ndof)      // to be removed
-#define IT_D_END(data, ndof) ((data).begin() + DATA_OFFSET_D*ndof + ndof) // to be removed
     
 class Ramp {
 public:
@@ -262,13 +259,13 @@ public:
        \brief Initialize RampND to hold the given values. There can be X different initializations
        as follows:
 
-       1. All values (x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, t) are given.
+       1. All values (x0Vect, x1Vect, v0Vect, v1Vect, aVect, t) are given.
 
        2. Only some values are given: x0Vect, x1Vect, v0Vect, v1Vect, t are given. The acceleration
           will be calculated to minimize the sum of square of errors between computed x1, v1 and the
           given x1, v1.
      */
-    RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, const dReal t);
+    RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const dReal t);
     ~RampND() {
     }
 
@@ -294,7 +291,7 @@ public:
     void Initialize(size_t ndof);
 
     /// \brief Initialize rampnd from boundary values.
-    void Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, const dReal t);
+    void Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const dReal t);
 
     /// \brief Set the rampnd to have zero acceleration, start with xVect, and have the specified duration.
     void SetConstant(const std::vector<dReal>& xVect, const dReal t);
@@ -344,11 +341,6 @@ public:
         return _data[DATA_OFFSET_A*_ndof + idof];
     }
 
-    inline const dReal& GetDAt(int idof) const
-    {
-        return _data[DATA_OFFSET_D*_ndof + idof];
-    }
-
     inline const dReal& GetDuration() const
     {
         return _data.back();
@@ -377,11 +369,6 @@ public:
     inline void GetAVect(std::vector<dReal>& aVect) const
     {
         return _GetData(aVect, DATA_OFFSET_A*_ndof);
-    }
-
-    inline void GetDVect(std::vector<dReal>& dVect) const
-    {
-        return _GetData(dVect, DATA_OFFSET_D*_ndof);
     }
 
     inline void _GetData(std::vector<dReal>& res, int offset) const
@@ -424,11 +411,6 @@ public:
         return _data[DATA_OFFSET_A*_ndof + idof];
     }
 
-    inline dReal& SetDAt(int idof)
-    {
-        return _data[DATA_OFFSET_D*_ndof + idof];
-    }
-
     // Set values by giving a vector
     inline void SetX0Vect(const std::vector<dReal>& xVect)
     {
@@ -453,11 +435,6 @@ public:
     inline void SetAVect(const std::vector<dReal>& aVect)
     {
         return _SetData(aVect, DATA_OFFSET_A*_ndof);
-    }
-
-    inline void SetDVect(const std::vector<dReal>& dVect)
-    {
-        return _SetData(dVect, DATA_OFFSET_D*_ndof);
     }
 
     inline void _SetData(const std::vector<dReal>& valueVect, int offset)
@@ -496,11 +473,6 @@ public:
         return IT_A_BEGIN(_data, _ndof);
     }
 
-    inline std::vector<dReal>::const_iterator GetDVect() const
-    {
-        return IT_D_BEGIN(_data, _ndof);
-    }
-
     inline void SetX0Vect(std::vector<dReal>::const_iterator it)
     {
         return _SetData(it, 0);
@@ -524,11 +496,6 @@ public:
     inline void SetAVect(std::vector<dReal>::const_iterator it)
     {
         return _SetData(it, 4*_ndof);
-    }
-
-    inline void SetDVect(std::vector<dReal>::const_iterator it)
-    {
-        return _SetData(it, 5*_ndof);
     }
 
     inline void _SetData(std::vector<dReal>::const_iterator it, int offset)
@@ -555,8 +522,8 @@ public:
 
 private:
     size_t _ndof;
-    std::vector<dReal> _data; // a vector of size 6*_ndof + 1 containing the data of the following
-                              // order: x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, t. We put the
+    std::vector<dReal> _data; // a vector of size 5*_ndof + 1 containing the data of the following
+                              // order: x0Vect, x1Vect, v0Vect, v1Vect, aVect, t. We put the
                               // duration at the back of the vector since when it is queried for the
                               // duration we don't need to calculate the index.
 }; // end class RampND

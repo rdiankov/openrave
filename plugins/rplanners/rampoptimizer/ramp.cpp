@@ -678,11 +678,11 @@ RampND::RampND(size_t ndof)
 {
     OPENRAVE_ASSERT_OP(ndof, >, 0);
     _ndof = ndof;
-    _data.resize(6*_ndof + 1);
+    _data.resize(5*_ndof + 1);
     constraintChecked = false;
 }
 
-RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, dReal t)
+RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, dReal t)
 {
     OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
     if( t < 0 ) {
@@ -697,11 +697,7 @@ RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vec
     if( aVect.size() > 0 ) {
         OPENRAVE_ASSERT_OP(aVect.size(), ==, _ndof);
     }
-    if( dVect.size() > 0 ) {
-        OPENRAVE_ASSERT_OP(dVect.size(), ==, _ndof);
-    }
-
-    _data.resize(6*_ndof + 1);
+    _data.resize(5*_ndof + 1);
 
     std::copy(x0Vect.begin(), x0Vect.end(), IT_X0_BEGIN(_data, _ndof));
     std::copy(x1Vect.begin(), x1Vect.end(), IT_X1_BEGIN(_data, _ndof));
@@ -723,20 +719,6 @@ RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vec
     }
     else {
         std::copy(aVect.begin(), aVect.end(), IT_A_BEGIN(_data, _ndof));
-    }
-
-    if( dVect.size() == 0 ) {
-        if( t == 0 ) {
-            std::fill(IT_D_BEGIN(_data, _ndof), IT_D_END(_data, _ndof), 0);
-        }
-        else {
-            for (size_t idof = 0; idof < _ndof; ++idof) {
-                _data[DATA_OFFSET_D*_ndof + idof] = x1Vect[idof] - x0Vect[idof];
-            }
-        }
-    }
-    else {
-        std::copy(dVect.begin(), dVect.end(), IT_D_BEGIN(_data, _ndof));
     }
 
     _data.back() = t;
@@ -842,11 +824,11 @@ void RampND::Initialize(size_t ndof)
 {
     constraintChecked = false;
     _ndof = ndof;
-    _data.resize(6*_ndof + 1);
+    _data.resize(5*_ndof + 1);
     std::fill(_data.begin(), _data.end(), 0);
 }
 
-void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, const std::vector<dReal>& dVect, dReal t)
+void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, dReal t)
 {
     OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
     if( t < 0 ) {
@@ -861,11 +843,7 @@ void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dRea
     if( aVect.size() > 0 ) {
         OPENRAVE_ASSERT_OP(aVect.size(), ==, _ndof);
     }
-    if( dVect.size() > 0 ) {
-        OPENRAVE_ASSERT_OP(dVect.size(), ==, _ndof);
-    }
-
-    _data.resize(6*_ndof + 1);
+    _data.resize(5*_ndof + 1);
 
     std::copy(x0Vect.begin(), x0Vect.end(), IT_X0_BEGIN(_data, _ndof));
     std::copy(x1Vect.begin(), x1Vect.end(), IT_X1_BEGIN(_data, _ndof));
@@ -889,20 +867,6 @@ void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dRea
         std::copy(aVect.begin(), aVect.end(), IT_A_BEGIN(_data, _ndof));
     }
 
-    if( dVect.size() == 0 ) {
-        if( t == 0 ) {
-            std::fill(IT_D_BEGIN(_data, _ndof), IT_D_END(_data, _ndof), 0);
-        }
-        else {
-            for (size_t idof = 0; idof < _ndof; ++idof) {
-                _data[DATA_OFFSET_D*_ndof + idof] = x1Vect[idof] - x0Vect[idof];
-            }
-        }
-    }
-    else {
-        std::copy(dVect.begin(), dVect.end(), IT_D_BEGIN(_data, _ndof));
-    }
-
     _data.back() = t;
 
     constraintChecked = false;
@@ -914,7 +878,7 @@ void RampND::SetConstant(const std::vector<dReal>& xVect, const dReal t)
     OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
     std::copy(xVect.begin(), xVect.end(), IT_X0_BEGIN(_data, _ndof)); // x0Vect
     std::copy(xVect.begin(), xVect.end(), IT_X1_BEGIN(_data, _ndof)); // x1Vect
-    std::fill(IT_V0_BEGIN(_data, _ndof), _data.end(),  0); // v0Vect, v1Vect, aVect, dVect
+    std::fill(IT_V0_BEGIN(_data, _ndof), _data.end(),  0); // v0Vect, v1Vect, aVect
     _data.back() = t; // duration
     return;
 }
@@ -922,9 +886,11 @@ void RampND::SetConstant(const std::vector<dReal>& xVect, const dReal t)
 void RampND::SetInitialPosition(const std::vector<dReal>& xVect)
 {
     OPENRAVE_ASSERT_OP(xVect.size(), ==, _ndof);
-    std::copy(xVect.begin(), xVect.end(), IT_X0_BEGIN(_data, _ndof)); // x0Vect
+    dReal dOriginal;
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        SetX1At(idof) = GetX0At(idof) + GetDAt(idof);
+        dOriginal = GetX1At(idof) - GetX0At(idof);
+        SetX0At(idof) = xVect[idof];
+        SetX1At(idof) = xVect[idof] + dOriginal;
     }
     return;
 }
@@ -950,7 +916,6 @@ void RampND::Cut(dReal t, RampND& remRampND)
         std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V1_BEGIN(remRampND._data, _ndof));
 
         std::copy(IT_A_BEGIN(_data, _ndof), IT_A_END(_data, _ndof), IT_A_BEGIN(remRampND._data, _ndof)); // acceleration
-        std::fill(IT_D_BEGIN(remRampND._data, _ndof), IT_D_END(remRampND._data, _ndof), 0); // displacement
 
         remRampND._data.back() = 0;
 
@@ -967,10 +932,6 @@ void RampND::Cut(dReal t, RampND& remRampND)
         std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(remRampND._data, _ndof));
 
         std::copy(IT_A_BEGIN(_data, _ndof), IT_A_END(_data, _ndof), IT_A_BEGIN(remRampND._data, _ndof));
-
-        for (size_t idof = 0; idof < _ndof; ++idof) {
-            remRampND._data[DATA_OFFSET_D*_ndof + idof] = remRampND.GetX1At(idof) - remRampND.GetX0At(idof);
-        }
 
         remRampND._data.back() = _data.back() - t;
         _data.back() = t;
@@ -989,19 +950,12 @@ void RampND::TrimFront(dReal t)
     else if( t >= _data.back() ) {
         std::copy(IT_X1_BEGIN(_data, _ndof), IT_X1_END(_data, _ndof), IT_X0_BEGIN(_data, _ndof)); // replace x0 by x1
         std::copy(IT_V1_BEGIN(_data, _ndof), IT_V1_END(_data, _ndof), IT_V0_BEGIN(_data, _ndof)); // replace v0 by v1
-        std::fill(IT_D_BEGIN(_data, _ndof), IT_D_END(_data, _ndof), 0); // zero displacement
         _data.back() = 0; // duration
         return;
     }
     else {
         EvalPos(t, IT_X0_BEGIN(_data, _ndof)); // update x0
         EvalVel(t, IT_V0_BEGIN(_data, _ndof)); // update v0. Note that the update of x0 does not affect velocity calculation
-
-        // Update d
-        for (size_t idof = 0; idof < _ndof; ++idof) {
-            _data[DATA_OFFSET_D*_ndof + idof] = GetX1At(idof) - GetX0At(idof);
-        }
-
         _data.back() -= t;
         return;
     }
@@ -1015,7 +969,6 @@ void RampND::TrimBack(dReal t)
     if( t <= 0 ) {
         std::copy(IT_X0_BEGIN(_data, _ndof), IT_X0_END(_data, _ndof), IT_X1_BEGIN(_data, _ndof)); // replace x1 by x0
         std::copy(IT_V0_BEGIN(_data, _ndof), IT_V0_END(_data, _ndof), IT_V1_BEGIN(_data, _ndof)); // replace v1 by v0
-        std::fill(IT_D_BEGIN(_data, _ndof), IT_D_END(_data, _ndof), 0); // zero displacement
         _data.back() = 0; // duration
         return;
     }
@@ -1025,12 +978,6 @@ void RampND::TrimBack(dReal t)
     else {
         EvalPos(t, IT_X1_BEGIN(_data, _ndof)); // update x1
         EvalVel(t, IT_V1_BEGIN(_data, _ndof)); // update x1. Note that the update of x1 does not affect velocity calculation
-
-        // Update d
-        for (size_t idof = 0; idof < _ndof; ++idof) {
-            _data[DATA_OFFSET_D*_ndof + idof] = GetX1At(idof) - GetX0At(idof);
-        }
-
         _data.back() = t;
         return;
     }
