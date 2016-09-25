@@ -766,7 +766,7 @@ public:
                 return PS_Failed;
             }
         }
-        _DumpTrajectory(ptraj, Level_Debug);
+        _DumpTrajectory(ptraj, _dumplevel);
 
 #ifdef SMOOTHER_TIMING_DEBUG
         RAVELOG_DEBUG_FORMAT("measured %d interpolations; total exectime = %.15e; time/iter = %.15e", _nCallsInterpolator%_totalTimeInterpolator%(_totalTimeInterpolator/_nCallsInterpolator));
