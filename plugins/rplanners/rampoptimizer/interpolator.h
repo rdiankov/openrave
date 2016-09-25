@@ -206,7 +206,7 @@ private:
 
     // Caching stuff
     std::vector<dReal> _cacheVect, _cacheSwitchpointsList;
-    std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheAVect, _cacheDVect;
+    std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheAVect;
     Ramp _cacheRamp;
     std::vector<Ramp> _cacheRampsVect;
     std::vector<Ramp> _cacheRampsVect2; // for using in Compute1DTrajectoryFixedDuration

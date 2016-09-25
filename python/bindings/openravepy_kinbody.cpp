@@ -413,7 +413,7 @@ public:
             info._linkname1 = boost::python::extract<std::string>(_linkname1);
         }
         info._vanchor = ExtractVector3(_vanchor);
-        
+
         // We might be able to replace these exceptions with static_assert in C++11
         size_t num = len(_vaxes);
         OPENRAVE_EXCEPTION_FORMAT0(num == info._vaxes.size(), ORE_InvalidState);
@@ -2448,6 +2448,11 @@ object PyKinBody::GetNonAdjacentLinks(int adjacentoptions) const
     return ononadjacent;
 }
 
+void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
+{
+    _pbody->SetAdjacentLinks(linkindex0, linkindex1);
+}
+
 object PyKinBody::GetAdjacentLinks() const
 {
     boost::python::list adjacent;
@@ -3090,6 +3095,7 @@ void init_openravepy_kinbody()
                         .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, args("adjacentoptions"), DOXY_FN(KinBody,GetNonAdjacentLinks))
+                        .def("SetAdjacentLinks",&PyKinBody::SetAdjacentLinks, args("linkindex0", "linkindex1"), DOXY_FN(KinBody,SetAdjacentLinks))
                         .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
                         .def("GetPhysicsData",&PyKinBody::GetPhysicsData, DOXY_FN(KinBody,GetPhysicsData))
                         .def("GetCollisionData",&PyKinBody::GetCollisionData, DOXY_FN(KinBody,GetCollisionData))

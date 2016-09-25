@@ -32,7 +32,6 @@ ParabolicInterpolator::ParabolicInterpolator(size_t ndof)
     _cacheV0Vect.resize(_ndof);
     _cacheV1Vect.resize(_ndof);
     _cacheAVect.resize(_ndof);
-    _cacheDVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
 }
 
@@ -46,7 +45,6 @@ void ParabolicInterpolator::Initialize(size_t ndof)
     _cacheV0Vect.resize(_ndof);
     _cacheV1Vect.resize(_ndof);
     _cacheAVect.resize(_ndof);
-    _cacheDVect.resize(_ndof);
     _cacheCurvesVect.resize(_ndof);
 }
 
@@ -61,7 +59,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
 
     // Cache
     ParabolicCurve& curve = _cacheCurve;
-    std::vector<dReal>& v0Vect = _cacheV0Vect, v1Vect = _cacheV0Vect, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& v0Vect = _cacheV0Vect, &v1Vect = _cacheV0Vect, &aVect = _cacheAVect, &dVect = _cacheX0Vect;
 
     SubtractVector(x1Vect, x0Vect, dVect); // total displacement
 
@@ -69,10 +67,12 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     // with the parameter s).
     dReal vMin = g_fRampInf;
     dReal aMin = g_fRampInf;
+    dReal dinv;
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( !FuzzyZero(dVect[idof], g_fRampEpsilon) ) {
-            vMin = Min(vMin, vmVect[idof]/Abs(dVect[idof]));
-            aMin = Min(aMin, amVect[idof]/Abs(dVect[idof]));
+            dinv = 1/dVect[idof];
+            vMin = Min(vMin, vmVect[idof]*Abs(dinv));
+            aMin = Min(aMin, amVect[idof]*Abs(dinv));
         }
     }
     if( !(vMin < g_fRampInf && aMin < g_fRampInf) ) {
@@ -101,9 +101,6 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         rampndVectOut[1].SetX1Vect(x1Vect);
 
         ScaleVector(dVect, 0.5); // displacement for each RampND is half of the total displacement
-        rampndVectOut[0].SetDVect(dVect);
-        rampndVectOut[1].SetDVect(dVect);
-
         AddVector2(dVect, x0Vect); // distance after the first RampND
         rampndVectOut[0].SetX1Vect(dVect);
         rampndVectOut[1].SetX0Vect(dVect);
@@ -136,26 +133,18 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         rampndVectOut[0].SetX0Vect(x0Vect);
         rampndVectOut[2].SetX1Vect(x1Vect);
 
-        ScaleVector(dVect, curve.GetRamp(0).d); // displacement done by the first RampND
-        rampndVectOut[0].SetDVect(dVect);
-        rampndVectOut[2].SetDVect(dVect); // the last RampND also causes the equal displacement
-
-        ScaleVector(dVect, -2);
-        SubtractVector2(dVect, x0Vect);
-        AddVector2(dVect, x1Vect); // now dVect = x1 - x0 - 2*d where d is the displacement caused by the first RampND
-        rampndVectOut[1].SetDVect(dVect);
-
-        rampndVectOut[0].GetDVect(dVect);
+        ScaleVector(dVect, curve.GetRamp(0).x1 - curve.GetRamp(0).x0); // displacement done by the first RampND
         AddVector2(dVect, x0Vect); // now dVect contains positions at the first switch point
         rampndVectOut[0].SetX1Vect(dVect);
         rampndVectOut[1].SetX0Vect(dVect);
 
-        rampndVectOut[2].GetDVect(dVect);
+        SubtractVector(x1Vect, x0Vect, dVect); // displacement
+        ScaleVector(dVect, curve.GetRamp(0).x1 - curve.GetRamp(0).x0); // displacement done by the last RampND
         SubtractVector2(dVect, x1Vect);
         ScaleVector(dVect, -1); // now dVect contains positions at the second switch point
         rampndVectOut[1].SetX1Vect(dVect);
         rampndVectOut[2].SetX0Vect(dVect);
-
+        
         // Compute the velocity at the end of the first RampND
         SubtractVector(x1Vect, x0Vect, v0Vect); // displacement
         ScaleVector(v0Vect, curve.GetRamp(1).v0);
@@ -1608,7 +1597,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     }
 
     rampndVectOut.resize(switchpointsList.size() - 1);
-    std::vector<dReal>& x0Vect = _cacheX0Vect, x1Vect = _cacheX1Vect, v0Vect = _cacheV0Vect, v1Vect = _cacheV1Vect, aVect = _cacheAVect, dVect = _cacheDVect;
+    std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &aVect = _cacheAVect;
     for (size_t jdof = 0; jdof < _ndof; ++jdof) {
         x0Vect[jdof] = curvesVectIn[jdof].EvalPos(0);
         v0Vect[jdof] = curvesVectIn[jdof].EvalVel(0);
@@ -1619,15 +1608,15 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     for (size_t iswitch = 1; iswitch < switchpointsList.size(); ++iswitch) {
         dReal dur = switchpointsList[iswitch] - switchpointsList[iswitch - 1];
         dReal durSqr = dur*dur, a, temp1, temp2;
+        dReal divMult = 1/(dur*(0.5*durSqr + 2));
         for (size_t jdof = 0; jdof < _ndof; ++jdof) {
             x1Vect[jdof] = curvesVectIn[jdof].EvalPos(switchpointsList[iswitch]);
             v1Vect[jdof] = curvesVectIn[jdof].EvalVel(switchpointsList[iswitch]);
-            dVect[jdof] = x1Vect[jdof] - x0Vect[jdof];
             aVect[jdof] = curvesVectIn[jdof].EvalAcc(0.5*(switchpointsList[iswitch] + switchpointsList[iswitch - 1]));
             if( bRecomputeAccel ) {
                 temp1 = x0Vect[jdof] - x1Vect[jdof] + v0Vect[jdof]*dur;
                 temp2 = v0Vect[jdof] - v1Vect[jdof];
-                a = -(dur*temp1 + 2*temp2)/(dur*(0.5*durSqr + 2));
+                a = -(dur*temp1 + 2*temp2)*divMult;
                 // if( Sqr(temp1 + 0.5*durSqr*a) + Sqr(temp2 + a*dur) < Sqr(temp1 + 0.5*durSqr*aVect[jdof]) + Sqr(temp2 + aVect[jdof]*dur) ) {
                 if( Abs(temp1 + 0.5*durSqr*a) <= g_fRampEpsilon && Abs(temp2 + a*dur) <= g_fRampEpsilon ) {
                     // The recomputed acceleration gives smaller discrepancy
@@ -1637,7 +1626,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
                 }
             }
         }
-        rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, aVect, dVect, dur);
+        rampndVectOut[iswitch - 1].Initialize(x0Vect, x1Vect, v0Vect, v1Vect, aVect, dur);
 
         x0Vect.swap(x1Vect);
         v0Vect.swap(v1Vect);
