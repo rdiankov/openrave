@@ -200,6 +200,7 @@ public:
     object GetURI() const;
     object GetNonAdjacentLinks() const;
     object GetNonAdjacentLinks(int adjacentoptions) const;
+    void SetAdjacentLinks(int linkindex0, int linkindex1);
     object GetAdjacentLinks() const;
     object GetPhysicsData() const;
     object GetCollisionData() const;
