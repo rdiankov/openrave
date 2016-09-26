@@ -453,17 +453,17 @@ public:
         int retcode = 0;
         dReal maxallowedmult = 0.92;
 
-        std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp = outramps.begin();
+        std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp1 = outramps.begin();
         FOREACHC(itmanipinfo, _listCheckManips) {
             KinBodyPtr probot = itmanipinfo->plink->GetParent();
 
-            itramp->Accel(0, ac);
+            itramp1->Accel(0, ac);
             qfillactive.resize(itmanipinfo->vuseddofindices.size());
             _vfillactive.resize(itmanipinfo->vuseddofindices.size());
             _afill.resize(probot->GetDOF());
             for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
-                qfillactive[index] = itramp->x0.at(itmanipinfo->vconfigindices.at(index));
-                _vfillactive[index] = itramp->dx0.at(itmanipinfo->vconfigindices.at(index));
+                qfillactive[index] = itramp1->x0.at(itmanipinfo->vconfigindices.at(index));
+                _vfillactive[index] = itramp1->dx0.at(itmanipinfo->vconfigindices.at(index));
                 _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
             }
 
@@ -531,13 +531,13 @@ public:
         if (itramp2 != itramp1 || itramp1->endTime > g_fEpsilonLinear) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
-                itramp->Accel(itramp->endTime, ac);
+                itramp2->Accel(itramp2->endTime, ac);
                 qfillactive.resize(itmanipinfo->vuseddofindices.size());
                 _vfillactive.resize(itmanipinfo->vuseddofindices.size());
                 _afill.resize(probot->GetDOF());
                 for(size_t index = 0; index < itmanipinfo->vuseddofindices.size(); ++index) {
-                    qfillactive[index] = itramp->x1.at(itmanipinfo->vconfigindices.at(index));
-                    _vfillactive[index] = itramp->dx1.at(itmanipinfo->vconfigindices.at(index));
+                    qfillactive[index] = itramp2->x1.at(itmanipinfo->vconfigindices.at(index));
+                    _vfillactive[index] = itramp2->dx1.at(itmanipinfo->vconfigindices.at(index));
                     _afill[itmanipinfo->vuseddofindices.at(index)] = ac.at(itmanipinfo->vconfigindices.at(index));
                 }
 
