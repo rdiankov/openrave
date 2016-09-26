@@ -189,18 +189,6 @@ public:
         return _ramps[index];
     }
 
-    /// \brief Return a constant reference to _switchpointsList
-    inline const std::vector<dReal>& GetSwitchPointsList() const
-    {
-        return _switchpointsList;
-    }
-
-    /// \brief Return the switch point of the given index
-    inline const dReal& GetSwitchPoint(size_t index) const
-    {
-        return _switchpointsList[index];
-    }
-
     /// \brief Get the total duration of the curve
     inline const dReal& GetDuration() const
     {
@@ -242,10 +230,6 @@ private:
     dReal _duration; // total duration of this curve
 
     std::vector<Ramp> _ramps;             // vector of all Ramps constituting this curve
-    std::vector<dReal> _switchpointsList; // vector of all time instants at which the acceleration
-                                          // changes. This include t = 0 and t =
-                                          // _duration. _switchpointsList.size() = _ramps.size() + 1
-                                          // must always hold.
 }; // end class ParabolicCurve
 
 class RampND {

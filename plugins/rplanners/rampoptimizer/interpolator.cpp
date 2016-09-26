@@ -1581,17 +1581,18 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     switchpointsList.push_back(0);
     switchpointsList.push_back(curvesVectIn[0].GetDuration());
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        const std::vector<dReal>& swList = curvesVectIn[idof].GetSwitchPointsList();
-        for (size_t jswitch = 1; jswitch < swList.size() - 1; ++jswitch) {
-            std::vector<dReal>::iterator it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), swList[jswitch]);
+        dReal sw = 0;
+        for (std::vector<Ramp>::const_iterator itramp = curvesVectIn[idof].GetRamps().begin(); itramp != curvesVectIn[idof].GetRamps().end(); ++itramp) {
+            sw += itramp->duration;
+            std::vector<dReal>::iterator it = std::lower_bound(switchpointsList.begin(), switchpointsList.end(), sw);
             // Since we already have t = 0 and t = duration in switchpointsList, it must point to
             // some value between *(switchpointsList.begin()) and *(switchpointsList.end() - 1)
             // (exclusive).
 
             // Note also that skipping some switchpoints which are closer to their neighbors than
             // g_fRampEpsilon may introduce discrepancies greater than g_fRampEpsilon.
-            if( !(swList[jswitch] == *it) && !(swList[jswitch] == *(it - 1)) ) {
-                switchpointsList.insert(it, swList[jswitch]);
+            if( !(sw == *it) && !(sw == *(it - 1)) ) {
+                switchpointsList.insert(it, sw);
             }
         }
     }
