@@ -975,13 +975,7 @@ void ParabolicPath::AppendRampND(RampND& rampndIn)
         _rampnds.reserve(_rampnds.size() + 1);
     }
     _rampnds.push_back(rampndIn);
-
-    if( _switchpointsList.capacity() < _rampnds.size() + 1 ) {
-        _switchpointsList.reserve(_rampnds.size() + 1);
-    }
-    _switchpointsList.push_back(_duration + rampndIn.GetDuration());
-
-    _duration = _switchpointsList.back();
+    _duration += rampndIn.GetDuration();
 }
 
 void ParabolicPath::EvalPos(dReal t, std::vector<dReal>& xVect) const
@@ -1021,14 +1015,15 @@ void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
         // Convention: if t lies exactly at a switch point between rampsnd[i] and rampsnd[i + 1], we
         // return index = i + 1 and remainder = 0.
         int index_ = 0;
-        std::vector<dReal>::const_iterator it = _switchpointsList.begin();
-        while ( it != _switchpointsList.end() && t >= *it ) {
+        dReal curTime = 0;
+        std::vector<RampND>::const_iterator itrampnd = _rampnds.begin();
+        while ((itrampnd - 1) != _rampnds.end() && t >= curTime) {
+            curTime += itrampnd->GetDuration();
+            itrampnd++;
             index_++;
-            it++;
         }
-        // OPENRAVE_ASSERT_OP(index_, <, (int)_switchpointsList.size());
         index = index_ - 1;
-        remainder = t - *(it - 1);
+        remainder = t - (curTime - (itrampnd - 1)->GetDuration());
         return;
     }
 }
@@ -1038,12 +1033,7 @@ void ParabolicPath::Initialize(const RampND& rampndIn)
     _rampnds.resize(0);
     _rampnds.reserve(1);
     _rampnds.push_back(rampndIn);
-
-    _switchpointsList.resize(2);
-    _switchpointsList[0] = 0;
-    _switchpointsList[1] = rampndIn.GetDuration();
-
-    _duration = _switchpointsList.back();
+    _duration = rampndIn.GetDuration();
 }
 
 void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>& rampndVect)
@@ -1053,13 +1043,8 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
     if( t0 <= 0 && t1 >= _duration ) {
         dReal duration = 0;
         _rampnds = rampndVect;
-        if( _switchpointsList.size() != _rampnds.size() + 1 ) {
-            _switchpointsList.resize(_rampnds.size() + 1);
-        }
-        _switchpointsList[0] = 0;
         for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
             duration += _rampnds[irampnd].GetDuration();
-            _switchpointsList[irampnd + 1] = duration;
         }
         _duration = duration;
         return;
@@ -1136,12 +1121,9 @@ void ParabolicPath::Serialize(std::ostream& O) const
 
 void ParabolicPath::_UpdateMembers()
 {
-    _switchpointsList.resize(_rampnds.size() + 1);
-    _switchpointsList[0] = 0;
     dReal duration = 0;
     for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
         duration += _rampnds[irampnd].GetDuration();
-        _switchpointsList[irampnd + 1] = duration;
     }
     _duration = duration;
 }

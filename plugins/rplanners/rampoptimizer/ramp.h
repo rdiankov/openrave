@@ -228,8 +228,7 @@ public:
 private:
     dReal _d;        // total displacement done by this curve
     dReal _duration; // total duration of this curve
-
-    std::vector<Ramp> _ramps;             // vector of all Ramps constituting this curve
+    std::vector<Ramp> _ramps; // vector of all Ramps constituting this curve
 }; // end class ParabolicCurve
 
 class RampND {
@@ -515,8 +514,6 @@ class ParabolicPath {
 public:
     ParabolicPath() {
         _duration = 0;
-        _switchpointsList.resize(1);
-        _switchpointsList[0] = 0;
     }
     ~ParabolicPath() {
     }
@@ -548,8 +545,6 @@ public:
     inline void Reset() {
         _duration = 0;
         _rampnds.resize(0);
-        _switchpointsList.resize(1);
-        _switchpointsList[0] = 0;
     }
 
     /// \brief Serialize the parabolicpath to stream for saving to file.
@@ -569,14 +564,8 @@ public:
         return _rampnds;
     }
 
-    inline const std::vector<dReal>& GetSwitchPointsList() const
-    {
-        return _switchpointsList;
-    }
-
 private:
     std::vector<RampND> _rampnds;
-    std::vector<dReal> _switchpointsList;
     dReal _duration;
 }; // end class ParabolicPath
 
