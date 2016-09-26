@@ -2694,6 +2694,19 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
             FOREACHC(it, GetManipulators()) {
                 rapidjson::Value manipulatorValue;
                 (*it)->SerializeJSON(manipulatorValue, allocator, options);
+
+                // look up link sid based on name
+                LinkPtr baseLink = GetLink((*it)->GetInfo().baseLinkName);
+                if (!!baseLink) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(manipulatorValue, allocator, "baseLinkSid", baseLink->GetInfo().sid);
+                    manipulatorValue.RemoveMember("baseLinkName");
+                }
+                LinkPtr effectorLink = GetLink((*it)->GetInfo().effectorLinkName);
+                if (!!effectorLink) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(manipulatorValue, allocator, "effectorLinkSid", effectorLink->GetInfo().sid);
+                    manipulatorValue.RemoveMember("effectorLinkName");
+                }
+
                 manipulatorsValue.PushBack(manipulatorValue, allocator);
             }
             value.AddMember("manipulators", manipulatorsValue, allocator);
@@ -2705,6 +2718,14 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
             FOREACHC(it, GetAttachedSensors()) {
                 rapidjson::Value attachedSensorValue;
                 (*it)->SerializeJSON(attachedSensorValue, allocator, options);
+
+                // look up link sid based on name
+                LinkPtr link = GetLink((*it)->GetInfo().linkName);
+                if (!!link) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(attachedSensorValue, allocator, "linkSid", link->GetInfo().sid);
+                    attachedSensorValue.RemoveMember("linkName");
+                }
+
                 attachedSensorsValue.PushBack(attachedSensorValue, allocator);
             }
             value.AddMember("attachedSensors", attachedSensorsValue, allocator);
@@ -2731,6 +2752,8 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
     RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
     SetName(name);
 
+    std::map<std::string, std::string> linkSidsToNames;
+
     std::vector<KinBody::LinkInfoConstPtr> linkinfos;
     if (value.HasMember("links"))
     {
@@ -2742,8 +2765,15 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
             LinkInfoPtr linkinfo(new LinkInfo());
             linkinfo->DeserializeJSON(value["links"][i]);
             linkinfos.push_back(linkinfo);
+
+            // remember link sid to name mapping
+            linkSidsToNames[linkinfo->sid] = linkinfo->name;
         }
     }
+
+    // get an allocator since we need to copy and modify the json
+    rapidjson::Document doc;
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     std::vector<KinBody::JointInfoConstPtr> jointinfos;
     if (value.HasMember("joints"))
@@ -2753,8 +2783,23 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
         jointinfos.reserve(value["joints"].Size());
         for (size_t i = 0; i < value["joints"].Size(); ++i)
         {
+            // copy and then add back childLinkName and parentLinkName
+            rapidjson::Value copy(value["joints"][i], allocator);
+
+            std::string childLinkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "childLinkSid", childLinkSid);
+            if (linkSidsToNames.find(childLinkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "childLinkName", linkSidsToNames[childLinkSid]);
+            }
+
+            std::string parentLinkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "parentLinkSid", parentLinkSid);
+            if (linkSidsToNames.find(parentLinkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "parentLinkName", linkSidsToNames[parentLinkSid]);
+            }
+
             JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(value["joints"][i]);
+            jointinfo->DeserializeJSON(copy);
             jointinfos.push_back(jointinfo);
         }
     }
@@ -2767,8 +2812,23 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
         manipulatorinfos.reserve(value["manipulators"].Size());
         for (size_t i = 0; i < value["manipulators"].Size(); ++i)
         {
+            // copy and then add back baseLinkName and effectorLinkName
+            rapidjson::Value copy(value["manipulators"][i], allocator);
+
+            std::string baseLinkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "baseLinkSid", baseLinkSid);
+            if (linkSidsToNames.find(baseLinkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "baseLinkName", linkSidsToNames[baseLinkSid]);
+            }
+
+            std::string effectorLinkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "effectorLinkSid", effectorLinkSid);
+            if (linkSidsToNames.find(effectorLinkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "effectorLinkName", linkSidsToNames[effectorLinkSid]);
+            }
+
             ManipulatorInfoPtr manipulatorinfo(new ManipulatorInfo());
-            manipulatorinfo->DeserializeJSON(value["manipulators"][i]);
+            manipulatorinfo->DeserializeJSON(copy);
             manipulatorinfos.push_back(manipulatorinfo);
         }
     }
@@ -2781,8 +2841,17 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
         attachedsensorinfos.reserve(value["attachedSensors"].Size());
         for (size_t i = 0; i < value["attachedSensors"].Size(); ++i)
         {
+            // copy and then add back linkName
+            rapidjson::Value copy(value["attachedSensors"][i], allocator);
+
+            std::string linkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "linkSid", linkSid);
+            if (linkSidsToNames.find(linkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "linkName", linkSidsToNames[linkSid]);
+            }
+
             AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-            attachedsensorinfo->DeserializeJSON(value["attachedSensors"][i]);
+            attachedsensorinfo->DeserializeJSON(copy);
             attachedsensorinfos.push_back(attachedsensorinfo);
         }
     }

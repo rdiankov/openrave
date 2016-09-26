@@ -4801,11 +4801,37 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
             FOREACHC(it, GetJoints()) {
                 rapidjson::Value jointValue;
                 (*it)->SerializeJSON(jointValue, allocator, options);
+
+                // look up link sid based on name
+                LinkPtr childLink = GetLink((*it)->GetInfo().childLinkName);
+                if (!!childLink) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(jointValue, allocator, "childLinkSid", childLink->GetInfo().sid);
+                    jointValue.RemoveMember("childLinkName");
+                }
+                LinkPtr parentLink = GetLink((*it)->GetInfo().parentLinkName);
+                if (!!parentLink) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(jointValue, allocator, "parentLinkSid", parentLink->GetInfo().sid);
+                    jointValue.RemoveMember("parentLinkName");
+                }
+
                 jointsValue.PushBack(jointValue, allocator);
             }
             FOREACHC(it, GetPassiveJoints()) {
                 rapidjson::Value jointValue;
                 (*it)->SerializeJSON(jointValue, allocator, options);
+
+                // look up link sid based on name
+                LinkPtr childLink = GetLink((*it)->GetInfo().childLinkName);
+                if (!!childLink) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(jointValue, allocator, "childLinkSid", childLink->GetInfo().sid);
+                    jointValue.RemoveMember("childLinkName");
+                }
+                LinkPtr parentLink = GetLink((*it)->GetInfo().parentLinkName);
+                if (!!parentLink) {
+                    RAVE_SERIALIZEJSON_ADDMEMBER(jointValue, allocator, "parentLinkSid", parentLink->GetInfo().sid);
+                    jointValue.RemoveMember("parentLinkName");
+                }
+
                 jointsValue.PushBack(jointValue, allocator);
             }
             value.AddMember("joints", jointsValue, allocator);
@@ -4832,6 +4858,8 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
     RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
     SetName(name);
 
+    std::map<std::string, std::string> linkSidsToNames;
+
     std::vector<KinBody::LinkInfoConstPtr> linkinfos;
     if (value.HasMember("links"))
     {
@@ -4843,8 +4871,15 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
             LinkInfoPtr linkinfo(new LinkInfo());
             linkinfo->DeserializeJSON(value["links"][i]);
             linkinfos.push_back(linkinfo);
+
+            // remember link sid to name mapping
+            linkSidsToNames[linkinfo->sid] = linkinfo->name;
         }
     }
+
+    // get an allocator since we need to copy and modify the json
+    rapidjson::Document doc;
+    rapidjson::Document::AllocatorType& allocator = doc.GetAllocator();
 
     std::vector<KinBody::JointInfoConstPtr> jointinfos;
     if (value.HasMember("joints"))
@@ -4854,8 +4889,23 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
         jointinfos.reserve(value["joints"].Size());
         for (size_t i = 0; i < value["joints"].Size(); ++i)
         {
+            // copy and then add back childLinkName and parentLinkName
+            rapidjson::Value copy(value["joints"][i], allocator);
+
+            std::string childLinkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "childLinkSid", childLinkSid);
+            if (linkSidsToNames.find(childLinkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "childLinkName", linkSidsToNames[childLinkSid]);
+            }
+
+            std::string parentLinkSid;
+            RAVE_DESERIALIZEJSON_REQUIRED(copy, "parentLinkSid", parentLinkSid);
+            if (linkSidsToNames.find(parentLinkSid) != linkSidsToNames.end()) {
+                RAVE_SERIALIZEJSON_ADDMEMBER(copy, allocator, "parentLinkName", linkSidsToNames[parentLinkSid]);
+            }
+
             JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(value["joints"][i]);
+            jointinfo->DeserializeJSON(copy);
             jointinfos.push_back(jointinfo);
         }
     }
