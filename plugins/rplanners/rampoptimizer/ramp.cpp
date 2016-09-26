@@ -1162,7 +1162,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         newindex0 = index0;
     }
     else {
-        _rampnds[newindex0].TrimBack(rem0);
+        _rampnds[index0].TrimBack(rem0);
     }
 
     if( t1 >= _duration ) {
