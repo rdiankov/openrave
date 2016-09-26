@@ -118,17 +118,6 @@ public:
     bool Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, ParabolicCurve& curveOut, bool bCheck=true);
 
     /**
-       \brief Compute the minimum-time 1D parabolic trajectory interpolating (x0, v0) and (x1, v1)
-       while considering *only* acceleration limit.
-     */
-    bool _Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut, bool bCheck=true);
-
-    /**
-       \brief Modify a 1D parabolic trajectory such that the given velocity limit is observed.
-     */
-    bool _ImposeVelocityLimit(ParabolicCurve& curve, dReal vm);
-
-    /**
        \brief Impose the given joint limits to a 1D parabolic trajectory while maintaining the
        original duration of the trajectory. This function is only called from ND trajectory
        generation functions.

@@ -89,7 +89,9 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
 
     // Map the computed sd profile to joint velocity profiles
     if( _cacheCurve.GetRamps().size() == 2 ) {
-        rampndVectOut.resize(2);
+        if( rampndVectOut.size() != 2 ) {
+            rampndVectOut.resize(2);
+        }
         // Initialize and fill rampnd._data with zeros
         rampndVectOut[0].Initialize(_ndof);
         rampndVectOut[1].Initialize(_ndof);
@@ -120,7 +122,9 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         rampndVectOut[1].SetAVect(aVect);
     }
     else {
-        rampndVectOut.resize(3);
+        if( rampndVectOut.size() != 3 ) {
+            rampndVectOut.resize(3);
+        }
         // Initialize and fill rampnd._data with zeros
         rampndVectOut[0].Initialize(_ndof);
         rampndVectOut[1].Initialize(_ndof);
@@ -424,30 +428,6 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
     OPENRAVE_ASSERT_OP(Abs(v0), <=, vm + g_fRampEpsilon);
     OPENRAVE_ASSERT_OP(Abs(v1), <=, vm + g_fRampEpsilon);
 
-    if( !_Compute1DTrajectoryNoVelocityLimit(x0, x1, v0, v1, am, curveOut) ) {
-        return false;
-    }
-
-    if( curveOut.GetRamps().size() == 1 ) {
-        // Since the trajectory has only one ramp, no other constraint to be checked.
-        return true;
-    }
-
-    if( !_ImposeVelocityLimit(curveOut, vm) ) {
-        return false;
-    }
-
-    if( bCheck ) {// Check ParabolicCurve before returning
-        ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
-        if( ret != PCR_Normal ) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut, bool bCheck)
-{
     dReal d = x1 - x0;
     dReal dv = v1 - v0;
     dReal v0Sqr = v0*v0;
@@ -508,54 +488,53 @@ bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal 
 
     dReal sumVSqr = v0Sqr + v1Sqr;
     dReal a0, vp; // acceleration of the first ramp and peak velocity
+    bool noViolation = true; // indicates if the peak velocity, vp, exceeds the bound
     if( d > dStraight ) {
         a0 = am;
         vp = Sqrt((0.5*sumVSqr) + (a0*d));
+        if( vp > vm + g_fRampEpsilon ) {
+            noViolation = false;
+        }
     }
     else {
         a0 = -am;
         vp = -Sqrt((0.5*sumVSqr) + (a0*d));
+        if( -vp > vm + g_fRampEpsilon ) {
+            noViolation = false;
+        }
     }
 
     dReal a0inv = 1/a0;
-    // Prepare the ramp container
-    _cacheRampsVect.resize(2);
-    _cacheRampsVect[0].Initialize(v0, a0, (vp - v0)*a0inv, x0);
-    _cacheRampsVect[1].Initialize(_cacheRampsVect[0].v1, -a0, (vp - v1)*a0inv);
-    curveOut.Initialize(_cacheRampsVect);
-    {// Check curveOut before returning
-     // No need because we will check it outside
+    if( noViolation ) {
+        if( _cacheRampsVect.size() != 2 ) {
+            _cacheRampsVect.resize(2);
+        }
+        _cacheRampsVect[0].Initialize(v0, a0, (vp - v0)*a0inv, x0);
+        _cacheRampsVect[1].Initialize(_cacheRampsVect[0].v1, -a0, (vp - v1)*a0inv);
+        curveOut.Initialize(_cacheRampsVect);
     }
-    return true;
-}
-
-bool ParabolicInterpolator::_ImposeVelocityLimit(ParabolicCurve& curve, dReal vm)
-{
-    if( Abs(curve.GetRamp(0).v1) <= vm + g_fRampEpsilon ) {
-        // The initial curve does not violate the velocity limit
-        return true;
+    else {
+        // Idea: try to compensate the exceeding displacement (when plotting the velocity profile,
+        // this exceeding displacement is the triangle whose base lies at v = vm or -vm and one of
+        // its apex is at vp) by adding a middle ramp
+        dReal h = Abs(vp) - vm;
+        dReal t = h*Abs(a0inv);
+        
+        _cacheRampsVect.resize(3);
+        _cacheRampsVect[0].Initialize(v0, a0, (vp - v0)*a0inv - t, x0);
+        dReal nom = h*h;
+        dReal denom = Abs(a0)*vm;
+        dReal newVp = vp > 0 ? vm : -vm;
+        _cacheRampsVect[1].Initialize(newVp, 0, 2*t + (nom/denom));
+        _cacheRampsVect[2].Initialize(newVp, -a0, (vp - v1)*a0inv - t);
+        curveOut.Initialize(_cacheRampsVect);
     }
 
-    dReal vp = curve.GetRamp(0).v1; // peak velocity
-    dReal a0 = curve.GetRamp(0).a;  // acceleration of the first ramp
-    dReal h = Abs(vp) - vm;
-    dReal t = h/Abs(a0); // Note that 1. a0 can never be zero since in the previous stage, any
-                         // 2-ramp trajectory is always generated with maximal accel/decel; 2. t is
-                         // half of the time duration when this trajectory violates the velocity
-                         // limit.
-
-    _cacheRampsVect.resize(3);
-    _cacheRampsVect[0].Initialize(curve.GetV0(), curve.GetRamp(0).a, curve.GetRamp(0).duration - t, curve.GetX0());
-
-    dReal nom = h*h;
-    dReal denom = Abs(a0)*vm;
-    dReal newVp = vp > 0 ? vm : -vm;
-    _cacheRampsVect[1].Initialize(newVp, 0, 2*t + (nom/denom));
-    _cacheRampsVect[2].Initialize(newVp, curve.GetRamp(1).a, curve.GetRamp(1).duration - t);
-
-    curve.Initialize(_cacheRampsVect);
-    {// Check curve before returning
-     // No need because we will check it outside
+    if( bCheck ) {// Check ParabolicCurve before returning
+        ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+        if( ret != PCR_Normal ) {
+            return false;
+        }
     }
     return true;
 }
