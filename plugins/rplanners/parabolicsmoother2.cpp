@@ -67,13 +67,16 @@ public:
             }
 
             // Extract all switch points (including t = 0 and t = duration).
-            _vswitchtimes.resize(0);
-            _vswitchtimes.reserve(rampndVect.size() + 1);
+            if( _vswitchtimes.size() != rampndVect.size() + 1 ) {
+                _vswitchtimes.resize(rampndVect.size() + 1);
+            }
             dReal switchtime = 0;
-            _vswitchtimes.push_back(switchtime);
-            FOREACH(itrampnd, rampndVect) {
+            int index = 0;
+            _vswitchtimes[index] = switchtime;
+            FOREACHC(itrampnd, rampndVect) {
+                index++;
                 switchtime += itrampnd->GetDuration();
-                _vswitchtimes.push_back(switchtime);
+                _vswitchtimes[index] = switchtime;
             }
 
             // Check boundary configurations
@@ -1277,7 +1280,6 @@ protected:
         _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 0);
 
         std::vector<RampOptimizer::RampND> rampndVect = parabolicpath.GetRampNDVect(); // for convenience
-        std::vector<dReal> vswitchpoints = parabolicpath.GetSwitchPointsList(); // for convenience
 
         // Caching stuff
         std::vector<RampOptimizer::RampND>& shortcutRampNDVect = _cacheRampNDVect; // for storing interpolated trajectory
