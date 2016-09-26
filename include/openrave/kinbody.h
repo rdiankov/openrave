@@ -2179,6 +2179,9 @@ private:
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
 
+    /// \brief adds the pair of links to the adjacency list. This is
+    virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
+
     /// \deprecated (12/12/11)
     virtual UserDataPtr GetPhysicsData() const RAVE_DEPRECATED {
         return GetUserData("_physics_");

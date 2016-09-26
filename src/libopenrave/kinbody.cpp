@@ -592,7 +592,11 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
             plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
         }
         FOREACHC(itadjacentname, info.forcedAdjacentLinks) {
-            _vForcedAdjacentLinks.push_back(std::make_pair(info.name, *itadjacentname));
+            // make sure the same pair isn't added more than once
+            std::pair<std::string, std::string> adjpair = std::make_pair(info.name, *itadjacentname);
+            if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
+                _vForcedAdjacentLinks.push_back(adjpair);
+            }
         }
         _veclinks.push_back(plink);
     }
@@ -4583,6 +4587,23 @@ const std::set<int>& KinBody::GetAdjacentLinks() const
 {
     CHECK_INTERNAL_COMPUTATION;
     return _setAdjacentLinks;
+}
+
+void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
+{
+    OPENRAVE_ASSERT_OP(linkindex0,!=,linkindex1);
+    if( linkindex0 > linkindex1 ) {
+        std::swap(linkindex0, linkindex1);
+    }
+
+    _setAdjacentLinks.insert(linkindex0|(linkindex1<<16));
+    std::string linkname0 = _veclinks.at(linkindex0)->GetName();
+    std::string linkname1 = _veclinks.at(linkindex1)->GetName();
+    std::pair<std::string, std::string> adjpair = std::make_pair(linkname0, linkname1);
+    if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
+        _vForcedAdjacentLinks.push_back(adjpair);
+    }
+    _ResetInternalCollisionCache();
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
