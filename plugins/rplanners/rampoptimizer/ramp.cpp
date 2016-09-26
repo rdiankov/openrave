@@ -1103,15 +1103,16 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
 {
     OPENRAVE_ASSERT_OP(t0, <, t1);
     OPENRAVE_ASSERT_OP(rampndVect.size(), >, 0);
-    if( t0 == 0 && t1 == _duration ) {
+    if( t0 <= 0 && t1 >= _duration ) {
         dReal duration = 0;
         _rampnds = rampndVect;
-        _switchpointsList.resize(0);
-        _switchpointsList.reserve(rampndVect.size() + 1);
-        _switchpointsList.push_back(duration);
-        for (size_t irampnd = 0; irampnd < rampndVect.size(); ++irampnd) {
+        if( _switchpointsList.size() != _rampnds.size() + 1 ) {
+            _switchpointsList.resize(_rampnds.size() + 1);
+        }
+        _switchpointsList[0] = 0;
+        for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
             duration += _rampnds[irampnd].GetDuration();
-            _switchpointsList.push_back(duration);
+            _switchpointsList[irampnd + 1] = duration;
         }
         _duration = duration;
         return;
@@ -1122,54 +1123,57 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
     FindRampNDIndex(t0, index0, rem0);
     FindRampNDIndex(t1, index1, rem1);
 
-    /*
-       Idea: First resize _rampnds to prepare for inserting rampndVect into it. Imaging dividing
-       _rampnds into three segments where the middle part is to be replaced by rampndVect. Next move
-       the right segment towards the end of _rampnds. Finally, we replace the middle segment with
-       rampndVect.
-     */
-
-    // Carefully resize the container
     size_t prevSize = _rampnds.size();
-    size_t leftPartLength = rem0 == 0 ? index0 : (index0 + 1);
-    size_t rightPartLength = t1 == _duration ? 0 : (prevSize - index1);
+    size_t leftPartLength = rem0 <= 0 ? index0 : (index0 + 1);
+    size_t rightPartLength = t1 >= _duration ? 0 : (prevSize - index1);
     size_t newSize = leftPartLength + rampndVect.size() + rightPartLength;
 
+    int newindex1 = index1; // index of the rampnd which contains t1 after the resizing
+                            // operation. _rampnds.begin() + newindex1 will serve as the upper limit
+                            // when replacing the segment using std::copy.    
+
+    // Make sure the right RampNDs are moved correctly
     if( prevSize < newSize ) {
-        // The new size is greater than the current value so we can resize the container right away.
+        // The new size is greater than the original size. Resize the container first and start
+        // moving from right to left.
         _rampnds.resize(newSize);
         for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
             _rampnds[newSize - 1 - irampnd] = _rampnds[prevSize - 1 - irampnd];
         }
-
-        _rampnds[index0].TrimBack(rem0);
-        if( rightPartLength > 0 ) {
-            _rampnds[newSize - rightPartLength].TrimFront(rem1);
-        }
-        std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
+        newindex1 = newSize - rightPartLength;
     }
-    else if( prevSize == newSize ) {
-        // No resizing required.
-        _rampnds[index0].TrimBack(rem0);
-        if( rightPartLength > 0 ) {
-            _rampnds[index1].TrimFront(rem1);
-        }
-        std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
-    }
-    else {
-        // The new size is less than the current value so we need to move RampNDs first before
-        // resizing.
+    else if( prevSize > newSize ) {
+        // The new size is less than the current size. We need to move the RampNDs (from left to
+        // right) first before resizing the container.
         for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
             _rampnds[newSize - rightPartLength + irampnd] = _rampnds[prevSize - rightPartLength + irampnd];
         }
         _rampnds.resize(newSize);
-
-        _rampnds[index0].TrimBack(rem0);
-        if( rightPartLength > 0 ) {
-            _rampnds[newSize - rightPartLength].TrimFront(rem1);
-        }
-        std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + index0 + 1);
+        newindex1 = newSize - rightPartLength;
     }
+    else {
+        // All the right RampNDs stay at the same position
+    }
+
+    int newindex0 = index0 + 1; // _rampnds.begin() + newindex0 will be the start iterator when
+                                // inserting the new segment.
+    if( rem0 <= 0 ) {
+        // In this case, we do not need to trim.
+        newindex0 = index0;
+    }
+    else {
+        _rampnds[index0].TrimBack(rem0);
+    }
+
+    if( t1 >= _duration ) {
+        // In this case, we do not need to trim.
+        newindex1 += 1;
+    }
+    else {
+        _rampnds[newindex1].TrimFront(rem1);
+    }
+    OPENRAVE_ASSERT_OP(newindex0 + rampndVect.size(), ==, newindex1);
+    std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + newindex0);
 
     _UpdateMembers();
 }

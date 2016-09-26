@@ -320,6 +320,11 @@ public:
         Vector endeffvellin, endeffvelang, endeffacclin, endeffaccang;
         dReal maxactualmanipspeed = 0, maxactualmanipaccel = 0;
 
+        dReal reductionFactor = 1; // default reduction factor
+        dReal multiplier = 0.85;     // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
+        int retcode = 0;
+        dReal maxallowedmult = 0.92; // the final reduction factor should not less than this value
+        
         // Check manipspeed and manipaccel at the beginning of the segment
         std::vector<RampOptimizerInternal::RampND>::const_iterator itrampnd = rampndVect.begin();
         FOREACHC(itmanipinfo, _listCheckManips) {
@@ -370,12 +375,7 @@ public:
             // Finished iterating through all checkpoints
         }
         // Finished iterating through all manipulators
-
-        dReal reductionFactor = 0.9; // default reduction factor
-        dReal multiplier = 0.85;     // a multiplier to the scaling factor computed from the ratio between the violating value and the bound
-        int retcode = 0;
-        dReal maxallowedmult = 0.92; // the final reduction factor should not less than this value
-
+        
         if( (itrampnd == rampndVect.end() - 1) && (itrampnd->GetDuration() <= g_fEpsilonLinear) ) {
             // No further checking is needed since the segment contains only one very small ramp.
             if( _maxmanipspeed > 0 && maxactualmanipspeed > _maxmanipspeed ) {

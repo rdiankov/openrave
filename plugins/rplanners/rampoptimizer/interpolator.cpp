@@ -1576,7 +1576,7 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
 {
     std::vector<dReal>& switchpointsList = _cacheSwitchpointsList;
     switchpointsList.resize(0);
-    switchpointsList.reserve(3*_ndof); // just an estimate of the maximum possible number of switch points
+    switchpointsList.reserve(4*_ndof); // just an estimate of the maximum possible number of switch points
 
     switchpointsList.push_back(0);
     switchpointsList.push_back(curvesVectIn[0].GetDuration());
@@ -1599,8 +1599,8 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
     rampndVectOut.resize(switchpointsList.size() - 1);
     std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &aVect = _cacheAVect;
     for (size_t jdof = 0; jdof < _ndof; ++jdof) {
-        x0Vect[jdof] = curvesVectIn[jdof].EvalPos(0);
-        v0Vect[jdof] = curvesVectIn[jdof].EvalVel(0);
+        x0Vect[jdof] = curvesVectIn[jdof].GetX0();
+        v0Vect[jdof] = curvesVectIn[jdof].GetV0();
     }
 
     bool bRecomputeAccel = (amVect.size() == _ndof);
