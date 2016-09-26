@@ -97,7 +97,12 @@ protected:
                 }
                 else
                 {
-                    // TODO: convert scheme to _vForceResolveOpenRAVEScheme
+                    // for external references, need to canonicalize the uri
+                    std::string uri = _CanonicalizeURI((*it)->GetURI());
+                    if (bodyValue.HasMember("uri")) {
+                        bodyValue.RemoveMember("uri");
+                    }
+                    RAVE_SERIALIZEJSON_ADDMEMBER(bodyValue, _doc.GetAllocator(), "uri", uri);
                 }
 
                 bodiesValue.PushBack(bodyValue, _doc.GetAllocator());
@@ -117,7 +122,56 @@ protected:
         }
 
         // TODO: need to check if the external reference is refering to a json file
-        return pbody->GetURI() != "";
+        return pbody->GetURI().size() > 0;
+    }
+
+    /// \brief get the scheme of the uri, e.g. file: or openrave:
+    void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
+    {
+        path = uri;
+        size_t hashindex = path.find_last_of('#');
+        if (hashindex != std::string::npos) {
+            fragment = path.substr(hashindex + 1);
+            path = path.substr(0, hashindex);
+        }
+
+        size_t colonindex = path.find_first_of(':');
+        if (colonindex != std::string::npos) {
+            scheme = path.substr(0, colonindex + 1);
+            path = path.substr(colonindex + 1);
+        }
+    }
+
+    std::string _CanonicalizeURI(const std::string& uri)
+    {
+        std::string scheme, path, fragment;
+        _ParseURI(uri, scheme, path, fragment);
+
+        if (_vForceResolveOpenRAVEScheme.size() > 0 && scheme == "file:") {
+            // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
+            std::string filename;
+            if (RaveInvertFileLookup(filename, path)) {
+                path = "/" + filename;
+                scheme = _vForceResolveOpenRAVEScheme;
+            }
+        }
+
+        // TODO: fix other scheme.
+
+        // fix extension, replace dae with json
+        // this is done for ease of migration
+        size_t len = path.size();
+        if (len >= sizeof(".dae") - 1) {
+            if (path[len - 4] == '.' && ::tolower(path[len - 3]) == 'd' && ::tolower(path[len - 2]) == 'a' && ::tolower(path[len - 1]) == 'e') {
+                path = path.substr(0, path.size() - (sizeof(".dae") - 1)) + ".json";
+            }
+        }
+
+        std::string newuri = scheme + path;
+        if (fragment.size() > 0) {
+            newuri += "#" + fragment;
+        }
+        return newuri;
     }
 
     std::string _vForceResolveOpenRAVEScheme; ///< if specified, writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme

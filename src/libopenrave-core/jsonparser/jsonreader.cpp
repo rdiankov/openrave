@@ -46,32 +46,6 @@ namespace OpenRAVE {
         {
         }
 
-        // void AddFullURI(rapidjson::Document& d, rapidjson::Value::ValueIterator& body, std::string filename){
-
-        //     if( body->HasMember("uri") ){
-        //         std::string uri = body->FindMember("uri")->value.GetString();
-
-        //         if(uri.size() == 0 ){
-        //             return;
-        //         }
-
-        //         if(_prefix.size() > 0){
-        //             uri = _prefix + uri;
-        //         }
-
-        //         else if(uri[0] == '#'){
-        //             uri = filename + uri;
-        //         }
-
-        //         if(body->RemoveMember("uri")){
-        //             rapidjson::Value key;
-        //             rapidjson::Value value(uri, d.GetAllocator());
-        //             key.SetString("uri", d.GetAllocator());
-        //             body->AddMember(key, value, d.GetAllocator());
-        //         }
-        //     }
-        // }
-
         bool InitFromFile(const std::string& filename)
         {
             _filename = filename;
