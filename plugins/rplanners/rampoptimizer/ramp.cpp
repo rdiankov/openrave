@@ -799,7 +799,9 @@ void RampND::Initialize(size_t ndof)
 {
     constraintChecked = false;
     _ndof = ndof;
-    _data.resize(5*_ndof);
+    if( _data.size() != 5*_ndof ) {
+        _data.resize(5*_ndof);
+    }
     std::fill(_data.begin(), _data.end(), 0);
 }
 
@@ -818,7 +820,9 @@ void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dRea
     if( aVect.size() > 0 ) {
         OPENRAVE_ASSERT_OP(aVect.size(), ==, _ndof);
     }
-    _data.resize(5*_ndof);
+    if( _data.size() != 5*_ndof ) {
+        _data.resize(5*_ndof);
+    }
 
     std::copy(x0Vect.begin(), x0Vect.end(), IT_X0_BEGIN(_data, _ndof));
     std::copy(x1Vect.begin(), x1Vect.end(), IT_X1_BEGIN(_data, _ndof));
@@ -971,10 +975,8 @@ void RampND::Serialize(std::ostream& O) const
 // ParabolicPath
 void ParabolicPath::AppendRampND(RampND& rampndIn)
 {
-    if( _rampnds.capacity() < _rampnds.size() + 1 ) {
-        _rampnds.reserve(_rampnds.size() + 1);
-    }
-    _rampnds.push_back(rampndIn);
+    _rampnds.resize(_rampnds.size() + 1);
+    _rampnds.back() = rampndIn;
     _duration += rampndIn.GetDuration();
 }
 
@@ -1030,9 +1032,8 @@ void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
 
 void ParabolicPath::Initialize(const RampND& rampndIn)
 {
-    _rampnds.resize(0);
-    _rampnds.reserve(1);
-    _rampnds.push_back(rampndIn);
+    _rampnds.resize(1);
+    _rampnds[0] = rampndIn;
     _duration = rampndIn.GetDuration();
 }
 
@@ -1107,7 +1108,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
     OPENRAVE_ASSERT_OP(newindex0 + rampndVect.size(), ==, newindex1);
     std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + newindex0);
 
-    _UpdateMembers();
+    _UpdateDuration();
 }
 
 void ParabolicPath::Serialize(std::ostream& O) const
@@ -1119,7 +1120,7 @@ void ParabolicPath::Serialize(std::ostream& O) const
     return;
 }
 
-void ParabolicPath::_UpdateMembers()
+void ParabolicPath::_UpdateDuration()
 {
     dReal duration = 0;
     for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {

@@ -551,8 +551,8 @@ public:
     void Serialize(std::ostream& O) const;
 
     /// \brief To be called after some changes have been made to _rampnds in order to update
-    /// _switchpointsList and _duration accordingly.
-    void _UpdateMembers();
+    /// _duration accordingly.
+    void _UpdateDuration();
 
     inline dReal GetDuration() const
     {
