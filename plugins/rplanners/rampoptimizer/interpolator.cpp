@@ -83,7 +83,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     }
 
     // Compute the sd profile.
-    if( !Compute1DTrajectory(0, 1, 0, 0, vMin, aMin, curve) ) {
+    if( !Compute1DTrajectory(0, 1, 0, 0, vMin, aMin, curve, false) ) {
         return false;
     }
 
@@ -144,7 +144,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
         ScaleVector(dVect, -1); // now dVect contains positions at the second switch point
         rampndVectOut[1].SetX1Vect(dVect);
         rampndVectOut[2].SetX0Vect(dVect);
-        
+
         // Compute the velocity at the end of the first RampND
         SubtractVector(x1Vect, x0Vect, v0Vect); // displacement
         ScaleVector(v0Vect, curve.GetRamp(1).v0);
@@ -189,12 +189,12 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
             RAVELOG_WARN_FORMAT("x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
-            
+
         if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
             RAVELOG_WARN_FORMAT("x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
-        
+
         if( vmVect[idof] <= 0 ) {
             RAVELOG_WARN_FORMAT("vmVect[%d] = %.15e is not positive", idof%vmVect[idof]);
             return false;
@@ -326,12 +326,12 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
             RAVELOG_WARN_FORMAT("x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
-            
+
         if( x1Vect[idof] > xmaxVect[idof] + g_fRampEpsilon || x1Vect[idof] < xminVect[idof] - g_fRampEpsilon ) {
             RAVELOG_WARN_FORMAT("x1Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", idof%x1Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
         }
-        
+
         if( vmVect[idof] <= 0 ) {
             RAVELOG_WARN_FORMAT("vmVect[%d] = %.15e is not positive", idof%vmVect[idof]);
             return false;
@@ -391,7 +391,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
         RAVELOG_VERBOSE(sss.str());
     }
 
-    if( IS_DEBUGLEVEL(Level_Verbose) ){// Debugging: check ParabolicCurves before conversion
+    if( IS_DEBUGLEVEL(Level_Verbose) ) {// Debugging: check ParabolicCurves before conversion
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
             OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
@@ -404,7 +404,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
     }
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
-    
+
     {// Check RampNDs before returning
         ParabolicCheckReturn ret = CheckRampNDs(rampndVectOut, xminVect, xmaxVect, vmVect, amVect, x0Vect, x1Vect, v0Vect, v1Vect);
         OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
@@ -417,7 +417,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // 1D Trajectory
-bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, ParabolicCurve& curveOut)
+bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, ParabolicCurve& curveOut, bool bCheck)
 {
     OPENRAVE_ASSERT_OP(vm, >, 0);
     OPENRAVE_ASSERT_OP(am, >, 0);
@@ -437,7 +437,7 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
         return false;
     }
 
-    {// Check ParabolicCurve before returning
+    if( bCheck ) {// Check ParabolicCurve before returning
         ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
         if( ret != PCR_Normal ) {
             return false;
@@ -446,7 +446,7 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
     return true;
 }
 
-bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut)
+bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut, bool bCheck)
 {
     dReal d = x1 - x0;
     dReal dv = v1 - v0;
@@ -497,7 +497,7 @@ bool ParabolicInterpolator::_Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal 
         dReal a = dv > 0 ? am : -am;
         _cacheRamp.Initialize(v0, a, dv/a, x0);
         curveOut.Initialize(_cacheRamp);
-        {// Check curveOut before returning
+        if( bCheck ) {// Check curveOut before returning
             ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, g_fRampInf, am, x0, x1, v0, v1);
             if( ret != PCR_Normal ) {
                 return false;
@@ -560,7 +560,7 @@ bool ParabolicInterpolator::_ImposeVelocityLimit(ParabolicCurve& curve, dReal vm
     return true;
 }
 
-bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am)
+bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am, bool bCheck)
 {
     dReal bmin, bmax;
     curve.GetPeaks(bmin, bmax);
@@ -671,7 +671,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     }
 
     curve.Initialize(_cacheRampsVect);
-    {// Check curve before returning
+    if( bCheck ) {// Check curve before returning
         ParabolicCheckReturn ret = CheckRamps(curve.GetRamps(), xmin, xmax, vm, am, x0, x1, v0, v1);
         if( ret != PCR_Normal ) {
             RAVELOG_VERBOSE_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0%x1%v0%v1%duration%xmin%xmax%vm%am);

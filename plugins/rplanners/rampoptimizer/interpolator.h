@@ -115,13 +115,13 @@ public:
        \param vm velocity limit
        \param am acceleration limit
      */
-    bool Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, ParabolicCurve& curveOut);
+    bool Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dReal v1, dReal vm, dReal am, ParabolicCurve& curveOut, bool bCheck=true);
 
     /**
        \brief Compute the minimum-time 1D parabolic trajectory interpolating (x0, v0) and (x1, v1)
        while considering *only* acceleration limit.
      */
-    bool _Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut);
+    bool _Compute1DTrajectoryNoVelocityLimit(dReal x0, dReal x1, dReal v0, dReal v1, dReal am, ParabolicCurve& curveOut, bool bCheck=true);
 
     /**
        \brief Modify a 1D parabolic trajectory such that the given velocity limit is observed.
@@ -135,7 +135,7 @@ public:
 
        Note: the algorithm is taken from Hauser's implementation of parabolic shortcut.
      */
-    bool _ImposeJointLimitFixedDuration(ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am);
+    bool _ImposeJointLimitFixedDuration(ParabolicCurve& curve, dReal xmin, dReal xmax, dReal vm, dReal am, bool bCheck=true);
 
     /**
        \brief Stretch the paraboliccurve such that it ends at the given duration newDuration. This
