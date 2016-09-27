@@ -1570,7 +1570,8 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
 
             // Note also that skipping some switchpoints which are closer to their neighbors than
             // g_fRampEpsilon may introduce discrepancies greater than g_fRampEpsilon.
-            if( !(sw == *it) && !(sw == *(it - 1)) ) {
+            // if( !(sw == *it) && !(sw == *(it - 1)) ) {
+            if( !FuzzyEquals(sw, *it, 0.01*g_fRampEpsilon) && !FuzzyEquals(sw, *(it - 1), 0.01*g_fRampEpsilon) ) {
                 switchpointsList.insert(it, sw);
             }
         }

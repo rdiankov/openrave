@@ -896,10 +896,12 @@ public:
                     bool bAccelChanged = false;
                     for (size_t idof = 0; idof < ndof; ++idof) {
                         if( _cacheRampNDSeg.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                            RAVELOG_VERBOSE_FORMAT("accel changed: %.15e --> %.15e; diff = %.15e", _cacheRampNDSeg.GetAAt(idof)%(-_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
                             _cacheRampNDSeg.SetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
                             bAccelChanged = true;
                         }
                         else if( _cacheRampNDSeg.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
+                            RAVELOG_VERBOSE_FORMAT("accel changed: %.15e --> %.15e; diff = %.15e", _cacheRampNDSeg.GetAAt(idof)%(_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
                             _cacheRampNDSeg.SetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
                             bAccelChanged = true;
                         }
