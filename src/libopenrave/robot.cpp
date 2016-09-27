@@ -419,6 +419,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
     set<std::string> setusednames;
 
     _vecManipulators.resize(0);
+    int nextmanipindex = 0;
     FOREACHC(itmanipinfo, manipinfos) {
         ManipulatorPtr newmanip;
 
@@ -431,7 +432,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         // check sid duplicates
         if ((*itmanipinfo)->sid == "") {
             ManipulatorInfo info = **itmanipinfo;
-            utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
+            utils::InitializeUniquePrefixedString(info.sid, "manip", nextmanipindex, setusedsids);
             newmanip.reset(new Manipulator(shared_robot(),info));
         } else {
             newmanip.reset(new Manipulator(shared_robot(),**itmanipinfo));
@@ -450,6 +451,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
     setusedsids.clear();
     
     _vecSensors.resize(0);
+    int nextattachedsensorindex = 0;
     FOREACHC(itattachedsensorinfo, attachedsensorinfos) {
         AttachedSensorPtr newattachedsensor;
 
@@ -462,7 +464,7 @@ bool RobotBase::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, co
         // check sid duplicates
         if ((*itattachedsensorinfo)->sid == "") {
             AttachedSensorInfo info = **itattachedsensorinfo;
-            utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
+            utils::InitializeUniquePrefixedString(info.sid, "attachedsensor", nextattachedsensorindex, setusedsids);
             newattachedsensor.reset(new AttachedSensor(shared_robot(),info));
         } else {
             newattachedsensor.reset(new AttachedSensor(shared_robot(),**itattachedsensorinfo));

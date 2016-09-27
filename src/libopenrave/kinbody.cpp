@@ -549,6 +549,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     set<std::string> setusedsids;
     set<std::string> setusedchildnames;
     set<std::string> setusedchildsids;
+    int nextlinkindex = 0;
     FOREACHC(itlinkinfo, linkinfos) {
         LinkInfoConstPtr rawinfo = *itlinkinfo;
         if( setusednames.find(rawinfo->name) != setusednames.end() ) {
@@ -560,7 +561,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         LinkInfo& info = plink->_info;
 
         // check sid duplicates
-        utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
+        utils::InitializeUniquePrefixedString(info.sid, "link", nextlinkindex, setusedsids);
         if( setusedsids.find(info.sid) != setusedsids.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("link %s sid %s is not unique"), info.name%info.sid, ORE_InvalidArguments);
         }
@@ -570,6 +571,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
 
         setusedchildnames.clear();
         setusedchildsids.clear();
+        int nextgeomindex = 0;
         FOREACH(itgeominfo,info.geometries) {
             // check name duplicates
             if( setusedchildnames.find((*itgeominfo)->name) != setusedchildnames.end() ) {
@@ -578,7 +580,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
             setusedchildnames.insert((*itgeominfo)->name);
 
             // check sid duplicates
-            utils::InitializeUniqueAlphaNumericString((*itgeominfo)->sid, setusedchildsids);
+            utils::InitializeUniquePrefixedString((*itgeominfo)->sid, "geom", nextgeomindex, setusedchildsids);
             if( setusedchildsids.find((*itgeominfo)->sid) != setusedchildsids.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s sid %s is not unique"), (*itgeominfo)->name%(*itgeominfo)->sid, ORE_InvalidArguments);
             }
@@ -603,6 +605,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     setusednames.clear();
     setusedsids.clear();
     _vecjoints.reserve(jointinfos.size());
+    int nextjointindex = 0;
     FOREACHC(itjointinfo, jointinfos) {
         JointInfoConstPtr rawinfo = *itjointinfo;
         if( setusednames.find(rawinfo->name) != setusednames.end() ) {
@@ -614,7 +617,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         JointInfo& info = pjoint->_info;
 
         // check sid duplicates
-        utils::InitializeUniqueAlphaNumericString(info.sid, setusedsids);
+        utils::InitializeUniquePrefixedString(info.sid, "joint", nextjointindex, setusedsids);
         if( setusedsids.find(info.sid) != setusedsids.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s sid %s is not unique"), info.name%info.sid, ORE_InvalidArguments);
         }

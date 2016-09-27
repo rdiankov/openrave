@@ -171,7 +171,7 @@ namespace OpenRAVE {
             std::string scheme, path, fragment;
             _ParseURI(uri, scheme, path, fragment);
 
-            std:string filename = _ResolveURI(scheme, path);
+            std::string filename = _ResolveURI(scheme, path);
             boost::shared_ptr<rapidjson::Document> doc = _OpenDocument(filename);
             if (!doc) {
                 throw OPENRAVE_EXCEPTION_FORMAT("failed resolve json document \"%s\"", uri, ORE_InvalidArguments);

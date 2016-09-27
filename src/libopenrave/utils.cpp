@@ -102,6 +102,19 @@ void InitializeUniqueAlphaNumericString(std::string &s, const std::set<std::stri
     }
 }
 
+void InitializeUniquePrefixedString(std::string &s, const std::string &prefix, int &nextindex, const std::set<std::string> &usedstrings) {
+    if (s.size() == 0) {
+        // TODO: what if there are 1000 used strings? may be need to find out the largest number and increment from there?
+        for (int retry = 0; retry < 1000; ++retry) {
+            s = str(boost::format("%s%d")%prefix%nextindex);
+            ++nextindex;
+            if (usedstrings.find(s) == usedstrings.end()) {
+                break;
+            }
+        }
+    }
+}
+
 bool PairStringLengthCompare(const std::pair<std::string, std::string>&p0, const std::pair<std::string, std::string>&p1)
 {
     return p0.first.size() > p1.first.size();

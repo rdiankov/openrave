@@ -278,6 +278,8 @@ OPENRAVE_API std::string GetRandomAlphaNumericString(size_t length);
 OPENRAVE_API std::string GetRandomHexString(size_t length);
 /// \brief when s is empty, initialize it with a unique alpha numeric string
 OPENRAVE_API void InitializeUniqueAlphaNumericString(std::string &s, const std::set<std::string> &usedstrings);
+/// \brief when s is empty, initialize it with a unique name derived by appending a number to the supplied prefix
+OPENRAVE_API void InitializeUniquePrefixedString(std::string &s, const std::string &prefix, int &nextindex, const std::set<std::string> &usedstrings);
 
 template<class T>
 inline T ClampOnRange(T value, T min, T max)
