@@ -910,31 +910,15 @@ public:
                         RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRampND(_cacheRampNDSeg, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit);
                         if( parabolicret != RampOptimizer::PCR_Normal ) {
                             std::stringstream ss;
-                            std::string separator = "";
                             ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
                             ss << "x0 = [";
-                            FOREACHC(itvalue, curPos) {
-                                ss << separator << *itvalue;
-                                separator = ", ";
-                            }
+                            SerializeValues(ss, curPos);
                             ss << "]; x1 = [";
-                            separator = "";
-                            FOREACHC(itvalue, newPos) {
-                                ss << separator << *itvalue;
-                                separator = ", ";
-                            }
+                            SerializeValues(ss, newPos);
                             ss << "]; v0 = [";
-                            separator = "";
-                            FOREACHC(itvalue, curVel) {
-                                ss << separator << *itvalue;
-                                separator = ", ";
-                            }
+                            SerializeValues(ss, curVel);
                             ss << "]; v1 = [";
-                            separator = "";
-                            FOREACHC(itvalue, newVel) {
-                                ss << separator << *itvalue;
-                                separator = ", ";
-                            }
+                            SerializeValues(ss, newVel);
                             ss << "]; deltatime = " << deltaTime;
 
                             RAVELOG_WARN_FORMAT("env = %d: the output RampND becomes invalid (ret = %x) after fixing accelerations. %s", GetEnv()->GetId()%parabolicret%ss.str());
@@ -983,28 +967,13 @@ public:
                     std::string separator = "";
                     ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
                     ss << "x0 = [";
-                    FOREACHC(itvalue, q0) {
-                        ss << separator << *itvalue;
-                        separator = ", ";
-                    }
+                    SerializeValues(ss, q0);
                     ss << "]; x1 = [";
-                    separator = "";
-                    FOREACHC(itvalue, q1) {
-                        ss << separator << *itvalue;
-                        separator = ", ";
-                    }
+                    SerializeValues(ss, q1);
                     ss << "]; v0 = [";
-                    separator = "";
-                    FOREACHC(itvalue, dq0) {
-                        ss << separator << *itvalue;
-                        separator = ", ";
-                    }
+                    SerializeValues(ss, dq0);
                     ss << "]; v1 = [";
-                    separator = "";
-                    FOREACHC(itvalue, dq1) {
-                        ss << separator << *itvalue;
-                        separator = ", ";
-                    }
+                    SerializeValues(ss, dq1);
                     ss << "]; deltatime = " << timeElapsed;
 
                     RAVELOG_WARN_FORMAT("env = %d: the output RampND becomes invalid (ret = %x) after fixing accelerations. %s", GetEnv()->GetId()%parabolicret%ss.str());
@@ -1418,7 +1387,7 @@ protected:
 
                     {
                         dReal f = fStartTimeAccelMult * _parameters->_vConfigAccelerationLimit[j];
-                        if (accellimits[j] > f) {
+                        if( accellimits[j] > f ) {
                             accellimits[j] = f;
                         }
                     }

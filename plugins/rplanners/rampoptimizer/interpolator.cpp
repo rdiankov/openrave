@@ -22,6 +22,8 @@ namespace OpenRAVE {
 
 namespace RampOptimizerInternal {
 
+#define BCHECK_1D_TRAJ false // set this to true to enable checking at the end of functions Compute1DTrajectory and _ImposeJointLimitFixedDuration (for verification and debugging purposes)
+    
 ParabolicInterpolator::ParabolicInterpolator(size_t ndof)
 {
     OPENRAVE_ASSERT_OP(ndof, >, 0);
@@ -83,7 +85,7 @@ bool ParabolicInterpolator::ComputeZeroVelNDTrajectory(const std::vector<dReal>&
     }
 
     // Compute the sd profile.
-    if( !Compute1DTrajectory(0, 1, 0, 0, vMin, aMin, curve, false) ) {
+    if( !Compute1DTrajectory(0, 1, 0, 0, vMin, aMin, curve, BCHECK_1D_TRAJ) ) {
         return false;
     }
 
@@ -223,7 +225,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     dReal maxDuration = 0;
     size_t maxIndex = 0;
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( !Compute1DTrajectory(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], vmVect[idof], amVect[idof], _cacheCurvesVect[idof]) ) {
+        if( !Compute1DTrajectory(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], vmVect[idof], amVect[idof], _cacheCurvesVect[idof], BCHECK_1D_TRAJ) ) {
             return false;
         }
         if( _cacheCurvesVect[idof].GetDuration() > maxDuration ) {
@@ -246,7 +248,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     RAVELOG_VERBOSE_FORMAT("ND Trajectory generated with duration %.15e s.", _cacheCurvesVect[0].GetDuration());
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
-        if( !_ImposeJointLimitFixedDuration(_cacheCurvesVect[idof], xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof]) ) {
+        if( !_ImposeJointLimitFixedDuration(_cacheCurvesVect[idof], xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], BCHECK_1D_TRAJ) ) {
             return false;
         }
     }
@@ -362,7 +364,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
             return false;
         }
 
-        if( !_ImposeJointLimitFixedDuration(_cacheCurve, xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof]) ) {
+        if( !_ImposeJointLimitFixedDuration(_cacheCurve, xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], BCHECK_1D_TRAJ) ) {
             RAVELOG_VERBOSE_FORMAT("Cannot impose joint limit on idof = %d", idof);
             return false;
         }
