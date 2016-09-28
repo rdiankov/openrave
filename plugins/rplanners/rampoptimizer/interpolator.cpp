@@ -634,7 +634,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
                     if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
                         RAVELOG_VERBOSE("Case IV: passed");
                         _cacheRampsVect.resize(2 + _cacheCurve.GetRamps().size());
-                        _cacheRampsVect[0].Initialize(v0, ba1, bt0, x0);
+                        _cacheRampsVect[0].Initialize(v0, ba0, bt0, x0);
                         for (size_t iramp = 0; iramp < _cacheCurve.GetRamps().size(); ++iramp) {
                             _cacheRampsVect[iramp + 1] = _cacheCurve.GetRamp(iramp);
                         }
