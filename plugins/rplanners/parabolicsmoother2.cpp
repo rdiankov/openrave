@@ -1161,9 +1161,6 @@ protected:
         vellimits = _parameters->_vConfigVelocityLimit;
         accellimits = _parameters->_vConfigAccelerationLimit;
 
-        // For debugging
-        std::stringstream sss;
-
         RampOptimizer::CheckReturn retseg(0);
         size_t numTries = 30; // number of times allowed to scale down vellimits and accellimits
         for (size_t itry = 0; itry < numTries; ++itry) {
@@ -1181,8 +1178,8 @@ protected:
 
                 retseg = SegmentFeasible2(x0Vect, x1Vect, v0Vect, v1Vect, itrampnd->GetDuration(), options, _cacheRampNDVectOut1);
                 if( 0 ) {
-                    sss.str("");
-                    sss.clear();
+                    // For debugging
+                    std::stringstream sss;
                     sss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
                     sss << "x0 = [";
                     SerializeValues(sss, x0Vect);
