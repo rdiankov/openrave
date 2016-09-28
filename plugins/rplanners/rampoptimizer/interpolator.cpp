@@ -258,9 +258,10 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
     if( IS_DEBUGLEVEL(Level_Verbose) ) {// Debugging: check ParabolicCurves before conversion
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
-            OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
             if( ret != PCR_Normal ) {
                 RAVELOG_WARN("Failed before conversion to RampNDs");
+                RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%_cacheCurvesVect[idof].GetDuration()%xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]);
+                OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
                 return false;
             }
         }
@@ -400,9 +401,10 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
     if( IS_DEBUGLEVEL(Level_Verbose) ) {// Debugging: check ParabolicCurves before conversion
         for (size_t idof = 0; idof < _ndof; ++idof) {
             ParabolicCheckReturn ret = CheckRamps(_cacheCurvesVect[idof].GetRamps(), xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof]);
-            OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
             if( ret != PCR_Normal ) {
                 RAVELOG_WARN("Failed before conversion to RampNDs");
+                RAVELOG_WARN_FORMAT("Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; duration = %.15e; xmin = %.15e; xmax = %.15e; vm = %.15e; am = %.15e", x0Vect[idof]%x1Vect[idof]%v0Vect[idof]%v1Vect[idof]%duration%xminVect[idof]%xmaxVect[idof]%vmVect[idof]%amVect[idof]);
+                OPENRAVE_ASSERT_OP(ret, ==, PCR_Normal);
                 return false;
             }
         }
