@@ -1105,7 +1105,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
     else {
         _rampnds[newindex1].TrimFront(rem1);
     }
-    OPENRAVE_ASSERT_OP(newindex0 + rampndVect.size(), ==, newindex1);
+    OPENRAVE_ASSERT_OP(newindex0 + (int)rampndVect.size(), ==, newindex1);
     std::copy(rampndVect.begin(), rampndVect.end(), _rampnds.begin() + newindex0);
 
     _UpdateDuration();

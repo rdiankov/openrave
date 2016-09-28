@@ -15,9 +15,7 @@
 #define RAMP_OPTIM_RAMP_H
 
 #include <vector>
-#include <cassert>
 #include <openrave/openrave.h>
-#include <boost/format.hpp>
 #include "paraboliccommon.h"
 
 namespace OpenRAVE {
