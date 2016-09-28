@@ -663,7 +663,9 @@ public:
                                             tempRampNDVect.insert(tempRampNDVect.begin(), remRampND);
                                         }
                                         else if( bTrimmedBack ) {
-                                            tempRampNDVect.reserve(tempRampNDVect.size() + 1);
+                                            if( tempRampNDVect.capacity() < tempRampNDVect.size() + 1 ) {
+                                                tempRampNDVect.reserve(tempRampNDVect.size() + 1);
+                                            }
                                             tempRampNDVect.push_back(remRampND);
                                         }
                                         bSuccess = true;

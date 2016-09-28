@@ -1559,7 +1559,9 @@ void ParabolicInterpolator::_ConvertParabolicCurvesToRampNDs(const std::vector<P
 {
     std::vector<dReal>& switchpointsList = _cacheSwitchpointsList;
     switchpointsList.resize(0);
-    switchpointsList.reserve(4*_ndof); // just an estimate of the maximum possible number of switch points
+    if( switchpointsList.capacity() < 4*_ndof ) {
+        switchpointsList.reserve(4*_ndof); // just an estimate of the maximum possible number of switch points
+    }
 
     switchpointsList.push_back(0);
     switchpointsList.push_back(curvesVectIn[0].GetDuration());
