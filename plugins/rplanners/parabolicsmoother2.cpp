@@ -871,7 +871,7 @@ public:
             for (size_t itime = 0; itime < _constraintreturn->_configurationtimes.size(); ++itime, it += ndof) {
                 std::copy(it, it + ndof, newPos.begin());
                 dReal deltaTime = _constraintreturn->_configurationtimes[itime] - curTime;
-                if( deltaTime > g_fEpsilon ) {
+                if( deltaTime > RampOptimizer::g_fRampEpsilon ) {
                     dReal iDeltaTime = 1/deltaTime;
 
                     // Compute the next velocity for each DOF as well as check consistency
