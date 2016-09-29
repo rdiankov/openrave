@@ -1694,9 +1694,6 @@ public:
     void SetUserData(PyUserData pdata) {
         _penv->SetUserData(pdata._handle);
     }
-    void SetUserData(object o) {
-        _penv->SetUserData(boost::shared_ptr<UserData>(new PyUserObject(o)));
-    }
     object GetUserData() const {
         return openravepy::GetUserData(_penv->GetUserData());
     }
@@ -1744,21 +1741,15 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
 
 object GetUserData(UserDataPtr pdata)
 {
-    boost::shared_ptr<PyUserObject> po = boost::dynamic_pointer_cast<PyUserObject>(pdata);
-    if( !!po ) {
-        return po->_o;
+    SerializableDataPtr pserializable = boost::dynamic_pointer_cast<SerializableData>(pdata);
+    if( !!pserializable ) {
+        return object(PySerializableData(pserializable));
+    }
+    else if( !!pdata ) {
+        return object(PyUserData(pdata));
     }
     else {
-        SerializableDataPtr pserializable = boost::dynamic_pointer_cast<SerializableData>(pdata);
-        if( !!pserializable ) {
-            return object(PySerializableData(pserializable));
-        }
-        else if( !!pdata ) {
-            return object(PyUserData(pdata));
-        }
-        else {
-            return object();
-        }
+        return object();
     }
 }
 
@@ -1934,9 +1925,7 @@ BOOST_PYTHON_MODULE(openravepy_int)
     class_<PyEnvironmentBase, PyEnvironmentBasePtr > classenv("Environment", DOXY_CLASS(EnvironmentBase));
     {
         void (PyInterfaceBase::*setuserdata1)(PyUserData) = &PyInterfaceBase::SetUserData;
-        void (PyInterfaceBase::*setuserdata2)(object) = &PyInterfaceBase::SetUserData;
         void (PyInterfaceBase::*setuserdata3)(const std::string&, PyUserData) = &PyInterfaceBase::SetUserData;
-        void (PyInterfaceBase::*setuserdata4)(const std::string&, object) = &PyInterfaceBase::SetUserData;
         std::string sSendCommandDoc = std::string(DOXY_FN(InterfaceBase,SendCommand)) + std::string("The calling conventions between C++ and Python differ a little.\n\n\
 In C++ the syntax is::\n\n  success = SendCommand(OUT, IN)\n\n\
 In python, the syntax is::\n\n\
@@ -1953,9 +1942,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("GetEnv",&PyInterfaceBase::GetEnv, DOXY_FN(InterfaceBase,GetEnv))
         .def("Clone",&PyInterfaceBase::Clone,args("ref","cloningoptions"), DOXY_FN(InterfaceBase,Clone))
         .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
-        .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("SetUserData",setuserdata3,args("key","data"), DOXY_FN(InterfaceBase,SetUserData))
-        .def("SetUserData",setuserdata4,args("key", "data"), DOXY_FN(InterfaceBase,SetUserData))
         .def("RemoveUserData", &PyInterfaceBase::RemoveUserData, DOXY_FN(InterfaceBase, RemoveUserData))
         .def("GetUserData",&PyInterfaceBase::GetUserData, GetUserData_overloads(args("key"), DOXY_FN(InterfaceBase,GetUserData)))
         .def("SupportsCommand",&PyInterfaceBase::SupportsCommand, args("cmd"), DOXY_FN(InterfaceBase,SupportsCommand))
@@ -2005,7 +1992,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
         void (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
-        void (PyEnvironmentBase::*setuserdata2)(object) = &PyEnvironmentBase::SetUserData;
         bool (PyEnvironmentBase::*load1)(const string &) = &PyEnvironmentBase::Load;
         bool (PyEnvironmentBase::*load2)(const string &, object) = &PyEnvironmentBase::Load;
         bool (PyEnvironmentBase::*loaddata1)(const string &) = &PyEnvironmentBase::LoadData;
@@ -2146,7 +2132,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetDebugLevel",&PyEnvironmentBase::GetDebugLevel, DOXY_FN(EnvironmentBase,GetDebugLevel))
                     .def("GetHomeDirectory",&PyEnvironmentBase::GetHomeDirectory, DOXY_FN(EnvironmentBase,GetHomeDirectory))
                     .def("SetUserData",setuserdata1,args("data"), DOXY_FN(InterfaceBase,SetUserData))
-                    .def("SetUserData",setuserdata2,args("data"), DOXY_FN(InterfaceBase,SetUserData))
                     .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                     .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                     .def("SetUnit",&PyEnvironmentBase::SetUnit, args("unitname","unitmult"),  DOXY_FN(EnvironmentBase,SetUnit))
