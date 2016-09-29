@@ -1254,6 +1254,7 @@ def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
 
     return curvesnd
 
+
 def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
     """Data format
     rampnd1
@@ -1263,8 +1264,8 @@ def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
       :
 
     For each RampND:
-    rampnd data = [x0, x1, v0, v1, a, d, t]
-    len(data) = 6*ndof + 1
+    rampnd data = [ndof x0, x1, v0, v1, a, t]
+    len(data) = 5*ndof + 2
     """
 
     parabolicpathstring = parabolicpathstring.strip()
@@ -1273,13 +1274,13 @@ def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
     finalcurvesnd = ParabolicCurvesND()
 
     # check soundness
-    ndof = int((len(rawdata[0].strip().split(" ")) - 1)/6)
-    for i in xrange(1, nrampnds):
-        assert( ndof == int((len(rawdata[i].strip().split(" ")) - 1)/6) )
+    ndof = int(rawdata[0].strip().split(" ")[0])
+    for i in xrange(nrampnds):
+        assert( ndof == int((len(rawdata[i].strip().split(" ")) - 2)/5) )
 
     for i in xrange(nrampnds):
         data = rawdata[i].strip().split(" ")
-        data = [float(x) for x in data]
+        data = [float(x) for x in data[1:]]
         offset = 0
         x0 = np.array(data[offset : offset + ndof])
         offset += ndof
@@ -1291,8 +1292,6 @@ def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
         offset += ndof
         a = np.array(data[offset : offset + ndof])
         offset += ndof
-        d = np.array(data[offset : offset + ndof])
-        offset += ndof
         t = data[offset]
 
         curvesnd = ParabolicCurvesND()
@@ -1301,3 +1300,33 @@ def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
 
     return finalcurvesnd
         
+
+def ConvertOpenRAVETrajectoryToParabolicCurvesND(traj):
+    nwaypoints = traj.GetNumWaypoints()
+    curvesnd = ParabolicCurvesND()
+    
+    spec = traj.GetConfigurationSpecification()
+    xgroup = spec.GetGroupFromName('joint_values')
+    xoffset = xgroup.offset
+    xdof = xgroup.dof
+    if not (xgroup.interpolation == 'quadratic'):
+        raise ValueError("This function supports only parabolic trajectory. The given trajectory has interpolation == {0}".format(xgroup.interpolation))
+    
+    vgroup = spec.GetGroupFromName('joint_velocities')
+    voffset = vgroup.offset
+    vdof = vgroup.dof
+    deltatimegroup = spec.GetGroupFromName('deltatime')
+    toffset = deltatimegroup.offset
+
+    for iwaypoint in xrange(nwaypoints - 1):
+        x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
+        x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
+        v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]
+        v1 = traj.GetWaypoint(iwaypoint + 1)[voffset: voffset + vdof]
+        t = traj.GetWaypoint(iwaypoint + 1)[toffset]
+        temp = ParabolicCurvesND()
+        temp.SetSegment(x0, x1, v0, v1, t)
+        curvesnd.Append(temp)
+    
+    return curvesnd
+
