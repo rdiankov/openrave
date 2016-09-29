@@ -1173,8 +1173,6 @@ protected:
             rampndVectOut[0].GetX0Vect(x0Vect);
             rampndVectOut[0].GetV0Vect(v0Vect);
             FOREACHC(itrampnd, rampndVectOut) {
-                irampnd = itrampnd - rampndVectOut.begin();
-
                 itrampnd->GetX1Vect(x1Vect);
                 itrampnd->GetV1Vect(v1Vect);
 
@@ -1306,7 +1304,7 @@ protected:
                 t0 = 0;
                 t1 = tTotal;
             }
-            else if(  (_zeroVelPoints.size() > 0 && rng->Rand() <= specialShortcutWeight) || (numIters - iters <= (int)_zeroVelPoints.size())  ) {
+            else if( (_zeroVelPoints.size() > 0 && rng->Rand() <= specialShortcutWeight) || (numIters - iters <= (int)_zeroVelPoints.size()) ) {
                 /* We consider shortcutting around a zerovelpoint (the time instant of an original
                    waypoint which has not yet been shortcut) when there are some zerovelpoints left
                    and either
