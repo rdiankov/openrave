@@ -966,12 +966,11 @@ void RampND::TrimBack(dReal t)
 
 void RampND::Serialize(std::ostream& O) const
 {
-    std::string separator = "";
+    O << _ndof;
     for (size_t i = 0; i < _data.size(); ++i) {
-        O << separator << _data[i];
-        separator = " ";
+        O << " " << _data[i];
     }
-    O << "\n";
+    O << " " << _duration << "\n";
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ParabolicPath

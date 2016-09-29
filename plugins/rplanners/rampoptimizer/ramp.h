@@ -487,7 +487,7 @@ public:
         return;
     }
 
-    /// \brief Serialize this RampND by basically concatenating all entries in _data.
+    /// \brief Serialize this RampND. The format is _ndof<space>all entries in _data<space>_duration
     void Serialize(std::ostream& O) const;
 
     /**
