@@ -687,31 +687,15 @@ public:
                             if( !bSuccess ) {
                                 if (IS_DEBUGLEVEL(Level_Verbose)) {
                                     std::stringstream ss;
-                                    std::string separator = "";
                                     ss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
                                     ss << "x0 = [";
-                                    FOREACHC(itvalue, x0Vect) {
-                                        ss << separator << *itvalue;
-                                        separator = ", ";
-                                    }
+                                    SerializeValues(ss, x0Vect);
                                     ss << "]; x1 = [";
-                                    separator = "";
-                                    FOREACHC(itvalue, x1Vect) {
-                                        ss << separator << *itvalue;
-                                        separator = ", ";
-                                    }
+                                    SerializeValues(ss, x1Vect);
                                     ss << "]; v0 = [";
-                                    separator = "";
-                                    FOREACHC(itvalue, v0Vect) {
-                                        ss << separator << *itvalue;
-                                        separator = ", ";
-                                    }
+                                    SerializeValues(ss, v0Vect);
                                     ss << "]; v1 = [";
-                                    separator = "";
-                                    FOREACHC(itvalue, v1Vect) {
-                                        ss << separator << *itvalue;
-                                        separator = ", ";
-                                    }
+                                    SerializeValues(ss, v1Vect);
                                     ss << "]; deltatime = " << rampndTrimmed.GetDuration();
                                     RAVELOG_WARN_FORMAT("env = %d: original RampND %d/%d does not satisfy constraints. retcode = 0x%x. %s", GetEnv()->GetId()%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode%ss.str());
                                 }
