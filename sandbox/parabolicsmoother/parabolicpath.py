@@ -51,7 +51,7 @@ class ParabolicPath(object):
                 self.AppendParabolicCurvesND(curvesnd)
         return
 
-
+    
     def EvalPos(self, t):
         index, remainder = self.FindParabolicCurvesNDIndex(t)
         return self.curvesndVect[index].EvalPos(remainder)

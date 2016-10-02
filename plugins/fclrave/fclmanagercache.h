@@ -68,7 +68,7 @@ public:
             RAVELOG_WARN_FORMAT("_tmpbuffer has left over objects %d", _tmpbuffer.size());
         }
         _tmpbuffer.resize(0);
-        
+
         pmanager->clear();
         // should clear all vcolobjs notifying the destructor that manager has the objects unregistered
         FOREACH(it, mapCachedBodies) {

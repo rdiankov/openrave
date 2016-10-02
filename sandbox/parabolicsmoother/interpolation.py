@@ -47,8 +47,11 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
             vMin = min(vMin, vmVect[i]/Abs(dVect[i]))
             aMin = min(aMin, amVect[i]/Abs(dVect[i]))
 
-    assert(vMin < inf)
-    assert(aMin < inf)
+    if (not (vMin < inf and aMin < inf)):
+        # dVect is zero.
+        curvesnd = ParabolicCurvesND()
+        curvesnd.SetConstant(x0Vect_, 0)
+        return curvesnd
 
     if delta == zero:
         sdProfile = Interpolate1D(zero, one, zero, zero, vMin, aMin) # parabolic ramp (velocity profile sd(t))
@@ -596,15 +599,43 @@ def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
     assert(am > zero)
 
     if (newDuration < -epsilon):
+        log.info("duration = {0} is negative".format(newDuration))
         return ParabolicCurve()
     if (newDuration <= epsilon):
         # Check if this is a stationary trajectory
         if (FuzzyEquals(x0, x1, epsilon) and FuzzyEquals(v0, v1, epsilon)):
+            log.info("stationary trajectory")
             ramp0 = Ramp(v0, 0, 0, x0)
             newCurve = ParabolicCurve(ramp0)
             return newCurve
         else:
-            # newDuration is too short to any movement to be made
+            log.info("newDuration is too short for any movement to be made")
+            return ParabolicCurve()
+
+    # Correct small discrepancies if any
+    if (v0 > vm):
+        if FuzzyEquals(v0, vm, epsilon):
+            v0 = vm
+        else:
+            log.info("v0 > vm: {0} > {1}".format(v0, vm))
+            return ParabolicCurve()
+    elif (v0 < -vm):
+        if FuzzyEquals(v0, -vm, epsilon):
+            v0 = -vm
+        else:
+            log.info("v0 < -vm: {0} < {1}".format(v0, -vm))
+            return ParabolicCurve()
+    if (v1 > vm):
+        if FuzzyEquals(v1, vm, epsilon):
+            v1 = vm
+        else:
+            log.info("v1 > vm: {0} > {1}".format(v1, vm))
+            return ParabolicCurve()
+    elif (v1 < -vm):
+        if FuzzyEquals(v1, -vm, epsilon):
+            v1 = -vm
+        else:
+            log.info("v1 < -vm: {0} < {1}".format(v1, -vm))
             return ParabolicCurve()
 
     d = Sub(x1, x0)
@@ -903,10 +934,16 @@ def _CalculateLeastUpperBoundInoperativeInterval(x0, x1, v0, v1, vm, am):
             assert(dExcess > 0)
             deltaTime = mp.fdiv(dExcess, vm)
             newDuration = Add(newDuration, deltaTime)
+
+        log.debug('Calculation successful: T0 = {0}; T1 = {1}; T2 = {2}; T3 = {3}'.format(mp.nstr(T0, n=_prec), mp.nstr(T1, n=_prec), mp.nstr(T2, n=_prec), mp.nstr(T3, n=_prec)))
         
         newDuration = Mul(newDuration, number('1.01')) # add 1% safety bound
         return newDuration
     else:
+        if (FuzzyEquals(x0, x1, epsilon) and FuzzyZero(v0, epsilon) and FuzzyZero(v1, epsilon)):
+            # t = 0 is actually a correct solution
+            newDuration = 0
+            return newDuration
         log.debug('Unable to calculate the least upper bound: T0 = {0}; T1 = {1}; T2 = {2}; T3 = {3}'.\
                   format(mp.nstr(T0, n=_prec), mp.nstr(T1, n=_prec), mp.nstr(T2, n=_prec), mp.nstr(T3, n=_prec)))
         return number('-1')

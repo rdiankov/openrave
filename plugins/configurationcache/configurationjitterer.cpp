@@ -379,6 +379,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             perturbations.resize(1,0);
         }
         vnewdof.resize(GetDOF());
+        int numNeighStateFailed = 0;
         FOREACH(itperturbation,perturbations) {
             if( bConstraint ) {
                 FOREACH(it,_deltadof) {
@@ -392,7 +393,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 //                        bCollision = true;
 //                        break;
 //                    }
-                    return -1;
+                    ++numNeighStateFailed;
+                    continue;
                 }
             }
             else {
@@ -424,6 +426,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
 
         if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
+            if( numNeighStateFailed > 0 ) {
+                RAVELOG_DEBUG_FORMAT("env=%d jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetId()%numNeighStateFailed);
+            }
             return -1;
         }
 
