@@ -1716,7 +1716,7 @@ protected:
             RAVELOG_DEBUG_FORMAT("finished at shortcut iter=%d (did not make progress in the last %d iterations), successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e",iters%nCutoffIters%shortcuts%numslowdowns%originalEndTime%endTime%(originalEndTime - endTime));
         }
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
-        _DumpDynamicPath(dynamicpath, _dumplevel, fileindex, 1);
+        _DumpDynamicPath(dynamicpath, Level_Verbose, fileindex, 1);
 
         if (IS_DEBUGLEVEL(Level_Verbose)) {
             std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
@@ -2378,6 +2378,7 @@ protected:
         }
 #ifdef OPENRAVE_TIMING_DEBUGGING
         RAVELOG_DEBUG_FORMAT("shortcutting time = %.15e s.; avg. time per iteration = %.15e s.", tshortcuttotal%(tshortcuttotal/numIters));
+        _DumpDynamicPath(dynamicpath, Level_Verbose, fileindex, 1);
 
         // Record the progress if in Verbose level
         if (IS_DEBUGLEVEL(Level_Verbose)) {
@@ -2461,7 +2462,7 @@ protected:
        option indicates whether it is called before (0) or after (1) shortcutting so as to set the
        file name accordingly.
      */
-    void _DumpDynamicPath(ParabolicRamp::DynamicPath &path, DebugLevel level=Level_Debug, uint32_t fileindex=1000, int option=-1) const {
+    void _DumpDynamicPath(ParabolicRamp::DynamicPath &path, DebugLevel level=Level_Verbose, uint32_t fileindex=1000, int option=-1) const {
         if (!IS_DEBUGLEVEL(level)) {
             return;
         }
@@ -2493,8 +2494,7 @@ protected:
         for (std::vector<ParabolicRamp::ParabolicRampND>::const_iterator it = path.ramps.begin(); it != path.ramps.end(); ++it) {
             duration += it->endTime;
         }
-        RAVELOG_DEBUG_FORMAT("Wrote a dynamic path to %s (duration = %.15e)", filename%duration);
-        return;
+        RavePrintfA(str(boost::format("[%s:%d %s] Wrote a dynamic path to %s (duration = %.15e)")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__%filename%duration), level);
     }
 
     ConstraintTrajectoryTimingParametersPtr _parameters;

@@ -578,7 +578,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask)
 {
     FOREACHC(itj, vJointIndices) {
-        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "bad indices %d (dof=%d)",*itj%GetDOF(),ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "bad index %d (dof=%d)",*itj%GetDOF(),ORE_InvalidArguments);
     }
     // only reset the cache if the dof values are different
     if( _vActiveDOFIndices.size() != vJointIndices.size() ) {

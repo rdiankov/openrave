@@ -68,7 +68,7 @@ public:
             RAVELOG_WARN_FORMAT("_tmpbuffer has left over objects %d", _tmpbuffer.size());
         }
         _tmpbuffer.resize(0);
-        
+
         pmanager->clear();
         // should clear all vcolobjs notifying the destructor that manager has the objects unregistered
         FOREACH(it, mapCachedBodies) {
@@ -297,7 +297,7 @@ public:
             }
 
             if( pinfo->nLinkUpdateStamp != itcache->second.nLinkUpdateStamp ) {
-                RAVELOG_VERBOSE_FORMAT("%u body %s (%d) for cache changed link %d != %d", _lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
+                //RAVELOG_VERBOSE_FORMAT("%u body %s (%d) for cache changed link %d != %d", _lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLinkUpdateStamp%itcache->second.nLinkUpdateStamp);
                 // links changed
                 uint64_t newlinkmask = pbody->GetLinkEnableStatesMask();
                 if( _bTrackActiveDOF && ptrackingbody == pbody ) {
@@ -404,7 +404,7 @@ public:
                 itcache->second.nGeometryUpdateStamp = pinfo->nGeometryUpdateStamp;
             }
             if( pinfo->nLastStamp != itcache->second.nLastStamp ) {
-                // RAVELOG_VERBOSE_FORMAT("%u body %s (%d) for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp);
+                //RAVELOG_VERBOSE_FORMAT("%u body %s (%d) for cache changed transform %d != %d", _lastSyncTimeStamp%pbody->GetName()%pbody->GetEnvironmentId()%pinfo->nLastStamp%itcache->second.nLastStamp);
                 // transform changed
                 for(uint64_t ilink = 0; ilink < pinfo->vlinks.size(); ++ilink) {
                     if( itcache->second.linkmask & ((uint64_t)1<<ilink) ) {
