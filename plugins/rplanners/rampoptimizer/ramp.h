@@ -38,7 +38,7 @@ namespace RampOptimizerInternal {
 #define IT_V1_END(data, ndof) ((data).begin() + DATA_OFFSET_V1*ndof + ndof)
 #define IT_A_BEGIN(data, ndof) ((data).begin() + DATA_OFFSET_A*ndof)
 #define IT_A_END(data, ndof) ((data).begin() + DATA_OFFSET_A*ndof + ndof)
-    
+
 class Ramp {
 public:
     Ramp() {
@@ -188,37 +188,37 @@ public:
     }
 
     /// \brief Get the total duration of the curve
-    inline const dReal& GetDuration() const
+    inline const dReal GetDuration() const
     {
         return _duration;
     }
 
     /// \brief Get the initial velocity of the curve
-    inline const dReal& GetV0() const
+    inline const dReal GetV0() const
     {
         return _ramps.at(0).v0;
     }
 
     /// \brief Get the final velocity of the curve
-    inline const dReal& GetV1() const
+    inline const dReal GetV1() const
     {
         return _ramps.back().v1;
     }
 
     /// \brief Get the initial position of the curve
-    inline const dReal& GetX0() const
+    inline const dReal GetX0() const
     {
         return _ramps.at(0).x0;
     }
 
     /// \brief Get the final position of the curve
-    inline const dReal& GetX1() const
+    inline const dReal GetX1() const
     {
         return _ramps.back().x1;
     }
 
     /// \brief Get the total displacement done by the curve
-    inline const dReal& GetTotalDisplacement() const
+    inline const dReal GetTotalDisplacement() const
     {
         return _d;
     }
@@ -297,32 +297,57 @@ public:
 
     /// Before calling Get functions, users need to make sure that _data has been
     /// initialized beforehand.
-    inline const dReal& GetX0At(int idof) const
+    inline const dReal GetX0At(int idof) const
     {
         return _data[DATA_OFFSET_X0*_ndof + idof];
     }
 
-    inline const dReal& GetX1At(int idof) const
+    inline const dReal GetX1At(int idof) const
     {
         return _data[DATA_OFFSET_X1*_ndof + idof];
     }
 
-    inline const dReal& GetV0At(int idof) const
+    inline const dReal GetV0At(int idof) const
     {
         return _data[DATA_OFFSET_V0*_ndof + idof];
     }
 
-    inline const dReal& GetV1At(int idof) const
+    inline const dReal GetV1At(int idof) const
     {
         return _data[DATA_OFFSET_V1*_ndof + idof];
     }
 
-    inline const dReal& GetAAt(int idof) const
+    inline const dReal GetAAt(int idof) const
     {
         return _data[DATA_OFFSET_A*_ndof + idof];
     }
 
-    inline const dReal& GetDuration() const
+    inline dReal& GetX0At(int idof)
+    {
+        return _data[DATA_OFFSET_X0*_ndof + idof];
+    }
+
+    inline dReal& GetX1At(int idof)
+    {
+        return _data[DATA_OFFSET_X1*_ndof + idof];
+    }
+
+    inline dReal& GetV0At(int idof)
+    {
+        return _data[DATA_OFFSET_V0*_ndof + idof];
+    }
+
+    inline dReal& GetV1At(int idof)
+    {
+        return _data[DATA_OFFSET_V1*_ndof + idof];
+    }
+
+    inline dReal& GetAAt(int idof)
+    {
+        return _data[DATA_OFFSET_A*_ndof + idof];
+    }
+
+    inline const dReal GetDuration() const
     {
         return _duration;
     }
@@ -365,31 +390,6 @@ public:
         OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
         _duration = t;
         return;
-    }
-
-    inline dReal& SetX0At(int idof)
-    {
-        return _data[DATA_OFFSET_X0*_ndof + idof];
-    }
-
-    inline dReal& SetX1At(int idof)
-    {
-        return _data[DATA_OFFSET_X1*_ndof + idof];
-    }
-
-    inline dReal& SetV0At(int idof)
-    {
-        return _data[DATA_OFFSET_V0*_ndof + idof];
-    }
-
-    inline dReal& SetV1At(int idof)
-    {
-        return _data[DATA_OFFSET_V1*_ndof + idof];
-    }
-
-    inline dReal& SetAAt(int idof)
-    {
-        return _data[DATA_OFFSET_A*_ndof + idof];
     }
 
     // Set values by giving a vector

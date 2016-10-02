@@ -50,6 +50,10 @@ public:
         /// \brief Check all constraints on all rampnds in the given vector of rampnds. options is passed to the OpenRAVE check function.
         RampOptimizer::CheckReturn Check2(const std::vector<RampOptimizer::RampND>& rampndVect, int options, std::vector<RampOptimizer::RampND>& rampndVectOut)
         {
+            std::vector<dReal> &vswitchtimes=_vswitchtimes;
+            std::vector<dReal> &q0=_q0, &q1=_q1, &dq0=_dq0, &dq1=_dq1;
+            std::vector<uint8_t> &vsearchsegments=_vsearchsegments;
+
             // If all necessary constraints are checked (specified by options), then we set constraintChecked to true.
             if( (options & constraintmask) == constraintmask ) {
                 FOREACH(itrampnd, rampndVect) {
@@ -80,35 +84,35 @@ public:
             }
 
             // Check boundary configurations
-            rampndVect[0].GetX0Vect(_q0);
-            rampndVect[0].GetV0Vect(_dq0);
-            RampOptimizer::CheckReturn ret0 = feas->ConfigFeasible2(_q0, _dq0, options);
+            rampndVect[0].GetX0Vect(q0);
+            rampndVect[0].GetV0Vect(dq0);
+            RampOptimizer::CheckReturn ret0 = feas->ConfigFeasible2(q0, dq0, options);
             if( ret0.retcode != 0 ) {
                 return ret0;
             }
 
-            rampndVect.back().GetX1Vect(_q1);
-            rampndVect.back().GetV1Vect(_dq1);
-            RampOptimizer::CheckReturn ret1 = feas->ConfigFeasible2(_q1, _dq1, options);
+            rampndVect.back().GetX1Vect(q1);
+            rampndVect.back().GetV1Vect(dq1);
+            RampOptimizer::CheckReturn ret1 = feas->ConfigFeasible2(q1, dq1, options);
             if( ret1.retcode != 0 ) {
                 return ret1;
             }
 
             // Check configurations at all switch time
-            _vsearchsegments.resize(_vswitchtimes.size(), 0);
-            for (size_t i = 0; i < _vsearchsegments.size(); ++i) {
-                _vsearchsegments[i] = i;
+            vsearchsegments.resize(_vswitchtimes.size(), 0);
+            for (size_t i = 0; i < vsearchsegments.size(); ++i) {
+                vsearchsegments[i] = i;
             }
-            size_t midIndex = _vsearchsegments.size()/2;
-            std::swap(_vsearchsegments[0], _vsearchsegments[midIndex]); // put the mid point as the first point to be considered
+            size_t midIndex = vsearchsegments.size()/2;
+            std::swap(vsearchsegments[0], vsearchsegments[midIndex]); // put the mid point as the first point to be considered
 
             if( rampndVect.size() > 1 ) {
                 for (size_t irampnd = 0; irampnd < rampndVect.size() - 1; ++irampnd) {
-                    rampndVect[irampnd].GetX1Vect(_q1);
+                    rampndVect[irampnd].GetX1Vect(q1);
                     if( feas->NeedDerivativeForFeasibility() ) {
-                        rampndVect[irampnd].GetV1Vect(_dq1);
+                        rampndVect[irampnd].GetV1Vect(dq1);
                     }
-                    RampOptimizer::CheckReturn retconf = feas->ConfigFeasible2(_q1, _dq1, options);
+                    RampOptimizer::CheckReturn retconf = feas->ConfigFeasible2(q1, dq1, options);
                     if( retconf.retcode != 0 ) {
                         return retconf;
                     }
@@ -121,29 +125,29 @@ public:
             rampndVectOut.resize(0);
 
             // Now check each RampND
-            rampndVect[0].GetX0Vect(_q0);
-            rampndVect[0].GetV0Vect(_dq0);
+            rampndVect[0].GetX0Vect(q0);
+            rampndVect[0].GetV0Vect(dq0);
             dReal elapsedTime, expectedElapsedTime, newElapsedTime, iElapsedTime, totalWeight;
             for (size_t iswitch = 1; iswitch < _vswitchtimes.size(); ++iswitch) {
-                rampndVect[iswitch - 1].GetX1Vect(_q1); // configuration at _vswitchtimes[iswitch]
+                rampndVect[iswitch - 1].GetX1Vect(q1); // configuration at _vswitchtimes[iswitch]
                 elapsedTime = _vswitchtimes[iswitch] - _vswitchtimes[iswitch - 1]; // current elapsed time of this ramp
 
                 if( feas->NeedDerivativeForFeasibility() ) {
-                    rampndVect[iswitch - 1].GetV1Vect(_dq1);
+                    rampndVect[iswitch - 1].GetV1Vect(dq1);
 
                     if( bExpectedModifiedConfigurations ) {
                         // Due to constraints, configurations along the segment may have been modified
                         // (via CheckPathAllConstraints called from SegmentFeasible2). This may cause
-                        // _dq1 not being consistent with _q0, _q1, _dq0, and elapsedTime. So we check
-                        // consistency here as well as modify _dq1 and elapsedTime if necessary.
+                        // dq1 not being consistent with q0, q1, dq0, and elapsedTime. So we check
+                        // consistency here as well as modify dq1 and elapsedTime if necessary.
 
                         expectedElapsedTime = 0;
                         totalWeight = 0;
-                        for (size_t idof = 0; idof < _q0.size(); ++idof) {
-                            dReal avgVel = 0.5*(_dq0[idof] + _dq1[idof]);
+                        for (size_t idof = 0; idof < q0.size(); ++idof) {
+                            dReal avgVel = 0.5*(dq0[idof] + dq1[idof]);
                             if( RaveFabs(avgVel) > g_fEpsilon ) {
-                                dReal fWeight = RaveFabs(_q1[idof] - _q0[idof]);
-                                expectedElapsedTime += fWeight*(_q1[idof] - _q0[idof])/avgVel;
+                                dReal fWeight = RaveFabs(q1[idof] - q0[idof]);
+                                expectedElapsedTime += fWeight*(q1[idof] - q0[idof])/avgVel;
                                 totalWeight += fWeight;
                             }
                         }
@@ -157,49 +161,49 @@ public:
                                 elapsedTime = newElapsedTime;
                                 if( elapsedTime > g_fEpsilon ) {
                                     iElapsedTime = 1/elapsedTime;
-                                    for (size_t idof = 0; idof < _q0.size(); ++idof) {
-                                        _dq1[idof] = 2*iElapsedTime*(_q1[idof] - _q0[idof]) - _dq0[idof];
+                                    for (size_t idof = 0; idof < q0.size(); ++idof) {
+                                        dq1[idof] = 2*iElapsedTime*(q1[idof] - q0[idof]) - dq0[idof];
                                     }
                                 }
                                 else {
-                                    _dq1 = _dq0;
+                                    dq1 = dq0;
                                 }
                             }
                         }
                     }
                 }
 
-                RampOptimizer::CheckReturn retseg = feas->SegmentFeasible2(_q0, _q1, _dq0, _dq1, elapsedTime, options, _cacheRampNDVectOut);
+                RampOptimizer::CheckReturn retseg = feas->SegmentFeasible2(q0, q1, dq0, dq1, elapsedTime, options, _cacheRampNDVectOut);
                 if( retseg.retcode != 0 ) {
                     return retseg;
                 }
 
                 if( _cacheRampNDVectOut.size() > 0 ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                        for (size_t idof = 0; idof < _q0.size(); ++idof) {
-                            if( RaveFabs(_q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                                RAVELOG_VERBOSE_FORMAT("rampndVect[%d] idof = %d: end point does not finish at the desired position, diff = %.15e", (iswitch - 1)%idof%RaveFabs(_q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)));
+                        for (size_t idof = 0; idof < q0.size(); ++idof) {
+                            if( RaveFabs(q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
+                                RAVELOG_VERBOSE_FORMAT("rampndVect[%d] idof = %d: end point does not finish at the desired position, diff = %.15e", (iswitch - 1)%idof%RaveFabs(q1[idof] - _cacheRampNDVectOut.back().GetX1At(idof)));
                             }
-                            if( RaveFabs(_dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
-                                RAVELOG_VERBOSE_FORMAT("rampndVect[%d] idof = %d: end point does not finish at the desired velocity, diff = %.15e", (iswitch - 1)%idof%RaveFabs(_dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)));
+                            if( RaveFabs(dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)) > RampOptimizer::g_fRampEpsilon ) {
+                                RAVELOG_VERBOSE_FORMAT("rampndVect[%d] idof = %d: end point does not finish at the desired velocity, diff = %.15e", (iswitch - 1)%idof%RaveFabs(dq1[idof] - _cacheRampNDVectOut.back().GetV1At(idof)));
                             }
                         }
                     }
                     rampndVectOut.insert(rampndVectOut.end(), _cacheRampNDVectOut.begin(), _cacheRampNDVectOut.end());
-                    rampndVectOut.back().GetX1Vect(_q0);
-                    rampndVectOut.back().GetV1Vect(_dq0);
+                    rampndVectOut.back().GetX1Vect(q0);
+                    rampndVectOut.back().GetV1Vect(dq0);
                 }
             }
 
-            // Note that now _q0 and _dq0 are actually the final joint position and velocity
+            // Note that now q0 and dq0 are actually the final joint position and velocity
             bool bDifferentVelocity = false;
-            for (size_t idof = 0; idof < _q0.size(); ++idof) {
-                if( RaveFabs(rampndVect.back().GetX1At(idof) - _q0[idof]) > RampOptimizer::g_fRampEpsilon ) {
-                    RAVELOG_VERBOSE_FORMAT("rampndVectOut idof = %d: end point does not finish at the desired position, diff = %.15e. Rejecting...", idof%RaveFabs(rampndVect.back().GetX1At(idof) - _q0[idof]));
+            for (size_t idof = 0; idof < q0.size(); ++idof) {
+                if( RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]) > RampOptimizer::g_fRampEpsilon ) {
+                    RAVELOG_VERBOSE_FORMAT("rampndVectOut idof = %d: end point does not finish at the desired position, diff = %.15e. Rejecting...", idof%RaveFabs(rampndVect.back().GetX1At(idof) - q0[idof]));
                     return RampOptimizer::CheckReturn(CFO_FinalValuesNotReached);
                 }
-                if( RaveFabs(rampndVect.back().GetV1At(idof) - _dq0[idof]) > RampOptimizer::g_fRampEpsilon ) {
-                    RAVELOG_VERBOSE_FORMAT("rampndVectOut idof = %d: end point does not finish at the desired velocity, diff = %.15e", idof%RaveFabs(rampndVect.back().GetV1At(idof) - _dq0[idof]));
+                if( RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]) > RampOptimizer::g_fRampEpsilon ) {
+                    RAVELOG_VERBOSE_FORMAT("rampndVectOut idof = %d: end point does not finish at the desired velocity, diff = %.15e", idof%RaveFabs(rampndVect.back().GetV1At(idof) - dq0[idof]));
                     bDifferentVelocity = true;
                 }
             }
@@ -883,12 +887,12 @@ public:
                     for (size_t idof = 0; idof < ndof; ++idof) {
                         if( _cacheRampNDSeg.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
                             RAVELOG_VERBOSE_FORMAT("accel changed: %.15e --> %.15e; diff = %.15e", _cacheRampNDSeg.GetAAt(idof)%(-_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
-                            _cacheRampNDSeg.SetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
+                            _cacheRampNDSeg.GetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
                             bAccelChanged = true;
                         }
                         else if( _cacheRampNDSeg.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
                             RAVELOG_VERBOSE_FORMAT("accel changed: %.15e --> %.15e; diff = %.15e", _cacheRampNDSeg.GetAAt(idof)%(_parameters->_vConfigAccelerationLimit[idof])%(_cacheRampNDSeg.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
-                            _cacheRampNDSeg.SetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
+                            _cacheRampNDSeg.GetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
                             bAccelChanged = true;
                         }
                     }
@@ -938,11 +942,11 @@ public:
             bool bAccelChanged = false;
             for (size_t idof = 0; idof < ndof; ++idof) {
                 if( _cacheRampNDSeg.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
-                    _cacheRampNDSeg.SetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
+                    _cacheRampNDSeg.GetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
                     bAccelChanged = true;
                 }
                 else if( _cacheRampNDSeg.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
-                    _cacheRampNDSeg.SetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
+                    _cacheRampNDSeg.GetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
                     bAccelChanged = true;
                 }
             }
@@ -1139,7 +1143,7 @@ protected:
     /// velocities. Manip constraints (if available) is also taken care of by gradually scaling
     /// vellimits and accellimits down until the constraints are no longer violated. Therefore, the
     /// output trajectory (rampnd) is guaranteed to feasible.
-    bool _TimeParameterizeZeroVel(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<RampOptimizer::RampND>& rampndVectOut)
+    bool _ComputeRampWithZeroVelEndpoints(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<RampOptimizer::RampND>& rampndVectOut)
     {
         // Cache
         std::vector<dReal> &x0Vect = _cacheX0Vect1, &x1Vect = _cacheX1Vect1, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
@@ -1299,7 +1303,7 @@ protected:
                 dReal t = _zeroVelPoints[index];
                 t0 = t - rng->Rand()*min(specialShortcutCutoffTime, t);
                 t1 = t + rng->Rand()*min(specialShortcutCutoffTime, tTotal - t);
-                
+
                 if( numIters - iters <= (int)_zeroVelPoints.size() ) {
                     // By the time we reach here, it is likely that these multipliers have been
                     // scaled down to be very small. Try resetting it in hopes that it helps produce
@@ -1402,7 +1406,7 @@ protected:
                         segmentTime += itrampnd->GetDuration();
                     }
                     if( segmentTime + minTimeStep > t1 - t0 ) {
-                        RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d, rejecting shortcut from t0 = %.15e to t1 = %.15e, %.15e > %.15e, minTimeStep = %.15e, final trajectory duration = %.15e s.\n",
+                        RAVELOG_VERBOSE_FORMAT("env = %d: shortcut iter = %d/%d, rejecting shortcut from t0 = %.15e to t1 = %.15e, %.15e > %.15e, minTimeStep = %.15e, final trajectory duration = %.15e s.",
                                                GetEnv()->GetId()%iters%numIters%t0%t1%segmentTime%(t1 - t0)%minTimeStep%parabolicpath.GetDuration());
                         break;
                     }
@@ -1811,8 +1815,8 @@ protected:
     std::vector<std::vector<dReal> > _cacheWaypointVect; ///< each element is a vector storing a waypoint
     std::vector<dReal> _cacheX0Vect, _cacheX1Vect, _cacheV0Vect, _cacheV1Vect, _cacheTVect; ///< used in PlanPath and _Shortcut
     RampOptimizer::RampND _cacheRampND, _cacheRemRampND;
-    std::vector<RampOptimizer::RampND> _cacheRampNDVect; ///< use cases: 1. being passed to _TimeParameterizeZeroVel when retrieving cubic waypoints from input traj
-                                                         ///             2. in _SetMileStones: being passed to _TimeParameterizeZeroVel
+    std::vector<RampOptimizer::RampND> _cacheRampNDVect; ///< use cases: 1. being passed to _ComputeRampWithZeroVelEndpoints when retrieving cubic waypoints from input traj
+                                                         ///             2. in _SetMileStones: being passed to _ComputeRampWithZeroVelEndpoints
                                                          ///             3. handles the finalized set of RampNDs before writing to OpenRAVE trajectory
                                                          ///             4. in _Shortcut
     std::vector<RampOptimizer::RampND> _cacheRampNDVectOut; ///< used to handle output from Check function in PlanPath, also used in _Shortcut
@@ -1824,7 +1828,7 @@ protected:
     // in _SetMileStones
     std::vector<std::vector<dReal> > _cacheNewWaypointsVect;
 
-    // in _TimeParameterizeZeroVel
+    // in _ComputeRampWithZeroVelEndpoints
     std::vector<dReal> _cacheX0Vect1, _cacheX1Vect1; ///< need to have another copies of x0 and x1 vectors. For v0 and v1 vectors, we can reuse to ones above.
     std::vector<dReal> _cacheVellimits, _cacheAccelLimits; ///< stores current velocity and acceleration limits, also used in _Shortcut
     std::vector<RampOptimizer::RampND> _cacheRampNDVectOut1; ///< stores output from the check function, also used in _Shortcut

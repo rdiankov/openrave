@@ -36,9 +36,6 @@ Ramp::Ramp(dReal v0_, dReal a_, dReal duration_, dReal x0_)
 
 dReal Ramp::EvalPos(dReal t) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
-
     if (t <= 0) {
         return x0;
     }
@@ -51,9 +48,6 @@ dReal Ramp::EvalPos(dReal t) const
 
 dReal Ramp::EvalVel(dReal t) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
-
     if (t <= 0) {
         return v0;
     }
@@ -184,9 +178,6 @@ void Ramp::Copy(Ramp& outRamp)
 
 void Ramp::Cut(dReal t, Ramp& remRamp)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         remRamp.Copy(*this);
         Initialize(v0, 0, 0, x0);
@@ -205,9 +196,6 @@ void Ramp::Cut(dReal t, Ramp& remRamp)
 
 void Ramp::TrimFront(dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         return;
     }
@@ -224,9 +212,6 @@ void Ramp::TrimFront(dReal t)
 
 void Ramp::TrimBack(dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         Initialize(v0, 0, 0, x0);
         return;
@@ -286,9 +271,6 @@ void ParabolicCurve::Append(ParabolicCurve& curve)
 
 dReal ParabolicCurve::EvalPos(dReal t) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         return _ramps.front().x0;
     }
@@ -304,9 +286,6 @@ dReal ParabolicCurve::EvalPos(dReal t) const
 
 dReal ParabolicCurve::EvalVel(dReal t) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         return _ramps.front().v0;
     }
@@ -322,9 +301,6 @@ dReal ParabolicCurve::EvalVel(dReal t) const
 
 dReal ParabolicCurve::EvalAcc(dReal t) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         return _ramps.front().a;
     }
@@ -342,9 +318,6 @@ dReal ParabolicCurve::EvalAcc(dReal t) const
 
 void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         index = 0;
         remainder = 0;
@@ -440,7 +413,6 @@ void ParabolicCurve::Reset()
 
 void ParabolicCurve::SetConstant(dReal x0, dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
     if( t < 0 ) {
         t = 0;
     }
@@ -465,7 +437,6 @@ void ParabolicCurve::SetInitialValue(dReal newx0)
 
 void ParabolicCurve::SetSegment(dReal x0, dReal x1, dReal v0, dReal v1, dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
     if( t < 0 ) {
         t = 0;
     }
@@ -541,9 +512,6 @@ void ParabolicCurve::Swap(ParabolicCurve& anotherCurve)
 
 void ParabolicCurve::Cut(dReal t, ParabolicCurve& remCurve)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         Swap(remCurve);
         SetZeroDuration(remCurve.GetX0(), remCurve.GetV0());
@@ -588,9 +556,6 @@ void ParabolicCurve::Cut(dReal t, ParabolicCurve& remCurve)
 
 void ParabolicCurve::TrimFront(dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         return;
     }
@@ -618,9 +583,6 @@ void ParabolicCurve::TrimFront(dReal t)
 
 void ParabolicCurve::TrimBack(dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         SetZeroDuration(GetX0(), GetV0());
         return;
@@ -661,7 +623,6 @@ RampND::RampND(size_t ndof)
 
 RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect, const std::vector<dReal>& aVect, dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
     if( t < 0 ) {
         t = 0;
     }
@@ -705,9 +666,6 @@ RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vec
 
 void RampND::EvalPos(dReal t, std::vector<dReal>::iterator it) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         std::copy(IT_X0_BEGIN(_data, _ndof), IT_X0_END(_data, _ndof), it);
         return;
@@ -725,9 +683,6 @@ void RampND::EvalPos(dReal t, std::vector<dReal>::iterator it) const
 
 void RampND::EvalVel(dReal t, std::vector<dReal>::iterator it) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         std::copy(IT_V0_BEGIN(_data, _ndof), IT_V0_END(_data, _ndof), it);
         return;
@@ -751,9 +706,6 @@ void RampND::EvalAcc(std::vector<dReal>::iterator it) const
 
 void RampND::EvalPos(dReal t, std::vector<dReal>& xVect) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         GetX0Vect(xVect);
         return;
@@ -772,9 +724,6 @@ void RampND::EvalPos(dReal t, std::vector<dReal>& xVect) const
 
 void RampND::EvalVel(dReal t, std::vector<dReal>& vVect) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         GetV0Vect(vVect);
         return;
@@ -870,16 +819,14 @@ void RampND::SetInitialPosition(const std::vector<dReal>& xVect)
     dReal dOriginal;
     for (size_t idof = 0; idof < _ndof; ++idof) {
         dOriginal = GetX1At(idof) - GetX0At(idof);
-        SetX0At(idof) = xVect[idof];
-        SetX1At(idof) = xVect[idof] + dOriginal;
+        GetX0At(idof) = xVect[idof];
+        GetX1At(idof) = xVect[idof] + dOriginal;
     }
     return;
 }
 
 void RampND::Cut(dReal t, RampND& remRampND)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
     if( remRampND._ndof != _ndof ) {
         remRampND.Initialize(_ndof);
     }
@@ -922,9 +869,6 @@ void RampND::Cut(dReal t, RampND& remRampND)
 
 void RampND::TrimFront(dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         return;
     }
@@ -944,9 +888,6 @@ void RampND::TrimFront(dReal t)
 
 void RampND::TrimBack(dReal t)
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         std::copy(IT_X0_BEGIN(_data, _ndof), IT_X0_END(_data, _ndof), IT_X1_BEGIN(_data, _ndof)); // replace x1 by x0
         std::copy(IT_V0_BEGIN(_data, _ndof), IT_V0_END(_data, _ndof), IT_V1_BEGIN(_data, _ndof)); // replace v1 by v0
@@ -983,9 +924,6 @@ void ParabolicPath::AppendRampND(RampND& rampndIn)
 
 void ParabolicPath::EvalPos(dReal t, std::vector<dReal>& xVect) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     int index;
     dReal remainder;
     FindRampNDIndex(t, index, remainder);
@@ -994,9 +932,6 @@ void ParabolicPath::EvalPos(dReal t, std::vector<dReal>& xVect) const
 
 void ParabolicPath::EvalVel(dReal t, std::vector<dReal>& vVect) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-    
     int index;
     dReal remainder;
     FindRampNDIndex(t, index, remainder);
@@ -1005,9 +940,6 @@ void ParabolicPath::EvalVel(dReal t, std::vector<dReal>& vVect) const
 
 void ParabolicPath::EvalAcc(dReal t, std::vector<dReal>& aVect) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     int index;
     dReal remainder;
     FindRampNDIndex(t, index, remainder);
@@ -1016,9 +948,6 @@ void ParabolicPath::EvalAcc(dReal t, std::vector<dReal>& aVect) const
 
 void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
 {
-    OPENRAVE_ASSERT_OP(t, >=, -g_fRampEpsilon);
-    OPENRAVE_ASSERT_OP(t, <=, _duration + g_fRampEpsilon);
-
     if( t <= 0 ) {
         index = 0;
         remainder = 0;
