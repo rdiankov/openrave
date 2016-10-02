@@ -420,7 +420,7 @@ public:
                     }
                     else {
                         // We only check time-based constraints since the path is anyway likely to be modified during shortcutting.
-                        if( !_TimeParameterizeZeroVel(x0Vect, x1Vect, CFO_CheckTimeBasedConstraints, tempRampNDVect) ) {
+                        if( !_ComputeRampWithZeroVelEndpoints(x0Vect, x1Vect, CFO_CheckTimeBasedConstraints, tempRampNDVect) ) {
                             RAVELOG_WARN_FORMAT("env = %d: Failed to initialize from cubic waypoints", GetEnv()->GetId());
                             _DumpTrajectory(ptraj, Level_Debug);
                             return PS_Failed;
@@ -1109,7 +1109,7 @@ protected:
             for (size_t iwaypoint = 1; iwaypoint < vNewWaypoints.size(); ++iwaypoint) {
                 OPENRAVE_ASSERT_OP(vNewWaypoints[iwaypoint].size(), ==, ndof);
 
-                if( !_TimeParameterizeZeroVel(vNewWaypoints[iwaypoint - 1], vNewWaypoints[iwaypoint], options, rampndVect) ) {
+                if( !_ComputeRampWithZeroVelEndpoints(vNewWaypoints[iwaypoint - 1], vNewWaypoints[iwaypoint], options, rampndVect) ) {
                     RAVELOG_WARN_FORMAT("env = %d: Failed to time-parameterize path connecting waypoints %d and %d", GetEnv()->GetId()%(iwaypoint - 1)%iwaypoint);
                     return false;
                 }
