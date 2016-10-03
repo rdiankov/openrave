@@ -41,7 +41,8 @@ RobotBase::AttachedSensorInfo::AttachedSensorInfo() :
     _name(name),
     _linkname(linkName),
     _trelative(transform),
-    _sensorname(type)
+    _sensorname(type),
+    _sensorgeometry(sensorGeometry)
 {
 }
 #pragma GCC diagnostic pop
@@ -62,7 +63,7 @@ RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const Ro
     type = other.type;
     linkName = other.linkName;
     transform = other.transform;
-    _sensorgeometry = other._sensorgeometry;
+    sensorGeometry = other.sensorGeometry;
     return *this;
 }
 
@@ -76,9 +77,11 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", linkName);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
 
-    if (!!_sensorgeometry) {
-        _sensorgeometry->SerializeJSON(value, allocator, options);
+    rapidjson::Value sensorGeometryValue;
+    if (!!sensorGeometry) {
+        sensorGeometry->SerializeJSON(sensorGeometryValue, allocator, options);
     }
+    value.AddMember("sensorGeometry", sensorGeometryValue, allocator);
 }
 
 void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value)
@@ -91,13 +94,13 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &valu
     RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", linkName);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
 
-    // TODO(jsonserialization)
-
-    BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
-    if( !!preader ) {
-        preader->DeserializeJSON(value);
-        if( !!preader->GetReadable() ) {
-            _sensorgeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+    if (value.HasMember("sensorGeometry")) {
+        BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
+        if( !!preader ) {
+            preader->DeserializeJSON(value["sensorGeometry"]);
+            if( !!preader->GetReadable() ) {
+                sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+            }
         }
     }
 }

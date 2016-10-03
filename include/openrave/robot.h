@@ -467,7 +467,8 @@ public:
         std::string type; ///< name of the sensor interface to create, in other words the sensor type
         std::string& _sensorname RAVE_DEPRECATED;
 
-        SensorBase::SensorGeometryPtr _sensorgeometry; ///< the sensor geometry to initialize the sensor with
+        SensorBase::SensorGeometryPtr sensorGeometry; ///< the sensor geometry to initialize the sensor with
+        SensorBase::SensorGeometryPtr& _sensorgeometry RAVE_DEPRECATED; 
     };
     typedef boost::shared_ptr<AttachedSensorInfo> AttachedSensorInfoPtr;
     typedef boost::shared_ptr<AttachedSensorInfo const> AttachedSensorInfoConstPtr;
