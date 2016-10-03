@@ -1603,6 +1603,7 @@ class IKFastSolver(AutoReloader):
                 else:
                     Tjoints = []
                     for iaxis in range(joint.GetDOF()):
+                        var = None
                         if joint.GetDOFIndex() >= 0:
                             var = Symbol(self.axismapinv[joint.GetDOFIndex()])
                             cosvar = cos(var)
@@ -1616,20 +1617,24 @@ class IKFastSolver(AutoReloader):
                             # this needs to be reduced!
                             cosvar = cos(var)
                             sinvar = sin(var)
+                        elif joint.IsStatic():
+                            # joint doesn't move so assume identity
+                            pass
                         else:
                             raise ValueError('cannot solve for mechanism when a non-mimic passive joint %s is in chain'%str(joint))
                         
                         Tj = eye(4)
-                        jaxis = axissign*self.numpyVectorToSympy(joint.GetInternalHierarchyAxis(iaxis))
-                        if joint.IsRevolute(iaxis):
-                            Tj[0:3,0:3] = self.rodrigues2(jaxis,cosvar,sinvar)
-                        elif joint.IsPrismatic(iaxis):
-                            Tj[0:3,3] = jaxis*(var)
-                        else:
-                            raise ValueError('failed to process joint %s'%joint.GetName())
+                        if var is not None:
+                            jaxis = axissign*self.numpyVectorToSympy(joint.GetInternalHierarchyAxis(iaxis))
+                            if joint.IsRevolute(iaxis):
+                                Tj[0:3,0:3] = self.rodrigues2(jaxis,cosvar,sinvar)
+                            elif joint.IsPrismatic(iaxis):
+                                Tj[0:3,3] = jaxis*(var)
+                            else:
+                                raise ValueError('failed to process joint %s'%joint.GetName())
                         
                         Tjoints.append(Tj)
-
+                    
                     if axisAngleFromRotationMatrix is not None:
                         axisangle = axisAngleFromRotationMatrix(numpy.array(numpy.array(Tright * TLeftjoint),numpy.float64))
                         angle = sqrt(axisangle[0]**2+axisangle[1]**2+axisangle[2]**2)
