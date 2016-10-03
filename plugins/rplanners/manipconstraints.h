@@ -507,7 +507,7 @@ public:
         }
 
         std::vector<ParabolicRampInternal::ParabolicRampND>::const_iterator itramp2 = --outramps.end();
-        if (itramp2 != itramp1) {
+        if (itramp2 != itramp1 || itramp1->endTime > g_fEpsilonLinear) {
             FOREACHC(itmanipinfo, _listCheckManips) {
                 KinBodyPtr probot = itmanipinfo->plink->GetParent();
 

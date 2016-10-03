@@ -107,8 +107,8 @@ class Ramp(object):
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
         self.x1 = Add(self.x0, self.d)
 
-
-    def SetInitialValue(newx0):
+        
+    def SetInitialValue(self, newx0):
         self.x0 = ConvertFloatToMPF(newx0)
         self.x1 = Add(self.x0, self.d)
         
@@ -162,19 +162,22 @@ class Ramp(object):
         
         if (FuzzyZero(self.a, epsilon)):
             if self.v0 > 0:
-                xmin = self.x0
-                xmax = self.EvalPos(self.duration)
+                xmin = self.EvalPos(ta)
+                xmax = self.EvalPos(tb)
             else:
-                xmin = self.EvalPos(self.duration)
-                xmax = self.x0
+                xmin = self.EvalPos(tb)
+                xmax = self.EvalPos(ta)
             return [xmin, xmax]
-        elif (self.a > 0):
-            xmin = self.x0
-            xmax = self.EvalPos(self.duration)
+
+        tempa = self.EvalPos(ta)
+        tempb = self.EvalPos(tb)
+        if (tempa < tempb):
+            xmin = tempa
+            xmax = tempb
         else:
-            xmin = self.EvalPos(self.duration)
-            xmax = self.x0            
-            
+            xmin = tempb
+            xmax = tempa
+        
         tDeflection = Neg(mp.fdiv(self.v0, self.a))
         if (tDeflection <= ta) or (tDeflection >= tb):
             return [xmin, xmax]
@@ -369,7 +372,7 @@ class ParabolicCurve(object):
             for ramp in curve.ramps:
                 self.ramps.append(deepcopy(ramp))
                 # Update displacement
-                self.ramps[-1].x0 = self.ramps[-2].x1
+                self.ramps[-1].SetInitialValue(self.ramps[-2].x1)
                 d = Add(d, self.ramps[-1].d)                
                 dur = Add(dur, self.ramps[-1].duration)
                 self.switchpointsList.append(dur)
@@ -481,7 +484,7 @@ class ParabolicCurve(object):
         self.x0 = x0
         newx0 = x0
         for ramp in self.ramps:
-            ramp.x0 = newx0
+            ramp.SetInitialValue(newx0)
             newx0 = Add(newx0, ramp.d)
         self.x1 = Add(self.x0, self.d)
 
@@ -507,7 +510,8 @@ class ParabolicCurve(object):
         if FuzzyZero(t, epsilon):
             a = 0
         else:
-            a = mp.fdiv(Sub(v1, v0), t)
+            tSqr = Sqr(t)
+            a = mp.fdiv(Neg(Sum([Mul(v0, tSqr), Mul(t, Sub(x0, x1)), Mul(2, Sub(v0, v1))])), Mul(t, Add(Mul(pointfive, tSqr), 2)))
         ramp0 = Ramp(v0, a, t, x0)
         self.Initialize([ramp0])
         return
@@ -828,7 +832,7 @@ class ParabolicCurvesND(object):
 
 
     def SetConstant(self, x0Vect_, t):
-        t = ConvertFloatArrayToMPF(t)
+        t = ConvertFloatToMPF(t)
         assert(t >= 0)
         x0Vect = ConvertFloatArrayToMPF(x0Vect_)
         
@@ -1195,3 +1199,134 @@ def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
         curvesnd.Append(nextCurvesND)
 
     return curvesnd
+
+
+def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
+    """
+    Data format:
+
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 1 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 2 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+     :
+     :
+    
+    chunk N
+
+    For each ParabolicCurve:
+      ramp 0      ramp 1            ramp M
+    v0 a t x0 | v0 a t x0 | ... | v0 a t x0
+    
+    """
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    ndof = int(rawdata[0])
+    nlines_chunk = 2 + ndof
+
+    nchunks = len(rawdata)/nlines_chunk
+
+    curves = []
+    for idof in xrange(ndof):
+        curvedata = rawdata[(chunkindex*nlines_chunk) + 2 + idof]
+        curvedata = curvedata.strip().split(" ")
+        curve = ParabolicCurve()
+        nramps = len(curvedata)/4
+        for iramp in xrange(nramps):
+            v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
+            ramp = Ramp(v, a, t, x0)
+            nextCurve = ParabolicCurve([ramp])
+            curve.Append(nextCurve)
+        curves.append(curve)
+    curvesnd = ParabolicCurvesND(curves)
+
+    return curvesnd
+
+
+def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
+    """Data format
+    rampnd1
+    rampnd2
+    rampnd3
+      :
+      :
+
+    For each RampND:
+    rampnd data = [ndof x0, x1, v0, v1, a, t]
+    len(data) = 5*ndof + 2
+    """
+
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    nrampnds = len(rawdata)
+    finalcurvesnd = ParabolicCurvesND()
+
+    # check soundness
+    ndof = int(rawdata[0].strip().split(" ")[0])
+    for i in xrange(nrampnds):
+        assert( ndof == int((len(rawdata[i].strip().split(" ")) - 2)/5) )
+
+    for i in xrange(nrampnds):
+        data = rawdata[i].strip().split(" ")
+        data = [float(x) for x in data[1:]]
+        offset = 0
+        x0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        x1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        a = np.array(data[offset : offset + ndof])
+        offset += ndof
+        t = data[offset]
+
+        curvesnd = ParabolicCurvesND()
+        curvesnd.SetSegment(x0, x1, v0, v1, t)
+        finalcurvesnd.Append(curvesnd)
+
+    return finalcurvesnd
+        
+
+def ConvertOpenRAVETrajectoryToParabolicCurvesND(traj):
+    nwaypoints = traj.GetNumWaypoints()
+    curvesnd = ParabolicCurvesND()
+    
+    spec = traj.GetConfigurationSpecification()
+    xgroup = spec.GetGroupFromName('joint_values')
+    xoffset = xgroup.offset
+    xdof = xgroup.dof
+    if not (xgroup.interpolation == 'quadratic'):
+        raise ValueError("This function supports only parabolic trajectory. The given trajectory has interpolation == {0}".format(xgroup.interpolation))
+    
+    vgroup = spec.GetGroupFromName('joint_velocities')
+    voffset = vgroup.offset
+    vdof = vgroup.dof
+    deltatimegroup = spec.GetGroupFromName('deltatime')
+    toffset = deltatimegroup.offset
+
+    for iwaypoint in xrange(nwaypoints - 1):
+        x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
+        x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
+        v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]
+        v1 = traj.GetWaypoint(iwaypoint + 1)[voffset: voffset + vdof]
+        t = traj.GetWaypoint(iwaypoint + 1)[toffset]
+        temp = ParabolicCurvesND()
+        temp.SetSegment(x0, x1, v0, v1, t)
+        curvesnd.Append(temp)
+    
+    return curvesnd
+
