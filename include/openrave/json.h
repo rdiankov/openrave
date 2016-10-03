@@ -14,8 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-/** \file logging.h
-    \brief Defines logging related utilities. This file is automatically included by openrave.h.
+/** \file json.h
+    \brief Defines json serialization and deserailization related utilities. This file is automatically included by openrave.h.
  */
 #ifndef OPENRAVE_JSON_H
 #define OPENRAVE_JSON_H
