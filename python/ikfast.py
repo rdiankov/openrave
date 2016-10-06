@@ -7879,8 +7879,10 @@ class IKFastSolver(AutoReloader):
                                 ioffset += 2
                             eqmuls = eqmuls2
                         eqadds.append(eqmuls[0])
+                    log.info('done multiplying all determinant, now convert to poly')
                     det = Poly(S.Zero,leftvar)
-                    for eq in eqadds:
+                    for ieq, eq in enumerate(eqadds):
+                        log.info('adding to det %d/%d', ieq, len(eqadds))
                         det += eq
                     if len(Mall) <= 3:
                         # need to simplify further since self.globalsymbols can have important substitutions that can yield the entire determinant to zero
