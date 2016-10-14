@@ -179,6 +179,8 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
   }\n\n";
     RegisterCommand("SetFiguresInCamera",boost::bind(&QtCoinViewer::_SetFiguresInCamera,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the figure plots in the camera image through GetCameraImage");
+    RegisterCommand("SetItemVisualization",boost::bind(&QtCoinViewer::_SetItemVisualizationCommand, this, _1, _2),
+                    "sets the visualization mode of a kinbody/render item in the viewer");
     RegisterCommand("SetFeedbackVisibility",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("ShowWorldAxes",boost::bind(&QtCoinViewer::_SetFeedbackVisibility,this,_1,_2),
@@ -3731,6 +3733,14 @@ void QtCoinViewer::EnvMessage::viewerexecute()
 bool QtCoinViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
 {
     sinput >> _bRenderFiguresInCamera;
+    return !!sinput;
+}
+
+bool QtCoinViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
+{
+    std::string itemname, visualizationmode;
+    sinput >> itemname >> visualizationmode;
+
     return !!sinput;
 }
 
