@@ -22,6 +22,7 @@
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
 #include <osg/LineStipple>
+#include <osg/Depth>
 
 namespace qtosgrave {
 
@@ -362,12 +363,27 @@ void KinBodyItem::Load()
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
-
+                    state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                     //state->setRenderBinDetails(0, "transparent");
-                    state->setMode(GL_BLEND, osg::StateAttribute::ON);
-                    state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                    state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+                    // state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+                    // state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
+                    // Enable blending, select transparent bin.
+                    state->setMode( GL_BLEND, osg::StateAttribute::ON );
+                    state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
+
+                    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
+                    state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
+
+                    // Conversely, disable writing to depth buffer so that
+                    // a transparent polygon will allow polygons behind it to shine thru.
+                    // OSG renders transparent polygons after opaque ones.
+                    osg::Depth* depth = new osg::Depth;
+                    depth->setWriteMask( false );
+                    state->setAttributeAndModes( depth, osg::StateAttribute::ON );
+
+                   // Disable conflicting modes.
+                    state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
@@ -699,8 +715,8 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
     if( _bReload || _bDrawStateChanged ) {
         EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
-        if( !!lockenv ) {
-            if( _bReload || _bDrawStateChanged ) {
+        if( !!lockenv ) { 
+           if( _bReload || _bDrawStateChanged ) {
                 Load();
             }
         }
