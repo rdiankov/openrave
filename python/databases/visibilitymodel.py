@@ -114,7 +114,7 @@ class VisibilityModel(DatabaseGenerator):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,target,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None):
+    def __init__(self,robot,target,targetlink,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None):
         """Starts a visibility model using a robot, a sensor, and a target
 
         The minimum needed to be specified is the robot and a sensorname. Supports sensors that do
@@ -124,6 +124,7 @@ class VisibilityModel(DatabaseGenerator):
         DatabaseGenerator.__init__(self,robot=robot)
         self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.target = target
+        self.targetlink = targetlink
         self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult,ignoresensorcollision=ignoresensorcollision)
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
@@ -168,7 +169,7 @@ class VisibilityModel(DatabaseGenerator):
 
     def preprocess(self):
         with self.env:
-            manipname = self.visualprob.SetCameraAndTarget(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname,target=self.target)
+            manipname = self.visualprob.SetCameraAndTarget(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname,target=self.target,targetlink=self.targetlink)
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
             self.attachedsensor = [s for s in self.sensorrobot.GetAttachedSensors() if s.GetName() == self.sensorname][0]
