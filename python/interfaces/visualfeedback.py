@@ -55,12 +55,14 @@ class VisualFeedback:
         envother.Add(clone.prob,True,clone.args)
         return clone
     
-    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,raydensity=None):
+    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,targetlink=None,raydensity=None):
         """See :ref:`module-visualfeedback-setcameraandtarget`
         """
         cmd = 'SetCameraAndTarget '
         if target is not None:
             cmd += 'target %s '%target.GetName()
+        if targetlink is not None:
+            cmd += 'targetlink %s '%targetlink.GetName()
         if sensorrobot is not None:
             cmd += 'sensorrobot %s '%sensorrobot.GetName()
         if sensorindex is not None:

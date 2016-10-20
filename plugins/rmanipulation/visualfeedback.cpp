@@ -641,6 +641,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> name;
                 _target = GetEnv()->GetKinBody(name);
             }
+            else if( cmd == "targetlink" ) {
+                string name;
+                sinput >> name;
+                _targetlink = _target->GetLink(name);
+            }
             else if( cmd == "manipname" ) {
                 string manipname;
                 sinput >> manipname;
@@ -765,8 +770,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 pmanip = _robot->GetActiveManipulator();
             }
 
-            if( !!_target ) {
-                _ttogripper = _target->GetTransform().inverse() * pmanip->GetTransform();
+            if( !!_target && !!_targetlink ) {
+                _ttogripper = _targetlink->GetTransform().inverse() * pmanip->GetTransform();
             }
         }
 
@@ -842,10 +847,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
-                if( !bSetTargetCenter && !!_target ) {
+                if( !bSetTargetCenter && !!_target && !!_targetlink ) {
                     KinBody::KinBodyStateSaver saver(_target);
-                    _target->SetTransform(Transform());
-                    vTargetLocalCenter = _target->ComputeAABB().pos;
+                    _targetlink->SetTransform(Transform());
+                    vTargetLocalCenter = _targetlink->ComputeAABB().pos;
                 }
                 int numtrans=0;
                 sinput >> numtrans;
@@ -864,10 +869,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
             else if( cmd == "sphere" || cmd == "invertsphere" ) {
-                if( !bSetTargetCenter && !!_target ) {
+                if( !bSetTargetCenter && !!_target && !!_targetlink ) {
                     KinBody::KinBodyStateSaver saver(_target);
-                    _target->SetTransform(Transform());
-                    vTargetLocalCenter = _target->ComputeAABB().pos;
+                    _targetlink->SetTransform(Transform());
+                    vTargetLocalCenter = _targetlink->ComputeAABB().pos;
                 }
 
                 TriMesh spheremesh;
@@ -940,7 +945,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         KinBody::KinBodyStateSaver saver(_target,KinBody::Save_LinkTransformation);
-        _target->SetTransform(Transform());
+        _targetlink->SetTransform(Transform());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
@@ -1010,7 +1015,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
 
         if( mindist != 0 ) {
             KinBody::KinBodyStateSaver saver(_target);
-            _target->SetTransform(Transform());
+            _targetlink->SetTransform(Transform());
             boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
             vector<Transform> visibilitytransforms; visibilitytransforms.swap(_visibilitytransforms);
             _visibilitytransforms.reserve(visibilitytransforms.size());
@@ -1414,6 +1419,7 @@ protected:
     RobotBasePtr _robot, _sensorrobot;
     bool _bIgnoreSensorCollision; ///< if true will ignore any collisions with vf->_sensorrobot
     KinBodyPtr _target; ///< the target to check visibility for. Only links that are visible are checked
+    KinBody::LinkPtr _targetlink; ///< the link where the verification pattern is attached
     dReal _fMaxVelMult;
     RobotBase::AttachedSensorPtr _psensor;
     RobotBase::ManipulatorPtr _pmanip;
