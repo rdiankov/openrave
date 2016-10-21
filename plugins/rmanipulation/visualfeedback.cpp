@@ -180,13 +180,18 @@ public:
             // create the dummy box
             {
                 KinBody::KinBodyStateSaver saver(_vf->_target,KinBody::Save_LinkTransformation);
-                _vf->_target->SetTransform(Transform());
+                _vf->_targetlink->SetTransform(Transform());
 
-                _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
-                FOREACHC(itlink, _vf->_target->GetLinks()) {
-                    if( (*itlink)->IsVisible() ) {
-                        _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->ComputeLocalAABB(),(*itlink)->GetTransform()));
-                    }
+                // _vTargetOBBs.reserve(_vf->_target->GetLinks().size());
+                // FOREACHC(itlink, _vf->_target->GetLinks()) {
+                //     if( (*itlink)->IsVisible() ) {
+                //         _vTargetOBBs.push_back(geometry::OBBFromAABB((*itlink)->ComputeLocalAABB(),(*itlink)->GetTransform()));
+                //     }
+                // }
+
+                _vTargetOBBs.reserve(1);
+                if( _vf->_targetlink->IsVisible() ) {
+                    _vTargetOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->ComputeLocalAABB(),_vf->_targetlink->GetTransform()));
                 }
 
                 vector<AABB> vboxes;
@@ -233,7 +238,7 @@ public:
                 _ptargetbox->SetName("__visualfeedbacktest__");
                 _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
                 _ptargetbox->Enable(false);
-                _ptargetbox->SetTransform(_vf->_target->GetTransform());
+                _ptargetbox->SetTransform(_vf->_targetlink->GetTransform());
             }
             _ikreturn.reset(new IkReturn(IKRA_Success));
             _bSamplingRays = false;
@@ -247,7 +252,7 @@ public:
 
         virtual bool IsVisible(bool bcheckocclusion=true)
         {
-            Transform ttarget = _vf->_target->GetTransform();
+            Transform ttarget = _vf->_targetlink->GetTransform();
             TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
             if( !InConvexHull(tcamera) ) {
                 RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
@@ -278,7 +283,7 @@ public:
                 tCameraInTarget = ttarget.inverse()*_vf->_psensor->GetTransform();
             }
             else {
-                ttarget = _vf->_target->GetTransform();
+                ttarget = _vf->_targetlink->GetTransform();
                 tCameraInTarget = ttarget.inverse()*t;
             }
             if( !InConvexHull(tCameraInTarget) ) {
@@ -331,7 +336,7 @@ public:
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_target,KinBody::Save_LinkEnable);
             TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
-            Transform ttarget = _vf->_target->GetTransform();
+            Transform ttarget = _vf->_targetlink->GetTransform();
             _ptargetbox->SetTransform(ttarget);
             Transform tworldcamera = ttarget*tCameraInTarget;
             _ptargetbox->Enable(true);
@@ -364,7 +369,7 @@ public:
                 }
             }
             TransformMatrix tcamerainv = tcamera.inverse();
-            Transform ttarget = _vf->_target->GetTransform();
+            Transform ttarget = _vf->_targetlink->GetTransform();
             _ptargetbox->SetTransform(ttarget);
             Transform tworldcamera = ttarget*tcamera;
             _ptargetbox->Enable(true);
@@ -460,7 +465,7 @@ public:
         GoalSampleFunction(boost::shared_ptr<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
             RAVELOG_DEBUG(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
-            _ttarget = _vf->_target->GetTransform();
+            _ttarget = _vf->_targetlink->GetTransform();
             _sphereperms.PermuteStart(_visibilitytransforms.size());
         }
         virtual ~GoalSampleFunction() {
@@ -553,6 +558,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot.reset();
         _sensorrobot.reset();
         _target.reset();
+        _targetlink.reset();
         _psensor.reset();
         _pmanip.reset();
         _pcamerageom.reset();
@@ -604,6 +610,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _vconvexplanes.resize(0);
         _pcamerageom.reset();
         _target.reset();
+        _targetlink.reset();
         RobotBase::AttachedSensorPtr psensor;
         RobotBase::ManipulatorPtr pmanip;
         _sensorrobot = _robot;
