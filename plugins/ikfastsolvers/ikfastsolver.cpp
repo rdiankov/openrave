@@ -118,7 +118,7 @@ public:
         sinput >> fFreeIncRevolute >> fFreeIncPrismaticNum >> _fFreeIncRevolute >> _fFreeIncPrismaticNum;
         _vFreeInc.resize(_vfreeparams.size());
         for(size_t i = 0; i < _vFreeInc.size(); ++i) {
-            if( _vfreerevolute[i] ) {
+            if( _vfreerevolute.at(i) ) {
                 _vFreeInc[i] = fFreeIncRevolute;
             }
             else {
@@ -290,7 +290,7 @@ public:
             //stringstream ss;
             //ss << "robot " << probot->GetName() << ":" << pmanip->GetName() << " setting free increment to: ";
             for(size_t i = 0; i < _vFreeInc.size(); ++i) {
-                if( _vfreerevolute[i] ) {
+                if( _vfreerevolute.at(i) ) {
                     _vFreeInc[i] = 0.1;
                 }
                 else {
