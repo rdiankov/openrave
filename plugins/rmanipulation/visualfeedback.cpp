@@ -345,7 +345,7 @@ public:
         /// this function is not meant to be called during planning (only database generation)
         bool IsOccludedByRigid(const TransformMatrix& tcamera)
         {
-            KinBody::KinBodyStateSaver saver1(_ptargetbox);
+            KinBody::KinBodyStateSaver saver(_ptargetbox);
             vector<KinBody::LinkPtr> vattachedlinks;
             _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
             RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
@@ -845,6 +845,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
+                    KinBody::KinBodyStateSaver saver(_targetlink->GetParent());
                     vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
                 }
                 int numtrans=0;
@@ -865,6 +866,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             else if( cmd == "sphere" || cmd == "invertsphere" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
+                    KinBody::KinBodyStateSaver saver(_targetlink->GetParent());
                     vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
                 }
 
@@ -937,6 +939,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
         }
 
+        KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
