@@ -2525,6 +2525,13 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return new PyStateRestoreContext<PyKinBodyStateSaverPtr, PyKinBodyPtr>(saver);
 }
 
+void PyKinBody::DeserializeJSON(object obj)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    _pbody->DeserializeJSON(doc);
+}
+
 string PyKinBody::__repr__()
 {
     return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s')")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
@@ -3139,6 +3146,7 @@ void init_openravepy_kinbody()
                         .def("serialize",&PyKinBody::serialize,args("options"), DOXY_FN(KinBody,serialize))
                         .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
                         .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
+                        .def("DeserializeJSON", &PyKinBody::DeserializeJSON, args("obj"), DOXY_FN(KinBody, DeserializeJSON))
                         .def("__enter__",&PyKinBody::__enter__)
                         .def("__exit__",&PyKinBody::__exit__)
                         .def("__repr__",&PyKinBody::__repr__)

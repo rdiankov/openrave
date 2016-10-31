@@ -66,6 +66,31 @@ public:
             return pinfo;
         }
 
+
+        void PyManipulatorInfoExact(const RobotBase::ManipulatorInfo& info){
+             _name = ConvertStringToUnicode(info._name);
+            _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
+            _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
+            _tLocalTool = ReturnTransform(info._tLocalTool);
+            _vChuckingDirection = toPyArray(info._vChuckingDirection);
+            _vdirection = toPyVector3(info._vdirection);
+            _sIkSolverXMLId = info._sIkSolverXMLId;
+            boost::python::list vGripperJointNames;
+            FOREACHC(itname, info._vGripperJointNames) {
+                vGripperJointNames.append(ConvertStringToUnicode(*itname));
+            }
+            _vGripperJointNames = vGripperJointNames;
+        }
+
+        void DeserializeJSON(object obj){
+            rapidjson::Document doc;
+            toRapidJSONValue(obj, doc, doc.GetAllocator());
+
+            RobotBase::ManipulatorInfo info;
+            info.DeserializeJSON(doc);
+            this->PyManipulatorInfoExact(info);
+        }
+
         object _name, _sBaseLinkName, _sEffectorLinkName;
         object _tLocalTool;
         object _vChuckingDirection;
@@ -611,6 +636,9 @@ public:
         long __hash__() {
             return static_cast<long>(uintptr_t(_pmanip.get()));
         }
+
+
+
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
@@ -1349,6 +1377,12 @@ public:
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
+    void DeserializeJSON(object obj){
+        rapidjson::Document doc;
+        toRapidJSONValue(obj, doc, doc.GetAllocator());
+        _probot->DeserializeJSON(doc);
+    }
+
     virtual string __repr__() {
         return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s')")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
     }
@@ -1488,6 +1522,7 @@ void init_openravepy_robot()
                              .def_readwrite("_vdirection",&PyRobotBase::PyManipulatorInfo::_vdirection)
                              .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
+                             .def("DeserializeJSON", &PyRobotBase::PyManipulatorInfo::DeserializeJSON, args("obj"), DOXY_FN(RobotBase::ManipulatorInfo, DeserializeJSON))
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
@@ -1616,6 +1651,7 @@ void init_openravepy_robot()
                       .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"), "Wait until the robot controller is done")
                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
                       .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
+                      .def("DeserializeJSON", &PyRobotBase::DeserializeJSON, args("obj"), DOXY_FN(RobotBase, DeserializeJSON))
                       .def("__repr__", &PyRobotBase::__repr__)
                       .def("__str__", &PyRobotBase::__str__)
                       .def("__unicode__", &PyRobotBase::__unicode__)

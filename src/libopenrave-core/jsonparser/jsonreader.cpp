@@ -95,6 +95,46 @@ namespace OpenRAVE {
             return true;
         }
 
+        bool ExtractKinBody(KinBodyPtr& ppbody, const string& uri, const AttributesList& atts){
+            // TODO
+            std::string scheme, path, fragment;
+            _ParseURI(uri, scheme, path, fragment);
+
+            if( fragment == ""){
+                rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
+                std::string objectUri;
+                RAVE_DESERIALIZEJSON_REQUIRED(*itr, "uri", objectUri);
+                std::string sceneUri = uri;
+                objectUri = sceneUri.append(objectUri);
+                rapidjson::Value::ValueIterator object = _ResolveObject(objectUri);
+
+                for (rapidjson::Value::MemberIterator memitr = object->MemberBegin(); memitr != object->MemberEnd(); ++memitr) {
+                    std::string keystr = memitr->name.GetString();
+                    if (keystr != "" && !itr->HasMember(keystr)) {
+                        rapidjson::Value key(keystr, _doc->GetAllocator());
+                        rapidjson::Value value(memitr->value, _doc->GetAllocator());
+                        itr->AddMember(key, value, _doc->GetAllocator());
+                    }
+                }
+                itr->RemoveMember("uri");
+                RAVE_SERIALIZEJSON_ADDMEMBER(*itr, _doc->GetAllocator(), "uri", _CanonicalizeURI(sceneUri));
+
+                KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
+                tmpBody->DeserializeJSON(*itr);
+                ppbody = tmpBody;
+            }else{
+                rapidjson::Value::ValueIterator object = _ResolveObjectInDocument(_doc, fragment);
+                rapidjson::Value key("uri", _doc->GetAllocator());
+                rapidjson::Value value(uri, _doc->GetAllocator());
+                object->AddMember(key, value, _doc->GetAllocator());
+                KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
+                tmpBody->DeserializeJSON(*object);
+                ppbody = tmpBody;
+            }   
+            
+           
+            return true;
+        }
     protected:
 
         std::string _CanonicalizeURI(const std::string& uri)
@@ -105,9 +145,6 @@ namespace OpenRAVE {
             if (scheme == "" && path == "") {
                 return std::string("file:") + _filename + std::string("#") + fragment;
             }
-
-            // TODO: fix other scheme.
-
             return uri;
         }
 
@@ -161,9 +198,12 @@ namespace OpenRAVE {
 
             size_t colonindex = path.find_first_of(':');
             if (colonindex != std::string::npos) {
-                scheme = path.substr(0, colonindex + 1);
-                path = path.substr(colonindex + 1);
+                // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
+                scheme = path.substr(0, colonindex);
+                // path (mujin:/ask.mujin.json) should skip slash
+                path = path.substr(colonindex + 2);
             }
+
         }
 
         rapidjson::Value::ValueIterator _ResolveObject(const std::string &uri)
@@ -236,8 +276,22 @@ namespace OpenRAVE {
             }
             else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
             {
+
+                // std::string filename = path;
+                // size_t found = filename.find("mujin:/");
+                // if(found != std::string::npos){
+                //     filename = filename.substr(found+8);
+                // }
+
+                // found = filename.find("openrave:/");
+                // if(found != std::string::npos){
+                //     filename = filename.substr(found+11);
+                // }
+                return RaveFindLocalFile(path);
+
                 // TODO deal with openrave: or mujin:
             }
+            
             return "";
         }
 
@@ -247,7 +301,6 @@ namespace OpenRAVE {
             if (_docs.find(filename) != _docs.end()) {
                 return _docs[filename];
             }
-
             std::ifstream ifs(filename.c_str());
             rapidjson::IStreamWrapper isw(ifs);
             boost::shared_ptr<rapidjson::Document> doc;
@@ -332,8 +385,7 @@ namespace OpenRAVE {
         if (!reader.InitFromURI(uri)) {
             return false;
         }
-        // TODO
-        return false;
+        return reader.ExtractKinBody(ppbody, uri, atts);
     }
 
     bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts)
@@ -343,7 +395,10 @@ namespace OpenRAVE {
             return false;
         }
         // TODO
-        return false;
+
+        throw OPENRAVE_EXCEPTION_FORMAT("in RaveParseJSONURI ROBOT\"%s\"", uri, ORE_InvalidArguments);
+        // pprobot->DeserializeJSON();
+        return reader.Extract();
     }
 
     bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
