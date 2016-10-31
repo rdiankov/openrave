@@ -179,6 +179,9 @@ public:
 
             // create the dummy box
             {
+                KinBody::KinBodyStateSaver saver(_vf->_targetlink->GetParent(),KinBody::Save_LinkTransformation);
+                _vf->_targetlink->SetTransform(Transform());
+
                 _vTargetOBBs.reserve(1);
                 if( _vf->_targetlink->IsVisible() ) {
                     _vTargetOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->ComputeLocalAABB(),_vf->_targetlink->GetTransform()));
@@ -324,7 +327,7 @@ public:
         /// \param tCameraInTarget in target coordinate system
         bool IsOccluded(const TransformMatrix& tCameraInTarget)
         {
-            KinBody::KinBodyStateSaver saver(_ptargetbox);
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
             TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
             Transform ttarget = _vf->_targetlink->GetTransform();
             _ptargetbox->SetTransform(ttarget);
@@ -345,7 +348,7 @@ public:
         /// this function is not meant to be called during planning (only database generation)
         bool IsOccludedByRigid(const TransformMatrix& tcamera)
         {
-            KinBody::KinBodyStateSaver saver(_ptargetbox);
+            KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent());
             vector<KinBody::LinkPtr> vattachedlinks;
             _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
             RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
@@ -845,7 +848,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
-                    KinBody::KinBodyStateSaver saver(_targetlink->GetParent());
                     vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
                 }
                 int numtrans=0;
@@ -866,7 +868,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             else if( cmd == "sphere" || cmd == "invertsphere" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
-                    KinBody::KinBodyStateSaver saver(_targetlink->GetParent());
                     vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
                 }
 
@@ -940,6 +941,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
+        _targetlink->SetTransform(Transform());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
@@ -1008,6 +1010,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         if( mindist != 0 ) {
+            KinBody::KinBodyStateSaver saver(_targetlink->GetParent());
+            _targetlink->SetTransform(Transform());
             boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
             vector<Transform> visibilitytransforms; visibilitytransforms.swap(_visibilitytransforms);
             _visibilitytransforms.reserve(visibilitytransforms.size());
@@ -1364,7 +1368,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             params->_checkpathconstraintsfn = boost::bind(&VisibilityConstraintFunction::Constraint,pconstraint,params->_checkpathconstraintsfn,_1,_2,_3,_4);
         }
 
-        //params->_ptarget = _target;
+        params->_ptarget = _targetlink->GetParent();
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");

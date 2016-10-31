@@ -198,7 +198,7 @@ class VisibilityModel(DatabaseGenerator):
         if len(self.manip.GetGripperIndices()) > 0:
             if preshapes is None:
                 with self.targetlink.GetParent():
-                    self.targetlink.Enable(False)
+                    self.targetlink.GetParent().Enable(False)
                     taskmanip = interfaces.TaskManipulation(self.robot)
                     final,traj = taskmanip.ReleaseFingers(execute=False,outputfinal=True)
                 preshapes = array([final])
@@ -249,7 +249,7 @@ class VisibilityModel(DatabaseGenerator):
         if self.robot != self.sensorrobot:
             pts = poseMultArrayT(self.sensorrobot.GetTransformPose(), InvertPoses(self.visibilitytransforms))[:,4:7]
         else:
-            pts = poseMultArrayT(self.targetlink.GetTransformPose(), self.visibilitytransforms)[:,4:7]
+            pts = poseMultArrayT(self.targetlink.GetParent().GetTransformPose(), self.visibilitytransforms)[:,4:7]
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
         try:
             with RobotStateSaver(self.robot):
@@ -264,15 +264,13 @@ class VisibilityModel(DatabaseGenerator):
 
                             if self.robot != self.sensorrobot:
                                 # sensor is not attached to robot
-                                # robot should be grabbing the targt
                                 assert(self.targetlink is not None)
-                                relativepose = poseMult(poseMult(self.attachedsensor.GetTransformPose(),InvertPose(pose)), InvertPose(self.targetlink.GetTransformPose()))
+                                relativepose = poseMult(poseMult(self.attachedsensor.GetTransformPose(),InvertPose(pose)), InvertPose(self.targetlink.GetParent().GetTransformPose()))
                                 for link in self.manip.GetChildLinks():
                                     link.SetTransform(poseMult(relativepose, link.GetTransformPose()))
                             else:
-                                # robot should not be grabbing the targt
                                 relativepose = poseMult(InvertPose(self.attachedsensor.GetTransformPose()),self.manip.GetTransformPose())
-                                globalCameraPose = poseMult(self.targetlink.GetTransformPose(), pose)
+                                globalCameraPose = poseMult(self.targetlink.GetParent().GetTransformPose(), pose)
                                 grasppose = poseMult(globalCameraPose,relativepose)
                                 deltapose = poseMult(grasppose,InvertPose(self.manip.GetTransformPose()))
                                 for link in self.manip.GetChildLinks():
@@ -297,7 +295,7 @@ class VisibilityModel(DatabaseGenerator):
         if self.robot != self.sensorrobot:
             pts = poseMult(self.sensorrobot.GetTransformPose(), InvertPose(relativepose))[4:7]
         else:
-            pts = poseMult(self.targetlink.GetTransformPose(), relativepose)[4:7]
+            pts = poseMult(self.targetlink.GetParent().GetTransformPose(), relativepose)[4:7]
         h=self.env.plot3(pts,5,colors=array([0.5,0.5,1,0.2]))
         try:
             with RobotStateSaver(self.robot):
@@ -311,14 +309,13 @@ class VisibilityModel(DatabaseGenerator):
 
                         if self.robot != self.sensorrobot:
                             # sensor is not attached to robot
-                            # robot should be grabbing the targt
-                            linkrelativepose = poseMult(poseMult(self.attachedsensor.GetTransformPose(),InvertPose(relativepose)), InvertPose(self.targetlink.GetTransformPose()))
+                            assert(self.targetlink is not None)
+                            linkrelativepose = poseMult(poseMult(self.attachedsensor.GetTransformPose(),InvertPose(relativepose)), InvertPose(self.targetlink.GetParent().GetTransformPose()))
                             for link in self.manip.GetChildLinks():
                                 link.SetTransform(poseMult(linkrelativepose, link.GetTransformPose()))
                         else:
-                            # robot should not be grabbing the targt
                             linkrelativepose = poseMult(InvertPose(self.attachedsensor.GetTransformPose()),self.manip.GetTransformPose())
-                            globalCameraPose = poseMult(self.targetlink.GetTransformPose(), relativepose)
+                            globalCameraPose = poseMult(self.targetlink.GetParent().GetTransformPose(), relativepose)
                             grasppose = poseMult(globalCameraPose, linkrelativepose)
                             deltapose = poseMult(grasppose,InvertPose(self.manip.GetTransformPose()))
                             for link in self.manip.GetChildLinks():
@@ -371,7 +368,7 @@ class VisibilityModel(DatabaseGenerator):
             for i in order:
                 pose = self.visibilitytransforms[i]
                 Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetEndEffectorTransform())
-                Tcamera = dot(self.targetlink.GetTransform(),matrixFromPose(pose))
+                Tcamera = dot(self.targetlink.GetParent().GetTransform(),matrixFromPose(pose))
                 Tgrasp = dot(Tcamera,Trelative)
                 s = self.manip.FindIKSolution(Tgrasp,checkcollision)
                 if s is not None:
@@ -396,7 +393,7 @@ class VisibilityModel(DatabaseGenerator):
             visibilitytransforms = self.visibilitytransforms[invertPoses(self.visibilitytransforms)[:,6]<maxdist]
         else:
             visibilitytransforms = self.visibilitytransforms
-        newtrans = poseMultArrayT(poseFromMatrix(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.targetlink.GetTransform())),visibilitytransforms)
+        newtrans = poseMultArrayT(poseFromMatrix(dot(linalg.inv(self.manip.GetBase().GetTransform()),self.targetlink.GetParent().GetTransform())),visibilitytransforms)
         if translationonly:
             transdensity = kdtree.kFRSearchArray(newtrans[:,4:7],thresh**2,0,thresh*0.01)[2]
             I=flatnonzero(transdensity>numminneighs)
@@ -449,19 +446,24 @@ class VisibilityModel(DatabaseGenerator):
         parser.add_option('--showimage',action="store_true",dest='showimage',default=False,
                           help='If set, will show the camera image when showing the models')
         return parser
-    @staticmethod
-    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
-        if parser is None:
-            parser = VisibilityModel.CreateOptionParser()
-        (options, leftargs) = parser.parse_args(args=args)
-        env = Environment()
-        try:
-            if Model is None:
-                Model = lambda robot: VisibilityModel(robot=robot,targetlink=targetlink,sensorname=options.sensorname)
-            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
-        finally:
-            env.Destroy()
-            RaveDestroy()
+    #@staticmethod
+    #def RunFromParser(Model=None,parser=None,args=None,**kwargs):
+    #    if parser is None:
+    #        parser = VisibilityModel.CreateOptionParser()
+    #    (options, leftargs) = parser.parse_args(args=args)
+    #    env = Environment()
+    #    try:
+    #        target = None
+    #        with env:
+    #            target = env.ReadKinBodyXMLFile(options.target)
+    #            target.SetTransform(eye(4))
+    #            env.Add(target)
+    #        if Model is None:
+    #            Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
+    #        DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
+    #    finally:
+    #        env.Destroy()
+    #        RaveDestroy()
 
 def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
