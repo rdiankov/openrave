@@ -38,18 +38,7 @@ public:
             _vGripperJointNames = boost::python::list();
         }
         PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
-            _name = ConvertStringToUnicode(info._name);
-            _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
-            _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
-            _tLocalTool = ReturnTransform(info._tLocalTool);
-            _vChuckingDirection = toPyArray(info._vChuckingDirection);
-            _vdirection = toPyVector3(info._vdirection);
-            _sIkSolverXMLId = info._sIkSolverXMLId;
-            boost::python::list vGripperJointNames;
-            FOREACHC(itname, info._vGripperJointNames) {
-                vGripperJointNames.append(ConvertStringToUnicode(*itname));
-            }
-            _vGripperJointNames = vGripperJointNames;
+            this->_Update(info);
         }
 
         RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
@@ -66,8 +55,23 @@ public:
             return pinfo;
         }
 
+        void DeserializeJSON(object obj){
+            rapidjson::Document doc;
+            toRapidJSONValue(obj, doc, doc.GetAllocator());
 
-        void PyManipulatorInfoExact(const RobotBase::ManipulatorInfo& info){
+            RobotBase::ManipulatorInfo info;
+            info.DeserializeJSON(doc);
+            this->_Update(info);
+        }
+
+        object _name, _sBaseLinkName, _sEffectorLinkName;
+        object _tLocalTool;
+        object _vChuckingDirection;
+        object _vdirection;
+        std::string _sIkSolverXMLId;
+        object _vGripperJointNames;
+private:
+        void _Update(const RobotBase::ManipulatorInfo& info){
              _name = ConvertStringToUnicode(info._name);
             _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
             _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
@@ -81,22 +85,6 @@ public:
             }
             _vGripperJointNames = vGripperJointNames;
         }
-
-        void DeserializeJSON(object obj){
-            rapidjson::Document doc;
-            toRapidJSONValue(obj, doc, doc.GetAllocator());
-
-            RobotBase::ManipulatorInfo info;
-            info.DeserializeJSON(doc);
-            this->PyManipulatorInfoExact(info);
-        }
-
-        object _name, _sBaseLinkName, _sEffectorLinkName;
-        object _tLocalTool;
-        object _vChuckingDirection;
-        object _vdirection;
-        std::string _sIkSolverXMLId;
-        object _vGripperJointNames;
     };
     typedef boost::shared_ptr<PyManipulatorInfo> PyManipulatorInfoPtr;
 

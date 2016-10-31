@@ -2532,6 +2532,16 @@ void PyKinBody::DeserializeJSON(object obj)
     _pbody->DeserializeJSON(doc);
 }
 
+
+object PyKinBody::SerializeJSON(object ooptions)
+{
+    rapidjson::Document doc;
+    rapidjson::Value value;
+    _pbody->SerializeJSON(value, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+    return toPyObject(value);
+}
+
+
 string PyKinBody::__repr__()
 {
     return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s')")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
@@ -2856,6 +2866,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromSpheres_overloads, InitFromSphere
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromTrimesh_overloads, InitFromTrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitFromGeometries_overloads, InitFromGeometries, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
+
 
 void init_openravepy_kinbody()
 {
@@ -3147,6 +3159,7 @@ void init_openravepy_kinbody()
                         .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
                         .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
                         .def("DeserializeJSON", &PyKinBody::DeserializeJSON, args("obj"), DOXY_FN(KinBody, DeserializeJSON))
+                        .def("SerializeJSON", &PyKinBody::SerializeJSON,SerializeJSON_overloads(args("options"), DOXY_FN(KinBody,SerializeJSON)))
                         .def("__enter__",&PyKinBody::__enter__)
                         .def("__exit__",&PyKinBody::__exit__)
                         .def("__repr__",&PyKinBody::__repr__)

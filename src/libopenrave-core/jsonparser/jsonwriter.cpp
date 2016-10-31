@@ -137,8 +137,8 @@ protected:
 
         size_t colonindex = path.find_first_of(':');
         if (colonindex != std::string::npos) {
-            scheme = path.substr(0, colonindex + 1);
-            path = path.substr(colonindex + 1);
+            scheme = path.substr(0, colonindex);
+            path = path.substr(colonindex + 2);
         }
     }
 
@@ -147,7 +147,7 @@ protected:
         std::string scheme, path, fragment;
         _ParseURI(uri, scheme, path, fragment);
 
-        if (_vForceResolveOpenRAVEScheme.size() > 0 && scheme == "file:") {
+        if (_vForceResolveOpenRAVEScheme.size() > 0 && scheme == "file") {
             // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
             std::string filename;
             if (RaveInvertFileLookup(filename, path)) {

@@ -104,29 +104,33 @@ namespace OpenRAVE {
                 rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
                 std::string objectUri;
                 RAVE_DESERIALIZEJSON_REQUIRED(*itr, "uri", objectUri);
-                std::string sceneUri = uri;
-                objectUri = sceneUri.append(objectUri);
-                rapidjson::Value::ValueIterator object = _ResolveObject(objectUri);
+                
 
-                for (rapidjson::Value::MemberIterator memitr = object->MemberBegin(); memitr != object->MemberEnd(); ++memitr) {
-                    std::string keystr = memitr->name.GetString();
-                    if (keystr != "" && !itr->HasMember(keystr)) {
-                        rapidjson::Value key(keystr, _doc->GetAllocator());
-                        rapidjson::Value value(memitr->value, _doc->GetAllocator());
-                        itr->AddMember(key, value, _doc->GetAllocator());
-                    }
-                }
-                itr->RemoveMember("uri");
-                RAVE_SERIALIZEJSON_ADDMEMBER(*itr, _doc->GetAllocator(), "uri", _CanonicalizeURI(sceneUri));
+                _FillBody(*itr, _doc->GetAllocator());
+
+
+                // std::string sceneUri = uri;
+                // objectUri = sceneUri.append(objectUri);
+
+                // rapidjson::Value::ValueIterator object = _ResolveObject(objectUri);
+
+                // for (rapidjson::Value::MemberIterator memitr = object->MemberBegin(); memitr != object->MemberEnd(); ++memitr) {
+                //     std::string keystr = memitr->name.GetString();
+                //     if (keystr != "" && !itr->HasMember(keystr)) {
+                //         rapidjson::Value key(keystr, _doc->GetAllocator());
+                //         rapidjson::Value value(memitr->value, _doc->GetAllocator());
+                //         itr->AddMember(key, value, _doc->GetAllocator());
+                //     }
+                // }
+                // itr->RemoveMember("uri");
+                // RAVE_SERIALIZEJSON_ADDMEMBER(*itr, _doc->GetAllocator(), "uri", _CanonicalizeURI(sceneUri));
 
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
                 tmpBody->DeserializeJSON(*itr);
                 ppbody = tmpBody;
             }else{
                 rapidjson::Value::ValueIterator object = _ResolveObjectInDocument(_doc, fragment);
-                rapidjson::Value key("uri", _doc->GetAllocator());
-                rapidjson::Value value(uri, _doc->GetAllocator());
-                object->AddMember(key, value, _doc->GetAllocator());
+                RAVE_SERIALIZEJSON_ADDMEMBER(*object, _doc->GetAllocator(), "uri", _CanonicalizeURI(uri));
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
                 tmpBody->DeserializeJSON(*object);
                 ppbody = tmpBody;
@@ -270,25 +274,13 @@ namespace OpenRAVE {
             {
                 return _filename;
             }
-            else if (scheme == "file:")
+            else if (scheme == "file")
             {
                 return RaveFindLocalFile(path);
             }
             else if(find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), scheme) != _vOpenRAVESchemeAliases.end())
             {
-
-                // std::string filename = path;
-                // size_t found = filename.find("mujin:/");
-                // if(found != std::string::npos){
-                //     filename = filename.substr(found+8);
-                // }
-
-                // found = filename.find("openrave:/");
-                // if(found != std::string::npos){
-                //     filename = filename.substr(found+11);
-                // }
                 return RaveFindLocalFile(path);
-
                 // TODO deal with openrave: or mujin:
             }
             

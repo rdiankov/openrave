@@ -70,6 +70,14 @@ public:
         RaveDeserializeJSON(doc, _param);
     }
 
+    object SerializeJSON(){
+        rapidjson::Value value;
+        rapidjson::Document doc;
+        RaveSerializeJSON(value, doc.GetAllocator(), _param);
+        return toPyObject(value);
+    }
+
+
     int GetDOF() {
         return _param.GetDOF();
     }
@@ -481,6 +489,7 @@ void init_openravepy_ikparameterization()
                                    .def("__mul__",&PyIkParameterization::__mul__)
                                    .def("__rmul__",&PyIkParameterization::__rmul__)
                                    .def("DeserializeJSON", &PyIkParameterization::DeserializeJSON, args("obj"), DOXY_FN(IkParameterization, DeserializeJSON))
+                                   .def("SerializeJSON", &PyIkParameterization::SerializeJSON, DOXY_FN(IkParameterization, SerializeJSON))
                                    .def_pickle(IkParameterization_pickle_suite())
 
         ;
