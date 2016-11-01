@@ -38,7 +38,7 @@ public:
             _vGripperJointNames = boost::python::list();
         }
         PyManipulatorInfo(const RobotBase::ManipulatorInfo& info) {
-            this->_Update(info);
+            _Update(info);
         }
 
         RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const
@@ -61,16 +61,15 @@ public:
 
             RobotBase::ManipulatorInfo info;
             info.DeserializeJSON(doc);
-            this->_Update(info);
+            _Update(info);
         }
 
 
         object SerializeJSON(object options=object()){
             rapidjson::Document doc;
-            rapidjson::Value value;
             RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
-            pInfo->SerializeJSON(value, doc.GetAllocator(), pyGetIntFromPy(options, 0));
-            return toPyObject(value);
+            pInfo->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+            return toPyObject(doc);
         }
 
         object _name, _sBaseLinkName, _sEffectorLinkName;

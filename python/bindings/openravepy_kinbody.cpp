@@ -2536,9 +2536,8 @@ void PyKinBody::DeserializeJSON(object obj)
 object PyKinBody::SerializeJSON(object ooptions)
 {
     rapidjson::Document doc;
-    rapidjson::Value value;
-    _pbody->SerializeJSON(value, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
-    return toPyObject(value);
+    _pbody->SerializeJSON(doc, doc.GetAllocator(), pyGetIntFromPy(ooptions,0));
+    return toPyObject(doc);
 }
 
 

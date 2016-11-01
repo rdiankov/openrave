@@ -71,10 +71,9 @@ public:
     }
 
     object SerializeJSON(){
-        rapidjson::Value value;
         rapidjson::Document doc;
-        RaveSerializeJSON(value, doc.GetAllocator(), _param);
-        return toPyObject(value);
+        RaveSerializeJSON(doc, doc.GetAllocator(), _param);
+        return toPyObject(doc);
     }
 
 

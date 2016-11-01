@@ -100,7 +100,7 @@ namespace OpenRAVE {
             std::string scheme, path, fragment;
             _ParseURI(uri, scheme, path, fragment);
 
-            if( fragment == ""){
+            if (fragment == "") {
                 rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
                 std::string objectUri;
                 RAVE_DESERIALIZEJSON_REQUIRED(*itr, "uri", objectUri);
@@ -108,7 +108,7 @@ namespace OpenRAVE {
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
                 tmpBody->DeserializeJSON(*itr);
                 ppbody = tmpBody;
-            }else{
+            } else {
                 rapidjson::Value::ValueIterator object = _ResolveObjectInDocument(_doc, fragment);
                 RAVE_SERIALIZEJSON_ADDMEMBER(*object, _doc->GetAllocator(), "uri", _CanonicalizeURI(uri));
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
