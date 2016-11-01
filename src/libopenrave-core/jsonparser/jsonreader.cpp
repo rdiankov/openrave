@@ -367,10 +367,7 @@ namespace OpenRAVE {
             return false;
         }
         // TODO
-
-        throw OPENRAVE_EXCEPTION_FORMAT("in RaveParseJSONURI ROBOT\"%s\"", uri, ORE_InvalidArguments);
-        // pprobot->DeserializeJSON();
-        return reader.Extract();
+        return false;
     }
 
     bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, const AttributesList& atts)
