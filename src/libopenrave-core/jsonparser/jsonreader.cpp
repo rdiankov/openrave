@@ -104,27 +104,7 @@ namespace OpenRAVE {
                 rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
                 std::string objectUri;
                 RAVE_DESERIALIZEJSON_REQUIRED(*itr, "uri", objectUri);
-                
-
                 _FillBody(*itr, _doc->GetAllocator());
-
-
-                // std::string sceneUri = uri;
-                // objectUri = sceneUri.append(objectUri);
-
-                // rapidjson::Value::ValueIterator object = _ResolveObject(objectUri);
-
-                // for (rapidjson::Value::MemberIterator memitr = object->MemberBegin(); memitr != object->MemberEnd(); ++memitr) {
-                //     std::string keystr = memitr->name.GetString();
-                //     if (keystr != "" && !itr->HasMember(keystr)) {
-                //         rapidjson::Value key(keystr, _doc->GetAllocator());
-                //         rapidjson::Value value(memitr->value, _doc->GetAllocator());
-                //         itr->AddMember(key, value, _doc->GetAllocator());
-                //     }
-                // }
-                // itr->RemoveMember("uri");
-                // RAVE_SERIALIZEJSON_ADDMEMBER(*itr, _doc->GetAllocator(), "uri", _CanonicalizeURI(sceneUri));
-
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
                 tmpBody->DeserializeJSON(*itr);
                 ppbody = tmpBody;
