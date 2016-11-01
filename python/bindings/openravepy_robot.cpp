@@ -64,6 +64,15 @@ public:
             this->_Update(info);
         }
 
+
+        object SerializeJSON(object options=object()){
+            rapidjson::Document doc;
+            rapidjson::Value value;
+            RobotBase::ManipulatorInfoPtr pInfo = GetManipulatorInfo();
+            pInfo->SerializeJSON(value, doc.GetAllocator(), pyGetIntFromPy(options, 0));
+            return toPyObject(value);
+        }
+
         object _name, _sBaseLinkName, _sEffectorLinkName;
         object _tLocalTool;
         object _vChuckingDirection;
@@ -1484,6 +1493,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateInfo_overloads, UpdateInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateAndGetInfo_overloads, UpdateAndGetInfo, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
+
 
 void init_openravepy_robot()
 {
@@ -1511,6 +1522,7 @@ void init_openravepy_robot()
                              .def_readwrite("_sIkSolverXMLId",&PyRobotBase::PyManipulatorInfo::_sIkSolverXMLId)
                              .def_readwrite("_vGripperJointNames",&PyRobotBase::PyManipulatorInfo::_vGripperJointNames)
                              .def("DeserializeJSON", &PyRobotBase::PyManipulatorInfo::DeserializeJSON, args("obj"), DOXY_FN(RobotBase::ManipulatorInfo, DeserializeJSON))
+                             .def("SerializeJSON", &PyRobotBase::PyManipulatorInfo::SerializeJSON, SerializeJSON_overloads(args("options"), DOXY_FN(RobotBase::ManipulatorInfo, SerializeJSON)))
                              .def_pickle(ManipulatorInfo_pickle_suite())
     ;
 
