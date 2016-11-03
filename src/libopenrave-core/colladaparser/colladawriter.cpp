@@ -1704,13 +1704,10 @@ private:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;
             case GT_Cylinder: {
-                daeElementRef pcylinder = ptec->add("cylinder");
+                daeElementRef pcylinder = ptec->add("cylinderz");
                 ss << geom->GetCylinderRadius() << " " << geom->GetCylinderRadius();
                 pcylinder->add("radius")->setCharData(ss.str());
                 pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
-                // collada cylinder is oriented toward y-axis while openrave is toward z-axis
-                Transform trot(quatRotateDirection(Vector(0,1,0),Vector(0,0,1)),Vector());
-                tlocalgeom = tlocalgeom * trot;
                 break;
             }
             case GT_None:
