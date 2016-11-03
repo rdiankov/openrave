@@ -40,7 +40,7 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
     };
 
     OSGGroupPtr proot = new osg::Group();
-    
+
     // add 3 cylinder+cone axes
     for(int i = 0; i < 3; ++i) {
         osg::MatrixTransform* psep = new osg::MatrixTransform();
@@ -85,7 +85,7 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
         osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
         matrix.setTrans(osg::Vec3f(0,0,len));
         pconetrans->setMatrix(matrix);
-        
+
         psep->addChild(protation);
         protation->addChild(pcyltrans);
         pcyltrans->addChild(gcyl.get());
@@ -363,10 +363,10 @@ void KinBodyItem::Load()
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
-                    state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                     //state->setRenderBinDetails(0, "transparent");
-                    // state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                    // state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+                    //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS); 
+                    state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
                     // Enable blending, select transparent bin.
                     state->setMode( GL_BLEND, osg::StateAttribute::ON );
@@ -382,7 +382,7 @@ void KinBodyItem::Load()
                     depth->setWriteMask( false );
                     state->setAttributeAndModes( depth, osg::StateAttribute::ON );
 
-                   // Disable conflicting modes.
+                    // Disable conflicting modes.
                     state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
@@ -715,8 +715,8 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
 
     if( _bReload || _bDrawStateChanged ) {
         EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
-        if( !!lockenv ) { 
-           if( _bReload || _bDrawStateChanged ) {
+        if( !!lockenv ) {
+            if( _bReload || _bDrawStateChanged ) {
                 Load();
             }
         }
@@ -815,7 +815,7 @@ RobotItem::~RobotItem()
         FOREACH(it, _vEndEffectors) {
             _osgFigureRoot->removeChild(it->_pswitch);
         }
-    }    
+    }
 }
 
 void RobotItem::SetGrab(bool bGrab, bool bUpdate)
@@ -860,7 +860,7 @@ void RobotItem::Load()
     }
     _vEndEffectors.resize(0);
     _vAttachedSensors.resize(0);
-        
+
     FOREACHC(itmanip, _probot->GetManipulators()) {
         if(!!(*itmanip)->GetEndEffector()) {
             OSGSwitchPtr peeswitch = new osg::Switch();
@@ -876,7 +876,7 @@ void RobotItem::Load()
             peeswitch->setAllChildrenOff();
             ptrans->addChild(peesep);
             SetMatrixTransform(*ptrans, (*itmanip)->GetTransform());
-            
+
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
@@ -892,19 +892,19 @@ void RobotItem::Load()
                 ptextsep->addChild(ptrans);
 
                 osg::ref_ptr<osgText::Text> text = new osgText::Text();
-                
+
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
                 text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
                 text->setCharacterSize(25.0);
-                
+
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
 
                 text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
                 text->setBackdropColor(osg::Vec4(1,1,1,1));
 
-        
+
                 text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
                 //text->setFontResolution(18,18);
 
@@ -930,7 +930,7 @@ void RobotItem::Load()
             peeswitch->setAllChildrenOff();
             ptrans->addChild(peesep);
             SetMatrixTransform(*ptrans, (*itattsensor)->GetTransform());
-            
+
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
@@ -946,19 +946,19 @@ void RobotItem::Load()
                 ptextsep->addChild(ptrans);
 
                 osg::ref_ptr<osgText::Text> text = new osgText::Text();
-                
+
                 //Set the screen alignment - always face the screen
                 text->setAxisAlignment(osgText::Text::SCREEN);
                 text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
                 text->setCharacterSize(25.0);
-                
+
                 text->setColor(osg::Vec4(0,0,0,1));
                 text->setEnableDepthWrites(false);
 
                 text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
                 text->setBackdropColor(osg::Vec4(1,1,1,1));
 
-        
+
                 text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
                 //text->setFontResolution(18,18);
 
