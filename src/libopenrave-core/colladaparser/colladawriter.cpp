@@ -1704,13 +1704,10 @@ private:
                 ptec->add("sphere")->add("radius")->setCharData(ss.str());
                 break;
             case GT_Cylinder: {
-                daeElementRef pcylinder = ptec->add("cylinder");
+                daeElementRef pcylinder = ptec->add("cylinderz");
                 ss << geom->GetCylinderRadius() << " " << geom->GetCylinderRadius();
                 pcylinder->add("radius")->setCharData(ss.str());
                 pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
-                // collada cylinder is oriented toward y-axis while openrave is toward z-axis
-                Transform trot(quatRotateDirection(Vector(0,1,0),Vector(0,0,1)),Vector());
-                tlocalgeom = tlocalgeom * trot;
                 break;
             }
             case GT_None:
@@ -2436,20 +2433,30 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
     ColladaWriter writer(penv, atts);
     writer.Init("openrave_snapshot");
     std::string scenename;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "scenename" ) {
+            scenename = itatt->second;
+            break;
+        }
+    }
+
+    if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-    boost::filesystem::path pfilename(filename);
-    scenename = pfilename.stem().string();
+        boost::filesystem::path pfilename(filename);
+        scenename = pfilename.stem().string();
 #else
-    boost::filesystem::path pfilename(filename, boost::filesystem::native);
-    scenename = pfilename.stem();
+        boost::filesystem::path pfilename(filename, boost::filesystem::native);
+        scenename = pfilename.stem();
 #endif
 #endif
-    // if there's any '.', then remove them
-    size_t dotindex = scenename.find_first_of('.');
-    if( dotindex != string::npos ) {
-        scenename = scenename.substr(0, dotindex);
+        // if there's any '.', then remove them
+        size_t dotindex = scenename.find_first_of('.');
+        if( dotindex != string::npos ) {
+            scenename = scenename.substr(0, dotindex);
+        }
     }
+
     if( !writer.Write(scenename) ) {
         throw openrave_exception(_("ColladaWriter::Write(EnvironmentBasePtr) failed"));
     }
@@ -2474,19 +2481,28 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
         writer.Init("openrave_snapshot");
         std::string scenename;
-#if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
-#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
-        boost::filesystem::path pfilename(filename);
-        scenename = pfilename.stem().string();
-#else
-        boost::filesystem::path pfilename(filename, boost::filesystem::native);
-        scenename = pfilename.stem();
-#endif
-#endif
-        // if there's any '.', then remove them
-        size_t dotindex = scenename.find_first_of('.');
-        if( dotindex != string::npos ) {
-            scenename = scenename.substr(0, dotindex);
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scenename" ) {
+                scenename = itatt->second;
+                break;
+            }
+        }
+
+        if( scenename.size() == 0 ) {
+    #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
+    #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+            boost::filesystem::path pfilename(filename);
+            scenename = pfilename.stem().string();
+    #else
+            boost::filesystem::path pfilename(filename, boost::filesystem::native);
+            scenename = pfilename.stem();
+    #endif
+    #endif
+            // if there's any '.', then remove them
+            size_t dotindex = scenename.find_first_of('.');
+            if( dotindex != string::npos ) {
+                scenename = scenename.substr(0, dotindex);
+            }
         }
         if( !writer.Write(listbodies, scenename) ) {
             throw openrave_exception(_("ColladaWriter::Write(list<KinBodyPtr>) failed"));
