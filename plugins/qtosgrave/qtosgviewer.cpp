@@ -1989,7 +1989,7 @@ void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block
     }
     
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 100 ) {
+    if( _listGUIFunctions.size() > 1000 ) {
         RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
         return;
     }
