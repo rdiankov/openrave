@@ -412,7 +412,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         type = GT_Sphere;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData);
 
-        // TODO fUnitScale
+        _vGeomData *= fUnitScale;
     }
     else if (typestr == "cylinder")
     {
@@ -420,13 +420,21 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData.x);
         RAVE_DESERIALIZEJSON_REQUIRED(value, "height", _vGeomData.y);
 
-        // TODO fUnitScale
+        _vGeomData.x *= fUnitScale;
+        _vGeomData.y *= fUnitScale;
+
     }
     else if (typestr == "trimesh")
     {
         type = GT_TriMesh;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", mesh);
-        // TODO fUnitScale
+
+        for(size_t index = 0; index < mesh.indices.size(); index +=1 )
+        {
+            mesh.vertices[index][0] *= fUnitScale;
+            mesh.vertices[index][1] *= fUnitScale;
+            mesh.vertices[index][2] *= fUnitScale;
+        }
     }
     else
     {

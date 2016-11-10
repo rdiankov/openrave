@@ -41,6 +41,7 @@ namespace OpenRAVE {
                 _vOpenRAVESchemeAliases.push_back("openrave");
             }
             // set global scale when initalize jsonreader.
+
             _fGlobalScale = 1.0 / _penv->GetUnit().second;
         }
 
@@ -128,6 +129,14 @@ namespace OpenRAVE {
         {
             std::pair<std::string, dReal> unit;
             RAVE_DESERIALIZEJSON_REQUIRED(*_doc, "unit", unit);
+            if (unit.first == "mm")
+            {
+                unit.second *= 0.001;
+            }
+            else if (unit.first == "cm")
+            {
+                unit.second *= 0.01;
+            }
             dReal scale = unit.second / _fGlobalScale;
             return scale;
         }
@@ -170,7 +179,8 @@ namespace OpenRAVE {
         void _ExtractKinBody(const rapidjson::Value &value)
         {
             KinBodyPtr body = RaveCreateKinBody(_penv, "");
-            body->DeserializeJSON(value);
+            dReal fUnitScale = _GetUnitScale();
+            body->DeserializeJSON(value, fUnitScale);
             _penv->Add(body, false);
         }
 
