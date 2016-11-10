@@ -634,12 +634,20 @@ public:
             }
         }
         if( pbody->GetID() == "" || !_CheckUniqueID(KinBodyConstPtr(pbody), false) ) {
-            for (int i = 0; i < 3; ++i) {
-                pbody->SetID(utils::GetRandomAlphaNumericString(16));
-                if (_CheckUniqueID(KinBodyConstPtr(pbody), false)) {
-                    break;
-                }
+
+            std::vector<KinBodyPtr> bodies;
+            GetBodies(bodies, 0);
+            std::set<std::string> usedstrings;
+            for(std::vector<KinBodyPtr>::iterator it = bodies.begin(); it != bodies.end(); ++it)
+            {
+                usedstrings.insert( (*it)->GetID() );
             }
+
+            int nextIndex = usedstrings.size()+1;  // InitializeUniquePrefixedString will increase index for most 1000 times
+
+            std::string pBodyID = "";
+            utils::InitializeUniquePrefixedString(pBodyID, "body", nextIndex, usedstrings);
+            pbody->SetID(pBodyID);
             _CheckUniqueID(KinBodyConstPtr(pbody), true);
         }
         {
@@ -678,12 +686,21 @@ public:
             }
         }
         if( robot->GetID() == "" || !_CheckUniqueID(KinBodyConstPtr(robot), false) ) {
-            for (int i = 0; i < 3; ++i) {
-                robot->SetID(utils::GetRandomAlphaNumericString(16));
-                if (_CheckUniqueID(KinBodyConstPtr(robot), false)) {
-                    break;
-                }
+
+
+            std::vector<KinBodyPtr> bodies;
+            GetBodies(bodies, 0);
+            std::set<std::string> usedstrings;
+            for(std::vector<KinBodyPtr>::iterator it = bodies.begin(); it != bodies.end(); ++it)
+            {
+                usedstrings.insert( (*it)->GetID() );
             }
+
+            int nextIndex = usedstrings.size()+1;  // InitializeUniquePrefixedString will increase index for most 1000 times
+
+            std::string pRobotID = "";
+            utils::InitializeUniquePrefixedString(pRobotID, "robot", nextIndex, usedstrings);
+            robot->SetID(pRobotID);
             _CheckUniqueID(KinBodyConstPtr(robot), true);
         }
         {
