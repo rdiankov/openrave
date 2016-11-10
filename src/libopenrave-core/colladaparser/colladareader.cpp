@@ -2713,6 +2713,23 @@ public:
                                 }
                             }
                         }
+                        else if( name == "cylinderz" ) {
+                            daeElementRef pradius = children[i]->getChild("radius");
+                            daeElementRef pheight = children[i]->getChild("height");
+                            if( !!pradius && !!pheight ) {
+                                Vector vGeomData;
+                                stringstream ss(pradius->getCharData());
+                                ss >> vGeomData.x;
+                                stringstream ss2(pheight->getCharData());
+                                ss2 >> vGeomData.y;
+                                if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
+                                    geominfo._type = GT_Cylinder;
+                                    geominfo._vGeomData = vGeomData;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
                         else if( name == "container" ) {
                             daeElementRef pouter_extents = children[i]->getChild("outer_extents");
                             if( !!pouter_extents ) {
