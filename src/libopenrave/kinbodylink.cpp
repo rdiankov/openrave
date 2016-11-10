@@ -366,7 +366,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "isEnabled", isEnabled);
 }
 
-void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -381,6 +381,10 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
     RAVE_DESERIALIZEJSON_OPTIONAL(value, "stringParameters", stringParameters);
     RAVE_DESERIALIZEJSON_OPTIONAL(value, "forcedAdjacentLinks", forcedAdjacentLinks);
 
+
+    transform.trans *= fUnitScale;
+    massTransform.trans *= fUnitScale;
+
     if (value.HasMember("geometries")) {
         RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["geometries"]);
 
@@ -388,7 +392,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value)
         geometries.reserve(value["geometries"].Size());
         for (size_t i = 0; i < value["geometries"].Size(); ++i) {
             GeometryInfoPtr geometry(new GeometryInfo());
-            geometry->DeserializeJSON(value["geometries"][i]);
+            geometry->DeserializeJSON(value["geometries"][i], fUnitScale);
             geometries.push_back(geometry);
         }
     }
@@ -406,9 +410,9 @@ void KinBody::Link::SerializeJSON(rapidjson::Value &value, rapidjson::Document::
     _info.SerializeJSON(value, allocator, options);
 }
 
-void KinBody::Link::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::Link::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
-    _info.DeserializeJSON(value);
+    _info.DeserializeJSON(value, fUnitScale);
 }
 
 void KinBody::Link::SetStatic(bool bStatic)

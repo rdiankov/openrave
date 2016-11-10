@@ -210,7 +210,7 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docum
     }
 }
 
-void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -250,7 +250,28 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value &value)
     RAVE_DESERIALIZEJSON_REQUIRED(value, "upperLimit", upperLimit);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "isCircular", isCircular);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "isActive", isActive);
+
+    // multiply fUnitScale on maxVel, maxAccel, lowerLimit, upperLimit
+
+    dReal fjointmult = fUnitScale;
+    if( type == JointRevolute ) 
+    {
+        fjointmult = 1;
+    }
+    else if (type == JointPrismatic) 
+    {
+        fjointmult = fUnitScale;
+    }
+    for(size_t ic = 0; ic < axes.size(); ic++)
+    {
+        
+        maxVel[ic] *= fjointmult;
+        maxAccel[ic] *= fjointmult;
+        lowerLimit[ic] *= fjointmult;
+        upperLimit[ic] *= fjointmult;
+    }
     
+
     boost::array<MimicInfoPtr, 3> newmimic;
     if (value.HasMember("mimic"))
     {

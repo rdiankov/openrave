@@ -377,13 +377,15 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Do
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "modifiable", modifiable);
 }
 
-void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
     RAVE_DESERIALIZEJSON_REQUIRED(value, "sid", sid);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "name", name);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
+
+    transform.trans *= fUnitScale;
 
     std::string typestr;
     RAVE_DESERIALIZEJSON_REQUIRED(value, "type", typestr);
@@ -392,6 +394,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
     {
         type = GT_Box;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "halfExtents", _vGeomData);
+        _vGeomData *= fUnitScale;
     }
     else if (typestr == "container")
     {
@@ -399,22 +402,31 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value)
         RAVE_DESERIALIZEJSON_REQUIRED(value, "outerExtents", _vGeomData);
         RAVE_DESERIALIZEJSON_REQUIRED(value, "innerExtents", _vGeomData2);
         RAVE_DESERIALIZEJSON_REQUIRED(value, "bottomCross", _vGeomData3);
+
+        _vGeomData *= fUnitScale;
+        _vGeomData2 *= fUnitScale;
+        _vGeomData3 *= fUnitScale;
     }
     else if (typestr == "sphere")
     {
         type = GT_Sphere;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData);
+
+        // TODO fUnitScale
     }
     else if (typestr == "cylinder")
     {
         type = GT_Cylinder;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData.x);
         RAVE_DESERIALIZEJSON_REQUIRED(value, "height", _vGeomData.y);
+
+        // TODO fUnitScale
     }
     else if (typestr == "trimesh")
     {
         type = GT_TriMesh;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", mesh);
+        // TODO fUnitScale
     }
     else
     {
@@ -442,9 +454,9 @@ void KinBody::Link::Geometry::SerializeJSON(rapidjson::Value &value, rapidjson::
     _info.SerializeJSON(value, allocator, options);
 }
 
-void KinBody::Link::Geometry::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::Link::Geometry::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
-    _info.DeserializeJSON(value);
+    _info.DeserializeJSON(value, fUnitScale);
 }
 
 AABB KinBody::Link::Geometry::ComputeAABB(const Transform& t) const

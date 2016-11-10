@@ -4865,7 +4865,7 @@ void KinBody::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Alloca
     }
 }
 
-void KinBody::DeserializeJSON(const rapidjson::Value &value)
+void KinBody::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -4893,7 +4893,7 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
         for (size_t i = 0; i < value["links"].Size(); ++i)
         {
             LinkInfoPtr linkinfo(new LinkInfo());
-            linkinfo->DeserializeJSON(value["links"][i]);
+            linkinfo->DeserializeJSON(value["links"][i], fUnitScale);
             linkinfos.push_back(linkinfo);
 
             // remember link sid to name mapping
@@ -4929,7 +4929,7 @@ void KinBody::DeserializeJSON(const rapidjson::Value &value)
             }
 
             JointInfoPtr jointinfo(new JointInfo());
-            jointinfo->DeserializeJSON(copy);
+            jointinfo->DeserializeJSON(copy, fUnitScale);
             jointinfos.push_back(jointinfo);
         }
     }

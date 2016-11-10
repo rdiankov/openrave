@@ -40,6 +40,8 @@ namespace OpenRAVE {
             if (_vOpenRAVESchemeAliases.size() == 0) {
                 _vOpenRAVESchemeAliases.push_back("openrave");
             }
+            // set global scale when initalize jsonreader.
+            _fGlobalScale = 1.0 / _penv->GetUnit().second;
         }
 
         virtual ~JSONReader()
@@ -100,26 +102,35 @@ namespace OpenRAVE {
             std::string scheme, path, fragment;
             _ParseURI(uri, scheme, path, fragment);
 
+            dReal fUnitScale = _GetUnitScale();
+            
             if (fragment == "") {
+                // if fragment is empty, take the first body in the scene
                 rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
                 std::string objectUri;
                 RAVE_DESERIALIZEJSON_REQUIRED(*itr, "uri", objectUri);
                 _FillBody(*itr, _doc->GetAllocator());
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
-                tmpBody->DeserializeJSON(*itr);
+                tmpBody->DeserializeJSON(*itr, fUnitScale);
                 ppbody = tmpBody;
             } else {
+                // find object by uri
                 rapidjson::Value::ValueIterator object = _ResolveObjectInDocument(_doc, fragment);
                 RAVE_SERIALIZEJSON_ADDMEMBER(*object, _doc->GetAllocator(), "uri", _CanonicalizeURI(uri));
                 KinBodyPtr tmpBody = RaveCreateKinBody(_penv, "");
-                tmpBody->DeserializeJSON(*object);
+                tmpBody->DeserializeJSON(*object, fUnitScale);
                 ppbody = tmpBody;
-            }   
-            
-           
+            }
             return true;
         }
     protected:
+        inline dReal _GetUnitScale()
+        {
+            std::pair<std::string, dReal> unit;
+            RAVE_DESERIALIZEJSON_REQUIRED(*_doc, "unit", unit);
+            dReal scale = unit.second / _fGlobalScale;
+            return scale;
+        }
 
         std::string _CanonicalizeURI(const std::string& uri)
         {
@@ -300,6 +311,7 @@ namespace OpenRAVE {
             return doc;
         }
 
+        dReal _fGlobalScale;
         EnvironmentBasePtr _penv;
         std::string _prefix;
         std::string _filename;

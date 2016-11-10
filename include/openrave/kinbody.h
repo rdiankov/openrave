@@ -182,7 +182,7 @@ public:
         bool InitCollisionMesh(float fTessellation=1);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
@@ -268,7 +268,7 @@ public:
         LinkInfo& operator=(const LinkInfo& other);
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -436,7 +436,7 @@ public:
             virtual void serialize(std::ostream& o, int options) const;
 
             virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-            virtual void DeserializeJSON(const rapidjson::Value &value);
+            virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
             /// \brief sets a new collision mesh and notifies every registered callback about it
             virtual void SetCollisionMesh(const TriMesh& mesh);
@@ -701,7 +701,7 @@ protected:
         virtual void serialize(std::ostream& o, int options) const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
@@ -881,7 +881,7 @@ public:
         virtual int GetDOF() const;
 
         virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value);
+        virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -2218,7 +2218,7 @@ private:
 
     /// \brief Serialize the kinbody as a JSON object.
     virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-    virtual void DeserializeJSON(const rapidjson::Value &value);
+    virtual void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale = 1);
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
