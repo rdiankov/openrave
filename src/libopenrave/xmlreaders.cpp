@@ -272,7 +272,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         }
     }
 
-    static boost::array<string,13> tags = { { "translation", "rotationmat", "rotationaxis", "quat", "diffusecolor", "ambientcolor", "transparency", "render", "extents", "halfextents", "fullextents", "radius", "height"}};
+    static boost::array<string,14> tags = { { "translation", "rotationmat", "rotationaxis", "quat", "diffusecolor", "ambientcolor", "transparency", "render", "extents", "halfextents", "fullextents", "radius", "height", "name"}};
     if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
         return PE_Support;
     }
@@ -345,6 +345,9 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     else if( xmlname == "transparency" ) {
         _bOverwriteTransparency = true;
         _ss >> _pgeom->_fTransparency;
+    }
+    else if( xmlname == "name" ) {
+        _ss >> _pgeom->_name;
     }
     else {
         // could be type specific features
