@@ -191,6 +191,13 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 {
     osg::ArgumentParser arguments(0, NULL);
 
+    if( !QApplication::instance() ) {
+        RAVELOG_WARN("no app instance to attach close\n");
+    }
+    else {
+        connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
+    }
+    
     _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second);
     setCentralWidget(_posgWidget);
 
@@ -1168,6 +1175,27 @@ bool QtOSGViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+void QtOSGViewer::_ProcessApplicationQuit()
+{
+    RAVELOG_VERBOSE("processing viewer application quit\n");
+    // remove all messages in order to release the locks
+    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+    if( _listGUIFunctions.size() > 0 ) {
+        bool bnotify = false;
+        FOREACH(it,_listGUIFunctions) {
+            (*it)->SetFinished();
+            if( (*it)->IsBlocking() ) {
+                bnotify = true;
+            }
+        }
+        if( bnotify ) {
+            _notifyGUIFunctionComplete.notify_all();
+        }
+    }
+    _listGUIFunctions.clear();
+
+}
+
 bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
 {
     if( !QApplication::instance() ) {
@@ -1182,6 +1210,7 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
     if( bcallmain ) {
         _posgWidget->SetHome();
         QApplication::instance()->exec();
+        _nQuitMainLoop = 2; // have to specify that quit!
     }
     return true;
 }
@@ -1225,6 +1254,7 @@ int QtOSGViewer::main(bool bShow)
     _posgWidget->SetHome();
     if( _nQuitMainLoop < 0 ) {
         QApplication::instance()->exec();
+        _nQuitMainLoop = 2; // have to specify that quit!
     }
     SetEnvironmentSync(false);
     return 0;
@@ -1953,8 +1983,17 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
 void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
 {
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
+    if( _nQuitMainLoop != -1 ) {
+        // viewer quit, so anything posted won't get processed
+        return;
+    }
+    
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+    if( _listGUIFunctions.size() > 1000 ) {
+        RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
+        return;
+    }
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
     _listGUIFunctions.push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
