@@ -183,13 +183,19 @@ public:
                 _vf->_targetlink->SetTransform(Transform());
 
                 _vTargetOBBs.reserve(1);
+                bool found = false;
                 if( _vf->_targetlink->IsVisible() ) {
                     for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
-                        if( _vf->_targetlink->GetGeometries().at(igeom)->GetName() == "calibboard" ) {
+                        if( _vf->_targetlink->GetGeometries().at(igeom)->GetName() == "_calibboard_" ) {
                             _vTargetOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(Transform()),_vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
+                            found = true;
                             break;
                         }
                     }
+                }
+                if (!found) {
+                    RAVELOG_WARN("No geometry named _calibboard_ found in target link.\n");
+                    return;
                 }
 
                 vector<AABB> vboxes;
