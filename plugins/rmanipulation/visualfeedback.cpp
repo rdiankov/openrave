@@ -184,7 +184,12 @@ public:
 
                 _vTargetOBBs.reserve(1);
                 if( _vf->_targetlink->IsVisible() ) {
-                    _vTargetOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->ComputeLocalAABB(),_vf->_targetlink->GetTransform()));
+                    for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
+                        if( _vf->_targetlink->GetGeometries().at(igeom)->GetName() == "calibboard" ) {
+                            _vTargetOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(Transform()),_vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
+                            break;
+                        }
+                    }
                 }
 
                 vector<AABB> vboxes;

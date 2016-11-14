@@ -2639,6 +2639,10 @@ public:
             return false;
         }
 
+        std::string geomname;
+        if( !!domgeom->getName() ) {
+            geomname = domgeom->getName();
+        }
         Transform tlocalgeom;
         bool bgeomvisible = true;
         // check for OpenRAVE profile simple geometric primitives
@@ -2773,6 +2777,7 @@ public:
                     }
                     if( bfoundgeom ) {
                         FillGeometryColor(_ExtractFirstMaterial(domgeom,mapmaterials),geominfo);
+                        geominfo._name = geomname;
                         listGeometryInfos.push_back(geominfo);
                         return true;
                     }
@@ -2786,24 +2791,28 @@ public:
             for (size_t tg = 0; tg<meshRef->getTriangles_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
@@ -2863,6 +2872,7 @@ public:
 
             if( vconvexhull.size()> 0 ) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._type = GT_TriMesh;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
