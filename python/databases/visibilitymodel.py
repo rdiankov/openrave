@@ -89,6 +89,9 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 class VisibilityModel(DatabaseGenerator):
     visibilitytransforms = None # a list of camera pose in the pattern coordinate system
+    targetlink = None # the target link object
+    targetgeomname = None # name of a geometry object inside target link to constrain the visiblity checking
+    
     class GripperVisibility:
         """Used to hide links not beloning to gripper.
 
@@ -114,7 +117,7 @@ class VisibilityModel(DatabaseGenerator):
                 for geom,isdraw in self.hiddengeoms:
                     geom.SetDraw(isdraw)
 
-    def __init__(self,robot,targetlink,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None):
+    def __init__(self,robot,targetlink,sensorrobot=None,sensorname=None,maxvelmult=None, ignoresensorcollision=None, targetgeomname=None):
         """Starts a visibility model using a robot, a sensor, and a targetlink
 
         The minimum needed to be specified is the robot and a sensorname. Supports sensors that do
@@ -124,6 +127,7 @@ class VisibilityModel(DatabaseGenerator):
         DatabaseGenerator.__init__(self,robot=robot)
         self.sensorrobot = sensorrobot if sensorrobot is not None else robot
         self.targetlink = targetlink
+        self.targetgeomname = targetgeomname
         self.visualprob = interfaces.VisualFeedback(self.robot,maxvelmult=maxvelmult,ignoresensorcollision=ignoresensorcollision)
         self.basemanip = interfaces.BaseManipulation(self.robot,maxvelmult=maxvelmult)
         self.convexhull = None
@@ -168,7 +172,7 @@ class VisibilityModel(DatabaseGenerator):
 
     def preprocess(self):
         with self.env:
-            manipname = self.visualprob.SetCameraAndTarget(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname,targetlink=self.targetlink)
+            manipname = self.visualprob.SetCameraAndTarget(sensorname=self.sensorname,sensorrobot=self.sensorrobot,manipname=self.manipname,targetlink=self.targetlink, targetgeomname=self.targetgeomname)
             assert(self.manipname is None or self.manipname==manipname)
             self.manip = self.robot.SetActiveManipulator(manipname)
             self.attachedsensor = [s for s in self.sensorrobot.GetAttachedSensors() if s.GetName() == self.sensorname][0]
@@ -433,6 +437,8 @@ class VisibilityModel(DatabaseGenerator):
     def CreateOptionParser():
         parser = DatabaseGenerator.CreateOptionParser()
         parser.description='Computes and manages the visibility transforms for a manipulator/target.'
+        parser.add_option('--target',action="store",type='string',dest='target',
+                          help='OpenRAVE kinbody target filename')
         parser.add_option('--sensorname',action="store",type='string',dest='sensorname',default=None,
                           help='Name of the sensor to build visibilty model for (has to be camera). If none, takes first possible sensor.')
         parser.add_option('--preshape', action='append', type='string',dest='preshapes',default=None,
@@ -446,24 +452,24 @@ class VisibilityModel(DatabaseGenerator):
         parser.add_option('--showimage',action="store_true",dest='showimage',default=False,
                           help='If set, will show the camera image when showing the models')
         return parser
-    #@staticmethod
-    #def RunFromParser(Model=None,parser=None,args=None,**kwargs):
-    #    if parser is None:
-    #        parser = VisibilityModel.CreateOptionParser()
-    #    (options, leftargs) = parser.parse_args(args=args)
-    #    env = Environment()
-    #    try:
-    #        target = None
-    #        with env:
-    #            target = env.ReadKinBodyXMLFile(options.target)
-    #            target.SetTransform(eye(4))
-    #            env.Add(target)
-    #        if Model is None:
-    #            Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
-    #        DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
-    #    finally:
-    #        env.Destroy()
-    #        RaveDestroy()
+    @staticmethod
+    def RunFromParser(Model=None,parser=None,args=None,**kwargs):
+        if parser is None:
+            parser = VisibilityModel.CreateOptionParser()
+        (options, leftargs) = parser.parse_args(args=args)
+        env = Environment()
+        try:
+            target = None
+            with env:
+                target = env.ReadKinBodyXMLFile(options.target)
+                target.SetTransform(eye(4))
+                env.Add(target)
+            if Model is None:
+                Model = lambda robot: VisibilityModel(robot=robot,target=target,sensorname=options.sensorname)
+            DatabaseGenerator.RunFromParser(env=env,Model=Model,parser=parser,args=args,**kwargs)
+        finally:
+            env.Destroy()
+            RaveDestroy()
 
 def run(*args,**kwargs):
     """Command-line execution of the example. ``args`` specifies a list of the arguments to the script.
