@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
+#include <boost/algorithm/string/replace.hpp>
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
@@ -246,7 +247,7 @@ public:
             _ptargetbox->GetEnv()->Remove(_ptargetbox);
         }
 
-        virtual bool IsVisible(bool bcheckocclusion=true)
+        virtual bool IsVisible(bool bcheckocclusion, bool bOutputError, std::string& errormsg)
         {
             Transform ttarget = _vf->_targetlink->GetTransform();
             TransformMatrix tcamera = ttarget.inverse()*_vf->_psensor->GetTransform();
@@ -254,7 +255,7 @@ public:
                 RAVELOG_WARN("box not in camera vision hull (shouldn't happen due to preprocessing\n");
                 return false;
             }
-            if( bcheckocclusion && IsOccluded(tcamera) ) {
+            if( bcheckocclusion && IsOccluded(tcamera, bOutputError, errormsg) ) {
                 return false;
             }
             return true;
@@ -265,13 +266,14 @@ public:
             if( !oldfn(pSrcConf,pDestConf,interval,configurations) ) {
                 return false;
             }
-            return IsVisible();
+            std::string errormsg;
+            return IsVisible(true, false, errormsg);
         }
 
         /// samples the ik
         /// If camera is attached to robot, assume target is not movable and t is the camera position.
         /// If camera is not attached to robot, assume target is movable and t is the target position.
-        bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample)
+        bool SampleWithCamera(const TransformMatrix& t, vector<dReal>& pNewSample, bool bOutputError, std::string& errormsg)
         {
             Transform tCameraInTarget, ttarget;
             if( _vf->_robot != _vf->_sensorrobot ) {
@@ -284,12 +286,18 @@ public:
             }
             if( !InConvexHull(tCameraInTarget) ) {
                 RAVELOG_DEBUG("box not in camera vision hull\n");
+                if( bOutputError ) {
+                    errormsg = str(boost::format("{\"type\":\"outofcamera\""));
+                }
                 return false;
             }
 
             // object is inside, find an ik solution
             Transform tgoalee = t*_vf->_ttogripper;
             if( !_vf->_pmanip->FindIKSolution(tgoalee,IKFO_CheckEnvCollisions, _ikreturn) ) {
+                if( bOutputError ) {
+                    errormsg = str(boost::format("{\"type\":\"ikfailed\", \"action\":\"0x%x\"}")%_ikreturn->_action);
+                }
                 RAVELOG_VERBOSE_FORMAT("no valid ik 0x%.8x", _ikreturn->_action);
                 return false;
             }
@@ -305,7 +313,7 @@ public:
             }
             _vf->_robot->SetActiveDOFValues(pNewSample);
 
-            return !IsOccluded(tCameraInTarget);
+            return !IsOccluded(tCameraInTarget, bOutputError, errormsg);
         }
 
         /// \brief checks if the target geometries of the target link are inside the camera visiblity convex hull (
@@ -329,8 +337,9 @@ public:
         /// check if any part of the environment or robot is in front of the camera blocking the object
         /// sample object's surface and shoot rays
         /// \param tCameraInTarget in target coordinate system
-        bool IsOccluded(const TransformMatrix& tCameraInTarget)
+        bool IsOccluded(const TransformMatrix& tCameraInTarget, bool bOutputError, std::string& errormsg)
         {
+            // TODO have to output to errormsg in bOutputError is true
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
             TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
             Transform ttarget = _vf->_targetlink->GetTransform();
@@ -493,7 +502,8 @@ public:
                 return false;
             }
             RobotBase::RobotStateSaver state(_vf->_robot);
-            _sphereperms._fn = boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,boost::ref(pNewSample));
+            std::string errormsg;
+            _sphereperms._fn = boost::bind(&GoalSampleFunction::SampleWithParameters,this,_1,boost::ref(pNewSample), false, errormsg);
             if( _sphereperms.PermuteContinue() >= 0 ) {
                 return true;
             }
@@ -505,10 +515,10 @@ public:
             return false;
         }
 
-        bool SampleWithParameters(int isample, vector<dReal>& pNewSample)
+        bool SampleWithParameters(int isample, vector<dReal>& pNewSample, bool bOutputError, std::string& errormsg)
         {
             TransformMatrix tcamera = _ttarget*_visibilitytransforms.at(isample);
-            return _vconstraint.SampleWithCamera(tcamera,pNewSample);
+            return _vconstraint.SampleWithCamera(tcamera,pNewSample, bOutputError, errormsg);
         }
 
         VisibilityConstraintFunction _vconstraint;
@@ -1065,7 +1075,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( !_pconstraintfn ) {
             _pconstraintfn.reset(new VisibilityConstraintFunction(shared_problem()));
         }
-        sout << _pconstraintfn->IsVisible(bcheckocclusion);
+
+        std::string errormsg;
+        sout << _pconstraintfn->IsVisible(bcheckocclusion, false, errormsg);
         return true;
     }
 
@@ -1132,16 +1144,32 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+
+        
         if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, _preport) ) {
             RAVELOG_VERBOSE_FORMAT("endeffector is in collision, %s\n",_preport->__str__());
-            return false;
+            std::string errormsg = _preport->__str__();
+            boost::replace_all(errormsg, "\"", "\\\"");
+            sout << "{\"error\":{\"type\":\"endeffector\", \"report\":\"" << errormsg << "\"}}";
+            return true;
         }
-        if( !pconstraintfn->SampleWithCamera(t,vsample) ) {
-            return false;
+        std::string errormsg;
+        if( !pconstraintfn->SampleWithCamera(t,vsample, true, errormsg) ) {
+            // TODO have better error message on why this failed!
+            boost::replace_all(errormsg, "\"", "\\\"");
+            sout << "{\"error\":" << errormsg << "}";
+            return true;
         }
-        FOREACH(it,vsample) {
-            sout << *it << " ";
+
+        // have a sample!
+        sout << "{\"solution\":[";
+        for(size_t i = 0; i < vsample.size(); ++i) {
+            if( i > 0 ) {
+                sout << ",";
+            }
+            sout << vsample[i];
         }
+        sout << "]}";
         return true;
     }
 
