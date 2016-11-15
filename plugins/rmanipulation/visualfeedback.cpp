@@ -340,15 +340,14 @@ public:
         /// \param tCameraInTarget in target coordinate system
         bool IsOccluded(const TransformMatrix& tCameraInTarget, bool bOutputError, std::string& errormsg)
         {
-            // TODO have to output to errormsg in bOutputError is true
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent(),KinBody::Save_LinkEnable);
             TransformMatrix tCameraInTargetinv = tCameraInTarget.inverse();
             Transform ttarget = _vf->_targetlink->GetTransform();
-            _ptargetbox->SetTransform(ttarget);
-            Transform tworldcamera = ttarget*tCameraInTarget;
+            _ptargetbox->SetTransform(ttarget); // world
+            Transform tworldcamera = ttarget*tCameraInTarget;  // tCameraInTarget is in targetLink coordinates
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
-            FOREACH(itobb,_vTargetLocalOBBs) {
+            FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
@@ -439,10 +438,18 @@ private:
                         return bInside;
                     }
                     else {
-                        RAVELOG_WARN("ray did not return any contacts, so have to reject\n");
+                        RAVELOG_WARN_FORMAT("contact link is the target link, however the count of contacting points is 0.");
                         return false;
                     }
                 }
+                else{
+                    RAVE_VERBOSE_FORMAT("ray hit other unknown links, reject.");
+                    return false;
+                }
+            }
+            else {
+                RAVELOG_WARN("ray did not return any contacts, so have to reject\n");
+                return false;
             }
         }
 
@@ -1119,7 +1126,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
     bool ComputeVisibleConfiguration(ostream& sout, istream& sinput)
     {
         string cmd;
-        Transform t;
+        Transform t;  // In world coordinate system
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
