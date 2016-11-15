@@ -1156,7 +1156,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
         std::string errormsg;
         if( !pconstraintfn->SampleWithCamera(t,vsample, true, errormsg) ) {
             // TODO have better error message on why this failed!
-            boost::replace_all(errormsg, "\"", "\\\"");
+            //boost::replace_all(errormsg, "\"", "\\\"");   // error message
+            //already has escape characters at this point
             sout << "{\"error\":" << errormsg << "}";
             return true;
         }
