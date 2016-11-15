@@ -443,7 +443,7 @@ private:
                     }
                 }
                 else{
-                    RAVE_VERBOSE("ray hit other unknown links, reject.");
+                    RAVELOG_VERBOSE("ray hit other unknown links, reject.");
                     return false;
                 }
             }
