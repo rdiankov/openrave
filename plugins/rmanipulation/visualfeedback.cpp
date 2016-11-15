@@ -95,7 +95,8 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) ) {
+                
+                if( !testfn(vcur, temperrormsg) ) {
                     if( nallowableoutliers-- <= 0 )
                         return false;
                 }
@@ -121,7 +122,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur) ) {
+                if( !testfn(vcur, e) ) {
                     if( nallowableoutliers-- <= 0 )
                         return false;
                 }
@@ -351,7 +352,7 @@ public:
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern occluded\"}"));
+                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"link\":\"%s\"}"));
                     return true;
                 }
             }
@@ -391,7 +392,7 @@ public:
 
 private:
         /// \brief return true if not occluded by any other target (ray hits the intended target box)
-        bool _TestRay(const Vector& v, const TransformMatrix& tcamera)
+        bool _TestRay(const Vector& v, const TransformMatrix& tcamera. std::string& errormsg)
         {
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
@@ -443,7 +444,9 @@ private:
                     }
                 }
                 else{
-                    RAVELOG_VERBOSE("ray hit other unknown links, reject.");
+                    std::string linkname = _report->plink1->GetName();
+                    RAVELOG_VERBOSE_FORMAT("ray hit other links %s, reject.", linkname);
+                    errormsg = linkname;
                     return false;
                 }
             }
