@@ -143,9 +143,11 @@ class VisualFeedback:
         for i in range(7):
             cmd += str(pose[i]) + ' '
         res = self.prob.SendCommand(cmd)
+        log.info('result of compute visible conf: %s' % res)
         if res is None:
             raise PlanningError()
-        return numpy.array([float(s) for s in res.split()])
+        return res
+
     def SampleVisibilityGoal(self,numsamples=None):
         """See :ref:`module-visualfeedback-samplevisibilitygoal`
         """
