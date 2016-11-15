@@ -438,12 +438,12 @@ private:
                         return bInside;
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("contact link is the target link, however the count of contacting points is 0.");
+                        RAVELOG_WARN("contact link is the target link, however the count of contacting points is 0.");
                         return false;
                     }
                 }
                 else{
-                    RAVE_VERBOSE_FORMAT("ray hit other unknown links, reject.");
+                    RAVE_VERBOSE("ray hit other unknown links, reject.");
                     return false;
                 }
             }
