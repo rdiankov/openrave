@@ -96,7 +96,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
                 
-                if( !testfn(vcur, temperrormsg) ) {
+                if( !testfn(vcur) ) {
                     if( nallowableoutliers-- <= 0 )
                         return false;
                 }
@@ -122,7 +122,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                if( !testfn(vcur, e) ) {
+                if( !testfn(vcur) ) {
                     if( nallowableoutliers-- <= 0 )
                         return false;
                 }
@@ -348,11 +348,12 @@ public:
             Transform tworldcamera = ttarget*tCameraInTarget;  // tCameraInTarget is in targetLink coordinates
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
+            std::string occludinglinkname = "";
             FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera)),_vf->_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludinglinkname)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"link\":\"%s\"}"));
+                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"link\":\"%s\"}")%occludinglinkname);
                     return true;
                 }
             }
@@ -392,7 +393,7 @@ public:
 
 private:
         /// \brief return true if not occluded by any other target (ray hits the intended target box)
-        bool _TestRay(const Vector& v, const TransformMatrix& tcamera. std::string& errormsg)
+        bool _TestRay(const Vector& v, const TransformMatrix& tcamera, std::string& errormsg)
         {
             RAY r;
             dReal filen = 1/RaveSqrt(v.lengthsqr3());
@@ -445,7 +446,7 @@ private:
                 }
                 else{
                     std::string linkname = _report->plink1->GetName();
-                    RAVELOG_VERBOSE_FORMAT("ray hit other links %s, reject.", linkname);
+                    RAVELOG_VERBOSE_FORMAT("Ray hit a non-target link named %s, reject.", linkname);
                     errormsg = linkname;
                     return false;
                 }
