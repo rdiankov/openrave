@@ -353,7 +353,7 @@ public:
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"occluding body and link name\":\"%s\"}")%occludingbodyandlinkname);
+                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
                     return true;
                 }
             }
