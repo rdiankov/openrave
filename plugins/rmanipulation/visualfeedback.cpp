@@ -348,12 +348,12 @@ public:
             Transform tworldcamera = ttarget*tCameraInTarget;  // tCameraInTarget is in targetLink coordinates
             _ptargetbox->Enable(true);
             SampleRaysScope srs(*this);
-            std::string occludinglinkname = "";
+            std::string occludingbodyandlinkname = "";
             FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
-                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludinglinkname)),_vf->_fAllowableOcclusion) ) {
+                if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"link\":\"%s\"}")%occludinglinkname);
+                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"occluding body and link name\":\"%s\"}")%occludingbodyandlinkname);
                     return true;
                 }
             }
@@ -446,8 +446,9 @@ private:
                 }
                 else{
                     std::string linkname = _report->plink1->GetName();
-                    RAVELOG_VERBOSE_FORMAT("Ray hit a non-target link named %s, reject.", linkname);
-                    errormsg = linkname;
+                    std::string bodyname = _report->plink1->GetParent()->GetName();
+                    errormsg = bodyname + "/" + linkname;
+                    RAVELOG_VERBOSE_FORMAT("Ray hit a non-target body and link named %s, reject.", errormsg);
                     return false;
                 }
             }
