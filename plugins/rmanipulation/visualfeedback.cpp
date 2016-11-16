@@ -184,7 +184,7 @@ public:
             if( _vf->_targetlink->IsVisible() ) {
                 for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
                     if( _vf->_targetGeomName.size() == 0 || _vf->_targetlink->GetGeometries().at(igeom)->GetName() == _vf->_targetGeomName ) {
-                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(Transform()), _vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
+                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(_vf->_targetlink->GetGeometries().at(igeom)->GetTransform()), _vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
                     }
                 }
             }
@@ -901,7 +901,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
-                    vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
+                    vTargetLocalCenter = _targetlink->GetGeometries().at(0)->ComputeAABB(Transform()).pos;
                 }
                 int numtrans=0;
                 sinput >> numtrans;
@@ -921,7 +921,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             else if( cmd == "sphere" || cmd == "invertsphere" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
-                    vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
+                    vTargetLocalCenter = _targetlink->GetGeometries().at(0)->ComputeAABB(Transform()).pos;
                 }
 
                 TriMesh spheremesh;
