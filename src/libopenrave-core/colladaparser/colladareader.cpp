@@ -4941,6 +4941,10 @@ private:
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
             return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
         }
+        domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
+        if (!!passet && !!passet->getUnit()) {
+            return passet->getUnit()->getMeter() / _penv->GetUnit().second;
+        }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);
         }
