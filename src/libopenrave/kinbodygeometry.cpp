@@ -410,7 +410,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     else if (typestr == "sphere")
     {
         type = GT_Sphere;
-        RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData);
+        RAVE_DESERIALIZEJSON_REQUIRED(value, "radius", _vGeomData.x);
 
         _vGeomData *= fUnitScale;
     }
