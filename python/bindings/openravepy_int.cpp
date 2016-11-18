@@ -335,7 +335,16 @@ protected:
 
             if( !!puseviewer ) {
                 _bInMain = true;
-                puseviewer->main(bShowViewer);
+                try {
+                    puseviewer->main(bShowViewer);
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_ERROR_FORMAT("got exception in viewer main thread %s", ex.what());
+                }
+                catch(...) {
+                    RAVELOG_ERROR("got unknown exception in viewer main thread\n");
+                }
+                
                 _bInMain = false;
                 // remove from _listviewerinfos in order to avoid running the main loop again
                 {
