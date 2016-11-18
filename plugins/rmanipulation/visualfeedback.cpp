@@ -901,7 +901,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
-                    vTargetLocalCenter = _targetlink->GetGeometries().at(0)->ComputeAABB(Transform()).pos;
+                    vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
                 }
                 int numtrans=0;
                 sinput >> numtrans;
@@ -921,7 +921,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             else if( cmd == "sphere" || cmd == "invertsphere" ) {
                 if( !bSetTargetCenter && !!_targetlink ) {
-                    vTargetLocalCenter = _targetlink->GetGeometries().at(0)->ComputeAABB(Transform()).pos;
+                    vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
                 }
 
                 TriMesh spheremesh;
@@ -942,10 +942,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
-                            itcamera->trans += vTargetLocalCenter;
                             if( bInvert ) {
                                 *itcamera = itcamera->inverse();
                             }
+                            itcamera->trans += vTargetLocalCenter;
                             ++itcamera;
                         }
                     }
@@ -954,12 +954,16 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "conedirangle" ) {
                 Vector vconedir; dReal fangle;
                 sinput >> vconedir.x >> vconedir.y >> vconedir.z;
+                RAVELOG_WARN("vconedir.x : %f \n", vconedir.x);
+                RAVELOG_WARN("vconedir.y : %f \n", vconedir.y);
+                RAVELOG_WARN("vconedir.z : %f \n", vconedir.z);
                 fangle = RaveSqrt(vconedir.lengthsqr3());
                 if( fangle == 0 ) {
                     return false;
                 }
 
                 vconedir /= fangle;
+                RAVELOG_WARN("fangle : %f \n", fangle);
                 vconedir.w = RaveCos(fangle);
                 vconedirangles.push_back(vconedir);
             }
@@ -980,8 +984,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
             vtransforms.reserve(voldtransforms.size());
             FOREACH(itt,voldtransforms) {
                 Vector v = itt->trans-vTargetLocalCenter;
+                RAVELOG_WARN_FORMAT("sphere vector: %f, %f, %f",  v.x% v.y% v.z);
                 bool bInCone = false;
                 FOREACH(itcone, vconedirangles) {
+                    RAVELOG_WARN("normalized dot product : %f \n", itcone->dot3(v) / RaveSqrt(v.lengthsqr3()));
+                    RAVELOG_WARN("itcone->w : %f \n", itcone->w);
                     if( itcone->dot3(v) >= itcone->w*RaveSqrt(v.lengthsqr3()) ) {
                         bInCone = true;
                         break;
