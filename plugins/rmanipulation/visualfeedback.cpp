@@ -932,7 +932,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 FOREACH(it,vdists) {
                     sinput >> *it;
                 }
-                bool bInvert = cmd == "invertsphere";
+                bool bInvert = _sensorrobot != _robot;//cmd == "invertsphere";
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vtransforms.begin();
@@ -942,10 +942,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
+                            itcamera->trans += vTargetLocalCenter;
                             if( bInvert ) {
                                 *itcamera = itcamera->inverse();
                             }
-                            itcamera->trans += vTargetLocalCenter;
                             ++itcamera;
                         }
                     }
@@ -982,15 +982,34 @@ Visibility computation checks occlusion with other objects using ray sampling in
             vector<Transform> voldtransforms;
             voldtransforms.swap(vtransforms);
             vtransforms.reserve(voldtransforms.size());
+            int upcount = 0;
+            int downcount = 0;
+            float maxdotprod = 0;
+            int vtransformscount = 0;
             FOREACH(itt,voldtransforms) {
-                Vector v = itt->trans-vTargetLocalCenter;
-                RAVELOG_WARN_FORMAT("sphere vector: %f, %f, %f",  v.x% v.y% v.z);
+                Vector vCameraInTargetLink;
+                if( _sensorrobot == _robot ) {
+                    vCameraInTargetLink = itt->trans-vTargetLocalCenter;
+                }
+                else {
+                    vCameraInTargetLink = itt->inverse().trans - vTargetLocalCenter;
+                }
                 bool bInCone = false;
                 FOREACH(itcone, vconedirangles) {
-                    RAVELOG_WARN("normalized dot product : %f \n", itcone->dot3(v) / RaveSqrt(v.lengthsqr3()));
-                    RAVELOG_WARN("itcone->w : %f \n", itcone->w);
-                    if( itcone->dot3(v) >= itcone->w*RaveSqrt(v.lengthsqr3()) ) {
+                    //RAVELOG_WARN("dot product : %f \n", itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3());
+                    //RAVELOG_WARN("itcone->w : %f \n", itcone->w);
+                    if( itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3() >= 0 ) {
+                        upcount += 1;
+                    }
+                    if( itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3() < 0 ) {
+                        downcount += 1;
+                    }
+                    if( itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3() > maxdotprod ) {
+                        maxdotprod = itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3();
+                    }
+                    if( itcone->dot3(vCameraInTargetLink) >= itcone->w*RaveSqrt(vCameraInTargetLink.lengthsqr3()) ) {
                         bInCone = true;
+                        vtransformscount += 1;
                         break;
                     }
                 }
@@ -998,6 +1017,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     vtransforms.push_back(*itt);
                 }
             }
+            RAVELOG_WARN("upcount : %i \n", upcount);
+            RAVELOG_WARN("downcount : %i \n", downcount);
+            RAVELOG_WARN("maxdotprod : %f \n", maxdotprod);
+            RAVELOG_WARN("vtransformscount : %i \n", vtransformscount);
         }
 
         KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
@@ -1005,8 +1028,13 @@ Visibility computation checks occlusion with other objects using ray sampling in
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
+        int itcameracount = 0;
+        int goodcount1 = 0;
+        int goodcount2 = 0;
         FOREACHC(itcamera, vtransforms) {
+            itcameracount += 1;
             Transform tCameraInTarget = *itcamera;
+            //Transform tCameraInTargetGeom = _targetlink->GetGeometries().at(0)->GetTransform().inverse() * tCameraInTarget;
             Transform tTargetInWorld;
             if( _sensorrobot == _robot ) {
                 tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
@@ -1016,8 +1044,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
 
             if( pconstraintfn->InConvexHull(*itcamera) ) {
+            //if( pconstraintfn->InConvexHull(tCameraInTargetGeom) ) {
+                goodcount1 += 1;
                 if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_ttogripper, _preport) ) {
                     if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
+                        goodcount2 += 1;
                         sout << *itcamera << " ";
                     }
                     else {
@@ -1029,6 +1060,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
         }
+        RAVELOG_WARN("itcameracount : %i \n", itcameracount);
+        RAVELOG_WARN("goodcount1 : %i \n", goodcount1);
+        RAVELOG_WARN("goodcount2 : %i \n", goodcount2);
 
         return true;
     }
