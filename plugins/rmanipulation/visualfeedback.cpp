@@ -184,7 +184,7 @@ public:
             if( _vf->_targetlink->IsVisible() ) {
                 for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
                     if( _vf->_targetGeomName.size() == 0 || _vf->_targetlink->GetGeometries().at(igeom)->GetName() == _vf->_targetGeomName ) {
-                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(_vf->_targetlink->GetGeometries().at(igeom)->GetTransform()), _vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
+                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(Transform()), Transform()));
                     }
                 }
             }
@@ -236,7 +236,7 @@ public:
             _ptargetbox->SetName("__visualfeedbacktest__");
             _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
             _ptargetbox->Enable(false);
-            _ptargetbox->SetTransform(_vf->_targetlink->GetTransform());
+            _ptargetbox->SetTransform(_vf->_targetlink->GetTransform() * _vf->_targetlink->GetGeometries().at(0)->GetTransform());
 
             _ikreturn.reset(new IkReturn(IKRA_Success));
             _bSamplingRays = false;
@@ -914,7 +914,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     v *= 1/fdist;
                     dReal froll = 0;
                     for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
-                        Transform t = ComputeCameraMatrix(v,fdist,froll); t.trans += vTargetLocalCenter;
+                        Transform t = ComputeCameraMatrix(v,fdist,froll);// t.trans += vTargetLocalCenter;
                         vtransforms.push_back(t);
                     }
                 }
@@ -942,10 +942,13 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
-                            itcamera->trans += vTargetLocalCenter;
+                            // itcamera->trans += vTargetLocalCenter; // step 1
                             if( bInvert ) {
-                                *itcamera = itcamera->inverse();
+                                // always true for now
+                                *itcamera = itcamera->inverse(); // wrong, only work if everything is in pattern coordinate system
                             }
+                            // Need to make sure this itcamera is always camera
+                            // in link coordinate system.
                             ++itcamera;
                         }
                     }
@@ -954,16 +957,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "conedirangle" ) {
                 Vector vconedir; dReal fangle;
                 sinput >> vconedir.x >> vconedir.y >> vconedir.z;
-                RAVELOG_WARN("vconedir.x : %f \n", vconedir.x);
-                RAVELOG_WARN("vconedir.y : %f \n", vconedir.y);
-                RAVELOG_WARN("vconedir.z : %f \n", vconedir.z);
                 fangle = RaveSqrt(vconedir.lengthsqr3());
                 if( fangle == 0 ) {
                     return false;
                 }
 
                 vconedir /= fangle;
-                RAVELOG_WARN("fangle : %f \n", fangle);
                 vconedir.w = RaveCos(fangle);
                 vconedirangles.push_back(vconedir);
             }
@@ -982,45 +981,29 @@ Visibility computation checks occlusion with other objects using ray sampling in
             vector<Transform> voldtransforms;
             voldtransforms.swap(vtransforms);
             vtransforms.reserve(voldtransforms.size());
-            int upcount = 0;
-            int downcount = 0;
-            float maxdotprod = 0;
-            int vtransformscount = 0;
+            Transform GeometryToTargetLink = _targetlink->GetGeometries().at(0)->GetTransform();
+            Vector pluszvector;
+            pluszvector.x = 0;
+            pluszvector.y = 0;
+            pluszvector.z = 1;
             FOREACH(itt,voldtransforms) {
-                Vector vCameraInTargetLink;
+                Vector vCameraToPattern;
                 if( _sensorrobot == _robot ) {
-                    vCameraInTargetLink = itt->trans-vTargetLocalCenter;
+                    vCameraToPattern = itt->trans;// - vTargetLocalCenter;
                 }
                 else {
-                    vCameraInTargetLink = itt->inverse().trans - vTargetLocalCenter;
+                    vCameraToPattern = itt->inverse().trans;// - vTargetLocalCenter; // step 0
                 }
                 bool bInCone = false;
-                FOREACH(itcone, vconedirangles) {
-                    //RAVELOG_WARN("dot product : %f \n", itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3());
-                    //RAVELOG_WARN("itcone->w : %f \n", itcone->w);
-                    if( itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3() >= 0 ) {
-                        upcount += 1;
+                FOREACH(itcone, vconedirangles) { // hard-code vcondirangle as (0,0,1)
+                    if( pluszvector.dot3(vCameraToPattern) >= itcone->w*RaveSqrt(vCameraToPattern.lengthsqr3()) ) {
+                        Vector ConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
+                        Transform PatternToGeometry = geometry::matrixFromQuat(ConeQuat);
+                        Transform CameraToTargetLink = GeometryToTargetLink * PatternToGeometry * *itt;
+                        vtransforms.push_back(CameraToTargetLink);
                     }
-                    if( itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3() < 0 ) {
-                        downcount += 1;
-                    }
-                    if( itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3() > maxdotprod ) {
-                        maxdotprod = itcone->dot3(vCameraInTargetLink) / vCameraInTargetLink.lengthsqr3();
-                    }
-                    if( itcone->dot3(vCameraInTargetLink) >= itcone->w*RaveSqrt(vCameraInTargetLink.lengthsqr3()) ) {
-                        bInCone = true;
-                        vtransformscount += 1;
-                        break;
-                    }
-                }
-                if( bInCone ) {
-                    vtransforms.push_back(*itt);
                 }
             }
-            RAVELOG_WARN("upcount : %i \n", upcount);
-            RAVELOG_WARN("downcount : %i \n", downcount);
-            RAVELOG_WARN("maxdotprod : %f \n", maxdotprod);
-            RAVELOG_WARN("vtransformscount : %i \n", vtransformscount);
         }
 
         KinBody::KinBodyStateSaver saver(_targetlink->GetParent(),KinBody::Save_LinkTransformation);
