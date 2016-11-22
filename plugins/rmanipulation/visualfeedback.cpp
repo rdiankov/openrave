@@ -181,10 +181,16 @@ public:
 
             // create the dummy box
             _vTargetLocalOBBs.reserve(1);
+
+            // We assume only one geometry named exactly _vf->_targetGeomName exists on
+            // the targetlink. This geometry name is hard-coded in
+            // handeyecalibrationtask.py in planning common. Here the
+            // calibboard geometry OBB is computed relative to the targetlink.
             if( _vf->_targetlink->IsVisible() ) {
                 for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
                     if( _vf->_targetGeomName.size() == 0 || _vf->_targetlink->GetGeometries().at(igeom)->GetName() == _vf->_targetGeomName ) {
-                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(Transform()), Transform()));
+                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(_vf->_targetlink->GetGeometries().at(igeom)->GetTransform()), _vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
+                        break;
                     }
                 }
             }
@@ -227,8 +233,6 @@ public:
                 vboxes.push_back(_abTarget);
             }
 
-            // compute the AABB of _vTargetLocalOBBs (could be different from _vf->_targetlink->ComputeLocalAABB())
-            //_abTarget = _vf->_targetlink->ComputeLocalAABB();
             // have to increase its dimensions a little!
 
             _ptargetbox = RaveCreateKinBody(_vf->_targetlink->GetParent()->GetEnv());
@@ -236,7 +240,7 @@ public:
             _ptargetbox->SetName("__visualfeedbacktest__");
             _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
             _ptargetbox->Enable(false);
-            _ptargetbox->SetTransform(_vf->_targetlink->GetTransform() * _vf->_targetlink->GetGeometries().at(0)->GetTransform());
+            _ptargetbox->SetTransform(_vf->_targetlink->GetTransform());
 
             _ikreturn.reset(new IkReturn(IKRA_Success));
             _bSamplingRays = false;
@@ -543,7 +547,6 @@ private:
 
 
         Transform _ttarget;         ///< transform of target
-        Vector _vTargetLocalCenter;
         RandomPermutationExecutor _sphereperms;
         vector<Transform> _vcameras;         ///< camera transformations in local coord systems
     };
@@ -873,8 +876,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
     bool ProcessVisibilityExtents(ostream& sout, istream& sinput)
     {
         string cmd;
-        Vector vTargetLocalCenter;
-        bool bSetTargetCenter = false;
         int numrolls=8;
         vector<Vector> vconedirangles;
         vector<Transform> vtransforms; // the camera transforms with respect to the target
@@ -885,11 +886,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
 
-            if( cmd == "localtargetcenter" ) {
-                sinput >> vTargetLocalCenter.x >> vTargetLocalCenter.y >> vTargetLocalCenter.z;
-                bSetTargetCenter = true;
-            }
-            else if( cmd == "transforms" ) {
+            if( cmd == "transforms" ) {
                 int numtrans=0;
                 sinput >> numtrans;
                 vtransforms.resize(numtrans);
@@ -900,9 +897,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
             else if( cmd == "numrolls" )
                 sinput >> numrolls;
             else if( cmd == "extents" ) {
-                if( !bSetTargetCenter && !!_targetlink ) {
-                    vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
-                }
                 int numtrans=0;
                 sinput >> numtrans;
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
@@ -914,16 +908,22 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     v *= 1/fdist;
                     dReal froll = 0;
                     for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
-                        Transform t = ComputeCameraMatrix(v,fdist,froll);// t.trans += vTargetLocalCenter;
+                        Transform t = ComputeCameraMatrix(v,fdist,froll);
                         vtransforms.push_back(t);
                     }
                 }
             }
             else if( cmd == "sphere" || cmd == "invertsphere" ) {
-                if( !bSetTargetCenter && !!_targetlink ) {
-                    vTargetLocalCenter = _targetlink->ComputeLocalAABB().pos;
-                }
-
+                // In the current system we always have the pattern on the
+                // robot, so we always use invertsphere. The sphere is first
+                // generated in the pattern frame (the calibboard geometry and
+                // the cone direction). Camera poses surround the pattern.
+                // Invertsphere produces pattern poses around the camera. After
+                // inversion, only pattern poses that are in a cone around the
+                // (0,0,1) axis of the camera (i.e., in front of the lens) will
+                // pass the InConvexHull() check. After filtering out these
+                // valid poses, we express them in the targetlink frame and
+                // pass them to the IK solver.
                 TriMesh spheremesh;
                 int spherelevel = 3, numdists = 0;
                 sinput >> spherelevel >> numdists;
@@ -932,7 +932,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 FOREACH(it,vdists) {
                     sinput >> *it;
                 }
-                bool bInvert = _sensorrobot != _robot;//cmd == "invertsphere";
+                bool bInvert = _sensorrobot != _robot; // this is to ensure that cmd == "invertsphere"
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
                 vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
                 vector<Transform>::iterator itcamera = vtransforms.begin();
@@ -942,19 +942,18 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         dReal froll = 0;
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
-                            // itcamera->trans += vTargetLocalCenter; // step 1
                             if( bInvert ) {
-                                // always true for now
-                                *itcamera = itcamera->inverse(); // wrong, only work if everything is in pattern coordinate system
+                                *itcamera = itcamera->inverse(); 
                             }
-                            // Need to make sure this itcamera is always camera
-                            // in link coordinate system.
                             ++itcamera;
                         }
                     }
                 }
             }
             else if( cmd == "conedirangle" ) {
+                // conedirangle includes both cone direction and angle info. The
+                // magnitude of conedirangle encodes the angle (i.e., radius) of the
+                // cone.
                 Vector vconedir; dReal fangle;
                 sinput >> vconedir.x >> vconedir.y >> vconedir.z;
                 fangle = RaveSqrt(vconedir.lengthsqr3());
@@ -989,13 +988,18 @@ Visibility computation checks occlusion with other objects using ray sampling in
             FOREACH(itt,voldtransforms) {
                 Vector vCameraToPattern;
                 if( _sensorrobot == _robot ) {
-                    vCameraToPattern = itt->trans;// - vTargetLocalCenter;
+                    vCameraToPattern = itt->trans;               
                 }
                 else {
-                    vCameraToPattern = itt->inverse().trans;// - vTargetLocalCenter; // step 0
+                    vCameraToPattern = itt->inverse().trans;
                 }
                 bool bInCone = false;
-                FOREACH(itcone, vconedirangles) { // hard-code vcondirangle as (0,0,1)
+
+                // We hard-code the cone direction (0,0,1) for initial visibility checking 
+                // because only patterns in front of the camera lens will pass InConvexHull(). 
+                // We then appropriately express these pattern poses in the targetlink
+                // frame, taking into account vconedirangles.
+                FOREACH(itcone, vconedirangles) { 
                     if( pluszvector.dot3(vCameraToPattern) >= itcone->w*RaveSqrt(vCameraToPattern.lengthsqr3()) ) {
                         Vector ConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
                         Transform PatternToGeometry = geometry::matrixFromQuat(ConeQuat);
@@ -1017,7 +1021,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
         FOREACHC(itcamera, vtransforms) {
             itcameracount += 1;
             Transform tCameraInTarget = *itcamera;
-            //Transform tCameraInTargetGeom = _targetlink->GetGeometries().at(0)->GetTransform().inverse() * tCameraInTarget;
             Transform tTargetInWorld;
             if( _sensorrobot == _robot ) {
                 tTargetInWorld = _sensorrobot->GetTransform() * tCameraInTarget.inverse();
@@ -1027,7 +1030,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
 
             if( pconstraintfn->InConvexHull(*itcamera) ) {
-            //if( pconstraintfn->InConvexHull(tCameraInTargetGeom) ) {
                 goodcount1 += 1;
                 if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_ttogripper, _preport) ) {
                     if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
