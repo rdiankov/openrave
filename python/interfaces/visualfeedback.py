@@ -81,12 +81,10 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         return res
-    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,invertsphere=None,conedirangles=None):
+    def ProcessVisibilityExtents(self,numrolls=None,transforms=None,extents=None,sphere=None,invertsphere=None,conedirangles=None):
         """See :ref:`module-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
-        if localtargetcenter is not None:
-            cmd += 'localtargetcenter %.15e %.15e %.15e '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
         if numrolls is not None:
             cmd += 'numrolls %d '%numrolls
         if transforms is not None:

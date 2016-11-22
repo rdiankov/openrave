@@ -238,6 +238,7 @@ public:
             _ptargetbox = RaveCreateKinBody(_vf->_targetlink->GetParent()->GetEnv());
             _ptargetbox->InitFromBoxes(vboxes,true);
             _ptargetbox->SetName("__visualfeedbacktest__");
+            RAVELOG_WARN("Adding _ptargetbox\n");
             _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
             _ptargetbox->Enable(false);
             _ptargetbox->SetTransform(_vf->_targetlink->GetTransform());
@@ -248,7 +249,9 @@ public:
                 _collisionfn = _vf->_targetlink->GetParent()->GetEnv()->RegisterCollisionCallback(boost::bind(&VisibilityConstraintFunction::_IgnoreCollisionCallback,this,_1,_2));
             }
         }
+
         virtual ~VisibilityConstraintFunction() {
+            RAVELOG_WARN("Removing _ptargetbox\n");
             _ptargetbox->GetEnv()->Remove(_ptargetbox);
         }
 
@@ -601,11 +604,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot.reset();
         _sensorrobot.reset();
         _targetlink.reset();
+        _targetGeomName.clear();
         _psensor.reset();
         _pmanip.reset();
         _pcamerageom.reset();
         _visibilitytransforms.clear();
-        _pconstraintfn.reset();
         _preport.reset();
         ModuleBase::Destroy();
     }
@@ -615,7 +618,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
         stringstream ss(args);
         string robotname;
         _fMaxVelMult=1;
-        _pconstraintfn.reset();
         ss >> robotname;
         _bIgnoreSensorCollision = false;
         string cmd;
@@ -980,7 +982,13 @@ Visibility computation checks occlusion with other objects using ray sampling in
             vector<Transform> voldtransforms;
             voldtransforms.swap(vtransforms);
             vtransforms.reserve(voldtransforms.size());
-            Transform GeometryToTargetLink = _targetlink->GetGeometries().at(0)->GetTransform();
+            Transform GeometryToTargetLink;
+            for(size_t igeom = 0; igeom < _targetlink->GetGeometries().size(); ++igeom) {
+                if( _targetGeomName.size() == 0 || _targetlink->GetGeometries().at(igeom)->GetName() == _targetGeomName ) {
+                    GeometryToTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
+                    break;
+                }
+            }
             Vector pluszvector;
             pluszvector.x = 0;
             pluszvector.y = 0;
@@ -1015,11 +1023,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
-        int itcameracount = 0;
-        int goodcount1 = 0;
-        int goodcount2 = 0;
         FOREACHC(itcamera, vtransforms) {
-            itcameracount += 1;
             Transform tCameraInTarget = *itcamera;
             Transform tTargetInWorld;
             if( _sensorrobot == _robot ) {
@@ -1030,10 +1034,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
 
             if( pconstraintfn->InConvexHull(*itcamera) ) {
-                goodcount1 += 1;
                 if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_ttogripper, _preport) ) {
                     if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
-                        goodcount2 += 1;
                         sout << *itcamera << " ";
                     }
                     else {
@@ -1045,9 +1047,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
         }
-        RAVELOG_WARN("itcameracount : %i \n", itcameracount);
-        RAVELOG_WARN("goodcount1 : %i \n", goodcount1);
-        RAVELOG_WARN("goodcount2 : %i \n", goodcount2);
 
         return true;
     }
@@ -1111,13 +1110,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
-
-        if( !_pconstraintfn ) {
-            _pconstraintfn.reset(new VisibilityConstraintFunction(shared_problem()));
-        }
+        boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         std::string errormsg;
-        sout << _pconstraintfn->IsVisible(bcheckocclusion, false, errormsg);
+        sout << pconstraintfn->IsVisible(bcheckocclusion, false, errormsg);
         return true;
     }
 
@@ -1183,7 +1179,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
+        RAVELOG_WARN("check 1");
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
+        RAVELOG_WARN("check 2");
 
         
         if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, _preport) ) {
@@ -1523,8 +1521,6 @@ protected:
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
     CollisionReportPtr _preport;
-
-    boost::shared_ptr<VisibilityConstraintFunction> _pconstraintfn;
 
     vector<Vector> _vconvexplanes;     ///< the planes defining the bounding visibility region (posive is inside). Inside camera coordinate system
     Vector _vcenterconvex;     ///< center point on the z=1 plane of the convex region
