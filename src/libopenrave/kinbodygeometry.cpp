@@ -424,7 +424,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         _vGeomData.y *= fUnitScale;
 
     }
-    else if (typestr == "trimesh")
+    else if (typestr == "trimesh" or typestr == "mesh")
     {
         type = GT_TriMesh;
         RAVE_DESERIALIZEJSON_REQUIRED(value, "mesh", mesh);
