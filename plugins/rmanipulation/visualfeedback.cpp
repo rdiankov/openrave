@@ -1179,9 +1179,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RobotBase::RobotStateSaver saver(_robot);
         _robot->SetActiveManipulator(_pmanip);
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
-        RAVELOG_WARN("check 1");
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
-        RAVELOG_WARN("check 2");
 
         
         if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, _preport) ) {
