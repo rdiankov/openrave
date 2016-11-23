@@ -2691,15 +2691,32 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
-        r._name = state[6][0];
-        r._filenamerender = state[6][1];
-        r._filenamecollision = state[6][2];
-        r._vRenderScale = state[7];
-        r._vCollisionScale = state[8];
-        r._fTransparency = boost::python::extract<float>(state[9]);
-        r._bVisible = boost::python::extract<bool>(state[10]);
-        r._bModifiable = boost::python::extract<bool>(state[11]);
-        r._mapExtraGeometries = dict(state[12]);
+
+        boost::python::extract<std::string> pyoldfilenamerender(state[6]);
+        if( pyoldfilenamerender.check() ) {
+            // old format
+            r._filenamerender = state[6];
+            r._filenamecollision = state[7];
+            r._name = boost::python::object();
+            r._vRenderScale = state[8];
+            r._vCollisionScale = state[9];
+            r._fTransparency = boost::python::extract<float>(state[10]);
+            r._bVisible = boost::python::extract<bool>(state[11]);
+            r._bModifiable = boost::python::extract<bool>(state[12]);
+            r._mapExtraGeometries = dict(state[13]);
+        }
+        else {
+            // new format
+            r._name = state[6][0];
+            r._filenamerender = state[6][1];
+            r._filenamecollision = state[6][2];
+            r._vRenderScale = state[7];
+            r._vCollisionScale = state[8];
+            r._fTransparency = boost::python::extract<float>(state[9]);
+            r._bVisible = boost::python::extract<bool>(state[10]);
+            r._bModifiable = boost::python::extract<bool>(state[11]);
+            r._mapExtraGeometries = dict(state[12]);
+        }
     }
 };
 
