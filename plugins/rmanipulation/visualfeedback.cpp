@@ -238,7 +238,6 @@ public:
             _ptargetbox = RaveCreateKinBody(_vf->_targetlink->GetParent()->GetEnv());
             _ptargetbox->InitFromBoxes(vboxes,true);
             _ptargetbox->SetName("__visualfeedbacktest__");
-            RAVELOG_WARN("Adding _ptargetbox\n");
             _ptargetbox->GetEnv()->Add(_ptargetbox,true); // need to set to visible, otherwise will be ignored
             _ptargetbox->Enable(false);
             _ptargetbox->SetTransform(_vf->_targetlink->GetTransform());
@@ -251,7 +250,6 @@ public:
         }
 
         virtual ~VisibilityConstraintFunction() {
-            RAVELOG_WARN("Removing _ptargetbox\n");
             _ptargetbox->GetEnv()->Remove(_ptargetbox);
         }
 
@@ -1181,7 +1179,6 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
-        
         if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, _preport) ) {
             RAVELOG_VERBOSE_FORMAT("endeffector is in collision, %s\n",_preport->__str__());
             std::string errormsg = _preport->__str__();
