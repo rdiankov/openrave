@@ -1181,7 +1181,12 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                             else {
                                 partialvelocity = vPassiveJointVelocities.at(vdofformat[ipartial].jointindex-_vecjoints.size()).at(vdofformat[ipartial].axis);
                             }
-                            dummyvalues[i] += veval.at(ipartial) * partialvelocity;
+                            if( ipartial < veval.size() ) {
+                                dummyvalues[i] += veval.at(ipartial) * partialvelocity;
+                            }
+                            else {
+                                RAVELOG_DEBUG_FORMAT("cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", pjoint->GetName());
+                            }
                         }
                     }
 
@@ -3259,7 +3264,7 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
                     if( vDOFVelocities.size() > 0 ) {
                         int err = pjoint->_Eval(i,1,vtempvalues,veval);
                         if( err ) {
-                            RAVELOG_WARN(str(boost::format("failed to evaluate joint %s, fparser error %d")%pjoint->GetName()%err));
+                            RAVELOG_WARN_FORMAT("failed to evaluate joint %s, fparser error %d", pjoint->GetName()%err);
                         }
                         else {
                             for(size_t ipartial = 0; ipartial < vdofformat.size(); ++ipartial) {
@@ -3270,7 +3275,12 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
                                 else {
                                     partialvelocity = vPassiveJointVelocities.at(vdofformat[ipartial].jointindex-_vecjoints.size()).at(vdofformat[ipartial].axis);
                                 }
-                                dummyvelocities[i] += veval.at(ipartial) * partialvelocity;
+                                if( ipartial < veval.size() ) {
+                                    dummyvelocities[i] += veval.at(ipartial) * partialvelocity;
+                                }
+                                else {
+                                    RAVELOG_DEBUG_FORMAT("cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", pjoint->GetName());
+                                }
                             }
                         }
                         // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.
@@ -3294,7 +3304,12 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
                                 else {
                                     partialacceleration = vPassiveJointAccelerations.at(vdofformat[ipartial].jointindex-_vecjoints.size()).at(vdofformat[ipartial].axis);
                                 }
-                                dummyaccelerations[i] += veval.at(ipartial) * partialacceleration;
+                                if( ipartial < veval.size() ) {
+                                    dummyaccelerations[i] += veval.at(ipartial) * partialacceleration;
+                                }
+                                else {
+                                    RAVELOG_DEBUG_FORMAT("cannot evaluate partial acceleration for mimic joint %s, perhaps equations don't exist", pjoint->GetName());
+                                }
                             }
                         }
                         // if joint is passive, update the stored joint values! This is necessary because joint value might be referenced in the future.

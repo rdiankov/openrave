@@ -230,6 +230,8 @@ public:
         GeometryType type; ///< the type of geometry primitive
         GeometryType& _type RAVE_DEPRECATED; ///< the type of geometry primitive
 
+        std::string _name; ///< the name of the geometry
+        
         /// \brief filename for render model (optional)
         ///
         /// Should be transformed by _t before rendering.
@@ -415,6 +417,9 @@ public:
             inline const RaveVector<float>& GetAmbientColor() const {
                 return _info.ambientColor;
             }
+            inline const std::string& GetName() const {
+                return _info._name;
+            }
 
             /// \brief returns the local collision mesh
             inline const TriMesh& GetCollisionMesh() const {
@@ -465,6 +470,9 @@ public:
             /// \brief sets a new render filename for the geometry. This does not change the collision
             virtual void SetRenderFilename(const std::string& renderfilename);
 
+            /// \brief sets the name of the geometry
+            virtual void SetName(const std::string& name);
+            
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
