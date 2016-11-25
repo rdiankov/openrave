@@ -16,6 +16,7 @@
 #ifndef OPENRAVE_BASECAMERA_H
 #define OPENRAVE_BASECAMERA_H
 
+#include <boost/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
 
 class BaseCameraSensor : public SensorBase
@@ -167,7 +168,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
+        return boost::make_shared<BaseCameraXMLReader>(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr));
     }
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {

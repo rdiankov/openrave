@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 class IdealController : public ControllerBase
 {
@@ -558,5 +559,5 @@ private:
 
 ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new IdealController(penv,sinput));
+    return boost::make_shared<IdealController>(penv, boost::ref(sinput));
 }

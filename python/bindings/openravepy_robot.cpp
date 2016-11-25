@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_kinbody.h"
+#include <boost/make_shared.hpp>
 
 namespace openravepy {
 
@@ -113,7 +114,7 @@ public:
         }
 
         PyRobotBasePtr GetRobot() {
-            return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv));
+            return boost::make_shared<PyRobotBase>(_pmanip->GetRobot(),_pyenv);
         }
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver) {
@@ -580,7 +581,7 @@ public:
         }
 
         object GetInfo() {
-            return object(PyManipulatorInfoPtr(new PyManipulatorInfo(_pmanip->GetInfo())));
+            return object(boost::make_shared<PyManipulatorInfo>(_pmanip->GetInfo()));
         }
 
         string GetStructureHash() const {
@@ -614,7 +615,7 @@ public:
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
-        return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
+        return !pmanip ? PyManipulatorPtr() : boost::make_shared<PyManipulator>(pmanip,_pyenv);
     }
 
     class PyAttachedSensorInfo
@@ -677,7 +678,7 @@ public:
             return toPyArray(_pattached->GetTransform());
         }
         PyRobotBasePtr GetRobot() const {
-            return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
+            return _pattached->GetRobot() ? PyRobotBasePtr() : boost::make_shared<PyRobotBase>(_pattached->GetRobot(), _pyenv);
         }
         object GetName() const {
             return ConvertStringToUnicode(_pattached->GetName());
@@ -700,11 +701,11 @@ public:
         }
 
         object UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo(type))));
+            return object(boost::make_shared<PyAttachedSensorInfo>(_pattached->UpdateAndGetInfo(type)));
         }
 
         object GetInfo() {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->GetInfo())));
+            return object(boost::make_shared<PyAttachedSensorInfo>(_pattached->GetInfo()));
         }
 
         string __repr__() {
@@ -730,7 +731,7 @@ public:
     typedef boost::shared_ptr<PyAttachedSensor> PyAttachedSensorPtr;
     boost::shared_ptr<PyAttachedSensor> _GetAttachedSensor(RobotBase::AttachedSensorPtr pattachedsensor)
     {
-        return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
+        return !pattachedsensor ? PyAttachedSensorPtr() : boost::make_shared<PyAttachedSensor>(pattachedsensor, _pyenv);
     }
 
     class PyGrabbedInfo
@@ -1272,7 +1273,7 @@ public:
         std::vector<KinBodyPtr> vbodies;
         _probot->GetGrabbed(vbodies);
         FOREACH(itbody, vbodies) {
-            bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,_pyenv)));
+            bodies.append(boost::make_shared<PyKinBody>(*itbody,_pyenv));
         }
         return bodies;
     }
@@ -1283,7 +1284,7 @@ public:
         std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
         _probot->GetGrabbedInfo(vgrabbedinfo);
         FOREACH(itgrabbed, vgrabbedinfo) {
-            ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+            ograbbed.append(boost::make_shared<PyGrabbedInfo>(**itgrabbed));
         }
         return ograbbed;
     }
@@ -1418,7 +1419,7 @@ RobotBasePtr GetRobot(PyRobotBasePtr pyrobot)
 
 PyInterfaceBasePtr toPyRobot(RobotBasePtr probot, PyEnvironmentBasePtr pyenv)
 {
-    return !probot ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyRobotBase(probot,pyenv));
+    return !probot ? PyInterfaceBasePtr() : boost::make_shared<PyRobotBase>(probot,pyenv);
 }
 
 RobotBase::ManipulatorPtr GetRobotManipulator(object o)
@@ -1432,7 +1433,7 @@ RobotBase::ManipulatorPtr GetRobotManipulator(object o)
 
 object toPyRobotManipulator(RobotBase::ManipulatorPtr pmanip, PyEnvironmentBasePtr pyenv)
 {
-    return !pmanip ? object() : object(PyRobotBase::PyManipulatorPtr(new PyRobotBase::PyManipulator(pmanip,pyenv)));
+    return !pmanip ? object() : object(boost::make_shared<PyRobotBase::PyManipulator>(pmanip,pyenv));
 }
 
 PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -1441,7 +1442,7 @@ PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& na
     if( !p ) {
         return PyRobotBasePtr();
     }
-    return PyRobotBasePtr(new PyRobotBase(p,pyenv));
+    return boost::make_shared<PyRobotBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)

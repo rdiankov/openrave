@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class RedirectController : public ControllerBase
 {
 public:
@@ -156,5 +158,5 @@ private:
 
 ControllerBasePtr CreateRedirectController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new RedirectController(penv,sinput));
+    return boost::make_shared<RedirectController>(penv, boost::ref(sinput));
 }

@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "colladacommon.h"
+#include <boost/make_shared.hpp>
 #include <boost/algorithm/string.hpp>
 #include <openrave/xmlreaders.h>
 
@@ -4069,7 +4070,7 @@ private:
                 if( !!tec ) {
                     daeElementRef pdata = tec->getChild("data");
                     if( !!pdata ) {
-                        pbody->SetReadableInterface(xmlid, XMLReadablePtr(new xmlreaders::StringXMLReadable(xmlid, pdata->getCharData())));
+                        pbody->SetReadableInterface(xmlid, boost::make_shared<xmlreaders::StringXMLReadable>(xmlid, pdata->getCharData()));
                     }
                 }
             }
@@ -4111,7 +4112,7 @@ private:
                 if( !!ptec ) {
                     daeElementRef ptype = ptec->getChild("interface");
                     if( !!ptype ) {
-                        return InterfaceTypePtr(new InterfaceType(ptype->getAttribute("type"), ptype->getCharData()));
+                        return boost::make_shared<InterfaceType>(ptype->getAttribute("type"), ptype->getCharData());
                     }
                 }
             }
@@ -4127,7 +4128,7 @@ private:
                 if( !!tec ) {
                     daeElementRef ptype = tec->getChild("interface");
                     if( !!ptype ) {
-                        return InterfaceTypePtr(new InterfaceType(ptype->getAttribute("type"), ptype->getCharData()));
+                        return boost::make_shared<InterfaceType>(ptype->getAttribute("type"), ptype->getCharData());
                     }
                 }
             }

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class CollisionMapRobot : public RobotBase
 {
 public:
@@ -123,7 +125,7 @@ protected:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
-        return BaseXMLReaderPtr(new CollisionMapXMLReader(boost::shared_ptr<XMLData>(),atts));
+        return boost::make_shared<CollisionMapXMLReader>(boost::shared_ptr<XMLData>(),atts);
     }
 
     CollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput) : RobotBase(penv) {

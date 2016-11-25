@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include <boost/make_shared.hpp>
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -156,7 +157,7 @@ public:
         }
         _pIkSolver->SolveAll(ikparam, filteroptions, vikreturns);
         FOREACH(itikreturn,vikreturns) {
-            pyreturns.append(object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+            pyreturns.append(object(boost::make_shared<PyIkReturn>(*itikreturn)));
         }
         return pyreturns;
     }
@@ -194,7 +195,7 @@ public:
         }
         _pIkSolver->SolveAll(ikparam, vFreeParameters, filteroptions, vikreturns);
         FOREACH(itikreturn,vikreturns) {
-            pyreturns.append(object(PyIkReturnPtr(new PyIkReturn(*itikreturn))));
+            pyreturns.append(object(boost::make_shared<PyIkReturn>(*itikreturn)));
         }
         return pyreturns;
     }
