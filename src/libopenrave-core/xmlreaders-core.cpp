@@ -36,10 +36,11 @@
 #include <boost/filesystem.hpp>
 #endif
 
-#include <boost/utility.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/thread/once.hpp>
+#include <boost/utility.hpp>
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
@@ -849,11 +850,11 @@ public:
             _plink = plink;
         }
         if( linkfilename.size() > 0 ) {
-            ParseXMLFile(BaseXMLReaderPtr(new LinkXMLReader(_plink, _pparent, AttributesList())), linkfilename);
+            ParseXMLFile(boost::make_shared<LinkXMLReader>(boost::ref(_plink), _pparent, AttributesList()), linkfilename);
         }
 
         if( !_plink ) {
-            _plink.reset(new KinBody::Link(pparent));
+            _plink = boost::make_shared<KinBody::Link>(pparent);
         }
         if( linkname.size() > 0 ) {
             _plink->_info._name = linkname;
@@ -888,7 +889,7 @@ public:
             AttributesList newatts = atts;
             newatts.push_back(make_pair("skipgeometry",_bSkipGeometry ? "1" : "0"));
             newatts.push_back(make_pair("scalegeometry",str(boost::format("%f %f %f")%_vScaleGeometry.x%_vScaleGeometry.y%_vScaleGeometry.z)));
-            _pcurreader.reset(new LinkXMLReader(_plink, _pparent, newatts));
+            _pcurreader = boost::make_shared<LinkXMLReader>(boost::ref(_plink), _pparent, newatts);
             return PE_Support;
         }
 
@@ -923,7 +924,7 @@ public:
             if( _bSkipGeometry ) {
                 return PE_Ignore;
             }
-            _pcurreader.reset(new xmlreaders::GeometryInfoReader(KinBody::GeometryInfoPtr(),atts));
+            _pcurreader = boost::make_shared<xmlreaders::GeometryInfoReader>(KinBody::GeometryInfoPtr(),atts);
             return PE_Support;
         }
 
@@ -1030,7 +1031,7 @@ public:
                             listGeometries.front()._filenamecollision = info->_filenamecollision;
                             listGeometries.front()._bVisible = info->_bVisible;
                             FOREACH(itinfo, listGeometries) {
-                                _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
+                                _plink->_vGeometries.push_back(boost::make_shared<KinBody::Link::Geometry>(_plink,*itinfo));
                             }
                         }
                         else {
@@ -1040,7 +1041,7 @@ public:
                             }
                             info->_t.trans *= _vScaleGeometry;
                             _plink->_collision.Append(info->_meshcollision, info->_t);
-                            _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*info)));
+                            _plink->_vGeometries.push_back(boost::make_shared<KinBody::Link::Geometry>(_plink,*info));
                         }
                     }
                     else {
@@ -1054,7 +1055,7 @@ public:
                         }
 
                         // call before attaching the geom
-                        KinBody::Link::GeometryPtr geom(new KinBody::Link::Geometry(_plink,*info));
+                        KinBody::Link::GeometryPtr geom = boost::make_shared<KinBody::Link::Geometry>(_plink,*info);
                         geom->_info.InitCollisionMesh();
                         FOREACH(it,info->_meshcollision.vertices) {
                             *it = tmres * *it;
@@ -1316,7 +1317,7 @@ public:
     JointXMLReader(KinBody::JointPtr& pjoint, KinBodyPtr pparent, const AttributesList &atts) : _pjoint(pjoint) {
         _bNegateJoint = false;
         _pparent = pparent;
-        _pjoint.reset(new KinBody::Joint(pparent));
+        _pjoint = boost::make_shared<KinBody::Joint>(pparent);
         _pjoint->_info._type = KinBody::JointHinge;
         _vScaleGeometry = Vector(1,1,1);
 
@@ -1944,7 +1945,7 @@ public:
     }
 
     virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr(new InterfaceXMLReadable(_pinterface));
+        return boost::make_shared<InterfaceXMLReadable>(_pinterface);
     }
 protected:
     EnvironmentBasePtr _penv;
@@ -2387,7 +2388,7 @@ public:
             }
             else if( itatt->first == "joints" ) {
                 stringstream ss(itatt->second);
-                _vjoints.reset(new std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>()));
+                _vjoints = boost::make_shared<std::vector<std::string> >((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
             else if( itatt->first == "transform" ) {
                 stringstream ss(itatt->second);
@@ -3453,39 +3454,39 @@ protected:
 
 BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList &atts)
 {
-    return BaseXMLReaderPtr(new EnvironmentXMLReader(penv,atts,false));
+    return boost::make_shared<EnvironmentXMLReader>(penv,atts,false);
 }
 
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList &atts)
 {
     switch(type) {
-    case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));
+    case PT_Planner: return boost::make_shared<DummyInterfaceXMLReader<PT_Planner> >(penv, boost::ref(pinterface),xmltag,atts);
     case PT_Robot: {
-        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
+        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(boost::ref(pinterface));
         int rootoffset = 0;
         if( !!pbody ) {
             rootoffset = (int)pbody->GetLinks().size();
         }
-        return InterfaceXMLReaderPtr(new RobotXMLReader(penv,pinterface,atts,rootoffset));
+        return boost::make_shared<RobotXMLReader>(penv,boost::ref(pinterface),atts,rootoffset);
     }
-    case PT_SensorSystem: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SensorSystem>(penv,pinterface,xmltag,atts));
-    case PT_Controller: return InterfaceXMLReaderPtr(new ControllerXMLReader(penv,pinterface,atts));
-    case PT_Module: return InterfaceXMLReaderPtr(new ModuleXMLReader(penv,pinterface,atts));
-    case PT_IkSolver: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_IkSolver>(penv,pinterface,xmltag,atts));
+    case PT_SensorSystem: return boost::make_shared<DummyInterfaceXMLReader<PT_SensorSystem> >(penv,boost::ref(pinterface),xmltag,atts);
+    case PT_Controller: return boost::make_shared<ControllerXMLReader>(penv,boost::ref(pinterface),atts);
+    case PT_Module: return boost::make_shared<ModuleXMLReader>(penv,boost::ref(pinterface),atts);
+    case PT_IkSolver: return boost::make_shared<DummyInterfaceXMLReader<PT_IkSolver> >(penv,boost::ref(pinterface),xmltag,atts);
     case PT_KinBody: {
-        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
+        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(boost::ref(pinterface));
         int rootoffset = 0;
         if( !!pbody ) {
             rootoffset = (int)pbody->GetLinks().size();
         }
-        return InterfaceXMLReaderPtr(new KinBodyXMLReader(penv,pinterface,type,atts,rootoffset));
+        return boost::make_shared<KinBodyXMLReader>(penv,boost::ref(pinterface),type,atts,rootoffset);
     }
-    case PT_PhysicsEngine: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_PhysicsEngine>(penv,pinterface,xmltag,atts));
-    case PT_Sensor: return InterfaceXMLReaderPtr(new SensorXMLReader(penv,pinterface,atts));
-    case PT_CollisionChecker: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_CollisionChecker>(penv,pinterface,xmltag,atts));
-    case PT_Trajectory: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Trajectory>(penv,pinterface,xmltag,atts));
-    case PT_Viewer: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Viewer>(penv,pinterface,xmltag,atts));
-    case PT_SpaceSampler: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_SpaceSampler>(penv,pinterface,xmltag,atts));
+    case PT_PhysicsEngine: return boost::make_shared<DummyInterfaceXMLReader<PT_PhysicsEngine> >(penv,boost::ref(pinterface),xmltag,atts);
+    case PT_Sensor: return boost::make_shared<SensorXMLReader>(penv,boost::ref(pinterface),atts);
+    case PT_CollisionChecker: return boost::make_shared<DummyInterfaceXMLReader<PT_CollisionChecker> >(penv,boost::ref(pinterface),xmltag,atts);
+    case PT_Trajectory: return boost::make_shared<DummyInterfaceXMLReader<PT_Trajectory> >(penv,boost::ref(pinterface),xmltag,atts);
+    case PT_Viewer: return boost::make_shared<DummyInterfaceXMLReader<PT_Viewer> >(penv,boost::ref(pinterface),xmltag,atts);
+    case PT_SpaceSampler: return boost::make_shared<DummyInterfaceXMLReader<PT_SpaceSampler> >(penv,boost::ref(pinterface),xmltag,atts);
     }
 
     throw openrave_exception(str(boost::format(_("could not create interface of type %d"))%type),ORE_InvalidArguments);
@@ -3591,7 +3592,7 @@ public:
     }
 
     virtual XMLReadablePtr GetReadable() {
-        return XMLReadablePtr(new InterfaceXMLReadable(_pinterface));
+        return boost::make_shared<InterfaceXMLReadable>(_pinterface);
     }
 protected:
     EnvironmentBasePtr _penv;
@@ -3602,7 +3603,7 @@ protected:
 
 BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList &atts,bool bAddToEnvironment)
 {
-    return BaseXMLReaderPtr(new OpenRAVEXMLParser::GlobalInterfaceXMLReader(penv,atts,bAddToEnvironment));
+    return boost::make_shared<OpenRAVEXMLParser::GlobalInterfaceXMLReader>(penv,atts,bAddToEnvironment);
 }
 
 } // end namespace OpenRAVEXMLParser

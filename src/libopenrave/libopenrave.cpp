@@ -16,9 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/make_shared.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <boost/utility.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/utility.hpp>
 
 #include <streambuf>
 
@@ -653,7 +654,7 @@ protected:
 
     UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
-        return UserDataPtr(new XMLReaderFunctionData(type,xmltag,fn,shared_from_this()));
+        return boost::make_shared<XMLReaderFunctionData>(type, xmltag, fn, shared_from_this());
     }
 
     const BaseXMLReaderPtr CallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
