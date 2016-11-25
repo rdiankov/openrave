@@ -412,7 +412,7 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
         }
         (*itlink)->_vGeometries.resize(pvinfos->size());
         for(size_t i = 0; i < pvinfos->size(); ++i) {
-            (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
+            (*itlink)->_vGeometries[i] = boost::make_shared<Link::Geometry>(*itlink,*pvinfos->at(i));
             if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
                 (*itlink)->_vGeometries[i]->InitCollisionMesh();
             }
@@ -478,12 +478,12 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
             throw OPENRAVE_EXCEPTION_FORMAT(_("joint %s is declared more than once"), rawinfo->_name, ORE_InvalidArguments);
         }
         setusednames.insert(rawinfo->_name);
-        JointPtr pjoint(new Joint(shared_kinbody(), rawinfo->_type));
+        JointPtr pjoint = boost::make_shared<Joint>(shared_kinbody(), rawinfo->_type);
         pjoint->_info = *rawinfo;
         JointInfo& info = pjoint->_info;
         for(size_t i = 0; i < info._vmimic.size(); ++i) {
             if( !!info._vmimic[i] ) {
-                pjoint->_vmimic[i].reset(new Mimic());
+                pjoint->_vmimic[i] = boost::make_shared<Mimic>();
                 pjoint->_vmimic[i]->_equations = info._vmimic[i]->_equations;
             }
         }
@@ -4493,7 +4493,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         // have to copy all the geometries too!
         std::vector<Link::GeometryPtr> vnewgeometries(pnewlink->_vGeometries.size());
         for(size_t igeom = 0; igeom < vnewgeometries.size(); ++igeom) {
-            vnewgeometries[igeom].reset(new Link::Geometry(pnewlink, pnewlink->_vGeometries[igeom]->_info));
+            vnewgeometries[igeom] = boost::make_shared<Link::Geometry>(pnewlink, pnewlink->_vGeometries[igeom]->_info);
         }
         pnewlink->_vGeometries = vnewgeometries;
         _veclinks.push_back(pnewlink);

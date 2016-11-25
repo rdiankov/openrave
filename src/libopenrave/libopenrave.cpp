@@ -442,7 +442,7 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _pdatabase.reset(new RaveDatabase());
+        _pdatabase = boost::make_shared<RaveDatabase>();
         if( !_pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
@@ -2199,7 +2199,7 @@ BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& na
     }
 
     // create a new parser
-    _pcurreader.reset(new DummyXMLReader(name, _parentname,_osrecord));
+    _pcurreader = boost::make_shared<DummyXMLReader>(name, _parentname,_osrecord);
     return PE_Support;
 }
 
@@ -2440,7 +2440,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
         BaseXMLReader::ProcessElement pestatus = pdata->_reader.startElement(s, listatts);
         if( pestatus != BaseXMLReader::PE_Support ) {
             // not handling, so create a temporary class to handle it
-            pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
+            pdata->_pdummy = boost::make_shared<DummyXMLReader>(s,"(libxml)");
         }
     }
 }

@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
 
+#include <boost/make_shared.hpp>
+
 namespace OpenRAVE {
 
 class MultiController : public MultiControllerBase
@@ -233,7 +235,7 @@ protected:
 
 MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return MultiControllerBasePtr(new MultiController(penv));
+    return boost::make_shared<MultiController>(penv);
 }
 
 }

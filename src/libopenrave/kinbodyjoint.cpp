@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp> // boost::trim
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 #include "fparsermulti.h"
 
@@ -1295,7 +1296,7 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
 
     // copy equations into the info
     if( !_info._vmimic.at(iaxis) ) {
-        _info._vmimic.at(iaxis).reset(new MimicInfo());
+        _info._vmimic.at(iaxis) = boost::make_shared<MimicInfo>();
     }
     _info._vmimic.at(iaxis)->_equations = mimic->_equations;
 

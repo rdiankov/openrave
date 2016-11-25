@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PySpaceSamplerBase : public PyInterfaceBase
@@ -167,7 +169,7 @@ SpaceSamplerBasePtr GetSpaceSampler(PySpaceSamplerBasePtr pyspacesampler)
 
 PyInterfaceBasePtr toPySpaceSampler(SpaceSamplerBasePtr pspacesampler, PyEnvironmentBasePtr pyenv)
 {
-    return !pspacesampler ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PySpaceSamplerBase(pspacesampler,pyenv));
+    return !pspacesampler ? PyInterfaceBasePtr() : boost::make_shared<PySpaceSamplerBase>(pspacesampler,pyenv);
 }
 
 PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -176,7 +178,7 @@ PySpaceSamplerBasePtr RaveCreateSpaceSampler(PyEnvironmentBasePtr pyenv, const s
     if( !p ) {
         return PySpaceSamplerBasePtr();
     }
-    return PySpaceSamplerBasePtr(new PySpaceSamplerBase(p,pyenv));
+    return boost::make_shared<PySpaceSamplerBase>(p, pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SampleSequenceOneReal_overloads, SampleSequenceOneReal, 0, 1)

@@ -500,7 +500,7 @@ public:
                 object omimic = _vmimic[i];
                 if( !IS_PYTHONOBJECT_NONE(omimic) ) {
                     OPENRAVE_ASSERT_OP(len(omimic),==,3);
-                    info._vmimic[i].reset(new KinBody::MimicInfo());
+                    info._vmimic[i] = boost::make_shared<KinBody::MimicInfo>();
                     for(size_t j = 0; j < 3; ++j) {
                         info._vmimic[i]->_equations.at(j) = boost::python::extract<std::string>(omimic[j]);
                     }
@@ -2018,7 +2018,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     KinBody::AccelerationMapPtr pmapExternalAccelerations;
     if( !IS_PYTHONOBJECT_NONE(oexternalaccelerations) ) {
         //externalaccelerations
-        pmapExternalAccelerations.reset(new KinBody::AccelerationMap());
+        pmapExternalAccelerations = boost::make_shared<KinBody::AccelerationMap>();
         boost::python::dict odict = (boost::python::dict)oexternalaccelerations;
         boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
         vector<dReal> v;
@@ -2508,10 +2508,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
     if( IS_PYTHONOBJECT_NONE(options) ) {
-        saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv));
+        saver = boost::make_shared<PyKinBodyStateSaver>(_pbody,_pyenv);
     }
     else {
-        saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv,options));
+        saver = boost::make_shared<PyKinBodyStateSaver>(_pbody,_pyenv,options);
     }
     return new PyStateRestoreContext<PyKinBodyStateSaverPtr, PyKinBodyPtr>(saver);
 }

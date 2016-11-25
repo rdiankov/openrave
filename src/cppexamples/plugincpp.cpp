@@ -40,6 +40,7 @@
 #include <openrave/openrave.h>
 #include <openrave/plugin.h>
 #include <boost/bind.hpp>
+#include <boost/make_shared.hpp>
 
 using namespace std;
 using namespace OpenRAVE;
@@ -90,7 +91,7 @@ public:
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     if( type == PT_Module && interfacename == "mymodule" ) {
-        return InterfaceBasePtr(new cppexamples::MyModule(penv));
+        return boost::make_shared<cppexamples::MyModule>(penv);
     }
     return InterfaceBasePtr();
 }

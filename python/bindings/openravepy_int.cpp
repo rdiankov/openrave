@@ -126,7 +126,7 @@ public:
     ViewerManager() {
         _bShutdown = false;
         _bInMain = false;
-        _threadviewer.reset(new boost::thread(boost::bind(&ViewerManager::_RunViewerThread, this)));
+        _threadviewer = boost::make_shared<boost::thread>(boost::bind(&ViewerManager::_RunViewerThread, this));
     }
 
     virtual ~ViewerManager() {
@@ -377,7 +377,7 @@ boost::shared_ptr<ViewerManager> GetViewerManager()
 {
     static boost::shared_ptr<ViewerManager> viewermanager;
     if( !viewermanager ) {
-        viewermanager.reset(new ViewerManager());
+        viewermanager = boost::make_shared<ViewerManager>();
     }
     return viewermanager;
 }
@@ -404,16 +404,16 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
         openravepy::PythonThreadSaverPtr statesaver;
         openravepy::PyEnvironmentLockSaverPtr envsaver;
         if( releasegil ) {
-            statesaver.reset(new openravepy::PythonThreadSaver());
+            statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             if( lockenv ) {
                 // GIL is already released, so use a regular environment lock
-                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, true));
+                envsaver = boost::make_shared<openravepy::PyEnvironmentLockSaver>(_pyenv, true);
             }
         }
         else {
             if( lockenv ) {
                 // try to safely lock the environment first
-                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, false));
+                envsaver = boost::make_shared<openravepy::PyEnvironmentLockSaver>(_pyenv, false);
             }
         }
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost

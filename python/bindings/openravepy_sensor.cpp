@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PyCameraIntrinsics
@@ -684,7 +686,7 @@ SensorBasePtr GetSensor(PySensorBasePtr pysensor)
 
 PyInterfaceBasePtr toPySensor(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)
 {
-    return !psensor ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PySensorBase(psensor,pyenv));
+    return !psensor ? PyInterfaceBasePtr() : boost::make_shared<PySensorBase>(psensor,pyenv);
 }
 
 object toPySensorData(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)
@@ -701,17 +703,17 @@ PySensorBasePtr RaveCreateSensor(PyEnvironmentBasePtr pyenv, const std::string& 
     if( !p ) {
         return PySensorBasePtr();
     }
-    return PySensorBasePtr(new PySensorBase(p,pyenv));
+    return boost::make_shared<PySensorBase>(p,pyenv);
 }
 
 PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr pgeom)
 {
     if( !!pgeom ) {
         if( pgeom->GetType() == SensorBase::ST_Camera ) {
-            return PySensorGeometryPtr(new PyCameraGeomData(boost::static_pointer_cast<SensorBase::CameraGeomData const>(pgeom)));
+            return boost::make_shared<PyCameraGeomData>(boost::static_pointer_cast<SensorBase::CameraGeomData const>(pgeom));
         }
         else if( pgeom->GetType() == SensorBase::ST_Laser ) {
-            return PySensorGeometryPtr(new PyLaserGeomData(boost::static_pointer_cast<SensorBase::LaserGeomData const>(pgeom)));
+            return boost::make_shared<PyLaserGeomData>(boost::static_pointer_cast<SensorBase::LaserGeomData const>(pgeom));
         }
 
     }
@@ -720,12 +722,12 @@ PySensorGeometryPtr toPySensorGeometry(SensorBase::SensorGeometryPtr pgeom)
 
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>& intrinsics)
 {
-    return PyCameraIntrinsicsPtr(new PyCameraIntrinsics(intrinsics));
+    return boost::make_shared<PyCameraIntrinsics>(intrinsics);
 }
 
 PyCameraIntrinsicsPtr toPyCameraIntrinsics(const geometry::RaveCameraIntrinsics<double>& intrinsics)
 {
-    return PyCameraIntrinsicsPtr(new PyCameraIntrinsics(intrinsics));
+    return boost::make_shared<PyCameraIntrinsics>(intrinsics);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Configure_overloads, Configure, 1, 2)
