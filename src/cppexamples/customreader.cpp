@@ -8,6 +8,8 @@
 #include <openrave/openrave.h>
 #include <openrave/plugin.h>
 
+#include <boost/make_shared.hpp>
+
 using namespace std;
 using namespace OpenRAVE;
 
@@ -75,7 +77,7 @@ protected:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
-        return BaseXMLReaderPtr(new PIDXMLReader(boost::shared_ptr<XMLData>(),atts));
+        return boost::make_shared<PIDXMLReader>(boost::shared_ptr<XMLData>(),atts);
     }
 
     CustomController(EnvironmentBasePtr penv) : ControllerBase(penv)
@@ -154,7 +156,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case PT_Controller:
         if( interfacename == "customcontroller")
-            return InterfaceBasePtr(new cppexamples::CustomController(penv));
+            return boost::make_shared<cppexamples::CustomController>(penv);
         break;
     default:
         break;

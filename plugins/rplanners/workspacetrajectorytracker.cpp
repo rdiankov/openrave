@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
 public:
@@ -432,5 +434,5 @@ protected:
 };
 
 PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new WorkspaceTrajectoryTracker(penv, sinput));
+    return boost::make_shared<WorkspaceTrajectoryTracker>(penv, boost::ref(sinput));
 }

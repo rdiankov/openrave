@@ -19,6 +19,7 @@
 
 #include <openrave/xmlreaders.h>
 #include <openrave/utils.h>
+#include <boost/make_shared.hpp>
 
 namespace openravepy {
 
@@ -81,7 +82,7 @@ object toPyXMLReadable(XMLReadablePtr p) {
     if( !p ) {
         return object();
     }
-    return object(PyXMLReadablePtr(new PyXMLReadable(p)));
+    return object(boost::make_shared<PyXMLReadable>(p));
 }
 
 namespace xmlreaders
@@ -94,7 +95,7 @@ public:
 
 PyXMLReadablePtr pyCreateStringXMLReadable(const std::string& xmlid, const std::string& data)
 {
-    return PyXMLReadablePtr(new PyXMLReadable(XMLReadablePtr(new OpenRAVE::xmlreaders::StringXMLReadable(xmlid, data))));
+    return boost::make_shared<PyXMLReadable>(boost::make_shared<OpenRAVE::xmlreaders::StringXMLReadable>(xmlid, data));
 }
 
 } // end namespace xmlreaders
@@ -524,7 +525,7 @@ public:
 
     PyConfigurationSpecificationPtr __add__(PyConfigurationSpecificationPtr r)
     {
-        return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(_spec + r->_spec));
+        return boost::make_shared<PyConfigurationSpecification>(_spec + r->_spec);
     }
 
     PyConfigurationSpecificationPtr __iadd__(PyConfigurationSpecificationPtr r)
@@ -563,7 +564,7 @@ public:
 
 PyConfigurationSpecificationPtr toPyConfigurationSpecification(const ConfigurationSpecification &spec)
 {
-    return PyConfigurationSpecificationPtr(new PyConfigurationSpecification(spec));
+    return boost::make_shared<PyConfigurationSpecification>(spec);
 }
 
 const ConfigurationSpecification& GetConfigurationSpecification(PyConfigurationSpecificationPtr p)
