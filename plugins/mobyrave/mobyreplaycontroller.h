@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 class MRDFile {
 private:
@@ -282,7 +283,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts));
+    	return boost::make_shared<ControllerPropertiesXMLReader>(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts);
     }
 
     MobyReplayController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _mrdfilename(""), _firstAction(true) {
@@ -991,5 +992,5 @@ private:
 
 ControllerBasePtr CreateMobyReplayController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new MobyReplayController(penv,sinput));
+    return boost::make_shared<MobyReplayController>(penv, boost::ref(sinput));
 }

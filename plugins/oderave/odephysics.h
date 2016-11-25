@@ -18,6 +18,8 @@
 
 #include "odespace.h"
 
+#include <boost/make_shared.hpp>
+
 class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
 {
     // ODE joint helper fns
@@ -184,7 +186,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
+        return boost::make_shared<PhysicsPropertiesXMLReader>(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts);
     }
 
     ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, "odephysics", true)) {

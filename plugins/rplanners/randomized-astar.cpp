@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class RandomizedAStarPlanner : public PlannerBase
 {
     class SimpleCostMetric
@@ -622,5 +624,5 @@ private:
 };
 
 PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new RandomizedAStarPlanner(penv, sinput));
+    return boost::make_shared<RandomizedAStarPlanner>(penv, boost::ref(sinput));
 }

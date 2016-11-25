@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
-
+#include <boost/make_shared.hpp>
 #include <Inventor/elements/SoGLCacheContextElement.h>
 #include <Inventor/actions/SoToVRML2Action.h>
 #include <Inventor/actions/SoWriteAction.h>
@@ -879,49 +879,49 @@ SoSwitch* QtCoinViewer::_createhandle()
 GraphHandlePtr QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const RaveVector<float>& color, int drawstyle)
 {
     SoSwitch* handle = _createhandle();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point));
+    EnvMessagePtr pmsg = boost::make_shared<DrawMessage>(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, color, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point);
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtCoinViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
 {
     SoSwitch* handle = _createhandle();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point, bhasalpha));
+    EnvMessagePtr pmsg = boost::make_shared<DrawMessage>(shared_viewer(), handle, ppoints, numPoints, stride, fPointSize, colors, drawstyle ? DrawMessage::DT_Sphere : DrawMessage::DT_Point, bhasalpha);
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
     SoSwitch* handle = _createhandle();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip));
+    EnvMessagePtr pmsg = boost::make_shared<DrawMessage>(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color,DrawMessage::DT_LineStrip);
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtCoinViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
     SoSwitch* handle = _createhandle();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip,false));
+    EnvMessagePtr pmsg = boost::make_shared<DrawMessage>(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineStrip,false);
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
 {
     SoSwitch* handle = _createhandle();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList));
+    EnvMessagePtr pmsg = boost::make_shared<DrawMessage>(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, color, DrawMessage::DT_LineList);
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtCoinViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
     SoSwitch* handle = _createhandle();
-    EnvMessagePtr pmsg(new DrawMessage(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList,false));
+    EnvMessagePtr pmsg = boost::make_shared<DrawMessage>(shared_viewer(), handle, ppoints, numPoints, stride, fwidth, colors, DrawMessage::DT_LineList,false);
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 class DrawArrowMessage : public QtCoinViewer::EnvMessage
@@ -953,7 +953,7 @@ GraphHandlePtr QtCoinViewer::drawarrow(const RaveVector<float>& p1, const RaveVe
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawArrowMessage(shared_viewer(), handle, p1, p2, fwidth, color));
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 class DrawBoxMessage : public QtCoinViewer::EnvMessage
@@ -984,7 +984,7 @@ GraphHandlePtr QtCoinViewer::drawbox(const RaveVector<float>& vpos, const RaveVe
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawBoxMessage(shared_viewer(), handle, vpos, vextents));
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 class DrawPlaneMessage : public QtCoinViewer::EnvMessage
@@ -1017,7 +1017,7 @@ GraphHandlePtr QtCoinViewer::drawplane(const RaveTransform<float>& tplane, const
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawPlaneMessage(shared_viewer(), handle, tplane,vextents,vtexture));
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 class DrawTriMeshMessage : public QtCoinViewer::EnvMessage
@@ -1108,7 +1108,7 @@ GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawTriMeshMessage(shared_viewer(), handle, ppoints, stride, pIndices, numTriangles, color));
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
@@ -1116,7 +1116,7 @@ GraphHandlePtr QtCoinViewer::drawtrimesh(const float* ppoints, int stride, const
     SoSwitch* handle = _createhandle();
     EnvMessagePtr pmsg(new DrawTriMeshColorMessage(shared_viewer(), handle, ppoints, stride, pIndices, numTriangles, colors));
     pmsg->callerexecute(false);
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 class CloseGraphMessage : public QtCoinViewer::EnvMessage

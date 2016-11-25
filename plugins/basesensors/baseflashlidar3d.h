@@ -16,6 +16,8 @@
 #ifndef OPENRAVE_BASEFLASHLIDAR_H
 #define OPENRAVE_BASEFLASHLIDAR_H
 
+#include <boost/make_shared.hpp>
+
 /// Flash LIDAR - sends laser points given a camera projection matrix
 class BaseFlashLidar3DSensor : public SensorBase
 {
@@ -123,7 +125,7 @@ public:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(boost::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr)));
+        return boost::make_shared<BaseFlashLidar3DXMLReader>(boost::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr));
     }
 
     BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
@@ -313,7 +315,7 @@ public:
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Laser) ) {
-            return SensorDataPtr(new LaserSensorData());
+            return boost::make_shared<LaserSensorData>();
         }
         return SensorDataPtr();
     }

@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "trajectoryretimer.h"
 
+#include <boost/make_shared.hpp>
+
 namespace rplanners {
 
 class LinearTrajectoryRetimer : public TrajectoryRetimer
@@ -243,7 +245,7 @@ protected:
 
 
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new LinearTrajectoryRetimer(penv, sinput));
+    return boost::make_shared<LinearTrajectoryRetimer>(penv, boost::ref(sinput));
 }
 
 } // end namespace rplanners

@@ -22,7 +22,7 @@ using namespace OpenRAVE;
 // create moby physics shared pointer
 PhysicsEngineBasePtr CreateMobyPhysics(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PhysicsEngineBasePtr(new MobyPhysics(penv,sinput));
+    return boost::make_shared<MobyPhysics>(penv, boost::ref(sinput));
 }
 
 static std::list< OpenRAVE::UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object
@@ -46,10 +46,10 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         break;
     case OpenRAVE::PT_Controller:
         if( interfacename == "moby") {
-            return InterfaceBasePtr(new MobyController(penv,sinput));
+            return boost::make_shared<MobyController>(penv, boost::ref(sinput));
         }
         else if( interfacename == "mobyreplay") {
-            return InterfaceBasePtr(new MobyReplayController(penv,sinput));
+            return boost::make_shared<MobyReplayController>(penv, boost::ref(sinput));
         }
         break;
     default:

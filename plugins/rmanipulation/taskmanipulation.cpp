@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/make_shared.hpp>
+
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL
@@ -1847,5 +1849,5 @@ protected:
 };
 
 ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new TaskManipulation(penv));
+    return boost::make_shared<TaskManipulation>(penv);
 }

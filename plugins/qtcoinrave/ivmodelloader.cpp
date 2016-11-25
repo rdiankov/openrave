@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "qtcoin.h"
 #include <boost/algorithm/string.hpp>
-
+#include <boost/make_shared.hpp>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -235,5 +235,5 @@ public:
 };
 
 ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new IvModelLoader(penv));
+    return boost::make_shared<IvModelLoader>(penv);
 }

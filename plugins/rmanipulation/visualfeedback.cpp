@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/make_shared.hpp>
+
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
 /// allowableoutliers - specifies the % of allowable outliying rays
@@ -1432,5 +1434,5 @@ protected:
 };
 
 ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new VisualFeedback(penv));
+    return boost::make_shared<VisualFeedback>(penv);
 }

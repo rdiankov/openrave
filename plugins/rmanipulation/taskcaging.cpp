@@ -19,6 +19,8 @@
 // Manipulation Planning with Caging Grasps. IEEE-RAS Intl. Conf. on Humanoid Robots, December 2008.
 #include "commonmanipulation.h"
 
+#include <boost/make_shared.hpp>
+
 class TaskCaging : public ModuleBase
 {
 public:
@@ -1932,5 +1934,5 @@ BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::FINDGRASPDATA)
 #endif
 
 ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new TaskCaging(penv));
+    return boost::make_shared<TaskCaging>(penv);
 }

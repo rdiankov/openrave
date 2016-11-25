@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 #include <fstream>
-
+#include <boost/make_shared.hpp>
 #include <openrave/planningutils.h>
 
 #include "manipconstraints.h"
@@ -2545,7 +2545,7 @@ protected:
 
 PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PlannerBasePtr(new ParabolicSmoother(penv,sinput));
+    return boost::make_shared<ParabolicSmoother>(penv, boost::ref(sinput));
 }
 
 } // using namespace rplanners

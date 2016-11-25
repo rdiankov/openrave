@@ -16,6 +16,8 @@
 // 2013 Modifications: Theodoros Stouraitis and Praveen Ramanujam
 #include "bulletspace.h"
 
+#include <boost/make_shared.hpp>
+
 class BulletPhysicsEngine : public PhysicsEngineBase
 {
     class PhysicsFilterCallback : public OpenRAVEFilterCallback
@@ -184,7 +186,7 @@ public:
     
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts));
+    	return boost::make_shared<PhysicsPropertiesXMLReader>(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts);
     }
 
     BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
@@ -725,5 +727,5 @@ private:
 
 PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PhysicsEngineBasePtr(new BulletPhysicsEngine(penv,sinput));
+    return boost::make_shared<BulletPhysicsEngine>(penv, boost::ref(sinput));
 }

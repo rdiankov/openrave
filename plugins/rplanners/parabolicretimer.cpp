@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "trajectoryretimer.h"
+#include <boost/make_shared.hpp>
 #include <openrave/planningutils.h>
 
 #include "ParabolicPathSmooth/ParabolicRamp.h"
@@ -917,7 +918,7 @@ protected:
 };
 
 PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new ParabolicTrajectoryRetimer(penv, sinput));
+    return boost::make_shared<ParabolicTrajectoryRetimer>(penv, boost::ref(sinput));
 }
 
 } // end namespace rplanners

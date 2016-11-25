@@ -1935,9 +1935,9 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
 {
     // try to acquire the lock
 #if BOOST_VERSION >= 103500
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = boost::make_shared<EnvironmentMutex::scoped_try_lock>(boost::ref(GetEnv()->GetMutex()), boost::defer_lock_t());
 #else
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = boost::make_shared<EnvironmentMutex::scoped_try_lock>(boost::ref(GetEnv()->GetMutex()), false);
 #endif
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {

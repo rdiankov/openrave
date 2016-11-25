@@ -18,6 +18,7 @@
 #if defined(HAVE_X11_XLIB_H) && defined(Q_WS_X11)
 #include <X11/Xlib.h>
 #endif
+#include <boost/make_shared.hpp>
 
 #include <QApplication>
 
@@ -50,10 +51,10 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             boost::mutex::scoped_lock lock(g_mutexsoqt);
             EnsureSoQtInit();
             //SoDBWriteLock dblock;
-            return InterfaceBasePtr(new QtCoinViewer(penv, sinput));
+            return boost::make_shared<QtCoinViewer>(penv, boost::ref(sinput));
         }
         else if( interfacename == "qtcameraviewer" ) {
-            return InterfaceBasePtr(new QtCameraViewer(penv,sinput));
+            return boost::make_shared<QtCameraViewer>(penv, boost::ref(sinput));
         }
         break;
     case PT_Module:

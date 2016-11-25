@@ -16,6 +16,8 @@
 #ifndef OPENRAVE_TRAJECTORY_RETIMER
 #define OPENRAVE_TRAJECTORY_RETIMER
 
+#include <boost/make_shared.hpp>
+
 #include "openraveplugindefs.h"
 #include "manipconstraints.h"
 
@@ -423,7 +425,7 @@ protected:
 
     /// \brief createa s group info
     virtual GroupInfoPtr CreateGroupInfo(int degree, const ConfigurationSpecification& spec, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) {
-        return GroupInfoPtr(new GroupInfo(degree, gpos, gvel));
+        return boost::make_shared<GroupInfo>(degree, gpos, gvel);
     }
     /// \brief resets any cached data in the group info
     virtual void ResetCachedGroupInfo(GroupInfoPtr g) {

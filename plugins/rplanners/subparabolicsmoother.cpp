@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 #include <fstream>
-
+#include <boost/make_shared.hpp>
 #include <openrave/planningutils.h>
 
 #include "ParabolicPathSmooth/DynamicPath.h"
@@ -458,7 +458,7 @@ protected:
 
 PlannerBasePtr CreateSubParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PlannerBasePtr(new SubParabolicSmoother(penv,sinput));
+    return boost::make_shared<SubParabolicSmoother>(penv, boost::ref(sinput));
 }
 
 #ifdef RAVE_REGISTER_BOOST
