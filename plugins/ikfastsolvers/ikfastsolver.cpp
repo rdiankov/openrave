@@ -18,6 +18,7 @@
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
@@ -2012,11 +2013,11 @@ protected:
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
 
 {
-    return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc));
+    return boost::make_shared<IkFastSolver<float> >(penv,sinput,ikfunctions,vfreeinc);
 }
 #endif
 
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
 {
-    return IkSolverBasePtr(new IkFastSolver<double>(penv,sinput,ikfunctions,vfreeinc));
+    return boost::make_shared<IkFastSolver<double> >(penv,sinput,ikfunctions,vfreeinc);
 }

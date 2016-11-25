@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
+#include <boost/make_shared.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 
@@ -1704,5 +1705,5 @@ protected:
 
 ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ModuleBasePtr(new GrasperModule(penv,sinput));
+    return boost::make_shared<GrasperModule>(penv, boost::ref(sinput));
 }

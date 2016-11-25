@@ -271,7 +271,7 @@ protected:
 
 RobotBasePtr CreateCollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return RobotBasePtr(new CollisionMapRobot(penv,sinput));
+    return boost::make_shared<CollisionMapRobot>(penv, boost::ref(sinput));
 }
 
 void RegisterCollisionMapRobotReaders(std::list< UserDataPtr >& listRegisteredReaders)

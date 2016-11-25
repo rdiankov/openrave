@@ -16,6 +16,7 @@
 #include "plugindefs.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 #ifdef Boost_IOSTREAMS_FOUND
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -1436,7 +1437,7 @@ public:
 
 ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ModuleBasePtr(new IkFastModule(penv,sinput));
+    return boost::make_shared<IkFastModule>(penv, boost::ref(sinput));
 }
 
 void DestroyIkFastLibraries() {

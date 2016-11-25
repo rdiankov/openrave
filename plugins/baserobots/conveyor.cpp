@@ -187,7 +187,7 @@ protected:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
-        return BaseXMLReaderPtr(new ConveyorXMLReader(ConveyorInfoPtr(),RaveInterfaceCast<RobotBase>(ptr), atts));
+        return boost::make_shared<ConveyorXMLReader>(ConveyorInfoPtr(),RaveInterfaceCast<RobotBase>(ptr), atts);
     }
 
     Conveyor(EnvironmentBasePtr penv, std::istream& is) : RobotBase(penv) {

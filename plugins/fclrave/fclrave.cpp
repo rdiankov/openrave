@@ -17,13 +17,14 @@
 
 #include "fclcollision.h"
 
+#include <boost/make_shared.hpp>
 #include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
 
     if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-        return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
+        return boost::make_shared<fclrave::FCLCollisionChecker>(penv, boost::ref(sinput));
     }
 
     return InterfaceBasePtr();

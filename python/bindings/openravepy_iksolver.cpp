@@ -202,7 +202,7 @@ public:
 
     PyIkReturnPtr CallFilters(object oparam)
     {
-        PyIkReturnPtr pyreturn(new PyIkReturn(IKRA_Reject));
+        PyIkReturnPtr pyreturn = boost::make_shared<PyIkReturn>(IKRA_Reject);
         IkReturnPtr preturn(&pyreturn->_ret, utils::null_deleter());
         IkParameterization ikparam;
         if( !ExtractIkParameterization(oparam,ikparam) ) {
@@ -237,7 +237,7 @@ bool ExtractIkReturn(object o, IkReturn& ikfr)
 
 object toPyIkReturn(const IkReturn& ret)
 {
-    return object(PyIkReturnPtr(new PyIkReturn(ret)));
+    return object(boost::make_shared<PyIkReturn>(ret));
 }
 
 IkSolverBasePtr GetIkSolver(PyIkSolverBasePtr pyIkSolver)
@@ -247,7 +247,7 @@ IkSolverBasePtr GetIkSolver(PyIkSolverBasePtr pyIkSolver)
 
 PyInterfaceBasePtr toPyIkSolver(IkSolverBasePtr pIkSolver, PyEnvironmentBasePtr pyenv)
 {
-    return !pIkSolver ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyIkSolverBase(pIkSolver,pyenv));
+    return !pIkSolver ? PyInterfaceBasePtr() : boost::make_shared<PyIkSolverBase>(pIkSolver,pyenv);
 }
 
 PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -256,7 +256,7 @@ PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::stri
     if( !p ) {
         return PyIkSolverBasePtr();
     }
-    return PyIkSolverBasePtr(new PyIkSolverBase(p,pyenv));
+    return boost::make_shared<PyIkSolverBase>(p,pyenv);
 }
 
 void init_openravepy_iksolver()
