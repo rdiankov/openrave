@@ -955,6 +955,19 @@ void KinBody::Joint::_ComputeInternalInformation(LinkPtr plink0, LinkPtr plink1,
             _tRightNoOffset = toffset * _tRightNoOffset;
             _tRight = toffset * _tRight;
         }
+
+        // when the joint is revolute and vcurrentvalues[0] is non-zero, then there can be redundancy in where the rotation can be shifted (whether in the left or right transform). Have to shift as much of the redundant rotation onto one side.
+        if( GetDOF() == 1 && _info.type == JointHinge && RaveFabs(vcurrentvalues[0]) > 0 ) {
+            // the axis should be (0,0,1)
+            dReal angle = RaveAtan2(-_tRightNoOffset.rot.w*_vaxes[0].z-_tRightNoOffset.rot.z*_vaxes[0].y-_tRightNoOffset.rot.y*_vaxes[0].x,_tRightNoOffset.rot.x);
+            dReal sinangle2 = RaveSin(angle), cosangle2 = RaveCos(angle);
+            Transform tnormalizing(Vector(cosangle2,_vaxes[0].x*sinangle2,_vaxes[0].y*sinangle2,_vaxes[0].z*sinangle2), Vector());
+            Transform tnormalizinginv(Vector(cosangle2,-_vaxes[0].x*sinangle2,-_vaxes[0].y*sinangle2,-_vaxes[0].z*sinangle2), Vector());
+            _tRight = tnormalizing * _tRight;
+            _tRightNoOffset = tnormalizing * _tRightNoOffset;
+            _tLeft = _tLeft * tnormalizinginv;
+            _tLeftNoOffset = _tLeftNoOffset * tnormalizinginv;
+        }
     }
     _tinvRight = _tRight.inverse();
     _tinvLeft = _tLeft.inverse();
