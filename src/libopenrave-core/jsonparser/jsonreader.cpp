@@ -205,8 +205,14 @@ namespace OpenRAVE {
             if (colonindex != std::string::npos) {
                 // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
                 scheme = path.substr(0, colonindex);
-                // path (mujin:/ask.mujin.json) should skip slash
-                path = path.substr(colonindex + 2);
+
+                if(scheme == "file"){
+                    path = path.substr(colonindex + 1);
+                }
+                else{
+                    // path (mujin:/ask.mujin.json) should skip slash
+                    path = path.substr(colonindex + 2);    
+                }
             }
 
         }

@@ -430,10 +430,6 @@ public:
                 return _info;
             }
 
-            inline const std::string& GetName() const {
-                return _info.name;
-            }
-
             virtual bool InitCollisionMesh(float fTessellation=1);
 
             /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
