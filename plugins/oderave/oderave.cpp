@@ -18,6 +18,7 @@
 #include "odephysics.h"
 #include "odecontroller.h"
 
+#include <boost/make_shared.hpp>
 #include <openrave/plugin.h>
 
 static std::list< OpenRAVE::UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object destruction from taking precedence
@@ -31,15 +32,15 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "ode")
-            return InterfaceBasePtr(new ODECollisionChecker(penv));
+            return boost::make_shared<ODECollisionChecker>(penv);
         break;
     case OpenRAVE::PT_PhysicsEngine:
         if( interfacename == "ode" )
-            return InterfaceBasePtr(new ODEPhysicsEngine(penv));
+            return boost::make_shared<ODEPhysicsEngine>(penv);
         break;
     case OpenRAVE::PT_Controller:
         if( interfacename == "odevelocity")
-            return InterfaceBasePtr(new ODEVelocityController(penv));
+            return boost::make_shared<ODEVelocityController>(penv);
         break;
     default:
         break;

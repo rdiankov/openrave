@@ -14,6 +14,7 @@
 #include "qtosgviewer.h"
 
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 #include <iostream>
 
 #include <osg/ArgumentParser>
@@ -1416,7 +1417,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int stride, float fPointSize, const float* colors, int drawstyle, bool bhasalpha)
@@ -1437,7 +1438,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     }
 
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
@@ -1452,7 +1453,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
@@ -1467,7 +1468,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
     }
 
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const RaveVector<float>& color)
@@ -1481,7 +1482,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
 {
@@ -1496,7 +1497,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     }
 
     _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
@@ -1612,7 +1613,7 @@ GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const 
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 void QtOSGViewer::_DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency)
@@ -1677,7 +1678,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     (*osgcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
 
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors)
@@ -1712,7 +1713,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
 
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
-    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+    return boost::make_shared<PrivateGraphHandle>(shared_viewer(), handle);
 }
 
 void QtOSGViewer::_Deselect()
@@ -2083,21 +2084,21 @@ void QtOSGViewer::_SetGraphShow(OSGSwitchPtr handle, bool bShow)
 
 UserDataPtr QtOSGViewer::RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback)
 {
-    ItemSelectionCallbackDataPtr pdata(new ItemSelectionCallbackData(fncallback,shared_viewer()));
+    ItemSelectionCallbackDataPtr pdata = boost::make_shared<ItemSelectionCallbackData>(fncallback,shared_viewer());
     pdata->_iterator = _listRegisteredItemSelectionCallbacks.insert(_listRegisteredItemSelectionCallbacks.end(),pdata);
     return pdata;
 }
 
 UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback)
 {
-    ViewerThreadCallbackDataPtr pdata(new ViewerThreadCallbackData(fncallback,shared_viewer()));
+    ViewerThreadCallbackDataPtr pdata = boost::make_shared<ViewerThreadCallbackData>(fncallback,shared_viewer());
     pdata->_iterator = _listRegisteredViewerThreadCallbacks.insert(_listRegisteredViewerThreadCallbacks.end(),pdata);
     return pdata;
 }
 
 ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ViewerBasePtr(new QtOSGViewer(penv, sinput));
+    return boost::make_shared<QtOSGViewer>(penv, boost::ref(sinput));
 }
 
 } // end namespace qtosgviewer

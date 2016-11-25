@@ -911,7 +911,7 @@ protected:
 
 SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return boost::make_shared<ConfigurationJitterer>(penv, sinput);
+    return boost::make_shared<ConfigurationJitterer>(penv, boost::ref(sinput));
 }
 
 }

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/make_shared.hpp>
+
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
@@ -2468,7 +2470,7 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     _vecSensors.clear();
     FOREACHC(itsensor, r->_vecSensors) {
-        _vecSensors.push_back(AttachedSensorPtr(new AttachedSensor(shared_robot(),**itsensor,cloningoptions)));
+        _vecSensors.push_back(boost::make_shared<AttachedSensor>(shared_robot(),**itsensor,cloningoptions));
     }
     _UpdateAttachedSensors();
 

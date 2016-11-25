@@ -17,6 +17,7 @@
 #include "openraveplugindefs.h"
 #include "rrt.h"
 
+#include <boost/make_shared.hpp>
 #include <openrave/plugin.h>
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput);
@@ -43,17 +44,17 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return CreateRandomizedAStarPlanner(penv,sinput);
         }
         else if( interfacename == "birrt") {
-            return InterfaceBasePtr(new BirrtPlanner(penv));
+            return boost::make_shared<BirrtPlanner>(penv);
         }
         else if( interfacename == "rbirrt") {
             RAVELOG_WARN("rBiRRT is deprecated, use BiRRT\n");
-            return InterfaceBasePtr(new BirrtPlanner(penv));
+            return boost::make_shared<BirrtPlanner>(penv);
         }
         else if( interfacename == "basicrrt") {
-            return InterfaceBasePtr(new BasicRrtPlanner(penv));
+            return boost::make_shared<BasicRrtPlanner>(penv);
         }
         else if( interfacename == "explorationrrt" ) {
-            return InterfaceBasePtr(new ExplorationPlanner(penv));
+            return boost::make_shared<ExplorationPlanner>(penv);
         }
         else if( interfacename == "graspgradient" ) {
             return CreateGraspGradientPlanner(penv,sinput);

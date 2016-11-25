@@ -16,11 +16,11 @@
 #define __STDC_CONSTANT_MACROS
 #include "plugindefs.h"
 
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
-#include <boost/version.hpp>
-
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/thread/condition.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/version.hpp>
 
 #ifdef _WIN32
 
@@ -902,7 +902,7 @@ protected:
 };
 
 ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) {
-    return ModuleBasePtr(new ViewerRecorder(penv,sinput));
+    return boost::make_shared<ViewerRecorder>(penv, boost::ref(sinput));
 }
 void DestroyViewerRecordingStaticResources()
 {

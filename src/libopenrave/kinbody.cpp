@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <boost/make_shared.hpp>
 
 // used for functions that are also used internally
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
@@ -4172,7 +4173,7 @@ void KinBody::_ComputeInternalInformation()
         if( (*itlink)->_info._mapExtraGeometries.find(selfgroup) == (*itlink)->_info._mapExtraGeometries.end() ) {
             std::vector<GeometryInfoPtr> vgeoms;
             FOREACH(itgeom, (*itlink)->_vGeometries) {
-                vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));
+                vgeoms.push_back(boost::make_shared<GeometryInfo>((*itgeom)->GetInfo()));
             }
             (*itlink)->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
         }

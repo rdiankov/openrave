@@ -16,6 +16,7 @@
 #include "commonmanipulation.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/make_shared.hpp>
 
 class BaseManipulation : public ModuleBase
 {
@@ -1122,5 +1123,5 @@ protected:
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new BaseManipulation(penv));
+    return boost::make_shared<BaseManipulation>(penv);
 }

@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PyTrajectoryBase : public PyInterfaceBase
@@ -192,7 +194,7 @@ public:
     {
         std::stringstream ss(s);
         InterfaceBasePtr p = _ptrajectory->deserialize(ss);
-        return PyTrajectoryBasePtr(new PyTrajectoryBase(RaveInterfaceCast<TrajectoryBase>(p),_pyenv));
+        return boost::make_shared<PyTrajectoryBase>(RaveInterfaceCast<TrajectoryBase>(p),_pyenv);
     }
 
     object serialize(object ooptions=object())
@@ -235,7 +237,7 @@ TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr pytrajectory)
 
 PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr ptrajectory, PyEnvironmentBasePtr pyenv)
 {
-    return !ptrajectory ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyTrajectoryBase(ptrajectory,pyenv));
+    return !ptrajectory ? PyInterfaceBasePtr() : boost::make_shared<PyTrajectoryBase>(ptrajectory,pyenv);
 }
 
 object toPyTrajectory(TrajectoryBasePtr ptraj, object opyenv)
@@ -258,7 +260,7 @@ PyTrajectoryBasePtr RaveCreateTrajectory(PyEnvironmentBasePtr pyenv, const std::
     if( !p ) {
         return PyTrajectoryBasePtr();
     }
-    return PyTrajectoryBasePtr(new PyTrajectoryBase(p,pyenv));
+    return boost::make_shared<PyTrajectoryBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(serialize_overloads, serialize, 0, 1)

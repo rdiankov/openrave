@@ -2013,11 +2013,11 @@ protected:
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
 
 {
-    return boost::make_shared<IkFastSolver<float> >(penv,sinput,ikfunctions,vfreeinc);
+    return boost::make_shared<IkFastSolver<float> >(penv, boost::ref(sinput),ikfunctions,vfreeinc);
 }
 #endif
 
 IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
 {
-    return boost::make_shared<IkFastSolver<double> >(penv,sinput,ikfunctions,vfreeinc);
+    return boost::make_shared<IkFastSolver<double> >(penv, boost::ref(sinput),ikfunctions,vfreeinc);
 }

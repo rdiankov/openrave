@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PyCollisionReport
@@ -591,7 +593,7 @@ CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr pyCollisio
 
 PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr pCollisionChecker, PyEnvironmentBasePtr pyenv)
 {
-    return !pCollisionChecker ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyCollisionCheckerBase(pCollisionChecker,pyenv));
+    return !pCollisionChecker ? PyInterfaceBasePtr() : boost::make_shared<PyCollisionCheckerBase>(pCollisionChecker,pyenv);
 }
 
 CollisionReportPtr GetCollisionReport(object o)
@@ -642,7 +644,7 @@ PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv,
     if( !p ) {
         return PyCollisionCheckerBasePtr();
     }
-    return PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(p,pyenv));
+    return boost::make_shared<PyCollisionCheckerBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
