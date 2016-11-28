@@ -95,7 +95,7 @@ bool SampleProjectedOBBWithTest(const OBB& obb, dReal delta, const boost::functi
             int numsteps = (int)(ftotalen/delta);
             Vector vdelta = (vcur2-vcur1)*(1.0f/numsteps), vcur = vcur1;
             for(int k = 0; k <= numsteps; ++k, vcur += vdelta) {
-                
+
                 if( !testfn(vcur) ) {
                     if( nallowableoutliers-- <= 0 )
                         return false;
@@ -295,7 +295,7 @@ public:
                 if( bOutputError ) {
                     errormsg = str(boost::format("{\"type\":\"outofcamera\""));
                 }
-                
+
                 return false;
             }
 
@@ -356,9 +356,10 @@ public:
             std::string occludingbodyandlinkname = "";
             FOREACH(itobb,_vTargetLocalOBBs) {  // itobb is in targetlink coordinates
                 OBB cameraobb = geometry::TransformOBB(tCameraInTargetinv,*itobb);
+                // SampleProjectedOBBWithTest usually quits when first occlusion is found, so just passing occludingbodyandlinkname to _TestRay should return the initial occluding part.
                 if( !SampleProjectedOBBWithTest(cameraobb, _vf->_fSampleRayDensity, boost::bind(&VisibilityConstraintFunction::_TestRay, this, _1, boost::ref(tworldcamera), boost::ref(occludingbodyandlinkname)),_vf->_fAllowableOcclusion) ) {
                     RAVELOG_VERBOSE("box is occluded\n");
-                    errormsg = str(boost::format("{\"type\":\"pattern occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
+                    errormsg = str(boost::format("{\"type\":\"pattern_occluded\", \"bodylinkname\":\"%s\"}")%occludingbodyandlinkname);
                     return true;
                 }
             }
@@ -398,6 +399,9 @@ public:
 
 private:
         /// \brief return true if not occluded by any other target (ray hits the intended target box)
+        ///
+        /// \brief v is in camera coordinate system
+        /// \brief tcamera is the camera in the world coordinate system
         bool _TestRay(const Vector& v, const TransformMatrix& tcamera, std::string& errormsg)
         {
             RAY r;
@@ -431,7 +435,7 @@ private:
                     if( _report->contacts.size() > 0 ) {
                         // transform the contact point into the target link coordinate system
                         Transform ttarget = _vf->_targetlink->GetTransform();
-                        Vector vintargetlink = ttarget.inverse()*_report->contacts.at(0).pos; 
+                        Vector vintargetlink = ttarget.inverse()*_report->contacts.at(0).pos;
                         // if vertex is inside any of the OBBs, then return true. Note: assumes that the original geometries are a box
                         bool bInside = false;
                         FOREACH(itobb, _vTargetLocalOBBs) {
@@ -446,6 +450,7 @@ private:
                     }
                     else {
                         RAVELOG_WARN("contact link is the target link, however the count of contacting points is 0.");
+                        errormsg = "nocontacts";
                         return false;
                     }
                 }
@@ -459,6 +464,7 @@ private:
             }
             else {
                 RAVELOG_WARN("ray did not return any contacts, so have to reject\n");
+                errormsg = "norayintersection";
                 return false;
             }
         }
@@ -577,7 +583,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         "Processes the visibility extents of the target and initializes the camera transforms.\n\
 \n\
 :param sphere: Sets the transforms along a sphere density and the distances\n\
-:param conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect.");
+:param conedirangle: Prunes the currently set transforms along a cone centered at the local target center and directed towards conedirangle with a half-angle of ``|conedirangle|``. Can specify multiple cones for an OR effect. The cone represents the visibility of the pattern, should not represent the field of view of the camera.");
         RegisterCommand("SetCameraTransforms",boost::bind(&VisualFeedback::SetCameraTransforms,this,_1,_2),
                         "Sets new camera transformations. Can optionally choose a minimum distance from all planes of the camera convex hull (includes gripper mask)");
         RegisterCommand("ComputeVisibility",boost::bind(&VisualFeedback::ComputeVisibility,this,_1,_2),
@@ -692,7 +698,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 if( !ptarget ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("could not find target %s", targetname, ORE_InvalidArguments);
                 }
-                
+
                 _targetlink = ptarget->GetLink(targetlinkname);
                 if( !_targetlink ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("could not find target link %s of target %s", targetname%targetlinkname, ORE_InvalidArguments);
@@ -781,7 +787,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         if( !psensor ) {
             return false;
         }
-        
+
         if( !psensor->GetSensor() ) {
             RAVELOG_WARN(str(boost::format("attached sensor %s does not have sensor interface\n")%psensor->GetName()));
             return false;
@@ -878,7 +884,9 @@ Visibility computation checks occlusion with other objects using ray sampling in
         string cmd;
         int numrolls=8;
         vector<Vector> vconedirangles;
-        vector<Transform> vtransforms; // the camera transforms with respect to the target
+        //vector<Transform> vtransforms; // the camera transforms with respect to the target link
+        std::vector<Transform> vCamerasInPatternCoord; // cameras with respect to the pattern coordinate system (usually the pattern face is in +z)
+        std::vector<Transform> vCamerasInTargetLinkCoord; // cameras with respect to the target link coordinate system. A pattern can be anywhere in the link and depends on geometry transform and cone dir angle.
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -889,8 +897,8 @@ Visibility computation checks occlusion with other objects using ray sampling in
             if( cmd == "transforms" ) {
                 int numtrans=0;
                 sinput >> numtrans;
-                vtransforms.resize(numtrans);
-                FOREACH(it,vtransforms) {
+                vCamerasInPatternCoord.resize(numtrans);
+                FOREACH(it,vCamerasInPatternCoord) {
                     sinput >> *it;
                 }
             }
@@ -900,7 +908,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 int numtrans=0;
                 sinput >> numtrans;
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
-                vtransforms.resize(0); vtransforms.reserve(numtrans*numrolls);
+                vCamerasInPatternCoord.resize(0); vCamerasInPatternCoord.reserve(numtrans*numrolls);
                 for(int i = 0; i < numtrans; ++i) {
                     Vector v;
                     sinput >> v.x >> v.y >> v.z;
@@ -909,11 +917,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
                     dReal froll = 0;
                     for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                         Transform t = ComputeCameraMatrix(v,fdist,froll);
-                        vtransforms.push_back(t);
+                        vCamerasInPatternCoord.push_back(t);
                     }
                 }
             }
-            else if( cmd == "sphere" || cmd == "invertsphere" ) {
+            else if( cmd == "sphere" ) {
                 // In the current system we always have the pattern on the
                 // robot, so we always use invertsphere. The sphere is first
                 // generated in the pattern frame (the calibboard geometry and
@@ -932,10 +940,10 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 FOREACH(it,vdists) {
                     sinput >> *it;
                 }
-                bool bInvert = _sensorrobot != _robot; // this is to ensure that cmd == "invertsphere"
+                bool bInvert = _sensorrobot != _robot; // if True, then invert sampled transforms of the sphere.
                 dReal deltaroll = PI*2.0f/(dReal)numrolls;
-                vtransforms.resize(spheremesh.vertices.size()*numdists*numrolls);
-                vector<Transform>::iterator itcamera = vtransforms.begin();
+                vCamerasInPatternCoord.resize(spheremesh.vertices.size()*numdists*numrolls);
+                vector<Transform>::iterator itcamera = vCamerasInPatternCoord.begin();
                 for(size_t j = 0; j < spheremesh.vertices.size(); ++j) {
                     Vector v = spheremesh.vertices[j];
                     for(int i = 0; i < numdists; ++i) {
@@ -943,7 +951,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
                         for(int iroll = 0; iroll < numrolls; ++iroll, froll += deltaroll) {
                             *itcamera = ComputeCameraMatrix(spheremesh.vertices[j],vdists[i],froll);
                             if( bInvert ) {
-                                *itcamera = itcamera->inverse(); 
+                                *itcamera = itcamera->inverse();
                             }
                             ++itcamera;
                         }
@@ -977,42 +985,50 @@ Visibility computation checks occlusion with other objects using ray sampling in
         }
 
         if( vconedirangles.size() > 0 ) {
-            vector<Transform> voldtransforms;
-            voldtransforms.swap(vtransforms);
-            vtransforms.reserve(voldtransforms.size());
-            Transform GeometryToTargetLink;
+            vCamerasInTargetLinkCoord.reserve(vCamerasInPatternCoord.size());
+            Transform tGeometryToTargetLink;
             for(size_t igeom = 0; igeom < _targetlink->GetGeometries().size(); ++igeom) {
                 if( _targetGeomName.size() == 0 || _targetlink->GetGeometries().at(igeom)->GetName() == _targetGeomName ) {
-                    GeometryToTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
+                    tGeometryToTargetLink = _targetlink->GetGeometries().at(igeom)->GetTransform();
                     break;
                 }
             }
+
+            dReal fCameraCosFOV = 0; // cos of the half angle of the camera FOV, in this case cos(pi/2)
+
             Vector pluszvector;
             pluszvector.x = 0;
             pluszvector.y = 0;
             pluszvector.z = 1;
-            FOREACH(itt,voldtransforms) {
-                Vector vCameraToPattern;
-                if( _sensorrobot == _robot ) {
-                    vCameraToPattern = itt->trans;               
+            FOREACH(itt,vCamerasInPatternCoord) {
+                Vector vCameraDirInPattern = ExtractAxisFromQuat(itt->rot, 2); // camera is always +z
+                Vector vCameraToPatternPos = itt->trans;
+                dReal flen = RaveSqrt(vCameraToPatternPos.lengthsqr3());
+                if( -vCameraToPatternPos.dot3(vCameraDirInPattern) < fCameraCosFOV * flen ) {
+                    // outside of camera FOV
+                    continue;
                 }
-                else {
-                    vCameraToPattern = itt->inverse().trans;
-                }
+
                 bool bInCone = false;
 
-                // We hard-code the cone direction (0,0,1) for initial visibility checking 
-                // because only patterns in front of the camera lens will pass InConvexHull(). 
+                // We hard-code the cone direction (0,0,1) for initial visibility checking
+                // because only patterns in front of the camera lens will pass InConvexHull().
                 // We then appropriately express these pattern poses in the targetlink
                 // frame, taking into account vconedirangles.
-                FOREACH(itcone, vconedirangles) { 
-                    if( pluszvector.dot3(vCameraToPattern) >= itcone->w*RaveSqrt(vCameraToPattern.lengthsqr3()) ) {
-                        Vector ConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
-                        Transform PatternToGeometry = geometry::matrixFromQuat(ConeQuat);
-                        Transform CameraToTargetLink = GeometryToTargetLink * PatternToGeometry * *itt;
-                        vtransforms.push_back(CameraToTargetLink);
+                FOREACH(itcone, vconedirangles) {
+                    if( pluszvector.dot3(vCameraToPatternPos) >= itcone->w*flen ) {
+                        Vector vConeQuat = geometry::quatRotateDirection(pluszvector, *itcone);
+                        Transform vPatternToGeometry = geometry::matrixFromQuat(vConeQuat);
+                        Transform vCameraToTargetLink = tGeometryToTargetLink * vPatternToGeometry * *itt;
+                        vCamerasInTargetLinkCoord.push_back(vCameraToTargetLink);
                     }
                 }
+            }
+        }
+        else {
+            vCamerasInTargetLinkCoord.resize(vCamerasInPatternCoord.size());
+            for(size_t i = 0; i < vCamerasInTargetLinkCoord.size(); ++i) {
+                vCamerasInTargetLinkCoord[i] = vCamerasInPatternCoord[i];
             }
         }
 
@@ -1021,7 +1037,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
         // get all the camera positions and test them
-        FOREACHC(itcamera, vtransforms) {
+        FOREACHC(itcamera, vCamerasInTargetLinkCoord) {
             Transform tCameraInTarget = *itcamera;
             Transform tTargetInWorld;
             if( _sensorrobot == _robot ) {
@@ -1511,7 +1527,7 @@ protected:
     RobotBase::ManipulatorPtr _pmanip;
     bool _bCameraOnManip;     ///< true if camera is attached to manipulator
     SensorBase::CameraGeomDataConstPtr _pcamerageom;
-    Transform _ttogripper;     ///< transforms a coord system to the gripper coordsystem
+    Transform _ttogripper;     ///< transforms a coord system from the link to the gripper coordsystem. tLinkInWorld * _ttogripper = tManipInWorld
     vector<Transform> _visibilitytransforms; ///< the transform with respect to the targetlink and camera (or vice-versa)
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 

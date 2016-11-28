@@ -61,7 +61,7 @@ class VisualFeedback:
         cmd = u'SetCameraAndTarget '
         if targetlink is not None:
             cmd += u'targetlink %s %s '%(targetlink.GetParent().GetName(), targetlink.GetName())
-        if targetgeomname is not None:
+        if targetgeomname is not None and len(targetgeomname) > 0:
             cmd += u'targetgeomname %s '%targetgeomname
         if sensorrobot is not None:
             cmd += u'sensorrobot %s '%sensorrobot.GetName()
@@ -81,7 +81,7 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         return res
-    def ProcessVisibilityExtents(self,numrolls=None,transforms=None,extents=None,sphere=None,invertsphere=None,conedirangles=None):
+    def ProcessVisibilityExtents(self,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
         """See :ref:`module-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
@@ -98,10 +98,6 @@ class VisualFeedback:
         if sphere is not None:
             cmd += 'sphere %d %d ' % (sphere[0], len(sphere) - 1)
             for s in sphere[1:]:
-                cmd += '%.15e ' % s
-        elif invertsphere is not None:
-            cmd += 'invertsphere %d %d ' % (invertsphere[0], len(invertsphere) - 1)
-            for s in invertsphere[1:]:
                 cmd += '%.15e ' % s
         if conedirangles is not None:
             for conedirangle in conedirangles:
