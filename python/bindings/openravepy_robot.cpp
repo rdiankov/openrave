@@ -353,7 +353,7 @@ public:
             else {
                 if( ikreturn ) {
                     IkReturn ikreturn(IKRA_Reject);
-                    _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreturn,releasegil);
+                    _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreturn,releasegil);
                     return openravepy::toPyIkReturn(ikreturn);
                 }
                 else {

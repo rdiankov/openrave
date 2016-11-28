@@ -144,6 +144,9 @@ public slots:
     /// \brief updates the screen with a new frame and runs viewer update logic. Also tries to update with the openrave environment
     void _UpdateViewerCallback();
 
+    /// \brief called when application quits
+    void _ProcessApplicationQuit();
+
     /// Set model home position in viewer
     void ResetViewToHome();
 

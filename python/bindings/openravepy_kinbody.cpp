@@ -78,6 +78,7 @@ public:
         _vAmbientColor = toPyVector3(info._vAmbientColor);
         _meshcollision = toPyTriMesh(info._meshcollision);
         _type = info._type;
+        _name = ConvertStringToUnicode(info._name);
         _filenamerender = ConvertStringToUnicode(info._filenamerender);
         _filenamecollision = ConvertStringToUnicode(info._filenamecollision);
         _vRenderScale = toPyVector3(info._vRenderScale);
@@ -102,6 +103,9 @@ public:
             ExtractTriMesh(_meshcollision,info._meshcollision);
         }
         info._type = _type;
+        if( !IS_PYTHONOBJECT_NONE(_name) ) {
+            info._name = boost::python::extract<std::string>(_name);
+        }
         if( !IS_PYTHONOBJECT_NONE(_filenamerender) ) {
             info._filenamerender = boost::python::extract<std::string>(_filenamerender);
         }
@@ -120,6 +124,7 @@ public:
 
     object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
     GeometryType _type;
+    object _name;
     object _filenamerender, _filenamecollision;
     object _vRenderScale, _vCollisionScale;
     boost::python::dict _mapExtraGeometries;
@@ -601,6 +606,9 @@ public:
         void SetRenderFilename(const string& filename) {
             _pgeometry->SetRenderFilename(filename);
         }
+        void SetName(const std::string& name) {
+            _pgeometry->SetName(name);
+        }
         bool IsDraw() {
             RAVELOG_WARN("IsDraw deprecated, use Geometry.IsVisible\n");
             return _pgeometry->IsVisible();
@@ -646,6 +654,9 @@ public:
         }
         object GetRenderFilename() const {
             return ConvertStringToUnicode(_pgeometry->GetRenderFilename());
+        }
+        object GetName() const {
+            return ConvertStringToUnicode(_pgeometry->GetName());
         }
         float GetTransparency() const {
             return _pgeometry->GetTransparency();
@@ -2668,7 +2679,7 @@ class GeometryInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, boost::python::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
         //int num = len(state);
@@ -2680,14 +2691,32 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
-        r._filenamerender = state[6];
-        r._filenamecollision = state[7];
-        r._vRenderScale = state[8];
-        r._vCollisionScale = state[9];
-        r._fTransparency = boost::python::extract<float>(state[10]);
-        r._bVisible = boost::python::extract<bool>(state[11]);
-        r._bModifiable = boost::python::extract<bool>(state[12]);
-        r._mapExtraGeometries = dict(state[13]);
+
+        boost::python::extract<std::string> pyoldfilenamerender(state[6]);
+        if( pyoldfilenamerender.check() ) {
+            // old format
+            r._filenamerender = state[6];
+            r._filenamecollision = state[7];
+            r._name = boost::python::object();
+            r._vRenderScale = state[8];
+            r._vCollisionScale = state[9];
+            r._fTransparency = boost::python::extract<float>(state[10]);
+            r._bVisible = boost::python::extract<bool>(state[11]);
+            r._bModifiable = boost::python::extract<bool>(state[12]);
+            r._mapExtraGeometries = dict(state[13]);
+        }
+        else {
+            // new format
+            r._name = state[6][0];
+            r._filenamerender = state[6][1];
+            r._filenamecollision = state[6][2];
+            r._vRenderScale = state[7];
+            r._vCollisionScale = state[8];
+            r._fTransparency = boost::python::extract<float>(state[9]);
+            r._bVisible = boost::python::extract<bool>(state[10]);
+            r._bModifiable = boost::python::extract<bool>(state[11]);
+            r._mapExtraGeometries = dict(state[12]);
+        }
     }
 };
 
@@ -2894,6 +2923,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
                           .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
                           .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
                           .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
                           .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
@@ -3211,6 +3241,7 @@ void init_openravepy_kinbody()
                                  .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
                                  .def("SetAmbientColor",&PyLink::PyGeometry::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
                                  .def("SetRenderFilename",&PyLink::PyGeometry::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
+                                 .def("SetName",&PyLink::PyGeometry::SetName,args("name"), DOXY_FN(KinBody::Link::Geometry,setName))
                                  .def("SetVisible",&PyLink::PyGeometry::SetVisible,args("visible"), DOXY_FN(KinBody::Link::Geometry,SetVisible))
                                  .def("IsDraw",&PyLink::PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                  .def("IsVisible",&PyLink::PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
@@ -3227,6 +3258,7 @@ void init_openravepy_kinbody()
                                  .def("GetContainerBottomCross",&PyLink::PyGeometry::GetContainerBottomCross, DOXY_FN(KinBody::Link::Geometry,GetContainerBottomCross))
                                  .def("GetRenderScale",&PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
                                  .def("GetRenderFilename",&PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
+                                 .def("GetName",&PyLink::PyGeometry::GetName, DOXY_FN(KinBody::Link::Geometry,GetName))
                                  .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                  .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                  .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))

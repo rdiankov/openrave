@@ -1615,6 +1615,7 @@ private:
 
         domGeometryRef pdomgeom = daeSafeCast<domGeometry>(_geometriesLib->add(COLLADA_ELEMENT_GEOMETRY));
         {
+            pdomgeom->setName(geom->GetName().c_str());
             pdomgeom->setId(parentid.c_str());
             domMeshRef pdommesh = daeSafeCast<domMesh>(pdomgeom->add(COLLADA_ELEMENT_MESH));
             {
