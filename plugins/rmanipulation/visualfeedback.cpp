@@ -182,20 +182,28 @@ public:
             // create the dummy box
             _vTargetLocalOBBs.reserve(1);
 
+            if( !_vf->_targetlink->IsVisible() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("no geometries target link %s is visible so cannot use it for visibility checking", _vf->_targetlink->GetName(), ORE_InvalidArguments);
+            }
+            
             // We assume only one geometry named exactly _vf->_targetGeomName exists on
             // the targetlink. This geometry name is hard-coded in
             // handeyecalibrationtask.py in planning common. Here the
             // calibboard geometry OBB is computed relative to the targetlink.
-            if( _vf->_targetlink->IsVisible() ) {
-                for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
-                    if( _vf->_targetGeomName.size() == 0 || _vf->_targetlink->GetGeometries().at(igeom)->GetName() == _vf->_targetGeomName ) {
-                        _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(_vf->_targetlink->GetGeometries().at(igeom)->ComputeAABB(_vf->_targetlink->GetGeometries().at(igeom)->GetTransform()), _vf->_targetlink->GetGeometries().at(igeom)->GetTransform()));
-                        break;
-                    }
+            for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
+                KinBody::Link::GeometryPtr pgeom = _vf->_targetlink->GetGeometries().at(igeom);
+                if( pgeom->IsVisible() && (_vf->_targetGeomName.size() == 0 || pgeom->GetName() == _vf->_targetGeomName) ) {
+                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(pgeom->GetTransform()), pgeom->GetTransform()));
+                    break;
                 }
             }
+            
             if (_vTargetLocalOBBs.size() == 0 ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("No geometry named '%s' found in target link %s.", _vf->_targetGeomName%_vf->_targetlink->GetName(), ORE_InvalidArguments);
+                std::stringstream ss;
+                for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
+                    ss << _vf->_targetlink->GetGeometries().at(igeom)->GetName() << " (" << _vf->_targetlink->GetGeometries().at(igeom)->IsVisible() << "), ";
+                }
+                throw OPENRAVE_EXCEPTION_FORMAT("No visibile geometries named '%s' found in target link %s with geometires [%s].", _vf->_targetGeomName%_vf->_targetlink->GetName()%ss.str(), ORE_InvalidArguments);
             }
 
             vector<AABB> vboxes;
