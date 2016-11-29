@@ -193,7 +193,7 @@ public:
             for(size_t igeom = 0; igeom < _vf->_targetlink->GetGeometries().size(); ++igeom) {
                 KinBody::Link::GeometryPtr pgeom = _vf->_targetlink->GetGeometries().at(igeom);
                 if( pgeom->IsVisible() && (_vf->_targetGeomName.size() == 0 || pgeom->GetName() == _vf->_targetGeomName) ) {
-                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(pgeom->GetTransform()), pgeom->GetTransform()));
+                    _vTargetLocalOBBs.push_back(geometry::OBBFromAABB(pgeom->ComputeAABB(Transform()), pgeom->GetTransform()));
                     break;
                 }
             }
@@ -308,8 +308,8 @@ public:
             }
 
             // object is inside, find an ik solution
-            Transform tgoalee = t*_vf->_ttogripper;
-            if( !_vf->_pmanip->FindIKSolution(tgoalee,IKFO_CheckEnvCollisions, _ikreturn) ) {
+            Transform tmanipgoal = t*_vf->_tToManip;
+            if( !_vf->_pmanip->FindIKSolution(tmanipgoal,IKFO_CheckEnvCollisions, _ikreturn) ) {
                 if( bOutputError ) {
                     errormsg = str(boost::format("{\"type\":\"ikfailed\", \"action\":\"0x%x\"}")%_ikreturn->_action);
                 }
@@ -833,15 +833,16 @@ Visibility computation checks occlusion with other objects using ray sampling in
                 }
             }
 
-            _ttogripper = psensor->GetTransform().inverse()*pmanip->GetTransform();
+            _tToManip = psensor->GetTransform().inverse()*pmanip->GetTransform();
         }
         else {
             if( !pmanip ) {
                 pmanip = _robot->GetActiveManipulator();
+                RAVELOG_INFO_FORMAT("using default manip %s", pmanip->GetName());
             }
 
             if( !!_targetlink ) {
-                _ttogripper = _targetlink->GetTransform().inverse() * pmanip->GetTransform();
+                _tToManip = _targetlink->GetTransform().inverse() * pmanip->GetTransform();
             }
         }
 
@@ -1056,7 +1057,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
 
             if( pconstraintfn->InConvexHull(*itcamera) ) {
-                if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_ttogripper, _preport) ) {
+                if( !_pmanip->CheckEndEffectorCollision(tTargetInWorld*_tToManip, _preport) ) {
                     if( !pconstraintfn->IsOccludedByRigid(*itcamera) ) {
                         sout << *itcamera << " ";
                     }
@@ -1203,7 +1204,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
         _robot->SetActiveDOFs(_pmanip->GetArmIndices());
         boost::shared_ptr<VisibilityConstraintFunction> pconstraintfn(new VisibilityConstraintFunction(shared_problem()));
 
-        if( _pmanip->CheckEndEffectorCollision(t*_ttogripper, _preport) ) {
+        if( _pmanip->CheckEndEffectorCollision(t*_tToManip, _preport) ) {
             RAVELOG_VERBOSE_FORMAT("endeffector is in collision, %s\n",_preport->__str__());
             std::string errormsg = _preport->__str__();
             boost::replace_all(errormsg, "\"", "\\\"");
@@ -1535,7 +1536,7 @@ protected:
     RobotBase::ManipulatorPtr _pmanip;
     bool _bCameraOnManip;     ///< true if camera is attached to manipulator
     SensorBase::CameraGeomDataConstPtr _pcamerageom;
-    Transform _ttogripper;     ///< transforms a coord system from the link to the gripper coordsystem. tLinkInWorld * _ttogripper = tManipInWorld
+    Transform _tToManip;     ///< transforms a coord system from the link to the gripper coordsystem. tLinkInWorld * _tToManip = tManipInWorld
     vector<Transform> _visibilitytransforms; ///< the transform with respect to the targetlink and camera (or vice-versa)
     dReal _fRayMinDist, _fAllowableOcclusion, _fSampleRayDensity;
 
