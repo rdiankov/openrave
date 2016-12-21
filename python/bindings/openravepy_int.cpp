@@ -17,6 +17,7 @@
 #include "openravepy_int.h"
 
 #include <openrave/utils.h>
+#include <boost/thread/once.hpp>
 
 namespace openravepy
 {
@@ -335,15 +336,15 @@ protected:
 
             if( !!puseviewer ) {
                 _bInMain = true;
-                try {
-                    puseviewer->main(bShowViewer);
-                }
-                catch(const std::exception& ex) {
-                    RAVELOG_ERROR_FORMAT("got exception in viewer main thread %s", ex.what());
-                }
-                catch(...) {
-                    RAVELOG_ERROR("got unknown exception in viewer main thread\n");
-                }
+                // try {
+                puseviewer->main(bShowViewer);
+                // }
+                // catch(const std::exception& ex) {
+                //     RAVELOG_ERROR_FORMAT("got exception in viewer main thread %s", ex.what());
+                // }
+                // catch(...) {
+                //     RAVELOG_ERROR("got unknown exception in viewer main thread\n");
+                // }
                 
                 _bInMain = false;
                 // remove from _listviewerinfos in order to avoid running the main loop again
@@ -372,13 +373,17 @@ protected:
     bool _bInMain; ///< if true, viewer thread is running a main function
 };
 
+static boost::shared_ptr<ViewerManager> _viewerManager;
+static boost::once_flag _viewerManagerOnce = BOOST_ONCE_INIT;
+void _CreateViewerManager()
+{
+    _viewerManager.reset(new ViewerManager());
+}
+
 boost::shared_ptr<ViewerManager> GetViewerManager()
 {
-    static boost::shared_ptr<ViewerManager> viewermanager;
-    if( !viewermanager ) {
-        viewermanager.reset(new ViewerManager());
-    }
-    return viewermanager;
+    boost::call_once(_CreateViewerManager, _viewerManagerOnce);
+    return _viewerManager;
 }
 
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
