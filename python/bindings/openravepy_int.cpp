@@ -17,6 +17,8 @@
 #include "openravepy_int.h"
 
 #include <openrave/utils.h>
+#include <boost/thread/once.hpp>
+#include <boost/scoped_ptr.hpp>
 
 namespace openravepy
 {
@@ -130,6 +132,12 @@ public:
 
     virtual ~ViewerManager() {
         Destroy();
+    }
+
+    static ViewerManager& GetInstance() {
+        boost::call_once(_InitializeSingleton, _onceInitialize);
+        // Return reference to object.
+        return *_singleton;
     }
 
     /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
@@ -344,7 +352,7 @@ protected:
                 catch(...) {
                     RAVELOG_ERROR("got unknown exception in viewer main thread\n");
                 }
-                
+
                 _bInMain = false;
                 // remove from _listviewerinfos in order to avoid running the main loop again
                 {
@@ -363,6 +371,12 @@ protected:
         RAVELOG_DEBUG("shutting down viewer manager thread\n");
     }
 
+    static void _InitializeSingleton()
+    {
+        _singleton.reset(new ViewerManager());
+
+    }
+
     boost::shared_ptr<boost::thread> _threadviewer;
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
@@ -370,16 +384,14 @@ protected:
 
     bool _bShutdown; ///< if true, shutdown everything
     bool _bInMain; ///< if true, viewer thread is running a main function
+
+    static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
+    static boost::once_flag _onceInitialize; ///< makes sure initialization is atomic
+
 };
 
-boost::shared_ptr<ViewerManager> GetViewerManager()
-{
-    static boost::shared_ptr<ViewerManager> viewermanager;
-    if( !viewermanager ) {
-        viewermanager.reset(new ViewerManager());
-    }
-    return viewermanager;
-}
+boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
+boost::once_flag ViewerManager::_onceInitialize = BOOST_ONCE_INIT;
 
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
@@ -541,7 +553,7 @@ public:
         _penv->Reset();
     }
     void Destroy() {
-        GetViewerManager()->RemoveViewersOfEnvironment(_penv);
+        ViewerManager::GetInstance().RemoveViewersOfEnvironment(_penv);
         _penv->Destroy();
     }
 
@@ -1167,7 +1179,7 @@ public:
         // have to check if viewer in order to notify viewer manager
         ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(obj->GetInterfaceBase());
         if( !!pviewer ) {
-            GetViewerManager()->RemoveViewer(pviewer);
+            ViewerManager::GetInstance().RemoveViewer(pviewer);
         }
         return _penv->Remove(obj->GetInterfaceBase());
     }
@@ -1349,7 +1361,7 @@ public:
 
     bool SetViewer(const string &viewername, bool showviewer=true)
     {
-        ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+        ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
         return !(pviewer == NULL);
     }
 
@@ -1358,7 +1370,7 @@ public:
     {
         std::string viewername = RaveGetDefaultViewerType();
         if( viewername.size() > 0 ) {
-            ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+            ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
             return !!pviewer;
         }
 
