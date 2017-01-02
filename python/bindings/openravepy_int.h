@@ -484,6 +484,15 @@ class PyUserObject : public UserData
 public:
     PyUserObject(object o) : _o(o) {
     }
+    virtual ~PyUserObject() {
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        try {
+            _o = object();
+        } catch(...) {
+            RAVELOG_ERROR("Cannot delete PyUserObject\n");
+        }
+        PyGILState_Release(gstate);
+    }
     object _o;
 };
 
