@@ -680,7 +680,7 @@ public:
         switch(pinterface->GetInterfaceType()) {
         case PT_KinBody:
         case PT_Robot: {
-            KinBodyPtr pbody;
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
                 vector<KinBodyPtr>::iterator it = std::find(_vecbodies.begin(), _vecbodies.end(), pbody);
