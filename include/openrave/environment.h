@@ -418,7 +418,7 @@ public:
     ///
     /// \param[in] name of the kinbody to remove
     /// \return true if the kinbody was successfully removed from the environment.
-    virtual bool RemoveKinBody(const std::string& name) = 0;
+    virtual bool RemoveKinBodyByName(const std::string& name) = 0;
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name

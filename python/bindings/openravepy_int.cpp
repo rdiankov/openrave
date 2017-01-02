@@ -1137,6 +1137,10 @@ public:
         return _penv->Remove(openravepy::GetKinBody(pbody));
     }
 
+    bool RemoveKinBodyByName(const std::string& name) {
+        return _penv->RemoveKinBodyByName(name);
+    }
+
     object GetKinBody(const string &name)
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
@@ -2116,6 +2120,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("AddSensor",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
                     .def("AddViewer",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddViewer))
                     .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
+                    .def("RemoveKinBodyByName",&PyEnvironmentBase::RemoveKinBodyByName,args("name"), DOXY_FN(EnvironmentBase,RemoveKinBodyByName))
                     .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
                     .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
                     .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"), DOXY_FN(EnvironmentBase,GetRobot))
