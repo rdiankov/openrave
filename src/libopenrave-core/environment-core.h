@@ -1952,6 +1952,11 @@ public:
 
         std::vector<dReal> vdoflastsetvalues;
         FOREACH(itbody, _vecbodies) {
+            if( (*itbody)->_nHierarchyComputed != 2 ) {
+                // skip
+                continue;
+            }
+            
             _vPublishedBodies.push_back(KinBody::BodyState());
             KinBody::BodyState& state = _vPublishedBodies.back();
             state.pbody = *itbody;

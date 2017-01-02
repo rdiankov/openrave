@@ -408,11 +408,17 @@ public:
     ///
     /// The function removes currently loaded bodies, robots, sensors, problems from the actively used
     /// interfaces of the environment. This does not destroy the interface, but it does remove all
-    /// references managed. Some interfaces like problems have destroy methods that are called to signal
+    /// references managed. Some interfaces like modules have destroy methods that are called to signal
     /// unloading. Note that the active interfaces are different from the owned interfaces.
     /// \param[in] obj interface to remove
     /// \return true if the interface was successfully removed from the environment.
     virtual bool Remove(InterfaceBasePtr obj) = 0;
+
+    /// \brief Removes all kinbodies that match the name
+    ///
+    /// \param[in] name of the kinbody to remove
+    /// \return true if the kinbody was successfully removed from the environment.
+    virtual bool RemoveKinBody(const std::string& name) = 0;
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name
