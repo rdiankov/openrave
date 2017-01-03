@@ -137,7 +137,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         return;
     }
     if( _options & Save_JointLimits ) {
-        _pbody->SetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
+        pbody->SetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
     if( _options & Save_LinkTransformation ) {
         pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
@@ -175,7 +175,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         pbody->SetLinkVelocities(_vLinkVelocities);
     }
     if( _options & Save_JointWeights ) {
-        _pbody->SetDOFWeights(_vDOFWeights);
+        pbody->SetDOFWeights(_vDOFWeights);
     }
 }
 
