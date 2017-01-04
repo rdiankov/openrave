@@ -384,8 +384,8 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize(pbody1);
-        _fclspace->Synchronize(pbody2);
+        _fclspace->SynchronizeWithAttached(pbody1);
+        _fclspace->SynchronizeWithAttached(pbody2);
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
@@ -421,9 +421,9 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize(plink1->GetParent());
+        _fclspace->SynchronizeWithAttached(plink1->GetParent());
         if( plink1->GetParent() != plink2->GetParent() ) {
-            _fclspace->Synchronize(plink2->GetParent());
+            _fclspace->SynchronizeWithAttached(plink2->GetParent());
         }
 
         CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
@@ -467,13 +467,13 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize(plink->GetParent());
+        _fclspace->SynchronizeWithAttached(plink->GetParent());
 
         std::set<KinBodyConstPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
         FOREACH(itbody, attachedBodies) {
             if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
-                _fclspace->Synchronize(*itbody);
+                _fclspace->SynchronizeWithAttached(*itbody);
             }
         }
 
@@ -605,7 +605,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        _fclspace->Synchronize(pbody);
+        _fclspace->SynchronizeWithAttached(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -653,7 +653,7 @@ public:
 
         const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);
+        _fclspace->SynchronizeWithAttached(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");

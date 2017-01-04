@@ -687,31 +687,9 @@ public:
                 if( it == _vecbodies.end() ) {
                     return false;
                 }
-                // before deleting, make sure no robots are grabbing it!!
-                FOREACH(itrobot, _vecrobots) {
-                    if( (*itrobot)->IsGrabbing(*it) ) {
-                        RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", pbody->GetName().c_str(), (*itrobot)->GetName().c_str());
-                        (*itrobot)->Release(pbody);
-                    }
-                }
-
-                if( (*it)->IsRobot() ) {
-                    vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(pbody));
-                    if( itrobot != _vecrobots.end() ) {
-                        _vecrobots.erase(itrobot);
-                    }
-                }
-                if( !!_pCurrentChecker ) {
-                    _pCurrentChecker->RemoveKinBody(*it);
-                }
-                if( !!_pPhysicsEngine ) {
-                    _pPhysicsEngine->RemoveKinBody(*it);
-                }
-                pbody->_PostprocessChangedParameters(KinBody::Prop_BodyRemoved);
-                RemoveEnvironmentId(pbody);
-                _vecbodies.erase(it);
-                _nBodiesModifiedStamp++;
+                _RemoveKinBodyFromIterator(it);
             }
+            // pbody is valid so run any callbacks and exit
             _CallBodyCallbacks(pbody, 0);
             return true;
         }
@@ -751,6 +729,30 @@ public:
             break;
         }
         return false;
+    }
+
+    virtual bool RemoveKinBodyByName(const std::string& name)
+    {
+        EnvironmentMutex::scoped_lock lockenv(GetMutex());
+        KinBodyPtr pbody;
+        {
+            boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
+            vector<KinBodyPtr>::iterator it = _vecbodies.end();
+            FOREACHC(itbody, _vecbodies) {
+                if( (*itbody)->GetName() == name ) {
+                    it = itbody;
+                    break;
+                }
+            }
+            if( it == _vecbodies.end() ) {
+                return false;
+            }
+            pbody = *it;
+            _RemoveKinBodyFromIterator(it);
+        }
+        // pbody is valid so run any callbacks and exit
+        _CallBodyCallbacks(pbody, 0);
+        return true;
     }
 
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
@@ -1952,6 +1954,11 @@ public:
 
         std::vector<dReal> vdoflastsetvalues;
         FOREACH(itbody, _vecbodies) {
+            if( (*itbody)->_nHierarchyComputed != 2 ) {
+                // skip
+                continue;
+            }
+
             _vPublishedBodies.push_back(KinBody::BodyState());
             KinBody::BodyState& state = _vPublishedBodies.back();
             state.pbody = *itbody;
@@ -1987,6 +1994,37 @@ public:
 
 
 protected:
+
+    /// \brief assumes environment and _mutexInterfaces are locked
+    ///
+    /// \param[in] it the iterator into _vecbodies to erase
+    void _RemoveKinBodyFromIterator(vector<KinBodyPtr>::iterator it)
+    {
+        // before deleting, make sure no robots are grabbing it!!
+        FOREACH(itrobot, _vecrobots) {
+            if( (*itrobot)->IsGrabbing(*it) ) {
+                RAVELOG_WARN("destroy %s already grabbed by robot %s!\n", (*it)->GetName().c_str(), (*itrobot)->GetName().c_str());
+                (*itrobot)->Release(*it);
+            }
+        }
+
+        if( (*it)->IsRobot() ) {
+            vector<RobotBasePtr>::iterator itrobot = std::find(_vecrobots.begin(), _vecrobots.end(), RaveInterfaceCast<RobotBase>(*it));
+            if( itrobot != _vecrobots.end() ) {
+                _vecrobots.erase(itrobot);
+            }
+        }
+        if( !!_pCurrentChecker ) {
+            _pCurrentChecker->RemoveKinBody(*it);
+        }
+        if( !!_pPhysicsEngine ) {
+            _pPhysicsEngine->RemoveKinBody(*it);
+        }
+        (*it)->_PostprocessChangedParameters(KinBody::Prop_BodyRemoved);
+        RemoveEnvironmentId(*it);
+        _vecbodies.erase(it);
+        _nBodiesModifiedStamp++;
+    }
 
     void _SetDefaultGravity()
     {

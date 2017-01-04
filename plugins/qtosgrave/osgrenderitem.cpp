@@ -43,28 +43,28 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 
     // add 3 cylinder+cone axes
     for(int i = 0; i < 3; ++i) {
-        osg::MatrixTransform* psep = new osg::MatrixTransform();
+        osg::ref_ptr<osg::MatrixTransform> psep = new osg::MatrixTransform();
         //psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
 
         // set a diffuse color
-        osg::StateSet* state = psep->getOrCreateStateSet();
-        osg::Material* mat = new osg::Material;
+        osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
+        osg::ref_ptr<osg::Material> mat = new osg::Material;
         mat->setDiffuse(osg::Material::FRONT, colors[i]);
         mat->setAmbient(osg::Material::FRONT, colors[i]);
         state->setAttribute( mat );
 
         osg::Matrix matrix;
-        osg::MatrixTransform* protation = new osg::MatrixTransform();
+        osg::ref_ptr<osg::MatrixTransform> protation = new osg::MatrixTransform();
         matrix.makeRotate(rotations[i]);
         protation->setMatrix(matrix);
 
         matrix.makeIdentity();
-        osg::MatrixTransform* pcyltrans = new osg::MatrixTransform();
+        osg::ref_ptr<osg::MatrixTransform> pcyltrans = new osg::MatrixTransform();
         matrix.setTrans(osg::Vec3f(0,0,0.5*len));
         pcyltrans->setMatrix(matrix);
 
         // make SoCylinder point towards z, not y
-        osg::Cylinder* cy = new osg::Cylinder();
+        osg::ref_ptr<osg::Cylinder> cy = new osg::Cylinder();
         cy->setRadius(axisthickness);
         cy->setHeight(len);
         osg::ref_ptr<osg::Geode> gcyl = new osg::Geode;
@@ -72,7 +72,7 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
         sdcyl->setColor(colors[i]);
         gcyl->addDrawable(sdcyl.get());
 
-        osg::Cone* cone = new osg::Cone();
+        osg::ref_ptr<osg::Cone> cone = new osg::Cone();
         cone->setRadius(axisthickness*2);
         cone->setHeight(len*0.25);
 
@@ -82,7 +82,7 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
         sdcone->setColor(colors[i]);
 
         matrix.makeIdentity();
-        osg::MatrixTransform* pconetrans = new osg::MatrixTransform();
+        osg::ref_ptr<osg::MatrixTransform> pconetrans = new osg::MatrixTransform();
         matrix.setTrans(osg::Vec3f(0,0,len));
         pconetrans->setMatrix(matrix);
 
@@ -317,7 +317,7 @@ void KinBodyItem::Load()
                     loadedModel = osgDB::readNodeFile(orgeom->GetRenderFilename());
 
                     pgeometrydata = loadedModel->asGroup();
-                    osg::StateSet* state = pgeometrydata->getOrCreateStateSet();
+                    osg::ref_ptr<osg::StateSet> state = pgeometrydata->getOrCreateStateSet();
                     state->setMode(GL_RESCALE_NORMAL,osg::StateAttribute::ON);
 
                     bSucceeded = true;
@@ -824,6 +824,9 @@ RobotItem::~RobotItem()
         FOREACH(it, _vEndEffectors) {
             _osgFigureRoot->removeChild(it->_pswitch);
         }
+        FOREACH(it, _vAttachedSensors) {
+            _osgFigureRoot->removeChild(it->_pswitch);
+        }
     }
 }
 
@@ -865,6 +868,9 @@ void RobotItem::Load()
     if( !!_osgFigureRoot ) {
         FOREACH(it, _vEndEffectors) {
             _osgFigureRoot->removeChild(it->_pswitch);
+        }
+        FOREACH(it, _vAttachedSensors) {
+          _osgFigureRoot->removeChild(it->_pswitch);
         }
     }
     _vEndEffectors.resize(0);
@@ -942,7 +948,7 @@ void RobotItem::Load()
 
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
-            // add text
+            // Add Text
             {
                 OSGGroupPtr ptextsep = new osg::Group();
                 osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
