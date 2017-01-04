@@ -87,7 +87,7 @@ static void fparser_sass(std::vector<dReal>& res, const vector<dReal>& coeffs)
 
 OpenRAVEFunctionParserRealPtr CreateJointFunctionParser()
 {
-    OpenRAVEFunctionParserRealPtr parser(new OpenRAVEFunctionParserReal());
+    OpenRAVEFunctionParserRealPtr parser = boost::make_shared<OpenRAVEFunctionParserReal>();
 #ifdef OPENRAVE_FPARSER_SETEPSILON
     parser->setEpsilon(g_fEpsilonLinear);
 #endif
@@ -1234,12 +1234,12 @@ std::string KinBody::Joint::GetMimicEquation(int iaxis, int itype, const std::st
         std::string sout;
         KinBodyConstPtr parent(_parent);
         FOREACHC(itdofformat, _vmimic.at(iaxis)->_vdofformat) {
-            JointConstPtr pjoint = itdofformat->GetJoint(parent);
-            if( pjoint->GetDOF() > 1 ) {
-                Vars.push_back(str(boost::format("<csymbol>%s_%d</csymbol>")%pjoint->GetName()%(int)itdofformat->axis));
+            const Joint &joint = *(itdofformat->GetJoint(parent));
+            if( joint.GetDOF() > 1 ) {
+                Vars.push_back(str(boost::format("<csymbol>%s_%d</csymbol>")%joint.GetName()%(int)itdofformat->axis));
             }
             else {
-                Vars.push_back(str(boost::format("<csymbol>%s</csymbol>")%pjoint->GetName()));
+                Vars.push_back(str(boost::format("<csymbol>%s</csymbol>")%joint.GetName()));
             }
         }
         if( itype == 0 ) {
@@ -1343,9 +1343,9 @@ void KinBody::Joint::SetMimicEquations(int iaxis, const std::string& poseq, cons
             dofformat.axis = 0;
         }
         dofformat.dofindex = -1;
-        JointPtr pjoint = dofformat.GetJoint(parent);
-        if((pjoint->GetDOFIndex() >= 0)&& !pjoint->IsMimic(dofformat.axis) ) {
-            dofformat.dofindex = pjoint->GetDOFIndex()+dofformat.axis;
+        Joint &joint = *(dofformat.GetJoint(parent));
+        if((joint.GetDOFIndex() >= 0)&& !joint.IsMimic(dofformat.axis) ) {
+            dofformat.dofindex = joint.GetDOFIndex()+dofformat.axis;
             MIMIC::DOFHierarchy h;
             h.dofindex = dofformat.dofindex;
             h.dofformatindex = mimic->_vdofformat.size();
