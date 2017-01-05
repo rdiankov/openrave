@@ -1408,12 +1408,19 @@ PyKinBody::PyKinBody(const PyKinBody& r) : PyInterfaceBase(r._pbody,r._pyenv)
 {
     _pbody = r._pbody;
 }
+
 PyKinBody::~PyKinBody()
 {
 }
+
 KinBodyPtr PyKinBody::GetBody()
 {
     return _pbody;
+}
+
+void PyKinBody::Destroy()
+{
+    _pbody->Destroy();
 }
 
 bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw, const std::string& uri)
@@ -2715,15 +2722,32 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
-        r._name = state[6][0];
-        r._filenamerender = state[6][1];
-        r._filenamecollision = state[6][2];
-        r._vRenderScale = state[7];
-        r._vCollisionScale = state[8];
-        r._fTransparency = boost::python::extract<float>(state[9]);
-        r._bVisible = boost::python::extract<bool>(state[10]);
-        r._bModifiable = boost::python::extract<bool>(state[11]);
-        r._mapExtraGeometries = dict(state[12]);
+
+        boost::python::extract<std::string> pyoldfilenamerender(state[6]);
+        if( pyoldfilenamerender.check() ) {
+            // old format
+            r._filenamerender = state[6];
+            r._filenamecollision = state[7];
+            r._name = boost::python::object();
+            r._vRenderScale = state[8];
+            r._vCollisionScale = state[9];
+            r._fTransparency = boost::python::extract<float>(state[10]);
+            r._bVisible = boost::python::extract<bool>(state[11]);
+            r._bModifiable = boost::python::extract<bool>(state[12]);
+            r._mapExtraGeometries = dict(state[13]);
+        }
+        else {
+            // new format
+            r._name = state[6][0];
+            r._filenamerender = state[6][1];
+            r._filenamecollision = state[6][2];
+            r._vRenderScale = state[7];
+            r._vCollisionScale = state[8];
+            r._fTransparency = boost::python::extract<float>(state[9]);
+            r._bVisible = boost::python::extract<bool>(state[10]);
+            r._bModifiable = boost::python::extract<bool>(state[11]);
+            r._mapExtraGeometries = dict(state[12]);
+        }
     }
 };
 
@@ -3023,6 +3047,7 @@ void init_openravepy_kinbody()
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
+                        .def("Destroy",&PyKinBody::Destroy, DOXY_FN(KinBody,Destroy))
                         .def("InitFromBoxes",&PyKinBody::InitFromBoxes,InitFromBoxes_overloads(args("boxes","draw","uri"), sInitFromBoxesDoc.c_str()))
                         .def("InitFromSpheres",&PyKinBody::InitFromSpheres,InitFromSpheres_overloads(args("spherex","draw","uri"), DOXY_FN(KinBody,InitFromSpheres)))
                         .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,InitFromTrimesh_overloads(args("trimesh","draw","uri"), DOXY_FN(KinBody,InitFromTrimesh)))

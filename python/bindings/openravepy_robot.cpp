@@ -565,6 +565,31 @@ public:
             }
             return bCollision;
         }
+
+        bool CheckEndEffectorSelfCollision(PyCollisionReportPtr pyreport) const
+        {
+            BOOST_ASSERT(0);
+            bool bcollision = true;//_pmanip->CheckEndEffectorSelfCollision(openravepy::GetCollisionReport(pyreport));
+            openravepy::UpdateCollisionReport(pyreport,_pyenv);
+            return bcollision;
+        }
+
+        bool CheckEndEffectorSelfCollision(object otrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr(), int numredundantsamples=0) const
+        {
+            bool bCollision;
+            IkParameterization ikparam;
+            if( ExtractIkParameterization(otrans,ikparam) ) {
+                bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples);
+            }
+            else {
+                bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples);
+            }
+            if( !!pyreport ) {
+                openravepy::UpdateCollisionReport(pyreport,_pyenv);
+            }
+            return bCollision;
+        }
+
         bool CheckIndependentCollision() const
         {
             return _pmanip->CheckIndependentCollision();
@@ -1325,6 +1350,11 @@ public:
         _probot->ResetGrabbed(vgrabbedinfos);
     }
 
+    bool CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr())
+    {
+        return _probot->CheckLinkSelfCollision(ilinkindex, ExtractTransform(olinktrans), !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport));
+    }
+
     bool WaitForController(float ftimeout)
     {
         ControllerBasePtr pcontroller = _probot->GetController();
@@ -1476,6 +1506,7 @@ PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& na
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorCollision_overloads, CheckEndEffectorCollision, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckEndEffectorSelfCollision_overloads, CheckEndEffectorSelfCollision, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolution_overloads, FindIKSolution, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutionFree_overloads, FindIKSolution, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(FindIKSolutions_overloads, FindIKSolutions, 2, 4)
@@ -1492,8 +1523,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Init_overloads, Init, 4,5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateInfo_overloads, UpdateInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(UpdateAndGetInfo_overloads, UpdateAndGetInfo, 0,1)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SerializeJSON_overloads, SerializeJSON, 0, 1)
-
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckLinkSelfCollision_overloads, CheckLinkSelfCollision, 2, 3)
 
 void init_openravepy_robot()
 {
@@ -1647,6 +1677,7 @@ void init_openravepy_robot()
                       .def("GetGrabbed",&PyRobotBase::GetGrabbed, DOXY_FN(RobotBase,GetGrabbed))
                       .def("GetGrabbedInfo",&PyRobotBase::GetGrabbedInfo, DOXY_FN(RobotBase,GetGrabbedInfo))
                       .def("ResetGrabbed",&PyRobotBase::ResetGrabbed, args("grabbedinfos"), DOXY_FN(RobotBase,ResetGrabbed))
+                      .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision, CheckLinkSelfCollision_overloads(args("linkindex", "linktrans", "report"), DOXY_FN(RobotBase,CheckLinkSelfCollision)))
                       .def("WaitForController",&PyRobotBase::WaitForController,args("timeout"), "Wait until the robot controller is done")
                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
                       .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(args("options"), "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
@@ -1667,6 +1698,8 @@ void init_openravepy_robot()
 
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision0)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object,PyCollisionReportPtr,int) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
+        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorSelfCollision0)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision;
+        bool (PyRobotBase::PyManipulator::*pCheckEndEffectorSelfCollision1)(object,PyCollisionReportPtr,int) const = &PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision1)() const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
@@ -1721,6 +1754,8 @@ void init_openravepy_robot()
         .def("GetIkConfigurationSpecification",&PyRobotBase::PyManipulator::GetIkConfigurationSpecification, GetIkConfigurationSpecification_overloads(args("iktype", "interpolation"),DOXY_FN(RobotBase::Manipulator,GetIkConfigurationSpecification)))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision1,CheckEndEffectorCollision_overloads(args("transform", "report", "numredundantsamples"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision)))
         .def("CheckEndEffectorCollision",pCheckEndEffectorCollision0,args("report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorCollision))
+        .def("CheckEndEffectorSelfCollision",pCheckEndEffectorSelfCollision1,CheckEndEffectorSelfCollision_overloads(args("transform", "report", "numredundantsamples"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorSelfCollision)))
+        .def("CheckEndEffectorSelfCollision",pCheckEndEffectorSelfCollision0,args("report"), DOXY_FN(RobotBase::Manipulator,CheckEndEffectorSelfCollision))
         .def("CheckIndependentCollision",pCheckIndependentCollision1, DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
         .def("CheckIndependentCollision",pCheckIndependentCollision2,args("report"), DOXY_FN(RobotBase::Manipulator,CheckIndependentCollision))
         .def("CalculateJacobian",&PyRobotBase::PyManipulator::CalculateJacobian,DOXY_FN(RobotBase::Manipulator,CalculateJacobian))

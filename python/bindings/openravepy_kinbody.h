@@ -94,6 +94,7 @@ public:
     PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv);
     PyKinBody(const PyKinBody& r);
     virtual ~PyKinBody();
+    void Destroy();
     KinBodyPtr GetBody();
     bool InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw=true, const std::string& uri=std::string());
     bool InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, bool bDraw=true, const std::string& uri=std::string());
