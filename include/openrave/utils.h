@@ -273,14 +273,6 @@ OPENRAVE_API std::string GetMD5HashString(const std::string& s);
 /// \brief compute the md5 hash of an array
 OPENRAVE_API std::string GetMD5HashString(const std::vector<uint8_t>& v);
 
-/// \brief return a string of specified length consists of randomly selected alpha numeric characters
-OPENRAVE_API std::string GetRandomAlphaNumericString(size_t length);
-/// \brief return a string of specified length consists of randomly selected hex characters
-OPENRAVE_API std::string GetRandomHexString(size_t length);
-/// \brief when s is empty, initialize it with a unique alpha numeric string
-OPENRAVE_API void InitializeUniqueAlphaNumericString(std::string &s, const std::set<std::string> &usedstrings);
-/// \brief when s is empty, initialize it with a unique name derived by appending a number to the supplied prefix
-OPENRAVE_API void InitializeUniquePrefixedString(std::string &s, const std::string &prefix, int &nextindex, const std::set<std::string> &usedstrings);
 
 template<class T>
 inline T ClampOnRange(T value, T min, T max)
