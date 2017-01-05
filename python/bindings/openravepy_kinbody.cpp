@@ -92,7 +92,7 @@ public:
     }
 
     KinBody::GeometryInfoPtr GetGeometryInfo() {
-        KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
+        KinBody::GeometryInfoPtr pinfo = boost::make_shared<KinBody::GeometryInfo>();
         KinBody::GeometryInfo& info = *pinfo;
         info._t = ExtractTransform(_t);
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
@@ -174,7 +174,7 @@ public:
     }
 
     KinBody::LinkInfoPtr GetLinkInfo() {
-        KinBody::LinkInfoPtr pinfo(new KinBody::LinkInfo());
+        KinBody::LinkInfoPtr pinfo = boost::make_shared<KinBody::LinkInfo>();
         KinBody::LinkInfo& info = *pinfo;
         info._vgeometryinfos.resize(len(_vgeometryinfos));
         for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
@@ -276,7 +276,7 @@ public:
     }
 
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
-        ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
+        ElectricMotorActuatorInfoPtr pinfo = boost::make_shared<ElectricMotorActuatorInfo>();
         ElectricMotorActuatorInfo& info = *pinfo;
         info.model_type = model_type;
         info.gear_ratio = gear_ratio;
@@ -406,7 +406,7 @@ public:
     }
 
     KinBody::JointInfoPtr GetJointInfo() {
-        KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
+        KinBody::JointInfoPtr pinfo = boost::make_shared<KinBody::JointInfo>();
         KinBody::JointInfo& info = *pinfo;
         info._type = _type;
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
@@ -826,7 +826,7 @@ public:
         boost::python::list geoms;
         size_t N = _plink->GetGeometries().size();
         for(size_t i = 0; i < N; ++i) {
-            geoms.append(boost::shared_ptr<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
+            geoms.append(boost::make_shared<PyGeometry>(_plink->GetGeometry(i)));
         }
         return geoms;
     }

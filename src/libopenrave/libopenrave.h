@@ -26,6 +26,8 @@
 
 //#include <boost/math/special_functions/round.hpp>
 
+#include <boost/make_shared.hpp>
+
 // include boost for vc++ only (to get typeof working)
 #ifdef _MSC_VER
 #include <boost/typeof/std/string.hpp>
@@ -347,9 +349,9 @@ public:
         std::map<KinBody::LinkConstPtr, int>::iterator itnoncolliding;
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
         FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
-            boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
-            KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+            const Grabbed &grabbed = *(*itgrabbed);
+            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), grabbed._plinkrobot) != _vattachedlinks.end();
+            KinBodyPtr pothergrabbedbody(grabbed._pgrabbedbody);
             if( !!pothergrabbedbody && pothergrabbedbody != pgrabbedbody && pothergrabbedbody->GetLinks().size() > 0 ) {
                 if( bsamelink ) {
                     pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
@@ -365,10 +367,10 @@ public:
                             // new body?
                             if( !colsaver ) {
                                 // have to reset the collision options
-                                colsaver.reset(new CollisionOptionsStateSaver(pchecker,0));
+                                colsaver = boost::make_shared<CollisionOptionsStateSaver>(pchecker,0);
                             }
                             if( !othergrabbedbodysaver ) {
-                                othergrabbedbodysaver.reset(new KinBody::KinBodyStateSaver(pothergrabbedbody, KinBody::Save_LinkEnable));
+                                othergrabbedbodysaver = boost::make_shared<KinBody::KinBodyStateSaver>(pothergrabbedbody, KinBody::Save_LinkEnable);
                                 pothergrabbedbody->Enable(true);
                             }
                             _mapLinkIsNonColliding[*itgrabbedlink] = !pchecker->CheckCollision(KinBody::LinkConstPtr(*itgrabbedlink), pgrabbedbody);
@@ -380,8 +382,8 @@ public:
 
         std::set<KinBodyConstPtr> _setgrabbed;
         FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
-            boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-            KinBodyConstPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
+            const Grabbed &grabbed = *(*itgrabbed);
+            KinBodyConstPtr pothergrabbedbody(grabbed._pgrabbedbody);
             if( !!pothergrabbedbody ) {
                 _setgrabbed.insert(pothergrabbedbody);
             }

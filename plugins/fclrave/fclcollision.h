@@ -63,7 +63,7 @@ public:
         {
             _bHasCallbacks = _pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
-                _report.reset(new CollisionReport());
+                _report = boost::make_shared<CollisionReport>();
             }
 
             // TODO : What happens if we have CO_AllGeometryContacts set and not CO_Contacts ?
@@ -112,7 +112,7 @@ public:
         : OpenRAVE::CollisionCheckerBase(penv), _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2"), _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
     {
         _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
-        _fclspace.reset(new FCLSpace(penv, _userdatakey));
+        _fclspace = boost::make_shared<FCLSpace>(penv, _userdatakey);
         _options = 0;
         // TODO : Should we put a more reasonable arbitrary value ?
         _numMaxContacts = std::numeric_limits<int>::max();
@@ -684,7 +684,7 @@ public:
 
 private:
     inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
-        return boost::dynamic_pointer_cast<FCLCollisionChecker>(shared_from_this());
+        return boost::static_pointer_cast<FCLCollisionChecker>(shared_from_this());
     }
 
     static bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
@@ -890,7 +890,7 @@ private:
     {
         BODYMANAGERSMAP::iterator it = _bodymanagers.find(std::make_pair(pbody, (int)bactiveDOFs));
         if( it == _bodymanagers.end() ) {
-            FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
+            FCLCollisionManagerInstancePtr p = boost::make_shared<FCLCollisionManagerInstance>(*_fclspace, _CreateManager());
             p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody, (int)bactiveDOFs), p)).first;
         }
@@ -924,7 +924,7 @@ private:
 
         std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.find(setExcludeBodyIds);
         if( it == _envmanagers.end() ) {
-            FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
+            FCLCollisionManagerInstancePtr p = boost::make_shared<FCLCollisionManagerInstance>(*_fclspace, _CreateManager());
             p->InitEnvironment(excludedbodies);
             it = _envmanagers.insert(std::map<std::set<int>, FCLCollisionManagerInstancePtr>::value_type(setExcludeBodyIds, p)).first;
         }

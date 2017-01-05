@@ -305,10 +305,10 @@ private:
     };
 
     inline boost::shared_ptr<IkFastModule> shared_problem() {
-        return boost::dynamic_pointer_cast<IkFastModule>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule>(shared_from_this());
     }
     inline boost::shared_ptr<IkFastModule const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<IkFastModule const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule const>(shared_from_this());
     }
 
 public:

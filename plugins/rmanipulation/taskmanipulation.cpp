@@ -102,7 +102,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
                         "Sets the robot.");
         _fMaxVelMult=1;
         _minimumgoalpaths=1;
-        _report.reset(new CollisionReport());
+        _report = boost::make_shared<CollisionReport>();
     }
     virtual ~TaskManipulation()
     {
@@ -362,7 +362,7 @@ protected:
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
 
         vector<dReal> vgrasps;
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams = boost::make_shared<GraspParameters>(GetEnv());
 
         KinBodyPtr ptarget;
         int nNumGrasps=0, nGraspDim=0;
@@ -390,7 +390,7 @@ protected:
         int iGraspTransformNoCol = -1;
         int iStartCountdown = 40;
         string cmd;
-        CollisionReportPtr report(new CollisionReport);
+        CollisionReportPtr report = boost::make_shared<CollisionReport>();
         Vector vLocalGraspTranslationOffset;
 
         while(!sinput.eof()) {
@@ -593,7 +593,7 @@ protected:
             mapPreshapeTrajectories[vCurHandValues] = pstarttraj;
         }
 
-        IkReturnPtr ikreturn(new IkReturn(IKRA_Success));
+        IkReturnPtr ikreturn = boost::make_shared<IkReturn>(IKRA_Success);
         TrajectoryBasePtr ptraj;
         GRASPGOAL goalFound;
         int iCountdown = 0;
@@ -1114,7 +1114,7 @@ protected:
         boost::shared_ptr<ostream> pOutputTrajStream;
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams = boost::make_shared<GraspParameters>(GetEnv());
         graspparams->vgoalconfig = pmanip->GetChuckingDirection();
 
         vector<dReal> voffset;
@@ -1234,7 +1234,7 @@ protected:
         Vector direction;
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams = boost::make_shared<GraspParameters>(GetEnv());
         graspparams->vgoalconfig = pmanip->GetChuckingDirection();
         FOREACH(it,graspparams->vgoalconfig) {
             *it = -*it;
@@ -1375,7 +1375,7 @@ protected:
         bool bExecute = true, bOutputFinal = false;
         string strtrajfilename;
         boost::shared_ptr<ostream> pOutputTrajStream;
-        boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
+        boost::shared_ptr<GraspParameters> graspparams = boost::make_shared<GraspParameters>(GetEnv());
 
         // initialize the moving direction as the opposite of the chucking direction defined in the manipulators
         vector<dReal> vchuckingsign_full(_robot->GetDOF(), 0);
@@ -1510,10 +1510,10 @@ protected:
 
 protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
+        return boost::static_pointer_cast<TaskManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
     /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
@@ -1654,7 +1654,7 @@ protected:
         if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot)) )
             RAVELOG_WARN("Hand in collision\n");
 
-        RRTParametersPtr params(new RRTParameters());
+        RRTParametersPtr params = boost::make_shared<RRTParameters>();
         params->_minimumgoalpaths = _minimumgoalpaths;
         if( _sPostProcessingParameters.size() > 0 ) {
             params->_sPostProcessingParameters = _sPostProcessingParameters;
@@ -1794,7 +1794,7 @@ protected:
                 _phandtraj = RaveCreateTrajectory(GetEnv(),"");
             }
 
-            GraspParametersPtr graspparams(new GraspParameters(GetEnv()));
+            GraspParametersPtr graspparams = boost::make_shared<GraspParameters>(GetEnv());
             graspparams->targetbody = ptarget;
             graspparams->btransformrobot = false;
             graspparams->breturntrajectory = false;

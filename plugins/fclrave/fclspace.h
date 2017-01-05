@@ -204,7 +204,7 @@ public:
         pinfo->vlinks.reserve(pbody->GetLinks().size());
         FOREACHC(itlink, pbody->GetLinks()) {
 
-            boost::shared_ptr<KinBodyInfo::LINK> link(new KinBodyInfo::LINK(*itlink));
+            boost::shared_ptr<KinBodyInfo::LINK> link = boost::make_shared<KinBodyInfo::LINK>(*itlink);
 
 
             typedef boost::range_detail::any_iterator<KinBody::GeometryInfo, boost::forward_traversal_tag, KinBody::GeometryInfo const&, std::ptrdiff_t> GeometryInfoIterator;

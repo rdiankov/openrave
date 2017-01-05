@@ -24,6 +24,9 @@
 
 namespace OpenRAVE {
 
+class Grabbed;
+typedef boost::shared_ptr<Grabbed> GrabbedPtr;
+
 /** \brief <b>[interface]</b> A robot is a kinematic body that has attached manipulators, sensors, and controllers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_robot.
     \ingroup interfaces
  */
@@ -562,7 +565,7 @@ protected:
         int affinedofs;
         Vector rotationaxis;
         ManipulatorPtr _pManipActive;
-        std::vector<UserDataPtr> _vGrabbedBodies;
+        std::vector<GrabbedPtr> _vGrabbedBodies;
         Transform _tActiveManipLocalTool;
         Vector _vActiveManipLocalDirection;
         IkSolverBasePtr _pActiveManipIkSolver;
@@ -1010,7 +1013,7 @@ protected:
     }
 
     /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    virtual void _Regrab(UserDataPtr pgrabbed);
+    virtual void _Regrab(GrabbedPtr pgrabbed);
 
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
@@ -1020,7 +1023,7 @@ protected:
     /// This function in calls every registers calledback that is tracking the changes.
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
-    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
     virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators

@@ -1046,12 +1046,12 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
 
             // check if any grabbed bodies are attached to this link
             FOREACHC(itgrabbed,probot->_vGrabbedBodies) {
-                GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-                if( pgrabbed->_plinkrobot == *itlink ) {
+                const Grabbed &grabbed = *(*itgrabbed);
+                if( grabbed._plinkrobot == *itlink ) {
                     if( vbodyexcluded.empty() ) {
                         vbodyexcluded.push_back(KinBodyConstPtr(probot));
                     }
-                    KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+                    KinBodyPtr pbody = grabbed._pgrabbedbody.lock();
                     if( !!pbody && probot->GetEnv()->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
                         return true;
                     }
