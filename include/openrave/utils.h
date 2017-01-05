@@ -28,6 +28,7 @@
 #include <string>
 #include <istream>
 #include <vector>
+#include <set>
 
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
@@ -212,7 +213,7 @@ inline std::string ConvertToLowerCase(const std::string & s)
     from http://stackoverflow.com/questions/5505965/fast-string-splitting-with-multiple-delimiters
 
    \param skipempty if true, then will skip empty strings. otherwise will insert them. use false when order of parameters is necessary.
-   
+
    Usage:
    \code
    std::vector<std::string> vstrings;
