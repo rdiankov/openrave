@@ -58,7 +58,7 @@ public:
 
                 probot->SetActiveDOFs(pmanip->GetArmIndices());
 
-                PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
+                PlannerBase::PlannerParametersPtr params = boost::make_shared<PlannerBase::PlannerParameters>();
                 params->_nMaxIterations = 4000; // max iterations before failure
                 params->SetRobotActiveJoints(probot); // set planning configuration space to current active dofs
                 params->vgoalconfig.resize(probot->GetActiveDOF());

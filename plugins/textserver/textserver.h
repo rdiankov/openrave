@@ -31,6 +31,7 @@
 #define usleep(microseconds) Sleep((microseconds+999)/1000)
 #endif
 
+#include <boost/make_shared.hpp>
 #include <sstream>
 
 #ifdef _WIN32
@@ -401,8 +402,8 @@ public:
 #endif
 
         RAVELOG_DEBUG("text server listening on port %d\n",_nPort);
-        _servthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_listen_threadcb,this)));
-        _workerthread.reset(new boost::thread(boost::bind(&SimpleTextServer::_worker_threadcb,this)));
+        _servthread = boost::make_shared<boost::thread>(boost::bind(&SimpleTextServer::_listen_threadcb,this));
+        _workerthread = boost::make_shared<boost::thread>(boost::bind(&SimpleTextServer::_worker_threadcb,this));
         bInitThread = true;
         return 0;
     }
@@ -535,7 +536,7 @@ private:
 
     void _listen_threadcb()
     {
-        SocketPtr psocket(new Socket());
+        SocketPtr psocket = boost::make_shared<Socket>();
 
         while(!bCloseThread) {
 
@@ -546,8 +547,8 @@ private:
             }
 
             // start a new thread
-            _listReadThreads.push_back(boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(&SimpleTextServer::_read_threadcb,shared_server(), psocket))));
-            psocket.reset(new Socket());
+            _listReadThreads.push_back(boost::make_shared<boost::thread>(boost::bind(&SimpleTextServer::_read_threadcb,shared_server(), psocket)));
+            psocket = boost::make_shared<Socket>();
         }
 
         RAVELOG_DEBUG("**Server thread exiting\n");
@@ -566,7 +567,7 @@ private:
                     flog << index++ << ": " << line << endl;
                 }
 
-                boost::shared_ptr<istream> is(new stringstream(line));
+                boost::shared_ptr<istream> is = boost::make_shared<stringstream>(line);
                 *is >> cmd;
                 if( !*is ) {
                     RAVELOG_ERROR("Failed to get command\n");
@@ -1535,7 +1536,7 @@ protected:
         if( !probot ) {
             return false;
         }
-        CollisionReportPtr preport(new CollisionReport());
+        CollisionReportPtr preport = boost::make_shared<CollisionReport>();
         os << probot->CheckSelfCollision(preport);
         return true;
     }
@@ -2060,7 +2061,7 @@ protected:
         int linkindex = -1;
         is >> bgetcontacts >> linkindex;
 
-        CollisionReportPtr preport(new CollisionReport());
+        CollisionReportPtr preport = boost::make_shared<CollisionReport>();
         vector<KinBody::LinkConstPtr> empty;
         CollisionOptionsStateSaver optionsaver(GetEnv()->GetCollisionChecker(),CO_Contacts);
         if( linkindex >= 0 ) {
@@ -2110,7 +2111,7 @@ protected:
         int oldoptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions();
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions|CO_Contacts);
 
-        CollisionReportPtr preport(new CollisionReport());
+        CollisionReportPtr preport = boost::make_shared<CollisionReport>();
         RAY r;
         bool bcollision;
         vector<dReal> info;

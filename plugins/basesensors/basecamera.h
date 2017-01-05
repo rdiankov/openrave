@@ -300,7 +300,7 @@ public:
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
-            return SensorDataPtr(boost::shared_ptr<CameraSensorData>(new CameraSensorData()));
+            return boost::make_shared<CameraSensorData>();
         }
         return SensorDataPtr();
     }

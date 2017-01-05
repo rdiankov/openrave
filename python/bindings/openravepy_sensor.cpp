@@ -97,7 +97,7 @@ public:
         return SensorBase::ST_Camera;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::CameraGeomData> geom(new SensorBase::CameraGeomData());
+        boost::shared_ptr<SensorBase::CameraGeomData> geom = boost::make_shared<SensorBase::CameraGeomData>();
         geom->hardware_id = hardware_id;
         geom->width = width;
         geom->height = height;
@@ -144,7 +144,7 @@ public:
         return SensorBase::ST_Laser;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::LaserGeomData> geom(new SensorBase::LaserGeomData());
+        boost::shared_ptr<SensorBase::LaserGeomData> geom = boost::make_shared<SensorBase::LaserGeomData>();
         geom->min_angle[0] = (dReal)boost::python::extract<dReal>(min_angle[0]);
         geom->min_angle[1] = (dReal)boost::python::extract<dReal>(min_angle[1]);
         geom->max_angle[0] = (dReal)boost::python::extract<dReal>(max_angle[0]);
@@ -176,7 +176,7 @@ public:
         return SensorBase::ST_JointEncoder;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::JointEncoderGeomData> geom(new SensorBase::JointEncoderGeomData());
+        boost::shared_ptr<SensorBase::JointEncoderGeomData> geom = boost::make_shared<SensorBase::JointEncoderGeomData>();
         geom->resolution = ExtractArray<dReal>(resolution);
         return geom;
     }
@@ -198,7 +198,7 @@ public:
         return SensorBase::ST_Force6D;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::Force6DGeomData> geom(new SensorBase::Force6DGeomData());
+        boost::shared_ptr<SensorBase::Force6DGeomData> geom = boost::make_shared<SensorBase::Force6DGeomData>();
         return geom;
     }
 };
@@ -219,7 +219,7 @@ public:
         return SensorBase::ST_IMU;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::IMUGeomData> geom(new SensorBase::IMUGeomData());
+        boost::shared_ptr<SensorBase::IMUGeomData> geom = boost::make_shared<SensorBase::IMUGeomData>();
         geom->time_measurement = time_measurement;
         return geom;
     }
@@ -242,7 +242,7 @@ public:
         return SensorBase::ST_Odometry;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::OdometryGeomData> geom(new SensorBase::OdometryGeomData());
+        boost::shared_ptr<SensorBase::OdometryGeomData> geom = boost::make_shared<SensorBase::OdometryGeomData>();
         geom->targetid = targetid;
         return geom;
     }
@@ -267,7 +267,7 @@ public:
         return SensorBase::ST_Tactile;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::TactileGeomData> geom(new SensorBase::TactileGeomData());
+        boost::shared_ptr<SensorBase::TactileGeomData> geom = boost::make_shared<SensorBase::TactileGeomData>();
         geom->thickness = thickness;
         return geom;
     }
@@ -305,7 +305,7 @@ public:
         return SensorBase::ST_Actuator;
     }
     virtual SensorBase::SensorGeometryPtr GetGeometry() {
-        boost::shared_ptr<SensorBase::ActuatorGeomData> geom(new SensorBase::ActuatorGeomData());
+        boost::shared_ptr<SensorBase::ActuatorGeomData> geom = boost::make_shared<SensorBase::ActuatorGeomData>();
         geom->maxtorque = maxtorque;
         geom->maxcurrent = maxcurrent;
         geom->nominalcurrent = nominalcurrent;
@@ -570,21 +570,21 @@ public:
     {
         switch(type) {
         case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorGeometry>(new PyLaserGeomData(boost::static_pointer_cast<SensorBase::LaserGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyLaserGeomData>(boost::static_pointer_cast<SensorBase::LaserGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_Camera:
-            return boost::shared_ptr<PySensorGeometry>(new PyCameraGeomData(boost::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyCameraGeomData>(boost::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_JointEncoder:
-            return boost::shared_ptr<PySensorGeometry>(new PyJointEncoderGeomData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyJointEncoderGeomData>(boost::static_pointer_cast<SensorBase::JointEncoderGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_Force6D:
-            return boost::shared_ptr<PySensorGeometry>(new PyForce6DGeomData(boost::static_pointer_cast<SensorBase::Force6DGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyForce6DGeomData>(boost::static_pointer_cast<SensorBase::Force6DGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_IMU:
-            return boost::shared_ptr<PySensorGeometry>(new PyIMUGeomData(boost::static_pointer_cast<SensorBase::IMUGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyIMUGeomData>(boost::static_pointer_cast<SensorBase::IMUGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_Odometry:
-            return boost::shared_ptr<PySensorGeometry>(new PyOdometryGeomData(boost::static_pointer_cast<SensorBase::OdometryGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyOdometryGeomData>(boost::static_pointer_cast<SensorBase::OdometryGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_Tactile:
-            return boost::shared_ptr<PySensorGeometry>(new PyTactileGeomData(boost::static_pointer_cast<SensorBase::TactileGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyTactileGeomData>(boost::static_pointer_cast<SensorBase::TactileGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_Actuator:
-            return boost::shared_ptr<PySensorGeometry>(new PyActuatorGeomData(boost::static_pointer_cast<SensorBase::ActuatorGeomData const>(_psensor->GetSensorGeometry())));
+            return boost::make_shared<PyActuatorGeomData>(boost::static_pointer_cast<SensorBase::ActuatorGeomData const>(_psensor->GetSensorGeometry()));
         case SensorBase::ST_Invalid:
             break;
         }
@@ -623,21 +623,21 @@ public:
         }
         switch(psensordata->GetType()) {
         case SensorBase::ST_Laser:
-            return boost::shared_ptr<PySensorData>(new PyLaserSensorData(boost::static_pointer_cast<SensorBase::LaserGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata)));
+            return boost::make_shared<PyLaserSensorData>(boost::static_pointer_cast<SensorBase::LaserGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::LaserSensorData>(psensordata));
         case SensorBase::ST_Camera:
-            return boost::shared_ptr<PySensorData>(new PyCameraSensorData(boost::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata)));
+            return boost::make_shared<PyCameraSensorData>(boost::static_pointer_cast<SensorBase::CameraGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::CameraSensorData>(psensordata));
         case SensorBase::ST_JointEncoder:
-            return boost::shared_ptr<PySensorData>(new PyJointEncoderSensorData(boost::static_pointer_cast<SensorBase::JointEncoderGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(psensordata)));
+            return boost::make_shared<PyJointEncoderSensorData>(boost::static_pointer_cast<SensorBase::JointEncoderGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::JointEncoderSensorData>(psensordata));
         case SensorBase::ST_Force6D:
-            return boost::shared_ptr<PySensorData>(new PyForce6DSensorData(boost::static_pointer_cast<SensorBase::Force6DGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(psensordata)));
+            return boost::make_shared<PyForce6DSensorData>(boost::static_pointer_cast<SensorBase::Force6DGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::Force6DSensorData>(psensordata));
         case SensorBase::ST_IMU:
-            return boost::shared_ptr<PySensorData>(new PyIMUSensorData(boost::static_pointer_cast<SensorBase::IMUGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(psensordata)));
+            return boost::make_shared<PyIMUSensorData>(boost::static_pointer_cast<SensorBase::IMUGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::IMUSensorData>(psensordata));
         case SensorBase::ST_Odometry:
-            return boost::shared_ptr<PySensorData>(new PyOdometrySensorData(boost::static_pointer_cast<SensorBase::OdometryGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata)));
+            return boost::make_shared<PyOdometrySensorData>(boost::static_pointer_cast<SensorBase::OdometryGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::OdometrySensorData>(psensordata));
         case SensorBase::ST_Tactile:
-            return boost::shared_ptr<PySensorData>(new PyTactileSensorData(boost::static_pointer_cast<SensorBase::TactileGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::TactileSensorData>(psensordata)));
+            return boost::make_shared<PyTactileSensorData>(boost::static_pointer_cast<SensorBase::TactileGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::TactileSensorData>(psensordata));
         case SensorBase::ST_Actuator:
-            return boost::shared_ptr<PySensorData>(new PyActuatorSensorData(boost::static_pointer_cast<SensorBase::ActuatorGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::ActuatorSensorData>(psensordata)));
+            return boost::make_shared<PyActuatorSensorData>(boost::static_pointer_cast<SensorBase::ActuatorGeomData const>(_psensor->GetSensorGeometry()), boost::static_pointer_cast<SensorBase::ActuatorSensorData>(psensordata));
         case SensorBase::ST_Invalid:
             break;
         }

@@ -77,8 +77,8 @@ public:
 
     bool _SetState(std::vector<dReal>& v, int filteroptions=IKFO_CheckEnvCollisions|IKFO_IgnoreCustomFilters) {
         // save state before modifying it
-        RobotBase::RobotStateSaverPtr savestate1(new RobotBase::RobotStateSaver(_probot));
-        RobotBase::RobotStateSaverPtr savestate2(new RobotBase::RobotStateSaver(_ptarget));
+        RobotBase::RobotStateSaverPtr savestate1 = boost::make_shared<RobotBase::RobotStateSaver>(_probot);
+        RobotBase::RobotStateSaverPtr savestate2 = boost::make_shared<RobotBase::RobotStateSaver>(_ptarget);
 
         vector<dReal> vdoor(1); vdoor[0] = v.back();
         _ptarget->SetActiveDOFValues(vdoor);

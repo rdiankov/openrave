@@ -478,7 +478,7 @@ public:
                 vsampletimes.resize(vabstimes.size());
                 std::merge(vabstimes.begin(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.begin()+trajectory->GetNumWaypoints(), vabstimes.end(), vsampletimes.begin());
                 std::vector<dReal> vprevdata, vprevdatavel;
-                ConstraintFilterReturnPtr filterreturn(new ConstraintFilterReturn());
+                ConstraintFilterReturnPtr filterreturn = boost::make_shared<ConstraintFilterReturn>();
                 trajectory->Sample(vprevdata,0,_parameters->_configurationspecification);
                 trajectory->Sample(vprevdatavel,0,velspec);
                 std::vector<dReal>::iterator itprevtime = vsampletimes.begin();
@@ -560,7 +560,7 @@ void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, Traject
 {
     EnvironmentMutex::scoped_lock lockenv(trajectory->GetEnv()->GetMutex());
     if( !parameters ) {
-        PlannerBase::PlannerParametersPtr newparams(new PlannerBase::PlannerParameters());
+        PlannerBase::PlannerParametersPtr newparams = boost::make_shared<PlannerBase::PlannerParameters>();
         newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
         parameters = newparams;
     }
@@ -585,7 +585,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     EnvironmentMutex::scoped_lock lockenv(env->GetMutex());
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
     PlannerBasePtr planner = RaveCreatePlanner(env,plannername.size() > 0 ? plannername : string("parabolicsmoother"));
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->SetRobotActiveJoints(probot);
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
@@ -626,7 +626,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _nRobotAffineDOF = _robot->GetAffineDOF();
     _vRobotRotationAxis = _robot->GetAffineRotationAxis();
     _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->SetRobotActiveJoints(_robot);
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
@@ -667,7 +667,7 @@ void ActiveDOFTrajectorySmoother::_UpdateParameters()
 {
     RobotBase::RobotStateSaver saver(_robot, KinBody::Save_ActiveDOF);
     _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->SetRobotActiveJoints(_robot);
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
@@ -687,7 +687,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _nRobotAffineDOF = _robot->GetAffineDOF();
     _vRobotRotationAxis = _robot->GetAffineRotationAxis();
     _planner = RaveCreatePlanner(robot->GetEnv(),plannername);
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->SetRobotActiveJoints(_robot);
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
@@ -731,7 +731,7 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
 {
     RobotBase::RobotStateSaver saver(_robot, KinBody::Save_ActiveDOF);
     _robot->SetActiveDOFs(_vRobotActiveIndices, _nRobotAffineDOF, _vRobotRotationAxis);
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->SetRobotActiveJoints(_robot);
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_hastimestamps = false;
@@ -761,7 +761,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
 
     EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->SetConfigurationSpecification(traj->GetEnv(),traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
     FOREACH(it,params->_vConfigVelocityLimit) {
         *it *= fmaxvelmult;
@@ -895,7 +895,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
     // don't need to convert since the planner does that automatically
     //ConvertTrajectorySpecification(traj,newspec);
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
     params->_vConfigVelocityLimit = maxvelocities;
     params->_vConfigAccelerationLimit = maxaccelerations;
@@ -961,9 +961,9 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
             params->_getstatefn = boost::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
             params->_distmetricfn = boost::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
-            boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
+            boost::shared_ptr<DynamicsCollisionConstraint> pcollision = boost::make_shared<DynamicsCollisionConstraint>(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints);
             params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
-            statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn));
+            statesaver = boost::make_shared<PlannerStateSaver>(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn);
         }
     }
     else {
@@ -1046,7 +1046,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     //ConvertTrajectorySpecification(traj,trajspec);
     TrajectoryTimingParametersPtr parameters;
     if( !_parameters ) {
-        parameters.reset(new TrajectoryTimingParameters());
+        parameters = boost::make_shared<TrajectoryTimingParameters>();
         parameters->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
         parameters->_setstatevaluesfn.clear();
         parameters->_setstatefn.clear();
@@ -1447,7 +1447,7 @@ size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& d
 
 size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
-    TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
+    TrajectoryTimingParametersPtr params = boost::make_shared<TrajectoryTimingParameters>();
     ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
     OPENRAVE_ASSERT_OP(specpos.GetDOF(),==,(int)dofvalues.size());
     params->SetConfigurationSpecification(traj->GetEnv(),specpos);
@@ -2000,7 +2000,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
 DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(0), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
-    _report.reset(new CollisionReport());
+    _report = boost::make_shared<CollisionReport>();
     _parameters = parameters;
     if( !!parameters ) {
         _specvel = parameters->_configurationspecification.ConvertToVelocitySpecification();
@@ -3056,7 +3056,7 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
         s._numleft = _nummaxsamples;
         _listsamples.push_back(s);
     }
-    _report.reset(new CollisionReport());
+    _report = boost::make_shared<CollisionReport>();
     pmanip->GetIkSolver()->GetFreeParameters(_vfreestart);
 
     std::stringstream ssout, ssin;
@@ -3174,7 +3174,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                     if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) ) {
                                         // make sure at least one ik solution exists...
                                         if( !ikreturnjittered ) {
-                                            ikreturnjittered.reset(new IkReturn(IKRA_Success));
+                                            ikreturnjittered = boost::make_shared<IkReturn>(IKRA_Success);
                                         }
                                         bool biksuccess = _pmanip->FindIKSolution(ikparamjittered, _ikfilteroptions, ikreturnjittered);
                                         if( biksuccess ) {
@@ -3208,7 +3208,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 try {
                                     if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) ) {
                                         if( !ikreturnjittered ) {
-                                            ikreturnjittered.reset(new IkReturn(IKRA_Success));
+                                            ikreturnjittered = boost::make_shared<IkReturn>(IKRA_Success);
                                         }
                                         bool biksuccess = _pmanip->FindIKSolution(ikparamjittered, _ikfilteroptions, ikreturnjittered);
                                         if( biksuccess ) {

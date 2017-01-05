@@ -71,7 +71,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
-                _gjointvalues.reset(new ConfigurationSpecification::Group());
+                _gjointvalues = boost::make_shared<ConfigurationSpecification::Group>();
                 _gjointvalues->offset = 0;
                 _gjointvalues->dof = _dofindices.size();
                 stringstream ss;
@@ -82,7 +82,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _gjointvalues->name = ss.str();
             }
             if( nControlTransformation ) {
-                _gtransform.reset(new ConfigurationSpecification::Group());
+                _gtransform = boost::make_shared<ConfigurationSpecification::Group>();
                 _gtransform->offset = robot->GetDOF();
                 _gtransform->dof = RaveGetAffineDOF(DOF_Transform);
                 _gtransform->name = str(boost::format("affine_transform %s %d")%robot->GetName()%DOF_Transform);
@@ -205,7 +205,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                                     trelativepose.trans[0] = boost::lexical_cast<dReal>(tokens[8]);
                                     trelativepose.trans[1] = boost::lexical_cast<dReal>(tokens[9]);
                                     trelativepose.trans[2] = boost::lexical_cast<dReal>(tokens[10]);
-                                    _vgrabbodylinks.back().trelativepose.reset(new Transform(trelativepose));
+                                    _vgrabbodylinks.back().trelativepose = boost::make_shared<Transform>(trelativepose);
                                 }
                             }
                             dof += _samplespec._vgroups.back().dof;

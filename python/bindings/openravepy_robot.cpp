@@ -233,7 +233,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,solution,filteroptions);
 
@@ -242,7 +242,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,vFreeParameters, solution,filteroptions);
         }
@@ -250,7 +250,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
         }
@@ -258,7 +258,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,vFreeParameters, filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
         }
@@ -267,7 +267,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,solutions,filteroptions);
         }
@@ -275,7 +275,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,vFreeParameters,solutions,filteroptions);
         }
@@ -283,7 +283,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,filteroptions,vikreturns);
         }
@@ -291,7 +291,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,vFreeParameters,filteroptions,vikreturns);
         }
@@ -658,7 +658,7 @@ public:
 
         RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const
         {
-            RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
+            RobotBase::AttachedSensorInfoPtr pinfo = boost::make_shared<RobotBase::AttachedSensorInfo>();
             pinfo->_name = boost::python::extract<std::string>(_name);
             pinfo->_linkname = boost::python::extract<std::string>(_linkname);
             pinfo->_trelative = ExtractTransform(_trelative);
@@ -778,7 +778,7 @@ public:
 
         RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
         {
-            RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
+            RobotBase::GrabbedInfoPtr pinfo = boost::make_shared<RobotBase::GrabbedInfo>();
             pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
             pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
             pinfo->_trelative = ExtractTransform(_trelative);
@@ -951,7 +951,7 @@ public:
     {
         boost::python::list sensors;
         FOREACH(itsensor, _probot->GetAttachedSensors()) {
-            sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
+            sensors.append(boost::make_shared<PyAttachedSensor>(*itsensor,_pyenv));
         }
         return sensors;
     }
@@ -1372,10 +1372,10 @@ public:
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
         PyRobotStateSaverPtr saver;
         if( IS_PYTHONOBJECT_NONE(options) ) {
-            saver.reset(new PyRobotStateSaver(_probot,_pyenv));
+            saver = boost::make_shared<PyRobotStateSaver>(_probot, _pyenv);
         }
         else {
-            saver.reset(new PyRobotStateSaver(_probot,_pyenv,options));
+            saver = boost::make_shared<PyRobotStateSaver>(_probot, _pyenv, options);
         }
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }

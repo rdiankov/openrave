@@ -1716,7 +1716,7 @@ object PyKinBody::GetDOFWeights(object oindices) const
     if( vindices.size() == 0 ) {
         return numeric::array(boost::python::list());
     }
-    vector<dReal> values, v;
+    vector<dReal> values;
     values.reserve(vindices.size());
     FOREACHC(it, vindices) {
         KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
@@ -1741,7 +1741,7 @@ object PyKinBody::GetDOFResolutions(object oindices) const
     if( vindices.size() == 0 ) {
         return numeric::array(boost::python::list());
     }
-    vector<dReal> values, v;
+    vector<dReal> values;
     values.reserve(vindices.size());
     FOREACHC(it, vindices) {
         KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);

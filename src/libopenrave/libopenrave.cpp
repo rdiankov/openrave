@@ -2339,7 +2339,7 @@ typedef boost::shared_ptr<CustomSamplerCallbackData> CustomSamplerCallbackDataPt
 
 UserDataPtr SpaceSamplerBase::RegisterStatusCallback(const StatusCallbackFn& callbackfn)
 {
-    CustomSamplerCallbackDataPtr pdata(new CustomSamplerCallbackData(callbackfn,shared_sampler()));
+    CustomSamplerCallbackDataPtr pdata = boost::make_shared<CustomSamplerCallbackData>(callbackfn,shared_sampler());
     pdata->_iterator = __listRegisteredCallbacks.insert(__listRegisteredCallbacks.end(),pdata);
     return pdata;
 }
