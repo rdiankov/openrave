@@ -422,7 +422,7 @@ public:
                         // We only check time-based constraints since the path is anyway likely to be modified during shortcutting.
                         if( !_ComputeRampWithZeroVelEndpoints(x0Vect, x1Vect, CFO_CheckTimeBasedConstraints, tempRampNDVect) ) {
                             RAVELOG_WARN_FORMAT("env = %d: Failed to initialize from cubic waypoints", GetEnv()->GetId());
-                            _DumpTrajectory(ptraj, Level_Debug);
+                            _DumpTrajectory(ptraj, _dumplevel);
                             return PS_Failed;
                         }
                     }
@@ -496,7 +496,7 @@ public:
             // Time-parameterize the initial path
             if( !_SetMileStones(vWaypoints, parabolicpath) ) {
                 RAVELOG_WARN_FORMAT("env = %d: Failed to initialize from piecewise linear waypoints", GetEnv()->GetId());
-                _DumpTrajectory(ptraj, Level_Debug);
+                _DumpTrajectory(ptraj, _dumplevel);
                 return PS_Failed;
             }
             RAVELOG_DEBUG_FORMAT("env = %d: Finished initializing linear waypoints via _SetMileStones", GetEnv()->GetId());
@@ -706,7 +706,7 @@ public:
                                 else {
                                     RAVELOG_WARN_FORMAT("env = %d: original RampND %d/%d does not satisfy constraints. retcode = 0x%x", GetEnv()->GetId()%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode);
                                 }
-                                _DumpTrajectory(ptraj, Level_Debug);
+                                _DumpTrajectory(ptraj, _dumplevel);
                                 return PS_Failed;
                             }
                         }
@@ -741,7 +741,7 @@ public:
             ptraj->Swap(_pdummytraj);
         }
         catch (const std::exception& ex) {
-            _DumpTrajectory(ptraj, Level_Debug);
+            _DumpTrajectory(ptraj, _dumplevel);
             RAVELOG_WARN_FORMAT("env = %d: Main planning loop threw exception %s", GetEnv()->GetId()%ex.what());
             return PS_Failed;
         }
@@ -755,7 +755,7 @@ public:
             }
             catch (const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("env = %d: Sampling for verification failed: %s", GetEnv()->GetId()%ex.what());
-                _DumpTrajectory(ptraj, Level_Debug);
+                _DumpTrajectory(ptraj, _dumplevel);
                 return PS_Failed;
             }
         }

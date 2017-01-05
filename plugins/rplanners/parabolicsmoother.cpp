@@ -363,7 +363,7 @@ public:
                         // only check time based constraints since most of the collision checks here will change due to a different path. however it's important to have the ramp start with reasonable velocities/accelerations.
                         if( !_ValidateRamp(dynamicpath.ramps[iramp], CFO_CheckTimeBasedConstraints, iramp, dynamicpath.ramps.size()) ) {
                             RAVELOG_WARN("failed to initialize from cubic ramps\n");
-                            _DumpTrajectory(ptraj, Level_Debug);
+                            _DumpTrajectory(ptraj, _dumplevel);
                             return PS_Failed;
 
                         }
@@ -422,7 +422,7 @@ public:
             //dynamicpath.SetMilestones(path);   //now the trajectory starts and stops at every milestone
             if( !_SetMilestones(dynamicpath.ramps, path) ) {
                 RAVELOG_WARN("failed to initialize ramps\n");
-                _DumpTrajectory(ptraj, Level_Debug);
+                _DumpTrajectory(ptraj, _dumplevel);
                 return PS_Failed;
             }
             RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
@@ -665,7 +665,7 @@ public:
                                 else {
                                     RAVELOG_WARN_FORMAT("env=%d, original ramp %d/%d does not satisfy contraints. check retcode=0x%x!", GetEnv()->GetId()%irampindex%dynamicpath.ramps.size()%checkret.retcode);
                                 }
-                                _DumpTrajectory(ptraj, Level_Verbose);
+                                _DumpTrajectory(ptraj, _dumplevel);
                                 return PS_Failed;
                             }
                         }
@@ -732,7 +732,7 @@ public:
             ptraj->Swap(_dummytraj);
         }
         catch (const std::exception& ex) {
-            _DumpTrajectory(ptraj, Level_Debug);
+            _DumpTrajectory(ptraj, _dumplevel);
             RAVELOG_WARN_FORMAT("env=%d, parabolic planner failed, iter=%d: %s", GetEnv()->GetId()%_progress._iteration%ex.what());
             return PS_Failed;
         }
@@ -751,7 +751,7 @@ public:
             }
             catch (const std::exception& ex) {
                 RAVELOG_WARN_FORMAT("sampling for verification failed: %s", ex.what());
-                _DumpTrajectory(ptraj, Level_Debug);
+                _DumpTrajectory(ptraj, _dumplevel);
             }
         }
         //====================================================================================================
