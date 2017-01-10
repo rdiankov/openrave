@@ -67,7 +67,7 @@ RobotBase::AttachedSensorInfo& RobotBase::AttachedSensorInfo::operator=(const Ro
     return *this;
 }
 
-void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
+void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options) const
 {
     RAVE_SERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -76,7 +76,6 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "type", type);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "linkName", linkName);
     RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "transform", transform);
-
     rapidjson::Value sensorGeometryValue;
     if (!!sensorGeometry) {
         sensorGeometry->SerializeJSON(sensorGeometryValue, allocator, options);
@@ -84,7 +83,7 @@ void RobotBase::AttachedSensorInfo::SerializeJSON(rapidjson::Value &value, rapid
     value.AddMember("sensorGeometry", sensorGeometryValue, allocator);
 }
 
-void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value)
+void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
 {
     RAVE_DESERIALIZEJSON_ENSURE_OBJECT(value);
 
@@ -94,12 +93,20 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &valu
     RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", linkName);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
 
+    RAVELOG_WARN_FORMAT("name = %s, type = %s", name%type);
+    // do not deserialize geometry since it requires a pointer to the sensor
+    sensorGeometry.reset();
+    
+    //SensorBasePtr psensor;
     if (value.HasMember("sensorGeometry")) {
-        BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, InterfaceBasePtr(), AttributesList());
-        if( !!preader ) {
-            preader->DeserializeJSON(value["sensorGeometry"]);
-            if( !!preader->GetReadable() ) {
-                sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+        SensorBasePtr psensor = RaveCreateSensor(penv, type); // because of the way deserialization works, this sensor will be deleted after function ends
+        if( !!psensor ) {
+            BaseJSONReaderPtr preader = RaveCallJSONReader(PT_Sensor, type, psensor, AttributesList());
+            if( !!preader ) {
+                preader->DeserializeJSON(value["sensorGeometry"]);
+                if( !!preader->GetReadable() ) {
+                    sensorGeometry = boost::dynamic_pointer_cast<SensorBase::SensorGeometry>(preader->GetReadable());
+                }
             }
         }
     }
@@ -140,8 +147,8 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::
     psensor = RaveCreateSensor(probot->GetEnv(), _info._sensorname);
     if( !!psensor ) {
         psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%_info._name)); // need a unique targettable name
-        if(!!_info._sensorgeometry) {
-            psensor->SetSensorGeometry(_info._sensorgeometry);
+        if(!!_info.sensorGeometry) {
+            psensor->SetSensorGeometry(_info.sensorGeometry);
         }
         pdata = psensor->CreateSensorData();
     }
@@ -170,7 +177,7 @@ void RobotBase::AttachedSensor::UpdateInfo(SensorBase::SensorType type)
     if( !!psensor ) {
         _info._sensorname = psensor->GetXMLId();
         // TODO try to get the sensor geometry...?
-        _info._sensorgeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(psensor->GetSensorGeometry(type));
+        _info.sensorGeometry = boost::const_pointer_cast<SensorBase::SensorGeometry>(psensor->GetSensorGeometry(type));
         //_info._sensorgeometry
     }
     LinkPtr prealattachedlink = pattachedlink.lock();
@@ -207,16 +214,16 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
     }
 }
 
-void RobotBase::AttachedSensor::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
-{
-    UpdateInfo();
-    _info.SerializeJSON(value, allocator, options);
-}
-
-void RobotBase::AttachedSensor::DeserializeJSON(const rapidjson::Value &value)
-{
-    _info.DeserializeJSON(value);
-}
+//void RobotBase::AttachedSensor::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options)
+//{
+//    UpdateInfo();
+//    _info.SerializeJSON(value, allocator, options);
+//}
+//
+//void RobotBase::AttachedSensor::DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv)
+//{
+//    _info.DeserializeJSON(value);
+//}
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 {
@@ -2722,7 +2729,7 @@ void RobotBase::SerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
             RAVE_SERIALIZEJSON_CLEAR_ARRAY(attachedSensorsValue);
             FOREACHC(it, GetAttachedSensors()) {
                 rapidjson::Value attachedSensorValue;
-                (*it)->SerializeJSON(attachedSensorValue, allocator, options);
+                (*it)->UpdateAndGetInfo().SerializeJSON(attachedSensorValue, allocator, options);
 
                 // look up link sid based on name
                 LinkPtr link = GetLink((*it)->GetInfo().linkName);
@@ -2842,7 +2849,6 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
     if (value.HasMember("attachedSensors"))
     {
         RAVE_DESERIALIZEJSON_ENSURE_ARRAY(value["attachedSensors"]);
-
         attachedsensorinfos.reserve(value["attachedSensors"].Size());
         for (size_t i = 0; i < value["attachedSensors"].Size(); ++i)
         {
@@ -2856,7 +2862,7 @@ void RobotBase::DeserializeJSON(const rapidjson::Value &value)
             }
 
             AttachedSensorInfoPtr attachedsensorinfo(new AttachedSensorInfo());
-            attachedsensorinfo->DeserializeJSON(copy);
+            attachedsensorinfo->DeserializeJSON(copy, GetEnv());
             attachedsensorinfos.push_back(attachedsensorinfo);
         }
     }

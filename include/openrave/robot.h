@@ -450,8 +450,8 @@ public:
 
         AttachedSensorInfo& operator=(const AttachedSensorInfo& other);
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value);
+        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0) const;
+        virtual void DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv);
 
         /// \brief unique and constant scoped identifier
         std::string sid;
@@ -518,8 +518,8 @@ public:
 
         virtual void serialize(std::ostream& o, int options) const;
 
-        virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
-        virtual void DeserializeJSON(const rapidjson::Value &value);
+        //virtual void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, int options=0);
+        //virtual void DeserializeJSON(const rapidjson::Value &value, EnvironmentBasePtr penv);
 
         /// \brief return hash of the sensor definition
         virtual const std::string& GetStructureHash() const;
