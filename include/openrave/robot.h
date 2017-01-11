@@ -69,7 +69,7 @@ public:
         std::string& _sIkSolverXMLId RAVE_DEPRECATED;
 
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
-        std::vector<std::string> _vGripperJointNames RAVE_DEPRECATED;
+        std::vector<std::string>& _vGripperJointNames RAVE_DEPRECATED;
     };
     typedef boost::shared_ptr<ManipulatorInfo> ManipulatorInfoPtr;
     typedef boost::shared_ptr<ManipulatorInfo const> ManipulatorInfoConstPtr;
