@@ -98,6 +98,27 @@ namespace OpenRAVE {
             return true;
         }
 
+        bool Extract(KinBodyPtr& ppbody){
+            // extract the first articulated system found.
+            RAVE_DESERIALIZEJSON_ENSURE_OBJECT(*_doc);
+
+            std::pair<std::string, dReal> unit;
+            RAVE_DESERIALIZEJSON_REQUIRED(*_doc, "unit", unit);
+            _penv->SetUnit(unit);
+
+            if (_doc->HasMember("bodies")){
+
+                RAVE_DESERIALIZEJSON_ENSURE_ARRAY((*_doc)["bodies"]);
+
+                rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin();
+                _FillBody(*itr, _doc->GetAllocator()); 
+                _ExtractKinBody(*itr, ppbody);
+            }
+
+            return true;
+        }
+
+
         bool ExtractKinBody(KinBodyPtr& ppbody, const string& uri, const AttributesList& atts){
             // TODO
             std::string scheme, path, fragment;
@@ -182,6 +203,14 @@ namespace OpenRAVE {
             dReal fUnitScale = _GetUnitScale();
             body->DeserializeJSON(value, fUnitScale);
             _penv->Add(body, false);
+        }
+
+        void _ExtractKinBody(const rapidjson::Value &value, KinBodyPtr& ppbody){
+            KinBodyPtr body = RaveCreateKinBody(_penv, "");
+            dReal fUnitScale = _GetUnitScale();
+            body->DeserializeJSON(value, fUnitScale);
+            _penv->Add(body, false);
+            ppbody = body;
         }
 
         void _ExtractRobot(const rapidjson::Value &value)
@@ -355,8 +384,7 @@ namespace OpenRAVE {
         if (fullFilename.size() == 0 || !reader.InitFromFile(fullFilename)) {
             return false;
         }
-        // TODO
-        return false;
+        return reader.Extract(ppbody);
     }
 
     bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts)
@@ -414,6 +442,7 @@ namespace OpenRAVE {
             return false;
         }
         // TODO
+        // return reader.ExtractKinBody(ppbody, )
         return false;
     }
 
