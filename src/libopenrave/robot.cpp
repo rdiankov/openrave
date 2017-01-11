@@ -93,7 +93,6 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value &valu
     RAVE_DESERIALIZEJSON_REQUIRED(value, "linkName", linkName);
     RAVE_DESERIALIZEJSON_REQUIRED(value, "transform", transform);
 
-    RAVELOG_WARN_FORMAT("name = %s, type = %s", name%type);
     // do not deserialize geometry since it requires a pointer to the sensor
     sensorGeometry.reset();
     

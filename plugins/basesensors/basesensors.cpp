@@ -56,7 +56,6 @@ void GetPluginAttributesValidated(PLUGININFO& info)
 
         s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateJSONReader));
         s_listRegisteredReaders->push_back(RaveRegisterJSONReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateJSONReader));
-        RAVELOG_WARN("json reader registered");
     }
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("BaseLaser2D");
     info.interfacenames[OpenRAVE::PT_Sensor].push_back("base_laser2d");
