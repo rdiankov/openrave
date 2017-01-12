@@ -138,7 +138,7 @@ protected:
         size_t colonindex = path.find_first_of(':');
         if (colonindex != std::string::npos) {
             scheme = path.substr(0, colonindex);
-            path = path.substr(colonindex + 2);
+            path = path.substr(colonindex + 1);
         }
     }
 
@@ -167,7 +167,7 @@ protected:
             }
         }
 
-        std::string newuri = scheme + path;
+        std::string newuri = scheme + ":" + path;
         if (fragment.size() > 0) {
             newuri += "#" + fragment;
         }

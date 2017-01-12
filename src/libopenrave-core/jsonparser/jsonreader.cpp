@@ -175,7 +175,7 @@ namespace OpenRAVE {
             std::string scheme, path, fragment;
             _ParseURI(uri, scheme, path, fragment);
 
-            dReal fUnitScale = _GetUnitScale();
+            dReal fUnitScale = _GetUnitScale(); // TODO(simon): use this
 
             if (fragment == "") {
                 for (rapidjson::Value::ValueIterator itr = (*_doc)["bodies"].Begin(); itr != (*_doc)["bodies"].End(); ++itr)
@@ -220,7 +220,12 @@ namespace OpenRAVE {
             _ParseURI(uri, scheme, path, fragment);
 
             if (scheme == "" && path == "") {
-                return std::string("file:") + _filename + std::string("#") + fragment;
+                if (_uri != "") {
+                    std::string scheme2, path2, fragment2;
+                    _ParseURI(_uri, scheme2, path2, fragment2);
+                    return scheme2 + ":" + path2 + "#" + fragment;
+                }
+                return std::string("file:") + _filename + "#" + fragment;
             }
             return uri;
         }
@@ -298,14 +303,7 @@ namespace OpenRAVE {
             if (colonindex != std::string::npos) {
                 // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
                 scheme = path.substr(0, colonindex);
-
-                if(scheme == "file"){
-                    path = path.substr(colonindex + 1);
-                }
-                else{
-                    // path (mujin:/ask.mujin.json) should skip slash
-                    path = path.substr(colonindex + 2);    
-                }
+                path = path.substr(colonindex + 1);
             }
 
         }
