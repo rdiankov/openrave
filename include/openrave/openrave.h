@@ -2621,7 +2621,7 @@ const std::string& IkParameterization::GetName() const
     if( it != RaveGetIkParameterizationMap().end() ) {
         return it->second;
     }
-    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")));
+    throw openrave_exception(str(boost::format("IkParameterization iktype 0x%x not supported")%_type));
 }
 
 } // end namespace OpenRAVE

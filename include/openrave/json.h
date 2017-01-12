@@ -218,6 +218,7 @@ inline void RaveSerializeJSON(rapidjson::Value &value, rapidjson::Document::Allo
     default:
         break;
     }
+    RAVE_SERIALIZEJSON_ADDMEMBER(value, allocator, "customData", ikparam.GetCustomDataMap());
 }
 
 /// \brief serialize an OpenRAVE CameraIntrinsics as json
@@ -428,6 +429,14 @@ inline void RaveDeserializeJSON(const rapidjson::Value &value, IkParameterizatio
     else
     {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to deserialize json, unsupported IkParameterization type \"%s\"", typestr, ORE_InvalidArguments);
+    }
+
+    std::map<std::string, std::vector<dReal> > customData;
+    RAVE_DESERIALIZEJSON_REQUIRED(value, "customData", customData);
+
+    ikparam.ClearCustomValues();
+    for (std::map<std::string, std::vector<dReal> >::const_iterator it = customData.begin(); it != customData.end(); ++it) {
+        ikparam.SetCustomValues(it->first, it->second);
     }
 }
 
