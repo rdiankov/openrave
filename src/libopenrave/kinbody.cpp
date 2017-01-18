@@ -573,17 +573,24 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         setusedchildsids.clear();
         int nextgeomindex = 0;
         FOREACH(itgeominfo,info.geometries) {
-            // check name duplicates
-            if( setusedchildnames.find((*itgeominfo)->name) != setusedchildnames.end() ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s is declared more than once"), (*itgeominfo)->name, ORE_InvalidArguments);
-            }
-            setusedchildnames.insert((*itgeominfo)->name);
 
             // check sid duplicates
             utils::InitializeUniquePrefixedString((*itgeominfo)->sid, "geom", nextgeomindex, setusedchildsids);
             if( setusedchildsids.find((*itgeominfo)->sid) != setusedchildsids.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s sid %s is not unique"), (*itgeominfo)->name%(*itgeominfo)->sid, ORE_InvalidArguments);
             }
+
+            if( (*itgeominfo)->name == ""){
+                //  set name to sid if name is empty 
+                (*itgeominfo)->name = (*itgeominfo)->sid;
+            }
+            // check name duplicates
+            if( setusedchildnames.find((*itgeominfo)->name) != setusedchildnames.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("geometry %s is declared more than once"), (*itgeominfo)->name, ORE_InvalidArguments);
+            }
+            setusedchildnames.insert((*itgeominfo)->name);
+
+            
             setusedchildsids.insert((*itgeominfo)->sid);
 
             Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
