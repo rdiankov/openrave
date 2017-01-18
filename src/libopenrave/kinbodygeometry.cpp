@@ -167,6 +167,7 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
 KinBody::GeometryInfo::GeometryInfo() :
     XMLReadable("geometry"),
     _t(transform),
+    _name(name),
     _vDiffuseColor(diffuseColor),
     _vAmbientColor(ambientColor),
     _meshcollision(mesh),

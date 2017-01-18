@@ -202,6 +202,8 @@ public:
 
         /// \brief unique geometry name
         std::string name;
+        std::string& _name RAVE_DEPRECATED;; ///< the name of the geometry
+
 
         Transform transform; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
         Transform& _t RAVE_DEPRECATED; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
@@ -230,7 +232,6 @@ public:
         GeometryType type; ///< the type of geometry primitive
         GeometryType& _type RAVE_DEPRECATED; ///< the type of geometry primitive
 
-        std::string _name; ///< the name of the geometry
         
         /// \brief filename for render model (optional)
         ///
