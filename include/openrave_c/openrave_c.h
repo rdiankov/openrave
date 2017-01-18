@@ -65,7 +65,7 @@ enum DebugLevel {
 OPENRAVE_C_API void ORCSetDebugLevel(int level);
 
 /// \brief Calls \ref RaveInitialize
-OPENRAVE_C_API void ORCInitialize(bool bLoadAllPlugins=true, int level=Level_Info);
+OPENRAVE_C_API void ORCInitialize(int bLoadAllPlugins, int level);
 
 /// \brief Calls \ref RaveDestroy
 OPENRAVE_C_API void ORCDestroy();
@@ -89,7 +89,7 @@ OPENRAVE_C_API void ORCTriMeshDestroy(void* trimesh);
 /// \brief Calls \ref EnvironmentBase::Destroy
 OPENRAVE_C_API void ORCEnvironmentDestroy(void* env);
 
-OPENRAVE_C_API bool ORCEnvironmentLoad(void* env, const char* filename);
+OPENRAVE_C_API int ORCEnvironmentLoad(void* env, const char* filename);
 
 /// \brief Calls \ref EnvironmentBase::GetKinBody
 OPENRAVE_C_API void* ORCEnvironmentGetKinBody(void* env, const char* name);
@@ -137,7 +137,7 @@ OPENRAVE_C_API void ORCEnvironmentLock(void* env);
 OPENRAVE_C_API void ORCEnvironmentUnlock(void* env);
 
 /// \brief Starts a viewer thread for the current environment
-OPENRAVE_C_API bool ORCEnvironmentSetViewer(void* env, const char* viewername);
+OPENRAVE_C_API int ORCEnvironmentSetViewer(void* env, const char* viewername);
 
 //@}
 
@@ -209,7 +209,7 @@ OPENRAVE_C_API void ORCBodyGetTransformMatrix(void* body, OpenRAVEReal* matrix);
 /// \brief Calls \ref KinBody::InitFromTrimesh
 ///
 /// \param trimesh returned from ORCTriMeshCreate()
-OPENRAVE_C_API bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible);
+OPENRAVE_C_API int ORCBodyInitFromTrimesh(void* body, void* trimesh, int visible);
 
 //@}
 
