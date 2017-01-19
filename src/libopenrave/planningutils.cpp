@@ -3151,7 +3151,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
             // could be jittered.
             // if bCheckEndEffector is true, then should call CheckEndEffectorCollision to quickly prune samples; otherwise, have to rely on calling FindIKSolution
             try {
-                if( (bCheckEndEffector && _pmanip->CheckEndEffectorCollision(ikparam,_report, numRedundantSamplesForEEChecking)) || (bCheckEndEffectorSelf && _pmanip->CheckEndEffectorSelfCollision(ikparam,_report, numRedundantSamplesForEEChecking))) {
+                if( (bCheckEndEffector && _pmanip->CheckEndEffectorCollision(ikparam,_report, numRedundantSamplesForEEChecking)) || (bCheckEndEffectorSelf && _pmanip->CheckEndEffectorSelfCollision(ikparam,_report, numRedundantSamplesForEEChecking,true))) {
                     bool bcollision=true;
                     if( _fjittermaxdist > 0 ) {
                         // try jittering the end effector out
@@ -3171,7 +3171,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 }
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) ) {
+                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking,true)) ) {
                                         // make sure at least one ik solution exists...
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered.reset(new IkReturn(IKRA_Success));
@@ -3206,7 +3206,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (delta*iiter);
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) ) {
+                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking,true)) ) {
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered.reset(new IkReturn(IKRA_Success));
                                         }
