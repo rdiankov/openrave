@@ -711,8 +711,9 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
             }
         }
 
-        if( !bAffected )
+        if( !bAffected ) {
             vlinks.push_back(*itlink);
+        }
     }
 }
 
@@ -832,7 +833,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     return bincollision;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
 {
     RobotBasePtr probot(__probot);
     Transform toldEE = GetTransform();
@@ -852,12 +853,41 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
 
     bool bincollision = false;
 
-    FOREACHC(itlink,vattachedlinks) {
-        if( probot->CheckLinkSelfCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+    if( bIgnoreManipulatorLinks ) {
+        CollisionCheckerBasePtr pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
+        std::vector<LinkPtr> vindependentinks;
+        GetIndependentLinks(vindependentinks);
+        FOREACHC(itlink,vattachedlinks) {
+            KinBody::LinkPtr plink = *itlink;
+            if( plink->IsEnabled() ) {
+                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+                Transform tlinktrans = tdelta*plink->GetTransform();
+                plink->SetTransform(tlinktrans);
+
+                FOREACHC(itindependentlink,vattachedlinks) {
+                    if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
+                        if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                RAVELOG_VERBOSE_FORMAT("link self collision with link %s", (*itlink)->GetName());
+                                return true;
+                            }
+                            bincollision = true;
+                        }
+                    }
+                }
             }
-            bincollision = true;
+        }
+    }
+    else {
+        // unfortunately we cannot check for self collisions of links since after IK they could be different for links that move because of the manipulator!
+        FOREACHC(itlink,vattachedlinks) {
+            if( probot->CheckLinkSelfCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    RAVELOG_VERBOSE_FORMAT("link self collision with link %s", (*itlink)->GetName());
+                    return true;
+                }
+                bincollision = true;
+            }
         }
     }
     FOREACHC(itlink, probot->GetLinks()) {
@@ -994,10 +1024,10 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
 //    return true;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples) const
+bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples, bool bIgnoreManipulatorLinks) const
 {
     if( ikparam.GetType() == IKP_Transform6D ) {
-        return CheckEndEffectorSelfCollision(ikparam.GetTransform6D(),report);
+        return CheckEndEffectorSelfCollision(ikparam.GetTransform6D(),report,bIgnoreManipulatorLinks);
     }
     RobotBasePtr probot = GetRobot();
     if( numredundantsamples > 0 ) {
@@ -1008,7 +1038,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
             Vector qdelta = quatFromAxisAngle(_info._vdirection, 2*M_PI/dReal(numredundantsamples));
             bool bNotInCollision = false;
             for(int i = 0; i < numredundantsamples; ++i) {
-                if( !CheckEndEffectorSelfCollision(tStartEE,report) ) {
+                if( !CheckEndEffectorSelfCollision(tStartEE,report, bIgnoreManipulatorLinks) ) {
                     // doesn't collide, but will need to verify that there actually exists an IK solution there...
                     // if we accidentally return here even there's no IK solution, then later processes could waste a lot of time looking for it.
                     bNotInCollision = true;
