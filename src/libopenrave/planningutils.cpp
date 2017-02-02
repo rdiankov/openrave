@@ -1763,43 +1763,34 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     TrajectoryBasePtr outtraj = RaveCreateTrajectory(traj->GetEnv(), traj->GetXMLId());
     outtraj->Init(spec);
 
-    // TODO
-//    size_t startindex = 0;
-//    if( starttime > 0 ) {
-//        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
-//        if( startindex > 0 ) {
-//            ConfigurationSpecification deltatimespec;
-//            deltatimespec.AddDeltaTimeGroup();
-//            std::vector<dReal> vdeltatime;
-//            traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
-//            traj->Sample(values, starttime);
-//            dReal fSampleDeltaTime=0;
-//            spec.ExtractDeltaTime(fSampleDeltaTime, values.begin());
-//
-//            // have to set deltatime to 0 and insert values
-//            spec.InsertDeltaTime(values.begin(), 0);
-//            traj.Insert(0, values);
-//
-//            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
-//            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
-//                // have to insert a new point
-//                vdeltatime[0] -= fSampleDeltaTime;
-//                traj->Insert(startindex, vdeltatime, deltatimespec, true);
-//                endremoveindex -= 1;
-//            }
-//        }
-//    }
-//
-//    std::vector<dReal> values;
-//    if( endtime < traj->GetDuration() ) {
-//        size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-//        if( endindex < traj->GetNumWaypoints() ) {
-//            traj->Sample(values, endtime);
-//            traj->Insert(endindex, values, true);
-//            traj->Remove(endindex+1, traj->GetNumWaypoints());
-//        }
-//    }
-    return TrajectoryBasePtr();
+    int startindex = 0, endindex = traj->GetNumWaypoints();
+
+    if( endtime < traj->GetDuration() ) {
+        endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
+    }
+
+    if( starttime > 0 ) {
+        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
+        if( startindex > 0 ) {
+        }
+    }
+
+    traj->GetWaypoints(startindex, endindex, values);
+    outtraj->Insert(0, values);
+    
+    if( starttime > 0 ) {
+        // have to change the first waypoint
+        traj->Sample(values, starttime);
+        outtraj->Insert(0,values,true);
+    }
+    
+    if( endtime < traj->GetDuration() && endindex > 1 ) {
+        // have to change the last endpoint
+        traj->Sample(values, endtime);
+        outtraj->Insert(endindex-startindex-1,values,true);
+    }
+
+    return outtraj;
 }
 
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
@@ -3067,14 +3058,14 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
     std::vector<int> vfreeindices((istream_iterator<int>(ssout)), istream_iterator<int>());
     if( (int)vfreeindices.size() != pmanip->GetIkSolver()->GetNumFreeParameters() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("free parameters from iksolver do not match", ORE_Assert);
-    }   
+    }
 
     // have to convert to roobt dof
     for(size_t i = 0; i < vfreeindices.size(); ++i) {
         vfreeindices[i] = pmanip->GetArmIndices().at(vfreeindices[i]); // have to convert to robot dof!
     }
     _probot->GetDOFWeights(_vfreeweights, vfreeindices);
-    
+
     // the halton sequence centers around 0.5, so make it center around vfreestart
     for(std::vector<dReal>::iterator it = _vfreestart.begin(); it != _vfreestart.end(); ++it) {
         *it -= 0.5;
@@ -3126,7 +3117,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         advance(itsample,isampleindex);
 
         SampleInfo& sampleinfo = *itsample;
-        
+
         int numRedundantSamplesForEEChecking = 0;
         if( (int)_pmanip->GetArmIndices().size() > sampleinfo._ikparam.GetDOF() ) {
             numRedundantSamplesForEEChecking = 40;
@@ -3265,14 +3256,14 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                         for(int jfree = 0; jfree < numfree; ++jfree) {
                             dist += _vfreeweights[jfree]*RaveFabs(sampleinfo._vfreesamples[isample*numfree+jfree] - 0.5);
                         }
-                        
+
                         sampleinfo._vcachedists[isample].first = isample;
                         sampleinfo._vcachedists[isample].second = dist;
                     }
                     std::sort(sampleinfo._vcachedists.begin(), sampleinfo._vcachedists.end(), ComparePriorityPair);
 #endif
                 }
-                
+
 #if 1
                 if( sampleinfo._vcachedists.size() > 0 ) {
                     int isample = sampleinfo._vcachedists.back().first;
