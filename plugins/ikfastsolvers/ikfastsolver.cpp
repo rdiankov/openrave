@@ -350,6 +350,7 @@ public:
             _bCheckEndEffectorSelfCollision = !(filteroptions & (IKFO_IgnoreEndEffectorSelfCollisions|IKFO_IgnoreSelfCollisions));
             _bCheckSelfCollision = !(filteroptions & IKFO_IgnoreSelfCollisions);
             _bDisabled = false;
+            numImpossibleSelfCollisions = 0;
         }
         virtual ~StateCheckEndEffector() {
             // restore the link states
@@ -437,6 +438,7 @@ public:
             _listCollidingTransforms.push_back(std::make_pair(t, bcolliding));
         }
 
+        int numImpossibleSelfCollisions; ///< a count of the number of self-collisions that most likely mean that the IK itself will fail.
 protected:
         void _InitSavers()
         {
@@ -1352,13 +1354,44 @@ protected:
 
         CollisionReport report;
         CollisionReportPtr ptempreport;
-        if( IS_DEBUGLEVEL(Level_Verbose) || paramnewglobal.GetType() == IKP_TranslationDirection5D ) { // 5D is necessary for tracking end effector collisions
+        if( !(filteroptions&IKFO_IgnoreSelfCollisions) || IS_DEBUGLEVEL(Level_Verbose) || paramnewglobal.GetType() == IKP_TranslationDirection5D ) { // 5D is necessary for tracking end effector collisions
             ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             // check for self collisions
             stateCheck.SetSelfCollisionState();
             if( probot->CheckSelfCollision(ptempreport) ) {
+                if( !!ptempreport ) {
+                    if( !!ptempreport->plink1 && !!ptempreport->plink2 && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
+                        // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
+                        // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
+                        KinBody::LinkConstPtr potherlink;
+                        if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink1) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink2;
+                        }
+                        else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink1;
+                        }
+                        if( !!potherlink ) {
+                            //bool bRigidlyAttached = false;
+                            for(int itestdof = (int)pmanip->GetArmIndices().size()-2; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                    stateCheck.numImpossibleSelfCollisions++;
+                                    RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                    if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                        RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                    }
+                                    else {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
         }
