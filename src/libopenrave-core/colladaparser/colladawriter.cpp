@@ -363,7 +363,7 @@ private:
     }
 
     /// \param docname the top level document?
-    virtual void Init(const string& docname)
+    virtual void Init(const string& docname, const std::string& keywords=std::string())
     {
         daeInt error = _dae->getDatabase()->insertDocument(docname.c_str(), &_doc );     // also creates a collada root
         BOOST_ASSERT( error == DAE_OK && !!_doc );
@@ -394,6 +394,10 @@ private:
 
             domAsset::domUp_axisRef zup = daeSafeCast<domAsset::domUp_axis>( asset->add( COLLADA_ELEMENT_UP_AXIS ) );
             zup->setValue(UP_AXIS_Z_UP);
+
+
+            domAsset::domKeywordsRef domkeywords = daeSafeCast<domAsset::domKeywords>( asset->add( COLLADA_ELEMENT_KEYWORDS ) );
+            domkeywords->setValue(keywords.c_str());
         }
 
         _globalscene = _dom->getScene();
@@ -2432,14 +2436,17 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
-    writer.Init("openrave_snapshot");
-    std::string scenename;
+    std::string scenename, keywords;
     FOREACHC(itatt,atts) {
         if( itatt->first == "scenename" ) {
             scenename = itatt->second;
-            break;
+        }
+        else if( itatt->first == "keywords" ) {
+            keywords = itatt->second;
         }
     }
+
+    writer.Init("openrave_snapshot", keywords);
 
     if( scenename.size() == 0 ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
@@ -2468,7 +2475,14 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 {
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
-    writer.Init("openrave_snapshot");
+    std::string keywords;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "keywords" ) {
+            keywords = itatt->second;
+        }
+    }
+
+    writer.Init("openrave_snapshot", keywords);
     if( !writer.Write(pbody) ) {
         throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
     }
@@ -2480,14 +2494,17 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
     boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         ColladaWriter writer(listbodies.front()->GetEnv(),atts);
-        writer.Init("openrave_snapshot");
-        std::string scenename;
+        std::string scenename, keywords;
         FOREACHC(itatt,atts) {
             if( itatt->first == "scenename" ) {
                 scenename = itatt->second;
                 break;
             }
+            else if( itatt->first == "keywords" ) {
+                keywords = itatt->second;
+            }
         }
+        writer.Init("openrave_snapshot", keywords);
 
         if( scenename.size() == 0 ) {
     #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36

@@ -56,7 +56,7 @@ The following attributes can be passed to the :class:`.Environment` Save/Write m
 * **openravescheme="customscheme"** - scheme for writing external references. writer will attempt to convert a local system URI (**file:/**) to a a relative path with respect to $OPENRAVE_DATA paths and use **customscheme** as the scheme.
 * **unit="1.0"**  - how many real-world meters in one distance unit. For example unit="0.001" represents millimeters.
 * **reusesimilar="true"/"false"** - if true, attemps to resuse similar looking meshes and structures to reduce size.
-
+* **keywords="xxx"** - the keywords to put inside the collada document
 * **password="????"**
 Any attributes are also set through the collada-dom DAE::getIOPlugin::setOption.
 
