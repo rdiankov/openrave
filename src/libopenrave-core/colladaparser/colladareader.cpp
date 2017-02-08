@@ -2938,6 +2938,16 @@ public:
                         if( !!pdirection ) {
                             stringstream ss(pdirection->getCharData());
                             ss >> manipinfo._vdirection.x >> manipinfo._vdirection.y >> manipinfo._vdirection.z;
+                            // have to normalize direction!
+                            dReal dirlen2 = manipinfo._vdirection.lengthsqr3();
+                            if( dirlen2 > g_fEpsilon ) {
+                                manipinfo._vdirection /= RaveSqrt(dirlen2);
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("invalid direction specified for manip %s, using [0,0,1]", manipinfo._name);
+                                manipinfo._vdirection = Vector(0,0,1);
+                            }
+                            
                             if( !ss ) {
                                 RAVELOG_WARN(str(boost::format("could not read frame_tip/direction of manipulator %s frame tip %s")%name%pframe_tip->getAttribute("link")));
                             }
