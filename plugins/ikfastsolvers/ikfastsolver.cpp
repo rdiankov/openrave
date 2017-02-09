@@ -308,6 +308,39 @@ public:
         }
         pmanip->GetIndependentLinks(_vindependentlinks);
 
+        if( _vfreeparams.size() == 0 ) {
+            _vIndependentLinksIncludingFreeJoints = _vindependentlinks;
+        }
+        else {
+            std::vector<dReal> vactiveindices; vactiveindices.reserve(pmanip->GetArmDOF() - _vfreeparams.size());
+            for(size_t i = 0; i < pmanip->GetArmIndices().size(); ++i) {
+                if( find(_vfreeparams.begin(), _vfreeparams.end(), i) == _vfreeparams.end() ) {
+                    vactiveindices.push_back(pmanip->GetArmIndices()[i]);
+                }
+            }
+
+            _vIndependentLinksIncludingFreeJoints.resize(0);
+            FOREACHC(itlink, probot->GetLinks()) {
+                bool bAffected = false;
+                FOREACHC(itindex,vactiveindices) {
+                    if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                        bAffected = true;
+                        break;
+                    }
+                }
+                FOREACHC(itindex,pmanip->GetGripperIndices()) {
+                    if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                        bAffected = true;
+                        break;
+                    }
+                }
+
+                if( !bAffected ) {
+                    _vIndependentLinksIncludingFreeJoints.push_back(*itlink);
+                }
+            }
+        }
+
 #ifdef OPENRAVE_HAS_LAPACK
         if( !!pmanip ) {
             _jacobinvsolver.Init(*pmanip);
@@ -1372,9 +1405,11 @@ protected:
                         else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
                             potherlink = ptempreport->plink1;
                         }
+
                         if( !!potherlink ) {
                             //bool bRigidlyAttached = false;
-                            for(int itestdof = (int)pmanip->GetArmIndices().size()-2; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                            int numBacktraceLinks = 3;
+                            for(int itestdof = (int)pmanip->GetArmIndices().size()-numBacktraceLinks; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                 KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
                                 if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
 
@@ -1390,6 +1425,38 @@ protected:
                                 }
                             }
                         }
+
+                        if( 0 ) {//_vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() ) {
+                            // check 
+                            potherlink.reset();
+                            if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink2;
+                            }
+                            else if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink2) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink1;
+                            }
+
+                            if( !!potherlink ) {
+                                //bool bRigidlyAttached = false;
+                                int numBacktraceLinks = 2;
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-numBacktraceLinks; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                    KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                        stateCheck.numImpossibleSelfCollisions++;
+                                        RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                            RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                        }
+                                        else {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
                     }
                 }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
@@ -2012,7 +2079,9 @@ protected:
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute; // 0 if not revolute, 1 if revolute and not circular, 2 if circular
     std::vector<dReal> _vfreeparamscales;
     UserDataPtr _cblimits;
-    std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;
+    std::vector<KinBody::LinkPtr> _vchildlinks; ///< the child links of the manipulator
+    std::vector<KinBody::LinkPtr> _vindependentlinks; ///< independent links of the manipulator
+    std::vector<KinBody::LinkPtr> _vIndependentLinksIncludingFreeJoints; ///< independent links of the ik chain without free joints
     std::vector<int> _vchildlinkindices; ///< indices of the links at _vchildlinks
     boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > _ikfunctions;
     std::vector<dReal> _vFreeInc;

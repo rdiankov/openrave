@@ -603,7 +603,7 @@ public:
             adjacentOptions |= KinBody::AO_ActiveDOFs;
         }
 
-        const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
+        const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
         _fclspace->SynchronizeWithAttached(pbody);
 
@@ -651,7 +651,7 @@ public:
             adjacentOptions |= KinBody::AO_ActiveDOFs;
         }
 
-        const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
+        const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
         _fclspace->SynchronizeWithAttached(pbody);
 

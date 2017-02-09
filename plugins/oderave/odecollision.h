@@ -713,7 +713,7 @@ public:
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
 
-        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
 
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);
@@ -770,7 +770,7 @@ public:
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
 
-        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
 
 #ifndef ODE_USE_MULTITHREAD
         boost::mutex::scoped_lock lock(_mutexode);

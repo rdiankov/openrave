@@ -838,7 +838,7 @@ private:
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& jacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& jacobian) const;
 
-    virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
+    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
     virtual void SetNonCollidingConfiguration();
