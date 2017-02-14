@@ -2094,12 +2094,21 @@ private:
                 chucking_direction->add("float")->setCharData(boost::lexical_cast<std::string>((*itmanip)->GetChuckingDirection().at(i)));
                 ++i;
             }
-            //            <iksolver interface="WAM7ikfast" type="Transform6D">
-            //              <free_axis axis="jointname3"/>
-            //            </iksolver>
-            //            <iksolver type="Translation3D">
-            //              <free_axis axis="jointname4"/>
-            //            </iksolver>
+
+            // store the iksolver if it exists
+            IkSolverBasePtr iksolver = (*itmanip)->GetIkSolver();
+            if(!!iksolver) {
+                //<iksolver type="Transform6D">
+                //<free_joint joint="jointname3"/>
+                daeElementRef piksolver = ptec->add("iksolver");
+                daeElementRef piksolverinterfacetype = piksolver->add("interface_type");
+                domTechniqueRef pinterfacetec = daeSafeCast<domTechnique>(piksolverinterfacetype->add(COLLADA_ELEMENT_TECHNIQUE));
+                pinterfacetec->setProfile("OpenRAVE");
+                daeElementRef piksolverinterface = pinterfacetec->add("interface");
+                piksolverinterface->setAttribute("type","iksolver");
+                piksolverinterface->setCharData(iksolver->GetXMLId().c_str());
+                // TODO add the free joints
+            }
         }
     }
 

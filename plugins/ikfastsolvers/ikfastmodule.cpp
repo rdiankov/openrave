@@ -196,7 +196,7 @@ public:
             return true;
         }
 
-        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, const vector<dReal>& vfreeinc)
+        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, const vector<dReal>& vfreeinc, dReal ikthreshold)
         {
             std::stringstream sversion(GetIkFastVersion());
             uint32_t ikfastversion = 0;
@@ -209,13 +209,13 @@ public:
             if( !!_ikfloat ) {
                 boost::shared_ptr<MyFunctions<float> > newfunctions(new MyFunctions<float>(*_ikfloat));
                 newfunctions->_library = shared_from_this();
-                return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc);
+                return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc,ikthreshold);
             }
 #endif
             if( !!_ikdouble ) {
                 boost::shared_ptr<MyFunctions<double> > newfunctions(new MyFunctions<double>(*_ikdouble));
                 newfunctions->_library = shared_from_this();
-                return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc);
+                return CreateIkFastSolver(penv,ss,newfunctions,vfreeinc,ikthreshold);
             }
             throw OPENRAVE_EXCEPTION_FORMAT0(_("uninitialized ikfast functions"),ORE_InvalidState);
         }
@@ -1414,7 +1414,7 @@ public:
     }
 
     /// sinput holds the freeindices and other run-time configuraiton parameters
-    static IkSolverBasePtr CreateIkSolver(const string& _name, const std::vector<dReal>& vfreeinc, EnvironmentBasePtr penv)
+    static IkSolverBasePtr CreateIkSolver(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, EnvironmentBasePtr penv)
     {
         string name; name.resize(_name.size());
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
@@ -1423,7 +1423,7 @@ public:
         for(list< boost::shared_ptr<IkLibrary> >::reverse_iterator itlib = GetLibraries()->rbegin(); itlib != GetLibraries()->rend(); ++itlib) {
             FOREACHC(itikname,(*itlib)->GetIkNames()) {
                 if( name == *itikname ) {
-                    return (*itlib)->CreateSolver(penv,vfreeinc);
+                    return (*itlib)->CreateSolver(penv,vfreeinc,ikthreshold);
                 }
             }
         }
@@ -1444,7 +1444,7 @@ void DestroyIkFastLibraries() {
     IkFastModule::GetLibraries() = NULL;
 }
 
-IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, EnvironmentBasePtr penv)
+IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, EnvironmentBasePtr penv)
 {
-    return IkFastModule::CreateIkSolver(_name,vfreeinc,penv);
+    return IkFastModule::CreateIkSolver(_name,vfreeinc,ikthreshold, penv);
 }

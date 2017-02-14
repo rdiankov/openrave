@@ -2984,7 +2984,7 @@ public:
                             RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%manipinfo._name%pmanipchild->getAttribute("joint")));
                         }
                         else if( pmanipchild->getElementName() == string("iksolver") ) {
-                            InterfaceTypePtr pinterfacetype = _ExtractInterfaceType(tec->getContents()[ic]);
+                            InterfaceTypePtr pinterfacetype = _ExtractInterfaceType(pmanipchild);
                             if( !!pinterfacetype ) {
                                 if( pinterfacetype->type.size() == 0 || pinterfacetype->type == "iksolver" ) {
                                     manipinfo._sIkSolverXMLId = pinterfacetype->name;
