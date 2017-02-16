@@ -494,7 +494,7 @@ public:
     virtual bool _ConvexHullCommand(std::ostream& sout, std::istream& sinput)
     {
         string cmd;
-        bool bReturnFaces = true, bReturnPlanes = true, bReturnTriangles = true;
+        bool bReturnFaces = true, bReturnPlanes = true, bReturnTriangles = true, bReturnVolume = false;
         int dim=0;
         vector<double> vpoints;
         while(!sinput.eof()) {
@@ -521,6 +521,9 @@ public:
             else if( cmd == "returntriangles" ) {
                 sinput >> bReturnTriangles;
             }
+            else if( cmd == "returnvolume" ) {
+                sinput >> bReturnVolume;
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -537,7 +540,8 @@ public:
         if( bReturnFaces || bReturnTriangles ) {
             vconvexfaces.reset(new vector<int>);
         }
-        if( _ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim) == 0 ) {
+        dReal volume = _ComputeConvexHull(vpoints,vconvexplanes, vconvexfaces, dim);
+        if( volume == 0 ) {
             return false;
         }
         if( bReturnPlanes ) {
@@ -609,6 +613,9 @@ public:
                 faceindex += numpoints+1;
                 planeindex += dim+1;
             }
+        }
+        if( bReturnVolume ) {
+            sout << volume << " ";
         }
         return true;
     }
