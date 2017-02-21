@@ -1612,6 +1612,16 @@ protected:
         boost::mutex::scoped_lock lock(s_QhullMutex);
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
+        if ( vpoints.empty() ) {
+            RAVELOG_ERROR("vpoints cannot be empty\n");
+            return 0;
+        }
+
+        if ( dim < 2 ) {
+            RAVELOG_ERROR("dim must be greater than or equal to 2\n");
+            return 0;
+        }
+
         vector<coordT> qpoints(vpoints.size());
         std::copy(vpoints.begin(),vpoints.end(),qpoints.begin());
 
