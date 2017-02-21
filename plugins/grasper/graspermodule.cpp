@@ -535,6 +535,11 @@ public:
             }
         }
 
+        if ( vpoints.empty() ) {
+            RAVELOG_ERROR("no points are provided");
+            return false;
+        }
+
         vector<double> vconvexplanes;
         boost::shared_ptr< vector<int> > vconvexfaces;
         if( bReturnFaces || bReturnTriangles ) {
