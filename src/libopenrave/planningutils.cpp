@@ -1718,6 +1718,19 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr sourcetraj)
 
 void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
 {
+    if( starttime < 0 ) {
+        RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
+        starttime = 0;
+    }
+    if( endtime > traj->GetDuration()+g_fEpsilonLinear ) {
+        RAVELOG_WARN_FORMAT("got an invalid end time %.15e", endtime);
+        endtime = traj->GetDuration();
+    }
+    if( endtime < starttime ) {
+        RAVELOG_WARN_FORMAT("got an invalid time range %.15e, %.15e, choosing the start time", starttime%endtime);
+        endtime = starttime;
+    }
+
     std::vector<dReal> values;
     if( endtime < traj->GetDuration() ) {
         size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
@@ -1754,6 +1767,9 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
 
         }
     }
+
+    // for debugging purposes
+    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilon);
 }
 
 TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
@@ -1762,34 +1778,81 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     const ConfigurationSpecification& spec = traj->GetConfigurationSpecification();
     TrajectoryBasePtr outtraj = RaveCreateTrajectory(traj->GetEnv(), traj->GetXMLId());
     outtraj->Init(spec);
+    if( traj->GetNumWaypoints() == 0 ) {
+        return outtraj;
+    }
 
-    int startindex = 0, endindex = traj->GetNumWaypoints();
+    if( starttime < 0 ) {
+        RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
+        starttime = 0;
+    }
+    if( endtime > traj->GetDuration()+g_fEpsilonLinear ) {
+        RAVELOG_WARN_FORMAT("got an invalid end time %.15e", endtime);
+        endtime = traj->GetDuration();
+    }
+    if( endtime < starttime ) {
+        RAVELOG_WARN_FORMAT("got an invalid time range %.15e, %.15e, choosing the start time", starttime%endtime);
+        endtime = starttime;
+    }
+    
+    int startindex = 0, endindex = traj->GetNumWaypoints()-1;
 
     if( endtime < traj->GetDuration() ) {
         endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-    }
-
-    if( starttime > 0 ) {
-        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
-        if( startindex > 0 ) {
+        if( endindex >= traj->GetNumWaypoints() ) {
+            endindex = traj->GetNumWaypoints()-1;
         }
     }
 
-    traj->GetWaypoints(startindex, endindex, values);
+    if( endindex == 0 ) {
+        // the first point! handle this separately
+        traj->GetWaypoint(endindex, values);
+        spec.InsertDeltaTime(values.begin(), endtime - starttime); // the first point might have a deltatime, so the traj duration can actaully be non-zero...
+        outtraj->Insert(0, values);
+        return outtraj;
+    }
+    
+    if( starttime > 0 ) {
+        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
+        if( startindex > 0 ) {
+            startindex--;
+        }
+    }
+    
+    traj->GetWaypoints(startindex, endindex+1, values);
     outtraj->Insert(0, values);
     
     if( starttime > 0 ) {
+        // have to overwrite the first point and 
+        dReal startdeltatime=0, waypointdeltatime = 0;
+        if( !spec.ExtractDeltaTime(waypointdeltatime, values.begin()+spec.GetDOF()) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("could not extract deltatime, bad traj", ORE_InvalidArguments);
+        }
+
         // have to change the first waypoint
         traj->Sample(values, starttime);
+        // have to set deltatime to 0
+        if( !spec.ExtractDeltaTime(startdeltatime, values.begin()) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("could not extract deltatime, bad traj", ORE_InvalidArguments);
+        }
+        
+        spec.InsertDeltaTime(values.begin(), 0); // first waypoint starts at 0 time
         outtraj->Insert(0,values,true);
+
+        // the second waypoint holds the delta time between new first waypoint
+        traj->GetWaypoint(startindex+1, values);
+        spec.InsertDeltaTime(values.begin(), waypointdeltatime - startdeltatime);
+        outtraj->Insert(1,values,true);
     }
     
-    if( endtime < traj->GetDuration() && endindex > 1 ) {
-        // have to change the last endpoint
-        traj->Sample(values, endtime);
-        outtraj->Insert(endindex-startindex-1,values,true);
+    if( endtime < traj->GetDuration() ) {
+        // have to change the last endpoint, should sample from outtraj instead since both start and end can be within same waypoint range
+        outtraj->Sample(values, endtime-starttime);
+        outtraj->Insert(endindex-startindex,values,true);
     }
 
+    // for debugging purposes
+    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilon*10);
     return outtraj;
 }
 
@@ -3249,7 +3312,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
 #if 1
                     // read all the samples and order them so that samples close to 0.5 are sampled first!
                     sampleinfo._psampler->SampleSequence(sampleinfo._vfreesamples,_nummaxsamples);
-                    OPENRAVE_ASSERT_OP(sampleinfo._vfreesamples.size(),==,_nummaxsamples*numfree);
+                    OPENRAVE_ASSERT_OP((int)sampleinfo._vfreesamples.size(),==,_nummaxsamples*numfree);
                     sampleinfo._vcachedists.resize(_nummaxsamples);
                     for(int isample = 0; isample < _nummaxsamples; ++isample) {
                         dReal dist = 0;
