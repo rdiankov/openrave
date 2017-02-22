@@ -17,6 +17,7 @@
 
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
+#include <cmath>
 
 #ifdef QHULL_FOUND
 
@@ -1613,13 +1614,20 @@ protected:
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
         if ( vpoints.empty() ) {
-            RAVELOG_ERROR("vpoints cannot be empty\n");
+            RAVELOG_WARN("points cannot be empty\n");
             return 0;
         }
 
         if ( dim < 2 ) {
             RAVELOG_ERROR("dim must be greater than or equal to 2\n");
             return 0;
+        }
+
+        for (size_t i = 0; i < vpoints.size(); ++i) {
+            if (std::isnan(vpoints[i])) {
+                RAVELOG_ERROR("points contain nan\n");
+                return 0;
+            }
         }
 
         vector<coordT> qpoints(vpoints.size());
@@ -1631,7 +1639,7 @@ protected:
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
         }
-        int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, errfile, errfile);
+        int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, NULL, errfile);
         if (!exitcode) {
             vconvexplanes.reserve(1000);
             if( !!vconvexfaces ) {
@@ -1673,8 +1681,18 @@ protected:
         if (curlong || totlong) {
             RAVELOG_ERROR("qhull internal warning (main): did not free %d bytes of long memory (%d pieces)\n", totlong, curlong);
         }
+
         if( exitcode ) {
-            RAVELOG_DEBUG(str(boost::format("Qhull failed with error %d")%exitcode));
+            RAVELOG_WARN(str(boost::format("Qhull failed with error %d")%exitcode));
+
+            rewind(errfile);
+            char buf[255];
+            while (fgets(buf, sizeof(buf), errfile) != NULL) {
+                RAVELOG_WARN(buf);
+            }
+            fclose(errfile);
+            errfile = NULL; // Reset tmp errfile
+
             vconvexplanes.resize(0);
             if( !!vconvexfaces ) {
                 vconvexfaces->resize(0);
