@@ -36,7 +36,7 @@ public:
     };
 
 public:
-    IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc) {
+    IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold=1e-4) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc), _ikthreshold(ikthreshold) {
         OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(IkReal));
 
         _bEmptyTransform6D = false;
@@ -58,7 +58,6 @@ public:
         _iktype = static_cast<IkParameterizationType>(ikfunctions->_GetIkType());
         _kinematicshash = ikfunctions->_GetKinematicsHash();
         __description = ":Interface Author: Rosen Diankov\n\nAn OpenRAVE wrapper for the ikfast generated files.\nIf 6D IK is used, will check if the end effector and other independent links are in collision before manipulator link collisions. If they are, the IK will terminate with failure immediately.\nBecause checking collisions is the slowest part of the IK, the custom filter function run before collision checking.";
-        _ikthreshold = 1e-4;
         RegisterCommand("SetIkThreshold",boost::bind(&IkFastSolver<IkReal>::_SetIkThresholdCommand,this,_1,_2),
                         "sets the ik threshold for validating returned ik solutions");
         RegisterCommand("SetJacobianRefine",boost::bind(&IkFastSolver<IkReal>::_SetJacobianRefineCommand,this,_1,_2),
@@ -308,6 +307,39 @@ public:
         }
         pmanip->GetIndependentLinks(_vindependentlinks);
 
+        if( _vfreeparams.size() == 0 ) {
+            _vIndependentLinksIncludingFreeJoints = _vindependentlinks;
+        }
+        else {
+            std::vector<dReal> vactiveindices; vactiveindices.reserve(pmanip->GetArmDOF() - _vfreeparams.size());
+            for(size_t i = 0; i < pmanip->GetArmIndices().size(); ++i) {
+                if( find(_vfreeparams.begin(), _vfreeparams.end(), i) == _vfreeparams.end() ) {
+                    vactiveindices.push_back(pmanip->GetArmIndices()[i]);
+                }
+            }
+
+            _vIndependentLinksIncludingFreeJoints.resize(0);
+            FOREACHC(itlink, probot->GetLinks()) {
+                bool bAffected = false;
+                FOREACHC(itindex,vactiveindices) {
+                    if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                        bAffected = true;
+                        break;
+                    }
+                }
+                FOREACHC(itindex,pmanip->GetGripperIndices()) {
+                    if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                        bAffected = true;
+                        break;
+                    }
+                }
+
+                if( !bAffected ) {
+                    _vIndependentLinksIncludingFreeJoints.push_back(*itlink);
+                }
+            }
+        }
+
 #ifdef OPENRAVE_HAS_LAPACK
         if( !!pmanip ) {
             _jacobinvsolver.Init(*pmanip);
@@ -350,6 +382,7 @@ public:
             _bCheckEndEffectorSelfCollision = !(filteroptions & (IKFO_IgnoreEndEffectorSelfCollisions|IKFO_IgnoreSelfCollisions));
             _bCheckSelfCollision = !(filteroptions & IKFO_IgnoreSelfCollisions);
             _bDisabled = false;
+            numImpossibleSelfCollisions = 0;
         }
         virtual ~StateCheckEndEffector() {
             // restore the link states
@@ -437,6 +470,7 @@ public:
             _listCollidingTransforms.push_back(std::make_pair(t, bcolliding));
         }
 
+        int numImpossibleSelfCollisions; ///< a count of the number of self-collisions that most likely mean that the IK itself will fail.
 protected:
         void _InitSavers()
         {
@@ -1352,13 +1386,78 @@ protected:
 
         CollisionReport report;
         CollisionReportPtr ptempreport;
-        if( IS_DEBUGLEVEL(Level_Verbose) || paramnewglobal.GetType() == IKP_TranslationDirection5D ) { // 5D is necessary for tracking end effector collisions
+        if( !(filteroptions&IKFO_IgnoreSelfCollisions) || IS_DEBUGLEVEL(Level_Verbose) || paramnewglobal.GetType() == IKP_TranslationDirection5D ) { // 5D is necessary for tracking end effector collisions
             ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             // check for self collisions
             stateCheck.SetSelfCollisionState();
             if( probot->CheckSelfCollision(ptempreport) ) {
+                if( !!ptempreport ) {
+                    if( !!ptempreport->plink1 && !!ptempreport->plink2 && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
+                        // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
+                        // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
+                        KinBody::LinkConstPtr potherlink;
+                        if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink1) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink2;
+                        }
+                        else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink1;
+                        }
+
+                        if( !!potherlink ) {
+                            //bool bRigidlyAttached = false;
+                            int numBacktraceLinks = 3;
+                            for(int itestdof = (int)pmanip->GetArmIndices().size()-numBacktraceLinks; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                    stateCheck.numImpossibleSelfCollisions++;
+                                    RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                    if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                        RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                    }
+                                    else {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if( 0 ) {//_vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() ) {
+                            // check 
+                            potherlink.reset();
+                            if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink2;
+                            }
+                            else if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink2) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink1;
+                            }
+
+                            if( !!potherlink ) {
+                                //bool bRigidlyAttached = false;
+                                int numBacktraceLinks = 2;
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-numBacktraceLinks; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                    KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                        stateCheck.numImpossibleSelfCollisions++;
+                                        RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                            RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                        }
+                                        else {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                    }
+                }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
         }
@@ -1979,7 +2078,9 @@ protected:
     std::vector<uint8_t> _vfreerevolute, _vjointrevolute; // 0 if not revolute, 1 if revolute and not circular, 2 if circular
     std::vector<dReal> _vfreeparamscales;
     UserDataPtr _cblimits;
-    std::vector<KinBody::LinkPtr> _vchildlinks, _vindependentlinks;
+    std::vector<KinBody::LinkPtr> _vchildlinks; ///< the child links of the manipulator
+    std::vector<KinBody::LinkPtr> _vindependentlinks; ///< independent links of the manipulator
+    std::vector<KinBody::LinkPtr> _vIndependentLinksIncludingFreeJoints; ///< independent links of the ik chain without free joints
     std::vector<int> _vchildlinkindices; ///< indices of the links at _vchildlinks
     boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > _ikfunctions;
     std::vector<dReal> _vFreeInc;
@@ -2009,14 +2110,14 @@ protected:
 };
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc)
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)
 
 {
-    return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc));
+    return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc,ikthreshold));
 }
 #endif
 
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc)
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)
 {
-    return IkSolverBasePtr(new IkFastSolver<double>(penv,sinput,ikfunctions,vfreeinc));
+    return IkSolverBasePtr(new IkFastSolver<double>(penv,sinput,ikfunctions,vfreeinc,ikthreshold));
 }

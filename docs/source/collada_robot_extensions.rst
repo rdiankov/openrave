@@ -256,10 +256,8 @@ The example defines an arm with an end effector at link wam7 with a local coordi
         <iksolver type="Transform6D">
           <free_joint joint="jointname3"/>
           <interface_type>
-            <technique profile="OpenRAVE">
-              <interface>WAM7ikfast</interface>
-              <plugin>WAM7ikfast</plugin>
-            </technique>
+            <interface>WAM7ikfast</interface>
+            <plugin>WAM7ikfast</plugin>
           </interface_type>
         </iksolver>
         <iksolver type="Translation3D">

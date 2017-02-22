@@ -2179,7 +2179,7 @@ private:
 
     /// \brief return all possible link pairs that could get in collision.
     /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
-    virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
+    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
@@ -2362,7 +2362,8 @@ protected:
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
-    mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
+    mutable boost::array<std::vector<int>, 4> _vNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
+    mutable boost::array<std::set<int>, 4> _cacheSetNonAdjacentLinks; ///< used for caching return value of GetNonAdjacentLinks.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
 

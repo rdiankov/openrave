@@ -36,10 +36,10 @@ object PyRay::pos() {
 }
 
 string PyRay::__repr__() {
-    return boost::str(boost::format("<Ray([%f,%f,%f],[%f,%f,%f])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
+    return boost::str(boost::format("<Ray([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
 string PyRay::__str__() {
-    return boost::str(boost::format("<%f %f %f %f %f %f>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
+    return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
 object PyRay::__unicode__() {
     return ConvertStringToUnicode(__str__());
@@ -179,10 +179,10 @@ public:
     }
 
     virtual string __repr__() {
-        return boost::str(boost::format("AABB([%f,%f,%f],[%f,%f,%f])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+        return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
     virtual string __str__() {
-        return boost::str(boost::format("<%f %f %f %f %f %f>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+        return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
     virtual object __unicode__() {
         return ConvertStringToUnicode(__str__());
@@ -517,6 +517,14 @@ public:
         std::vector<dReal> vtargetdata(pytargetspec->_spec.GetDOF()*numpoints,0);
         std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
         ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), filluninitialized);
+        return toPyArray(vtargetdata);
+    }
+
+    object ConvertDataFromPrevious(object otargetdata, PyConfigurationSpecificationPtr pytargetspec, object osourcedata, size_t numpoints, PyEnvironmentBasePtr pyenv)
+    {
+        std::vector<dReal> vtargetdata = ExtractArray<dReal>(otargetdata);
+        std::vector<dReal> vsourcedata = ExtractArray<dReal>(osourcedata);
+        ConfigurationSpecification::ConvertData(vtargetdata.begin(), pytargetspec->_spec, vsourcedata.begin(), _spec, numpoints, openravepy::GetEnvironment(pyenv), false);
         return toPyArray(vtargetdata);
     }
 
@@ -1199,6 +1207,7 @@ void init_openravepy_global()
                                            .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
                                            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, args("env"), DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
                                            .def("ConvertData", &PyConfigurationSpecification::ConvertData, args("targetspec", "sourcedata", "numpoints", "env", "filluninitialized"), DOXY_FN(ConfigurationSpecification, ConvertData))
+                                           .def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, args("targetdata", "targetspec", "sourcedata", "numpoints", "env"), DOXY_FN(ConfigurationSpecification, ConvertData))
                                            .def("GetGroups", &PyConfigurationSpecification::GetGroups, args("env"), "returns a list of the groups")
                                            .def("__eq__",&PyConfigurationSpecification::__eq__)
                                            .def("__ne__",&PyConfigurationSpecification::__ne__)

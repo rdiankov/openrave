@@ -368,7 +368,7 @@ public:
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
-        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
         FOREACHC(itset, nonadjacent) {
             if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(*itset&0xffff)), KinBody::LinkConstPtr(pbody->GetLinks().at(*itset>>16)), report) ) {
                 RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
@@ -393,7 +393,7 @@ public:
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
-        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));

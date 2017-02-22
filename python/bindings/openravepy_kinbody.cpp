@@ -2458,7 +2458,7 @@ object PyKinBody::GetURI() const
 object PyKinBody::GetNonAdjacentLinks() const
 {
     boost::python::list ononadjacent;
-    const std::set<int>& nonadjacent = _pbody->GetNonAdjacentLinks();
+    const std::vector<int>& nonadjacent = _pbody->GetNonAdjacentLinks();
     FOREACHC(it,nonadjacent) {
         ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     }
@@ -2467,7 +2467,7 @@ object PyKinBody::GetNonAdjacentLinks() const
 object PyKinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     boost::python::list ononadjacent;
-    const std::set<int>& nonadjacent = _pbody->GetNonAdjacentLinks(adjacentoptions);
+    const std::vector<int>& nonadjacent = _pbody->GetNonAdjacentLinks(adjacentoptions);
     FOREACHC(it,nonadjacent) {
         ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     }

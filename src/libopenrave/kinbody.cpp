@@ -4538,12 +4538,32 @@ void KinBody::SetNonCollidingConfiguration()
 void KinBody::_ResetInternalCollisionCache()
 {
     _nNonAdjacentLinkCache = 0x80000000;
-    FOREACH(it,_setNonAdjacentLinks) {
-        it->clear();
+    FOREACH(it,_vNonAdjacentLinks) {
+        it->resize(0);
     }
 }
 
-const std::set<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
+bool CompareNonAdjacentFarthest(int pair0, int pair1)
+{
+    // order so that farthest links are first. if equal, then prioritize links that are furthest down the chain.
+    int pair0link0 = (pair0&0xffff);
+    int pair0link1 = ((pair0>>16)&0xffff);
+    int dist0 = pair0link1 - pair0link0; // link1 > link0
+    int pair1link0 = (pair1&0xffff);
+    int pair1link1 = ((pair1>>16)&0xffff);
+    int dist1 = pair1link1 - pair1link0; // link1 > link0
+    if( dist0 == dist1 ) {
+        if( pair0link1 == pair1link1 ) {
+            return pair0link0 > pair1link0;
+        }
+        else {
+            return pair0link1 > pair1link1;
+        }
+    }
+    return dist0 > dist1;
+}
+
+const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     class TransformsSaver
     {
@@ -4578,13 +4598,15 @@ private:
             boost::static_pointer_cast<Link>(_veclinks[i])->_info.transform = _vInitialLinkTransformations.at(i);
         }
         _nUpdateStampId++; // because transforms were modified
+        _vNonAdjacentLinks[0].resize(0);
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             for(size_t j = i+1; j < _veclinks.size(); ++j) {
                 if((_setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end())&& !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
-                    _setNonAdjacentLinks[0].insert(i|(j<<16));
+                    _vNonAdjacentLinks[0].push_back(i|(j<<16));
                 }
             }
         }
+        std::sort(_vNonAdjacentLinks[0].begin(), _vNonAdjacentLinks[0].end(), CompareNonAdjacentFarthest);
         _nUpdateStampId++; // because transforms were modified
         _nNonAdjacentLinkCache = 0;
     }
@@ -4592,20 +4614,21 @@ private:
         int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
         // find out what needs to computed
         if( requestedoptions & AO_Enabled ) {
-            _setNonAdjacentLinks.at(AO_Enabled).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+            _vNonAdjacentLinks.at(AO_Enabled).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[0]) {
                 KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
                 if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _setNonAdjacentLinks[AO_Enabled].insert(*itset);
+                    _vNonAdjacentLinks[AO_Enabled].push_back(*itset);
                 }
             }
             _nNonAdjacentLinkCache |= AO_Enabled;
+            std::sort(_vNonAdjacentLinks[AO_Enabled].begin(), _vNonAdjacentLinks[AO_Enabled].end(), CompareNonAdjacentFarthest);
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT(_("no support for adjacentoptions %d"), adjacentoptions,ORE_InvalidArguments);
         }
     }
-    return _setNonAdjacentLinks.at(adjacentoptions);
+    return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
 const std::set<int>& KinBody::GetAdjacentLinks() const

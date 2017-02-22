@@ -72,8 +72,15 @@ public:
     object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const
     {
         vector<dReal> values;
-        _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec));
+        _ptrajectory->Sample(values,time,openravepy::GetConfigurationSpecification(pyspec), true);
         return toPyArray(values);
+    }
+
+    object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const
+    {
+        vector<dReal> vdata = ExtractArray<dReal>(odata);
+        _ptrajectory->Sample(vdata,time,openravepy::GetConfigurationSpecification(pyspec), false);
+        return toPyArray(vdata);
     }
 
     object SamplePoints2D(object otimes) const
@@ -97,7 +104,7 @@ public:
         ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
         std::vector<dReal> vtimes = ExtractArray<dReal>(otimes);
         _ptrajectory->SamplePoints(values, vtimes, spec);
-        
+
         npy_intp dims[] = { npy_intp(values.size()/spec.GetDOF()), npy_intp(spec.GetDOF()) };
         PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         if( values.size() > 0 ) {
@@ -146,7 +153,7 @@ public:
     {
         return GetWaypoints2D(0, _ptrajectory->GetNumWaypoints());
     }
-    
+
     object GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const
     {
         vector<dReal> values;
@@ -298,6 +305,7 @@ void init_openravepy_trajectory()
     .def("Remove",&PyTrajectoryBase::Remove,args("startindex","endindex"),DOXY_FN(TrajectoryBase,Remove))
     .def("Sample",Sample1,args("time"),DOXY_FN(TrajectoryBase,Sample "std::vector; dReal"))
     .def("Sample",Sample2,args("time","spec"),DOXY_FN(TrajectoryBase,Sample "std::vector; dReal; const ConfigurationSpecification"))
+    .def("SampleFromPrevious",&PyTrajectoryBase::SampleFromPrevious,args("data","time","spec"),DOXY_FN(TrajectoryBase,Sample "std::vector; dReal; const ConfigurationSpecification"))
     .def("SamplePoints2D",SamplePoints2D1,args("times"),DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector"))
     .def("SamplePoints2D",SamplePoints2D2,args("times","spec"),DOXY_FN(TrajectoryBase,SamplePoints2D "std::vector; std::vector; const ConfigurationSpecification"))
     .def("GetConfigurationSpecification",&PyTrajectoryBase::GetConfigurationSpecification,DOXY_FN(TrajectoryBase,GetConfigurationSpecification))

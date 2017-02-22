@@ -1548,7 +1548,9 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int linkindex, boost::mul
     }
 }
 
-const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
+bool CompareNonAdjacentFarthest(int pair0, int pair1); // defined in kinbody.cpp
+
+const std::vector<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 {
     KinBody::GetNonAdjacentLinks(0); // need to call to set the cache
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
@@ -1575,37 +1577,40 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 
         // compute it
         if( compute.at(AO_Enabled) ) {
-            _setNonAdjacentLinks.at(AO_Enabled).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+            _vNonAdjacentLinks.at(AO_Enabled).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[0]) {
                 KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
                 if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _setNonAdjacentLinks[AO_Enabled].insert(*itset);
+                    _vNonAdjacentLinks[AO_Enabled].push_back(*itset);
                 }
             }
+            std::sort(_vNonAdjacentLinks[AO_Enabled].begin(), _vNonAdjacentLinks[AO_Enabled].end(), CompareNonAdjacentFarthest);
         }
         if( compute.at(AO_ActiveDOFs) ) {
-            _setNonAdjacentLinks.at(AO_ActiveDOFs).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+            _vNonAdjacentLinks.at(AO_ActiveDOFs).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[0]) {
                 FOREACHC(it, GetActiveDOFIndices()) {
                     if( IsDOFInChain(*itset&0xffff,*itset>>16,*it) ) {
-                        _setNonAdjacentLinks[AO_ActiveDOFs].insert(*itset);
+                        _vNonAdjacentLinks[AO_ActiveDOFs].push_back(*itset);
                         break;
                     }
                 }
             }
+            std::sort(_vNonAdjacentLinks[AO_ActiveDOFs].begin(), _vNonAdjacentLinks[AO_ActiveDOFs].end(), CompareNonAdjacentFarthest);
         }
         if( compute.at(AO_Enabled|AO_ActiveDOFs) ) {
-            _setNonAdjacentLinks.at(AO_Enabled|AO_ActiveDOFs).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[AO_ActiveDOFs]) {
+            _vNonAdjacentLinks.at(AO_Enabled|AO_ActiveDOFs).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[AO_ActiveDOFs]) {
                 KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
                 if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _setNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].insert(*itset);
+                    _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].push_back(*itset);
                 }
             }
+            std::sort(_vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].begin(), _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].end(), CompareNonAdjacentFarthest);
         }
         _nNonAdjacentLinkCache |= requestedoptions;
     }
-    return _setNonAdjacentLinks.at(adjacentoptions);
+    return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
 void RobotBase::SetNonCollidingConfiguration()
