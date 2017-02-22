@@ -64,7 +64,7 @@ class GrasperModule : public ModuleBase
     };
 
 public:
-    GrasperModule(EnvironmentBasePtr penv, std::istream& sinput)  : ModuleBase(penv), errfile(NULL) {
+    GrasperModule(EnvironmentBasePtr penv, std::istream& sinput)  : ModuleBase(penv), outfile(NULL), errfile(NULL) {
         __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
         RegisterCommand("Grasp",boost::bind(&GrasperModule::_GraspCommand,this,_1,_2),
                         "Performs a grasp and returns contact points");
@@ -78,6 +78,8 @@ public:
                         "Given a point cloud, returns information about its convex hull like normal planes, vertex indices, and triangle indices. Computed planes point outside the mesh, face indices are not ordered, triangles point outside the mesh (counter-clockwise)");
     }
     virtual ~GrasperModule() {
+        if( !!outfile )
+            fclose(outfile);
         if( !!errfile )
             fclose(errfile);
     }
@@ -1614,7 +1616,7 @@ protected:
         vconvexplanes.resize(0);
 #ifdef QHULL_FOUND
         if ( vpoints.empty() ) {
-            RAVELOG_WARN("points cannot be empty\n");
+            RAVELOG_ERROR("points cannot be empty\n");
             return 0;
         }
 
@@ -1623,23 +1625,19 @@ protected:
             return 0;
         }
 
-        for (size_t i = 0; i < vpoints.size(); ++i) {
-            if (std::isnan(vpoints[i])) {
-                RAVELOG_ERROR("points contain nan\n");
-                return 0;
-            }
-        }
-
         vector<coordT> qpoints(vpoints.size());
         std::copy(vpoints.begin(),vpoints.end(),qpoints.begin());
 
         boolT ismalloc = 0;               // True if qhull should free points in qh_freeqhull() or reallocation
         char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
 
+        if( !outfile ) {
+            outfile = tmpfile();        // stdout from qhull code
+        }
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
         }
-        int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, NULL, errfile);
+        int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, outfile, errfile);
         if (!exitcode) {
             vconvexplanes.reserve(1000);
             if( !!vconvexfaces ) {
@@ -1733,6 +1731,7 @@ protected:
     RobotBasePtr _robot;
     CollisionReportPtr _report;
     boost::mutex _mutex;
+    FILE *outfile;
     FILE *errfile;
     std::vector<dReal> _vjointmaxlengths;
 };
