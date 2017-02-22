@@ -1769,7 +1769,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     }
 
     // for debugging purposes
-    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilon);
+    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*10);
 }
 
 TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
@@ -1852,7 +1852,7 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     }
 
     // for debugging purposes
-    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilon*10);
+    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*10);
     return outtraj;
 }
 
