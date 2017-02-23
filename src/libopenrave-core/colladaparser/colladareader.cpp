@@ -74,16 +74,21 @@ public:
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
                         return NULL;
                     }
-                    domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull);
-                    if( !!proxy ) {
-                        if( !!_preader ) {
-                            // have to convert the first element back to URI with %20 since that's what other functions input
-                            _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
-                        }
-                        doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
-                        if( !!doc ) {
-                            // insert it again with the original URI
-                            uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+
+                    // should double check that docurifull is not in the current database
+                    doc = dae->getDatabase()->getDocument(docurifull.c_str(), true);
+                    if( !doc ) {
+                        domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull); // be very careful with this call since it can delete prevoiusly opened documents!
+                        if( !!proxy ) {
+                            if( !!_preader ) {
+                                // have to convert the first element back to URI with %20 since that's what other functions input
+                                _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
+                            }
+                            doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
+                            if( !!doc ) {
+                                // insert it again with the original URI
+                                uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+                            }
                         }
                     }
                 }
@@ -2947,7 +2952,7 @@ public:
                                 RAVELOG_WARN_FORMAT("invalid direction specified for manip %s, using [0,0,1]", manipinfo._name);
                                 manipinfo._vdirection = Vector(0,0,1);
                             }
-                            
+
                             if( !ss ) {
                                 RAVELOG_WARN(str(boost::format("could not read frame_tip/direction of manipulator %s frame tip %s")%name%pframe_tip->getAttribute("link")));
                             }
@@ -4200,7 +4205,7 @@ private:
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
                             // for now don't load since we don't have good way of updating the geometry throughout the system yet.
-                            
+
 //                            const std::string groupname = pelt->getAttribute("type");
 //                            if( groupname == "" ) {
 //                                RAVELOG_WARN("encountered an empty group name");
