@@ -1634,10 +1634,9 @@ protected:
         if( !outfile ) {
             outfile = tmpfile();        // stdout from qhull code
         }
-        if( !!errfile ) {
-            fclose(errfile);
+        if( !errfile ) {
+            errfile = tmpfile();        // stderr, error messages from qhull code
         }
-        errfile = tmpfile();        // stderr, error messages from qhull code
 
         int exitcode= qh_new_qhull (dim, qpoints.size()/dim, &qpoints[0], ismalloc, flags, outfile, errfile);
         if (!exitcode) {
@@ -1690,6 +1689,7 @@ protected:
             while (fgets(buf, sizeof(buf), errfile) != NULL) {
                 RAVELOG_WARN(buf);
             }
+            rewind(errfile); // Rewind errfile for next error
 
             vconvexplanes.resize(0);
             if( !!vconvexfaces ) {
