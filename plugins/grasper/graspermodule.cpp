@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
+#include <algorithm>
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 #include <cmath>
@@ -1684,9 +1685,13 @@ protected:
         if( exitcode ) {
             RAVELOG_WARN(str(boost::format("Qhull failed with error %d")%exitcode));
 
+            // This is needed as the same errfile is used multiple times
+            const size_t errMsgEndPos = ftell(errfile);
+
             rewind(errfile);
             char buf[255];
-            while (fgets(buf, sizeof(buf), errfile) != NULL) {
+            // + 1 because fgets reads at most count - 1 chars
+            while (static_cast<size_t>(ftell(errfile)) < errMsgEndPos && (fgets(buf, std::min(errMsgEndPos - ftell(errfile) + 1, sizeof(buf)), errfile) != NULL)) {
                 RAVELOG_WARN(buf);
             }
             rewind(errfile); // Rewind errfile for next error
