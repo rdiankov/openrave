@@ -725,15 +725,23 @@ public:
                 pos = f.tellg();
             }
             if( bFound ) {
-                RAVELOG_INFO(str(boost::format("STL file %s has screen metadata")%filename));
-                stringbuf buf;
-                f.seekg(pos);
-                f.get(buf, 0);
+                RAVELOG_INFO_FORMAT("STL file %s has screen metadata", filename);
 
-                string newdata = buf.str();
-                aiSceneManaged scene(newdata, false);
-                if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-                    if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
+                f.seekg(0, std::ios::end);
+                stringstream::streampos endpos = f.tellg();                
+                f.seekg(pos);
+                string newdata;
+                newdata.reserve(endpos - pos);
+                newdata.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+                boost::shared_ptr<aiSceneManaged> scene(new aiSceneManaged(newdata, false));
+                if( (!scene->_scene || !scene->_scene->mRootNode) && newdata.size() >= 5 && newdata.substr(0,5) == std::string("solid") ) {
+                    // most likely a binary STL file with the first 5 words being solid. unfortunately assimp does not handle this well, so
+                    newdata[0] = 'x';
+                    scene.reset(new aiSceneManaged(newdata, false, "STL"));
+                }
+                
+                if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
+                    if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
                         FOREACH(itgeom, listGeometries) {
                             itgeom->_vDiffuseColor = vcolor;
                             if( bTransformOffset ) {
@@ -774,7 +782,7 @@ public:
                     if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
                         return true;
                     }
-                    RAVELOG_WARN("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!\n");
+                    RAVELOG_WARN_FORMAT("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!", filename);
                 }
                 return false;
             }

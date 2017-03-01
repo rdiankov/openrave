@@ -584,7 +584,7 @@ public:
             for (size_t irampnd = 0; irampnd < parabolicpath.GetRampNDVect().size(); ++irampnd) {
                 rampndTrimmed = parabolicpath.GetRampNDVect()[irampnd];
 
-                if( !(_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" && numShortcuts == 0) ) {
+                if( !(_parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" && numShortcuts == 0) || !rampndTrimmed.constraintChecked ) {
                     // When we read waypoints from the initial trajectory, the re-computation of
                     // accelerations (RampND::Initialize) can introduce some small discrepancy and
                     // trigger the error although the initial trajectory is perfectly
@@ -1759,7 +1759,7 @@ protected:
         ofstream f(filename.c_str());
         f << std::setprecision(RampOptimizer::g_nPrec);
         parabolicpath.Serialize(f);
-        RAVELOG_DEBUG_FORMAT("Wrote a parabolicpath to %s (duration = %.15e)", filename%parabolicpath.GetDuration());
+        RavePrintfA(str(boost::format("Wrote a parabolicpath to %s (duration = %.15e, num=%d)")%filename%parabolicpath.GetDuration()%parabolicpath.GetRampNDVect().size()), level);
         return;
     }
 
