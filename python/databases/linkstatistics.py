@@ -138,7 +138,9 @@ class LinkStatisticsModel(DatabaseGenerator):
             for ijoint in range(len(self.robot.GetJoints())):
                 if ijoint in jointspheres:
                     dofindex = self.robot.GetJoints()[ijoint].GetDOFIndex()
-                    resolutions[dofindex] = xyzdelta/jointspheres[ijoint][1]
+                    if abs(jointspheres[ijoint][1]) > 1e-7:
+                        # sometimes there are no geometries attached for prototype robots...
+                        resolutions[dofindex] = xyzdelta/jointspheres[ijoint][1]
             self.robot.SetDOFResolutions(resolutions)
             self.robot.SetAffineTranslationResolution(tile(xyzdelta,3))
             self.robot.SetAffineRotationAxisResolution(tile(resolutions[0],4))

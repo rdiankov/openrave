@@ -234,7 +234,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
         }
     }
 
-    RAVELOG_VERBOSE_FORMAT("Joint %d has the longest duration of %.15e s.", maxIndex%maxDuration);
+    //RAVELOG_VERBOSE_FORMAT("Joint %d has the longest duration of %.15e s.", maxIndex%maxDuration);
 
     // Now stretch all the trajectories to some duration t. If not tryHarder, t will be
     // maxDuration. Otherwise, t will be the maximum of maxDuration and tbound (computed by taking
@@ -245,7 +245,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
         return false;
     }
 
-    RAVELOG_VERBOSE_FORMAT("ND Trajectory generated with duration %.15e s.", _cacheCurvesVect[0].GetDuration());
+    //RAVELOG_VERBOSE_FORMAT("ND Trajectory generated with duration %.15e s.", _cacheCurvesVect[0].GetDuration());
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( !_ImposeJointLimitFixedDuration(_cacheCurvesVect[idof], xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof], BCHECK_1D_TRAJ) ) {
@@ -253,7 +253,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
         }
     }
 
-    RAVELOG_VERBOSE("Imposing joint limits successful");
+    //RAVELOG_VERBOSE("Imposing joint limits successful");
 
     if( IS_DEBUGLEVEL(Level_Verbose) ) {// Debugging: check ParabolicCurves before conversion
         for (size_t idof = 0; idof < _ndof; ++idof) {
@@ -265,7 +265,7 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
                 return false;
             }
         }
-        RAVELOG_VERBOSE("CheckParabolicCurves successful");
+        //RAVELOG_VERBOSE("CheckParabolicCurves successful");
     }
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
@@ -303,7 +303,7 @@ bool ParabolicInterpolator::_RecomputeNDTrajectoryFixedDuration(std::vector<Para
 
     for (size_t idof = 0; idof < _ndof; ++idof) {
         if( isPrevDurationSafe && idof == maxIndex ) {
-            RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
+            //RAVELOG_VERBOSE_FORMAT("joint %d is already the slowest DOF, continue to the next DOF (if any)", idof);
             continue;
         }
         if( !Compute1DTrajectoryFixedDuration(curvesVect[idof].GetX0(), curvesVect[idof].GetX1(), curvesVect[idof].GetV0(), curvesVect[idof].GetV1(), vmVect[idof], amVect[idof], newDuration, _cacheCurve) ) {
@@ -373,7 +373,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
         _cacheCurvesVect[idof] = _cacheCurve;
     }
 
-    RAVELOG_VERBOSE("Successfully computed ND trajectory with joint limits and fixed duration");
+    //RAVELOG_VERBOSE("Successfully computed ND trajectory with joint limits and fixed duration");
     if( 0 ) {
         std::stringstream sss;
         sss << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
@@ -408,7 +408,7 @@ bool ParabolicInterpolator::ComputeNDTrajectoryFixedDuration(const std::vector<d
                 return false;
             }
         }
-        RAVELOG_VERBOSE("CheckParabolicCurves successful");
+        //RAVELOG_VERBOSE("CheckParabolicCurves successful");
     }
 
     _ConvertParabolicCurvesToRampNDs(_cacheCurvesVect, rampndVectOut, amVect);
@@ -548,7 +548,7 @@ bool ParabolicInterpolator::_ImposeJointLimitFixedDuration(ParabolicCurve& curve
     dReal bmin, bmax;
     curve.GetPeaks(bmin, bmax);
     if( (bmin >= xmin - g_fRampEpsilon) && (bmax <= xmax + g_fRampEpsilon) ) {
-        RAVELOG_VERBOSE("The input curve does not violate joint limits.");
+        //RAVELOG_VERBOSE("The input curve does not violate joint limits.");
         return true;
     }
 

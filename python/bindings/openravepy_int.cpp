@@ -2079,7 +2079,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("CheckCollision",pcolyr,args("ray"), DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
                     .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                          CheckCollisionRays_overloads(args("rays","body","front_facing_only"),
-                                                      "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
+                                                      "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction*range."))
                     .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(args("filename","atts"), DOXY_FN(EnvironmentBase,LoadURI)))
                     .def("Load",load1,args("filename"), DOXY_FN(EnvironmentBase,Load))
                     .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))

@@ -388,14 +388,15 @@ class InverseKinematicsModel(DatabaseGenerator):
                 armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
                 eetrans = j.GetAnchor()
             freeinc = []
-            for index in self.freeindices:
-                joint = self.robot.GetJointFromDOFIndex(index)
-                if joint.IsRevolute(index-joint.GetDOFIndex()):
-                    freeinc.append(freeincrot)
-                elif joint.IsPrismatic(index-joint.GetDOFIndex()):
-                    freeinc.append(freeinctrans*armlength)
-                else:
-                    log.warn('cannot set increment for joint type %s'%joint.GetType())
+            if self.freeindices is not None:
+                for index in self.freeindices:
+                    joint = self.robot.GetJointFromDOFIndex(index)
+                    if joint.IsRevolute(index-joint.GetDOFIndex()):
+                        freeinc.append(freeincrot)
+                    elif joint.IsPrismatic(index-joint.GetDOFIndex()):
+                        freeinc.append(freeinctrans*armlength)
+                    else:
+                        log.warn('cannot set increment for joint type %s'%joint.GetType())
             return freeinc
         
     def GetDefaultIndices(self,avoidPrismaticAsFree=False):
@@ -544,7 +545,10 @@ class InverseKinematicsModel(DatabaseGenerator):
             index += 1
             dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             if allfreeindices is None:
-                allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+                if self.manip.GetArmDOF() > dofexpected:
+                    allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),self.manip.GetArmDOF()-dofexpected)]
+                else:
+                    allfreeindices = []
             if index >= len(allfreeindices):
                 break
             freeindices = allfreeindices[index]

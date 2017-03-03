@@ -159,7 +159,7 @@ public:
     class LinkAdjacentFilterCallback : public OpenRAVEFilterCallback
     {
 public:
-        LinkAdjacentFilterCallback(KinBodyConstPtr pparent, const std::set<int>& setadjacency) : OpenRAVEFilterCallback(), _pparent(pparent), _setadjacency(setadjacency) {
+        LinkAdjacentFilterCallback(KinBodyConstPtr pparent, const std::vector<int>& setadjacency) : OpenRAVEFilterCallback(), _pparent(pparent), _setadjacency(setadjacency) {
         }
 
         virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
@@ -174,7 +174,7 @@ public:
         }
 
         KinBodyConstPtr _pparent;
-        const std::set<int>& _setadjacency;
+        const std::vector<int>& _setadjacency;
     };
 
     class KinBodyLinkFilterCallback : public OpenRAVEFilterCallback

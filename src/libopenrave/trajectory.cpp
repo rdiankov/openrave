@@ -82,13 +82,16 @@ void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     Insert(0,data);
 }
 
-void TrajectoryBase::Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const
+void TrajectoryBase::Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData) const
 {
     RAVELOG_VERBOSE(str(boost::format("TrajectoryBase::Sample: calling slow implementation %s")%GetXMLId()));
     vector<dReal> vinternaldata;
     Sample(vinternaldata,time);
-    data.resize(spec.GetDOF());
-    ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),GetConfigurationSpecification(),1,GetEnv());
+    if( reintializeData ) {
+        data.resize(0);
+    }
+    data.resize(spec.GetDOF(),0);
+    ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),GetConfigurationSpecification(),1,GetEnv(),reintializeData);
 }
 
 void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const

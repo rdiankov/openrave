@@ -1718,6 +1718,19 @@ TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr sourcetraj)
 
 void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
 {
+    if( starttime < 0 ) {
+        RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
+        starttime = 0;
+    }
+    if( endtime > traj->GetDuration()+g_fEpsilonLinear ) {
+        RAVELOG_WARN_FORMAT("got an invalid end time %.15e", endtime);
+        endtime = traj->GetDuration();
+    }
+    if( endtime < starttime ) {
+        RAVELOG_WARN_FORMAT("got an invalid time range %.15e, %.15e, choosing the start time", starttime%endtime);
+        endtime = starttime;
+    }
+
     std::vector<dReal> values;
     if( endtime < traj->GetDuration() ) {
         size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
@@ -1754,6 +1767,9 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
 
         }
     }
+
+    // for debugging purposes
+    OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*10);
 }
 
 TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
@@ -1762,44 +1778,82 @@ TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal startt
     const ConfigurationSpecification& spec = traj->GetConfigurationSpecification();
     TrajectoryBasePtr outtraj = RaveCreateTrajectory(traj->GetEnv(), traj->GetXMLId());
     outtraj->Init(spec);
+    if( traj->GetNumWaypoints() == 0 ) {
+        return outtraj;
+    }
 
-    // TODO
-//    size_t startindex = 0;
-//    if( starttime > 0 ) {
-//        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
-//        if( startindex > 0 ) {
-//            ConfigurationSpecification deltatimespec;
-//            deltatimespec.AddDeltaTimeGroup();
-//            std::vector<dReal> vdeltatime;
-//            traj->GetWaypoint(startindex,vdeltatime,deltatimespec);
-//            traj->Sample(values, starttime);
-//            dReal fSampleDeltaTime=0;
-//            spec.ExtractDeltaTime(fSampleDeltaTime, values.begin());
-//
-//            // have to set deltatime to 0 and insert values
-//            spec.InsertDeltaTime(values.begin(), 0);
-//            traj.Insert(0, values);
-//
-//            // check if the sampletime can be very close to an existing waypoint, in which case can ignore inserting a new point
-//            if( RaveFabs(fSampleDeltaTime-vdeltatime.at(0)) > g_fEpsilonLinear ) {
-//                // have to insert a new point
-//                vdeltatime[0] -= fSampleDeltaTime;
-//                traj->Insert(startindex, vdeltatime, deltatimespec, true);
-//                endremoveindex -= 1;
-//            }
-//        }
-//    }
-//
-//    std::vector<dReal> values;
-//    if( endtime < traj->GetDuration() ) {
-//        size_t endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
-//        if( endindex < traj->GetNumWaypoints() ) {
-//            traj->Sample(values, endtime);
-//            traj->Insert(endindex, values, true);
-//            traj->Remove(endindex+1, traj->GetNumWaypoints());
-//        }
-//    }
-    return TrajectoryBasePtr();
+    if( starttime < 0 ) {
+        RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
+        starttime = 0;
+    }
+    if( endtime > traj->GetDuration()+g_fEpsilonLinear ) {
+        RAVELOG_WARN_FORMAT("got an invalid end time %.15e", endtime);
+        endtime = traj->GetDuration();
+    }
+    if( endtime < starttime ) {
+        RAVELOG_WARN_FORMAT("got an invalid time range %.15e, %.15e, choosing the start time", starttime%endtime);
+        endtime = starttime;
+    }
+    
+    int startindex = 0, endindex = traj->GetNumWaypoints()-1;
+
+    if( endtime < traj->GetDuration() ) {
+        endindex = traj->GetFirstWaypointIndexAfterTime(endtime);
+        if( endindex >= traj->GetNumWaypoints() ) {
+            endindex = traj->GetNumWaypoints()-1;
+        }
+    }
+
+    if( endindex == 0 ) {
+        // the first point! handle this separately
+        traj->GetWaypoint(endindex, values);
+        spec.InsertDeltaTime(values.begin(), endtime - starttime); // the first point might have a deltatime, so the traj duration can actaully be non-zero...
+        outtraj->Insert(0, values);
+        return outtraj;
+    }
+    
+    if( starttime > 0 ) {
+        startindex = traj->GetFirstWaypointIndexAfterTime(starttime);
+        if( startindex > 0 ) {
+            startindex--;
+        }
+    }
+    
+    traj->GetWaypoints(startindex, endindex+1, values);
+    outtraj->Insert(0, values);
+    
+    if( starttime > 0 ) {
+        // have to overwrite the first point and 
+        dReal startdeltatime=0, waypointdeltatime = 0;
+        if( !spec.ExtractDeltaTime(waypointdeltatime, values.begin()+spec.GetDOF()) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("could not extract deltatime, bad traj", ORE_InvalidArguments);
+        }
+
+        // have to change the first waypoint
+        traj->Sample(values, starttime);
+        // have to set deltatime to 0
+        if( !spec.ExtractDeltaTime(startdeltatime, values.begin()) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("could not extract deltatime, bad traj", ORE_InvalidArguments);
+        }
+        
+        spec.InsertDeltaTime(values.begin(), 0); // first waypoint starts at 0 time
+        outtraj->Insert(0,values,true);
+
+        // the second waypoint holds the delta time between new first waypoint
+        traj->GetWaypoint(startindex+1, values);
+        spec.InsertDeltaTime(values.begin(), waypointdeltatime - startdeltatime);
+        outtraj->Insert(1,values,true);
+    }
+    
+    if( endtime < traj->GetDuration() ) {
+        // have to change the last endpoint, should sample from outtraj instead since both start and end can be within same waypoint range
+        outtraj->Sample(values, endtime-starttime);
+        outtraj->Insert(endindex-startindex,values,true);
+    }
+
+    // for debugging purposes
+    OPENRAVE_ASSERT_OP(RaveFabs(outtraj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*10);
+    return outtraj;
 }
 
 TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& listtrajectories)
@@ -3067,14 +3121,14 @@ ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPt
     std::vector<int> vfreeindices((istream_iterator<int>(ssout)), istream_iterator<int>());
     if( (int)vfreeindices.size() != pmanip->GetIkSolver()->GetNumFreeParameters() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("free parameters from iksolver do not match", ORE_Assert);
-    }   
+    }
 
     // have to convert to roobt dof
     for(size_t i = 0; i < vfreeindices.size(); ++i) {
         vfreeindices[i] = pmanip->GetArmIndices().at(vfreeindices[i]); // have to convert to robot dof!
     }
     _probot->GetDOFWeights(_vfreeweights, vfreeindices);
-    
+
     // the halton sequence centers around 0.5, so make it center around vfreestart
     for(std::vector<dReal>::iterator it = _vfreestart.begin(); it != _vfreestart.end(); ++it) {
         *it -= 0.5;
@@ -3126,7 +3180,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
         advance(itsample,isampleindex);
 
         SampleInfo& sampleinfo = *itsample;
-        
+
         int numRedundantSamplesForEEChecking = 0;
         if( (int)_pmanip->GetArmIndices().size() > sampleinfo._ikparam.GetDOF() ) {
             numRedundantSamplesForEEChecking = 40;
@@ -3151,7 +3205,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
             // could be jittered.
             // if bCheckEndEffector is true, then should call CheckEndEffectorCollision to quickly prune samples; otherwise, have to rely on calling FindIKSolution
             try {
-                if( (bCheckEndEffector && _pmanip->CheckEndEffectorCollision(ikparam,_report, numRedundantSamplesForEEChecking)) || (bCheckEndEffectorSelf && _pmanip->CheckEndEffectorSelfCollision(ikparam,_report, numRedundantSamplesForEEChecking))) {
+                if( (bCheckEndEffector && _pmanip->CheckEndEffectorCollision(ikparam,_report, numRedundantSamplesForEEChecking)) || (bCheckEndEffectorSelf && _pmanip->CheckEndEffectorSelfCollision(ikparam,_report, numRedundantSamplesForEEChecking,true))) {
                     bool bcollision=true;
                     if( _fjittermaxdist > 0 ) {
                         // try jittering the end effector out
@@ -3171,7 +3225,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 }
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) ) {
+                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered,_report, numRedundantSamplesForEEChecking,true)) ) {
                                         // make sure at least one ik solution exists...
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered = boost::make_shared<IkReturn>(IKRA_Success);
@@ -3206,7 +3260,7 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
                                 tjitter.trans = Vector(xyzsamples[0]-0.5f, xyzsamples[1]-0.5f, xyzsamples[2]-0.5f) * (delta*iiter);
                                 IkParameterization ikparamjittered = tjitter * ikparam;
                                 try {
-                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) ) {
+                                    if( (!bCheckEndEffector || !_pmanip->CheckEndEffectorCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking)) && (!bCheckEndEffectorSelf || !_pmanip->CheckEndEffectorSelfCollision(ikparamjittered, _report, numRedundantSamplesForEEChecking,true)) ) {
                                         if( !ikreturnjittered ) {
                                             ikreturnjittered = boost::make_shared<IkReturn>(IKRA_Success);
                                         }
@@ -3258,21 +3312,21 @@ IkReturnPtr ManipulatorIKGoalSampler::Sample()
 #if 1
                     // read all the samples and order them so that samples close to 0.5 are sampled first!
                     sampleinfo._psampler->SampleSequence(sampleinfo._vfreesamples,_nummaxsamples);
-                    OPENRAVE_ASSERT_OP(sampleinfo._vfreesamples.size(),==,_nummaxsamples*numfree);
+                    OPENRAVE_ASSERT_OP((int)sampleinfo._vfreesamples.size(),==,_nummaxsamples*numfree);
                     sampleinfo._vcachedists.resize(_nummaxsamples);
                     for(int isample = 0; isample < _nummaxsamples; ++isample) {
                         dReal dist = 0;
                         for(int jfree = 0; jfree < numfree; ++jfree) {
                             dist += _vfreeweights[jfree]*RaveFabs(sampleinfo._vfreesamples[isample*numfree+jfree] - 0.5);
                         }
-                        
+
                         sampleinfo._vcachedists[isample].first = isample;
                         sampleinfo._vcachedists[isample].second = dist;
                     }
                     std::sort(sampleinfo._vcachedists.begin(), sampleinfo._vcachedists.end(), ComparePriorityPair);
 #endif
                 }
-                
+
 #if 1
                 if( sampleinfo._vcachedists.size() > 0 ) {
                     int isample = sampleinfo._vcachedists.back().first;
