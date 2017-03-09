@@ -1335,7 +1335,7 @@ protected:
                 _CheckRefineSolution(param, *pmanip, itravesol->first);
 
                 // due to floating-point precision, vravesol and param will not necessarily match anymore. The filters require perfectly matching pair, so compute a new param
-                paramnew = pmanip->GetIkParameterization(param,false);
+                paramnew = pmanip->GetIkParameterization(param,false); // custom data is copied!
                 paramnewglobal = pmanip->GetBase()->GetTransform() * paramnew;
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
@@ -2061,12 +2061,15 @@ protected:
         // try to convert localgoal into a different goal suitable for the IK
         if( param.GetType() == IKP_Transform6D ) {
             if( _nTotalDOF == 4 ) {
+                ikdummy = param; // copy the custom data!
                 ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans, -normalizeAxisRotation(Vector(0,0,1), param.GetTransform6D().rot).first);
                 return ikdummy;
             }
             else if( _nTotalDOF == 5 ) {
+                ikdummy = param; // copy the custom data!
                 RobotBase::ManipulatorPtr pmanip(_pmanip);
                 ikdummy.SetTranslationDirection5D(RAY(param.GetTransform6D().trans, quatRotate(param.GetTransform6D().rot, pmanip->GetLocalToolDirection())));
+                // have to copy the custom data!
                 return ikdummy;
             }
         }
