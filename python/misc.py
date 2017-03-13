@@ -385,7 +385,7 @@ def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
     R = openravepy_int.matrixFromQuat(openravepy_int.quatRotateDirection([0,0,1],normal))
     right = R[0:3,0]*radius
     up = R[0:3,1]*radius
-    return env.drawlinestrip(c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
+    return env.drawlinestrip(numpy.c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
