@@ -4861,7 +4861,7 @@ private:
         daeBool bhas1 = elt1->hasAttribute(attr.c_str());
         daeBool bhas2 = elt2->hasAttribute(attr.c_str());
         if( !bhas1 || !bhas2 ) {
-            if( !bhas1 && !bhas1 && elt1 == elt2 ) {
+            if( !bhas1 && !bhas2 && elt1 == elt2 ) {
                 return 1;
             }
             return -1;
