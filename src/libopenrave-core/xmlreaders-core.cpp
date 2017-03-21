@@ -661,7 +661,7 @@ public:
                 }
             }
 
-            if( !!scene->mMaterials && input_mesh->mMaterialIndex>=0 && input_mesh->mMaterialIndex<scene->mNumMaterials) {
+            if( !!scene->mMaterials&& input_mesh->mMaterialIndex<scene->mNumMaterials) {
                 aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
                 aiColor4D color;
                 aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
