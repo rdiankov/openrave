@@ -2202,6 +2202,56 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
     return bincollision;
 }
 
+bool RobotBase::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
+{
+    // TODO: have to consider rigidly attached links??
+    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+    bool bincollision = false;
+    LinkPtr plink = _veclinks.at(ilinkindex);
+    if( plink->IsEnabled() ) {
+        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
+        }
+    }
+
+    KinBodyStateSaverPtr linksaver;
+    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
+    // it is important to make sure to add all other attached bodies in the ignored list!
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    FOREACHC(itgrabbed,_vGrabbedBodies) {
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+        if( pgrabbed->_plinkrobot == plink ) {
+            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pbody ) {
+                if( !linksaver ) {
+                    linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
+                    plink->Enable(false);
+                    // also disable rigidly attached links?
+                }
+                KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
+                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pbody),report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+            }
+        }
+    }
+    return bincollision;
+}
+
 bool RobotBase::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
     // TODO: have to consider rigidly attached links??
