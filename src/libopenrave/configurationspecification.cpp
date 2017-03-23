@@ -1772,11 +1772,23 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     }
 }
 
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+    
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
+    std::vector<int> vgroupindices(spec._vgroups.size());
+    for(int i = 0; i < vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(spec), _1, _2));
+    
     O << "<configuration>" << endl;
-    FOREACHC(it,spec._vgroups) {
-        O << "<group name=\"" << it->name << "\" offset=\"" << it->offset << "\" dof=\"" << it->dof << "\" interpolation=\"" << it->interpolation << "\"/>" << endl;
+    FOREACH(itgroupindex, vgroupindices) {
+        const ConfigurationSpecification::Group& group = spec._vgroups[*itgroupindex];
+        O << "<group name=\"" << group.name << "\" offset=\"" << group.offset << "\" dof=\"" << group.dof << "\" interpolation=\"" << group.interpolation << "\"/>" << endl;
     }
     O << "</configuration>" << endl;
     return O;
