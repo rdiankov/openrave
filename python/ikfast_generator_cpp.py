@@ -1375,7 +1375,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for i in range(len(node.postcheckforzeros)):
                 if i != 0:
                     fcode += ' || '
-                fcode += 'IKabs(%sevalpoly[%d]) <= %.16f '%(name,i,node.thresh)
+                fcode += 'IKabs(%sevalpoly[%d]) <= %.16f '%(name,i,node.postcheckforzerosThresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
         if node.postcheckfornonzeros is not None and len(node.postcheckfornonzeros) > 0:
@@ -1384,7 +1384,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for i in range(len(node.postcheckfornonzeros)):
                 if i != 0:
                     fcode += ' || '
-                fcode += 'IKabs(%sevalpoly[%d]) > %.16f '%(name,i,node.thresh)
+                fcode += 'IKabs(%sevalpoly[%d]) > %.16f '%(name,i,node.postcheckfornonzerosThresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
         if node.postcheckforrange is not None and len(node.postcheckforrange) > 0:
@@ -1393,7 +1393,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for i in range(len(node.postcheckforrange)):
                 if i != 0:
                     fcode += ' || '
-                fcode += ' (%sevalpoly[%d] <= %.16f || %sevalpoly[%d] > %.16f) '%(name,i,-1.0-node.thresh,name,i,1.0+node.thresh)
+                fcode += ' (%sevalpoly[%d] <= %.16f || %sevalpoly[%d] > %.16f) '%(name,i,-1.0-node.postcheckforrangeThresh,name,i,1.0+node.postcheckforrangeThresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
         if node.postcheckforNumDenom is not None and len(node.postcheckforNumDenom) > 0:
@@ -1406,7 +1406,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
             for i in range(len(node.postcheckforNumDenom)):
                 if i != 0:
                     fcode += ' || '
-                fcode += ' (IKabs(%sevalpoly[%d]) <= %.16f && IKabs(%sevalpoly[%d]) > %.16f) '%(name,2*i,node.thresh,name,2*i+1,node.thresh)
+                fcode += ' (IKabs(%sevalpoly[%d]) <= %.16f && IKabs(%sevalpoly[%d]) > %.16f) '%(name,2*i,node.postcheckforNumDenomThresh,name,2*i+1,node.postcheckforNumDenomThresh)
             fcode += ' )\n{\n    continue;\n}\n'
             code += fcode
 

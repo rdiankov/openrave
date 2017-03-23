@@ -287,6 +287,14 @@ public:
          */
         virtual bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
 
+        /** \brief Checks self-collision with only the gripper with the rest of the robot. Ignores disabled links.
+
+            \param[out] report [optional] collision report
+            \param[in] bIgnoreManipulatorLinks if true, then will ignore any links that can potentially move because of manipulator moving.
+            \return true if a collision occurred
+         */
+        virtual bool CheckEndEffectorSelfCollision(CollisionReportPtr report = CollisionReportPtr(), bool bIgnoreManipulatorLinks=false) const;
+        
         /** \brief Checks self-collision with only the gripper given its end-effector transform with the rest of the robot. Ignores disabled links.
 
             \param tEE the end effector transform
@@ -966,6 +974,13 @@ private:
      */
     virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
 
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+    
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
