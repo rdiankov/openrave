@@ -1639,6 +1639,10 @@ protected:
 //            }
             // TODO: iterating vravesols would call the filters vravesols.size() times even if a valid solution is found
             // figure out a way to do short-curcuit the code to check the final solutions
+
+            int nSameStateRepeatCount = 0;
+            _nSameStateRepeatCount = 0;
+            
             list<IkReturnPtr> listtestikreturns;
             listtestikreturns.swap(listlocalikreturns);
             FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
@@ -1759,7 +1763,7 @@ protected:
         int nSameStateRepeatCount = 0;
         _nSameStateRepeatCount = 0;
         std::vector< pair<std::vector<dReal>,int> > vravesols;
-        list<IkReturnPtr> listlocalikreturns; // orderd with respect to vravesols
+        list< std::pair<IkReturnPtr, IkParameterization> > listlocalikreturns; // orderd with respect to vravesols
 
         // find the first valid solutino that satisfies joint constraints and collisions
         if( !(filteroptions&IKFO_IgnoreJointLimits) ) {
@@ -1782,7 +1786,7 @@ protected:
         IkParameterization paramnewglobal, paramnew;
 
         int retactionall = IKRA_Reject;
-        if( !(filteroptions & IKFO_IgnoreCustomFilters) ) {
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(1, IKSP_MaxPriority) ) {
 //            unsigned int maxsolutions = 1;
 //            for(size_t i = 0; i < iksol.basesol.size(); ++i) {
 //                unsigned char m = iksol.basesol[i].maxsolutions;
@@ -1810,7 +1814,7 @@ protected:
                     // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
                     stateCheck.RestoreCheckEndEffectorEnvCollision();
                 }
-                IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret);
+                IkReturnAction retaction = _CallFilters(itravesol->first, pmanip, paramnew,localret, 1, IKSP_MaxPriority);
                 if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
                     stateCheck.ResetCheckEndEffectorEnvCollision();
                 }
@@ -1822,7 +1826,7 @@ protected:
                 }
                 else if( retaction == IKRA_Success ) {
                     localret->_vsolution.swap(itravesol->first);
-                    listlocalikreturns.push_back(localret);
+                    listlocalikreturns.push_back(std::make_pair(localret, paramnew));
                 }
             }
             if( listlocalikreturns.size() == 0 ) {
@@ -1844,7 +1848,7 @@ protected:
                 IkReturnPtr localret(new IkReturn(IKRA_Success));
                 localret->_mapdata["solutionindices"] = std::vector<dReal>(_vsolutionindices.begin(),_vsolutionindices.end());
                 localret->_vsolution.swap(itravesol->first);
-                listlocalikreturns.push_back(localret);
+                listlocalikreturns.push_back(std::make_pair(localret, paramnew));
             }
         }
 
@@ -1856,6 +1860,67 @@ protected:
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
             if( probot->CheckSelfCollision(ptempreport) ) {
+                if( !!ptempreport ) {
+                    if( !!ptempreport->plink1 && !!ptempreport->plink2 && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
+                        // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
+                        // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
+                        KinBody::LinkConstPtr potherlink;
+                        if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink1) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink2;
+                        }
+                        else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
+                            potherlink = ptempreport->plink1;
+                        }
+
+                        if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
+                            for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                    stateCheck.numImpossibleSelfCollisions++;
+                                    RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                    if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                        RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                    }
+                                    else {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
+                            // check
+                            potherlink.reset();
+                            if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink2;
+                            }
+                            else if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink2) != _vIndependentLinksIncludingFreeJoints.end() ) {
+                                potherlink = ptempreport->plink1;
+                            }
+
+                            if( !!potherlink ) {
+                                //bool bRigidlyAttached = false;
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                    KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(potherlink) ) {
+
+                                        stateCheck.numImpossibleSelfCollisions++;
+                                        RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                            RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                            return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                        }
+                                        else {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision);
             }
         }
@@ -1898,13 +1963,52 @@ protected:
             }
         }
 
+        if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(IKSP_MinPriority, 0) ) {
+            int nSameStateRepeatCount = 0;
+            _nSameStateRepeatCount = 0;
+            
+            list< std::pair<IkReturnPtr, IkParameterization> >::iterator ittestreturn = listlocalikreturns.begin();
+            while(ittestreturn != listlocalikreturns.end()) {
+                IkReturnPtr localret = ittestreturn->first;
+                _vsolutionindices.resize(0);
+                FOREACH(it, localret->_mapdata["solutionindices"]) {
+                    _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
+                }
+                
+                probot->SetActiveDOFValues(localret->_vsolution,false);
+                _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
+
+                bool bNeedCheckEndEffectorEnvCollision = stateCheck.NeedCheckEndEffectorEnvCollision();
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) ) {
+                    // have to make sure end effector collisions are set, regardless if stateCheck.ResetCheckEndEffectorEnvCollision has been called
+                    stateCheck.RestoreCheckEndEffectorEnvCollision();
+                }
+                IkReturnAction retaction = _CallFilters(localret->_vsolution, pmanip, ittestreturn->second, localret, IKSP_MinPriority, 0);
+                if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
+                    stateCheck.ResetCheckEndEffectorEnvCollision();
+                }
+                nSameStateRepeatCount++;
+                _nSameStateRepeatCount = nSameStateRepeatCount;
+                retactionall |= retaction;
+                if( retactionall & IKRA_Quit ) {
+                    return static_cast<IkReturnAction>(retactionall|IKRA_RejectCustomFilter);
+                }
+                else if( retaction == IKRA_Success ) {
+                    ++ittestreturn;
+                }
+                else {
+                    ittestreturn = listlocalikreturns.erase(ittestreturn);
+                }
+            }
+        }
+        
         // check that end effector moved in the correct direction
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
             BOOST_ASSERT(listlocalikreturns.size()>0);
             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
             ss << "ignoring bad ik for " << probot->GetName() << ":" << pmanip->GetName() << " dist=" << RaveSqrt(ikworkspacedist) << ", param=[" << param << "], sol=[";
-            FOREACHC(itvalue,listlocalikreturns.front()->_vsolution) {
+            FOREACHC(itvalue,listlocalikreturns.front().first->_vsolution) {
                 ss << *itvalue << ", ";
             }
             ss << "]" << endl;
@@ -1919,13 +2023,15 @@ protected:
                 stateCheck.RestoreCheckEndEffectorEnvCollision();
             }
             FOREACH(itlocalikreturn, listlocalikreturns) {
-                _CallFinishCallbacks(*itlocalikreturn, pmanip, paramnewglobal);
+                _CallFinishCallbacks(itlocalikreturn->first, pmanip, paramnewglobal);
             }
             if( !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions) && !bNeedCheckEndEffectorEnvCollision ) {
                 stateCheck.ResetCheckEndEffectorEnvCollision();
             }
         }
-        vikreturns.insert(vikreturns.end(),listlocalikreturns.begin(),listlocalikreturns.end());
+        FOREACH(itlocalikreturn, listlocalikreturns) {
+            vikreturns.push_back(itlocalikreturn->first);
+        }
         return static_cast<IkReturnAction>(retactionall); // signals to continue
     }
 

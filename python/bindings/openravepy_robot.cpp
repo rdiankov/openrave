@@ -557,11 +557,12 @@ public:
         {
             bool bCollision;
             IkParameterization ikparam;
+            bool bIgnoreManipulatorLinks = false;
             if( ExtractIkParameterization(otrans,ikparam) ) {
-                bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples);
+                bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, bIgnoreManipulatorLinks);
             }
             else {
-                bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples);
+                bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, bIgnoreManipulatorLinks);
             }
             if( !!pyreport ) {
                 openravepy::UpdateCollisionReport(pyreport,_pyenv);
