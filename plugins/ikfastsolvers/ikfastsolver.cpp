@@ -1112,10 +1112,35 @@ protected:
                 RAY r = param.GetTranslationDirection5D();
                 IkReal eetrans[3] = {r.pos.x,r.pos.y,r.pos.z};
                 IkReal eerot[9] = {r.dir.x, r.dir.y, r.dir.z,0,0,0,0,0,0};
-                if( !_ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip) ) {
-                    return false;
+                bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                if( !bret ) {
+#ifdef OPENRAVE_HAS_LAPACK
+                    if( _fRefineWithJacobianInverseAllowedError > 0 ) {
+                        // since will be refining, can add a little error to see if IK gets recomputed
+                        eerot[0] = r.dir.x+0.001;
+                        eerot[1] = r.dir.y+0.001;
+                        eerot[2] = r.dir.z+0.001;
+                        dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                        eerot[0] /= fnorm;
+                        eerot[1] /= fnorm;
+                        eerot[2] /= fnorm;
+                        bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        if( !bret ) {
+                            eerot[0] = r.dir.x-0.001;
+                            eerot[1] = r.dir.y-0.001;
+                            eerot[2] = r.dir.z-0.001;
+                            dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                            eerot[0] /= fnorm;
+                            eerot[1] /= fnorm;
+                            eerot[2] /= fnorm;
+                            bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
+                        }
+                        RAVELOG_VERBOSE("ik failed, trying with slight jitter, ret=%d", (int)bret);
+                    }
+#endif
                 }
-                return true;
+
+                return bret;
             }
             case IKP_TranslationXY2D: {
                 Vector v = param.GetTranslationXY2D();
@@ -1642,7 +1667,7 @@ protected:
 
             int nSameStateRepeatCount = 0;
             _nSameStateRepeatCount = 0;
-            
+
             list<IkReturnPtr> listtestikreturns;
             listtestikreturns.swap(listlocalikreturns);
             FOREACH(ittestreturn, listtestikreturns) {//itravesol, vravesols) {
@@ -1966,7 +1991,7 @@ protected:
         if( !(filteroptions & IKFO_IgnoreCustomFilters) && _HasFilterInRange(IKSP_MinPriority, 0) ) {
             int nSameStateRepeatCount = 0;
             _nSameStateRepeatCount = 0;
-            
+
             list< std::pair<IkReturnPtr, IkParameterization> >::iterator ittestreturn = listlocalikreturns.begin();
             while(ittestreturn != listlocalikreturns.end()) {
                 IkReturnPtr localret = ittestreturn->first;
@@ -1974,7 +1999,7 @@ protected:
                 FOREACH(it, localret->_mapdata["solutionindices"]) {
                     _vsolutionindices.push_back((unsigned int)(*it+0.5)); // round
                 }
-                
+
                 probot->SetActiveDOFValues(localret->_vsolution,false);
                 _nSameStateRepeatCount = nSameStateRepeatCount; // could be overwritten by _CallFilters call!
 
@@ -2001,7 +2026,7 @@ protected:
                 }
             }
         }
-        
+
         // check that end effector moved in the correct direction
         dReal ikworkspacedist = param.ComputeDistanceSqr(paramnew);
         if( ikworkspacedist > _ikthreshold ) {
