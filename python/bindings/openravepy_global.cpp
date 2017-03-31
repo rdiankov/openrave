@@ -22,26 +22,26 @@
 
 namespace openravepy {
 
-PyRay::PyRay(object newpos, object newdir)
+PyRay::PyRay(const object& newpos, const object& newdir)
 {
     r.pos = ExtractVector3(newpos);
     r.dir = ExtractVector3(newdir);
 }
 
-object PyRay::dir() {
+object PyRay::dir() const {
     return toPyVector3(r.dir);
 }
-object PyRay::pos() {
+object PyRay::pos() const {
     return toPyVector3(r.pos);
 }
 
-string PyRay::__repr__() {
+string PyRay::__repr__() const {
     return boost::str(boost::format("<Ray([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
-string PyRay::__str__() {
+string PyRay::__str__() const {
     return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
-object PyRay::__unicode__() {
+object PyRay::__unicode__() const {
     return ConvertStringToUnicode(__str__());
 }
 
@@ -72,8 +72,8 @@ protected:
     XMLReadablePtr _xmlreadable;
 };
 
-XMLReadablePtr ExtractXMLReadable(object o) {
-    extract<PyXMLReadablePtr> pyreadable(o);
+XMLReadablePtr ExtractXMLReadable(const object& o) {
+    const extract<PyXMLReadablePtr> pyreadable(o);
     return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
 }
 
@@ -120,13 +120,13 @@ object toPyRay(const RAY& r)
     return object(boost::shared_ptr<PyRay>(new PyRay(r)));
 }
 
-RAY ExtractRay(object o)
+RAY ExtractRay(const object& o)
 {
     extract<boost::shared_ptr<PyRay> > pyray(o);
     return ((boost::shared_ptr<PyRay>)pyray)->r;
 }
 
-bool ExtractRay(object o, RAY& ray)
+bool ExtractRay(const object& o, RAY& ray)
 {
     extract<boost::shared_ptr<PyRay> > pyray(o);
     if( pyray.check() ) {
@@ -520,10 +520,10 @@ public:
         return ogroups;
     }
 
-    bool __eq__(PyConfigurationSpecificationPtr p) {
+    bool __eq__(PyConfigurationSpecificationPtr p) const {
         return !!p && _spec==p->_spec;
     }
-    bool __ne__(PyConfigurationSpecificationPtr p) {
+    bool __ne__(PyConfigurationSpecificationPtr p) const {
         return !p || _spec!=p->_spec;
     }
 
@@ -538,17 +538,17 @@ public:
         return shared_from_this();
     }
 
-    string __repr__() {
+    string __repr__() const {
         std::stringstream ss;
         ss << "ConfigurationSpecification(\"\"\"" << _spec << "\"\"\")";
         return ss.str();
     }
-    string __str__() {
+    string __str__() const {
         std::stringstream ss;
         ss << "<configuration dof=\"" << _spec.GetDOF() << "\">";
         return ss.str();
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 
@@ -868,7 +868,7 @@ object matrixFromPoses(object oposes)
     return omatrices;
 }
 
-object poseFromMatrix(object o)
+object poseFromMatrix(const object& o)
 {
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
@@ -880,7 +880,7 @@ object poseFromMatrix(object o)
     return toPyArray(Transform(t));
 }
 
-object poseFromMatrices(object otransforms)
+object poseFromMatrices(const object& otransforms)
 {
     int N = len(otransforms);
     if( N == 0 ) {
@@ -906,7 +906,7 @@ object poseFromMatrices(object otransforms)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-object InvertPoses(object o)
+object InvertPoses(const object& o)
 {
     int N = len(o);
     if( N == 0 ) {
@@ -925,24 +925,24 @@ object InvertPoses(object o)
     return static_cast<numeric::array>(handle<>(pytrans));
 }
 
-object InvertPose(object opose)
+object InvertPose(const object& opose)
 {
     Transform t = ExtractTransformType<dReal>(opose);
     return toPyArray(t.inverse());
 }
 
-object quatRotateDirection(object source, object target)
+object quatRotateDirection(const object& source, const object& target)
 {
     return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
-object normalizeAxisRotation(object axis, object quat)
+object normalizeAxisRotation(const object& axis, const object& quat)
 {
     std::pair<dReal, Vector > res = normalizeAxisRotation(ExtractVector3(axis), ExtractVector4(quat));
     return boost::python::make_tuple(res.first,toPyVector4(res.second));
 }
 
-object MultiplyQuat(object oquat1, object oquat2)
+object MultiplyQuat(const object& oquat1, const object& oquat2)
 {
     return toPyVector4(OpenRAVE::geometry::quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
 }
@@ -952,12 +952,12 @@ object InvertQuat(object oquat)
     return toPyVector4(OpenRAVE::geometry::quatInverse(ExtractVector4(oquat)));
 }
 
-object MultiplyPose(object opose1, object opose2)
+object MultiplyPose(const object& opose1, const object& opose2)
 {
     return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
 }
 
-object poseTransformPoints(object opose, object opoints)
+object poseTransformPoints(const object& opose, const object& opoints)
 {
     Transform t = ExtractTransformType<dReal>(opose);
     int N = len(opoints);
@@ -971,12 +971,12 @@ object poseTransformPoints(object opose, object opoints)
     return static_cast<numeric::array>(handle<>(pytrans));
 }
 
-object TransformLookat(object olookat, object ocamerapos, object ocameraup)
+object TransformLookat(const object& olookat, const object& ocamerapos, const object& ocameraup)
 {
     return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
 }
 
-dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
+dReal ComputePoseDistSqr(const object& opose0, const object& opose1, dReal quatweight=1.0)
 {
     Transform t0 = ExtractTransformType<dReal>(opose0);
     Transform t1 = ExtractTransformType<dReal>(opose1);
@@ -986,7 +986,7 @@ dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
     return (t0.trans-t1.trans).lengthsqr3() + quatweight*e;
 }
 
-string matrixSerialization(object o)
+string matrixSerialization(const object& o)
 {
     stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -994,7 +994,7 @@ string matrixSerialization(object o)
     return ss.str();
 }
 
-string poseSerialization(object o)
+string poseSerialization(const object& o)
 {
     stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost

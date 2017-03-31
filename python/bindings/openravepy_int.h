@@ -492,14 +492,14 @@ class PyRay
 public:
     PyRay() {
     }
-    PyRay(object newpos, object newdir);
+    PyRay(const object& newpos, const object& newdir);
     PyRay(const RAY& newr) : r(newr) {
     }
-    object dir();
-    object pos();
-    virtual string __repr__();
-    virtual string __str__();
-    virtual boost::python::object __unicode__();
+    object dir() const;
+    object pos() const;
+    virtual string __repr__() const;
+    virtual string __str__() const;
+    virtual boost::python::object __unicode__() const;
     RAY r;
 };
 
@@ -508,10 +508,10 @@ object toPyUserData(UserDataPtr p);
 void init_openravepy_ikparameterization();
 object toPyAABB(const AABB& ab);
 object toPyRay(const RAY& r);
-RAY ExtractRay(object o);
-bool ExtractRay(object o, RAY& r);
+RAY ExtractRay(const object& o);
+bool ExtractRay(const object& o, RAY& r);
 object toPyTriMesh(const TriMesh& mesh);
-bool ExtractTriMesh(object o, TriMesh& mesh);
+bool ExtractTriMesh(const object& o, TriMesh& mesh);
 
 class PyInterfaceBase
 {
@@ -571,22 +571,22 @@ public:
 
     virtual void SetReadableInterface(const std::string& xmltag, object oreadable);
 
-    virtual string __repr__() {
+    virtual string __repr__() const {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
-    virtual string __str__() {
+    virtual string __str__() const {
         return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
-    virtual boost::python::object __unicode__() {
+    virtual boost::python::object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
-    virtual int __hash__() {
+    virtual int __hash__() const {
         return static_cast<int>(uintptr_t(_pbase.get()));
     }
-    virtual bool __eq__(PyInterfaceBasePtr p) {
+    virtual bool __eq__(PyInterfaceBasePtr p) const {
         return !!p && _pbase == p->GetInterfaceBase();
     }
-    virtual bool __ne__(PyInterfaceBasePtr p) {
+    virtual bool __ne__(PyInterfaceBasePtr p) const {
         return !p || _pbase != p->GetInterfaceBase();
     }
     virtual InterfaceBasePtr GetInterfaceBase() {

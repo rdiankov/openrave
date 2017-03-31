@@ -666,13 +666,13 @@ public:
         return _psensor->SetName(name);
     }
 
-    virtual string __repr__() {
+    virtual string __repr__() const {
         return boost::str(boost::format("<RaveGetEnvironment(%d).GetSensor('%s')>")%RaveGetEnvironmentId(_psensor->GetEnv())%_psensor->GetName());
     }
-    virtual string __str__() {
+    virtual string __str__() const {
         return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName());
     }
-    virtual object __unicode__() {
+    virtual object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 };

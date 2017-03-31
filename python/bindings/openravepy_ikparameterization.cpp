@@ -293,28 +293,28 @@ public:
         _param.MultiplyTransformRight(ExtractTransform(otrans));
     }
 
-    string __repr__() {
+    string __repr__() const {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return boost::str(boost::format("IkParameterization('%s')")%ss.str());
     }
-    string __str__() {
+    string __str__() const {
         std::stringstream ss;
         ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         ss << _param;
         return ss.str();
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 
-    PyIkParameterizationPtr __mul__(object otrans)
+    PyIkParameterizationPtr __mul__(object otrans) const
     {
         return PyIkParameterizationPtr(new PyIkParameterization(_param * ExtractTransform(otrans)));
     }
 
-    PyIkParameterizationPtr __rmul__(object otrans)
+    PyIkParameterizationPtr __rmul__(object otrans) const
     {
         return PyIkParameterizationPtr(new PyIkParameterization(ExtractTransform(otrans) * _param));
     }

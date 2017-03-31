@@ -40,7 +40,7 @@ public:
             depth = c.depth;
         }
 
-        string __str__()
+        string __str__() const
         {
             Vector vpos = ExtractVector3(pos), vnorm = ExtractVector3(norm);
             stringstream ss;
@@ -48,7 +48,7 @@ public:
             ss << "pos=["<<vpos.x<<", "<<vpos.y<<", "<<vpos.z<<"], norm=["<<vnorm.x<<", "<<vnorm.y<<", "<<vnorm.z<<"]";
             return ss.str();
         }
-        object __unicode__() {
+        object __unicode__() const {
             return ConvertStringToUnicode(__str__());
         }
         object pos, norm;
@@ -93,11 +93,11 @@ public:
         vLinkColliding = newLinkColliding;
     }
 
-    string __str__()
+    string __str__() const
     {
         return report->__str__();
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 

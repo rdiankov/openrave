@@ -33,8 +33,8 @@ public:
     virtual void Restore(object p=object())  = 0;
     virtual void Release() = 0;
     virtual void Close() = 0;
-    virtual std::string __str__() = 0;
-    virtual object __unicode__() = 0;
+    virtual std::string __str__() const = 0;
+    virtual object __unicode__() const = 0;
 };
 
 /// \brief simple wrapper around a save state that manages  enter/exit scope
@@ -76,10 +76,10 @@ public:
         _state.reset();
     }
 
-    std::string __str__() {
+    std::string __str__() const {
         return _state->__str__();
     }
-    object __unicode__() {
+    object __unicode__() const {
         return _state->__unicode__();
     }
 };
@@ -210,9 +210,9 @@ public:
     string serialize(int options) const;
     string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(object options=object());
-    virtual string __repr__();
-    virtual string __str__();
-    virtual object __unicode__();
+    virtual string __repr__() const;
+    virtual string __str__() const;
+    virtual object __unicode__() const;
     virtual void __enter__();
     virtual void __exit__(object type, object value, object traceback);
 
