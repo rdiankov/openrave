@@ -149,9 +149,9 @@ TransformMatrix ExtractTransformMatrix(const object& oraw);
 object toPyArray(const TransformMatrix& t);
 object toPyArray(const Transform& t);
 
-XMLReadablePtr ExtractXMLReadable(object o);
+XMLReadablePtr ExtractXMLReadable(const object& o);
 object toPyXMLReadable(XMLReadablePtr p);
-bool ExtractIkParameterization(object o, IkParameterization& ikparam);
+bool ExtractIkParameterization(const object& o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyIkParameterization(const std::string& serializeddata);
 //@}
@@ -330,17 +330,17 @@ inline object toPyArray3(const std::vector<RaveVector<double> >& v)
     return static_cast<numeric::array>(handle<>(pyvalues));
 }
 
-inline object toPyVector2(Vector v)
+inline object toPyVector2(const Vector& v)
 {
     return numeric::array(boost::python::make_tuple(v.x,v.y));
 }
 
-inline object toPyVector3(Vector v)
+inline object toPyVector3(const Vector& v)
 {
     return numeric::array(boost::python::make_tuple(v.x,v.y,v.z));
 }
 
-inline object toPyVector4(Vector v)
+inline object toPyVector4(const Vector& v)
 {
     return numeric::array(boost::python::make_tuple(v.x,v.y,v.z,v.w));
 }

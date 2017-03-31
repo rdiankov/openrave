@@ -385,7 +385,7 @@ public:
         return object();
     }
 
-    object ExtractIkParameterization(object odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
+    object ExtractIkParameterization(const object& odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
     {
         IkParameterization ikparam;
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);

@@ -33,9 +33,9 @@ TransformMatrix ExtractTransformMatrix(const object& oraw);
 object toPyArray(const TransformMatrix& t);
 object toPyArray(const Transform& t);
 
-XMLReadablePtr ExtractXMLReadable(object o);
+XMLReadablePtr ExtractXMLReadable(const object& o);
 object toPyXMLReadable(XMLReadablePtr p);
-bool ExtractIkParameterization(object o, IkParameterization& ikparam);
+bool ExtractIkParameterization(const object& o, IkParameterization& ikparam);
 object toPyIkParameterization(const IkParameterization& ikparam);
 object toPyIkParameterization(const std::string& serializeddata);
 
