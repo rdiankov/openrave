@@ -150,27 +150,27 @@ class PyAABB
 public:
     PyAABB() {
     }
-    PyAABB(object newpos, object newextents) {
+    PyAABB(const object& newpos, const object& newextents) {
         ab.pos = ExtractVector3(newpos);
         ab.extents = ExtractVector3(newextents);
     }
     PyAABB(const AABB& newab) : ab(newab) {
     }
 
-    object extents() {
+    object extents() const {
         return toPyVector3(ab.extents);
     }
-    object pos() {
+    object pos() const {
         return toPyVector3(ab.pos);
     }
 
-    virtual string __repr__() {
+    virtual string __repr__() const {
         return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
-    virtual string __str__() {
+    virtual string __str__() const {
         return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
     }
-    virtual object __unicode__() {
+    virtual object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 
