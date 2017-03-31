@@ -72,7 +72,7 @@ protected:
     XMLReadablePtr _xmlreadable;
 };
 
-XMLReadablePtr ExtractXMLReadable(const object& o) {
+XMLReadablePtr ExtractXMLReadable(object o) {
     const extract<PyXMLReadablePtr> pyreadable(o);
     return ((PyXMLReadablePtr)pyreadable)->GetXMLReadable();
 }
@@ -385,7 +385,7 @@ public:
         return object();
     }
 
-    object ExtractIkParameterization(const object& odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
+    object ExtractIkParameterization(object odata, int timederivative=0, const std::string& robotname="", const std::string& manipulatorname="") const
     {
         IkParameterization ikparam;
         std::vector<dReal> vdata = ExtractArray<dReal>(odata);

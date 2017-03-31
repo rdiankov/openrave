@@ -322,7 +322,7 @@ public:
     IkParameterization _param;
 };
 
-bool ExtractIkParameterization(const object& o, IkParameterization& ikparam) {
+bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
     extract<PyIkParameterizationPtr > pyikparam(o);
     if( pyikparam.check() ) {
         ikparam = ((PyIkParameterizationPtr)pyikparam)->_param;
