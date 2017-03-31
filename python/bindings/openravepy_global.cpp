@@ -196,31 +196,28 @@ class PyTriMesh
 public:
     PyTriMesh() {
     }
-    PyTriMesh(object vertices, object indices) : vertices(vertices), indices(indices) {
+    PyTriMesh(const object& vertices, const object& indices) : vertices(vertices), indices(indices) {
     }
     PyTriMesh(const TriMesh& mesh) {
         npy_intp dims[] = { npy_intp(mesh.vertices.size()), npy_intp(3)};
         PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
-        FOREACHC(itv, mesh.vertices) {
-            *pvdata++ = itv->x;
-            *pvdata++ = itv->y;
-            *pvdata++ = itv->z;
-        }
+        std::memcpy(pvdata, mesh.vertices.data(), 3 * mesh.vertices.size() * sizeof(dReal));
         vertices = static_cast<numeric::array>(handle<>(pyvertices));
 
         dims[0] = mesh.indices.size()/3;
         dims[1] = 3;
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT);
         int* pidata = (int*)PyArray_DATA(pyindices);
-        FOREACHC(it, mesh.indices)
-        *pidata++ = *it;
+        std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int));
         indices = static_cast<numeric::array>(handle<>(pyindices));
     }
 
-    void GetTriMesh(TriMesh& mesh) {
-        int numverts = len(vertices);
+    void GetTriMesh(TriMesh& mesh) const {
+        const int numverts = len(vertices);
         mesh.vertices.resize(numverts);
+        // User can set vertices/indices to non-contiguous arrays or even nested
+        // python lists, so we cannot use memcpy here
         for(int i = 0; i < numverts; ++i) {
             object ov = vertices[i];
             mesh.vertices[i].x = extract<dReal>(ov[0]);
@@ -228,7 +225,7 @@ public:
             mesh.vertices[i].z = extract<dReal>(ov[2]);
         }
 
-        int numtris = len(indices);
+        const int numtris = len(indices);
         mesh.indices.resize(3*numtris);
         for(int i = 0; i < numtris; ++i) {
             object oi = indices[i];
@@ -238,19 +235,19 @@ public:
         }
     }
 
-    string __str__() {
+    string __str__() const {
         return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices));
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 
     object vertices,indices;
 };
 
-bool ExtractTriMesh(object o, TriMesh& mesh)
+bool ExtractTriMesh(const object& o, TriMesh& mesh)
 {
-    extract<boost::shared_ptr<PyTriMesh> > pytrimesh(o);
+    const extract<boost::shared_ptr<PyTriMesh> > pytrimesh(o);
     if( pytrimesh.check() ) {
         ((boost::shared_ptr<PyTriMesh>)pytrimesh)->GetTriMesh(mesh);
         return true;
