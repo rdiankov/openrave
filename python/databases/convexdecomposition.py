@@ -69,7 +69,8 @@ __license__ = 'Apache License, Version 2.0'
 if not __openravepy_build_doc__:
     from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros, isnan
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange
+from numpy.linalg import norm
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
@@ -334,24 +335,33 @@ class ConvexDecompositionModel(DatabaseGenerator):
     def PadMesh(vertices,indices,padding):
         """pads a mesh by increasing towards the normal
         """
+        import time
+        t = time.time()
         M = mean(vertices,0)
         facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
-        facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
+        facenormals /= norm(facenormals, axis=1)[:, newaxis]
+        print("1 {}".format(time.time() - t))
         # make sure normals are facing outward
-        newvertices = zeros((0,3),float64)
-        newindices = zeros((0,3),int32)
-        originaledges = []
+        newvertices = empty((3 *len(facenormals),3),float64)
+        newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
+        originaledges = empty((3 * len(facenormals), 4), dtype=int32)
+        t = time.time()
+        print("--------------")
+        a = 0
         for i in range(len(facenormals)):
             if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
                 facenormals[i] *= -1
-            offset = len(newvertices)
-            newvertices = r_[newvertices,vertices[indices[i,:]]+tile(facenormals[i]*padding,(3,1))]
-            newindices = r_[newindices,[[offset,offset+1,offset+2]]]
-            for j0,j1 in [[0,1],[0,2],[1,2]]:
+            newvertices[a:a+3] = vertices[indices[i,:]] + facenormals[i]*padding
+            #newindices[a/3] = [offset,offset+1,offset+2]
+            for j0,j1, b in [[0,1, 0],[0,2, 1],[1,2, 2]]:
                 if indices[i,j0] < indices[i,j1]:
-                    originaledges.append([indices[i,j0],indices[i,j1],offset+j0,offset+j1])
+                    originaledges[a + b] = [indices[i,j0],indices[i,j1],a+j0,a+j1]
                 else:
-                    originaledges.append([indices[i,j1],indices[i,j0],offset+j1,offset+j0])
+                    originaledges[a + b] = [indices[i,j1],indices[i,j0],a+j1,a+j0]
+            a += 3
+        print("2 {}".format(time.time() - t))
+        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+        t = time.time()
         # find the connecting edges across the new faces
         originaledges = array(originaledges)
         offset = 0
@@ -368,6 +378,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     verticesofinterest[edge[1]] = len(newvertices)+offset
                     offset += 1
                 newindices = r_[newindices,[[edge[2],edge[3],cedge[3]],[edge[2],cedge[3],cedge[2]],[edge[2],cedge[2],verticesofinterest[edge[0]]],[edge[3],cedge[3],verticesofinterest[edge[1]]]]]
+        print("3 {}".format(time.time() - t))
+        t = time.time()
         if offset > 0:
             newvertices = r_[newvertices,zeros((offset,3))]
         # for every vertex, add a point representing the mean of surrounding extruded vertices
@@ -376,10 +388,15 @@ class ConvexDecompositionModel(DatabaseGenerator):
             assert(len(vertexindices) > 0)
             newvertices[newvertex,:] = mean(newvertices[vertexindices],0)
         assert(not any(isnan(newvertices)))
+        print("4 {}".format(time.time() - t))
+        t = time.time()
         # make sure all faces are facing outward
         for inds in newindices:
             if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
                 inds[1],inds[2] = inds[2],inds[1]
+        print("5 {}".format(time.time() - t))
+        exit()
+        t = time.time()
         return newvertices,newindices
 
     @staticmethod
