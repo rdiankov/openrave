@@ -202,7 +202,11 @@ public:
         npy_intp dims[] = { npy_intp(mesh.vertices.size()), npy_intp(3)};
         PyObject *pyvertices = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
         dReal* pvdata = (dReal*)PyArray_DATA(pyvertices);
-        std::memcpy(pvdata, mesh.vertices.data(), 3 * mesh.vertices.size() * sizeof(dReal));
+        FOREACHC(itv, mesh.vertices) {
+            *pvdata++ = itv->x;
+            *pvdata++ = itv->y;
+            *pvdata++ = itv->z;
+        }
         vertices = static_cast<numeric::array>(handle<>(pyvertices));
 
         dims[0] = mesh.indices.size()/3;
