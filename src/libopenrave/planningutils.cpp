@@ -864,7 +864,7 @@ public:
     virtual ~PlannerStateSaver() {
         int ret = _setfn(_savedvalues, 0);
         if( ret != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set state in PlannerStateSaver, return=%d"), ret, ORE_Assert);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to set state in PlannerStateSaver, return=%d"), ret, ORE_Assert); // throwing from destructor, is this okay?
         }
     }
 
@@ -956,7 +956,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
 
     boost::shared_ptr<PlannerStateSaver> statesaver;
     if( bsmooth ) {
-        if( listsetfunctions.size() > 0 ) {
+        if( !listsetfunctions.empty() ) {
             params->_setstatevaluesfn = boost::bind(_SetAffineState,boost::ref(listsetfunctions), _1, _2);
             params->_getstatefn = boost::bind(_GetAffineState,_1,params->GetDOF(), boost::ref(listgetfunctions));
             params->_distmetricfn = boost::bind(_ComputeAffineDistanceMetric,_1,_2,boost::ref(listdistfunctions));
@@ -1860,7 +1860,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
 {
     // merge both deltatime and iswaypoint groups
     TrajectoryBasePtr presulttraj;
-    if( listtrajectories.size() == 0 ) {
+    if( listtrajectories.empty() ) {
         return presulttraj;
     }
     if( listtrajectories.size() == 1 ) {

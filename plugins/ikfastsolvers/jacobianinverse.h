@@ -16,6 +16,8 @@
 #ifndef OPENRAVE_JACOBIANINVERSE_H
 #define OPENRAVE_JACOBIANINVERSE_H
 
+//#define OPENRAVE_DISPLAY_CONVERGENCESTATS
+
 #include "plugindefs.h"
 
 #ifdef OPENRAVE_HAS_LAPACK
@@ -62,6 +64,10 @@ public:
         _J.resize(6,probot->GetActiveDOF());
         _invJJt.resize(6,6);
         _error.resize(6,1);
+
+        _J3d.resize(3,probot->GetActiveDOF());
+        _invJJt3d.resize(3,3);
+        _error3d.resize(3,1);
 
         _viweights.resize(manip.GetArmIndices().size(),0);
         for(size_t i = 0; i < _viweights.size(); ++i) {
@@ -110,12 +116,14 @@ public:
             return -1;
         }
         
-        const T lambda2 = 1e-16;         // normalization constant
+        const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
         T firsterror2 = totalerror2;
+        T besterror2 = totalerror2;
         _lasterror2 = totalerror2;
         int armdof = manip.GetArmDOF();
+        std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
         bool bSuccess = false;
         int iter = 0;
@@ -125,7 +133,11 @@ public:
             Transform tmanip = manip.GetTransform();
             T totalerror2 = _ComputeConstraintError(tmanip, _error, _nMaxIterations-iter);
             //dReal ratio = totalerror2/_lasterror2;
-            //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(ratio));
+            //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(totalerror2/_lasterror2));
+            if( totalerror2 < besterror2 ) {
+                besterror2 = totalerror2;
+                vbest = vnew;
+            }
             if( totalerror2 <= _errorthresh2 ) {
                 bSuccess = true;
                 break;
@@ -138,8 +150,8 @@ public:
             // 2.0 is an arbitrary number...
             if( totalerror2 > 10.0*firsterror2 ) {// && fdistcur2 > 4.0*fdistprev2 ) {
                 // last adjustment was greater than total distance (jacobian was close to being singular)
+                RAVELOG_VERBOSE_FORMAT("last adjustment on iter %d was greater than total distance (jacobian was close to being singular?): %.15e > %.15e", iter%totalerror2%_lasterror2);//%fdistcur2%fdistprev2);
                 iter = -1;
-                RAVELOG_VERBOSE_FORMAT("last adjustment was greater than total distance (jacobian was close to being singular?): %.15e > %.15e", totalerror2%_lasterror2);//%fdistcur2%fdistprev2);
                 break;
             }
             _lasterror2 = totalerror2;
@@ -165,6 +177,24 @@ public:
             for(int i = 0; i < 6; ++i) {
                 _invJJt(i,i) += lambda2;
             }
+            
+#ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+2);
+            ss << std::endl << "J=array([" << std::endl;
+            for(int i = 0; i < 6; ++i) {
+                ss << "[";
+                for(int j = 0; j < 6; ++j) {
+                    ss << _J(i,j) << ", ";
+                }
+                ss << "]," << std::endl;
+            }
+            ss << "]);" << std::endl;
+            ss << "error=array([";
+            for(int i = 0; i < 6; ++i) {
+                ss << _error(i,0) << ", ";
+            }
+            ss << "]);" << std::endl;
+#endif
             try {
                 if( !_InvertMatrix(_invJJt,_invJJt) ) {
                     RAVELOG_VERBOSE("failed to invert matrix\n");
@@ -184,7 +214,33 @@ public:
             }
             _invJ = prod(_Jt,_invJJt);
             _qdelta = prod(_invJ,_error);
-            dReal fmindeltascale = 1.0; // depending on
+
+#ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
+            ss << std::endl << "invJJt=array([" << std::endl;
+            for(int i = 0; i < 6; ++i) {
+                ss << "[";
+                for(int j = 0; j < 6; ++j) {
+                    ss << _invJJt(i,j) << ", ";
+                }
+                ss << "]," << std::endl;
+            }
+            ss << "]);" << std::endl;
+
+            ss << "qdelta=array([";
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                ss << _qdelta(i,0) << ", ";
+            }
+            ss << "]);" << std::endl;
+            ss << "vprev=array([";
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                ss << vnew[i] << ", ";
+            }
+            ss << "]);" << std::endl;
+
+            RAVELOG_VERBOSE(ss.str());
+#endif
+            
+            dReal fmindeltascale = 1; // depending on
             bool baddelta = false;
             for(size_t i = 0; i < vnew.size(); ++i) {
                 if(!isfinite(_qdelta(i,0))) { // don't assert since it is frequent and could destroy the entire plan
@@ -215,13 +271,13 @@ public:
         }
 
         int retcode = 0;
-        if( bSuccess || _lasterror2 < firsterror2 ) {
+        if( bSuccess || besterror2 < firsterror2 ) {
             // revert to real values
-            probot->GetActiveDOFValues(vnew); // have to re-get the joint values since joint limits are involved
-            vsolution = vnew;
+            probot->SetActiveDOFValues(vbest,0);
+            probot->GetActiveDOFValues(vsolution); // have to re-get the joint values since joint limits are involved
             probot->SetTransform(trobot);
             saver.Release(); // finished successfully, so use the new state
-            if( bSuccess ) {
+            if( bSuccess || besterror2 <= 10*_errorthresh2 ) { // if close enough to error, just return as being close. user should take this in account when setting the error threshold
                 retcode = 1;
             }
             else {
@@ -234,19 +290,212 @@ public:
         }
         return retcode;
     }
+    
+    int ComputeSolutionTranslation(const Transform& tgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution)
+    {
+        _vGoalQuat = tgoal.rot;
+        _vGoalAxisAngle = axisAngleFromQuat(tgoal.rot);
+        _vGoalPosition = tgoal.trans;
+        
+        RobotBasePtr probot = manip.GetRobot();
 
-    virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error, int nMaxIterations)
+        KinBody::KinBodyStateSaver saver(probot, KinBody::Save_LinkTransformation);
+        Transform tbase = manip.GetBase()->GetTransform();
+        Transform trobot = probot->GetTransform();
+        probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
+
+        Transform tprev = manip.GetTransform();
+        T totalerror2 = _ComputeConstraintError(tprev, _error3d, _nMaxIterations, false);
+        if( totalerror2 <= _errorthresh2 ) {
+            return -1;
+        }
+        
+        const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
+        using namespace boost::numeric::ublas;
+
+        T firsterror2 = totalerror2;
+        T besterror2 = totalerror2;
+        _lasterror2 = totalerror2;
+        int armdof = manip.GetArmDOF();
+        std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
+        std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
+        bool bSuccess = false;
+        int iter = 0;
+        // setup a class so its destructor saves the last iter used in _lastiter
+        ValueSaver valuesaver(&iter, &_lastiter);
+        for(iter = 0; iter < _nMaxIterations; ++iter) {
+            Transform tmanip = manip.GetTransform();
+            T totalerror2 = _ComputeConstraintError(tmanip, _error3d, _nMaxIterations-iter, false);
+            //dReal ratio = totalerror2/_lasterror2;
+            //RAVELOG_VERBOSE_FORMAT("%s:%s iter=%d, totalerror %.15e (%f)", probot->GetName()%manip.GetName()%iter%RaveSqrt(totalerror2)%RaveSqrt(totalerror2/_lasterror2));
+            if( totalerror2 < besterror2 ) {
+                besterror2 = totalerror2;
+                vbest = vnew;
+            }
+            if( totalerror2 <= _errorthresh2 ) {
+                bSuccess = true;
+                break;
+            }
+//            if( ratio > 0.98 ) {
+//                // probably won't get better...
+//                break;
+//            }
+
+            // 2.0 is an arbitrary number...
+            if( totalerror2 > 10.0*firsterror2 ) {// && fdistcur2 > 4.0*fdistprev2 ) {
+                // last adjustment was greater than total distance (jacobian was close to being singular)
+                RAVELOG_VERBOSE_FORMAT("last adjustment on iter %d was greater than total distance (jacobian was close to being singular?): %.15e > %.15e", iter%totalerror2%_lasterror2);//%fdistcur2%fdistprev2);
+                iter = -1;
+                break;
+            }
+            _lasterror2 = totalerror2;
+
+            // compute jacobians, make sure to transform by the world frame
+            manip.CalculateJacobian(_vjacobian);
+            for(size_t j = 0; j < _viweights.size(); ++j) {
+                Vector v = Vector(_vjacobian[j],_vjacobian[armdof+j],_vjacobian[2*armdof+j]);
+                _J3d(0,j) = v[0]*_viweights[j];
+                _J3d(1,j) = v[1]*_viweights[j];
+                _J3d(2,j) = v[2]*_viweights[j];
+            }
+            // pseudo inverse of jacobian
+            _Jt3d = trans(_J3d);
+            _invJJt3d = prod(_J3d,_Jt3d);
+            for(int i = 0; i < 3; ++i) {
+                _invJJt3d(i,i) += lambda2;
+            }
+            
+#ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
+            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+2);
+            ss << std::endl << "J=array([" << std::endl;
+            for(int i = 0; i < 3; ++i) {
+                ss << "[";
+                for(int j = 0; j < 3; ++j) {
+                    ss << _J3d(i,j) << ", ";
+                }
+                ss << "]," << std::endl;
+            }
+            ss << "]);" << std::endl;
+            ss << "error=array([";
+            for(int i = 0; i < 3; ++i) {
+                ss << _error3d(i,0) << ", ";
+            }
+            ss << "]);" << std::endl;
+#endif
+            try {
+                if( !_InvertMatrix(_invJJt3d,_invJJt3d) ) {
+                    RAVELOG_VERBOSE("failed to invert matrix\n");
+                    iter = -1;
+                    break;
+                }
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_VERBOSE_FORMAT("got exception during constraining, perhaps matix is singular: %s", ex.what());
+                iter = -1;
+                break;
+            }
+            catch(...) {
+                RAVELOG_WARN("got unknown exception during constraining\n");
+                iter = -1;
+                break;
+            }
+            _invJ3d = prod(_Jt3d,_invJJt3d);
+            _qdelta = prod(_invJ3d,_error3d);
+
+#ifdef OPENRAVE_DISPLAY_CONVERGENCESTATS
+            ss << std::endl << "invJJt=array([" << std::endl;
+            for(int i = 0; i < 3; ++i) {
+                ss << "[";
+                for(int j = 0; j < 3; ++j) {
+                    ss << _invJJt3d(i,j) << ", ";
+                }
+                ss << "]," << std::endl;
+            }
+            ss << "]);" << std::endl;
+
+            ss << "qdelta=array([";
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                ss << _qdelta(i,0) << ", ";
+            }
+            ss << "]);" << std::endl;
+            ss << "vprev=array([";
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                ss << vnew[i] << ", ";
+            }
+            ss << "]);" << std::endl;
+
+            RAVELOG_VERBOSE(ss.str());
+#endif
+            
+            dReal fmindeltascale = 1; // depending on
+            bool baddelta = false;
+            for(size_t i = 0; i < vnew.size(); ++i) {
+                if(!isfinite(_qdelta(i,0))) { // don't assert since it is frequent and could destroy the entire plan
+                    RAVELOG_WARN_FORMAT("inverse matrix produced a non-finite value: %e", _qdelta(i,0));
+                    baddelta = true;
+                    break;
+                }
+
+                dReal f = _qdelta(i,0)*_viweights.at(i);
+                _qdelta(i,0) = f;
+            }
+            if( baddelta ) {
+                break;
+            }
+            
+            if( fmindeltascale < 1 ) {
+                for(size_t i = 0; i < vnew.size(); ++i) {
+                    vnew.at(i) += _qdelta(i,0)*fmindeltascale;
+                }
+            }
+            else {
+                for(size_t i = 0; i < vnew.size(); ++i) {
+                    vnew.at(i) += _qdelta(i,0);
+                }
+            }
+
+            probot->SetActiveDOFValues(vnew,0);
+        }
+
+        int retcode = 0;
+        if( bSuccess || besterror2 < firsterror2 ) {
+            // revert to real values
+            probot->SetActiveDOFValues(vbest,0);
+            probot->GetActiveDOFValues(vsolution); // have to re-get the joint values since joint limits are involved
+            probot->SetTransform(trobot);
+            saver.Release(); // finished successfully, so use the new state
+            if( bSuccess || besterror2 < 10*_errorthresh2 ) { // if close enough to error, just return as being close. user should take this in account when setting the error threshold
+                retcode = 1;
+            }
+            else {
+                retcode = 2;
+            }
+        }
+        else if( iter >= _nMaxIterations ) {
+            iter = -1;
+            RAVELOG_VERBOSE_FORMAT("constraint function exceeded %d iterations, first error^2 is %.15e, final error^2 is %.15e > %.15e", _nMaxIterations%firsterror2%_lasterror2%_errorthresh2);
+        }
+        return retcode;
+    }
+    
+    virtual T _ComputeConstraintError(const Transform& tcur, boost::numeric::ublas::matrix<T>& error, int nMaxIterations, bool bAddRotation=true)
     {
         T totalerror2=0;
-        const Vector axisangleerror = axisAngleFromQuat(quatMultiply(_vGoalQuat, quatInverse(tcur.rot)));
-        for(int i = 0; i < 3; ++i) {
-            error(i,0) = axisangleerror[i];
-            totalerror2 += error(i,0)*error(i,0);
+        int transoffset = 0;
+        if( bAddRotation ) {
+            const Vector axisangleerror = axisAngleFromQuat(quatMultiply(_vGoalQuat, quatInverse(tcur.rot)));
+            for(int i = 0; i < 3; ++i) {
+                error(i,0) = axisangleerror[i];
+                totalerror2 += error(i,0)*error(i,0);
+            }
+            transoffset += 3;
         }
+
         for(int i = 0; i < 3; ++i) {
-            error(i+3,0) = (_vGoalPosition[i]-tcur.trans[i]);
-            totalerror2 += error(i+3,0)*error(i+3,0);
+            error(i+transoffset,0) = (_vGoalPosition[i]-tcur.trans[i]);
+            totalerror2 += error(i+transoffset,0)*error(i+transoffset,0);
         }
+        
         dReal fallowableerror2 = 0.03; // arbitrary... since solutions are close, is this step necessary?
         if( totalerror2 > _errorthresh2 && totalerror2 > fallowableerror2+1e-7 ) {
             // have to reduce the error or else the jacobian will not converge to the correct place and diverge too much from the current solution
@@ -256,7 +505,8 @@ public:
                 fscale = nMaxIterations;
             }
             T fiscale = 1/fscale;
-            for(int i = 0; i < 6; ++i) {
+            RAVELOG_VERBOSE_FORMAT("fiscale=%f", fiscale);
+            for(int i = 0; i < error.size1(); ++i) {
                 error(i,0) *= fiscale;
             }
         }
@@ -274,8 +524,8 @@ public:
 
         inverse.assign(identity_matrix<T>(A.size1()));         // create identity matrix of "inverse"
         for(size_t i = 0; i < A.size1(); ++i) {
-            if( RaveFabs(A(i,i)) < 1e-8 ) {
-                // most likely matrix is singular, so fail!
+            if( RaveFabs(A(i,i)) < 1e-9 ) {
+                RAVELOG_VERBOSE_FORMAT("most likely matrix is singular %.15e, so fail!", RaveFabs(A(i,i)));
                 return false;
             }
         }
@@ -305,7 +555,10 @@ protected:
     T _errorthresh2;
     std::vector<dReal> _vjacobian;
     boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
-    std::vector<dReal> _cachevnew; ///< cache
+
+    boost::numeric::ublas::matrix<T> _J3d, _Jt3d, _invJJt3d, _invJ3d, _error3d; // for translation
+    
+    std::vector<dReal> _cachevnew, _cachevbest; ///< cache
     dReal _fTighterCosAngleThresh; ///< if _pdirthresh is used, then this is a smaller angle than the one used in _pdirthresh->fCosAngleThresh
 };
 

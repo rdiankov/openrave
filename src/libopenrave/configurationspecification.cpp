@@ -710,7 +710,6 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                         itcompatgroup->interpolation = itrgroup->interpolation;
                     }
                 }
-                itrgroup->interpolation != itcompatgroup->interpolation;
             }
 
             if( itcompatgroup->name == itrgroup->name ) {

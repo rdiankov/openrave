@@ -827,8 +827,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngleYNorm4D
         else:
-            raise InverseKinematicsError(u'bad type')
-
+            raise InverseKinematicsError(u'bad type 0x%x'%self.iktype)
+        
         dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         if freeindices is not None:
             self.freeindices = freeindices
@@ -839,7 +839,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
-            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name})
+            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s. Perhaps the manipulator base link %(baselink)s or end link %(endlink)s are not correct.'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name, 'baselink':self.manip.GetBase().GetName(), 'endlink':self.manip.GetEndEffector().GetName()})
         
         if freeinc is not None:
             self.freeinc = freeinc

@@ -183,7 +183,7 @@ sympy_smaller_073 = sympy_version < '0.7.3'
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
-__version__ = '0x10000049' # hex of the version, has to be prefixed with 0x. also in ikfast.h
+__version__ = '0x1000004a' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
 import sys, copy, time, math, datetime
 import __builtin__
@@ -537,7 +537,10 @@ class AST:
         postcheckforNumDenom = None # list of (A,B) pairs where Ax=B was used. Fail if A==0&&B!=0
         postcheckforrange = None # checks that value is within [-1,1]
         dictequations = None
-        thresh = 1e-8
+        postcheckforzerosThresh = 1e-8 # threshold for checking postcheckforzeros. if abs(val) <= postcheckforzerosThresh: skip
+        postcheckfornonzerosThresh = 1e-8 # threshold for checking postcheckfornonzeros. if abs(val) > postcheckfornonzerosThresh: skip
+        postcheckforrangeThresh = 1e-8 # threshold for checking postcheckforrange. if  val <= -1-postcheckforrangeThresh || val > 1+postcheckforrangeThresh: skip
+        postcheckforNumDenomThresh = 1e-8 # threshold for checking postcheckforNumDenom: if abs(val[0]) <= postcheckforNumDenomThresh && abs(val[1]) > postcheckforNumDenomThresh: skip
         isHinge = True
         FeasibleIsZeros = False
         AddHalfTanValue = False
@@ -611,7 +614,7 @@ class AST:
         def getEquationsUsed(self):
             return self.equationsused
         def GetZeroThreshold(self):
-            return self.thresh
+            return self.postcheckforzerosThresh # not really sure...
         
     class SolverCoeffFunction(SolverBase):
         """Evaluate a set of coefficients and pass them to a custom function which will then return all possible values of the specified variables in jointnames.
@@ -7920,7 +7923,7 @@ class IKFastSolver(AutoReloader):
             solution.polybackup = pfinals[1]
         solution.postcheckforrange = []
         solution.dictequations = dictequations
-        solution.thresh = 1e-9 # depending on the degree, can expect small coefficients to be still valid
+        solution.postcheckfornonzerosThresh = 1e-7 # make threshold a little loose since can be a lot of numbers compounding. depending on the degree, can expect small coefficients to be still valid
         solution.AddHalfTanValue = True
         return [solution]
 

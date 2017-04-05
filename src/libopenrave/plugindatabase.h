@@ -423,7 +423,7 @@ protected:
         if( bLoadAllPlugins ) {
             FOREACH(it, vplugindirs) {
                 if( it->size() > 0 ) {
-                    AddDirectory(it->c_str());
+                    AddDirectory(*it);
                 }
             }
         }
@@ -601,7 +601,7 @@ protected:
                 string strplugin = pdir;
                 strplugin += "\\";
                 strplugin += FindFileData.cFileName;
-                LoadPlugin(strplugin.c_str());
+                LoadPlugin(strplugin);
             } while (FindNextFileA(hFind, &FindFileData) != 0);
             FindClose(hFind);
         }
@@ -617,7 +617,7 @@ protected:
                     string strplugin = pdir;
                     strplugin += "/";
                     strplugin += ep->d_name;
-                    LoadPlugin(strplugin.c_str());
+                    LoadPlugin(strplugin);
                 }
             }
             (void) closedir (dp);
@@ -703,7 +703,7 @@ protected:
                 plugins.push_back(pair<string,PLUGININFO>((*itplugin)->GetName(),info));
             }
         }
-        if( _listRegisteredInterfaces.size() > 0 ) {
+        if( !_listRegisteredInterfaces.empty() ) {
             plugins.push_back(make_pair(string("__internal__"),PLUGININFO()));
             plugins.back().second.version = OPENRAVE_VERSION;
             FOREACHC(it,_listRegisteredInterfaces) {
@@ -806,12 +806,12 @@ protected:
     PluginPtr _LoadPlugin(const string& _libraryname)
     {
         string libraryname = _libraryname;
-        void* plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);
+        void* plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
         if( plibrary == NULL ) {
             // check if PLUGIN_EXT is missing
             if( libraryname.find(PLUGIN_EXT) == string::npos ) {
                 libraryname += PLUGIN_EXT;
-                plibrary = _SysLoadLibrary(libraryname.c_str(),OPENRAVE_LAZY_LOADING);
+                plibrary = _SysLoadLibrary(libraryname,OPENRAVE_LAZY_LOADING);
             }
         }
 #ifndef _WIN32
@@ -845,7 +845,7 @@ protected:
             // try adding from the current plugin libraries
             FOREACH(itdir,_listplugindirs) {
                 string newlibraryname = boost::filesystem::absolute(libraryname,*itdir).string();
-                plibrary = _SysLoadLibrary(newlibraryname.c_str(),OPENRAVE_LAZY_LOADING);
+                plibrary = _SysLoadLibrary(newlibraryname,OPENRAVE_LAZY_LOADING);
                 if( !!plibrary ) {
                     libraryname = newlibraryname;
                     break;
@@ -1001,7 +1001,7 @@ protected:
             list<PluginPtr> listPluginsToLoad;
             {
                 boost::mutex::scoped_lock lock(_mutexPluginLoader);
-                if( _listPluginsToLoad.size() == 0 ) {
+                if( _listPluginsToLoad.empty() ) {
                     _condLoaderHasWork.wait(lock);
                     if( _bShutdown ) {
                         break;
