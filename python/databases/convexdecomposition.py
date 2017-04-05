@@ -338,7 +338,10 @@ class ConvexDecompositionModel(DatabaseGenerator):
         import time
         t = time.time()
         M = mean(vertices,0)
-        facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
+        # Is vertices always a numpy array?
+        #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+        facenormals = cross(vertices[indices[:, 1]] - vertices[indices[:, 0]], vertices[indices[:, 2]] - vertices[indices[:, 0]])
+        #facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
         facenormals /= norm(facenormals, axis=1)[:, newaxis]
         print("1 {}".format(time.time() - t))
         # make sure normals are facing outward
@@ -360,10 +363,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     originaledges[a + b] = [indices[i,j1],indices[i,j0],a+j1,a+j0]
             a += 3
         print("2 {}".format(time.time() - t))
-        from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
         t = time.time()
         # find the connecting edges across the new faces
-        originaledges = array(originaledges)
         offset = 0
         verticesofinterest = {}
         for i,edge in enumerate(originaledges):
@@ -395,7 +396,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
                 inds[1],inds[2] = inds[2],inds[1]
         print("5 {}".format(time.time() - t))
-        exit()
+        #exit()
         t = time.time()
         return newvertices,newindices
 
