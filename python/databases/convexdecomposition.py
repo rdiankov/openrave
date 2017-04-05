@@ -71,6 +71,7 @@ if not __openravepy_build_doc__:
 
 from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange
 from numpy.linalg import norm
+from numpy.core.umath_tests import inner1d
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
@@ -392,8 +393,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
         print("4 {}".format(time.time() - t))
         t = time.time()
         # make sure all faces are facing outward
-        for inds in newindices:
-            if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
+        #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
+        flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices[newindices[:, 0]],
+                             newvertices[newindices[:, 2]] - newvertices[newindices[:, 0]]), newvertices[newindices[:, 0]] - M) < 0
+        #newindices[:, 1], newindices[:, 2] = newindices[:, 1]
+        for n, inds in enumerate(newindices):
+            if flip[n]:
                 inds[1],inds[2] = inds[2],inds[1]
         print("5 {}".format(time.time() - t))
         #exit()
