@@ -69,7 +69,7 @@ __license__ = 'Apache License, Version 2.0'
 if not __openravepy_build_doc__:
     from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat
 from numpy.linalg import norm
 from numpy.core.umath_tests import inner1d
 
@@ -340,22 +340,21 @@ class ConvexDecompositionModel(DatabaseGenerator):
         t = time.time()
         M = mean(vertices,0)
         # Is vertices always a numpy array?
-        #from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed(config=embed.load_default_config())(local_ns=locals())
         facenormals = cross(vertices[indices[:, 1]] - vertices[indices[:, 0]], vertices[indices[:, 2]] - vertices[indices[:, 0]])
         #facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
         facenormals /= norm(facenormals, axis=1)[:, newaxis]
         print("1 {}".format(time.time() - t))
         # make sure normals are facing outward
-        newvertices = empty((3 *len(facenormals),3),float64)
         newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
         originaledges = empty((3 * len(facenormals), 4), dtype=int32)
         t = time.time()
         print("--------------")
         a = 0
+        flip = inner1d(vertices[indices[:,0]] - M, facenormals) < 0
+        facenormals[flip] *= -1
+        newvertices = vertices[indices.ravel()] + repeat(facenormals*padding, 3, axis=0)
         for i in range(len(facenormals)):
-            if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
-                facenormals[i] *= -1
-            newvertices[a:a+3] = vertices[indices[i,:]] + facenormals[i]*padding
+            #newvertices[a:a+3] = vertices[indices[i,:]] + facenormals[i]*padding
             #newindices[a/3] = [offset,offset+1,offset+2]
             for j0,j1, b in [[0,1, 0],[0,2, 1],[1,2, 2]]:
                 if indices[i,j0] < indices[i,j1]:
