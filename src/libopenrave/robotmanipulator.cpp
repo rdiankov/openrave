@@ -557,7 +557,7 @@ void RobotBase::Manipulator::GetChildLinks(std::vector<LinkPtr>& vlinks) const
 {
     RobotBasePtr probot(__probot);
     // get all child links of the manipualtor
-    vlinks.resize(0);
+    vlinks.clear();
     __pEffector->GetRigidlyAttachedLinks(vlinks);
     int iattlink = __pEffector->GetIndex();
     FOREACHC(itlink, probot->GetLinks()) {
@@ -620,6 +620,7 @@ bool RobotBase::Manipulator::IsChildLink(LinkConstPtr plink) const
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
 {
     RobotBasePtr probot(__probot);
+    vlinks.clear();
     FOREACHC(itlink, probot->GetLinks()) {
         bool bAffected = false;
         FOREACHC(itindex,__varmdofindices) {
