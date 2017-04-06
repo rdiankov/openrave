@@ -353,10 +353,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
         indices_j = [indices[:, j] for j in range(3)]
         for j0, j1, n in [[0,1,0],[0,2,1],[1,2,2]]:
             swap = indices_j[j0] < indices_j[j1]
-            originaledges[n::3][:, 0] = where(swap, indices_j[j0], indices_j[j1])
-            originaledges[n::3][:, 1] = where(swap, indices_j[j1], indices_j[j0])
-            originaledges[n::3][:, 2] = offsets + where(swap, j0, j1)
-            originaledges[n::3][:, 3] = offsets + where(swap, j1, j0)
+            originaledges_n = originaledges[n::3]
+            originaledges_n[:, 0] = where(swap, indices_j[j0], indices_j[j1])
+            originaledges_n[:, 1] = where(swap, indices_j[j1], indices_j[j0])
+            originaledges_n[:, 2] = offsets + where(swap, j0, j1)
+            originaledges_n[:, 3] = offsets + where(swap, j1, j0)
 
         # find the connecting edges across the new faces
         offset = 0
