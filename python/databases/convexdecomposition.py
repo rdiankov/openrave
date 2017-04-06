@@ -337,7 +337,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
         """pads a mesh by increasing towards the normal
         """
         M = mean(vertices,0)
-        facenormals = cross(vertices[indices[:, 1]] - vertices[indices[:, 0]], vertices[indices[:, 2]] - vertices[indices[:, 0]])
+        vertices_0 = vertices[indices[:, 0]]
+        facenormals = cross(vertices[indices[:, 1]] - vertices_0, vertices[indices[:, 2]] - vertices_0)
         facenormals /= norm(facenormals, axis=1)[:, newaxis]
 
         # make sure normals are facing outward
@@ -349,10 +350,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
         newvertices = vertices[indices.ravel()] + repeat(facenormals*padding, 3, axis=0)
 
         offsets = arange(0, 3 * len(facenormals), 3)
+        indices_j = [indices[:, j] for j in range(3)]
         for j0, j1, n in [[0,1,0],[0,2,1],[1,2,2]]:
-            swap = indices[:, j0] < indices[:, j1]
-            originaledges[n::3][:, 0] = where(swap, indices[:, j0], indices[:, j1])
-            originaledges[n::3][:, 1] = where(swap, indices[:, j1], indices[:, j0])
+            swap = indices_j[j0] < indices_j[j1]
+            originaledges[n::3][:, 0] = where(swap, indices_j[j0], indices_j[j1])
+            originaledges[n::3][:, 1] = where(swap, indices_j[j1], indices_j[j0])
             originaledges[n::3][:, 2] = offsets + where(swap, j0, j1)
             originaledges[n::3][:, 3] = offsets + where(swap, j1, j0)
 
@@ -381,8 +383,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
         assert(not any(isnan(newvertices)))
 
         # make sure all faces are facing outward
-        flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices[newindices[:, 0]],
-                             newvertices[newindices[:, 2]] - newvertices[newindices[:, 0]]), newvertices[newindices[:, 0]] - M) < 0
+        newvertices_0 = newvertices[newindices[:, 0]]
+        flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices_0,
+                             newvertices[newindices[:, 2]] - newvertices_0), newvertices_0 - M) < 0
         for n, inds in enumerate(newindices):
             if flip[n]:
                 inds[1],inds[2] = inds[2],inds[1]
