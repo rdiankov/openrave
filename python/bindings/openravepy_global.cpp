@@ -212,8 +212,8 @@ public:
         dims[0] = mesh.indices.size()/3;
         dims[1] = 3;
         PyObject *pyindices = PyArray_SimpleNew(2,dims, PyArray_INT32);
-        int* pidata = (int*)PyArray_DATA(pyindices);
-        std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int));
+        int32_t* pidata = reinterpret_cast<int32_t*>PyArray_DATA(pyindices);
+        std::memcpy(pidata, mesh.indices.data(), mesh.indices.size() * sizeof(int32_t));
         indices = static_cast<numeric::array>(handle<>(pyindices));
     }
 
@@ -221,14 +221,15 @@ public:
         int numverts = len(vertices);
         mesh.vertices.resize(numverts);
 
-        const PyObject *pPyVertices = vertices.ptr();
-        if (PyArray_Check(pPyVertices) && (PyArray_FLAGS(pPyVertices) & NPY_C_CONTIGUOUS)) {
+        PyObject *pPyVertices = vertices.ptr();
+        if (PyArray_Check(pPyVertices)) {
             if (PyArray_NDIM(pPyVertices) != 2) {
                 throw openrave_exception(_("vertices must be a 2D array"), ORE_InvalidArguments);
             }
             if (!PyArray_ISFLOAT(pPyVertices)) {
                 throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
             }
+            pPyVertices = reinterpret_cast<PyObject*>(PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices)));
 
             const size_t typeSize = PyArray_ITEMSIZE(pPyVertices);
             const size_t n = PyArray_DIM(pPyVertices, 0);
@@ -264,11 +265,12 @@ public:
 
         const size_t numtris = len(indices);
         mesh.indices.resize(3*numtris);
-        const PyObject *pPyIndices = indices.ptr();
-        if (PyArray_Check(pPyIndices) && (PyArray_FLAGS(pPyIndices) & NPY_C_CONTIGUOUS)) {
+        PyObject *pPyIndices = indices.ptr();
+        if (PyArray_Check(pPyIndices)) {
             if (PyArray_NDIM(pPyIndices) != 2 || PyArray_DIM(pPyIndices, 1) != 3 || !PyArray_ISINTEGER(pPyIndices)) {
                 throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
             }
+            pPyIndices = reinterpret_cast<PyObject*>(PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices)));
 
             const size_t typeSize = PyArray_ITEMSIZE(pPyIndices);
             const bool signedInt = PyArray_ISSIGNED(pPyIndices);
@@ -280,25 +282,25 @@ public:
                 } else {
                     const uint32_t *idata = reinterpret_cast<uint32_t*>(PyArray_DATA(pPyIndices));
                     for (size_t i = 0; i < 3 * numtris; ++i) {
-                        mesh.indices[i] = static_cast<int>(idata[i]);
+                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
                     }
                 }
             } else if (typeSize == sizeof(int64_t)) {
                 if (signedInt) {
                     const int64_t *idata = reinterpret_cast<int64_t*>(PyArray_DATA(pPyIndices));
                     for (size_t i = 0; i < 3 * numtris; ++i) {
-                        mesh.indices[i] = static_cast<int>(idata[i]);
+                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
                     }
                 } else {
                     const uint64_t *idata = reinterpret_cast<uint64_t*>(PyArray_DATA(pPyIndices));
                     for (size_t i = 0; i < 3 * numtris; ++i) {
-                        mesh.indices[i] = static_cast<int>(idata[i]);
+                        mesh.indices[i] = static_cast<int32_t>(idata[i]);
                     }
                 }
             } else if (typeSize == sizeof(uint16_t) && !signedInt) {
                 const uint16_t *idata = reinterpret_cast<uint16_t*>(PyArray_DATA(pPyIndices));
                 for (size_t i = 0; i < 3 * numtris; ++i) {
-                    mesh.indices[i] = static_cast<int>(idata[i]);
+                    mesh.indices[i] = static_cast<int32_t>(idata[i]);
                 }
             } else {
                 throw openrave_exception(_("Unsupported indices type"), ORE_InvalidArguments);
@@ -306,9 +308,9 @@ public:
         } else {
             for(size_t i = 0; i < numtris; ++i) {
                 object oi = indices[i];
-                mesh.indices[3*i+0] = extract<int>(oi[0]);
-                mesh.indices[3*i+1] = extract<int>(oi[1]);
-                mesh.indices[3*i+2] = extract<int>(oi[2]);
+                mesh.indices[3*i+0] = extract<int32_t>(oi[0]);
+                mesh.indices[3*i+1] = extract<int32_t>(oi[1]);
+                mesh.indices[3*i+2] = extract<int32_t>(oi[2]);
             }
         }
     }

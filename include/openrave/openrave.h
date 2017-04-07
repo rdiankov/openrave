@@ -2132,7 +2132,7 @@ class OPENRAVE_API TriMesh
 {
 public:
     std::vector<Vector> vertices;
-    std::vector<int> indices;
+    std::vector<int32_t> indices;
 
     void ApplyTransform(const Transform& t);
     void ApplyTransform(const TransformMatrix& t);
