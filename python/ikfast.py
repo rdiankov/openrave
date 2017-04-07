@@ -5497,8 +5497,11 @@ class IKFastSolver(AutoReloader):
             deg1index = None
             for i in range(len(newreducedeqs)):
                 if newreducedeqs[i].degree(2) == 1:
-                    deg1index = i
-                    break
+                    if self.codeComplexity(newreducedeqs[i].as_expr()) <= 5000:
+                        deg1index = i
+                        break
+                    else:
+                        log.warn('found equation with linear dof, but too complex so skipping')
             if deg1index is not None:
                 # try to solve one variable in terms of the others
                 if len(htvars) > 2:
