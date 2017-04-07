@@ -251,7 +251,7 @@ public:
                     mesh.vertices[i].z = static_cast<dReal>(vdata[j + 2]);
                 }
             } else {
-                throw openrave_exception(_("Unsupported type"), ORE_InvalidArguments);
+                throw openrave_exception(_("Unsupported vertices type"), ORE_InvalidArguments);
             }
         } else {
             for(int i = 0; i < numverts; ++i) {
@@ -271,22 +271,37 @@ public:
             }
 
             const size_t typeSize = PyArray_ITEMSIZE(pPyIndices);
+            const bool signedInt = PyArray_ISSIGNED(pPyIndices);
 
             if (typeSize == sizeof(int32_t)) {
-                const int32_t *idata = reinterpret_cast<int32_t*>(PyArray_DATA(pPyIndices));
-                std::memcpy(mesh.indices.data(), idata, numtris * 3 * sizeof(int32_t));
-            } else if (typeSize == sizeof(int64_t)) {
-                const int64_t *idata = reinterpret_cast<int64_t*>(PyArray_DATA(pPyIndices));
-                for (size_t i = 0; i < 3 * numtris; ++i) {
-                    mesh.indices[i] = static_cast<int>(idata[i]);
+                if (signedInt) {
+                    const int32_t *idata = reinterpret_cast<int32_t*>(PyArray_DATA(pPyIndices));
+                    std::memcpy(mesh.indices.data(), idata, numtris * 3 * sizeof(int32_t));
+                } else {
+                    const uint32_t *idata = reinterpret_cast<uint32_t*>(PyArray_DATA(pPyIndices));
+                    for (size_t i = 0; i < 3 * numtris; ++i) {
+                        mesh.indices[i] = static_cast<int>(idata[i]);
+                    }
                 }
-            } else if (typeSize == sizeof(uint16_t)) {
+            } else if (typeSize == sizeof(int64_t)) {
+                if (signedInt) {
+                    const int64_t *idata = reinterpret_cast<int64_t*>(PyArray_DATA(pPyIndices));
+                    for (size_t i = 0; i < 3 * numtris; ++i) {
+                        mesh.indices[i] = static_cast<int>(idata[i]);
+                    }
+                } else {
+                    const uint64_t *idata = reinterpret_cast<uint64_t*>(PyArray_DATA(pPyIndices));
+                    for (size_t i = 0; i < 3 * numtris; ++i) {
+                        mesh.indices[i] = static_cast<int>(idata[i]);
+                    }
+                }
+            } else if (typeSize == sizeof(uint16_t) && !signedInt) {
                 const uint16_t *idata = reinterpret_cast<uint16_t*>(PyArray_DATA(pPyIndices));
                 for (size_t i = 0; i < 3 * numtris; ++i) {
                     mesh.indices[i] = static_cast<int>(idata[i]);
                 }
             } else {
-                throw openrave_exception(_("Unsupported type"), ORE_InvalidArguments);
+                throw openrave_exception(_("Unsupported indices type"), ORE_InvalidArguments);
             }
         } else {
             for(size_t i = 0; i < numtris; ++i) {
