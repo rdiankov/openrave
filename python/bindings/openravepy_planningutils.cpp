@@ -299,14 +299,14 @@ public:
     }
     virtual ~PyDHParameter() {
     }
-    string __repr__() {
+    string __repr__() const {
         return boost::str(boost::format("<DHParameter(joint=%s, parentindex=%d, d=%f, a=%f, theta=%f, alpha=%f)>")%reprPyKinBodyJoint(joint)%parentindex%d%a%theta%alpha);
     }
-    string __str__() {
+    string __str__() const {
         TransformMatrix tm = ExtractTransformMatrix(transform);
         return boost::str(boost::format("<joint %s, transform [[%f, %f, %f, %f], [%f, %f, %f, %f], [%f, %f, %f, %f]], parentindex %d>")%strPyKinBodyJoint(joint)%tm.m[0]%tm.m[1]%tm.m[2]%tm.trans[0]%tm.m[4]%tm.m[5]%tm.m[6]%tm.trans[1]%tm.m[8]%tm.m[9]%tm.m[10]%tm.trans[2]%parentindex);
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 

@@ -27,7 +27,7 @@ public:
     PyPlannerProgress(const PlannerBase::PlannerProgress& progress) {
         _iteration = progress._iteration;
     }
-    string __str__() {
+    string __str__() const {
         return boost::str(boost::format("<PlannerProgress: iter=%d>")%_iteration);
     }
 
@@ -162,23 +162,23 @@ public:
             _paramswrite->_sPostProcessingParameters = plannerparameters;
         }
 
-        string __repr__() {
+        string __repr__() const {
             stringstream ss;
             ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
             ss << "Planner.PlannerParameters(\"\"\"";
             ss << *_paramsread << "\"\"\")" << endl;
             return ss.str();
         }
-        string __str__() {
+        string __str__() const {
             return boost::str(boost::format("<PlannerParameters, dof=%d>")%_paramsread->GetDOF());
         }
-        object __unicode__() {
+        object __unicode__() const {
             return ConvertStringToUnicode(__str__());
         }
-        bool __eq__(boost::shared_ptr<PyPlannerParameters> p) {
+        bool __eq__(boost::shared_ptr<PyPlannerParameters> p) const {
             return !!p && _paramsread == p->_paramsread;
         }
-        bool __ne__(boost::shared_ptr<PyPlannerParameters> p) {
+        bool __ne__(boost::shared_ptr<PyPlannerParameters> p) const {
             return !p || _paramsread != p->_paramsread;
         }
     };

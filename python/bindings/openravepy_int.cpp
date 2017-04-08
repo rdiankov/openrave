@@ -1736,19 +1736,19 @@ public:
 
     }
 
-    bool __eq__(PyEnvironmentBasePtr p) {
+    bool __eq__(PyEnvironmentBasePtr p) const {
         return !!p && _penv==p->_penv;
     }
-    bool __ne__(PyEnvironmentBasePtr p) {
+    bool __ne__(PyEnvironmentBasePtr p) const {
         return !p || _penv!=p->_penv;
     }
-    string __repr__() {
+    string __repr__() const {
         return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
     }
-    string __str__() {
+    string __str__() const {
         return boost::str(boost::format("<env %d>")%RaveGetEnvironmentId(_penv));
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 

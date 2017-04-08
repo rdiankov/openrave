@@ -619,22 +619,22 @@ public:
             return _pmanip->GetInverseKinematicsStructureHash(iktype);
         }
 
-        string __repr__() {
+        string __repr__() const {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetManipulator('%s')")%RaveGetEnvironmentId(_pmanip->GetRobot()->GetEnv())%_pmanip->GetRobot()->GetName()%_pmanip->GetName());
         }
-        string __str__() {
+        string __str__() const {
             return boost::str(boost::format("<manipulator:%s, parent=%s>")%_pmanip->GetName()%_pmanip->GetRobot()->GetName());
         }
-        object __unicode__() {
+        object __unicode__() const {
             return ConvertStringToUnicode(__str__());
         }
-        bool __eq__(boost::shared_ptr<PyManipulator> p) {
+        bool __eq__(boost::shared_ptr<PyManipulator> p) const {
             return !!p && _pmanip==p->_pmanip;
         }
-        bool __ne__(boost::shared_ptr<PyManipulator> p) {
+        bool __ne__(boost::shared_ptr<PyManipulator> p) const {
             return !p || _pmanip!=p->_pmanip;
         }
-        long __hash__() {
+        long __hash__() const {
             return static_cast<long>(uintptr_t(_pmanip.get()));
         }
     };
@@ -733,22 +733,22 @@ public:
             return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->GetInfo())));
         }
 
-        string __repr__() {
+        string __repr__() const {
             return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s').GetAttachedSensor('%s')")%RaveGetEnvironmentId(_pattached->GetRobot()->GetEnv())%_pattached->GetRobot()->GetName()%_pattached->GetName());
         }
-        string __str__() {
+        string __str__() const {
             return boost::str(boost::format("<attachedsensor:%s, parent=%s>")%_pattached->GetName()%_pattached->GetRobot()->GetName());
         }
-        object __unicode__() {
+        object __unicode__() const {
             return ConvertStringToUnicode(__str__());
         }
-        bool __eq__(boost::shared_ptr<PyAttachedSensor> p) {
+        bool __eq__(boost::shared_ptr<PyAttachedSensor> p) const {
             return !!p && _pattached==p->_pattached;
         }
-        bool __ne__(boost::shared_ptr<PyAttachedSensor> p) {
+        bool __ne__(boost::shared_ptr<PyAttachedSensor> p) const {
             return !p || _pattached!=p->_pattached;
         }
-        long __hash__() {
+        long __hash__() const {
             return static_cast<long>(uintptr_t(_pattached.get()));
         }
     };
@@ -833,14 +833,14 @@ public:
             _state.Release();
         }
 
-        std::string __str__() {
+        std::string __str__() const {
             KinBodyPtr pbody = _state.GetBody();
             if( !pbody ) {
                 return "robot state empty";
             }
             return boost::str(boost::format("robot state for %s")%pbody->GetName());
         }
-        object __unicode__() {
+        object __unicode__() const {
             return ConvertStringToUnicode(__str__());
         }
     };
@@ -1380,13 +1380,13 @@ public:
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
 
-    virtual string __repr__() {
+    virtual string __repr__() const {
         return boost::str(boost::format("RaveGetEnvironment(%d).GetRobot('%s')")%RaveGetEnvironmentId(_probot->GetEnv())%_probot->GetName());
     }
-    virtual string __str__() {
+    virtual string __str__() const {
         return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_probot->GetInterfaceType())%_probot->GetXMLId()%_probot->GetName()%_probot->GetRobotStructureHash());
     }
-    virtual object __unicode__() {
+    virtual object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
     virtual void __enter__()

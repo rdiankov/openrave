@@ -670,13 +670,13 @@ public:
         object GetInfo() {
             return object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
         }
-        bool __eq__(boost::shared_ptr<PyGeometry> p) {
+        bool __eq__(boost::shared_ptr<PyGeometry> p) const {
             return !!p && _pgeometry == p->_pgeometry;
         }
-        bool __ne__(boost::shared_ptr<PyGeometry> p) {
+        bool __ne__(boost::shared_ptr<PyGeometry> p) const {
             return !p || _pgeometry != p->_pgeometry;
         }
-        int __hash__() {
+        int __hash__() const {
             return static_cast<int>(uintptr_t(_pgeometry.get()));
         }
     };
@@ -952,22 +952,22 @@ public:
     }
 
 
-    std::string __repr__() {
+    std::string __repr__() const {
         return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetLink('%s')")%RaveGetEnvironmentId(_plink->GetParent()->GetEnv())%_plink->GetParent()->GetName()%_plink->GetName());
     }
-    std::string __str__() {
+    std::string __str__() const {
         return boost::str(boost::format("<link:%s (%d), parent=%s>")%_plink->GetName()%_plink->GetIndex()%_plink->GetParent()->GetName());
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
-    bool __eq__(boost::shared_ptr<PyLink> p) {
+    bool __eq__(boost::shared_ptr<PyLink> p) const {
         return !!p && _plink == p->_plink;
     }
-    bool __ne__(boost::shared_ptr<PyLink> p) {
+    bool __ne__(boost::shared_ptr<PyLink> p) const {
         return !p || _plink != p->_plink;
     }
-    int __hash__() {
+    int __hash__() const {
         return static_cast<int>(uintptr_t(_plink.get()));
     }
 };
@@ -1253,22 +1253,22 @@ public:
         return object(PyJointInfoPtr(new PyJointInfo(_pjoint->UpdateAndGetInfo(), _pyenv)));
     }
 
-    string __repr__() {
+    string __repr__() const {
         return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetJoint('%s')")%RaveGetEnvironmentId(_pjoint->GetParent()->GetEnv())%_pjoint->GetParent()->GetName()%_pjoint->GetName());
     }
-    string __str__() {
+    string __str__() const {
         return boost::str(boost::format("<joint:%s (%d), dof=%d, parent=%s>")%_pjoint->GetName()%_pjoint->GetJointIndex()%_pjoint->GetDOFIndex()%_pjoint->GetParent()->GetName());
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
-    bool __eq__(boost::shared_ptr<PyJoint> p) {
+    bool __eq__(boost::shared_ptr<PyJoint> p) const {
         return !!p && _pjoint==p->_pjoint;
     }
-    bool __ne__(boost::shared_ptr<PyJoint> p) {
+    bool __ne__(boost::shared_ptr<PyJoint> p) const {
         return !p || _pjoint!=p->_pjoint;
     }
-    int __hash__() {
+    int __hash__() const {
         return static_cast<int>(uintptr_t(_pjoint.get()));
     }
 };
@@ -1319,14 +1319,14 @@ public:
         _state.Release();
     }
 
-    std::string __str__() {
+    std::string __str__() const {
         KinBodyPtr pbody = _state.GetBody();
         if( !pbody ) {
             return "state empty";
         }
         return boost::str(boost::format("state for %s")%pbody->GetName());
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
 };
@@ -1370,22 +1370,22 @@ public:
         return _pdata->Lock(bDoLock);
     }
 
-    string __repr__() {
+    string __repr__() const {
         return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s').GetManageData()")%RaveGetEnvironmentId(_pdata->GetOffsetLink()->GetParent()->GetEnv())%_pdata->GetOffsetLink()->GetParent()->GetName());
     }
-    string __str__() {
+    string __str__() const {
         KinBody::LinkPtr plink = _pdata->GetOffsetLink();
         SensorSystemBasePtr psystem = _pdata->GetSystem();
         string systemname = !psystem ? "(NONE)" : psystem->GetXMLId();
         return boost::str(boost::format("<managedata:%s, parent=%s:%s>")%systemname%plink->GetParent()->GetName()%plink->GetName());
     }
-    object __unicode__() {
+    object __unicode__() const {
         return ConvertStringToUnicode(__str__());
     }
-    bool __eq__(boost::shared_ptr<PyManageData> p) {
+    bool __eq__(boost::shared_ptr<PyManageData> p) const {
         return !!p && _pdata==p->_pdata;
     }
-    bool __ne__(boost::shared_ptr<PyManageData> p) {
+    bool __ne__(boost::shared_ptr<PyManageData> p) const {
         return !p || _pdata!=p->_pdata;
     }
 };
@@ -2522,16 +2522,16 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return new PyStateRestoreContext<PyKinBodyStateSaverPtr, PyKinBodyPtr>(saver);
 }
 
-string PyKinBody::__repr__()
+string PyKinBody::__repr__() const
 {
     return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s')")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
 }
-string PyKinBody::__str__()
+string PyKinBody::__str__() const
 {
     return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash());
 }
 
-object PyKinBody::__unicode__()
+object PyKinBody::__unicode__() const
 {
     return ConvertStringToUnicode(__str__());
 }
