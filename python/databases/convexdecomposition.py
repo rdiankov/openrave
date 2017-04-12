@@ -69,7 +69,9 @@ __license__ = 'Apache License, Version 2.0'
 if not __openravepy_build_doc__:
     from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros, isnan
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where
+from numpy.linalg import norm
+from numpy.core.umath_tests import inner1d
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
@@ -335,25 +337,29 @@ class ConvexDecompositionModel(DatabaseGenerator):
         """pads a mesh by increasing towards the normal
         """
         M = mean(vertices,0)
-        facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
-        facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
+        vertices_0 = vertices[indices[:, 0]]
+        facenormals = cross(vertices[indices[:, 1]] - vertices_0, vertices[indices[:, 2]] - vertices_0)
+        facenormals /= norm(facenormals, axis=1)[:, newaxis]
+
         # make sure normals are facing outward
-        newvertices = zeros((0,3),float64)
-        newindices = zeros((0,3),int32)
-        originaledges = []
-        for i in range(len(facenormals)):
-            if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
-                facenormals[i] *= -1
-            offset = len(newvertices)
-            newvertices = r_[newvertices,vertices[indices[i,:]]+tile(facenormals[i]*padding,(3,1))]
-            newindices = r_[newindices,[[offset,offset+1,offset+2]]]
-            for j0,j1 in [[0,1],[0,2],[1,2]]:
-                if indices[i,j0] < indices[i,j1]:
-                    originaledges.append([indices[i,j0],indices[i,j1],offset+j0,offset+j1])
-                else:
-                    originaledges.append([indices[i,j1],indices[i,j0],offset+j1,offset+j0])
+        newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
+        originaledges = empty((3 * len(facenormals), 4), dtype=int32)
+
+        flip = inner1d(vertices[indices[:,0]] - M, facenormals) < 0
+        facenormals[flip] *= -1
+        newvertices = vertices[indices.ravel()] + repeat(facenormals*padding, 3, axis=0)
+
+        offsets = arange(0, 3 * len(facenormals), 3)
+        indices_j = [indices[:, j] for j in range(3)]
+        for j0, j1, n in [[0,1,0],[0,2,1],[1,2,2]]:
+            swap = indices_j[j0] < indices_j[j1]
+            originaledges_n = originaledges[n::3]
+            originaledges_n[:, 0] = where(swap, indices_j[j0], indices_j[j1])
+            originaledges_n[:, 1] = where(swap, indices_j[j1], indices_j[j0])
+            originaledges_n[:, 2] = offsets + where(swap, j0, j1)
+            originaledges_n[:, 3] = offsets + where(swap, j1, j0)
+
         # find the connecting edges across the new faces
-        originaledges = array(originaledges)
         offset = 0
         verticesofinterest = {}
         for i,edge in enumerate(originaledges):
@@ -376,10 +382,15 @@ class ConvexDecompositionModel(DatabaseGenerator):
             assert(len(vertexindices) > 0)
             newvertices[newvertex,:] = mean(newvertices[vertexindices],0)
         assert(not any(isnan(newvertices)))
+
         # make sure all faces are facing outward
-        for inds in newindices:
-            if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
+        newvertices_0 = newvertices[newindices[:, 0]]
+        flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices_0,
+                             newvertices[newindices[:, 2]] - newvertices_0), newvertices_0 - M) < 0
+        for n, inds in enumerate(newindices):
+            if flip[n]:
                 inds[1],inds[2] = inds[2],inds[1]
+
         return newvertices,newindices
 
     @staticmethod
