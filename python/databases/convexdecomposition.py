@@ -353,6 +353,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
         vertices_0 = vertices[indices[:, 0]]
         facenormals = cross(vertices[indices[:, 1]] - vertices_0, vertices[indices[:, 2]] - vertices_0)
         facenormals /= norm(facenormals, axis=1)[:, newaxis]
+        # Safety measure for degenerate triangles?
+        facenormals[isnan(facenormals).any(axis=1)] = 0.0
 
         # make sure normals are facing outward
         newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
