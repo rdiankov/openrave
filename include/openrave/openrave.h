@@ -2558,6 +2558,14 @@ typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, in
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
 
+/// \brief Called when OpenRAVE global runtime is finished initializing. See \ref OnRaveInitialized
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_OnRaveInitialized)();
+
+/// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_OnRavePreDestroy)();
+    
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 

@@ -59,7 +59,7 @@ void GetPluginAttributesValidated(OpenRAVE::PLUGININFO& info);
 OPENRAVE_PLUGIN_API OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv)
 {
     if( strcmp(interfacehash,OpenRAVE::RaveGetInterfaceHash(type)) ) {
-    throw OPENRAVE_EXCEPTION_FORMAT("bad interface %s hash: %s!=%s",RaveGetInterfaceName(type)%interfacehash%OpenRAVE::RaveGetInterfaceHash(type),OpenRAVE::ORE_InvalidInterfaceHash);
+        throw OPENRAVE_EXCEPTION_FORMAT("bad interface %s hash: %s!=%s",RaveGetInterfaceName(type)%interfacehash%OpenRAVE::RaveGetInterfaceHash(type),OpenRAVE::ORE_InvalidInterfaceHash);
     }
     if( !penv ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("need to set environment",OpenRAVE::ORE_InvalidArguments);
@@ -92,9 +92,23 @@ OPENRAVE_PLUGIN_API void OpenRAVEGetPluginAttributes(OpenRAVE::PLUGININFO* pinfo
     pinfo->version = OPENRAVE_VERSION;
 }
 
-/// \brief \b <b>[export]</b> Stub function to be defined by plugin that includes \ref rave/plugin.h.
+/// \brief \b <b>[export]</b> Called when plugin is about to be deleted.
+///
+/// Stub function to be defined by plugin that includes \ref rave/plugin.h.
 /// \ingroup plugin_exports
 OPENRAVE_PLUGIN_API void DestroyPlugin();
+
+/// \brief \b <b>[export]</b> Called when OpenRAVE global runtime is finished initializing.
+///
+/// Stub function to be defined by plugin that includes \ref rave/plugin.h.
+/// \ingroup plugin_exports
+OPENRAVE_PLUGIN_API void OnRaveInitialized();
+
+/// \brief \b <b>[export]</b> Called when OpenRAVE global runtime is about to be destroyed.
+///
+/// Stub function to be defined by plugin that includes \ref rave/plugin.h.
+/// \ingroup plugin_exports
+OPENRAVE_PLUGIN_API void OnRavePreDestroy();
 
 //@}
 

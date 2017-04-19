@@ -88,7 +88,7 @@ public:
     class Plugin : public UserData, public boost::enable_shared_from_this<Plugin>
     {
 public:
-        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), _bShutdown(false), _bInitializing(true) {
+        Plugin(boost::shared_ptr<RaveDatabase> pdatabase) : _pdatabase(pdatabase), plibrary(NULL), pfnCreate(NULL), pfnCreateNew(NULL), pfnGetPluginAttributes(NULL), pfnGetPluginAttributesNew(NULL), pfnDestroyPlugin(NULL), pfnOnRaveInitialized(NULL), pfnOnRavePreDestroy(NULL), _bShutdown(false), _bInitializing(true), _bHasCalledOnRaveInitialized(false) {
         }
         virtual ~Plugin() {
             Destroy();
@@ -127,6 +127,8 @@ public:
             pfnCreate = NULL;
             pfnCreateNew = NULL;
             pfnDestroyPlugin = NULL;
+            pfnOnRaveInitialized = NULL;
+            pfnOnRavePreDestroy = NULL;
             pfnGetPluginAttributes = NULL;
             pfnGetPluginAttributesNew = NULL;
             _bShutdown = true;
@@ -213,6 +215,47 @@ public:
             return pfnDestroyPlugin!=NULL;
         }
 
+        virtual bool Load_OnRaveInitialized()
+        {
+            _confirmLibrary();
+            if( pfnOnRaveInitialized == NULL ) {
+#ifdef _MSC_VER
+                pfnOnRaveInitialized = (PluginExportFn_OnRaveInitialized)_SysLoadSym(plibrary, "?OnRaveInitialized@@YAXXZ");
+#else
+                pfnOnRaveInitialized = (PluginExportFn_OnRaveInitialized)_SysLoadSym(plibrary, "_Z17OnRaveInitializedv");
+#endif
+                if( pfnOnRaveInitialized == NULL ) {
+                    pfnOnRaveInitialized = (PluginExportFn_OnRaveInitialized)_SysLoadSym(plibrary, "OnRaveInitialized");
+                    if( pfnOnRaveInitialized == NULL ) {
+                        //RAVELOG_VERBOSE(str(boost::format("%s: can't load OnRaveInitialized function, passing...\n")%ppluginname));
+                        return false;
+                    }
+                }
+            }
+            return pfnOnRaveInitialized!=NULL;
+        }
+
+        virtual bool Load_OnRavePreDestroy()
+        {
+            _confirmLibrary();
+            if( pfnOnRavePreDestroy == NULL ) {
+#ifdef _MSC_VER
+                pfnOnRavePreDestroy = (PluginExportFn_OnRavePreDestroy)_SysLoadSym(plibrary, "?OnRavePreDestroy@@YAXXZ");
+#else
+                pfnOnRavePreDestroy = (PluginExportFn_OnRavePreDestroy)_SysLoadSym(plibrary, "_Z16OnRavePreDestroyv");
+#endif
+                if( pfnOnRavePreDestroy == NULL ) {
+                    pfnOnRavePreDestroy = (PluginExportFn_OnRavePreDestroy)_SysLoadSym(plibrary, "OnRavePreDestroy");
+                    if( pfnOnRavePreDestroy == NULL ) {
+                        //RAVELOG_VERBOSE(str(boost::format("%s: can't load OnRavePreDestroy function, passing...\n")%ppluginname));
+                        return false;
+                    }
+                }
+            }
+            return pfnOnRavePreDestroy!=NULL;
+        }
+
+
         bool HasInterface(InterfaceType type, const string& name)
         {
             if( name.size() == 0 ) {
@@ -272,6 +315,28 @@ public:
             return InterfaceBasePtr();
         }
 
+        /// \brief call to initialize the plugin, if initialized already, then ignore the call.
+        void OnRaveInitialized()
+        {
+            if( Load_OnRaveInitialized() ) {
+                if( !!pfnOnRaveInitialized && !_bHasCalledOnRaveInitialized ) {
+                    pfnOnRaveInitialized();
+                    _bHasCalledOnRaveInitialized = true;
+                }
+            }
+        }
+
+        void OnRavePreDestroy()
+        {
+            if( Load_OnRavePreDestroy() ) {
+                // always call destroy regardless of initialization state (safest)
+                if( !!pfnOnRavePreDestroy ) {
+                    pfnOnRavePreDestroy();
+                    _bHasCalledOnRaveInitialized = false;
+                }
+            }
+        }
+
 protected:
         /// if the library is not loaded yet, wait for it.
         void _confirmLibrary()
@@ -302,11 +367,14 @@ protected:
         PluginExportFn_GetPluginAttributes pfnGetPluginAttributes;
         PluginExportFn_OpenRAVEGetPluginAttributes pfnGetPluginAttributesNew;
         PluginExportFn_DestroyPlugin pfnDestroyPlugin;
+        PluginExportFn_OnRaveInitialized pfnOnRaveInitialized;
+        PluginExportFn_OnRavePreDestroy pfnOnRavePreDestroy;
         PLUGININFO _infocached;
         boost::mutex _mutex;         ///< locked when library is getting updated, only used when plibrary==NULL
         boost::condition _cond;
         bool _bShutdown;         ///< managed by plugin database
         bool _bInitializing; ///< still in the initialization phase
+        bool _bHasCalledOnRaveInitialized; ///< if true, then OnRaveInitialized has been called and does not need to call it again.
 
         friend class RaveDatabase;
     };
@@ -641,6 +709,22 @@ protected:
         _CleanupUnusedLibraries();
     }
 
+    void OnRaveInitialized()
+    {
+        boost::mutex::scoped_lock lock(_mutex);
+        FOREACH(itplugin, _listplugins) {
+            (*itplugin)->OnRaveInitialized();
+        }
+    }
+
+    void OnRavePreDestroy()
+    {
+        boost::mutex::scoped_lock lock(_mutex);
+        FOREACH(itplugin, _listplugins) {
+            (*itplugin)->OnRavePreDestroy();
+        }
+    }
+
     bool LoadPlugin(const std::string& pluginname)
     {
         boost::mutex::scoped_lock lock(_mutex);
@@ -907,6 +991,7 @@ protected:
             p->_bShutdown = false;
         }
 
+        p->OnRaveInitialized(); // openrave runtime is most likely loaded already, so can safely initialize
         return p;
     }
 
