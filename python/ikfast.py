@@ -9537,7 +9537,7 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
     log.addHandler(handler)
     log.setLevel(options.debug)
 
-    solvefn=IKFastSolver.GetSolvers()[options.iktype]
+    solvefn=IKFastSolver.GetSolvers()[options.iktype.lower()]
     if options.robot is not None:
         try:
             env=openravepy.Environment()
