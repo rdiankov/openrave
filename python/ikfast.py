@@ -2142,7 +2142,7 @@ class IKFastSolver(AutoReloader):
             else:
                 lang = CodeGenerators.keys()[0]
         log.info('generating %s code...'%lang)
-        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__).generate(chaintree)
+        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype).generate(chaintree)
     
     def generateIkSolver(self, baselink, eelink, freeindices=None, solvefn=None, ikfastoptions=0):
         """
@@ -9537,7 +9537,7 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
     log.addHandler(handler)
     log.setLevel(options.debug)
 
-    solvefn=IKFastSolver.GetSolvers()[options.iktype]
+    solvefn=IKFastSolver.GetSolvers()[options.iktype.lower()]
     if options.robot is not None:
         try:
             env=openravepy.Environment()
