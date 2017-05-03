@@ -452,7 +452,18 @@ private:
             throw openrave_exception(str(boost::format(_("failed to save collada file to %s"))%filename));
         }
     }
-
+    
+    virtual void Save(std::vector<char>& output)
+    {
+#ifdef COLLADA_SUPPORT_WRITE_MEMORY
+        if(!_dae->writeToMemory(_doc->getDocumentURI()->getURI(), output) ) {
+            throw openrave_exception(_("failed to save collada to memory"));
+        }
+#else
+        throw OPENRAVE_EXCEPTION_FORMAT0("collada-dom does not support writeToMemory, make sure at least version 2.5.0 is installed", ORE_Assert);
+#endif
+    }
+    
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
@@ -2537,5 +2548,79 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
         writer.Save(filename);
     }
 }
+
+
+void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    ColladaWriter writer(penv, atts);
+    std::string scenename, keywords;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "scenename" ) {
+            scenename = itatt->second;
+        }
+        else if( itatt->first == "keywords" ) {
+            keywords = itatt->second;
+        }
+    }
+
+    writer.Init("openrave_snapshot", keywords);
+
+    if( scenename.size() == 0 ) {
+        scenename = "scene";
+    }
+    
+    if( !writer.Write(scenename) ) {
+        throw openrave_exception(_("ColladaWriter::Write(EnvironmentBasePtr) failed"));
+    }
+    writer.Save(output);
+}
+
+void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    ColladaWriter writer(pbody->GetEnv(),atts);
+    std::string keywords;
+    FOREACHC(itatt,atts) {
+        if( itatt->first == "keywords" ) {
+            keywords = itatt->second;
+        }
+    }
+
+    writer.Init("openrave_snapshot", keywords);
+    if( !writer.Write(pbody) ) {
+        throw openrave_exception(_("ColladaWriter::Write(KinBodyPtr) failed"));
+    }
+    writer.Save(output);
+}
+
+void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output,  const AttributesList& atts)
+{
+    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    output.clear();
+    if( listbodies.size() > 0 ) {
+        ColladaWriter writer(listbodies.front()->GetEnv(),atts);
+        std::string scenename, keywords;
+        FOREACHC(itatt,atts) {
+            if( itatt->first == "scenename" ) {
+                scenename = itatt->second;
+                break;
+            }
+            else if( itatt->first == "keywords" ) {
+                keywords = itatt->second;
+            }
+        }
+        writer.Init("openrave_snapshot", keywords);
+
+        if( scenename.size() == 0 ) {
+            scenename = "scene";
+        }
+        if( !writer.Write(listbodies, scenename) ) {
+            throw openrave_exception(_("ColladaWriter::Write(list<KinBodyPtr>) failed"));
+        }
+        writer.Save(output);
+    }
+}
+
 
 } // end OpenRAVE namespace

@@ -5168,7 +5168,11 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
 
     std::string articulatdSystemId;
     FOREACHC(itatt, atts) {
-        if( itatt->first == "articulatdSystemId" ) {
+        if( itatt->first == "articulatedSystemId" ) {
+            articulatdSystemId = itatt->second;
+        }
+        else if( itatt->first == "articulatdSystemId" ) {
+            RAVELOG_WARN("mispelled articulatdSystemId\n");
             articulatdSystemId = itatt->second;
         }
     }
