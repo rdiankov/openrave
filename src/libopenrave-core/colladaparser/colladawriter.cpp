@@ -455,7 +455,7 @@ private:
     
     virtual void Save(std::vector<char>& output)
     {
-#ifdef COLLADA_SUPPORT_WRITE_MEMORY
+#ifdef OPENRAVE_COLLADA_SUPPORT_WRITE_MEMORY
         if(!_dae->writeToMemory(_doc->getDocumentURI()->getURI(), output) ) {
             throw openrave_exception(_("failed to save collada to memory"));
         }
