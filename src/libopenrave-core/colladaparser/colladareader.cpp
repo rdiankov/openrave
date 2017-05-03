@@ -730,8 +730,8 @@ public:
 
     /// \extract robot from the scene
     ///
-    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(RobotBasePtr& probot, const std::string& articulatdSystemId=std::string())
+    /// \param articulatedSystemId If not empty, will extract the first articulated_system whose id matches articulatedSystemId. If empty, will extract the first articulated system found.
+    bool Extract(RobotBasePtr& probot, const std::string& articulatedSystemId=std::string())
     {
         std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         domCOLLADA::domSceneRef allscene = _dom->getScene();
@@ -772,9 +772,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -797,9 +797,9 @@ public:
         if( !bSuccess ) {
             KinBodyPtr pbody = probot;
             FOREACH(it, listPossibleBodies) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = it->first->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -837,8 +837,8 @@ public:
 
     /// \extract a kinbody from the scene
     ///
-    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(KinBodyPtr& pbody, const std::string& articulatdSystemId=std::string())
+    /// \param articulatedSystemId If not empty, will extract the first articulated_system whose id matches articulatedSystemId. If empty, will extract the first articulated system found.
+    bool Extract(KinBodyPtr& pbody, const std::string& articulatedSystemId=std::string())
     {
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
@@ -869,9 +869,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -889,9 +889,9 @@ public:
             }
         }
         FOREACH(it, listPossibleBodies) {
-            if( articulatdSystemId.size() > 0 ) {
+            if( articulatedSystemId.size() > 0 ) {
                 xsAnyURI articulatedSystemURI = it->first->getUrl();
-                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                     continue;
                 }
             }
@@ -5148,14 +5148,14 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
         return false;
     }
 
-    std::string articulatdSystemId;
+    std::string articulatedSystemId;
     FOREACHC(itatt, atts) {
-        if( itatt->first == "articulatdSystemId" ) {
-            articulatdSystemId = itatt->second;
+        if( itatt->first == "articulatedSystemId" ) {
+            articulatedSystemId = itatt->second;
         }
     }
 
-    return reader.Extract(pbody, articulatdSystemId);
+    return reader.Extract(pbody, articulatedSystemId);
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
@@ -5166,18 +5166,18 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
         return false;
     }
 
-    std::string articulatdSystemId;
+    std::string articulatedSystemId;
     FOREACHC(itatt, atts) {
         if( itatt->first == "articulatedSystemId" ) {
-            articulatdSystemId = itatt->second;
+            articulatedSystemId = itatt->second;
         }
-        else if( itatt->first == "articulatdSystemId" ) {
-            RAVELOG_WARN("mispelled articulatdSystemId\n");
-            articulatdSystemId = itatt->second;
+        else if( itatt->first == "articulatedSystemId" ) {
+            RAVELOG_WARN("mispelled articulatedSystemId\n");
+            articulatedSystemId = itatt->second;
         }
     }
 
-    return reader.Extract(probot, articulatdSystemId);
+    return reader.Extract(probot, articulatedSystemId);
 }
 
 // register for typeof (MSVC only)
