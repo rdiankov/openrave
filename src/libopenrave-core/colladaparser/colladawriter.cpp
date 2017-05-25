@@ -1545,7 +1545,19 @@ private:
                         daeElementRef pelt = pftec->add("equation");
                         pelt->setAttribute("type",sequationids[itype]);
                         KinBody::JointPtr pmimic = itdofformat->jointindex < (int)pbody->GetJoints().size() ? pbody->GetJoints().at(itdofformat->jointindex) : pbody->GetPassiveJoints().at(itdofformat->jointindex-(int)pbody->GetJoints().size());
-                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%pmimic->GetJointIndex());
+
+                        int mimicjointindex = -1;
+                        FOREACH(ittestjoint, vjoints) {
+                            if( ittestjoint->second == pmimic ) {
+                                mimicjointindex = ittestjoint->first;
+                                break;
+                            }
+                        }
+                        if( mimicjointindex < 0 ) {
+                            RAVELOG_WARN_FORMAT("cannot find index from joint %s", pmimic->GetName());
+                            mimicjointindex = 0;
+                        }
+                        std::string smimicid = str(boost::format("%s/joint%d")%kmodel->getID()%mimicjointindex);
                         pelt->setAttribute("target",smimicid.c_str());
                         offset += XMLtoDAE::Parse(pelt, sequations[itype].c_str()+offset, sequations[itype].size()-offset);
                         if( offset == 0 ) {
