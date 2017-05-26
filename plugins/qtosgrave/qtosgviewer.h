@@ -303,6 +303,7 @@ public:
     virtual void _Reset();
 
     /// \brief reset the camera depending on its mode
+        virtual void _UpdateRichHUDInfo();
     virtual void _UpdateCameraTransform(float fTimeElapsed);
     virtual void _SetCameraTransform();
 
@@ -378,6 +379,8 @@ public:
 
     std::string _userdatakey; ///< the key to use for KinBody::GetUserData and KinBody::SetUserData
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;    ///< mapping of all the bodies created
+        std::map<KinBodyPtr, osg::ref_ptr<osgText::Text> > _mapbodylabels;
+
     ItemPtr _pSelectedItem;     ///< the currently selected item
 
     //@{ camera

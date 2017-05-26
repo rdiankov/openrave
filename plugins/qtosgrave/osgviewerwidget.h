@@ -110,6 +110,7 @@ public:
     osg::Camera *GetCamera();
     osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
     OSGMatrixTransformPtr GetCameraHUD();
+    osg::ref_ptr<osg::Geode> GetLabelGeode();
 
     /// \brief Updates any changes in OSG to to OpenRAVE core.
     void UpdateFromOSG();
@@ -178,6 +179,7 @@ protected:
     OSGMatrixTransformPtr _draggerMatrix; ///< Transform applied by dragger
     OSGGroupPtr _osgSelectedNodeByDragger; ///< Object selected by dragger
     OSGMatrixTransformPtr _osgCameraHUD; ///< MatrixTransform node that gets displayed in the heads up display
+    osg::ref_ptr<osg::Geode> _osgLabelGeode;
 
     KinBodyItemPtr _selectedItem; ///< render item selected
     std::string _draggerName; ///< Actual dragger selected

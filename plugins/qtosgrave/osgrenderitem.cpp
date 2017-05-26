@@ -254,6 +254,19 @@ void KinBodyItem::Load()
     Transform tbodyinv = tbody.inverse();
     SetMatrixTransform(*_osgWorldTransform, tbody);
 
+    osg::ref_ptr<osgText::Text> label = new osgText::Text();
+    label->setText(_pbody->GetName());
+    label->setCharacterSize(0.1f);
+    label->setAxisAlignment(osgText::Text::SCREEN);
+    label->setDrawMode(osgText::Text::TEXT | osgText::Text::ALIGNMENT | osgText::Text::BOUNDINGBOX);
+    // label->setAlignment(osgText::Text::CENTER_TOP);
+    // label->setPosition(osg::Vec3f(0, -0.5f, -1.0f));
+    label->setColor(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    label->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
+    osg::ref_ptr<osg::Geode> labelGeode = new osg::Geode();
+    labelGeode->addDrawable(label);
+    // _osgdata->addChild(labelGeode);
+
     //  Extract geometry
     FOREACHC(itlink, _pbody->GetLinks()) {
         KinBody::LinkPtr porlink = *itlink;

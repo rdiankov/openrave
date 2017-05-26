@@ -353,6 +353,9 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
         osg::ref_ptr<osg::Geode> geodetext = new osg::Geode;
         geodetext->addDrawable(_osgHudText);
         _osgCameraHUD->addChild(geodetext);
+        // Object name label on HUD
+        _osgLabelGeode = new osg::Geode();
+        _osgCameraHUD->addChild(_osgLabelGeode);
     }
 
     _InitializeLights(2);
@@ -1033,7 +1036,11 @@ OSGMatrixTransformPtr ViewerWidget::GetCameraHUD()
     return _osgCameraHUD;
 }
 
-void ViewerWidget::_StoreMatrixTransform()
+    osg::ref_ptr<osg::Geode> ViewerWidget::GetLabelGeode() {
+        return _osgLabelGeode;
+    }
+
+    void ViewerWidget::_StoreMatrixTransform()
 {
     _viewCameraMatrix = _osgview->getCamera()->getViewMatrix();
 }
@@ -1211,5 +1218,6 @@ void ViewerWidget::paintEvent( QPaintEvent* event )
         RAVELOG_WARN_FORMAT("got exception in paint event: %s", ex.what());
     }
 }
+
 
 } // end namespace qtosgrave

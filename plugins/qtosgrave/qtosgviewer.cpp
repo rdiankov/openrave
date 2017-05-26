@@ -966,6 +966,47 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
     RAVELOG_VERBOSE("End _FillObjectTree....\n");
 }
 
+    void QtOSGViewer::_UpdateRichHUDInfo()
+    {
+        vector<KinBody::BodyState> vecbodies;
+        try {
+            GetEnv()->GetPublishedBodies(vecbodies, 1000000);
+        }
+        catch(const std::exception& ex) {
+                    RAVELOG_WARN("timeout of GetPublishedBodies\n");
+            return;
+        }
+
+        FOREACH(itbody, vecbodies) {
+            KinBodyPtr pbody = itbody->pbody;
+            if(_mapbodylabels.find(pbody) == _mapbodylabels.end()) {
+                // Create label for if it does not exist
+
+                osg::ref_ptr<osgText::Text> label = new osgText::Text();
+                label->setText(pbody->GetName());
+                label->setAxisAlignment(osgText::Text::SCREEN);
+                // label->setCharacterSize(100f);
+                label->setColor(osg::Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+                label->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+                _mapbodylabels[pbody] = label;
+                _posgWidget->GetLabelGeode()->addDrawable(label);
+
+            } else {
+                // Update labelposition
+                continue;
+            }
+        }
+
+        // Remove labels for removed bodies
+        FOREACH(itbodylabelmap, _mapbodylabels) {
+            if (_mapbodies.find(itbodylabelmap->first) == _mapbodies.end()) {
+                _posgWidget->GetLabelGeode()->removeDrawable(itbodylabelmap->second);
+                _mapbodylabels.erase(itbodylabelmap->first);
+                        RAVELOG_DEBUG("remove label !!!!!!!!!!!!!!!!!!!!");
+            }
+        }
+    }
+
 void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
 {
     boost::mutex::scoped_lock lock(_mutexGUIFunctions);
@@ -974,7 +1015,7 @@ void QtOSGViewer::_UpdateCameraTransform(float fTimeElapsed)
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
     _posgWidget->SetViewport(width, height, GetEnv()->GetUnit().second);
-
+    _UpdateRichHUDInfo();
     _Tcamera = GetRaveTransformFromMatrix(_posgWidget->GetCameraManipulator()->getMatrix());
     osg::ref_ptr<osgGA::TrackballManipulator> ptrackball = osg::dynamic_pointer_cast<osgGA::TrackballManipulator>(_posgWidget->GetCameraManipulator());
     if( !!ptrackball ) {
