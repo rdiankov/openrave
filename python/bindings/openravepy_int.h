@@ -479,14 +479,6 @@ public:
     SerializableDataPtr _handle;
 };
 
-class PyUserObject : public UserData
-{
-public:
-    PyUserObject(object o) : _o(o) {
-    }
-    object _o;
-};
-
 class PyRay
 {
 public:
@@ -550,12 +542,6 @@ public:
     }
     void SetUserData(const std::string& key, PyUserData pdata) {
         _pbase->SetUserData(key, pdata._handle);
-    }
-    void SetUserData(object o) {
-        _pbase->SetUserData(std::string(), boost::shared_ptr<UserData>(new PyUserObject(o)));
-    }
-    void SetUserData(const std::string& key, object o) {
-        _pbase->SetUserData(key, boost::shared_ptr<UserData>(new PyUserObject(o)));
     }
     bool RemoveUserData(const std::string& key) {
         return _pbase->RemoveUserData(key);
