@@ -303,7 +303,6 @@ public:
     virtual void _Reset();
 
     /// \brief reset the camera depending on its mode
-        virtual void _UpdateRichHUDInfo();
     virtual void _UpdateCameraTransform(float fTimeElapsed);
     virtual void _SetCameraTransform();
 

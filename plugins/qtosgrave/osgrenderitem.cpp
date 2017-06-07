@@ -23,6 +23,7 @@
 #include <osg/PolygonOffset>
 #include <osg/LineStipple>
 #include <osg/Depth>
+#include <osg/ComputeBoundsVisitor>
 
 namespace qtosgrave {
 
@@ -254,18 +255,41 @@ void KinBodyItem::Load()
     Transform tbodyinv = tbody.inverse();
     SetMatrixTransform(*_osgWorldTransform, tbody);
 
-    osg::ref_ptr<osgText::Text> label = new osgText::Text();
-    label->setText(_pbody->GetName());
-    label->setCharacterSize(0.1f);
-    label->setAxisAlignment(osgText::Text::SCREEN);
-    label->setDrawMode(osgText::Text::TEXT | osgText::Text::ALIGNMENT | osgText::Text::BOUNDINGBOX);
-    // label->setAlignment(osgText::Text::CENTER_TOP);
-    // label->setPosition(osg::Vec3f(0, -0.5f, -1.0f));
-    label->setColor(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
-    label->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
-    osg::ref_ptr<osg::Geode> labelGeode = new osg::Geode();
-    labelGeode->addDrawable(label);
-    // _osgdata->addChild(labelGeode);
+    if (!!_osgFigureRoot) {
+        osg::NodeVisitor nv;
+
+        OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
+        // ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+        SetMatrixTransform(*ptrans, _pbody->GetTransform());
+
+        osg::ref_ptr<osgText::Text> label = new osgText::Text();
+
+        label->setText(_pbody->GetName());
+        label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        label->setCharacterSize(20.0f);
+        label->setAxisAlignment(osgText::Text::SCREEN);
+        label->setDrawMode(osgText::Text::TEXT | osgText::Text::ALIGNMENT);
+        label->setAlignment(osgText::Text::CENTER_TOP);
+        label->setColor(osg::Vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        label->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
+        label->setBackdropColor(osg::Vec4(0.7f, 0.7f, 0.7f, 0.1f));
+
+        osg::ref_ptr<osg::Geode> labelGeode = new osg::Geode();
+        labelGeode->addDrawable(label);
+        ptrans->addChild(labelGeode);
+
+        osg::ref_ptr<osg::LOD> labelLod = new osg::LOD;
+        labelLod->setCenterMode(osg::LOD::USE_BOUNDING_SPHERE_CENTER);
+        labelLod->setCenter(label->getBound().center());
+        labelLod->setRangeMode(osg::LOD::DISTANCE_FROM_EYE_POINT);
+        float radius = label->getBound()._radius;
+        labelLod->setRadius(radius);
+        labelLod->setRange(0, 0, 1.3);
+
+        labelLod->addChild(ptrans);
+
+        _osgFigureRoot->addChild(labelLod);
+    }
 
     //  Extract geometry
     FOREACHC(itlink, _pbody->GetLinks()) {
