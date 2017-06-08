@@ -70,29 +70,31 @@ protected:
         {
             std::ostringstream vert_source;
             vert_source <<
-                "varying float CartoonTexCoord;\n"
+                "varying vec3 eye_space_normal;\n"
+                "varying vec3 LightDirection;\n"
                 "void main( void )\n"
                 "{\n"
                 "    vec4 LightPosition = gl_LightSource["<<_lightnum<<"].position;\n"
-                                                                   "    vec3 LightDirection;\n"
-                                                                   "    if (LightPosition[3]!=0.0) { \n"
-                                                                   "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
-                                                                   "        LightDirection = (LightPosition.xyz-eye_space_position.xyz);\n"
-                                                                   "    } else {\n"
-                                                                   "        LightDirection = LightPosition.xyz;\n"
-                                                                   "    }\n"
-                                                                   "    vec3 eye_space_normal = normalize(gl_NormalMatrix * gl_Normal);\n"
-                                                                   "    CartoonTexCoord = max(0.0, dot(normalize(LightDirection), eye_space_normal));\n"
-                                                                   "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
-                                                                   "}\n";
+                "    if (LightPosition[3]!=0.0) { \n"
+                "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
+                "        LightDirection = LightPosition.xyz-eye_space_position.xyz;\n"
+                "    } else {\n"
+                "        LightDirection = LightPosition.xyz;\n"
+                "    }\n"
+                "    LightDirection = normalize(LightDirection);\n"
+                "    eye_space_normal = normalize(gl_NormalMatrix * gl_Normal);\n"
+                "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+                "}\n";
 
             const char * frag_source =
                 "uniform sampler1D CartoonTexUnit;"
-                "varying float CartoonTexCoord;"
+                "varying vec3 eye_space_normal;"
+                "varying vec3 LightDirection;\n"
                 "void main( void )"
                 "{"
-                "gl_FragColor = texture1D( CartoonTexUnit, CartoonTexCoord ) * gl_FrontMaterial.diffuse;"
-                "gl_FragColor.xyz += gl_FrontMaterial.ambient.xyz;"
+                "    float CartoonTexCoord = max(0.0, dot(LightDirection, eye_space_normal));\n"
+                "    gl_FragColor = texture1D( CartoonTexUnit, CartoonTexCoord ) * gl_FrontMaterial.diffuse;"
+                "    gl_FragColor.xyz += gl_FrontMaterial.ambient.xyz;"
                 "}";
 
             osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
