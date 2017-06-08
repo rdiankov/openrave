@@ -239,6 +239,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
 KinBodyItem::~KinBodyItem()
 {
     _veclinks.clear();
+
 }
 
 void KinBodyItem::Load()
@@ -256,20 +257,18 @@ void KinBodyItem::Load()
     SetMatrixTransform(*_osgWorldTransform, tbody);
 
     if (!!_osgFigureRoot) {
-        osg::NodeVisitor nv;
 
         OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-        // ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
         SetMatrixTransform(*ptrans, _pbody->GetTransform());
 
         osg::ref_ptr<osgText::Text> label = new osgText::Text();
 
         label->setText(_pbody->GetName());
-        label->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
+        label->setCharacterSizeMode(osgText::Text::OBJECT_COORDS_WITH_MAXIMUM_SCREEN_SIZE_CAPPED_BY_FONT_HEIGHT);
         label->setCharacterSize(20.0f);
         label->setAxisAlignment(osgText::Text::SCREEN);
-        label->setDrawMode(osgText::Text::TEXT | osgText::Text::ALIGNMENT);
-        label->setAlignment(osgText::Text::CENTER_TOP);
+//        label->setDrawMode(osgText::Text::TEXT | osgText::Text::ALIGNMENT);
+//        label->setAlignment(osgText::Text::CENTER_TOP);
         label->setColor(osg::Vec4(0.0f, 0.0f, 0.0f, 1.0f));
         label->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
         label->setBackdropColor(osg::Vec4(0.7f, 0.7f, 0.7f, 0.1f));
@@ -280,7 +279,7 @@ void KinBodyItem::Load()
 
         osg::ref_ptr<osg::LOD> labelLod = new osg::LOD;
         labelLod->setCenterMode(osg::LOD::USE_BOUNDING_SPHERE_CENTER);
-        labelLod->setCenter(label->getBound().center());
+        labelLod->setCenter(ptrans->getMatrix().getTrans());
         labelLod->setRangeMode(osg::LOD::DISTANCE_FROM_EYE_POINT);
         float radius = label->getBound()._radius;
         labelLod->setRadius(radius);
