@@ -158,6 +158,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
+    RegisterCommand("SetBackgroundColor", boost::bind(&QtOSGViewer::_SetBackgroundColorCommand, this, _1, _2),
+                    "sets the viewer background color, for example, 0.95 0.95 0.95 1.0");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -1235,6 +1237,20 @@ void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
         _qactPerspectiveView->setChecked(false);
         _posgWidget->SetViewType(false);
     }
+}
+
+
+bool QtOSGViewer::_SetBackgroundColorCommand(ostream& sout, istream& sinput)
+{
+    RaveVector<float> color;
+    sinput >> color.x >> color.y >> color.z >> color.w;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBackgroundColor, this, color));
+    return !!sinput;
+}
+
+void QtOSGViewer::_SetBackgroundColor(const RaveVector<float>& color)
+{
+    _posgWidget->GetCamera()->setClearColor(osg::Vec4f(color.x, color.y, color.z, color.w));
 }
 
 int QtOSGViewer::main(bool bShow)
