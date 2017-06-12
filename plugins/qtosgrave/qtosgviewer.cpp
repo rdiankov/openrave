@@ -24,6 +24,8 @@ namespace qtosgrave {
 
 #define ITEM_DELETER boost::bind(DeleteItemCallbackSafe,weak_viewer(),_1)
 
+extern void SetXErrorHandlers();
+
 void DeleteItemCallbackSafe(QtOSGViewerWeakPtr wpt, Item* pItem)
 {
     QtOSGViewerPtr pviewer = wpt.lock();
@@ -1242,6 +1244,10 @@ int QtOSGViewer::main(bool bShow)
     if( !QApplication::instance() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("need a valid QApplication before viewer loop is run", ORE_InvalidState);
     }
+
+    // handle the x11 io error more gracefully
+    SetXErrorHandlers();
+
     _nQuitMainLoop = -1;
     //_StartPlaybackTimer();
     if (bShow) {
