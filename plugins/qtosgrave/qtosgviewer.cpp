@@ -1245,7 +1245,9 @@ int QtOSGViewer::main(bool bShow)
     _nQuitMainLoop = -1;
     //_StartPlaybackTimer();
     if (bShow) {
-        Show(1);
+        if( _nQuitMainLoop < 0 ) {
+            Show(1);
+        }
     }
 
     UpdateFromModel();
