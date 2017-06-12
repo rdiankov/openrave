@@ -1206,7 +1206,7 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
     sinput >> bcallmain;
     _nQuitMainLoop = -1;
     //_StartPlaybackTimer();
-    // this->show();
+    Show(1);
     if( bcallmain ) {
         _posgWidget->SetHome();
         QApplication::instance()->exec();
@@ -1244,11 +1244,9 @@ int QtOSGViewer::main(bool bShow)
     }
     _nQuitMainLoop = -1;
     //_StartPlaybackTimer();
-    // if (bShow) {
-    //     if( _nQuitMainLoop < 0 ) {
-    //         this->show();
-    //     }
-    // }
+    if (bShow) {
+        Show(1);
+    }
 
     UpdateFromModel();
     _posgWidget->SetHome();
