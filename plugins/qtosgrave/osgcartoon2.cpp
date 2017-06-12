@@ -1,7 +1,7 @@
 // -*- coding: utf-8 -*-
 // openrave: tweaked openscenegraph cartoon shader
 
-#include "osgcartoon.h"
+#include "osgcartoon2.h"
 
 #include <osgFX/Registry>
 
@@ -40,7 +40,7 @@ static osg::Image* create_sharp_lighting_map(int levels = 4, int texture_size = 
 }
 
 // register a prototype for this effect
-Registry::Proxy proxy(new OpenRAVECartoon);
+//Registry::Proxy proxy(new OpenRAVECartoon2); ???
 
 ///////////////////////////////////////////////////////////////////////////
 // A port of Marco Jez's "cartoon.cg" to the OpenGL Shading Language
@@ -167,7 +167,7 @@ private:
 
 ///////////////////////////////////////////////////////////////////////////
 
-OpenRAVECartoon::OpenRAVECartoon()
+OpenRAVECartoon2::OpenRAVECartoon2()
     :    Effect(),
     _wf_mat(new osg::Material),
     _wf_lw(new osg::LineWidth(2.0f)),
@@ -176,7 +176,7 @@ OpenRAVECartoon::OpenRAVECartoon()
     setOutlineColor(osg::Vec4(0, 0, 0, 1));
 }
 
-OpenRAVECartoon::OpenRAVECartoon(const OpenRAVECartoon& copy, const osg::CopyOp& copyop)
+OpenRAVECartoon2::OpenRAVECartoon2(const OpenRAVECartoon2& copy, const osg::CopyOp& copyop)
     :    Effect(copy, copyop),
     _wf_mat(static_cast<osg::Material* >(copyop(copy._wf_mat.get()))),
     _wf_lw(static_cast<osg::LineWidth *>(copyop(copy._wf_lw.get()))),
@@ -184,7 +184,7 @@ OpenRAVECartoon::OpenRAVECartoon(const OpenRAVECartoon& copy, const osg::CopyOp&
 {
 }
 
-bool OpenRAVECartoon::define_techniques()
+bool OpenRAVECartoon2::define_techniques()
 {
     addTechnique(new OGLSL_Technique(_wf_mat.get(), _wf_lw.get(), _lightnum));
     return true;
