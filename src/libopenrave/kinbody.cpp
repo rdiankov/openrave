@@ -4593,10 +4593,12 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
 
     _listAttachedBodies.clear(); // will be set in the environment
-    FOREACHC(itatt, r->_listAttachedBodies) {
-        KinBodyConstPtr pattref = itatt->lock();
-        if( !!pattref ) {
-            _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentId()));
+    if( !(cloningoptions & Clone_IgnoreAttachedBodies) ) {
+        FOREACHC(itatt, r->_listAttachedBodies) {
+            KinBodyConstPtr pattref = itatt->lock();
+            if( !!pattref ) {
+                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentId()));
+            }
         }
     }
 

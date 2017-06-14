@@ -2093,6 +2093,21 @@ void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
 
 int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
 {
+//    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+//        ss << "checking values=[";
+//            for(size_t i = 0; i < vdofvalues.size(); ++i ) {
+//            if( i > 0 ) {
+//                ss << "," << vdofvalues[i];
+//            }
+//            else {
+//                ss << vdofvalues[i];
+//            }
+//        }
+//        ss << "]";
+//        RAVELOG_VERBOSE(ss.str());
+//    }
+
     if( params->SetStateValues(vdofvalues, 0) != 0 ) {
         return CFO_StateSettingError;
     }
