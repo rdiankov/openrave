@@ -425,7 +425,7 @@ public:
                 _DumpTrajectory(ptraj, _dumplevel);
                 return PS_Failed;
             }
-            RAVELOG_DEBUG("Finish initializing the trajectory (via _SetMilestones)");
+            RAVELOG_DEBUG_FORMAT("env=%d, finish initializing the trajectory (via _SetMilestones)", GetEnv()->GetId());
         }
 
         // if ramp is not perfectly modeled, then have to verify!
