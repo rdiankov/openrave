@@ -13,6 +13,7 @@
 // limitations under the License.
 #include "osgviewerwidget.h"
 #include "osgcartoon.h"
+#include "osgskybox.h"
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -20,7 +21,11 @@
 #include <osg/CullFace>
 #include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
-
+#include <osg/Depth>
+#include <osg/TextureCubeMap>
+#include <osg/TexMat>
+#include <osg/TexGen>
+#include <osg/TexEnv>
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
 #include <osgManipulator/TabPlaneDragger>
@@ -313,6 +318,17 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
         stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
         _osgFigureRoot->setStateSet(stateset);
+
+    }
+
+    {
+        osg::ref_ptr<Skybox> skybox = new Skybox;
+        //#define CUBEMAP_FILENAME(face) "nvlobby_" #face ".png"
+        //#define CUBEMAP_FILENAME(face) "Cubemap_axis/" #face ".png"
+#define CUBEMAP_FILENAME(face) "OpenSceneGraph-Data/lightblue/" #face ".png"
+         skybox->setTextureCubeMap(CUBEMAP_FILENAME(posx), CUBEMAP_FILENAME(negx), CUBEMAP_FILENAME(posy),
+                CUBEMAP_FILENAME(negy), CUBEMAP_FILENAME(posz), CUBEMAP_FILENAME(negz));
+        _osgFigureRoot->addChild(skybox);
     }
 
     // create world axis
