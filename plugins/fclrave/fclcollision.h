@@ -724,7 +724,7 @@ private:
 
         LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1), pLINK2 = _fclspace->GetLinkInfo(plink2);
 
-        //RAVELOG_INFO_FORMAT("link %s:%s with %s:%s", plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
+        //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             FOREACH(itgeompair2, pLINK2->vgeoms) {
                 if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
@@ -914,6 +914,7 @@ private:
             std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
+                    //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
                     _envmanagers.erase(it++);
                 }
                 else {
@@ -931,6 +932,7 @@ private:
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
         //it->second->PrintStatus(OpenRAVE::Level_Info);
+        //RAVELOG_VERBOSE_FORMAT("env=%d, returning manager cache %x", GetEnv()->GetId()%it->second.get());
         return it->second->GetManager();
     }
 
