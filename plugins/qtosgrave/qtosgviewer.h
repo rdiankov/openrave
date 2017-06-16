@@ -323,6 +323,8 @@ public:
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBackgroundColor(const RaveVector<float>& projectionMode);
 
+    virtual void _SetName(const std::string& name);
+
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
