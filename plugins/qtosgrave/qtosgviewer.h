@@ -358,6 +358,7 @@ public:
     bool _ShowWorldAxesCommand(ostream& sout, istream& sinput);
     bool _SetItemVisualizationCommand(ostream& sout, istream& sinput);
     bool _SetNearPlaneCommand(ostream& sout, istream& sinput);
+    bool _SetTextureCubeMap(ostream& out, istream& sinput);
     bool _TrackLinkCommand(ostream& sout, istream& sinput);
     bool _TrackManipulatorCommand(ostream& sout, istream& sinput);
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);

@@ -322,13 +322,13 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     }
 
     {
-        osg::ref_ptr<Skybox> skybox = new Skybox;
+        _osgSkybox = new Skybox;
         //#define CUBEMAP_FILENAME(face) "nvlobby_" #face ".png"
         //#define CUBEMAP_FILENAME(face) "Cubemap_axis/" #face ".png"
 #define CUBEMAP_FILENAME(face) "OpenSceneGraph-Data/lightblue/" #face ".png"
-         skybox->setTextureCubeMap(CUBEMAP_FILENAME(posx), CUBEMAP_FILENAME(negx), CUBEMAP_FILENAME(posy),
+        _osgSkybox->setTextureCubeMap(CUBEMAP_FILENAME(posx), CUBEMAP_FILENAME(negx), CUBEMAP_FILENAME(posy),
                 CUBEMAP_FILENAME(negy), CUBEMAP_FILENAME(posz), CUBEMAP_FILENAME(negz));
-        _osgFigureRoot->addChild(skybox);
+        _osgFigureRoot->addChild(_osgSkybox);
     }
 
     // create world axis
@@ -802,6 +802,12 @@ void ViewerWidget::SetViewport(int width, int height, double metersinunit)
     double textheight = (10.0/480.0)*height;
     _osgHudText->setPosition(osg::Vec3(-width/2+10, height/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
+}
+
+void ViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
+        const std::string& negy, const std::string& posz, const std::string& negz)
+{
+    _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
 QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
