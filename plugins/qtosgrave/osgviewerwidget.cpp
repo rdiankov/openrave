@@ -323,11 +323,6 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
 
     {
         _osgSkybox = new Skybox;
-        //#define CUBEMAP_FILENAME(face) "nvlobby_" #face ".png"
-        //#define CUBEMAP_FILENAME(face) "Cubemap_axis/" #face ".png"
-#define CUBEMAP_FILENAME(face) "OpenSceneGraph-Data/lightblue/" #face ".png"
-        _osgSkybox->setTextureCubeMap(CUBEMAP_FILENAME(posx), CUBEMAP_FILENAME(negx), CUBEMAP_FILENAME(posy),
-                CUBEMAP_FILENAME(negy), CUBEMAP_FILENAME(posz), CUBEMAP_FILENAME(negz));
         _osgFigureRoot->addChild(_osgSkybox);
     }
 
