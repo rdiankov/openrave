@@ -325,6 +325,8 @@ public:
 
     virtual void _SetName(const std::string& name);
 
+    virtual void _SetName(const std::string& name);
+
     /// \brief posts a function to be executed in the GUI thread
     ///
     /// \param fn the function to execute
