@@ -359,7 +359,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _InitializeLights(2);
 
     {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2();
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2(_osgview->getCamera());
         //toon->setOutlineColor(osg::Vec4(0,1,0,1));
         _osgLightsGroup->addChild(toon);
         toon->addChild(_osgSceneRoot);
@@ -475,7 +475,7 @@ void ViewerWidget::SetSceneData()
         rootscene->addChild(_osgLightsGroup);
     }
     else {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2();
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2(_osgview->getCamera());
         //toon->setOutlineColor(osg::Vec4(0,1,0,1));
         rootscene->addChild(toon);
         toon->addChild(_osgSceneRoot);

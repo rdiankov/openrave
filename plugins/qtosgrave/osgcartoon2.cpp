@@ -51,8 +51,8 @@ static osg::Image* create_sharp_lighting_map(int levels = 4, int texture_size = 
 // need to revisit and enhance this shader.
 class OGLSL_TechniqueBla : public Technique {
 public:
-    OGLSL_TechniqueBla(osg::Material* wf_mat, osg::LineWidth *wf_lw, int lightnum)
-        : Technique(), _wf_mat(wf_mat), _wf_lw(wf_lw), _lightnum(lightnum) {
+    OGLSL_TechniqueBla(osg::Material* wf_mat, osg::LineWidth *wf_lw, int lightnum, osg::Camera *camera)
+        : Technique(), _wf_mat(wf_mat), _wf_lw(wf_lw), _lightnum(lightnum), _camera(camera) {
     }
 
     void getRequiredExtensions(std::vector<std::string>& extensions) const
@@ -66,8 +66,15 @@ protected:
 
     void define_passes()
     {
+        // Hack, experimental
+        const int inheritanceMask = 
+          (osg::Camera::ALL_VARIABLES &
+          ~osg::Camera::CULL_MASK);
+        _camera->setInheritanceMask(inheritanceMask);
         // implement pass #1 (solid surfaces)
         {
+            _camera->setCullMask(0x1); // Solid surfaces only
+
             std::ostringstream vert_source;
             vert_source <<
                 "varying vec3 eye_space_normal;\n"
@@ -163,15 +170,17 @@ private:
     osg::ref_ptr<osg::Material> _wf_mat;
     osg::ref_ptr<osg::LineWidth> _wf_lw;
     int _lightnum;
+    osg::Camera *_camera;
 };
 
 ///////////////////////////////////////////////////////////////////////////
 
-OpenRAVECartoon2::OpenRAVECartoon2()
+OpenRAVECartoon2::OpenRAVECartoon2(osg::Camera *camera)
     :    Effect(),
     _wf_mat(new osg::Material),
     _wf_lw(new osg::LineWidth(2.0f)),
-    _lightnum(0)
+    _lightnum(0),
+    _camera(camera)
 {
     setOutlineColor(osg::Vec4(0, 0, 0, 1));
 }
@@ -180,14 +189,28 @@ OpenRAVECartoon2::OpenRAVECartoon2(const OpenRAVECartoon2& copy, const osg::Copy
     :    Effect(copy, copyop),
     _wf_mat(static_cast<osg::Material* >(copyop(copy._wf_mat.get()))),
     _wf_lw(static_cast<osg::LineWidth *>(copyop(copy._wf_lw.get()))),
-    _lightnum(copy._lightnum)
+    _lightnum(copy._lightnum),
+    _camera(copy._camera)
 {
 }
 
 bool OpenRAVECartoon2::define_techniques()
 {
-    addTechnique(new OGLSL_TechniqueBla(_wf_mat.get(), _wf_lw.get(), _lightnum));
+    addTechnique(new OGLSL_TechniqueBla(_wf_mat.get(), _wf_lw.get(), _lightnum, _camera));
     return true;
+}
+
+osg::Texture2D* OpenRAVECartoon2::CreateAccumRTFor3DTransparencyPass(uint32_t width, uint32_t height)
+{
+    osg::Texture2D* texture = new osg::Texture2D();
+    texture->setTextureSize(width, height);
+    texture->setInternalFormat(GL_RGBA32F_ARB); // Use 16?
+    texture->setSourceFormat(GL_RGBA); // <---- Needed?
+    texture->setWrap(osg::Texture2D::WRAP_S,osg::Texture2D::CLAMP_TO_EDGE);
+    texture->setWrap(osg::Texture2D::WRAP_T,osg::Texture2D::CLAMP_TO_EDGE);
+    texture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
+    texture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+    return texture;
 }
 
 } // end namespace qtosgrave

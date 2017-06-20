@@ -22,6 +22,7 @@
 
 #include <osg/Material>
 #include <osg/LineWidth>
+#include <osg/Texture2D>
 
 namespace qtosgrave {
 
@@ -35,8 +36,12 @@ namespace qtosgrave {
  */
 class OpenRAVECartoon2 : public osgFX::Effect {
 public:
-    OpenRAVECartoon2();
+    OpenRAVECartoon2() {} // <--------------------------hack
+    OpenRAVECartoon2(osg::Camera *camera);
     OpenRAVECartoon2(const OpenRAVECartoon2& copy, const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY);
+
+    osg::Texture2D* CreateAccumRTFor3DTransparencyPass(uint32_t width, uint32_t height);
+    osg::Texture2D* CreateRevealageRTFor3DTransparencyPass(uint32_t width, uint32_t height);
 
     // effect class informations
     META_Effect(
@@ -86,6 +91,9 @@ private:
     osg::ref_ptr<osg::Material> _wf_mat;
     osg::ref_ptr<osg::LineWidth> _wf_lw;
     int _lightnum;
+    // Use raw pointer for not. Does not take ownership
+    // TODO: Fix this before merging
+    osg::Camera* _camera;
 };
 
 // INLINE METHODS

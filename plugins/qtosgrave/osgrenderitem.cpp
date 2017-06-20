@@ -497,13 +497,13 @@ void KinBodyItem::Load()
                     break;
                 }
 
-                const uint64_t nodeMask = transparency > 0 ? QTOSGRAVE_NODEMASK_TRANSPARENT : QTOSGRAVE_NODEMASK_OPAGUE;
-                const int inheritanceMask = 
-                  (osgUtil::SceneView::VariablesMask::ALL_VARIABLES &
-                  ~osgUtil::SceneView::VariablesMask::CULL_MASK);
+                const uint32_t nodeMask = transparency > 0 ? QTOSGRAVE_NODEMASK_TRANSPARENT : QTOSGRAVE_NODEMASK_OPAGUE;
+                // const int inheritanceMask = 
+                //   (osg::Camera::ALL_VARIABLES &
+                //   ~osg::Camera::CULL_MASK);
                 for (size_t i = 0; i < pgeometrydata->getNumChildren(); ++i) {
-                    pgeometrydata->getChild(i)->setInheritanceMask(inheritanceMask)
-                    pgeometrydata->getChild(i)->setNodeMask(nodeMask)
+                    //pgeometrydata->getChild(i)->setInheritanceMask(inheritanceMask)
+                    pgeometrydata->getChild(i)->setNodeMask(nodeMask);
                 }
             }
 
