@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "osgviewerwidget.h"
-#include "osgcartoon.h"
+// #include "osgcartoon.h"
+#include "osgcartoon2.h"
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -358,7 +359,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _InitializeLights(2);
 
     {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2();
         //toon->setOutlineColor(osg::Vec4(0,1,0,1));
         _osgLightsGroup->addChild(toon);
         toon->addChild(_osgSceneRoot);
@@ -474,7 +475,7 @@ void ViewerWidget::SetSceneData()
         rootscene->addChild(_osgLightsGroup);
     }
     else {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2();
         //toon->setOutlineColor(osg::Vec4(0,1,0,1));
         rootscene->addChild(toon);
         toon->addChild(_osgSceneRoot);

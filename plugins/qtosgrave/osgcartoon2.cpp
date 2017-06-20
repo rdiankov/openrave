@@ -49,9 +49,9 @@ static osg::Image* create_sharp_lighting_map(int levels = 4, int texture_size = 
 // This shader is simplified due to limitations in the OGLSL implementation
 // in the current 3Dlabs driver.  As the OGLSL implementation improves,
 // need to revisit and enhance this shader.
-class OGLSL_Technique : public Technique {
+class OGLSL_TechniqueBla : public Technique {
 public:
-    OGLSL_Technique(osg::Material* wf_mat, osg::LineWidth *wf_lw, int lightnum)
+    OGLSL_TechniqueBla(osg::Material* wf_mat, osg::LineWidth *wf_lw, int lightnum)
         : Technique(), _wf_mat(wf_mat), _wf_lw(wf_lw), _lightnum(lightnum) {
     }
 
@@ -99,10 +99,10 @@ protected:
 
             osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
 
-            osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
-            polyoffset->setFactor(1.0f);
-            polyoffset->setUnits(1.0f);
-            ss->setAttributeAndModes(polyoffset.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            // osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+            // polyoffset->setFactor(1.0f);
+            // polyoffset->setUnits(1.0f);
+            // ss->setAttributeAndModes(polyoffset.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
             osg::ref_ptr<osg::Program> program = new osg::Program;
             program->addShader( new osg::Shader( osg::Shader::VERTEX, vert_source.str() ) );
@@ -128,7 +128,7 @@ protected:
         }
 
         // implement pass #2 (outlines)
-        {
+        /*{
             osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
             osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
             polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
@@ -156,7 +156,7 @@ protected:
 
             addPass(ss.get());
 
-        }
+        }*/
     }
 
 private:
@@ -186,7 +186,7 @@ OpenRAVECartoon2::OpenRAVECartoon2(const OpenRAVECartoon2& copy, const osg::Copy
 
 bool OpenRAVECartoon2::define_techniques()
 {
-    addTechnique(new OGLSL_Technique(_wf_mat.get(), _wf_lw.get(), _lightnum));
+    addTechnique(new OGLSL_TechniqueBla(_wf_mat.get(), _wf_lw.get(), _lightnum));
     return true;
 }
 

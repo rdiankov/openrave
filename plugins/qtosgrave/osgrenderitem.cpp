@@ -24,6 +24,9 @@
 #include <osg/LineStipple>
 #include <osg/Depth>
 
+#define QTOSGRAVE_NODEMASK_OPAGUE      0x1
+#define QTOSGRAVE_NODEMASK_TRANSPARENT 0x2
+
 namespace qtosgrave {
 
 OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
@@ -240,6 +243,27 @@ KinBodyItem::~KinBodyItem()
     _veclinks.clear();
 }
 
+
+
+
+/*static void Cullll( osg::Node *n, osg::NodeVisitor *nv)
+{
+    // simgear::EffectCullVisitor* cv = dynamic_cast<simgear::EffectCullVisitor*>(nv);
+    osg::Camera* camera = static_cast<osg::Camera*>(n);
+    nv->traverse(*camera);
+
+    // ....
+
+    // Render saved transparent render bins
+    // osgUtil::RenderStage* renderStage = nv->getRenderStage();
+    // osgUtil::RenderBin::RenderBinList& rbl = renderStage->getRenderBinList();
+    // for (osgUtil::RenderBin::RenderBinList::iterator rbi = savedTransparentBins.begin();
+    // rbi != savedTransparentBins.end(); ++rbi ){
+    // rbl.insert( std::make_pair( rbi->first + 10000, rbi->second ) );
+    // }
+    // info->savedTransparentBins.clear();
+} */
+
 void KinBodyItem::Load()
 {
     _osgWorldTransform->setUserData(new OSGItemUserData(shared_from_this()));
@@ -253,6 +277,11 @@ void KinBodyItem::Load()
     Transform tbody = _pbody->GetTransform();
     Transform tbodyinv = tbody.inverse();
     SetMatrixTransform(*_osgWorldTransform, tbody);
+
+    // {
+    //     // Hack
+    //     _osgview->getCamera();
+    // }
 
     //  Extract geometry
     FOREACHC(itlink, _pbody->GetLinks()) {
@@ -466,6 +495,15 @@ void KinBodyItem::Load()
                 }
                 default:
                     break;
+                }
+
+                const uint64_t nodeMask = transparency > 0 ? QTOSGRAVE_NODEMASK_TRANSPARENT : QTOSGRAVE_NODEMASK_OPAGUE;
+                const int inheritanceMask = 
+                  (osgUtil::SceneView::VariablesMask::ALL_VARIABLES &
+                  ~osgUtil::SceneView::VariablesMask::CULL_MASK);
+                for (size_t i = 0; i < pgeometrydata->getNumChildren(); ++i) {
+                    pgeometrydata->getChild(i)->setInheritanceMask(inheritanceMask)
+                    pgeometrydata->getChild(i)->setNodeMask(nodeMask)
                 }
             }
 
