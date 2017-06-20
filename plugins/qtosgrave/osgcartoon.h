@@ -20,7 +20,7 @@
 #include <osgFX/Export>
 #include <osgFX/Effect>
 
-#include <osg/Material>
+// #include <osg/Material>
 #include <osg/LineWidth>
 
 namespace qtosgrave {
@@ -56,10 +56,10 @@ public:
         "Marco Jez; OGLSL port by Mike Weiblen");
 
     /** get the outline color */
-    inline const osg::Vec4& getOutlineColor() const;
+    // inline const osg::Vec4& getOutlineColor() const;
 
     /** set the outline color */
-    inline void setOutlineColor(const osg::Vec4& color);
+    // inline void setOutlineColor(const osg::Vec4& color);
 
     /** get the outline line width */
     inline float getOutlineLineWidth() const;
@@ -83,22 +83,21 @@ protected:
     bool define_techniques();
 
 private:
-    osg::ref_ptr<osg::Material> _wf_mat;
     osg::ref_ptr<osg::LineWidth> _wf_lw;
     int _lightnum;
 };
 
 // INLINE METHODS
 
-inline const osg::Vec4& OpenRAVECartoon::getOutlineColor() const
-{
-    return _wf_mat->getEmission(osg::Material::FRONT_AND_BACK);
-}
+// inline const osg::Vec4& OpenRAVECartoon::getOutlineColor() const
+// {
+//     return _wf_mat->getEmission(osg::Material::FRONT_AND_BACK);
+// }
 
-inline void OpenRAVECartoon::setOutlineColor(const osg::Vec4& color)
-{
-    _wf_mat->setEmission(osg::Material::FRONT_AND_BACK, color);
-}
+// inline void OpenRAVECartoon::setOutlineColor(const osg::Vec4& color)
+// {
+//     _wf_mat->setEmission(osg::Material::FRONT_AND_BACK, color);
+// }
 
 inline float OpenRAVECartoon::getOutlineLineWidth() const
 {

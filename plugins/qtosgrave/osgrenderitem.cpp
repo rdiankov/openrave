@@ -41,17 +41,35 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 
     OSGGroupPtr proot = new osg::Group();
 
+    static const char * vert_source =
+        "void main( void )"
+        "{"
+        "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+        "}";
+
+    static const char * frag_source =
+        "uniform vec4 ambient;"
+        "void main( void )"
+        "{"
+        "   gl_FragColor = ambient;"
+        "}";
+
     // add 3 cylinder+cone axes
     for(int i = 0; i < 3; ++i) {
         osg::ref_ptr<osg::MatrixTransform> psep = new osg::MatrixTransform();
         //psep->setMatrix(osg::Matrix::translate(-16.0f,-16.0f,-16.0f));
 
         // set a diffuse color
+        // <--------------------------------------------
         osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
-        osg::ref_ptr<osg::Material> mat = new osg::Material;
-        mat->setDiffuse(osg::Material::FRONT, colors[i]);
-        mat->setAmbient(osg::Material::FRONT, colors[i]);
-        state->setAttribute( mat );
+        // osg::ref_ptr<osg::Material> mat = new osg::Material
+
+        // TODO: before commit - Avoid binding the same shader 3 times
+        osg::ref_ptr<osg::Program> program = new osg::Program;
+        program->addShader( new osg::Shader( osg::Shader::VERTEX,   vert_source ) );
+        program->addShader( new osg::Shader( osg::Shader::FRAGMENT, frag_source ) );
+        state->setAttributeAndModes( program.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+        state->addUniform(new osg::Uniform("ambient", colors[i]), osg::StateAttribute::ON);
 
         osg::Matrix matrix;
         osg::ref_ptr<osg::MatrixTransform> protation = new osg::MatrixTransform();
@@ -176,42 +194,48 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
             // and that the drawing mode is changed to wireframe, and a polygon offset
             // is added to ensure that we see the wireframe itself, and turn off
             // so texturing too.
+            
+            // osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
             osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
-            osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
-            polyoffset->setFactor(-1.0f);
+            /*polyoffset->setFactor(-1.0f);
             polyoffset->setUnits(-1.0f);
             osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
             polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
             stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);*/
 
-#if 1
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-            material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
+            static const char * vert_source =
+                "void main( void )"
+                "{"
+                "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+                "}";
 
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-#else
-            // version which sets the color of the wireframe.
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setColorMode(osg::Material::OFF); // switch glColor usage off
-            // turn all lighting off
-            material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            // except emission... in which we set the color we desire
-            material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-#endif
+            static const char * frag_source =
+                "uniform vec4 ambient;"
+                "void main( void )"
+                "{"
+                "   gl_FragColor = ambient;"
+                "}";
+
+            osg::ref_ptr<osg::Program> program = new osg::Program;
+            program->addShader(new osg::Shader( osg::Shader::VERTEX,   vert_source ));
+            program->addShader(new osg::Shader( osg::Shader::FRAGMENT, frag_source ));
+            stateset->setAttributeAndModes( program.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            stateset->addUniform(new osg::Uniform("ambient", osg::Vec4f(0,1,0,1)), osg::StateAttribute::ON);
+
+            // stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            // stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
 
             stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
 
-            osg::ref_ptr<osg::LineStipple> linestipple = new osg::LineStipple;
-            linestipple->setFactor(1);
-            linestipple->setPattern(0xf0f0);
-            stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            stateset->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+            //osg::Depth* depth = new osg::Depth(osg::Depth::LEQUAL, 0.0, 1.0, false);
+            //stateset->setAttributeAndModes(depth, osg::StateAttribute::ON);
+
+            // osg::ref_ptr<osg::LineStipple> linestipple = new osg::LineStipple;
+            // linestipple->setFactor(1);
+            // linestipple->setPattern(0xf0f0);
+            // stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
             _osgwireframe->setStateSet(stateset);
         }
@@ -327,11 +351,11 @@ void KinBodyItem::Load()
             if( !bSucceeded || _viewmode == VG_RenderCollision ) {
                 float x,y,z,w;
 
-                osg::ref_ptr<osg::Material> mat = new osg::Material;
+                // osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
                 if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+                    // mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+                    // mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
                     transparency = 0.5f;
                 }
 
@@ -346,23 +370,30 @@ void KinBodyItem::Load()
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
                 z = orgeom->GetDiffuseColor().z;
-                w = 1;
+                w = 1.0f - transparency;
 
-                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
+
+                // TODO: Front!!!!
+                state->addUniform(new osg::Uniform("diffuse", osg::Vec4f(x,y,z,w)), osg::StateAttribute::ON);
+                //mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
 
                 x = orgeom->GetAmbientColor().x;
                 y = orgeom->GetAmbientColor().y;
                 z = orgeom->GetAmbientColor().z;
-                w = 1.0f;
+                w = 1.0f - transparency;
 
-                mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+
+                // TODO: Front and back!!!!
+                state->addUniform(new osg::Uniform("ambient", osg::Vec4f(x,y,z,w)), osg::StateAttribute::ON);
+                //mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
 
                 //mat->setShininess( osg::Material::FRONT, 25.0);
-                mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+                // <--------------------------- emission?
+                // mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
-                    mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
+                    //mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
                     if( 1 ) {
@@ -394,7 +425,7 @@ void KinBodyItem::Load()
                         state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
                     }
                 }
-                state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                // state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
 
                 switch(orgeom->GetType()) {

@@ -13,7 +13,6 @@
 #include <osg/Image>
 #include <osg/TexEnv>
 #include <osg/LineWidth>
-#include <osg/Material>
 #include <osg/Program>
 #include <osg/Shader>
 
@@ -51,8 +50,8 @@ Registry::Proxy proxy(new OpenRAVECartoon);
 // need to revisit and enhance this shader.
 class OGLSL_Technique : public Technique {
 public:
-    OGLSL_Technique(osg::Material* wf_mat, osg::LineWidth *wf_lw, int lightnum)
-        : Technique(), _wf_mat(wf_mat), _wf_lw(wf_lw), _lightnum(lightnum) {
+    OGLSL_Technique(osg::LineWidth *wf_lw, int lightnum)
+        : Technique(), _wf_lw(wf_lw), _lightnum(lightnum) {
     }
 
     void getRequiredExtensions(std::vector<std::string>& extensions) const
@@ -74,25 +73,27 @@ protected:
                 "void main( void )\n"
                 "{\n"
                 "    vec4 LightPosition = gl_LightSource["<<_lightnum<<"].position;\n"
-                                                                   "    vec3 LightDirection;\n"
-                                                                   "    if (LightPosition[3]!=0.0) { \n"
-                                                                   "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
-                                                                   "        LightDirection = (LightPosition.xyz-eye_space_position.xyz);\n"
-                                                                   "    } else {\n"
-                                                                   "        LightDirection = LightPosition.xyz;\n"
-                                                                   "    }\n"
-                                                                   "    vec3 eye_space_normal = normalize(gl_NormalMatrix * gl_Normal);\n"
-                                                                   "    CartoonTexCoord = max(0.0, dot(normalize(LightDirection), eye_space_normal));\n"
-                                                                   "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
-                                                                   "}\n";
+                "    vec3 LightDirection;\n"
+                "    if (LightPosition[3]!=0.0) { \n"
+                "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
+                "        LightDirection = (LightPosition.xyz-eye_space_position.xyz);\n"
+                "    } else {\n"
+                "        LightDirection = LightPosition.xyz;\n"
+                "    }\n"
+                "    vec3 eye_space_normal = normalize(gl_NormalMatrix * gl_Normal);\n"
+                "    CartoonTexCoord = max(0.0, dot(normalize(LightDirection), eye_space_normal));\n"
+                "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
+                "}\n";
 
-            const char * frag_source =
+            static const char * frag_source =
                 "uniform sampler1D CartoonTexUnit;"
+                "uniform vec4 ambient;"
+                "uniform vec4 diffuse;"
                 "varying float CartoonTexCoord;"
                 "void main( void )"
                 "{"
-                "gl_FragColor = texture1D( CartoonTexUnit, CartoonTexCoord ) * gl_FrontMaterial.diffuse;"
-                "gl_FragColor.xyz += gl_FrontMaterial.ambient.xyz;"
+                "gl_FragColor = texture1D( CartoonTexUnit, CartoonTexCoord ) * diffuse;"
+                "gl_FragColor.xyz += ambient.xyz;"
                 "}";
 
             osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
@@ -138,15 +139,17 @@ protected:
 
             ss->setAttributeAndModes(_wf_lw.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
 
-            _wf_mat->setColorMode(osg::Material::OFF);
-            _wf_mat->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-            _wf_mat->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-            _wf_mat->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+            // _wf_mat->setColorMode(osg::Material::OFF);
+            // _wf_mat->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+            // _wf_mat->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+            // _wf_mat->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+            ss->addUniform(new osg::Uniform("diffuse", osg::Vec4(0, 0, 0, 1)), osg::StateAttribute::ON);
+            ss->addUniform(new osg::Uniform("ambient", osg::Vec4(0, 0, 0, 1)), osg::StateAttribute::ON);
 
             // set by outline colour so no need to set here.
             //_wf_mat->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
 
-            ss->setAttributeAndModes(_wf_mat.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            // ss->setAttributeAndModes(_wf_mat.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
             ss->setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
             ss->setTextureMode(0, GL_TEXTURE_1D, osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
@@ -158,7 +161,6 @@ protected:
     }
 
 private:
-    osg::ref_ptr<osg::Material> _wf_mat;
     osg::ref_ptr<osg::LineWidth> _wf_lw;
     int _lightnum;
 };
@@ -167,16 +169,15 @@ private:
 
 OpenRAVECartoon::OpenRAVECartoon()
     :    Effect(),
-    _wf_mat(new osg::Material),
     _wf_lw(new osg::LineWidth(2.0f)),
     _lightnum(0)
 {
-    setOutlineColor(osg::Vec4(0, 0, 0, 1));
+    // TODO: <---------------------------------
+    //setOutlineColor(osg::Vec4(0, 0, 0, 1));
 }
 
 OpenRAVECartoon::OpenRAVECartoon(const OpenRAVECartoon& copy, const osg::CopyOp& copyop)
     :    Effect(copy, copyop),
-    _wf_mat(static_cast<osg::Material* >(copyop(copy._wf_mat.get()))),
     _wf_lw(static_cast<osg::LineWidth *>(copyop(copy._wf_lw.get()))),
     _lightnum(copy._lightnum)
 {
@@ -184,7 +185,7 @@ OpenRAVECartoon::OpenRAVECartoon(const OpenRAVECartoon& copy, const osg::CopyOp&
 
 bool OpenRAVECartoon::define_techniques()
 {
-    addTechnique(new OGLSL_Technique(_wf_mat.get(), _wf_lw.get(), _lightnum));
+    addTechnique(new OGLSL_Technique(_wf_lw.get(), _lightnum));
     return true;
 }
 
