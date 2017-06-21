@@ -192,6 +192,11 @@ protected:
     osg::ref_ptr<osgViewer::View> _osghudview;
     osg::ref_ptr<OpenRAVETrackball> _osgCameraManipulator;
 
+    // TODO: Clean this up
+    // To render with the same camera transform / viewport settings but different
+    // frame buffers, different cameras have to be created as far as I know
+    std::vector<osg::ref_ptr<osg::Camera> > _osgCameraList;
+
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
     std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
 

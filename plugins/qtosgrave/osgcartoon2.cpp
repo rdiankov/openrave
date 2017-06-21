@@ -66,15 +66,8 @@ protected:
 
     void define_passes()
     {
-        // Hack, experimental
-        const int inheritanceMask = 
-          (osg::Camera::ALL_VARIABLES &
-          ~osg::Camera::CULL_MASK);
-        _camera->setInheritanceMask(inheritanceMask);
         // implement pass #1 (solid surfaces)
         {
-            _camera->setCullMask(0x1); // Solid surfaces only
-
             std::ostringstream vert_source;
             vert_source <<
                 "varying vec3 eye_space_normal;\n"
@@ -200,12 +193,59 @@ bool OpenRAVECartoon2::define_techniques()
     return true;
 }
 
+//  http://www.mutantstargoat.com/bekos/wordpress/2011/06/12/deferred-rendering-with-openscenegraph/
+osg::Camera* OpenRAVECartoon2::CreateCameraFor3DTransparencyPass(
+    osg::Texture2D* rttDepth,
+    osg::Texture2D* rttAccum,
+    osg::Texture2D* rttRevealage)
+{
+    osg::Camera* camera = new osg::Camera();
+    //  Set the camera to render before the main camera.
+    camera->setRenderOrder(osg::Camera::PRE_RENDER); // <---------------------------- set order?
+    //  Tell the camera to use OpenGL frame buffer object where supported.
+    camera->setRenderTargetImplementation(osg::Camera::FRAME_BUFFER_OBJECT);
+    //  Attack RTT textures to Camera
+    camera->attach(osg::Camera::DEPTH_BUFFER,  rttDepth);
+    camera->attach(osg::Camera::COLOR_BUFFER0, rttAccum);
+    camera->attach(osg::Camera::COLOR_BUFFER1, rttRevealage);
+    //  Set up the background color and clear mask.
+    camera->setClearColor(osg::Vec4(0.0f,0.0f,0.0f,1.0f)); // <---------------- per RT clear
+    camera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+/*    //  Set viewport
+    camera->setViewport(0,0,512,512);
+    //  Set up projection.
+    camera->setProjectionMatrixAsPerspective(   45.0, 1.0, 10.0, 100.0);
+    //  Set view
+    camera->setReferenceFrame(osg::Transform::ABSOLUTE_RF);
+    camera->setViewMatrixAsLookAt(osg::Vec3(0.0f,-30.0f,0.0f),osg::Vec3(0,0,0),osg::Vec3(0.0f,0.0f,1.0f));
+    
+    //  Camera hints
+    camera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);*/
+
+    return camera;
+}
+}
+
 osg::Texture2D* OpenRAVECartoon2::CreateAccumRTFor3DTransparencyPass(uint32_t width, uint32_t height)
 {
     osg::Texture2D* texture = new osg::Texture2D();
     texture->setTextureSize(width, height);
     texture->setInternalFormat(GL_RGBA32F_ARB); // Use 16?
     texture->setSourceFormat(GL_RGBA); // <---- Needed?
+    texture->setWrap(osg::Texture2D::WRAP_S,osg::Texture2D::CLAMP_TO_EDGE);
+    texture->setWrap(osg::Texture2D::WRAP_T,osg::Texture2D::CLAMP_TO_EDGE);
+    texture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
+    texture->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+    return texture;
+}
+
+osg::Texture2D* CreateRevealageRTFor3DTransparencyPass(uint32_t width, uint32_t height)
+{
+    osg::Texture2D* texture = new osg::Texture2D();
+    texture->setTextureSize(width, height);
+    texture->setInternalFormat(GL_R8); // Use 16?
+    texture->setSourceFormat(GL_RED); // <---- Needed?
     texture->setWrap(osg::Texture2D::WRAP_S,osg::Texture2D::CLAMP_TO_EDGE);
     texture->setWrap(osg::Texture2D::WRAP_T,osg::Texture2D::CLAMP_TO_EDGE);
     texture->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);

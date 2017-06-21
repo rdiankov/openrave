@@ -359,11 +359,18 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     _InitializeLights(2);
 
     {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2(_osgview->getCamera());
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2();
         //toon->setOutlineColor(osg::Vec4(0,1,0,1));
         _osgLightsGroup->addChild(toon);
         toon->addChild(_osgSceneRoot);
     }
+
+    // Hack, experimental
+    const int inheritanceMask = 
+          (osg::Camera::ALL_VARIABLES &
+          ~osg::Camera::CULL_MASK);
+    _osgview->getCamera()->setInheritanceMask(inheritanceMask);
+    _osgview->getCamera()->setCullMask(0x1); // Solid surfaces only
 
     //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
@@ -475,7 +482,7 @@ void ViewerWidget::SetSceneData()
         rootscene->addChild(_osgLightsGroup);
     }
     else {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2(_osgview->getCamera());
+        osg::ref_ptr<qtosgrave::OpenRAVECartoon2> toon = new qtosgrave::OpenRAVECartoon2();
         //toon->setOutlineColor(osg::Vec4(0,1,0,1));
         rootscene->addChild(toon);
         toon->addChild(_osgSceneRoot);
