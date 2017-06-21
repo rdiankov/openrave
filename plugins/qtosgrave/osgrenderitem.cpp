@@ -214,7 +214,7 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
                 "uniform vec4 ambient;"
                 "void main( void )"
                 "{"
-                "   gl_FragColor = ambient;"
+                "   gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);"
                 "}";
 
             osg::ref_ptr<osg::Program> program = new osg::Program;
