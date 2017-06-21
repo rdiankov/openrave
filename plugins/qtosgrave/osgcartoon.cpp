@@ -72,7 +72,7 @@ protected:
                 "varying float CartoonTexCoord;\n"
                 "void main( void )\n"
                 "{\n"
-                "    vec4 LightPosition = gl_LightSource["<<_lightnum<<"].position;\n"
+                "    vec4 LightPosition = vec4(0.0, 0.0, 1.0, 0.0);\n"
                 "    vec3 LightDirection;\n"
                 "    if (LightPosition[3]!=0.0) { \n"
                 "        vec4 eye_space_position = gl_ModelViewMatrix * gl_Vertex;\n"
@@ -119,15 +119,15 @@ protected:
             texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
             ss->setTextureAttributeAndModes(0, texture.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
 
-            osg::ref_ptr<osg::TexEnv> texenv = new osg::TexEnv;
+            /*osg::ref_ptr<osg::TexEnv> texenv = new osg::TexEnv;
             texenv->setMode(osg::TexEnv::MODULATE);
-            ss->setTextureAttributeAndModes(0, texenv.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+            ss->setTextureAttributeAndModes(0, texenv.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);*/
 
             addPass(ss.get());
         }
 
         // implement pass #2 (outlines)
-        {
+        if (true) {
             osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
             osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
             polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);

@@ -271,6 +271,36 @@ private:
 //    }
 //}
 
+#if 1
+static const char *gl3TextVertexShader = {
+    "#version 330 core\n"
+    "in vec4 osg_Vertex;\n"
+    "in vec4 osg_Color;\n"
+    "in vec4 osg_MultiTexCoord0;\n"
+    "uniform mat4 osg_ModelViewProjectionMatrix;\n"
+    "out vec2 texCoord;\n"
+    "out vec4 vertexColor;\n"
+    "void main(void)\n"
+    "{\n"
+    "    gl_Position = osg_ModelViewProjectionMatrix * osg_Vertex;\n"
+    "    texCoord = osg_MultiTexCoord0.xy;\n"
+    "    vertexColor = osg_Color; \n"
+    "}\n"
+};
+
+static const char *gl3TextFragmentShader = {
+    "#version 330 core\n"
+    "uniform sampler2D glyphTexture;\n"
+    "in vec2 texCoord;\n"
+    "in vec4 vertexColor;\n"
+    "out vec4 color;\n"
+    "void main(void)\n"
+    "{\n"
+    "    color = vertexColor * texture(glyphTexture, texCoord).rrrr;\n"
+    "}\n"
+};
+#endif
+
 ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, const boost::function<bool(int)>& onKeyDown, double metersinunit) : QWidget(), _onKeyDown(onKeyDown)
 {
     setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
@@ -324,21 +354,23 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
 
-        osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
-        osg::ref_ptr<osg::Light> light(new osg::Light());
-        // each light must have a unique number
-        light->setLightNum(0);
-        // we set the light's position via a PositionAttitudeTransform object
-        light->setPosition(osg::Vec4(0.0, 0.0, 0.0, 1.0));
-        light->setDiffuse(osg::Vec4(0, 0, 0, 1.0));
-        light->setSpecular(osg::Vec4(0, 0, 0, 1.0));
-        light->setAmbient( osg::Vec4(1, 1, 1, 1.0));
-        lightSource->setLight(light.get());
+        // osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
+        // osg::ref_ptr<osg::Light> light(new osg::Light());
+        // // each light must have a unique number
+        // light->setLightNum(0);
+        // // we set the light's position via a PositionAttitudeTransform object
+        // light->setPosition(osg::Vec4(0.0, 0.0, 0.0, 1.0));
+        // light->setDiffuse(osg::Vec4(0, 0, 0, 1.0));
+        // light->setSpecular(osg::Vec4(0, 0, 0, 1.0));
+        // light->setAmbient( osg::Vec4(1, 1, 1, 1.0));
+        // lightSource->setLight(light.get());
 
-        _osgCameraHUD->addChild(lightSource.get());
-        lightSource->addChild(_osgWorldAxis.get());
+        // _osgCameraHUD->addChild(lightSource.get());
+        // lightSource->addChild(_osgWorldAxis.get());
+        _osgCameraHUD->addChild(_osgWorldAxis.get());
 
         _osgHudText = new osgText::Text();
+        _osgHudText->setUseVertexBufferObjects(true);
 
         //Set the screen alignment - always face the screen
         _osgHudText->setAxisAlignment(osgText::Text::SCREEN);
@@ -348,10 +380,15 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
         _osgHudText->setColor(osg::Vec4(0,0,0,1));
         //text->setFontResolution(32,32);
 
-        _osgHudText->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
+        // _osgHudText->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
 
         osg::ref_ptr<osg::Geode> geodetext = new osg::Geode;
         geodetext->addDrawable(_osgHudText);
+        //useVBOs = true;
+        osg::Program* program = new osg::Program;
+        program->addShader(new osg::Shader(osg::Shader::VERTEX, gl3TextVertexShader));
+        program->addShader(new osg::Shader(osg::Shader::FRAGMENT, gl3TextFragmentShader));
+        geodetext->getOrCreateStateSet()->setAttributeAndModes(program, osg::StateAttribute::ON);
         _osgCameraHUD->addChild(geodetext);
     }
 
@@ -918,7 +955,7 @@ osg::ref_ptr<osg::Material> ViewerWidget::_CreateSimpleMaterial(osg::Vec4 color)
     return material;
 }
 
-osg::ref_ptr<osg::Light> ViewerWidget::_CreateLight(osg::Vec4 color, int lightid)
+/*osg::ref_ptr<osg::Light> ViewerWidget::_CreateLight(osg::Vec4 color, int lightid)
 {
     osg::ref_ptr<osg::Light> light(new osg::Light());
     // each light must have a unique number
@@ -949,15 +986,15 @@ osg::ref_ptr<osg::Light> ViewerWidget::_CreateAmbientLight(osg::Vec4 color, int 
     light->setConstantAttenuation(1);
     light->setQuadraticAttenuation(0.2);
     return light;
-}
+}*/
 
 void ViewerWidget::_InitializeLights(int nlights)
 {
-    _vLightTransform.resize(nlights);
+    // _vLightTransform.resize(nlights);
 
     // we need the scene's state set to enable the light for the entire scene
     _osgLightsGroup = new osg::Group();
-    _lightStateSet = _osgLightsGroup->getOrCreateStateSet();
+    /*_lightStateSet = _osgLightsGroup->getOrCreateStateSet();
 
     // Create 3 Lights
     osg::Vec4 lightColors[] = { osg::Vec4(1.0, 1.0, 1.0, 1.0),
@@ -1001,7 +1038,7 @@ void ViewerWidget::_InitializeLights(int nlights)
         _vLightTransform[i]->setPosition(lightPosition[i]);
         _vLightTransform[i]->setScale(osg::Vec3(0.1,0.1,0.1));
         _osgLightsGroup->addChild(_vLightTransform[i].get());
-    }
+    }*/
 }
 
 //void ViewerWidget::_UpdateFromOSG()

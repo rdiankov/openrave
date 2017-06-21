@@ -144,8 +144,8 @@ protected:
 
     //  Lighting Stuff //
     osg::ref_ptr<osg::Material> _CreateSimpleMaterial(osg::Vec4 color);
-    osg::ref_ptr<osg::Light> _CreateLight(osg::Vec4 color, int lightid);
-    osg::ref_ptr<osg::Light> _CreateAmbientLight(osg::Vec4 color, int lightid);
+    // osg::ref_ptr<osg::Light> _CreateLight(osg::Vec4 color, int lightid);
+    // osg::ref_ptr<osg::Light> _CreateAmbientLight(osg::Vec4 color, int lightid);
 
     /// \brief Initialize lighting
     void _InitializeLights(int nlights);

@@ -197,20 +197,22 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
             
             // osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
             osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
-            /*polyoffset->setFactor(-1.0f);
-            polyoffset->setUnits(-1.0f);
+            // polyoffset->setFactor(-1.0f);
+            // polyoffset->setUnits(-1.0f);
             osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
             polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
-            stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);*/
+            // stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
             static const char * vert_source =
+                "#version 330 core\n"
                 "void main( void )"
                 "{"
                 "    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;\n"
                 "}";
 
             static const char * frag_source =
+                "#version 330 core\n"
                 "uniform vec4 ambient;"
                 "void main( void )"
                 "{"
