@@ -21,11 +21,6 @@
 #include <osg/CullFace>
 #include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
-#include <osg/Depth>
-#include <osg/TextureCubeMap>
-#include <osg/TexMat>
-#include <osg/TexGen>
-#include <osg/TexEnv>
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
 #include <osgManipulator/TabPlaneDragger>
