@@ -134,7 +134,7 @@ protected:
     QWidget* _AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview );
 
     /// \brief Create Open GL Context
-    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h, double metersinunit );
+    osg::ref_ptr<osg::Camera> _CreateCamera( int x, int y, int w, int h, double metersinunit, osg::Texture2D* depthTex);
     osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit );
 
     KinBodyItemPtr _GetItemFromName(const std::string& name);

@@ -286,7 +286,24 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     //  Improve FPS to 60 per viewer
     setThreadingModel(osgViewer::CompositeViewer::CullDrawThreadPerContext);
 
-    QWidget* widgetview = _AddViewWidget(_CreateCamera(0,0,100,100, metersinunit), _osgview, _CreateHUDCamera(0,0,100,100, metersinunit), _osghudview);
+    uint32_t w = 100, h = 100;
+
+    // Setup depth tex for MRT
+    osg::Texture2D* depthTex = new osg::Texture2D();
+    depthTex->setTextureSize(w, h);
+
+    depthTex->setSourceFormat(GL_DEPTH_COMPONENT);
+    depthTex->setSourceType(GL_FLOAT);
+    depthTex->setInternalFormat(GL_DEPTH_COMPONENT32F);
+    
+    depthTex->setWrap(osg::Texture2D::WRAP_S,osg::Texture2D::CLAMP_TO_EDGE);
+    depthTex->setWrap(osg::Texture2D::WRAP_T,osg::Texture2D::CLAMP_TO_EDGE);
+    depthTex->setFilter(osg::Texture2D::MIN_FILTER,osg::Texture2D::LINEAR);
+    depthTex->setFilter(osg::Texture2D::MAG_FILTER,osg::Texture2D::LINEAR);
+
+    QWidget* widgetview = _AddViewWidget(
+        _CreateCamera(0,0,w,h, metersinunit, depthTex), _osgview,
+        _CreateHUDCamera(0,0,w,h, metersinunit), _osghudview);
     QGridLayout* grid = new QGridLayout;
     grid->addWidget(widgetview, 0, 0);
     grid->setContentsMargins(1, 1, 1, 1);
@@ -371,6 +388,14 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
           ~osg::Camera::CULL_MASK);
     _osgview->getCamera()->setInheritanceMask(inheritanceMask);
     _osgview->getCamera()->setCullMask(0x1); // Solid surfaces only
+
+    osg::Camera *camera3DTransparencyPass = qtosgrave::OpenRAVECartoon2::CreateCameraFor3DTransparencyPass(
+        *_osgview->getCamera(),
+        depthTex,
+        qtosgrave::OpenRAVECartoon2::CreateAccumRTFor3DTransparencyPass(w, h),
+        qtosgrave::OpenRAVECartoon2::CreateRevealageRTFor3DTransparencyPass(w, h));
+
+    _osgview->getCamera()->addChild(camera3DTransparencyPass);
 
     //_osgLightsGroup->addChild(_osgSceneRoot);
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
@@ -743,11 +768,17 @@ void ViewerWidget::SetNearPlane(double nearplane)
         double left, right, bottom, top, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
         _osgview->getCamera()->setProjectionMatrixAsOrtho(left, right, bottom, top, nearplane, zFar);
+        for (size_t i = 0; i < _osgCameraList.size(); ++i) {
+            _osgCameraList[i]->setProjectionMatrixAsOrtho(left, right, bottom, top, nearplane, zFar);
+        }
     }
     else {
         double fovy, aspectRatio, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
         _osgview->getCamera()->setProjectionMatrixAsPerspective(fovy, aspectRatio, nearplane, zFar);
+        for (size_t i = 0; i < _osgCameraList.size(); ++i) {
+            _osgCameraList[i]->setProjectionMatrixAsPerspective(fovy, aspectRatio, nearplane, zFar);
+        }
     }
 }
 
@@ -775,15 +806,25 @@ void ViewerWidget::SetViewType(int isorthogonal)
     if( isorthogonal ) {
         double distance = 0.5*_osgCameraManipulator->getDistance();
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
+        for (size_t i = 0; i < _osgCameraList.size(); ++i) {
+            _osgCameraList[i]->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
+        }
     }
     else {
         _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, nearplane, 10000*nearplane );
+        for (size_t i = 0; i < _osgCameraList.size(); ++i) {
+            _osgCameraList[i]->setProjectionMatrixAsPerspective(45.0f, aspect, nearplane, 10000*nearplane );
+        }
     }
 }
 
 void ViewerWidget::SetViewport(int width, int height, double metersinunit)
 {
     _osgview->getCamera()->setViewport(0,0,width,height);
+    for (size_t i = 0; i < _osgCameraList.size(); ++i) {
+        _osgCameraList[i]->setViewport(0,0,width,height);
+    }
+
     _osghudview->getCamera()->setViewport(0,0,width,height);
     _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width/2, width/2, -height/2, height/2, 0.01/metersinunit, 100.0/metersinunit));
 
@@ -819,7 +860,7 @@ QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::re
     return gw ? gw->getGraphWidget() : NULL;
 }
 
-osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
+osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit, osg::Texture2D* depthTex)
 {
     osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
 
@@ -844,6 +885,10 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
     double fnear = 0.01/metersinunit;
     camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), fnear, 100.0/metersinunit);
     camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
+    
+    // For MRT
+    camera->attach(osg::Camera::DEPTH_BUFFER, depthTex);
+
     return camera;
 }
 

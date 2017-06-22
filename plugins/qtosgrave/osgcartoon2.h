@@ -40,12 +40,13 @@ public:
     OpenRAVECartoon2(osg::Camera *camera);
     OpenRAVECartoon2(const OpenRAVECartoon2& copy, const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY);
 
-    osg::Camera* CreateCameraFor3DTransparencyPass(
+    static osg::Camera* CreateCameraFor3DTransparencyPass(
+        const osg::Camera &mainCamera, // copy viewport from mainCamera
         osg::Texture2D* rttDepth,
         osg::Texture2D* rttAccum,
         osg::Texture2D* rttRevealage);
-    osg::Texture2D* CreateAccumRTFor3DTransparencyPass(uint32_t width, uint32_t height);
-    osg::Texture2D* CreateRevealageRTFor3DTransparencyPass(uint32_t width, uint32_t height);
+    static osg::Texture2D* CreateAccumRTFor3DTransparencyPass(uint32_t width, uint32_t height);
+    static osg::Texture2D* CreateRevealageRTFor3DTransparencyPass(uint32_t width, uint32_t height);
 
     // effect class informations
     META_Effect(

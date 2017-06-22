@@ -195,6 +195,7 @@ bool OpenRAVECartoon2::define_techniques()
 
 //  http://www.mutantstargoat.com/bekos/wordpress/2011/06/12/deferred-rendering-with-openscenegraph/
 osg::Camera* OpenRAVECartoon2::CreateCameraFor3DTransparencyPass(
+    const osg::Camera &mainCamera,
     osg::Texture2D* rttDepth,
     osg::Texture2D* rttAccum,
     osg::Texture2D* rttRevealage)
@@ -212,6 +213,15 @@ osg::Camera* OpenRAVECartoon2::CreateCameraFor3DTransparencyPass(
     camera->setClearColor(osg::Vec4(0.0f,0.0f,0.0f,1.0f)); // <---------------- per RT clear
     camera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    //camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
+    
+    // <------------------------------- hack
+    camera->setViewport(const_cast<osg::Viewport*>(mainCamera.getViewport())); // TODO: remove const cast
+    double fovy, aspectRatio, zNear, zFar;
+    mainCamera.getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+    camera->setProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
+    camera->setCullingMode(mainCamera.getCullingMode());
+
 /*    //  Set viewport
     camera->setViewport(0,0,512,512);
     //  Set up projection.
@@ -224,7 +234,6 @@ osg::Camera* OpenRAVECartoon2::CreateCameraFor3DTransparencyPass(
     camera->setComputeNearFarMode(osg::CullSettings::DO_NOT_COMPUTE_NEAR_FAR);*/
 
     return camera;
-}
 }
 
 osg::Texture2D* OpenRAVECartoon2::CreateAccumRTFor3DTransparencyPass(uint32_t width, uint32_t height)
@@ -240,7 +249,7 @@ osg::Texture2D* OpenRAVECartoon2::CreateAccumRTFor3DTransparencyPass(uint32_t wi
     return texture;
 }
 
-osg::Texture2D* CreateRevealageRTFor3DTransparencyPass(uint32_t width, uint32_t height)
+osg::Texture2D* OpenRAVECartoon2::CreateRevealageRTFor3DTransparencyPass(uint32_t width, uint32_t height)
 {
     osg::Texture2D* texture = new osg::Texture2D();
     texture->setTextureSize(width, height);
