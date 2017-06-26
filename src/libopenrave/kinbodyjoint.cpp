@@ -877,7 +877,12 @@ void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) con
         vmax.resize(0);
     }
     for(int i = 0; i < GetDOF(); ++i) {
-        vmax.push_back(_info._vmaxtorque[i]);
+        if( _info._infoElectricMotor ) {
+            vmax.push_back(GetMaxTorque(i));
+        }
+        else {
+            vmax.push_back(_info._vmaxtorque[i]);
+        }
     }
 }
 
