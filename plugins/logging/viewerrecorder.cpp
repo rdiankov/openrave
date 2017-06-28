@@ -767,7 +767,11 @@ protected:
         }
         codec_ctx->gop_size = 10;
         codec_ctx->max_b_frames = 1;
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+#else
         codec_ctx->pix_fmt = PIX_FMT_YUV420P;
+#endif
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         // not necessary to set parameters?
@@ -808,18 +812,28 @@ protected:
 #endif
         _bWroteHeader = true;
 
-        _picture = avcodec_alloc_frame();
-        _yuv420p = avcodec_alloc_frame();
+        // _picture = avcodec_alloc_frame();
+        // _yuv420p = avcodec_alloc_frame();
+        _picture = av_frame_alloc();
+        _yuv420p = av_frame_alloc();
 
         _outbuf_size = 500000;
         _outbuf = (char*)malloc(_outbuf_size);
         BOOST_ASSERT(!!_outbuf);
 
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#else
         _picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#endif
         _picture_buf = (char*)malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
 
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#else
         avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#endif
     }
 
     void _AddFrame(void* pdata)
@@ -844,7 +858,11 @@ protected:
 
 #ifdef HAVE_NEW_FFMPEG
         struct SwsContext *img_convert_ctx;
-        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, AV_PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+#else
+        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+#endif
         if (!sws_scale(img_convert_ctx, _picture->data, _picture->linesize, 0, _stream->codec->height, _yuv420p->data, _yuv420p->linesize)) {
             sws_freeContext(img_convert_ctx);
             throw OPENRAVE_EXCEPTION_FORMAT0("ADD_FRAME sws_scale failed",ORE_Assert);
@@ -864,7 +882,11 @@ protected:
         av_init_packet(&pkt);
         int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
         if( ret < 0 ) {
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+            av_free_packet(&pkt);
+#else
             av_destruct_packet(&pkt);
+#endif
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
         if( got_packet ) {
@@ -873,11 +895,19 @@ protected:
                 _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
             if( av_write_frame(_output, &pkt) < 0) {
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+                av_free_packet(&pkt);
+#else
                 av_destruct_packet(&pkt);
+#endif
                 throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
             }
         }
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        av_free_packet(&pkt);
+#else
         av_destruct_packet(&pkt);
+#endif
 #else
         int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
         if (size < 0) {
