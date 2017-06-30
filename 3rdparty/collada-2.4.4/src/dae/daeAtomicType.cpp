@@ -475,7 +475,7 @@ daeBool daeFloatType::memoryToString(daeChar* src, std::ostringstream& dst) {
     else if ( *(daeUInt*)src == 0xff800000 ) // -INF
         dst << "-INF";
     else {
-#ifndef COLLADA_DOM_DAEFLOAT_IS64
+#ifdef COLLADA_DOM_DAEFLOAT_IS64
         dst << std::setprecision(std::numeric_limits<daeFloat>::digits10+1) << *(daeFloat*)src;
 #else
         dst << *(daeFloat*)src;
@@ -523,7 +523,7 @@ daeBool daeDoubleType::memoryToString(daeChar* src, std::ostringstream& dst) {
         dst << buffer;
 #else
 
-#ifndef COLLADA_DOM_DAEFLOAT_IS64
+#ifdef COLLADA_DOM_DAEFLOAT_IS64
         dst << std::setprecision(std::numeric_limits<daeDouble>::digits10+1) << *(daeDouble*)src;
 #else
         dst << *(daeDouble*)src;
@@ -812,7 +812,7 @@ daeInt daeResolverType::compare(daeChar* value1, daeChar* value2) {
 }
 
 daeInt daeIDResolverType::compare(daeChar* value1, daeChar* value2) {
-    return (daeIDRef&)*value1 == (daeIDRef&)*value2;
+    return strcmp(((daeIDRef*)value1)->getID(), ((daeIDRef*)value2)->getID());
 }
 
 

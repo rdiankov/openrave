@@ -107,13 +107,11 @@ public:
     }
 
     static daeInt ID() {
-        return 0xdfdfdfdf;
+        return colladaTypeCount()-1;
     }
     virtual daeInt typeID() const {
-        return 0xdfdfdfdf;
+        return colladaTypeCount()-1;
     }
-    //static daeInt ID() { return colladaTypeCount()-1; }
-    //virtual daeInt typeID() const { return colladaTypeCount()-1; }
 
 protected:
     /**

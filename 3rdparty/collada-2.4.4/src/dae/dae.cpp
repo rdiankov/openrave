@@ -103,7 +103,7 @@ daeInt DAE::setDatabase(daeDatabase* _database)
         database = new daeSTLDatabase(*this);
         defaultDatabase = true;
     }
-    database->setMeta(getMeta(getDomCOLLADAID()));
+    database->setMeta(getMeta(getDomCOLLADAID(COLLADA_VERSION)));
     return DAE_OK;
 }
 
@@ -141,7 +141,7 @@ daeInt DAE::setIOPlugin(daeIOPlugin* _plugin)
         }
     }
 
-    int res = plugin->setMeta(getMeta(getDomCOLLADAID()));
+    int res = plugin->setMeta(getMeta(getDomCOLLADAID(COLLADA_VERSION)));
     if (res != DAE_OK) {
         if (defaultPlugin) {
             defaultPlugin = false;

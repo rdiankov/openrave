@@ -4,6 +4,8 @@
 #include <dae/daeErrorHandler.h>
 #include <dae/daeZAEUncompressHandler.h>
 
+namespace fs = boost::filesystem;
+
 //-----------------------------------------------------------------
 const std::string daeZAEUncompressHandler::MANIFEST_FILE_NAME("manifest.xml");
 const std::string daeZAEUncompressHandler::MANIFEST_FILE_ROOT_ELEMENT_NAME("dae_root");
@@ -13,18 +15,22 @@ const std::string daeZAEUncompressHandler::EMPTY_STRING = "";
 
 //-----------------------------------------------------------------
 daeZAEUncompressHandler::daeZAEUncompressHandler( const daeURI& zaeFile )
-  : mZipFile(NULL)
-  , mZipFileURI(zaeFile)
-  , mValidZipFile(false)
-  , mRootFilePath("")
+    : mZipFile(NULL)
+    , mZipFileURI(zaeFile)
+    , mValidZipFile(false)
+    , mRootFilePath("")
 {
     std::string zipFilePath = cdom::uriToNativePath(zaeFile.getURI());
     mZipFile = unzOpen(zipFilePath.c_str());
 
     mValidZipFile = mZipFile != NULL;
 
-    mTmpDir = cdom::getSafeTmpDir() + cdom::getRandomFileName() + 
-        cdom::getFileSeparator() + mZipFileURI.pathFile() + cdom::getFileSeparator();
+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
+    mTmpDir = (fs::temp_directory_path() / fs::unique_path()).string();
+#else
+    mTmpDir = cdom::getSafeTmpDir() + cdom::getRandomFileName() + cdom::getFileSeparator() + mZipFileURI.pathFile() + cdom::getFileSeparator();
+#endif
+
 }
 
 //-----------------------------------------------------------------
@@ -37,9 +43,9 @@ daeZAEUncompressHandler::~daeZAEUncompressHandler()
 //-----------------------------------------------------------------
 const std::string& daeZAEUncompressHandler::obtainRootFilePath()
 {
+
     if (!isZipFile())
         return EMPTY_STRING;
-
     if (boost::filesystem::create_directories(mTmpDir))
     {
         if (extractArchive(mZipFile, mTmpDir))
@@ -72,11 +78,8 @@ bool daeZAEUncompressHandler::retrieveRootURIFromManifest(const std::string& tmp
 {
     // extract via libxml.
     bool error = false;
-    xmlTextReaderPtr xmlReader = xmlReaderForFile(
-        (tmpDir + MANIFEST_FILE_NAME).c_str(),
-        NULL,
-        0
-        );
+    std::string manifest_path = (fs::path(tmpDir) / MANIFEST_FILE_NAME).string();
+    xmlTextReaderPtr xmlReader = xmlReaderForFile(manifest_path.c_str(), NULL, 0);
 
     if (xmlReader)
     {
@@ -94,7 +97,7 @@ bool daeZAEUncompressHandler::retrieveRootURIFromManifest(const std::string& tmp
                     xmlTextReaderRead(xmlReader);
 
                     cdom::trimWhitespaces(rootFilePath);
-                    mRootFilePath = cdom::nativePathToUri(tmpDir + rootFilePath);
+                    mRootFilePath = (fs::path(tmpDir) / rootFilePath).string();
                 }
                 else
                 {
@@ -192,7 +195,7 @@ bool daeZAEUncompressHandler::extractFile( unzFile zipFile,  const std::string& 
     {
         if ( currentFileName[ strlen(currentFileName)-1 ] == '/')
         {
-            if (!boost::filesystem::create_directories(destDir + currentFileName))
+            if (!boost::filesystem::create_directories(fs::path(destDir) / currentFileName))
             {
                 daeErrorHandler::get()->handleError("Error creating dir from zip archive in daeZAEUncompressHandler::extractFile\n");
                 error = true;
@@ -206,8 +209,8 @@ bool daeZAEUncompressHandler::extractFile( unzFile zipFile,  const std::string& 
                 char* buffer = 0;
                 int readBytes = 1;
                 buffer = new char[ BUFFER_SIZE ];
-                std::string currentOutFilePath(destDir + std::string(currentFileName));
-                std::ofstream outFile(currentOutFilePath.c_str(), std::ios::binary);
+                fs::path currentOutFilePath= fs::path(destDir) / std::string(currentFileName);
+                std::ofstream outFile(currentOutFilePath.string().c_str(), std::ios::binary);
 
                 while (readBytes > 0)
                 {
@@ -226,7 +229,7 @@ bool daeZAEUncompressHandler::extractFile( unzFile zipFile,  const std::string& 
                     }
                     else
                     {
-                        if (!checkAndExtractInternalArchive(currentOutFilePath))
+                        if (!checkAndExtractInternalArchive(currentOutFilePath.string()))
                         {
                             error = true;
                         }

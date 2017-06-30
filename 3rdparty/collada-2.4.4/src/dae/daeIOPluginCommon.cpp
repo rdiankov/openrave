@@ -92,7 +92,7 @@ daeInt daeIOPluginCommon::read(const daeURI& uri, daeString docBuffer)
         if (zaeHandler.isZipFile())
         {
             string rootFilePath = zaeHandler.obtainRootFilePath();
-            daeURI rootFileURI(*fileURI.getDAE(), rootFilePath);
+            daeURI rootFileURI(*fileURI.getDAE(), cdom::nativePathToUri(rootFilePath));
             domObject = readFromFile(rootFileURI);
             if (!domObject)
             {
