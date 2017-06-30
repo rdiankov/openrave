@@ -163,7 +163,7 @@ public:
         return (ColladaDOM141::domCOLLADA*)getRoot(path);
     }
     virtual bool        setRoot141(const std::string& path, ColladaDOM141::domCOLLADA* root) {
-        return (ColladaDOM141::domCOLLADA*)setRoot(path,(domCOLLADAProxy*)root);
+        return setRoot(path,(domCOLLADAProxy*)root);
     }
 #endif
 #ifdef COLLADA_DOM_SUPPORT150
@@ -171,7 +171,7 @@ public:
         return (ColladaDOM150::domCOLLADA*)getRoot(path);
     }
     virtual bool        setRoot150(const std::string& path, ColladaDOM150::domCOLLADA* root) {
-        return (ColladaDOM150::domCOLLADA*)setRoot(path,(domCOLLADAProxy*)root);
+        return setRoot(path,(domCOLLADAProxy*)root);
     }
 #endif
 

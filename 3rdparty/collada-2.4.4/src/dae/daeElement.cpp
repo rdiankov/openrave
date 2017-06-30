@@ -427,7 +427,7 @@ daeSmartRef<daeElement> daeElement::clone(daeString idSuffix, daeString nameSuff
 
     // Copy the attributes and character data. Requires special care for domAny.
     if (any) {
-        copyElementAny(this,ret);
+        copyElementAny(ret, this);
     } else {
         // Use the meta system to copy attributes
         daeMetaAttributeRefArray &attrs = _meta->getMetaAttributes();
