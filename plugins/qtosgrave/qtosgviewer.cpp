@@ -1762,9 +1762,14 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::SetName(const string& ptitle)
+void QtOSGViewer::SetName(const string& name)
 {
-    setWindowTitle(ptitle.c_str());
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
+}
+
+void QtOSGViewer::_SetName(const string& name)
+{
+    setWindowTitle(name.c_str());
 }
 
 bool QtOSGViewer::LoadModel(const string& filename)
