@@ -191,17 +191,17 @@ public:
     }
 };
 
-class AutoPyArrayDecRefencer
+class AutoPyArrayObjectDereferencer
 {
 public:
-    AutoPyArrayDecRefencer(PyArrayObject* pyarr) : _pyarr(pyarr) {
+    AutoPyArrayObjectDereferencer(PyArrayObject* pyarrobj) : _pyarrobj(pyarrobj) {
     }
-    ~AutoPyArrayDecRefencer() {
-        Py_DECREF(_pyarr);
+    ~AutoPyArrayObjectDereferencer() {
+        Py_DECREF(_pyarrobj);
     }
 
 private:
-    PyArrayObject* _pyarr;
+    PyArrayObject* _pyarrobj;
 };
 
 class PyTriMesh
@@ -243,7 +243,8 @@ public:
                 throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
             }
             PyArrayObject* pPyVerticesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices));
-            AutoPyArrayDecRefencer pydecref(pPyVerticesContiguous);
+            AutoPyArrayObjectDereferencer pydecref(pPyVerticesContiguous);
+
             const size_t typeSize = PyArray_ITEMSIZE(pPyVerticesContiguous);
             const size_t n = PyArray_DIM(pPyVerticesContiguous, 0);
             const size_t nElems = PyArray_DIM(pPyVerticesContiguous, 1);
@@ -268,8 +269,6 @@ public:
                 throw openrave_exception(_("Unsupported vertices type"), ORE_InvalidArguments);
             }
 
-            //Py_DECREF(pPyVerticesContiguous);
-
         } else {
             for(int i = 0; i < numverts; ++i) {
                 object ov = vertices[i];
@@ -287,7 +286,7 @@ public:
                 throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
             }
             PyArrayObject* pPyIndiciesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices));
-            AutoPyArrayDecRefencer pydecref(pPyIndiciesContiguous);
+            AutoPyArrayObjectDereferencer pydecref(pPyIndiciesContiguous);
 
             const size_t typeSize = PyArray_ITEMSIZE(pPyIndiciesContiguous);
             const bool signedInt = PyArray_ISSIGNED(pPyIndiciesContiguous);
@@ -322,8 +321,6 @@ public:
             } else {
                 throw openrave_exception(_("Unsupported indices type"), ORE_InvalidArguments);
             }
-
-            // Py_DECREF(pPyIndiciesContiguous);
 
         } else {
             for(size_t i = 0; i < numtris; ++i) {
