@@ -2965,10 +2965,10 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             // have to recompute the delta based on f and dQ
             dReal fnewscale = 1;
             for(size_t idof = 0; idof < dQ.size(); ++idof) {
-                _vprevtempconfig[idof] = q0[idof] + f*dQ[idof] - _vtempconfig[idof];
+                _vprevtempconfig[idof] = q0[idof] + (f+1)*dQ[idof] - _vtempconfig[idof];
                 // _vprevtempconfig[idof] cannot be too high
                 if( RaveFabs(_vprevtempconfig[idof]) > vConfigResolution[idof] ) {
-                    dReal fscale = RaveFabs(_vprevtempconfig[idof])/vConfigResolution[idof];
+                    dReal fscale = vConfigResolution[idof]/RaveFabs(_vprevtempconfig[idof]);
                     if( fscale < fnewscale ) {
                         fnewscale = fscale;
                     }
