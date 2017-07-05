@@ -1957,7 +1957,7 @@ protected:
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "ikfast collision " << report.__str__() << " colvalues=[";
+                            ss << "ikfast collision " << ptempreport->__str__() << " colvalues=[";
                             std::vector<dReal> vallvalues;
                             probot->GetDOFValues(vallvalues);
                             for(size_t i = 0; i < vallvalues.size(); ++i ) {
