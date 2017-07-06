@@ -384,8 +384,8 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize(pbody1);
-        _fclspace->Synchronize(pbody2);
+        _fclspace->SynchronizeWithAttached(pbody1);
+        _fclspace->SynchronizeWithAttached(pbody2);
 
         // Do we really want to synchronize everything ?
         // We could put the synchronization directly inside GetBodyManager
@@ -421,9 +421,9 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize(plink1->GetParent());
+        _fclspace->SynchronizeWithAttached(plink1->GetParent());
         if( plink1->GetParent() != plink2->GetParent() ) {
-            _fclspace->Synchronize(plink2->GetParent());
+            _fclspace->SynchronizeWithAttached(plink2->GetParent());
         }
 
         CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(plink1), pcollLink2 = _fclspace->GetLinkBV(plink2);
@@ -467,13 +467,13 @@ public:
             return false;
         }
 
-        _fclspace->Synchronize(plink->GetParent());
+        _fclspace->SynchronizeWithAttached(plink->GetParent());
 
         std::set<KinBodyConstPtr> attachedBodies;
         pbody->GetAttached(attachedBodies);
         FOREACH(itbody, attachedBodies) {
             if( (*itbody)->GetEnvironmentId() ) { // for now GetAttached can hold bodies that are not initialized
-                _fclspace->Synchronize(*itbody);
+                _fclspace->SynchronizeWithAttached(*itbody);
             }
         }
 
@@ -603,9 +603,9 @@ public:
             adjacentOptions |= KinBody::AO_ActiveDOFs;
         }
 
-        const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
+        const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody even if it is const
-        _fclspace->Synchronize(pbody);
+        _fclspace->SynchronizeWithAttached(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -651,9 +651,9 @@ public:
             adjacentOptions |= KinBody::AO_ActiveDOFs;
         }
 
-        const std::set<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
+        const std::vector<int> &nonadjacent = pbody->GetNonAdjacentLinks(adjacentOptions);
         // We need to synchronize after calling GetNonAdjacentLinks since it can move pbody evn if it is const
-        _fclspace->Synchronize(pbody);
+        _fclspace->SynchronizeWithAttached(pbody);
 
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("fcl doesn't support CO_Distance yet\n");
@@ -724,7 +724,7 @@ private:
 
         LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(plink1), pLINK2 = _fclspace->GetLinkInfo(plink2);
 
-        //RAVELOG_INFO_FORMAT("link %s:%s with %s:%s", plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
+        //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             FOREACH(itgeompair2, pLINK2->vgeoms) {
                 if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
@@ -914,6 +914,7 @@ private:
             std::map<std::set<int>, FCLCollisionManagerInstancePtr>::iterator it = _envmanagers.begin();
             while(it != _envmanagers.end()) {
                 if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
+                    //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
                     _envmanagers.erase(it++);
                 }
                 else {
@@ -931,6 +932,7 @@ private:
         it->second->EnsureBodies(_fclspace->GetEnvBodies());
         it->second->Synchronize();
         //it->second->PrintStatus(OpenRAVE::Level_Info);
+        //RAVELOG_VERBOSE_FORMAT("env=%d, returning manager cache %x", GetEnv()->GetId()%it->second.get());
         return it->second->GetManager();
     }
 

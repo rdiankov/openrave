@@ -350,7 +350,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("BiRRT Planner Initialized, initial=%d, goal=%d", _vecInitialNodes.size()%_treeBackward.GetNumNodes());
+        RAVELOG_DEBUG_FORMAT("env=%d BiRRT Planner Initialized, initial=%d, goal=%d", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes());
         return true;
     }
 
@@ -379,9 +379,29 @@ Some python code to display data::\n\
         PlannerProgress progress;
         PlannerAction callbackaction=PA_None;
         while(_vgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
-            RAVELOG_VERBOSE_FORMAT("iter=%d, forward=%d, backward=%d", (iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
+            RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, forward=%d, backward=%d", GetEnv()->GetId()%(iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
             ++iter;
 
+            // have to check callbacks at the beginning since code can continue
+            callbackaction = _CallCallbacks(progress);
+            if( callbackaction ==  PA_Interrupt ) {
+                return PS_Interrupted;
+            }
+            else if( callbackaction == PA_ReturnWithAnySolution ) {
+                if( _vgoalpaths.size() > 0 ) {
+                    break;
+                }
+            }
+
+            if( _parameters->_nMaxPlanningTime > 0 ) {
+                uint32_t elapsedtime = utils::GetMilliTime()-basetime;
+                if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
+                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking", elapsedtime);
+                    break;
+                }
+            }
+
+            
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
@@ -479,15 +499,6 @@ Some python code to display data::\n\
             }
 
             progress._iteration = iter/3;
-            callbackaction = _CallCallbacks(progress);
-            if( callbackaction ==  PA_Interrupt ) {
-                return PS_Interrupted;
-            }
-            else if( callbackaction == PA_ReturnWithAnySolution ) {
-                if( _vgoalpaths.size() > 0 ) {
-                    break;
-                }
-            }
         }
 
         if( _vgoalpaths.size() == 0 ) {
@@ -834,7 +845,7 @@ public:
             if( !!bestGoalNode && _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_VERBOSE_FORMAT("time exceeded (%d) so breaking with bestdist=%f", elapsedtime%fBestGoalNodeDist);
+                    RAVELOG_VERBOSE_FORMAT("time exceeded (%dms) so breaking with bestdist=%f", elapsedtime%fBestGoalNodeDist);
                     break;
                 }
             }

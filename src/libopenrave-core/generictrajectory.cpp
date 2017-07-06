@@ -208,7 +208,7 @@ public:
         }
     }
 
-    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const
+    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData) const
     {
         BOOST_ASSERT(_bInit);
         OPENRAVE_ASSERT_OP(_timeoffset,>=,0);
@@ -218,7 +218,9 @@ public:
         if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             _VerifySampling();
         }
-        data.resize(0);
+        if( reintializeData ) {
+            data.resize(0);
+        }
         data.resize(spec.GetDOF(),0);
         if( time >= GetDuration() ) {
             ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.end()-_spec.GetDOF(),_spec,1,GetEnv());

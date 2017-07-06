@@ -78,6 +78,7 @@ public:
         _vAmbientColor = toPyVector3(info._vAmbientColor);
         _meshcollision = toPyTriMesh(info._meshcollision);
         _type = info._type;
+        _name = ConvertStringToUnicode(info._name);
         _filenamerender = ConvertStringToUnicode(info._filenamerender);
         _filenamecollision = ConvertStringToUnicode(info._filenamecollision);
         _vRenderScale = toPyVector3(info._vRenderScale);
@@ -102,6 +103,9 @@ public:
             ExtractTriMesh(_meshcollision,info._meshcollision);
         }
         info._type = _type;
+        if( !IS_PYTHONOBJECT_NONE(_name) ) {
+            info._name = boost::python::extract<std::string>(_name);
+        }
         if( !IS_PYTHONOBJECT_NONE(_filenamerender) ) {
             info._filenamerender = boost::python::extract<std::string>(_filenamerender);
         }
@@ -120,6 +124,7 @@ public:
 
     object _t, _vGeomData, _vGeomData2, _vGeomData3, _vDiffuseColor, _vAmbientColor, _meshcollision;
     GeometryType _type;
+    object _name;
     object _filenamerender, _filenamecollision;
     object _vRenderScale, _vCollisionScale;
     boost::python::dict _mapExtraGeometries;
@@ -413,53 +418,78 @@ public:
             info._linkname1 = boost::python::extract<std::string>(_linkname1);
         }
         info._vanchor = ExtractVector3(_vanchor);
+
+        // We might be able to replace these exceptions with static_assert in C++11
         size_t num = len(_vaxes);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vaxes.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vaxes.at(i) = ExtractVector3(_vaxes[i]);
+            info._vaxes[i] = ExtractVector3(_vaxes[i]);
         }
+
         if( !IS_PYTHONOBJECT_NONE(_vcurrentvalues) ) {
             info._vcurrentvalues = ExtractArray<dReal>(_vcurrentvalues);
         }
+
         num = len(_vresolution);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vresolution.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vresolution.at(i) = boost::python::extract<dReal>(_vresolution[i]);
+            info._vresolution[i] = boost::python::extract<dReal>(_vresolution[i]);
         }
+
         num = len(_vmaxvel);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxvel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxvel.at(i) = boost::python::extract<dReal>(_vmaxvel[i]);
+            info._vmaxvel[i] = boost::python::extract<dReal>(_vmaxvel[i]);
         }
+
         num = len(_vhardmaxvel);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vhardmaxvel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vhardmaxvel.at(i) = boost::python::extract<dReal>(_vhardmaxvel[i]);
+            info._vhardmaxvel[i] = boost::python::extract<dReal>(_vhardmaxvel[i]);
         }
+
         num = len(_vmaxaccel);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxaccel.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxaccel.at(i) = boost::python::extract<dReal>(_vmaxaccel[i]);
+            info._vmaxaccel[i] = boost::python::extract<dReal>(_vmaxaccel[i]);
         }
+
         num = len(_vmaxtorque);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxtorque.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxtorque.at(i) = boost::python::extract<dReal>(_vmaxtorque[i]);
+            info._vmaxtorque[i] = boost::python::extract<dReal>(_vmaxtorque[i]);
         }
+
         num = len(_vmaxinertia);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vmaxinertia.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vmaxinertia.at(i) = boost::python::extract<dReal>(_vmaxinertia[i]);
+            info._vmaxinertia[i] = boost::python::extract<dReal>(_vmaxinertia[i]);
         }
+
         num = len(_vweights);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vweights.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vweights.at(i) = boost::python::extract<dReal>(_vweights[i]);
+            info._vweights[i] = boost::python::extract<dReal>(_vweights[i]);
         }
+
         num = len(_voffsets);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._voffsets.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._voffsets.at(i) = boost::python::extract<dReal>(_voffsets[i]);
+            info._voffsets[i] = boost::python::extract<dReal>(_voffsets[i]);
         }
+
         num = len(_vlowerlimit);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vlowerlimit.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vlowerlimit.at(i) = boost::python::extract<dReal>(_vlowerlimit[i]);
+            info._vlowerlimit[i] = boost::python::extract<dReal>(_vlowerlimit[i]);
         }
+
         num = len(_vupperlimit);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info._vupperlimit.size(), ORE_InvalidState);
         for(size_t i = 0; i < num; ++i) {
-            info._vupperlimit.at(i) = boost::python::extract<dReal>(_vupperlimit[i]);
+            info._vupperlimit[i] = boost::python::extract<dReal>(_vupperlimit[i]);
         }
+
         if( !IS_PYTHONOBJECT_NONE(_trajfollow) ) {
             info._trajfollow = GetTrajectory(_trajfollow);
         }
@@ -576,6 +606,9 @@ public:
         void SetRenderFilename(const string& filename) {
             _pgeometry->SetRenderFilename(filename);
         }
+        void SetName(const std::string& name) {
+            _pgeometry->SetName(name);
+        }
         bool IsDraw() {
             RAVELOG_WARN("IsDraw deprecated, use Geometry.IsVisible\n");
             return _pgeometry->IsVisible();
@@ -621,6 +654,9 @@ public:
         }
         object GetRenderFilename() const {
             return ConvertStringToUnicode(_pgeometry->GetRenderFilename());
+        }
+        object GetName() const {
+            return ConvertStringToUnicode(_pgeometry->GetName());
         }
         float GetTransparency() const {
             return _pgeometry->GetTransparency();
@@ -1364,12 +1400,19 @@ PyKinBody::PyKinBody(const PyKinBody& r) : PyInterfaceBase(r._pbody,r._pyenv)
 {
     _pbody = r._pbody;
 }
+
 PyKinBody::~PyKinBody()
 {
 }
+
 KinBodyPtr PyKinBody::GetBody()
 {
     return _pbody;
+}
+
+void PyKinBody::Destroy()
+{
+    _pbody->Destroy();
 }
 
 bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bDraw, const std::string& uri)
@@ -2407,7 +2450,7 @@ object PyKinBody::GetURI() const
 object PyKinBody::GetNonAdjacentLinks() const
 {
     boost::python::list ononadjacent;
-    const std::set<int>& nonadjacent = _pbody->GetNonAdjacentLinks();
+    const std::vector<int>& nonadjacent = _pbody->GetNonAdjacentLinks();
     FOREACHC(it,nonadjacent) {
         ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     }
@@ -2416,11 +2459,16 @@ object PyKinBody::GetNonAdjacentLinks() const
 object PyKinBody::GetNonAdjacentLinks(int adjacentoptions) const
 {
     boost::python::list ononadjacent;
-    const std::set<int>& nonadjacent = _pbody->GetNonAdjacentLinks(adjacentoptions);
+    const std::vector<int>& nonadjacent = _pbody->GetNonAdjacentLinks(adjacentoptions);
     FOREACHC(it,nonadjacent) {
         ononadjacent.append(boost::python::make_tuple((int)(*it)&0xffff,(int)(*it)>>16));
     }
     return ononadjacent;
+}
+
+void PyKinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
+{
+    _pbody->SetAdjacentLinks(linkindex0, linkindex1);
 }
 
 object PyKinBody::GetAdjacentLinks() const
@@ -2638,10 +2686,10 @@ class GeometryInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyGeometryInfo& r)
     {
-        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, r._filenamerender, r._filenamecollision, r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
+        return boost::python::make_tuple(r._t, boost::python::make_tuple(r._vGeomData, r._vGeomData2, r._vGeomData3), r._vDiffuseColor, r._vAmbientColor, r._meshcollision, (int)r._type, boost::python::make_tuple(r._name, r._filenamerender, r._filenamecollision), r._vRenderScale, r._vCollisionScale, r._fTransparency, r._bVisible, r._bModifiable, r._mapExtraGeometries);
     }
     static void setstate(PyGeometryInfo& r, boost::python::tuple state) {
-        int num = len(state);
+        //int num = len(state);
         r._t = state[0];
         r._vGeomData = state[1][0];
         r._vGeomData2 = state[1][1];
@@ -2650,14 +2698,32 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)boost::python::extract<int>(state[5]);
-        r._filenamerender = state[6];
-        r._filenamecollision = state[7];
-        r._vRenderScale = state[8];
-        r._vCollisionScale = state[9];
-        r._fTransparency = boost::python::extract<float>(state[10]);
-        r._bVisible = boost::python::extract<bool>(state[11]);
-        r._bModifiable = boost::python::extract<bool>(state[12]);
-        r._mapExtraGeometries = dict(state[13]);
+
+        boost::python::extract<std::string> pyoldfilenamerender(state[6]);
+        if( pyoldfilenamerender.check() ) {
+            // old format
+            r._filenamerender = state[6];
+            r._filenamecollision = state[7];
+            r._name = boost::python::object();
+            r._vRenderScale = state[8];
+            r._vCollisionScale = state[9];
+            r._fTransparency = boost::python::extract<float>(state[10]);
+            r._bVisible = boost::python::extract<bool>(state[11]);
+            r._bModifiable = boost::python::extract<bool>(state[12]);
+            r._mapExtraGeometries = dict(state[13]);
+        }
+        else {
+            // new format
+            r._name = state[6][0];
+            r._filenamerender = state[6][1];
+            r._filenamecollision = state[6][2];
+            r._vRenderScale = state[7];
+            r._vCollisionScale = state[8];
+            r._fTransparency = boost::python::extract<float>(state[9]);
+            r._bVisible = boost::python::extract<bool>(state[10]);
+            r._bModifiable = boost::python::extract<bool>(state[11]);
+            r._mapExtraGeometries = dict(state[12]);
+        }
     }
 };
 
@@ -2864,6 +2930,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vAmbientColor",&PyGeometryInfo::_vAmbientColor)
                           .def_readwrite("_meshcollision",&PyGeometryInfo::_meshcollision)
                           .def_readwrite("_type",&PyGeometryInfo::_type)
+                          .def_readwrite("_name",&PyGeometryInfo::_name)
                           .def_readwrite("_filenamerender",&PyGeometryInfo::_filenamerender)
                           .def_readwrite("_filenamecollision",&PyGeometryInfo::_filenamecollision)
                           .def_readwrite("_vRenderScale",&PyGeometryInfo::_vRenderScale)
@@ -2952,6 +3019,7 @@ void init_openravepy_kinbody()
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
         scope kinbody = class_<PyKinBody, boost::shared_ptr<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
+                        .def("Destroy",&PyKinBody::Destroy, DOXY_FN(KinBody,Destroy))
                         .def("InitFromBoxes",&PyKinBody::InitFromBoxes,InitFromBoxes_overloads(args("boxes","draw","uri"), sInitFromBoxesDoc.c_str()))
                         .def("InitFromSpheres",&PyKinBody::InitFromSpheres,InitFromSpheres_overloads(args("spherex","draw","uri"), DOXY_FN(KinBody,InitFromSpheres)))
                         .def("InitFromTrimesh",&PyKinBody::InitFromTrimesh,InitFromTrimesh_overloads(args("trimesh","draw","uri"), DOXY_FN(KinBody,InitFromTrimesh)))
@@ -3065,6 +3133,7 @@ void init_openravepy_kinbody()
                         .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                         .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, args("adjacentoptions"), DOXY_FN(KinBody,GetNonAdjacentLinks))
+                        .def("SetAdjacentLinks",&PyKinBody::SetAdjacentLinks, args("linkindex0", "linkindex1"), DOXY_FN(KinBody,SetAdjacentLinks))
                         .def("GetAdjacentLinks",&PyKinBody::GetAdjacentLinks, DOXY_FN(KinBody,GetAdjacentLinks))
                         .def("GetPhysicsData",&PyKinBody::GetPhysicsData, DOXY_FN(KinBody,GetPhysicsData))
                         .def("GetCollisionData",&PyKinBody::GetCollisionData, DOXY_FN(KinBody,GetCollisionData))
@@ -3180,6 +3249,7 @@ void init_openravepy_kinbody()
                                  .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
                                  .def("SetAmbientColor",&PyLink::PyGeometry::SetAmbientColor,args("color"), DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
                                  .def("SetRenderFilename",&PyLink::PyGeometry::SetRenderFilename,args("color"), DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
+                                 .def("SetName",&PyLink::PyGeometry::SetName,args("name"), DOXY_FN(KinBody::Link::Geometry,setName))
                                  .def("SetVisible",&PyLink::PyGeometry::SetVisible,args("visible"), DOXY_FN(KinBody::Link::Geometry,SetVisible))
                                  .def("IsDraw",&PyLink::PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                  .def("IsVisible",&PyLink::PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
@@ -3196,6 +3266,7 @@ void init_openravepy_kinbody()
                                  .def("GetContainerBottomCross",&PyLink::PyGeometry::GetContainerBottomCross, DOXY_FN(KinBody::Link::Geometry,GetContainerBottomCross))
                                  .def("GetRenderScale",&PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
                                  .def("GetRenderFilename",&PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
+                                 .def("GetName",&PyLink::PyGeometry::GetName, DOXY_FN(KinBody::Link::Geometry,GetName))
                                  .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                  .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                  .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))

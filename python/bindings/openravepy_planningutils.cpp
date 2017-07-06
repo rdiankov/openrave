@@ -264,6 +264,12 @@ void pySegmentTrajectory(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endt
     OpenRAVE::planningutils::SegmentTrajectory(openravepy::GetTrajectory(pytraj), starttime, endtime);
 }
 
+object pyGetTrajectorySegment(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endtime)
+{
+    PyEnvironmentBasePtr pyenv = openravepy::toPyEnvironment(pytraj);
+    return object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetTrajectorySegment(openravepy::GetTrajectory(pytraj), starttime, endtime), pyenv));
+}
+
 object pyMergeTrajectories(object pytrajectories)
 {
     std::list<TrajectoryBaseConstPtr> listtrajectories;
@@ -462,6 +468,8 @@ void InitPlanningUtils()
                   .staticmethod("InsertWaypointWithSmoothing")
                   .def("SegmentTrajectory",planningutils::pySegmentTrajectory,args("trajectory","starttime", "endtime"),DOXY_FN1(SegmentTrajectory))
                   .staticmethod("SegmentTrajectory")
+                  .def("GetTrajectorySegment",planningutils::pyGetTrajectorySegment,args("trajectory","starttime", "endtime"),DOXY_FN1(GetTrajectorySegment))
+                  .staticmethod("GetTrajectorySegment")
                   .def("MergeTrajectories",planningutils::pyMergeTrajectories,args("trajectories"),DOXY_FN1(MergeTrajectories))
                   .staticmethod("MergeTrajectories")
                   .def("GetDHParameters",planningutils::pyGetDHParameters,args("body"),DOXY_FN1(GetDHParameters))

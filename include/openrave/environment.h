@@ -251,6 +251,22 @@ public:
         Save(filename,options,atts);
     }
 
+    /** \brief Saves a scene depending on the filename extension.
+
+        \param filetype the type of file to save, can be collada
+        \param output the output data if saving is successful
+        \param options controls what to save
+        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \code
+        DAE::getIOPlugin()->setOption(key,value).
+        \endcode
+        Several default options are:
+        - 'target' - the target body name of the options, if relevant
+        - 'password' - the password/key to encrypt the data with, collada supports this through zae zip archives
+        \throw openrave_exception Throw if failed to save anything
+     */
+    virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
+    
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
@@ -408,11 +424,17 @@ public:
     ///
     /// The function removes currently loaded bodies, robots, sensors, problems from the actively used
     /// interfaces of the environment. This does not destroy the interface, but it does remove all
-    /// references managed. Some interfaces like problems have destroy methods that are called to signal
+    /// references managed. Some interfaces like modules have destroy methods that are called to signal
     /// unloading. Note that the active interfaces are different from the owned interfaces.
     /// \param[in] obj interface to remove
     /// \return true if the interface was successfully removed from the environment.
     virtual bool Remove(InterfaceBasePtr obj) = 0;
+
+    /// \brief Removes all kinbodies that match the name
+    ///
+    /// \param[in] name of the kinbody to remove
+    /// \return true if the kinbody was successfully removed from the environment.
+    virtual bool RemoveKinBodyByName(const std::string& name) = 0;
 
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
     /// \return first KinBody (including robots) that matches with name
@@ -440,7 +462,7 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout=0) const = 0;
-
+    
     /// \brief Retrieve published bodies, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
@@ -448,6 +470,33 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    /// \return true if name matches to a published body
+    virtual bool GetPublishedBody(const std::string& name, KinBody::BodyState& bodystate, uint64_t timeout=0) = 0;
+    
+    /// \brief Retrieve joint values of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBodyJointValues returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    /// \return true if name matches to a published body
+    virtual bool GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve body transform of all published bodies whose name matches prefix, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param prefix the prefix to match to the target names.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBodyTransformsMatchingPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0) = 0;
 
     /// \brief Updates the published bodies that viewers and other programs listening in on the environment see.
     ///

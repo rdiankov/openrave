@@ -531,4 +531,12 @@ void KinBody::Link::Geometry::SetRenderFilename(const std::string& renderfilenam
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
+void KinBody::Link::Geometry::SetName(const std::string& name)
+{
+    LinkPtr parent(_parent);
+    _info._name = name;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
+
+}
+    
 }

@@ -74,8 +74,9 @@ public:
         \param data[out] the sampled point
         \param time[in] the time to sample
         \param spec[in] the specification format to return the data in
+        \param reintializeData[in] if true, then data will be reset with 0s before sampling the trajectory. Otherwise, the data will be used as is
      */
-    virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const;
+    virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData=true) const;
 
     /** \brief bulk samples the trajectory given a vector of times using the trajectory's specification.
         

@@ -240,7 +240,9 @@ protected:
                 if( info->ptraj->GetNumWaypoints() == 0 ) {
                     // add the first point, copy all the data rather than just this group
                     _vtrajpoints.resize(info->ptraj->GetConfigurationSpecification().GetDOF());
-                    std::copy(itdata,itdata+_vtrajpoints.size(),_vtrajpoints.begin());
+                    std::copy(itdata+info->gpos.offset, itdata+info->gpos.offset+info->gpos.dof, _vtrajpoints.begin()+info->posindex);
+                    std::copy(itdata+info->gvel.offset, itdata+info->gvel.offset+info->gvel.dof, _vtrajpoints.begin()+info->velindex);
+                    _vtrajpoints.at(info->timeindex) = deltatime;
                     _vtrajpoints.at(info->waypointindex) = 1;
                     info->ptraj->Insert(info->ptraj->GetNumWaypoints(),_vtrajpoints);
                 }

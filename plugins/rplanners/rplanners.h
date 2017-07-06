@@ -369,6 +369,26 @@ public:
                 }
             }
 
+//            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+//                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+//                ss << "successfully connected _vCurConfig=[";
+//                for(size_t itempdof = 0; itempdof < _vCurConfig.size(); ++itempdof ) {
+//                    if( itempdof > 0 ) {
+//                        ss << ", ";
+//                    }
+//                    ss << _vCurConfig[itempdof];
+//                }
+//                ss << "]; _vNewConfig=[";
+//                for(size_t itempdof = 0; itempdof < _vNewConfig.size(); ++itempdof ) {
+//                    if( itempdof > 0 ) {
+//                        ss << ", ";
+//                    }
+//                    ss << _vNewConfig[itempdof];
+//                }
+//                ss << "]";
+//                RAVELOG_VERBOSE(ss.str());
+//            }
+
             NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
             if( !!pnewnode ) {
                 pnode = pnewnode;

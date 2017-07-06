@@ -535,7 +535,7 @@ inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
 
 namespace LocalXML
 {
-bool ParseXMLData(BaseXMLReaderPtr preader, const char* buffer, int size);
+bool ParseXMLData(BaseXMLReader& reader, const char* buffer, int size);
 }
 
 #ifdef _WIN32

@@ -578,7 +578,7 @@ void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffine
 void RobotBase::SetActiveDOFs(const std::vector<int>& vJointIndices, int nAffineDOFBitmask)
 {
     FOREACHC(itj, vJointIndices) {
-        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "bad indices %d (dof=%d)",*itj%GetDOF(),ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(*itj>=0 && *itj<GetDOF(), "bad index %d (dof=%d)",*itj%GetDOF(),ORE_InvalidArguments);
     }
     // only reset the cache if the dof values are different
     if( _vActiveDOFIndices.size() != vJointIndices.size() ) {
@@ -1026,11 +1026,26 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
         return;
     }
 
-    // go through all active joints
+    OPENRAVE_ASSERT_OP(q1.size(),==,q2.size());
+    OPENRAVE_ASSERT_OP(q1.size(), >=, _vActiveDOFIndices.size());
     size_t index = 0;
-    for(; index < _vActiveDOFIndices.size(); ++index) {
-        JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
-        q1.at(index) = pjoint->SubtractValue(q1.at(index),q2.at(index),_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+    if (_bAreAllJoints1DOFAndNonCircular) {
+        for (size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
+            q1[i] -= q2[i];
+        }
+        index = _vActiveDOFIndices.size();
+    }
+    else {
+        // go through all active joints
+        for(; index < _vActiveDOFIndices.size(); ++index) {
+            // We already did range check above
+            JointConstPtr pjoint = GetJointFromDOFIndex(_vActiveDOFIndices[index]);
+            q1[index] = pjoint->SubtractValue(q1[index],q2[index],_vActiveDOFIndices[index]-pjoint->GetDOFIndex());
+        }
+    }
+
+    if( _nAffineDOFs == OpenRAVE::DOF_NoTransform ) {
+        return;
     }
 
     if( _nAffineDOFs & OpenRAVE::DOF_X ) {
@@ -1391,7 +1406,9 @@ void RobotBase::CalculateActiveAngularVelocityJacobian(int linkindex, boost::mul
     }
 }
 
-const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
+bool CompareNonAdjacentFarthest(int pair0, int pair1); // defined in kinbody.cpp
+
+const std::vector<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 {
     KinBody::GetNonAdjacentLinks(0); // need to call to set the cache
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
@@ -1418,37 +1435,40 @@ const std::set<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) const
 
         // compute it
         if( compute.at(AO_Enabled) ) {
-            _setNonAdjacentLinks.at(AO_Enabled).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+            _vNonAdjacentLinks.at(AO_Enabled).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[0]) {
                 KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
                 if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _setNonAdjacentLinks[AO_Enabled].insert(*itset);
+                    _vNonAdjacentLinks[AO_Enabled].push_back(*itset);
                 }
             }
+            std::sort(_vNonAdjacentLinks[AO_Enabled].begin(), _vNonAdjacentLinks[AO_Enabled].end(), CompareNonAdjacentFarthest);
         }
         if( compute.at(AO_ActiveDOFs) ) {
-            _setNonAdjacentLinks.at(AO_ActiveDOFs).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[0]) {
+            _vNonAdjacentLinks.at(AO_ActiveDOFs).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[0]) {
                 FOREACHC(it, GetActiveDOFIndices()) {
                     if( IsDOFInChain(*itset&0xffff,*itset>>16,*it) ) {
-                        _setNonAdjacentLinks[AO_ActiveDOFs].insert(*itset);
+                        _vNonAdjacentLinks[AO_ActiveDOFs].push_back(*itset);
                         break;
                     }
                 }
             }
+            std::sort(_vNonAdjacentLinks[AO_ActiveDOFs].begin(), _vNonAdjacentLinks[AO_ActiveDOFs].end(), CompareNonAdjacentFarthest);
         }
         if( compute.at(AO_Enabled|AO_ActiveDOFs) ) {
-            _setNonAdjacentLinks.at(AO_Enabled|AO_ActiveDOFs).clear();
-            FOREACHC(itset, _setNonAdjacentLinks[AO_ActiveDOFs]) {
+            _vNonAdjacentLinks.at(AO_Enabled|AO_ActiveDOFs).resize(0);
+            FOREACHC(itset, _vNonAdjacentLinks[AO_ActiveDOFs]) {
                 KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
                 if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _setNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].insert(*itset);
+                    _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].push_back(*itset);
                 }
             }
+            std::sort(_vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].begin(), _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].end(), CompareNonAdjacentFarthest);
         }
         _nNonAdjacentLinkCache |= requestedoptions;
     }
-    return _setNonAdjacentLinks.at(adjacentoptions);
+    return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
 void RobotBase::SetNonCollidingConfiguration()
@@ -2171,6 +2191,56 @@ bool RobotBase::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
                     }
                 }
                 if( pchecker->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
+                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                        return true;
+                    }
+                    bincollision = true;
+                }
+            }
+        }
+    }
+    return bincollision;
+}
+
+bool RobotBase::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
+{
+    // TODO: have to consider rigidly attached links??
+    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+    bool bincollision = false;
+    LinkPtr plink = _veclinks.at(ilinkindex);
+    if( plink->IsEnabled() ) {
+        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
+        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+            bincollision = true;
+        }
+    }
+
+    KinBodyStateSaverPtr linksaver;
+    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
+    // it is important to make sure to add all other attached bodies in the ignored list!
+    std::vector<KinBodyConstPtr> vbodyexcluded;
+    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
+    FOREACHC(itgrabbed,_vGrabbedBodies) {
+        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
+        if( pgrabbed->_plinkrobot == plink ) {
+            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pbody ) {
+                if( !linksaver ) {
+                    linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
+                    plink->Enable(false);
+                    // also disable rigidly attached links?
+                }
+                KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
+                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pbody),report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
                     }

@@ -219,13 +219,13 @@ class InverseKinematicsModel(DatabaseGenerator):
                     geom.SetTransparency(tr)
                     
     _cachedKinematicsHash = None # manip.GetInverseKinematicsStructureHash() when the ik was built with
-    def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None):
+    def __init__(self,robot=None,iktype=None,forceikfast=False,freeindices=None,freejoints=None,manip=None, checkpreemptfn=None):
         """
         :param robot: if not None, will use the robot's active manipulator
         :param manip: if not None, will the manipulator, takes precedence over robot
         :param forceikfast: if set will always force the ikfast solver
         :param freeindices: force the following freeindices on the ik solver
-        
+        :param checkpreemptfn: a function to check if ik generation should be canceled
         """
         self.ikfastproblem = None
         if manip is not None:
@@ -268,6 +268,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         self.forceikfast = forceikfast
         self.ikfeasibility = None # if not None, ik is NOT feasibile and contains the error message
         self.statistics = dict()
+        self._checkpreemptfn=checkpreemptfn
         
     def  __del__(self):
         if self.ikfastproblem is not None:
@@ -387,14 +388,15 @@ class InverseKinematicsModel(DatabaseGenerator):
                 armlength += sqrt(sum((eetrans-j.GetAnchor())**2))
                 eetrans = j.GetAnchor()
             freeinc = []
-            for index in self.freeindices:
-                joint = self.robot.GetJointFromDOFIndex(index)
-                if joint.IsRevolute(index-joint.GetDOFIndex()):
-                    freeinc.append(freeincrot)
-                elif joint.IsPrismatic(index-joint.GetDOFIndex()):
-                    freeinc.append(freeinctrans*armlength)
-                else:
-                    log.warn('cannot set increment for joint type %s'%joint.GetType())
+            if self.freeindices is not None:
+                for index in self.freeindices:
+                    joint = self.robot.GetJointFromDOFIndex(index)
+                    if joint.IsRevolute(index-joint.GetDOFIndex()):
+                        freeinc.append(freeincrot)
+                    elif joint.IsPrismatic(index-joint.GetDOFIndex()):
+                        freeinc.append(freeinctrans*armlength)
+                    else:
+                        log.warn('cannot set increment for joint type %s'%joint.GetType())
             return freeinc
         
     def GetDefaultIndices(self,avoidPrismaticAsFree=False):
@@ -543,7 +545,10 @@ class InverseKinematicsModel(DatabaseGenerator):
             index += 1
             dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             if allfreeindices is None:
-                allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+                if self.manip.GetArmDOF() > dofexpected:
+                    allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),self.manip.GetArmDOF()-dofexpected)]
+                else:
+                    allfreeindices = []
             if index >= len(allfreeindices):
                 break
             freeindices = allfreeindices[index]
@@ -822,8 +827,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 return self.ikfast.IKFastSolver.solveFullIK_TranslationAxisAngle4D(*args,**kwargs)
             solvefn=solveFullIK_TranslationZAxisAngleYNorm4D
         else:
-            raise InverseKinematicsError(u'bad type')
-
+            raise InverseKinematicsError(u'bad type 0x%x'%self.iktype)
+        
         dofexpected = IkParameterization.GetDOFFromType(self.iktype)
         if freeindices is not None:
             self.freeindices = freeindices
@@ -834,7 +839,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 self.solveindices,self.freeindices = self.GetDefaultIndices(avoidPrismaticAsFree=avoidPrismaticAsFree)
         self.solveindices = [i for i in self.manip.GetArmIndices() if not i in self.freeindices]
         if len(self.solveindices) != dofexpected:
-            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name})
+            raise InverseKinematicsError(u'Manipulator %(manip)s (indices=%(manipindices)r) joint indices to solve for (%(solveindices)r) is not equal to number of expected joints (%(dofexpected)d) for IK type %(iktype)s. Perhaps the manipulator base link %(baselink)s or end link %(endlink)s are not correct.'%{'manip':self.manip.GetName(),'manipindices':list(self.manip.GetArmIndices()), 'solveindices':list(self.solveindices), 'dofexpected':dofexpected, 'iktype':self.iktype.name, 'baselink':self.manip.GetBase().GetName(), 'endlink':self.manip.GetEndEffector().GetName()})
         
         if freeinc is not None:
             self.freeinc = freeinc
@@ -855,7 +860,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             except OSError:
                 pass
             
-            solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetInverseKinematicsStructureHash(self.iktype),precision=precision)
+            solver = self.ikfast.IKFastSolver(kinbody=self.robot,kinematicshash=self.manip.GetInverseKinematicsStructureHash(self.iktype),precision=precision, checkpreemptfn=self._checkpreemptfn)
             solver.maxcasedepth = ikfastmaxcasedepth
             if self.iktype == IkParameterizationType.TranslationXAxisAngle4D or self.iktype == IkParameterizationType.TranslationYAxisAngle4D or self.iktype == IkParameterizationType.TranslationZAxisAngle4D or self.iktype == IkParameterizationType.TranslationXAxisAngleZNorm4D or self.iktype == IkParameterizationType.TranslationYAxisAngleXNorm4D or self.iktype == IkParameterizationType.TranslationZAxisAngleYNorm4D or self.iktype == IkParameterizationType.TranslationXYOrientation3D:
                 solver.useleftmultiply = False

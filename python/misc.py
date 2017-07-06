@@ -385,7 +385,7 @@ def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
     R = openravepy_int.matrixFromQuat(openravepy_int.quatRotateDirection([0,0,1],normal))
     right = R[0:3,0]*radius
     up = R[0:3,1]*radius
-    return env.drawlinestrip(c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
+    return env.drawlinestrip(numpy.c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
@@ -415,7 +415,6 @@ def ComputeCylinderYMesh(radius,height,angledelta=0.1):
         iprev = i
     return vertices,numpy.array(indices)
 
-
 def TSP(solutions,distfn=None):
     """solution to travelling salesman problem. orders the set of solutions such that visiting them one after another is fast.
     """
@@ -424,6 +423,7 @@ def TSP(solutions,distfn=None):
         distfn = lambda x,y: sum((x-y)**2)
     
     newsolutions = numpy.array(solutions)
+    newindices = numpy.arange(len(solutions))
     for i in range(newsolutions.shape[0]-2):
         n = newsolutions.shape[0]-i-1
         dists = [distfn(newsolutions[i,:],newsolutions[j,:]) for j in range(i+1,newsolutions.shape[0])]
@@ -431,7 +431,8 @@ def TSP(solutions,distfn=None):
         sol = numpy.array(newsolutions[i+1,:])
         newsolutions[i+1,:] = newsolutions[minind,:]
         newsolutions[minind,:] = sol
-    return newsolutions
+        newindices[i+1], newindices[minind] = newindices[minind], newindices[i+1]
+    return newsolutions, newindices
 
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
