@@ -69,7 +69,7 @@ __license__ = 'Apache License, Version 2.0'
 if not __openravepy_build_doc__:
     from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
 from numpy.linalg import norm
 from numpy.core.umath_tests import inner1d
 
@@ -333,13 +333,29 @@ class ConvexDecompositionModel(DatabaseGenerator):
             return self.PadMesh(trimesh.vertices,reshape(array(res[offset:(offset+3*numtriangles)],int32),(numtriangles,3)), padding)
         
     @staticmethod
-    def PadMesh(vertices,indices,padding):
+    def PadMesh(vertices, indices, padding, mergeDuplicated=True, rtol=1e-05, atol=1e-08):
         """pads a mesh by increasing towards the normal
+        :param mergeDuplicated: This function will return a bad mesh when there are duplicated vertices and mergeDuplicated=False
+        :param rtol: The relative tolerance parameter to np.isclose when finding duplicated vertices
+        :param atol: The absolute tolerance parameter to np.isclose when finding duplicated vertices
         """
         M = mean(vertices,0)
+
+        # Merge duplicated vertices (+- epsilon)
+        indices_raveled = indices.ravel()
+        vertices_map = arange(len(vertices), dtype=indices.dtype)
+        for a in range(len(vertices) - 1):
+            if vertices_map[a] == a:
+                combine = a + 1 + flatnonzero(isclose(vertices[a], vertices[a+1:], rtol, atol).all(axis=1))
+                vertices_map[combine] = a
+        indices = vertices_map[indices.ravel()].reshape(-1, 3)
+
         vertices_0 = vertices[indices[:, 0]]
         facenormals = cross(vertices[indices[:, 1]] - vertices_0, vertices[indices[:, 2]] - vertices_0)
+        degenerate = isclose(facenormals, 0.0, rtol, atol).all(axis=1)
         facenormals /= norm(facenormals, axis=1)[:, newaxis]
+        # Take care of degenerate triangles. Otherwise their normals would be none
+        facenormals[degenerate] = 0.0
 
         # make sure normals are facing outward
         newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)

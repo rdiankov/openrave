@@ -321,6 +321,9 @@ public:
     virtual void _SetCameraDistanceToFocus(float focalDistance);
 
     virtual void _SetProjectionMode(const std::string& projectionMode);
+    virtual void _SetBkgndColor(const RaveVector<float>& color);
+
+    virtual void _SetName(const std::string& name);
 
     /// \brief posts a function to be executed in the GUI thread
     ///

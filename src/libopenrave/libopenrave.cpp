@@ -487,6 +487,11 @@ public:
 
     void Destroy()
     {
+        if( !!_pdatabase ) {
+            // notify all plugins that about to destroy
+            _pdatabase->OnRavePreDestroy();
+        }
+        
         // don't use any log statements since global instance might be null
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
         std::map<int, EnvironmentBase*> mapenvironments;

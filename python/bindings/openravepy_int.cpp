@@ -1026,6 +1026,27 @@ public:
         }
     }
 
+    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+        std::vector<char> output;
+        extract<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            _penv->WriteToMemory(filetype,output,options,atts);
+        }
+        else {
+            _penv->WriteToMemory(filetype,output,options,toAttributesList(odictatts));
+        }
+
+        if( output.size() == 0 ) {
+            return boost::python::object();
+        }
+        else {
+            return boost::python::object(boost::python::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+        }
+    }
+
     object ReadRobotURI(const string &filename)
     {
         return object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
@@ -1885,6 +1906,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(WriteToMemory_overloads, WriteToMemory, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedBody, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
@@ -2085,6 +2107,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("LoadData",loaddata2,args("data","atts"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("Save",&PyEnvironmentBase::Save,Save_overloads(args("filename","options","atts"), DOXY_FN(EnvironmentBase,Save)))
+                    .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,WriteToMemory_overloads(args("filetype","options","atts"), DOXY_FN(EnvironmentBase,WriteToMemory)))
                     .def("ReadRobotURI",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotURI",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))

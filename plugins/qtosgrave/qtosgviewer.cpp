@@ -1206,7 +1206,7 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
     sinput >> bcallmain;
     _nQuitMainLoop = -1;
     //_StartPlaybackTimer();
-    this->show();
+    Show(1);
     if( bcallmain ) {
         _posgWidget->SetHome();
         QApplication::instance()->exec();
@@ -1246,7 +1246,7 @@ int QtOSGViewer::main(bool bShow)
     //_StartPlaybackTimer();
     if (bShow) {
         if( _nQuitMainLoop < 0 ) {
-            this->show();
+            Show(1);
         }
     }
 
@@ -1727,7 +1727,12 @@ void QtOSGViewer::Reset()
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
 {
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color));
+}
 
+void QtOSGViewer::_SetBkgndColor(const RaveVector<float>& color)
+{
+    _posgWidget->GetCamera()->setClearColor(osg::Vec4f(color.x, color.y, color.z, 1.0));
 }
 
 void QtOSGViewer::StartPlaybackTimer()
@@ -1748,9 +1753,14 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::SetName(const string& ptitle)
+void QtOSGViewer::SetName(const string& name)
 {
-    setWindowTitle(ptitle.c_str());
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
+}
+
+void QtOSGViewer::_SetName(const string& name)
+{
+    setWindowTitle(name.c_str());
 }
 
 bool QtOSGViewer::LoadModel(const string& filename)
