@@ -731,12 +731,40 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( !!_pConstraintToolDirection ) {
                     if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
                         bConstraintFailed = true;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "direction constraints failed, ";
+                            for(size_t i = 0; i < _newdof2.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << _newdof2[i];
+                                }
+                                else {
+                                    ss << "colvalues=[" << _newdof2[i];
+                                }
+                            }
+                            ss << "]; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         break;
                     }
                 }
                 if( !!_pConstraintToolPosition ) {
                     if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
                         bConstraintFailed = true;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "position constraints failed, ";
+                            for(size_t i = 0; i < _newdof2.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << _newdof2[i];
+                                }
+                                else {
+                                    ss << "colvalues=[" << _newdof2[i];
+                                }
+                            }
+                            ss << "]; trans=[" << _pmanip->GetTransform().trans.x << ", " << _pmanip->GetTransform().trans.y << ", " << _pmanip->GetTransform().trans.z << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         break;
                     }
                 }
