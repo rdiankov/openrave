@@ -101,6 +101,11 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                     return qtosgrave::CreateQtOSGViewer(penv, sinput); // no idea...
                 }
                 else {
+                    // TODO: Fix this temporary HACK! The function below is posted
+                    //       before the Qt app is running, so it won't get executed
+                    //       immediately and the GetViewer function will time out.
+                    return qtosgrave::CreateQtOSGViewer(penv, sinput);
+
                     //RAVELOG_DEBUG("detect QApplication, so exiting from GUI thread in order to safely create\n");
                     RAVELOG_DEBUG("detect QApplication, so attempting to create new viewer in original GUI thread\n");
                     boost::shared_ptr<qtosgrave::QtOSGViewerCreator> creator(new qtosgrave::QtOSGViewerCreator(penv, sinput));
