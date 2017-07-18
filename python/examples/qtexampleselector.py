@@ -55,8 +55,7 @@ class Example(Thread):
 
     def run(self):
         try:
-            with open("/dev/tty") as f:
-                sys.stdin = f
+            sys.stdin = open("/dev/tty")
             getattr(self.mod, "run")(self.args)
 
         except:
