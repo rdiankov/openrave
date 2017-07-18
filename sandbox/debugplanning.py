@@ -308,7 +308,8 @@ def test_contours():
     id = tvtk.ImageData(origin=array((numpy.min(x),numpy.min(y),numpy.min(z))),spacing=spacing,dimensions=scalars.shape)
     id.point_data.scalars = scalars.ravel()
 
-    x,y,z,t,sweptdata = pickle.load(open('tris.pp','r'))
+    with open('tris.pp','r') as f:
+        x,y,z,t,sweptdata = pickle.load(f)
     sweptdata = array(sweptdata,'float64')
     #sweptdata = sweptdata[0:61,0:60,0:60]
     id = tvtk.ImageData(origin=array((0,0,0)),spacing=array((0.005,0.005,0.005)),dimensions=sweptdata.shape[::-1])

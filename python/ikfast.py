@@ -104,7 +104,8 @@ IKFast can also be used as a library in python. Generating 6D IK for the Barrett
   solver = ikfast.IKFastSolver(kinbody=kinbody)
   chaintree = solver.generateIkSolver(baselink=0,eelink=7,freeindices=[2],solvefn=ikfast.IKFastSolver.solveFullIK_6D)
   code = solver.writeIkSolver(chaintree)
-  open('ik.cpp','w').write(code)
+  with open('ik.cpp','w') as f:
+    f.write(code)
 
 .. _ikfast_generatedcpp:
 
@@ -9551,4 +9552,5 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
             openravepy.RaveDestroy()
 
     if len(code) > 0:
-        open(options.savefile,'w').write(code)
+        with open(options.savefile,'w') as f:
+            f.write(code)
