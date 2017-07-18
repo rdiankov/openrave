@@ -164,7 +164,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 
         if sourcefilename is not None:
             sourcefilename_tail = os.path.split(sourcefilename)[1]
-            open(os.path.join(sourceoutputdir,sourcefilename_tail),'w').write(sourcecode)
+            with open(os.path.join(sourceoutputdir,sourcefilename_tail),'w') as f:
+                f.write(sourcecode)
             sourcename = ':download:`C++ Code <%s/%s>`'%(robotname,sourcefilename_tail)
         else:
             sourcename = ':red:`Failed`'
@@ -206,7 +207,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
         rows.append(row)
     if rows is not None:
         robotxml += writetable(rows)
-    open(os.path.join(outputdir,robotname+'.rst'),'w').write(robotxml)
+    with open(os.path.join(outputdir,robotname+'.rst'),'w') as f:
+        f.write(robotxml)
     returnxml = """
 :ref:`%s`
 %s
@@ -284,7 +286,8 @@ Robots
 """%(outputdir,buildoptions.jenkinsbuild_url, robotxml)
     for robotname in robotnames:
         text += '  %s\n'%(robotname)
-    open(os.path.join(outputdir,'robots.rst'),'w').write(text)
+    with open(os.path.join(outputdir,'robots.rst'),'w') as f:
+        f.write(text)
     freeparameters = ', '.join('%s free - %s tests'%(i,num) for i,num in enumerate(buildoptions.numiktests))
     text="""
 .. _ikfast-database:
@@ -333,7 +336,8 @@ Degenerate configurations can frequently occur when the robot axes align, this p
 
 .. [1] The discretization of the free joint values depends on the robot manipulator and is given in each individual manipulator page.
 """%(ikfast.__version__, buildoptions.errorthreshold,freeparameters,buildoptions.minimumsuccess,buildoptions.maximumnosolutions)
-    open(os.path.join(outputdir,'index.rst'),'w').write(text)
+    with open(os.path.join(outputdir,'index.rst'),'w') as f:
+        f.write(text)
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds the ik database')
@@ -356,7 +360,8 @@ if __name__ == "__main__":
         os.makedirs(imagedir)
     except OSError:
         pass
-    allstats,buildoptions = pickle.load(open(options.ikfaststats,'r'))
+    with open(options.ikfaststats,'r') as f:
+        allstats,buildoptions = pickle.load(f)
     env=Environment()
     try:
         env.SetViewer('qtcoin',False)

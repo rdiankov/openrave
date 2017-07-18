@@ -58,7 +58,9 @@ except ImportError:
         return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
-    return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
+    with open(trajfile,'r') as f:
+        traj = openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(f.read())
+    return traj
 
 def InitOpenRAVELogging(stream=stdout):
     """Sets the python logging **openravepy** scope to the same debug level as OpenRAVE and initializes handles if they are not present
