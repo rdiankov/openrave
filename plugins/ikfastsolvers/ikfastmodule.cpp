@@ -449,7 +449,7 @@ public:
             string output;
             FILE* pipe = MYPOPEN(OPENRAVE_PYTHON_EXECUTABLE " -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
             if (pipe == NULL) {
-                RAVELOG_WARN_FORMAT("Failed to open pipe: %s\n", strerror(errno));
+                RAVELOG_WARN("Failed to open pipe\n");
                 return false;
             }
             {
