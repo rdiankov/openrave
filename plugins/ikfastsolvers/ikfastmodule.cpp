@@ -448,6 +448,10 @@ public:
         if( _ikfastversion.size() == 0 || _platform.size() == 0 ) {
             string output;
             FILE* pipe = MYPOPEN(OPENRAVE_PYTHON_EXECUTABLE " -c \"import openravepy.ikfast; import platform; print(openravepy.ikfast.__version__+' '+platform.machine())\"", "r");
+            if (pipe == NULL) {
+                RAVELOG_WARN("Failed to open pipe\n");
+                return false;
+            }
             {
                 boost::iostreams::stream_buffer<boost::iostreams::file_descriptor_source> fpstream(fileno(pipe),FILE_DESCRIPTOR_FLAG);
                 std::istream in(&fpstream);
