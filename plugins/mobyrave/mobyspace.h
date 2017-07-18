@@ -29,6 +29,8 @@
 #include <Moby/SphericalJoint.h>
 #include <Moby/GravityForce.h>
 
+#include <boost/make_shared.hpp>
+
 typedef void (*ControllerCallbackFn)(boost::shared_ptr<Moby::DynamicBody>,double,void*);
 
 // manages a space of Moby objects
@@ -132,7 +134,7 @@ private:
 
         // compute a box to approximate link inertial properties
         AABB bb = plink->ComputeLocalAABB();
-        link->_primitive = Moby::PrimitivePtr(new Moby::BoxPrimitive(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2));
+        link->_primitive = boost::make_shared<Moby::BoxPrimitive>(bb.extents.x*2,bb.extents.y*2,bb.extents.z*2);
         link->_primitive->set_mass(plink->GetMass());
 
         // assign link parameters

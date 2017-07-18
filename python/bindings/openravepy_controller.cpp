@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PyControllerBase : public PyInterfaceBase
@@ -81,7 +83,7 @@ public:
         if( IS_PYTHONOBJECT_NONE(otransform) ) {
             return SetDesired(o);
         }
-        return _pcontroller->SetDesired(ExtractArray<dReal>(o),TransformConstPtr(new Transform(ExtractTransform(otransform))));
+        return _pcontroller->SetDesired(ExtractArray<dReal>(o), boost::make_shared<Transform>(ExtractTransform(otransform)));
     }
 
     bool SetPath(PyTrajectoryBasePtr pytraj)
@@ -158,10 +160,10 @@ PyInterfaceBasePtr toPyController(ControllerBasePtr pcontroller, PyEnvironmentBa
     // TODO this is a hack
     // unfortunately dynamic_pointer_cast will not work. The most ideal situation is to have MultiControllerBase registered as its own individual interface....
     else if( pcontroller->GetXMLId() == std::string("MultiController") ) {
-        return PyInterfaceBasePtr(new PyMultiControllerBase(boost::static_pointer_cast<MultiControllerBase>(pcontroller), pyenv));
+        return boost::make_shared<PyMultiControllerBase>(boost::static_pointer_cast<MultiControllerBase>(pcontroller), pyenv);
     }
     else {
-        return PyInterfaceBasePtr(new PyControllerBase(pcontroller, pyenv));
+        return boost::make_shared<PyControllerBase>(pcontroller, pyenv);
     }
 }
 
@@ -171,7 +173,7 @@ PyControllerBasePtr RaveCreateController(PyEnvironmentBasePtr pyenv, const std::
     if( !pcontroller ) {
         return PyControllerBasePtr();
     }
-    return PyControllerBasePtr(new PyControllerBase(pcontroller, pyenv));
+    return boost::make_shared<PyControllerBase>(pcontroller, pyenv);
 }
 
 PyMultiControllerBasePtr RaveCreateMultiController(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -180,7 +182,7 @@ PyMultiControllerBasePtr RaveCreateMultiController(PyEnvironmentBasePtr pyenv, c
     if( !pcontroller ) {
         return PyMultiControllerBasePtr();
     }
-    return PyMultiControllerBasePtr(new PyMultiControllerBase(pcontroller, pyenv));
+    return boost::make_shared<PyMultiControllerBase>(pcontroller, pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)

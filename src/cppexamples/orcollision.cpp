@@ -126,7 +126,7 @@ int main(int argc, char ** argv)
         }
         pbody->SetDOFValues(values,true);
 
-        CollisionReportPtr report(new CollisionReport());
+        CollisionReportPtr report = boost::make_shared<CollisionReport>();
         penv->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
         if( pbody->CheckSelfCollision(report) ) {
             contactpoints = (int)report->contacts.size();

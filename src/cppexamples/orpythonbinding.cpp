@@ -35,9 +35,10 @@
 #include <pyconfig.h>
 
 #include <exception>
-#include <boost/shared_ptr.hpp>
-#include <boost/format.hpp>
 #include <boost/assert.hpp>
+#include <boost/format.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <vector>
 #include <cstring>
@@ -60,7 +61,7 @@ class PythonBindingModule : public ModuleBase
 {
 public:
     PythonBindingModule(EnvironmentBasePtr penv, std::istream&) : ModuleBase(penv) {
-        SetUserData(UserDataPtr(new FunctionUserData()));
+        SetUserData(boost::make_shared<FunctionUserData>());
     }
     virtual ~PythonBindingModule() {
         RAVELOG_DEBUG("destroying python binding\n");
@@ -92,7 +93,7 @@ boost::shared_ptr<void> g_PythonBindingInterfaceHandle;
 
 InterfaceBasePtr PythonBindingCreateInterface(EnvironmentBasePtr penv, std::istream& istream)
 {
-    return InterfaceBasePtr(new PythonBindingModule(penv,istream));
+    return boost::make_shared<PythonBindingModule>(penv,istream);
 }
 
 InterfaceBasePtr RegisterSimulationFunction(int environmentid, boost::python::object simulationfn)

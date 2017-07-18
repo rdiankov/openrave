@@ -14,6 +14,8 @@
 #include "openraveplugindefs.h"
 #include "configurationcachetree.h"
 
+#include <boost/make_shared.hpp>
+
 namespace configurationcache
 {
 
@@ -690,7 +692,7 @@ protected:
 
 CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return CollisionCheckerBasePtr(new CacheCollisionChecker(penv, sinput));
+    return boost::make_shared<CacheCollisionChecker>(penv, boost::ref(sinput));
 }
 
 };

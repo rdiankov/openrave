@@ -16,6 +16,8 @@
 #include "commonmanipulation.h"
 #include <boost/algorithm/string/replace.hpp>
 
+#include <boost/make_shared.hpp>
+
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
 /// allowableoutliers - specifies the % of allowable outliying rays
@@ -137,10 +139,10 @@ class VisualFeedback : public ModuleBase
 {
 public:
     inline boost::shared_ptr<VisualFeedback> shared_problem() {
-        return boost::dynamic_pointer_cast<VisualFeedback>(shared_from_this());
+        return boost::static_pointer_cast<VisualFeedback>(shared_from_this());
     }
     inline boost::shared_ptr<VisualFeedback const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<VisualFeedback const>(shared_from_this());
+        return boost::static_pointer_cast<VisualFeedback const>(shared_from_this());
     }
     friend class VisibilityConstraintFunction;
 
@@ -1547,5 +1549,5 @@ protected:
 };
 
 ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new VisualFeedback(penv));
+    return boost::make_shared<VisualFeedback>(penv);
 }

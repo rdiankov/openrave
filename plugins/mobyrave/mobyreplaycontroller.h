@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 class MRDFile {
 private:
@@ -282,7 +283,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts));
+    	return boost::make_shared<ControllerPropertiesXMLReader>(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts);
     }
 
     MobyReplayController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _mrdfilename(""), _firstAction(true) {
@@ -817,12 +818,12 @@ private:
 
     inline boost::shared_ptr<MobyReplayController> shared_controller()
     {
-        return boost::dynamic_pointer_cast<MobyReplayController>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyReplayController const> shared_controller_const() const
     {
-        return boost::dynamic_pointer_cast<MobyReplayController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyReplayController const>(shared_from_this());
     }
 
     inline boost::weak_ptr<MobyReplayController> weak_controller()
@@ -991,5 +992,5 @@ private:
 
 ControllerBasePtr CreateMobyReplayController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new MobyReplayController(penv,sinput));
+    return boost::make_shared<MobyReplayController>(penv, boost::ref(sinput));
 }

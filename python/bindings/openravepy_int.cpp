@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
 #include <openrave/utils.h>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -127,7 +128,7 @@ public:
     ViewerManager() {
         _bShutdown = false;
         _bInMain = false;
-        _threadviewer.reset(new boost::thread(boost::bind(&ViewerManager::_RunViewerThread, this)));
+        _threadviewer = boost::make_shared<boost::thread>(boost::bind(&ViewerManager::_RunViewerThread, this));
     }
 
     virtual ~ViewerManager() {
@@ -415,16 +416,16 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
         openravepy::PythonThreadSaverPtr statesaver;
         openravepy::PyEnvironmentLockSaverPtr envsaver;
         if( releasegil ) {
-            statesaver.reset(new openravepy::PythonThreadSaver());
+            statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             if( lockenv ) {
                 // GIL is already released, so use a regular environment lock
-                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, true));
+                envsaver = boost::make_shared<openravepy::PyEnvironmentLockSaver>(_pyenv, true);
             }
         }
         else {
             if( lockenv ) {
                 // try to safely lock the environment first
-                envsaver.reset(new openravepy::PyEnvironmentLockSaver(_pyenv, false));
+                envsaver = boost::make_shared<openravepy::PyEnvironmentLockSaver>(_pyenv, false);
             }
         }
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -1784,7 +1785,7 @@ PyEnvironmentBasePtr PyInterfaceBase::GetEnv() const
     return _pyenv;
 #else
     // if raw shared_ptr is returned, then python will throw RuntimeError: tr1::bad_weak_ptr when env is used
-    return PyEnvironmentBasePtr(new PyEnvironmentBase(_pyenv->GetEnv()));
+    return boost::make_shared<PyEnvironmentBase>(_pyenv->GetEnv());
 #endif
 }
 
@@ -1863,7 +1864,7 @@ object RaveGetEnvironments()
     OpenRAVE::RaveGetEnvironments(listenvironments);
     boost::python::list oenvironments;
     FOREACH(it,listenvironments) {
-        oenvironments.append(PyEnvironmentBasePtr(new PyEnvironmentBase(*it)));
+        oenvironments.append(boost::make_shared<PyEnvironmentBase>(*it));
     }
     return oenvironments;
 }
@@ -1878,7 +1879,7 @@ PyEnvironmentBasePtr RaveGetEnvironment(int id)
     if( !penv ) {
         return PyEnvironmentBasePtr();
     }
-    return PyEnvironmentBasePtr(new PyEnvironmentBase(penv));
+    return boost::make_shared<PyEnvironmentBase>(penv);
 }
 
 PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name)
@@ -1887,7 +1888,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
     if( !p ) {
         return PyInterfaceBasePtr();
     }
-    return PyInterfaceBasePtr(new PyInterfaceBase(p,pyenv));
+    return boost::make_shared<PyInterfaceBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)

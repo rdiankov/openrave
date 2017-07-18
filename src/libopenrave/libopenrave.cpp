@@ -16,9 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/make_shared.hpp>
 #include <boost/scoped_ptr.hpp>
-#include <boost/utility.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/utility.hpp>
 
 #include <streambuf>
 
@@ -441,7 +442,7 @@ public:
             RAVELOG_WARN("failed to set to C locale: %s\n",e.what());
         }
 
-        _pdatabase.reset(new RaveDatabase());
+        _pdatabase = boost::make_shared<RaveDatabase>();
         if( !_pdatabase->Init(bLoadAllPlugins) ) {
             RAVELOG_FATAL("failed to create the openrave plugin database\n");
         }
@@ -658,7 +659,7 @@ protected:
 
     UserDataPtr RegisterXMLReader(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn)
     {
-        return UserDataPtr(new XMLReaderFunctionData(type,xmltag,fn,shared_from_this()));
+        return boost::make_shared<XMLReaderFunctionData>(type, xmltag, fn, shared_from_this());
     }
 
     const BaseXMLReaderPtr CallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)
@@ -2203,7 +2204,7 @@ BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& na
     }
 
     // create a new parser
-    _pcurreader.reset(new DummyXMLReader(name, _parentname,_osrecord));
+    _pcurreader = boost::make_shared<DummyXMLReader>(name, _parentname,_osrecord);
     return PE_Support;
 }
 
@@ -2343,7 +2344,7 @@ typedef boost::shared_ptr<CustomSamplerCallbackData> CustomSamplerCallbackDataPt
 
 UserDataPtr SpaceSamplerBase::RegisterStatusCallback(const StatusCallbackFn& callbackfn)
 {
-    CustomSamplerCallbackDataPtr pdata(new CustomSamplerCallbackData(callbackfn,shared_sampler()));
+    CustomSamplerCallbackDataPtr pdata = boost::make_shared<CustomSamplerCallbackData>(callbackfn,shared_sampler());
     pdata->_iterator = __listRegisteredCallbacks.insert(__listRegisteredCallbacks.end(),pdata);
     return pdata;
 }
@@ -2444,7 +2445,7 @@ void DefaultStartElementSAXFunc(void *ctx, const xmlChar *name, const xmlChar **
         BaseXMLReader::ProcessElement pestatus = pdata->_reader.startElement(s, listatts);
         if( pestatus != BaseXMLReader::PE_Support ) {
             // not handling, so create a temporary class to handle it
-            pdata->_pdummy.reset(new DummyXMLReader(s,"(libxml)"));
+            pdata->_pdummy = boost::make_shared<DummyXMLReader>(s,"(libxml)");
         }
     }
 }

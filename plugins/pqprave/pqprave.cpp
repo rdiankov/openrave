@@ -14,6 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include "collisionPQP.h"
+#include <boost/make_shared.hpp>
 #include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -21,7 +22,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "pqp")
-            return InterfaceBasePtr(new CollisionCheckerPQP(penv));
+            return boost::make_shared<CollisionCheckerPQP>(penv);
         break;
     default:
         break;

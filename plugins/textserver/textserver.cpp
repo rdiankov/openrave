@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include "textserver.h"
+#include <boost/make_shared.hpp>
 #include <openrave/plugin.h>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
@@ -22,7 +23,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case OpenRAVE::PT_Module:
         if( interfacename == "textserver")
-            return InterfaceBasePtr(new SimpleTextServer(penv));
+            return boost::make_shared<SimpleTextServer>(penv);
         break;
     default:
         break;

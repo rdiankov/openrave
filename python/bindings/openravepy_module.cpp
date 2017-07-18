@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
+#include <boost/make_shared.hpp>
 
 namespace openravepy {
 
@@ -48,7 +49,7 @@ ModuleBasePtr GetModule(PyModuleBasePtr pymodule)
 
 PyInterfaceBasePtr toPyModule(ModuleBasePtr pmodule, PyEnvironmentBasePtr pyenv)
 {
-    return !pmodule ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyModuleBase(pmodule,pyenv));
+    return !pmodule ? PyInterfaceBasePtr() : boost::make_shared<PyModuleBase>(pmodule,pyenv);
 }
 
 PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -57,7 +58,7 @@ PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& 
     if( !p ) {
         return PyModuleBasePtr();
     }
-    return PyModuleBasePtr(new PyModuleBase(p,pyenv));
+    return boost::make_shared<PyModuleBase>(p,pyenv);
 }
 
 void init_openravepy_module()

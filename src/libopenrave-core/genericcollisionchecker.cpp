@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
 
+#include <boost/make_shared.hpp>
+
 namespace OpenRAVE {
 
 class GenericCollisionChecker : public CollisionCheckerBase
@@ -126,7 +128,7 @@ public:
 
 CollisionCheckerBasePtr CreateGenericCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return CollisionCheckerBasePtr(new GenericCollisionChecker(penv,sinput));
+    return boost::make_shared<GenericCollisionChecker>(penv, boost::ref(sinput));
 }
 
 }

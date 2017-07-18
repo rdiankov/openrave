@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 class IdealVelocityController : public ControllerBase
 {
@@ -107,5 +108,5 @@ protected:
 
 ControllerBasePtr CreateIdealVelocityController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new IdealVelocityController(penv,sinput));
+    return boost::make_shared<IdealVelocityController>(penv, boost::ref(sinput));
 }

@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "trajectoryretimer.h"
+#include <boost/make_shared.hpp>
 #include <openrave/planningutils.h>
-
 #include <openrave/mathextra.h>
 
 namespace rplanners {
@@ -312,7 +312,7 @@ protected:
 };
 
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new CubicTrajectoryRetimer(penv, sinput));
+    return boost::make_shared<CubicTrajectoryRetimer>(penv, boost::ref(sinput));
 }
 
 } // end namespace rplanners

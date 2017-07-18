@@ -20,6 +20,7 @@
 #include "XFileParser.h"
 
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -342,7 +343,7 @@ protected:
             KinBody::GeometryInfo g;
             _ExtractGeometry(*it, g);
             g._t = plink->_info._t.inverse() * tflipyz * tnode;
-            plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(plink,g)));
+            plink->_vGeometries.push_back(boost::make_shared<KinBody::Link::Geometry>(plink,g));
         }
 
         FOREACH(it,node->mChildren) {

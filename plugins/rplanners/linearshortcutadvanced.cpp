@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
@@ -365,5 +367,5 @@ protected:
 };
 
 PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new ShortcutLinearPlanner(penv, sinput));
+    return boost::make_shared<ShortcutLinearPlanner>(penv, boost::ref(sinput));
 }

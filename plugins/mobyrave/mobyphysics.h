@@ -18,6 +18,7 @@
 
 #include "mobyspace.h"
 
+#include <boost/make_shared.hpp>
 #include <Moby/TimeSteppingSimulator.h>
 #include <Moby/EulerIntegrator.h>
 #include <Moby/GravityForce.h>
@@ -26,11 +27,11 @@ class MobyPhysics : public PhysicsEngineBase
 {
 
     inline boost::shared_ptr<MobyPhysics> shared_physics() {
-        return boost::dynamic_pointer_cast<MobyPhysics>(shared_from_this());
+        return boost::static_pointer_cast<MobyPhysics>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyPhysics const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<MobyPhysics const>(shared_from_this());
+        return boost::static_pointer_cast<MobyPhysics const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
@@ -116,7 +117,7 @@ public:
 
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<MobyPhysics>(ptr),atts));
+    	return boost::make_shared<PhysicsPropertiesXMLReader>(boost::dynamic_pointer_cast<MobyPhysics>(ptr),atts);
     }
 
     MobyPhysics(EnvironmentBasePtr penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 

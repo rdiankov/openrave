@@ -104,10 +104,10 @@ private:
     };
 
     inline boost::shared_ptr<ODECollisionChecker> shared_checker() {
-        return boost::dynamic_pointer_cast<ODECollisionChecker>(shared_from_this());
+        return boost::static_pointer_cast<ODECollisionChecker>(shared_from_this());
     }
     inline boost::shared_ptr<ODECollisionChecker const> shared_checker_const() const {
-        return boost::dynamic_pointer_cast<ODECollisionChecker const>(shared_from_this());
+        return boost::static_pointer_cast<ODECollisionChecker const>(shared_from_this());
     }
 
 public:

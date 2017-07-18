@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_kinbody.h"
+#include <boost/make_shared.hpp>
 
 namespace openravepy {
 
@@ -91,7 +92,7 @@ public:
     }
 
     KinBody::GeometryInfoPtr GetGeometryInfo() {
-        KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
+        KinBody::GeometryInfoPtr pinfo = boost::make_shared<KinBody::GeometryInfo>();
         KinBody::GeometryInfo& info = *pinfo;
         info._t = ExtractTransform(_t);
         info._vGeomData = ExtractVector<dReal>(_vGeomData);
@@ -147,7 +148,7 @@ public:
     }
     PyLinkInfo(const KinBody::LinkInfo& info) {
         FOREACHC(itgeominfo, info._vgeometryinfos) {
-            _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
+            _vgeometryinfos.append(boost::make_shared<PyGeometryInfo>(**itgeominfo));
         }
         _name = ConvertStringToUnicode(info._name);
         _t = ReturnTransform(info._t);
@@ -173,7 +174,7 @@ public:
     }
 
     KinBody::LinkInfoPtr GetLinkInfo() {
-        KinBody::LinkInfoPtr pinfo(new KinBody::LinkInfo());
+        KinBody::LinkInfoPtr pinfo = boost::make_shared<KinBody::LinkInfo>();
         KinBody::LinkInfo& info = *pinfo;
         info._vgeometryinfos.resize(len(_vgeometryinfos));
         for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
@@ -275,7 +276,7 @@ public:
     }
 
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo() {
-        ElectricMotorActuatorInfoPtr pinfo(new ElectricMotorActuatorInfo());
+        ElectricMotorActuatorInfoPtr pinfo = boost::make_shared<ElectricMotorActuatorInfo>();
         ElectricMotorActuatorInfo& info = *pinfo;
         info.model_type = model_type;
         info.gear_ratio = gear_ratio;
@@ -400,12 +401,12 @@ public:
         _bIsCircular = bIsCircular;
         _bIsActive = info._bIsActive;
         if( !!info._infoElectricMotor ) {
-            _infoElectricMotor = PyElectricMotorActuatorInfoPtr(new PyElectricMotorActuatorInfo(*info._infoElectricMotor));
+            _infoElectricMotor = boost::make_shared<PyElectricMotorActuatorInfo>(*info._infoElectricMotor);
         }
     }
 
     KinBody::JointInfoPtr GetJointInfo() {
-        KinBody::JointInfoPtr pinfo(new KinBody::JointInfo());
+        KinBody::JointInfoPtr pinfo = boost::make_shared<KinBody::JointInfo>();
         KinBody::JointInfo& info = *pinfo;
         info._type = _type;
         if( !IS_PYTHONOBJECT_NONE(_name) ) {
@@ -499,7 +500,7 @@ public:
                 object omimic = _vmimic[i];
                 if( !IS_PYTHONOBJECT_NONE(omimic) ) {
                     OPENRAVE_ASSERT_OP(len(omimic),==,3);
-                    info._vmimic[i].reset(new KinBody::MimicInfo());
+                    info._vmimic[i] = boost::make_shared<KinBody::MimicInfo>();
                     for(size_t j = 0; j < 3; ++j) {
                         info._vmimic[i]->_equations.at(j) = boost::python::extract<std::string>(omimic[j]);
                     }
@@ -668,7 +669,7 @@ public:
             return toPyVector3(_pgeometry->GetAmbientColor());
         }
         object GetInfo() {
-            return object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
+            return object(boost::make_shared<PyGeometryInfo>(_pgeometry->GetInfo()));
         }
         bool __eq__(boost::shared_ptr<PyGeometry> p) {
             return !!p && _pgeometry == p->_pgeometry;
@@ -719,7 +720,7 @@ public:
             return object(toPyRobot(RaveInterfaceCast<RobotBase>(_plink->GetParent()),_pyenv));
         }
         else {
-            return object(PyKinBodyPtr(new PyKinBody(_plink->GetParent(),_pyenv)));
+            return object(boost::make_shared<PyKinBody>(_plink->GetParent(),_pyenv));
         }
     }
 
@@ -729,7 +730,7 @@ public:
         _plink->GetParentLinks(vParentLinks);
         boost::python::list links;
         FOREACHC(itlink, vParentLinks) {
-            links.append(PyLinkPtr(new PyLink(*itlink, _pyenv)));
+            links.append(boost::make_shared<PyLink>(*itlink, _pyenv));
         }
         return links;
     }
@@ -825,7 +826,7 @@ public:
         boost::python::list geoms;
         size_t N = _plink->GetGeometries().size();
         for(size_t i = 0; i < N; ++i) {
-            geoms.append(boost::shared_ptr<PyGeometry>(new PyGeometry(_plink->GetGeometry(i))));
+            geoms.append(boost::make_shared<PyGeometry>(_plink->GetGeometry(i)));
         }
         return geoms;
     }
@@ -852,7 +853,7 @@ public:
     {
         boost::python::list ogeometryinfos;
         FOREACHC(itinfo, _plink->GetGeometriesFromGroup(name)) {
-            ogeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itinfo)));
+            ogeometryinfos.append(boost::make_shared<PyGeometryInfo>(**itinfo));
         }
         return ogeometryinfos;
     }
@@ -880,7 +881,7 @@ public:
         _plink->GetRigidlyAttachedLinks(vattachedlinks);
         boost::python::list links;
         FOREACHC(itlink, vattachedlinks) {
-            links.append(PyLinkPtr(new PyLink(*itlink, _pyenv)));
+            links.append(boost::make_shared<PyLink>(*itlink, _pyenv));
         }
         return links;
     }
@@ -945,10 +946,10 @@ public:
         _plink->UpdateInfo();
     }
     object GetInfo() {
-        return object(PyLinkInfoPtr(new PyLinkInfo(_plink->GetInfo())));
+        return object(boost::make_shared<PyLinkInfo>(_plink->GetInfo()));
     }
     object UpdateAndGetInfo() {
-        return object(PyLinkInfoPtr(new PyLinkInfo(_plink->UpdateAndGetInfo())));
+        return object(boost::make_shared<PyLinkInfo>(_plink->UpdateAndGetInfo()));
     }
 
 
@@ -1034,14 +1035,14 @@ public:
     }
 
     PyKinBodyPtr GetParent() const {
-        return PyKinBodyPtr(new PyKinBody(_pjoint->GetParent(),_pyenv));
+        return boost::make_shared<PyKinBody>(_pjoint->GetParent(),_pyenv);
     }
 
     PyLinkPtr GetFirstAttached() const {
-        return !_pjoint->GetFirstAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetFirstAttached(), _pyenv));
+        return !_pjoint->GetFirstAttached() ? PyLinkPtr() : boost::make_shared<PyLink>(_pjoint->GetFirstAttached(), _pyenv);
     }
     PyLinkPtr GetSecondAttached() const {
-        return !_pjoint->GetSecondAttached() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetSecondAttached(), _pyenv));
+        return !_pjoint->GetSecondAttached() ? PyLinkPtr() : boost::make_shared<PyLink>(_pjoint->GetSecondAttached(), _pyenv);
     }
 
     KinBody::JointType GetType() const {
@@ -1084,10 +1085,10 @@ public:
         return toPyVector3(_pjoint->GetAxis(iaxis));
     }
     PyLinkPtr GetHierarchyParentLink() const {
-        return !_pjoint->GetHierarchyParentLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyParentLink(),_pyenv));
+        return !_pjoint->GetHierarchyParentLink() ? PyLinkPtr() : boost::make_shared<PyLink>(_pjoint->GetHierarchyParentLink(),_pyenv);
     }
     PyLinkPtr GetHierarchyChildLink() const {
-        return !_pjoint->GetHierarchyChildLink() ? PyLinkPtr() : PyLinkPtr(new PyLink(_pjoint->GetHierarchyChildLink(),_pyenv));
+        return !_pjoint->GetHierarchyChildLink() ? PyLinkPtr() : boost::make_shared<PyLink>(_pjoint->GetHierarchyChildLink(),_pyenv);
     }
     object GetInternalHierarchyAxis(int iaxis) {
         return toPyVector3(_pjoint->GetInternalHierarchyAxis(iaxis));
@@ -1247,10 +1248,10 @@ public:
         _pjoint->UpdateInfo();
     }
     object GetInfo() {
-        return object(PyJointInfoPtr(new PyJointInfo(_pjoint->GetInfo(), _pyenv)));
+        return object(boost::make_shared<PyJointInfo>(_pjoint->GetInfo(), _pyenv));
     }
     object UpdateAndGetInfo() {
-        return object(PyJointInfoPtr(new PyJointInfo(_pjoint->UpdateAndGetInfo(), _pyenv)));
+        return object(boost::make_shared<PyJointInfo>(_pjoint->UpdateAndGetInfo(), _pyenv));
     }
 
     string __repr__() {
@@ -1355,7 +1356,7 @@ public:
     }
     PyLinkPtr GetOffsetLink() const {
         KinBody::LinkPtr plink = _pdata->GetOffsetLink();
-        return !plink ? PyLinkPtr() : PyLinkPtr(new PyLink(plink,_pyenv));
+        return !plink ? PyLinkPtr() : boost::make_shared<PyLink>(plink,_pyenv);
     }
     bool IsPresent() {
         return _pdata->IsPresent();
@@ -1715,7 +1716,7 @@ object PyKinBody::GetDOFWeights(object oindices) const
     if( vindices.size() == 0 ) {
         return numeric::array(boost::python::list());
     }
-    vector<dReal> values, v;
+    vector<dReal> values;
     values.reserve(vindices.size());
     FOREACHC(it, vindices) {
         KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
@@ -1740,7 +1741,7 @@ object PyKinBody::GetDOFResolutions(object oindices) const
     if( vindices.size() == 0 ) {
         return numeric::array(boost::python::list());
     }
-    vector<dReal> values, v;
+    vector<dReal> values;
     values.reserve(vindices.size());
     FOREACHC(it, vindices) {
         KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(*it);
@@ -1753,7 +1754,7 @@ object PyKinBody::GetLinks() const
 {
     boost::python::list links;
     FOREACHC(itlink, _pbody->GetLinks()) {
-        links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+        links.append(boost::make_shared<PyLink>(*itlink, GetEnv()));
     }
     return links;
 }
@@ -1766,7 +1767,7 @@ object PyKinBody::GetLinks(object oindices) const
     vector<int> vindices = ExtractArray<int>(oindices);
     boost::python::list links;
     FOREACHC(it, vindices) {
-        links.append(PyLinkPtr(new PyLink(_pbody->GetLinks().at(*it),GetEnv())));
+        links.append(boost::make_shared<PyLink>(_pbody->GetLinks().at(*it),GetEnv()));
     }
     return links;
 }
@@ -1774,14 +1775,14 @@ object PyKinBody::GetLinks(object oindices) const
 object PyKinBody::GetLink(const std::string& linkname) const
 {
     KinBody::LinkPtr plink = _pbody->GetLink(linkname);
-    return !plink ? object() : object(PyLinkPtr(new PyLink(plink,GetEnv())));
+    return !plink ? object() : object(boost::make_shared<PyLink>(plink,GetEnv()));
 }
 
 object PyKinBody::GetJoints() const
 {
     boost::python::list joints;
     FOREACHC(itjoint, _pbody->GetJoints()) {
-        joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        joints.append(boost::make_shared<PyJoint>(*itjoint, GetEnv()));
     }
     return joints;
 }
@@ -1794,7 +1795,7 @@ object PyKinBody::GetJoints(object oindices) const
     vector<int> vindices = ExtractArray<int>(oindices);
     boost::python::list joints;
     FOREACHC(it, vindices) {
-        joints.append(PyJointPtr(new PyJoint(_pbody->GetJoints().at(*it),GetEnv())));
+        joints.append(boost::make_shared<PyJoint>(_pbody->GetJoints().at(*it),GetEnv()));
     }
     return joints;
 }
@@ -1803,7 +1804,7 @@ object PyKinBody::GetPassiveJoints()
 {
     boost::python::list joints;
     FOREACHC(itjoint, _pbody->GetPassiveJoints()) {
-        joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        joints.append(boost::make_shared<PyJoint>(*itjoint, GetEnv()));
     }
     return joints;
 }
@@ -1812,7 +1813,7 @@ object PyKinBody::GetDependencyOrderedJoints()
 {
     boost::python::list joints;
     FOREACHC(itjoint, _pbody->GetDependencyOrderedJoints()) {
-        joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+        joints.append(boost::make_shared<PyJoint>(*itjoint, GetEnv()));
     }
     return joints;
 }
@@ -1823,7 +1824,7 @@ object PyKinBody::GetClosedLoops()
     FOREACHC(itloop, _pbody->GetClosedLoops()) {
         boost::python::list loop;
         FOREACHC(itpair,*itloop) {
-            loop.append(boost::python::make_tuple(PyLinkPtr(new PyLink(itpair->first,GetEnv())),PyJointPtr(new PyJoint(itpair->second,GetEnv()))));
+            loop.append(boost::python::make_tuple(boost::make_shared<PyLink>(itpair->first,GetEnv()), boost::make_shared<PyJoint>(itpair->second,GetEnv())));
         }
         loops.append(loop);
     }
@@ -1837,7 +1838,7 @@ object PyKinBody::GetRigidlyAttachedLinks(int linkindex) const
     _pbody->GetLinks().at(linkindex)->GetRigidlyAttachedLinks(vattachedlinks);
     boost::python::list links;
     FOREACHC(itlink, vattachedlinks) {
-        links.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+        links.append(boost::make_shared<PyLink>(*itlink, GetEnv()));
     }
     return links;
 }
@@ -1849,14 +1850,14 @@ object PyKinBody::GetChain(int linkindex1, int linkindex2,bool returnjoints) con
         std::vector<KinBody::JointPtr> vjoints;
         _pbody->GetChain(linkindex1,linkindex2,vjoints);
         FOREACHC(itjoint, vjoints) {
-            chain.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+            chain.append(boost::make_shared<PyJoint>(*itjoint, GetEnv()));
         }
     }
     else {
         std::vector<KinBody::LinkPtr> vlinks;
         _pbody->GetChain(linkindex1,linkindex2,vlinks);
         FOREACHC(itlink, vlinks) {
-            chain.append(PyLinkPtr(new PyLink(*itlink, GetEnv())));
+            chain.append(boost::make_shared<PyLink>(*itlink, GetEnv()));
         }
     }
     return chain;
@@ -1875,13 +1876,13 @@ int PyKinBody::GetJointIndex(const std::string& jointname) const
 object PyKinBody::GetJoint(const std::string& jointname) const
 {
     KinBody::JointPtr pjoint = _pbody->GetJoint(jointname);
-    return !pjoint ? object() : object(PyJointPtr(new PyJoint(pjoint,GetEnv())));
+    return !pjoint ? object() : object(boost::make_shared<PyJoint>(pjoint,GetEnv()));
 }
 
 object PyKinBody::GetJointFromDOFIndex(int dofindex) const
 {
     KinBody::JointPtr pjoint = _pbody->GetJointFromDOFIndex(dofindex);
-    return !pjoint ? object() : object(PyJointPtr(new PyJoint(pjoint,GetEnv())));
+    return !pjoint ? object() : object(boost::make_shared<PyJoint>(pjoint,GetEnv()));
 }
 
 object PyKinBody::GetTransform() const {
@@ -2024,7 +2025,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
     KinBody::AccelerationMapPtr pmapExternalAccelerations;
     if( !IS_PYTHONOBJECT_NONE(oexternalaccelerations) ) {
         //externalaccelerations
-        pmapExternalAccelerations.reset(new KinBody::AccelerationMap());
+        pmapExternalAccelerations = boost::make_shared<KinBody::AccelerationMap>();
         boost::python::dict odict = (boost::python::dict)oexternalaccelerations;
         boost::python::list iterkeys = (boost::python::list)odict.iterkeys();
         vector<dReal> v;
@@ -2380,7 +2381,7 @@ object PyKinBody::GetAttached() const
     std::set<KinBodyPtr> vattached;
     _pbody->GetAttached(vattached);
     FOREACHC(it,vattached)
-    attached.append(PyKinBodyPtr(new PyKinBody(*it,_pyenv)));
+    attached.append(boost::make_shared<PyKinBody>(*it,_pyenv));
     return attached;
 }
 
@@ -2490,7 +2491,7 @@ object PyKinBody::GetCollisionData() const
 object PyKinBody::GetManageData() const
 {
     KinBody::ManageDataPtr pdata = _pbody->GetManageData();
-    return !pdata ? object() : object(PyManageDataPtr(new PyManageData(pdata,_pyenv)));
+    return !pdata ? object() : object(boost::make_shared<PyManageData>(pdata,_pyenv));
 }
 int PyKinBody::GetUpdateStamp() const
 {
@@ -2514,10 +2515,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
     if( IS_PYTHONOBJECT_NONE(options) ) {
-        saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv));
+        saver = boost::make_shared<PyKinBodyStateSaver>(_pbody,_pyenv);
     }
     else {
-        saver.reset(new PyKinBodyStateSaver(_pbody,_pyenv,options));
+        saver = boost::make_shared<PyKinBodyStateSaver>(_pbody,_pyenv,options);
     }
     return new PyStateRestoreContext<PyKinBodyStateSaverPtr, PyKinBodyPtr>(saver);
 }
@@ -2559,7 +2560,7 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
     if( !plink ) {
         return object();
     }
-    return object(PyLinkPtr(new PyLink(plink,pyenv)));
+    return object(boost::make_shared<PyLink>(plink,pyenv));
 }
 
 object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
@@ -2576,7 +2577,7 @@ object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
     if( !pjoint ) {
         return object();
     }
-    return object(PyJointPtr(new PyJoint(pjoint,pyenv)));
+    return object(boost::make_shared<PyJoint>(pjoint,pyenv));
 }
 
 KinBody::LinkPtr GetKinBodyLink(object o)
@@ -2660,7 +2661,7 @@ PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
     if( pkinbody->IsRobot() ) {
         return toPyRobot(RaveInterfaceCast<RobotBase>(pkinbody), pyenv);
     }
-    return PyInterfaceBasePtr(new PyKinBody(pkinbody,pyenv));
+    return boost::make_shared<PyKinBody>(pkinbody,pyenv);
 }
 
 object toPyKinBody(KinBodyPtr pkinbody, object opyenv)
@@ -2678,7 +2679,7 @@ PyKinBodyPtr RaveCreateKinBody(PyEnvironmentBasePtr pyenv, const std::string& na
     if( !p ) {
         return PyKinBodyPtr();
     }
-    return PyKinBodyPtr(new PyKinBody(p,pyenv));
+    return boost::make_shared<PyKinBody>(p,pyenv);
 }
 
 class GeometryInfo_pickle_suite : public pickle_suite

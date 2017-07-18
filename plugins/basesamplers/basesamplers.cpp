@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include <boost/make_shared.hpp>
 #include <openrave/plugin.h>
 #include "mt19937ar.h"
 #include "halton.h"
@@ -25,16 +26,16 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case PT_SpaceSampler:
         if( interfacename == "mt19937") {
-            return InterfaceBasePtr(new MT19937Sampler(penv,sinput));
+            return boost::make_shared<MT19937Sampler>(penv, boost::ref(sinput));
         }
         else if( interfacename == "halton" ) {
-            return InterfaceBasePtr(new HaltonSampler(penv,sinput));
+            return boost::make_shared<HaltonSampler>(penv, boost::ref(sinput));
         }
         else if( interfacename == "robotconfiguration" ) {
-            return InterfaceBasePtr(new RobotConfigurationSampler(penv,sinput));
+            return boost::make_shared<RobotConfigurationSampler>(penv, boost::ref(sinput));
         }
         else if( interfacename == "bodyconfiguration" ) {
-            return InterfaceBasePtr(new BodyConfigurationSampler(penv,sinput));
+            return boost::make_shared<BodyConfigurationSampler>(penv, boost::ref(sinput));
         }
         break;
     default:

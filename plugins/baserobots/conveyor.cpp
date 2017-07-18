@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
+#include <boost/make_shared.hpp>
 #include <openrave/xmlreaders.h>
 
 class Conveyor : public RobotBase
@@ -186,7 +187,7 @@ protected:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
-        return BaseXMLReaderPtr(new ConveyorXMLReader(ConveyorInfoPtr(),RaveInterfaceCast<RobotBase>(ptr), atts));
+        return boost::make_shared<ConveyorXMLReader>(ConveyorInfoPtr(),RaveInterfaceCast<RobotBase>(ptr), atts);
     }
 
     Conveyor(EnvironmentBasePtr penv, std::istream& is) : RobotBase(penv) {
@@ -269,7 +270,7 @@ protected:
 
 RobotBasePtr CreateConveyorRobot(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return RobotBasePtr(new Conveyor(penv,sinput));
+    return boost::make_shared<Conveyor>(penv, boost::ref(sinput));
 }
 
 void RegisterConveyorReaders(std::list< UserDataPtr >& listRegisteredReaders)

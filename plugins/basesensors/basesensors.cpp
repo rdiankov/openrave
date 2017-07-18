@@ -34,16 +34,16 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     switch(type) {
     case PT_Sensor:
         if((interfacename == "baselaser2d")||(interfacename == "base_laser2d")) {
-            return InterfaceBasePtr(new BaseLaser2DSensor(penv));
+            return boost::make_shared<BaseLaser2DSensor>(penv);
         }
         else if( interfacename == "basespinninglaser2d" ) {
-            return InterfaceBasePtr(new BaseSpinningLaser2DSensor(penv));
+            return  boost::make_shared<BaseSpinningLaser2DSensor>(penv);
         }
         else if((interfacename == "baseflashlidar3d")||(interfacename == "base_laser3d")) {
-            return InterfaceBasePtr(new BaseFlashLidar3DSensor(penv));
+            return  boost::make_shared<BaseFlashLidar3DSensor>(penv);
         }
         else if((interfacename == "basecamera")||(interfacename == "base_pinhole_camera")) {
-            return InterfaceBasePtr(new BaseCameraSensor(penv));
+            return  boost::make_shared<BaseCameraSensor>(penv);
         }
         break;
     default:

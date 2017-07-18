@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PyPhysicsEngineBase : public PyInterfaceBase
@@ -173,7 +175,7 @@ PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const
     if( !p ) {
         return PyPhysicsEngineBasePtr();
     }
-    return PyPhysicsEngineBasePtr(new PyPhysicsEngineBase(p,pyenv));
+    return boost::make_shared<PyPhysicsEngineBase>(p, pyenv);
 }
 
 void init_openravepy_physicsengine()

@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/make_shared.hpp>
+
 namespace OpenRAVE {
 
 SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(boost::shared_ptr<XMLData> p) : _pdata(p)
@@ -91,7 +93,7 @@ void SimpleSensorSystem::SimpleXMLReader::characters(const std::string& ch)
 
 BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, InterfaceBasePtr ptr, const AttributesList& atts)
 {
-    return BaseXMLReaderPtr(new SimpleXMLReader(boost::shared_ptr<XMLData>(new XMLData(xmlid))));
+    return boost::make_shared<SimpleXMLReader>(boost::make_shared<XMLData>(xmlid));
 }
 
 UserDataPtr SimpleSensorSystem::RegisterXMLReaderId(EnvironmentBasePtr penv, const string& xmlid)
@@ -211,9 +213,9 @@ bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
 
 boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyData(KinBodyPtr pbody, boost::shared_ptr<XMLData const> pdata)
 {
-    boost::shared_ptr<XMLData> pnewdata(new XMLData(_xmlid));
+    boost::shared_ptr<XMLData> pnewdata = boost::make_shared<XMLData>(_xmlid);
     pnewdata->copy(pdata);
-    return boost::shared_ptr<BodyData>(new BodyData(RaveInterfaceCast<SimpleSensorSystem>(shared_from_this()),pbody, pnewdata));
+    return boost::make_shared<BodyData>(RaveInterfaceCast<SimpleSensorSystem>(shared_from_this()),pbody, pnewdata);
 }
 
 void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listbodies)

@@ -16,6 +16,7 @@
 #include "plugindefs.h"
 
 #include <algorithm>
+#include <boost/make_shared.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/thread/mutex.hpp>
 #include <cmath>
@@ -1743,5 +1744,5 @@ protected:
 
 ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ModuleBasePtr(new GrasperModule(penv,sinput));
+    return boost::make_shared<GrasperModule>(penv, boost::ref(sinput));
 }

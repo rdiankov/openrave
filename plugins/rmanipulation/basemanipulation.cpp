@@ -16,6 +16,7 @@
 #include "commonmanipulation.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/make_shared.hpp>
 
 class BaseManipulation : public ModuleBase
 {
@@ -131,10 +132,10 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -1122,5 +1123,5 @@ protected:
 };
 
 ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv) {
-    return ModuleBasePtr(new BaseManipulation(penv));
+    return boost::make_shared<BaseManipulation>(penv);
 }

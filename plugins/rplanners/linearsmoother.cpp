@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class LinearSmoother : public PlannerBase
 {
 public:
@@ -457,5 +459,5 @@ protected:
 };
 
 PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new LinearSmoother(penv, sinput));
+    return boost::make_shared<LinearSmoother>(penv, boost::ref(sinput));
 }

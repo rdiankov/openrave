@@ -15,13 +15,14 @@
 #include "plugindefs.h"
 #include "dualmanipulation.h"
 #include <openrave/plugin.h>
+#include <boost/make_shared.hpp>
 
 InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Module:
         if( interfacename == "dualmanipulation")
-            return InterfaceBasePtr(new DualManipulation(penv));
+            return boost::make_shared<DualManipulation>(penv);
         break;
     default:
         break;

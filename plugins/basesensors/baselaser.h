@@ -16,6 +16,8 @@
 #ifndef OPENRAVE_BASELASER_H
 #define OPENRAVE_BASELASER_H
 
+#include <boost/make_shared.hpp>
+
 /// Laser rotates around the zaxis and it's 0 angle is pointed toward the xaxis.
 class BaseLaser2DSensor : public SensorBase
 {
@@ -120,7 +122,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
+        return boost::make_shared<BaseLaser2DXMLReader>(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr));
     }
 
     BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -299,7 +301,7 @@ public:
     virtual SensorDataPtr CreateSensorData(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Laser) ) {
-            return SensorDataPtr(new LaserSensorData());
+            return boost::make_shared<LaserSensorData>();
         }
         return SensorDataPtr();
     }
@@ -512,7 +514,7 @@ public:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-        return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
+        return boost::make_shared<BaseSpinningLaser2DXMLReader>(boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr));
     }
 
     BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {

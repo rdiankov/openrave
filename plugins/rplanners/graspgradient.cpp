@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
 
+#include <boost/make_shared.hpp>
+
 class GraspGradientPlanner : public PlannerBase
 {
 public:
@@ -44,7 +46,7 @@ public:
     {
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         _parameters.reset();
-        boost::shared_ptr<GraspSetParameters> parameters(new GraspSetParameters(GetEnv()));
+        boost::shared_ptr<GraspSetParameters> parameters = boost::make_shared<GraspSetParameters>(GetEnv());
         parameters->copy(pparams);
         _robot = pbase;
         RobotBase::RobotStateSaver savestate(_robot);
@@ -334,5 +336,5 @@ private:
 };
 
 PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
-    return PlannerBasePtr(new GraspGradientPlanner(penv, sinput));
+    return boost::make_shared<GraspGradientPlanner>(penv, boost::ref(sinput));
 }

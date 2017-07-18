@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/make_shared.hpp>
+
 namespace OpenRAVE {
 
 bool IkReturn::Append(const IkReturn& r)
@@ -126,7 +128,7 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, 
     }
     ikreturns.resize(vsolutions.size());
     for(size_t i = 0; i < ikreturns.size(); ++i) {
-        ikreturns[i].reset(new IkReturn(IKRA_Success));
+        ikreturns[i] = boost::make_shared<IkReturn>(IKRA_Success);
         ikreturns[i]->_vsolution = vsolutions[i];
         ikreturns[i]->_action = IKRA_Success;
     }
@@ -157,7 +159,7 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<d
     }
     ikreturns.resize(vsolutions.size());
     for(size_t i = 0; i < ikreturns.size(); ++i) {
-        ikreturns[i].reset(new IkReturn(IKRA_Success));
+        ikreturns[i] = boost::make_shared<IkReturn>(IKRA_Success);
         ikreturns[i]->_vsolution = vsolutions[i];
         ikreturns[i]->_action = IKRA_Success;
     }
@@ -166,7 +168,7 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<d
 
 UserDataPtr IkSolverBase::RegisterCustomFilter(int32_t priority, const IkSolverBase::IkFilterCallbackFn &filterfn)
 {
-    CustomIkSolverFilterDataPtr pdata(new CustomIkSolverFilterData(priority,filterfn,shared_iksolver()));
+    CustomIkSolverFilterDataPtr pdata = boost::make_shared<CustomIkSolverFilterData>(priority,filterfn,shared_iksolver());
     std::list<UserDataWeakPtr>::iterator it;
     FORIT(it, __listRegisteredFilters) {
         CustomIkSolverFilterDataPtr pitdata = boost::dynamic_pointer_cast<CustomIkSolverFilterData>(it->lock());
@@ -180,7 +182,7 @@ UserDataPtr IkSolverBase::RegisterCustomFilter(int32_t priority, const IkSolverB
 
 UserDataPtr IkSolverBase::RegisterFinishCallback(const IkFinishCallbackFn& finishfn)
 {
-    IkSolverFinishCallbackDataPtr pdata(new IkSolverFinishCallbackData(finishfn,shared_iksolver()));
+    IkSolverFinishCallbackDataPtr pdata = boost::make_shared<IkSolverFinishCallbackData>(finishfn,shared_iksolver());
     pdata->_iterator = __listRegisteredFinishCallbacks.insert(__listRegisteredFinishCallbacks.end(), pdata);
     return pdata;
 }

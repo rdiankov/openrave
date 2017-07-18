@@ -17,6 +17,7 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
 #include <openrave/planningutils.h>
 
 namespace openravepy {
@@ -311,12 +312,12 @@ public:
 
     PyIkParameterizationPtr __mul__(object otrans)
     {
-        return PyIkParameterizationPtr(new PyIkParameterization(_param * ExtractTransform(otrans)));
+        return boost::make_shared<PyIkParameterization>(_param * ExtractTransform(otrans));
     }
 
     PyIkParameterizationPtr __rmul__(object otrans)
     {
-        return PyIkParameterizationPtr(new PyIkParameterization(ExtractTransform(otrans) * _param));
+        return boost::make_shared<PyIkParameterization>(ExtractTransform(otrans) * _param);
     }
 
     IkParameterization _param;
@@ -334,12 +335,12 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
 
 object toPyIkParameterization(const IkParameterization &ikparam)
 {
-    return object(PyIkParameterizationPtr(new PyIkParameterization(ikparam)));
+    return object(boost::make_shared<PyIkParameterization>(ikparam));
 }
 
 object toPyIkParameterization(const std::string& serializeddata)
 {
-    return object(PyIkParameterizationPtr(new PyIkParameterization(serializeddata)));
+    return object(boost::make_shared<PyIkParameterization>(serializeddata));
 }
 
 class IkParameterization_pickle_suite : public pickle_suite

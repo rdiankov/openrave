@@ -395,7 +395,7 @@ public:
     virtual EnvironmentBasePtr CloneSelf(int options)
     {
         EnvironmentMutex::scoped_lock lockenv(GetMutex());
-        boost::shared_ptr<Environment> penv(new Environment());
+        boost::shared_ptr<Environment> penv = boost::make_shared<Environment>();
         penv->_Clone(boost::static_pointer_cast<Environment const>(shared_from_this()),options,false);
         return penv;
     }
@@ -822,7 +822,7 @@ public:
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        BodyCallbackDataPtr pdata = boost::make_shared<BodyCallbackData>(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this()));
         pdata->_iterator = _listRegisteredBodyCallbacks.insert(_listRegisteredBodyCallbacks.end(),pdata);
         return pdata;
     }
@@ -894,7 +894,7 @@ public:
     virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
     {
         boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-        CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this())));
+        CollisionCallbackDataPtr pdata = boost::make_shared<CollisionCallbackData>(callback,boost::dynamic_pointer_cast<Environment>(shared_from_this()));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
@@ -1609,7 +1609,7 @@ public:
             }
         }
         if( !ptrimesh ) {
-            ptrimesh.reset(new TriMesh());
+            ptrimesh = boost::make_shared<TriMesh>();
         }
         if( !OpenRAVEXMLParser::CreateTriMeshFromFile(shared_from_this(),filedata, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
@@ -1641,7 +1641,7 @@ public:
             }
         }
         if( !ptrimesh ) {
-            ptrimesh.reset(new TriMesh());
+            ptrimesh = boost::make_shared<TriMesh>();
         }
         if( !OpenRAVEXMLParser::CreateTriMeshFromData(data, formathint, vScaleGeometry, *ptrimesh, diffuseColor, ambientColor, ftransparency) ) {
             ptrimesh.reset();
@@ -1712,7 +1712,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, color, drawstyle));
         }
@@ -1724,7 +1724,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->plot3(ppoints, numPoints, stride, fPointSize, colors, drawstyle, bhasalpha));
         }
@@ -1736,7 +1736,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,color));
         }
@@ -1748,7 +1748,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinestrip(ppoints, numPoints, stride, fwidth,colors));
         }
@@ -1760,7 +1760,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,color));
         }
@@ -1772,7 +1772,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawlinelist(ppoints, numPoints, stride, fwidth,colors));
         }
@@ -1784,7 +1784,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawarrow(p1,p2,fwidth,color));
         }
@@ -1796,7 +1796,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawbox(vpos, vextents));
         }
@@ -1808,7 +1808,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawplane(tplane, vextents, vtexture));
         }
@@ -1820,7 +1820,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, color));
         }
@@ -1832,7 +1832,7 @@ public:
         if( _listViewers.size() == 0 ) {
             return OpenRAVE::GraphHandlePtr();
         }
-        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        GraphHandleMultiPtr handles = boost::make_shared<GraphHandleMulti>();
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawtrimesh(ppoints, stride, pIndices, numTriangles, colors));
         }
@@ -2532,7 +2532,7 @@ protected:
     {
         if( !_threadSimulation ) {
             _bShutdownSimulation = false;
-            _threadSimulation.reset(new boost::thread(boost::bind(&Environment::_SimulationThread, this)));
+            _threadSimulation = boost::make_shared<boost::thread>(boost::bind(&Environment::_SimulationThread, this));
         }
     }
 

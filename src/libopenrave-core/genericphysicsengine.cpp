@@ -16,6 +16,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ravep.h"
 
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
+
 namespace OpenRAVE {
 
 class GenericPhysicsEngine : public PhysicsEngineBase
@@ -143,7 +146,7 @@ private:
 
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PhysicsEngineBasePtr(new GenericPhysicsEngine(penv,sinput));
+    return boost::make_shared<GenericPhysicsEngine>(penv, boost::ref(sinput));
 }
 
 }

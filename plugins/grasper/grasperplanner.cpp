@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
+#include <boost/make_shared.hpp>
 #include <openrave/planningutils.h>
 
 class GrasperPlanner :  public PlannerBase
@@ -694,5 +695,5 @@ protected:
 
 PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return PlannerBasePtr(new GrasperPlanner(penv,sinput));
+    return boost::make_shared<GrasperPlanner>(penv, boost::ref(sinput));
 }

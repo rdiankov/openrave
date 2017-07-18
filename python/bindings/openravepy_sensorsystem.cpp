@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PySensorSystemBase : public PyInterfaceBase
@@ -42,7 +44,7 @@ SensorSystemBasePtr GetSensorSystem(PySensorSystemBasePtr pySensorSystem)
 
 PyInterfaceBasePtr toPySensorSystem(SensorSystemBasePtr pSensorSystem, PyEnvironmentBasePtr pyenv)
 {
-    return !pSensorSystem ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PySensorSystemBase(pSensorSystem,pyenv));
+    return !pSensorSystem ? PyInterfaceBasePtr() : boost::make_shared<PySensorSystemBase>(pSensorSystem, pyenv);
 }
 
 PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -51,7 +53,7 @@ PySensorSystemBasePtr RaveCreateSensorSystem(PyEnvironmentBasePtr pyenv, const s
     if( !p ) {
         return PySensorSystemBasePtr();
     }
-    return PySensorSystemBasePtr(new PySensorSystemBase(p,pyenv));
+    return boost::make_shared<PySensorSystemBase>(p, pyenv);
 }
 
 void init_openravepy_sensorsystem()

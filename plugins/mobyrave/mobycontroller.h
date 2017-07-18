@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 class MobyController : public ControllerBase
 {
@@ -111,7 +112,7 @@ protected:
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
-    	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyController>(ptr),atts));
+    	return boost::make_shared<ControllerPropertiesXMLReader>(boost::dynamic_pointer_cast<MobyController>(ptr),atts);
     }
 
     MobyController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _bEnableTuningLogging(false), _bSteadyState(false)    {
@@ -793,12 +794,12 @@ private:
 
     inline boost::shared_ptr<MobyController> shared_controller()
     {
-        return boost::dynamic_pointer_cast<MobyController>(shared_from_this());
+        return boost::static_pointer_cast<MobyController>(shared_from_this());
     }
 
     inline boost::shared_ptr<MobyController const> shared_controller_const() const
     {
-        return boost::dynamic_pointer_cast<MobyController const>(shared_from_this());
+        return boost::static_pointer_cast<MobyController const>(shared_from_this());
     }
 
     inline boost::weak_ptr<MobyController> weak_controller()
@@ -1003,5 +1004,5 @@ private:
 
 ControllerBasePtr CreateMobyController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new MobyController(penv,sinput));
+    return boost::make_shared<MobyController>(penv, boost::ref(sinput));
 }

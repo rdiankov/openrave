@@ -17,6 +17,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 class IdealController : public ControllerBase
 {
@@ -70,7 +71,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
-                _gjointvalues.reset(new ConfigurationSpecification::Group());
+                _gjointvalues = boost::make_shared<ConfigurationSpecification::Group>();
                 _gjointvalues->offset = 0;
                 _gjointvalues->dof = _dofindices.size();
                 stringstream ss;
@@ -81,7 +82,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _gjointvalues->name = ss.str();
             }
             if( nControlTransformation ) {
-                _gtransform.reset(new ConfigurationSpecification::Group());
+                _gtransform = boost::make_shared<ConfigurationSpecification::Group>();
                 _gtransform->offset = robot->GetDOF();
                 _gtransform->dof = RaveGetAffineDOF(DOF_Transform);
                 _gtransform->name = str(boost::format("affine_transform %s %d")%robot->GetName()%DOF_Transform);
@@ -204,7 +205,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                                     trelativepose.trans[0] = boost::lexical_cast<dReal>(tokens[8]);
                                     trelativepose.trans[1] = boost::lexical_cast<dReal>(tokens[9]);
                                     trelativepose.trans[2] = boost::lexical_cast<dReal>(tokens[10]);
-                                    _vgrabbodylinks.back().trelativepose.reset(new Transform(trelativepose));
+                                    _vgrabbodylinks.back().trelativepose = boost::make_shared<Transform>(trelativepose);
                                 }
                             }
                             dof += _samplespec._vgroups.back().dof;
@@ -414,10 +415,10 @@ private:
     }
 
     inline boost::shared_ptr<IdealController> shared_controller() {
-        return boost::dynamic_pointer_cast<IdealController>(shared_from_this());
+        return boost::static_pointer_cast<IdealController>(shared_from_this());
     }
     inline boost::shared_ptr<IdealController const> shared_controller_const() const {
-        return boost::dynamic_pointer_cast<IdealController const>(shared_from_this());
+        return boost::static_pointer_cast<IdealController const>(shared_from_this());
     }
     inline boost::weak_ptr<IdealController> weak_controller() {
         return shared_controller();
@@ -565,5 +566,5 @@ private:
 
 ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ControllerBasePtr(new IdealController(penv,sinput));
+    return boost::make_shared<IdealController>(penv, boost::ref(sinput));
 }

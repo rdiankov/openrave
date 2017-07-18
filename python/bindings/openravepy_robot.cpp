@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NO_IMPORT_ARRAY
 #include "openravepy_kinbody.h"
+#include <boost/make_shared.hpp>
 
 namespace openravepy {
 
@@ -113,7 +114,7 @@ public:
         }
 
         PyRobotBasePtr GetRobot() {
-            return PyRobotBasePtr(new PyRobotBase(_pmanip->GetRobot(),_pyenv));
+            return boost::make_shared<PyRobotBase>(_pmanip->GetRobot(),_pyenv);
         }
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver) {
@@ -232,7 +233,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,solution,filteroptions);
 
@@ -241,7 +242,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,vFreeParameters, solution,filteroptions);
         }
@@ -249,7 +250,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
         }
@@ -257,7 +258,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolution(ikparam,vFreeParameters, filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()));
         }
@@ -266,7 +267,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,solutions,filteroptions);
         }
@@ -274,7 +275,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,vFreeParameters,solutions,filteroptions);
         }
@@ -282,7 +283,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,filteroptions,vikreturns);
         }
@@ -290,7 +291,7 @@ public:
         {
             openravepy::PythonThreadSaverPtr statesaver;
             if( releasegil ) {
-                statesaver.reset(new openravepy::PythonThreadSaver());
+                statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
             }
             return _pmanip->FindIKSolutions(ikparam,vFreeParameters,filteroptions,vikreturns);
         }
@@ -606,7 +607,7 @@ public:
         }
 
         object GetInfo() {
-            return object(PyManipulatorInfoPtr(new PyManipulatorInfo(_pmanip->GetInfo())));
+            return object(boost::make_shared<PyManipulatorInfo>(_pmanip->GetInfo()));
         }
 
         string GetStructureHash() const {
@@ -640,7 +641,7 @@ public:
     };
     typedef boost::shared_ptr<PyManipulator> PyManipulatorPtr;
     PyManipulatorPtr _GetManipulator(RobotBase::ManipulatorPtr pmanip) {
-        return !pmanip ? PyManipulatorPtr() : PyManipulatorPtr(new PyManipulator(pmanip,_pyenv));
+        return !pmanip ? PyManipulatorPtr() : boost::make_shared<PyManipulator>(pmanip,_pyenv);
     }
 
     class PyAttachedSensorInfo
@@ -658,7 +659,7 @@ public:
 
         RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const
         {
-            RobotBase::AttachedSensorInfoPtr pinfo(new RobotBase::AttachedSensorInfo());
+            RobotBase::AttachedSensorInfoPtr pinfo = boost::make_shared<RobotBase::AttachedSensorInfo>();
             pinfo->_name = boost::python::extract<std::string>(_name);
             pinfo->_linkname = boost::python::extract<std::string>(_linkname);
             pinfo->_trelative = ExtractTransform(_trelative);
@@ -703,7 +704,7 @@ public:
             return toPyArray(_pattached->GetTransform());
         }
         PyRobotBasePtr GetRobot() const {
-            return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
+            return _pattached->GetRobot() ? PyRobotBasePtr() : boost::make_shared<PyRobotBase>(_pattached->GetRobot(), _pyenv);
         }
         object GetName() const {
             return ConvertStringToUnicode(_pattached->GetName());
@@ -726,11 +727,11 @@ public:
         }
 
         object UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid) {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->UpdateAndGetInfo(type))));
+            return object(boost::make_shared<PyAttachedSensorInfo>(_pattached->UpdateAndGetInfo(type)));
         }
 
         object GetInfo() {
-            return object(PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(_pattached->GetInfo())));
+            return object(boost::make_shared<PyAttachedSensorInfo>(_pattached->GetInfo()));
         }
 
         string __repr__() {
@@ -756,7 +757,7 @@ public:
     typedef boost::shared_ptr<PyAttachedSensor> PyAttachedSensorPtr;
     boost::shared_ptr<PyAttachedSensor> _GetAttachedSensor(RobotBase::AttachedSensorPtr pattachedsensor)
     {
-        return !pattachedsensor ? PyAttachedSensorPtr() : PyAttachedSensorPtr(new PyAttachedSensor(pattachedsensor, _pyenv));
+        return !pattachedsensor ? PyAttachedSensorPtr() : boost::make_shared<PyAttachedSensor>(pattachedsensor, _pyenv);
     }
 
     class PyGrabbedInfo
@@ -778,7 +779,7 @@ public:
 
         RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
         {
-            RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
+            RobotBase::GrabbedInfoPtr pinfo = boost::make_shared<RobotBase::GrabbedInfo>();
             pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
             pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
             pinfo->_trelative = ExtractTransform(_trelative);
@@ -951,7 +952,7 @@ public:
     {
         boost::python::list sensors;
         FOREACH(itsensor, _probot->GetAttachedSensors()) {
-            sensors.append(boost::shared_ptr<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
+            sensors.append(boost::make_shared<PyAttachedSensor>(*itsensor,_pyenv));
         }
         return sensors;
     }
@@ -1298,7 +1299,7 @@ public:
         std::vector<KinBodyPtr> vbodies;
         _probot->GetGrabbed(vbodies);
         FOREACH(itbody, vbodies) {
-            bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,_pyenv)));
+            bodies.append(boost::make_shared<PyKinBody>(*itbody,_pyenv));
         }
         return bodies;
     }
@@ -1309,7 +1310,7 @@ public:
         std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
         _probot->GetGrabbedInfo(vgrabbedinfo);
         FOREACH(itgrabbed, vgrabbedinfo) {
-            ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+            ograbbed.append(boost::make_shared<PyGrabbedInfo>(**itgrabbed));
         }
         return ograbbed;
     }
@@ -1372,10 +1373,10 @@ public:
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=object()) {
         PyRobotStateSaverPtr saver;
         if( IS_PYTHONOBJECT_NONE(options) ) {
-            saver.reset(new PyRobotStateSaver(_probot,_pyenv));
+            saver = boost::make_shared<PyRobotStateSaver>(_probot, _pyenv);
         }
         else {
-            saver.reset(new PyRobotStateSaver(_probot,_pyenv,options));
+            saver = boost::make_shared<PyRobotStateSaver>(_probot, _pyenv, options);
         }
         return new PyStateRestoreContext<PyRobotStateSaverPtr, PyRobotBasePtr>(saver);
     }
@@ -1449,7 +1450,7 @@ RobotBasePtr GetRobot(PyRobotBasePtr pyrobot)
 
 PyInterfaceBasePtr toPyRobot(RobotBasePtr probot, PyEnvironmentBasePtr pyenv)
 {
-    return !probot ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyRobotBase(probot,pyenv));
+    return !probot ? PyInterfaceBasePtr() : boost::make_shared<PyRobotBase>(probot,pyenv);
 }
 
 RobotBase::ManipulatorPtr GetRobotManipulator(object o)
@@ -1463,7 +1464,7 @@ RobotBase::ManipulatorPtr GetRobotManipulator(object o)
 
 object toPyRobotManipulator(RobotBase::ManipulatorPtr pmanip, PyEnvironmentBasePtr pyenv)
 {
-    return !pmanip ? object() : object(PyRobotBase::PyManipulatorPtr(new PyRobotBase::PyManipulator(pmanip,pyenv)));
+    return !pmanip ? object() : object(boost::make_shared<PyRobotBase::PyManipulator>(pmanip,pyenv));
 }
 
 PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -1472,7 +1473,7 @@ PyRobotBasePtr RaveCreateRobot(PyEnvironmentBasePtr pyenv, const std::string& na
     if( !p ) {
         return PyRobotBasePtr();
     }
-    return PyRobotBasePtr(new PyRobotBase(p,pyenv));
+    return boost::make_shared<PyRobotBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetIkParameterization_overloads, GetIkParameterization, 1, 2)

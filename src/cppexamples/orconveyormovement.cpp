@@ -14,6 +14,8 @@
 
 #include "orexample.h"
 
+#include <boost/make_shared.hpp>
+
 using namespace OpenRAVE;
 using namespace std;
 
@@ -112,7 +114,7 @@ public:
 
     static InterfaceBasePtr create(EnvironmentBasePtr penv, std::istream& is)
     {
-        return InterfaceBasePtr(new ConveyorBeltModule(penv,is));
+        return boost::make_shared<ConveyorBeltModule>(penv,is);
     }
 
 private:

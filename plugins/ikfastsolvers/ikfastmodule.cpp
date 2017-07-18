@@ -16,6 +16,7 @@
 #include "plugindefs.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/make_shared.hpp>
 
 #ifdef Boost_IOSTREAMS_FOUND
 #include <boost/iostreams/device/file_descriptor.hpp>
@@ -304,10 +305,10 @@ private:
     };
 
     inline boost::shared_ptr<IkFastModule> shared_problem() {
-        return boost::dynamic_pointer_cast<IkFastModule>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule>(shared_from_this());
     }
     inline boost::shared_ptr<IkFastModule const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<IkFastModule const>(shared_from_this());
+        return boost::static_pointer_cast<IkFastModule const>(shared_from_this());
     }
 
 public:
@@ -1440,7 +1441,7 @@ public:
 
 ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return ModuleBasePtr(new IkFastModule(penv,sinput));
+    return boost::make_shared<IkFastModule>(penv, boost::ref(sinput));
 }
 
 void DestroyIkFastLibraries() {

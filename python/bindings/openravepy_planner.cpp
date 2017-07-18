@@ -17,6 +17,8 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 
+#include <boost/make_shared.hpp>
+
 namespace openravepy {
 
 class PyPlannerProgress
@@ -224,7 +226,7 @@ public:
         if( !params ) {
             return PyPlannerParametersPtr();
         }
-        return PyPlannerParametersPtr(new PyPlannerParameters(params));
+        return boost::make_shared<PyPlannerParameters>(params);
     }
 
     static PlannerAction _PlanCallback(object fncallback, PyEnvironmentBasePtr pyenv, const PlannerBase::PlannerProgress& progress)
@@ -282,7 +284,7 @@ PlannerBasePtr GetPlanner(PyPlannerBasePtr pyplanner)
 
 PyInterfaceBasePtr toPyPlanner(PlannerBasePtr pplanner, PyEnvironmentBasePtr pyenv)
 {
-    return !pplanner ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyPlannerBase(pplanner,pyenv));
+    return !pplanner ? PyInterfaceBasePtr() : boost::make_shared<PyPlannerBase>(pplanner,pyenv);
 }
 
 PlannerBase::PlannerParametersPtr GetPlannerParameters(object o)
@@ -308,7 +310,7 @@ object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params)
     if( !params ) {
         return object();
     }
-    return object(PyPlannerBase::PyPlannerParametersPtr(new PyPlannerBase::PyPlannerParameters(params)));
+    return object(boost::make_shared<PyPlannerBase::PyPlannerParameters>(params));
 }
 
 PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -317,7 +319,7 @@ PyPlannerBasePtr RaveCreatePlanner(PyEnvironmentBasePtr pyenv, const std::string
     if( !p ) {
         return PyPlannerBasePtr();
     }
-    return PyPlannerBasePtr(new PyPlannerBase(p,pyenv));
+    return boost::make_shared<PyPlannerBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(InitPlan_overloads, InitPlan, 2, 3)

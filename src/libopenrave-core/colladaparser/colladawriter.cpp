@@ -18,9 +18,10 @@
 using namespace ColladaDOM150;
 
 #include <locale>
+#include <boost/algorithm/string.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/time_facet.hpp>
-#include <boost/algorithm/string.hpp>
+#include <boost/make_shared.hpp>
 
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
@@ -279,7 +280,7 @@ public:
                     throw OPENRAVE_EXCEPTION_FORMAT(_("failed to add attribute %s to element %s"), xmltag%itatt->first, ORE_InvalidArguments);
                 }
             }
-            return BaseXMLWriterPtr(new ColladaInterfaceWriter(childelt));
+            return boost::make_shared<ColladaInterfaceWriter>(childelt);
         }
         virtual void SetCharData(const std::string& data) {
             if( !_elt->setCharData(data) ) {

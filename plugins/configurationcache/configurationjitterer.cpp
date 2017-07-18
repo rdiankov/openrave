@@ -13,6 +13,8 @@
 // limitations under the License.
 #include <openraveplugindefs.h>
 
+#include <boost/make_shared.hpp>
+
 #ifdef OPENRAVE_HAS_LAPACK
 // for jacobians
 #include <boost/numeric/ublas/vector.hpp>
@@ -1022,7 +1024,7 @@ protected:
 
 SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput)
 {
-    return SpaceSamplerBasePtr(new ConfigurationJitterer(penv, sinput));
+    return boost::make_shared<ConfigurationJitterer>(penv, boost::ref(sinput));
 }
 
 }

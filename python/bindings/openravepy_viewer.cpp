@@ -17,6 +17,7 @@
 #define NO_IMPORT_ARRAY
 #include "openravepy_int.h"
 #include <csignal>
+#include <boost/make_shared.hpp>
 
 #if defined(_WIN32) && !defined(sighandler_t)
 typedef void (*sighandler_t)(int);
@@ -188,7 +189,7 @@ public:
 #endif
         //s_prevsignal = signal(SIGINT,viewer_sigint_handler); // control C
         // have to release the GIL since this is an infinite loop
-        openravepy::PythonThreadSaverPtr statesaver(new openravepy::PythonThreadSaver());
+        openravepy::PythonThreadSaverPtr statesaver = boost::make_shared<openravepy::PythonThreadSaver>();
         bool bSuccess=false;
         try {
             bSuccess = _pviewer->main(bShow);
@@ -302,7 +303,7 @@ ViewerBasePtr GetViewer(PyViewerBasePtr pyviewer)
 
 PyInterfaceBasePtr toPyViewer(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv)
 {
-    return !pviewer ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyViewerBase(pviewer,pyenv));
+    return !pviewer ? PyInterfaceBasePtr() : boost::make_shared<PyViewerBase>(pviewer,pyenv);
 }
 
 PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name)
@@ -311,7 +312,7 @@ PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& 
     if( !p ) {
         return PyViewerBasePtr();
     }
-    return PyViewerBasePtr(new PyViewerBase(p,pyenv));
+    return boost::make_shared<PyViewerBase>(p,pyenv);
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(main_overloads, main, 1, 2)

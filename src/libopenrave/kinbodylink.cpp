@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <boost/make_shared.hpp>
 
 namespace OpenRAVE {
 
@@ -323,7 +324,7 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
 {
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {
-        _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
+        _vGeometries[i] = boost::make_shared<Geometry>(shared_from_this(),*geometries[i]);
         if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
             RAVELOG_VERBOSE("geometry has empty collision mesh\n");
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
@@ -334,7 +335,7 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
     for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
-        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        vgeometryinfos[i] = boost::make_shared<KinBody::GeometryInfo>();
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
     SetGroupGeometries("self", vgeometryinfos);
@@ -346,7 +347,7 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     _vGeometries.resize(geometries.size());
     size_t i = 0;
     FOREACH(itinfo,geometries) {
-        _vGeometries[i].reset(new Geometry(shared_from_this(),*itinfo));
+        _vGeometries[i] = boost::make_shared<Geometry>(shared_from_this(),*itinfo);
         if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
             RAVELOG_VERBOSE("geometry has empty collision mesh\n");
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
@@ -358,7 +359,7 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries)
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
     for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
-        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+        vgeometryinfos[i] = boost::make_shared<KinBody::GeometryInfo>();
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
     SetGroupGeometries("self", vgeometryinfos);
@@ -380,7 +381,7 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
     }
     _vGeometries.resize(pvinfos->size());
     for(size_t i = 0; i < pvinfos->size(); ++i) {
-        _vGeometries[i].reset(new Geometry(shared_from_this(),*pvinfos->at(i)));
+        _vGeometries[i] = boost::make_shared<Geometry>(shared_from_this(),*pvinfos->at(i));
         if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
             RAVELOG_VERBOSE("geometry has empty collision mesh\n");
             _vGeometries[i]->InitCollisionMesh();
@@ -493,7 +494,7 @@ void KinBody::Link::UpdateInfo()
         _info._vgeometryinfos.resize(_vGeometries.size());
         for(size_t i = 0; i < _info._vgeometryinfos.size(); ++i) {
             if( !_info._vgeometryinfos[i] ) {
-                _info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
+                _info._vgeometryinfos[i] = boost::make_shared<KinBody::GeometryInfo>();
             }
             *_info._vgeometryinfos[i] = _vGeometries[i]->GetInfo();
         }
