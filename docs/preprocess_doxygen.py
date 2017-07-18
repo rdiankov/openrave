@@ -23,9 +23,11 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     indexfilename =     os.path.join(options.outdir,'coreapihtml','index.html')
-    indexhtml = open(indexfilename,'r').read()
+    with open(indexfilename,'r') as f:
+        indexhtml = f.read()
     indexhtml = re.sub('<li><a href="examples.html"><span>Examples</span></a></li>','<li><a href="cpp_examples.html"><span>C++ Examples</span></a></li>',indexhtml)
-    open(indexfilename,'w').write(indexhtml)
+    with open(indexfilename,'w') as f:
+        f.write(indexhtml)
         
     # for now only build for english pdf
 #     if lang == 'en':

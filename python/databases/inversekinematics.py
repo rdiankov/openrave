@@ -300,8 +300,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             os.makedirs(os.path.split(statsfilename)[0])
         except OSError:
             pass
-        
-        pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), open(statsfilename, 'w'))
+        with open(statsfilename, 'w') as f:
+            pickle.dump((self.getversion(),self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc), f)
         log.info('inversekinematics generation is done, compiled shared object: %s',self.getfilename(False))
         
     def load(self,freeinc=None,checkforloaded=True,*args,**kwargs):
@@ -309,8 +309,8 @@ class InverseKinematicsModel(DatabaseGenerator):
             filename = self.getstatsfilename(True)
             if len(filename) == 0:
                 return checkforloaded and self.manip.GetIkSolver() is not None and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
-            
-            modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(open(filename, 'r'))
+            with open(filename, 'r') as f:
+                modelversion,self.statistics,self.ikfeasibility,self.solveindices,self.freeindices,self.freeinc = pickle.load(f)
             if modelversion != self.getversion():
                 log.warn('version is wrong %s!=%s',modelversion,self.getversion())
                 return checkforloaded and self.manip.GetIkSolver() is not None  and self.manip.GetIkSolver().Supports(self.iktype) # might have ik already loaded
@@ -894,7 +894,8 @@ class InverseKinematicsModel(DatabaseGenerator):
                 
                 self.statistics['generationtime'] = time.time()-generationstart
                 self.statistics['usinglapack'] = solver.usinglapack
-                open(sourcefilename,'w').write(code)
+                with open(sourcefilename,'w') as f:
+                    f.write(code)
                 try:
                     from pkg_resources import resource_filename
                     shutil.copyfile(resource_filename('openravepy','ikfast.h'), os.path.join(sourcedir,'ikfast.h'))

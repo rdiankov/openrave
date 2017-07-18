@@ -6,7 +6,8 @@
 import sys
 
 if __name__=='__main__':
-    data = open(sys.argv[1],'r').read()
+    with open(sys.argv[1],'r') as f: 
+        data = f.read()
     indices = [data.find('OPENRAVE_VERSION_MAJOR'), data.find('OPENRAVE_VERSION_MINOR'), data.find('OPENRAVE_VERSION_PATCH')]
     versions = []
     for index in indices:
