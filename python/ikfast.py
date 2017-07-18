@@ -105,7 +105,7 @@ IKFast can also be used as a library in python. Generating 6D IK for the Barrett
   chaintree = solver.generateIkSolver(baselink=0,eelink=7,freeindices=[2],solvefn=ikfast.IKFastSolver.solveFullIK_6D)
   code = solver.writeIkSolver(chaintree)
   with open('ik.cpp','w') as f:
-    f.write(code)
+      f.write(code)
 
 .. _ikfast_generatedcpp:
 
