@@ -2074,7 +2074,7 @@ void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
     _listNonCollidingLinks.clear();
     _mapLinkIsNonColliding.clear();
     KinBodyPtr pgrabbedbody(_pgrabbedbody);
-    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkrobot->GetParent());
+    KinBodyPtr probot = RaveInterfaceCast<KinBody>(_plinkrobot->GetParent());
     EnvironmentBasePtr penv = probot->GetEnv();
     CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
     if( !pchecker ) {

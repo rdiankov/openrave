@@ -1358,6 +1358,20 @@ private:
         Save_ActiveManipulatorToolTransform=0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
     };
 
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API GrabbedInfo
+    {
+public:
+        std::string _grabbedname; ///< the name of the body to grab
+        std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
+        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
+        std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
+    };
+    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
+    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
+
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
     /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
@@ -2098,6 +2112,82 @@ private:
 
     //@}
 
+    /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
+        link will be fixed. KinBody::_AttachBody is called for every grabbed body in order to make
+        the grabbed body a part of the robot. Once grabbed, the inter-collisions between the robot
+        and the body are regarded as self-collisions; any outside collisions of the body and the
+        environment are regarded as environment collisions with the robot.
+        @name Grabbing Bodies
+        @{
+     */
+
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
+        when checking collisions between the grabbed body and the robot.
+        \return true if successful and body is grabbed.
+     */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
+
+    /** \brief Grab a body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \return true if successful and body is grabbed/
+     */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
+
+    /** \brief Release the body if grabbed.
+
+        \param body body to release
+     */
+    virtual void Release(KinBodyPtr body);
+
+    /// Release all grabbed bodies.
+    virtual void ReleaseAllGrabbed();     ///< release all bodies
+
+    /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
+
+        This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
+     */
+    virtual void RegrabAll();
+
+    /** \brief return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+
+        \param[in] body the body to check
+     */
+    virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
+
+    /** \brief gets all grabbed bodies of the robot
+
+        \param[out] vbodies filled with the grabbed bodies
+     */
+    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /** \brief gets all grabbed bodies of the robot
+
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+
+    /** \brief resets the grabbed bodies of the robot
+
+        Any currently grabbed bodies will be first released.
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
+
+    /** \brief returns all the links of the robot whose links are being ignored by the grabbed body.
+
+        \param[in] body the grabbed body
+        \param[out] list of the ignored links
+     */
+    virtual void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
+
+    //@}
+
     /// only used for hashes...
     virtual void serialize(std::ostream& o, int options) const;
 
@@ -2110,6 +2200,9 @@ protected:
     inline KinBodyConstPtr shared_kinbody_const() const {
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
+
+    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
+    virtual void _Regrab(UserDataPtr pgrabbed);
 
     /// \deprecated (12/12/11)
     virtual void SetPhysicsData(UserDataPtr pdata) RAVE_DEPRECATED {
@@ -2166,6 +2259,9 @@ protected:
     /// \return true if body was successfully found and removed
     virtual bool _RemoveAttachedBody(KinBodyPtr body);
 
+    virtual void _UpdateGrabbedBodies();
+
+
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
 
@@ -2186,6 +2282,8 @@ protected:
                                      ///< i|(j<<16) will be in the set where i<j.
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
+
+    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
@@ -2233,6 +2331,7 @@ private:
     friend class SensorSystemBase;
     friend class RaveDatabase;
     friend class ChangeCallbackData;
+    friend class Grabbed;
 };
 
 } // end namespace OpenRAVE
