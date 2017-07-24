@@ -117,7 +117,8 @@ class TestCOLLADA(EnvironmentSetup):
   </kinbody>
 </environment>
 """
-        open('test_colladascenes.env.xml','w').write(xmldata)
+        with open('test_colladascenes.env.xml','w') as f:
+            f.write(xmldata)
         with env:
             with env2:
                 for name in ['test_colladascenes.env.xml','data/lab1.env.xml', 'data/camera.robot.xml']:
@@ -241,7 +242,8 @@ class TestCOLLADA(EnvironmentSetup):
         robot=env.GetRobots()[0]
         robot.SetDOFValues(ones(robot.GetDOF()))
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
-        filedata=open('test_externalref_joints.dae','r').read()
+        with open('test_externalref_joints.dae','r') as f:
+            filedata=f.read()
         assert(filedata.find(reffile)>=0)
         assert(len(filedata)<10000) # should be small
         assert(env2.Load('test_externalref_joints.dae'))
@@ -254,7 +256,8 @@ class TestCOLLADA(EnvironmentSetup):
         assert(env.Load('robots/schunk-lwa3.zae'))
         robot=env.GetRobots()[0]
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme'})
-        filedata=open('test_externalref_joints.dae','r').read()
+        with open('test_externalref_joints.dae','r') as f:
+            filedata=f.read()
         assert(filedata.find('testscheme:/')>=0)
         assert(env2.Load('test_externalref_joints.dae',{'openravescheme':'testscheme'}))
         misc.CompareBodies(env.GetRobots()[0],env2.GetRobots()[0])
@@ -410,7 +413,8 @@ class TestCOLLADA(EnvironmentSetup):
         env=self.env
         robot = self.LoadRobot('robots/pr2-beta-static.zae')
         env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'visual readable sensors physics'})
-        filedata=open('test_writekinematicsonly.dae','r').read()
+        with open('test_writekinematicsonly.dae','r') as f:
+            filedata=f.read()
         assert(len(filedata)<400000) # should be ~331kb
         env2=Environment()
         env2.Load('test_writekinematicsonly.dae')
@@ -418,7 +422,8 @@ class TestCOLLADA(EnvironmentSetup):
         misc.CompareBodies(robot,robot2,comparegeometries=False,comparesensors=False,comparemanipulators=True,comparegrabbed=False,comparephysics=False,epsilon=1e-10)
 
         env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'geometry readable sensors physics'})
-        filedata=open('test_writekinematicsonly.dae','r').read()
+        with open('test_writekinematicsonly.dae','r') as f:
+            filedata=f.read()
         assert(len(filedata)<400000) # should be ~331kb
         env2.Reset()
         env2.Load('test_writekinematicsonly.dae')
