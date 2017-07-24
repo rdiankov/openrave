@@ -21,6 +21,7 @@ using namespace ColladaDOM150;
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
+#include <ctime>
 
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
@@ -373,10 +374,12 @@ private:
         domAssetRef asset = daeSafeCast<domAsset>( _dom->add( COLLADA_ELEMENT_ASSET ) );
         {
             // facet becomes owned by locale, so no need to explicitly delete
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%s");
             std::stringstream ss;
-            ss.imbue(std::locale(ss.getloc(), facet));
-            ss << boost::posix_time::second_clock::local_time();
+            time_t now;
+            time(&now);
+            char timec[80];
+            strftime(timec, sizeof(timec), "%FT%T%z", localtime(&now));
+            ss << timec;
 
             domAsset::domCreatedRef created = daeSafeCast<domAsset::domCreated>( asset->add( COLLADA_ELEMENT_CREATED ) );
             created->setValue(ss.str().c_str());
