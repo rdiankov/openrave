@@ -375,11 +375,10 @@ private:
         {
             // facet becomes owned by locale, so no need to explicitly delete
             std::stringstream ss;
-            ss.imbue(std::locale(ss.getloc(), facet));
             time_t now;
             time(&now);
-            char timec[sizeof "2000-01-01T00:00:00+00:00"];
-            strftime(timec, sizeof timec, "%FT%T%z", localtime(&now));
+            char timec[80];
+            strftime(timec, sizeof(timec), "%FT%T%z", localtime(&now));
             ss << timec;
 
             domAsset::domCreatedRef created = daeSafeCast<domAsset::domCreated>( asset->add( COLLADA_ELEMENT_CREATED ) );
