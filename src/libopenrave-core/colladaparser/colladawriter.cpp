@@ -358,7 +358,6 @@ private:
     virtual ~ColladaWriter()
     {
         if( !!_dae && !!_doc ) {
-            _doc = NULL;
             // If GlobalDAE is not resetted, there will be memory leak inside the
             // Collada library because static daeStringTable in daeStringRef.cpp
             // will only be cleaned by daeStringRef::releaseStringTable when
@@ -368,7 +367,10 @@ private:
             // the comments of GetGlobalDAE() in OpenRAVE for more details
 #if LIBXML_VERSION >= 20900
             SetGlobalDAE(boost::shared_ptr<DAE>());
+#else
+            _dae->getDatabase()->removeDocument(_doc);
 #endif
+            _doc = NULL;
         }
     }
 
