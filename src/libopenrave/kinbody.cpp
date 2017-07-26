@@ -5004,12 +5004,12 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vgrabbedinfo)
         GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(_vGrabbedBodies[i]);
         vgrabbedinfo[i].reset(new GrabbedInfo());
         vgrabbedinfo[i]->_grabbedname = pgrabbed->_pgrabbedbody.lock()->GetName();
-        vgrabbedinfo[i]->_bodylinkName = pgrabbed->_plinkbody->GetName();
+        vgrabbedinfo[i]->_robotlinkname = pgrabbed->_plinkbody->GetName();
         vgrabbedinfo[i]->_trelative = pgrabbed->_troot;
-        vgrabbedinfo[i]->_setBodyLinksToIgnore = pgrabbed->_setBodyLinksToIgnore;
+        vgrabbedinfo[i]->_setRobotLinksToIgnore = pgrabbed->_setBodyLinksToIgnore;
         FOREACHC(itlink, _veclinks) {
             if( find(pgrabbed->_listNonCollidingLinks.begin(), pgrabbed->_listNonCollidingLinks.end(), *itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                vgrabbedinfo[i]->_setBodyLinksToIgnore.insert((*itlink)->GetIndex());
+                vgrabbedinfo[i]->_setRobotLinksToIgnore.insert((*itlink)->GetIndex());
             }
         }
     }
@@ -5024,7 +5024,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgra
         FOREACHC(itgrabbedinfo, vgrabbedinfo) {
             GrabbedInfoConstPtr pgrabbedinfo = *itgrabbedinfo;
             KinBodyPtr pbody = GetEnv()->GetKinBody(pgrabbedinfo->_grabbedname);
-            KinBody::LinkPtr pBodyLinkToGrabWith = GetLink(pgrabbedinfo->_bodylinkName);
+            KinBody::LinkPtr pBodyLinkToGrabWith = GetLink(pgrabbedinfo->_robotlinkname);
             OPENRAVE_ASSERT_FORMAT(!!pbody && !!pBodyLinkToGrabWith, "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
             OPENRAVE_ASSERT_FORMAT(pbody != shared_kinbody(), "body %s cannot grab itself",pbody->GetName(), ORE_InvalidArguments);
             if( IsGrabbing(pbody) ) {
@@ -5038,7 +5038,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vgra
                 // collision checking will not be automatically updated with environment calls, so need to do this manually
                 _selfcollisionchecker->InitKinBody(pbody);
             }
-            pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setBodyLinksToIgnore);
+            pgrabbed->_ProcessCollidingLinks(pgrabbedinfo->_setRobotLinksToIgnore);
             Transform tlink = pBodyLinkToGrabWith->GetTransform();
             Transform tbody = tlink * pgrabbed->_troot;
             pbody->SetTransform(tbody);
