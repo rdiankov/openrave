@@ -1365,9 +1365,9 @@ private:
     {
 public:
         std::string _grabbedname; ///< the name of the body to grab
-        std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
-        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
+        std::string _bodylinkName;  ///< the name of the body link that is grabbing the body
+        Transform _trelative; ///< transform of first link of body relative to _bodylinkName's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
+        std::set<int> _setBodyLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -1480,7 +1480,7 @@ private:
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
-    /// \brief Unique name of the robot.
+    /// \brief Unique name of the body.
     virtual const std::string& GetName() const {
         return _name;
     }
@@ -2112,11 +2112,11 @@ private:
 
     //@}
 
-    /** A grabbed body becomes part of the robot and its relative pose with respect to a robot's
+    /** A grabbed body becomes part of the body and its relative pose with respect to a body's
         link will be fixed. KinBody::_AttachBody is called for every grabbed body in order to make
-        the grabbed body a part of the robot. Once grabbed, the inter-collisions between the robot
-        and the body are regarded as self-collisions; any outside collisions of the body and the
-        environment are regarded as environment collisions with the robot.
+        the grabbed body a part of the body. Once grabbed, the inter-collisions between the grabbing body
+        and the grabbed body are regarded as self-collisions; any outside collisions of the grabbed body and the
+        environment are regarded as environment collisions with the grabbing body.
         @name Grabbing Bodies
         @{
      */
@@ -2124,20 +2124,20 @@ private:
     /** \brief Grab the body with the specified link.
 
         \param[in] body the body to be grabbed
-        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
-        \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
-        when checking collisions between the grabbed body and the robot.
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
+        when checking collisions between the grabbed body and the body.
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
 
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
-        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith);
 
     /** \brief Release the body if grabbed.
 
@@ -2150,36 +2150,36 @@ private:
 
     /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
 
-        This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
+        This has the effect of resetting the current collisions any grabbed body makes with the body into an ignore list.
      */
     virtual void RegrabAll();
 
-    /** \brief return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+    /** \brief return the body link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
 
         \param[in] body the body to check
      */
     virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
 
-    /** \brief gets all grabbed bodies of the robot
+    /** \brief gets all grabbed bodies of the body
 
         \param[out] vbodies filled with the grabbed bodies
      */
     virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
-    /** \brief gets all grabbed bodies of the robot
+    /** \brief gets all grabbed bodies of the body
 
         \param[out] vgrabbedinfo filled with the grabbed info for every body
      */
     virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
 
-    /** \brief resets the grabbed bodies of the robot
+    /** \brief resets the grabbed bodies of the body
 
         Any currently grabbed bodies will be first released.
         \param[out] vgrabbedinfo filled with the grabbed info for every body
      */
     virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
 
-    /** \brief returns all the links of the robot whose links are being ignored by the grabbed body.
+    /** \brief returns all the links of the body whose links are being ignored by the grabbed body.
 
         \param[in] body the grabbed body
         \param[out] list of the ignored links

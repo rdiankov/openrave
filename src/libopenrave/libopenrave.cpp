@@ -2070,13 +2070,13 @@ void TriMesh::serialize(std::ostream& o, int options) const
 
 void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 {
-    _setRobotLinksToIgnore = setRobotLinksToIgnore;
+    _setBodyLinksToIgnore = setRobotLinksToIgnore;
     _listNonCollidingLinks.clear();
     _mapLinkIsNonColliding.clear();
     KinBodyPtr pgrabbedbody(_pgrabbedbody);
-    KinBodyPtr probot = RaveInterfaceCast<KinBody>(_plinkrobot->GetParent());
-    EnvironmentBasePtr penv = probot->GetEnv();
-    CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
+    KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_plinkbody->GetParent());
+    EnvironmentBasePtr penv = pbody->GetEnv();
+    CollisionCheckerBasePtr pchecker = pbody->GetSelfCollisionChecker();
     if( !pchecker ) {
         pchecker = penv->GetCollisionChecker();
     }
@@ -2085,14 +2085,14 @@ void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         // have to enable all the links in order to compute accurate _mapLinkIsNonColliding info
         KinBody::KinBodyStateSaver grabbedbodysaver(pgrabbedbody, KinBody::Save_LinkEnable);
         pgrabbedbody->Enable(true);
-        KinBody::KinBodyStateSaver robotsaver(probot, KinBody::Save_LinkEnable);
-        probot->Enable(true);
+        KinBody::KinBodyStateSaver robotsaver(pbody, KinBody::Save_LinkEnable);
+        pbody->Enable(true);
 
         //uint64_t starttime = utils::GetMicroTime();
 
         // check collision with all links to see which are valid
         int numchecked = 0;
-        FOREACHC(itlink, probot->GetLinks()) {
+        FOREACHC(itlink, pbody->GetLinks()) {
             int noncolliding = 0;
             if( find(_vattachedlinks.begin(),_vattachedlinks.end(), *itlink) == _vattachedlinks.end() ) {
                 if( setRobotLinksToIgnore.find((*itlink)->GetIndex()) == setRobotLinksToIgnore.end() ) {
@@ -2110,9 +2110,9 @@ void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         //uint64_t starttime1 = utils::GetMicroTime();
 
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
-        FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
+        FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
+            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkbody) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);

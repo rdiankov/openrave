@@ -95,32 +95,32 @@ public:
     }
     PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
         _grabbedname = ConvertStringToUnicode(info._grabbedname);
-        _robotlinkname = ConvertStringToUnicode(info._robotlinkname);
+        _bodylinkName = ConvertStringToUnicode(info._bodylinkName);
         _trelative = ReturnTransform(info._trelative);
         boost::python::list setRobotLinksToIgnore;
-        FOREACHC(itindex, info._setRobotLinksToIgnore) {
+        FOREACHC(itindex, info._setBodyLinksToIgnore) {
             setRobotLinksToIgnore.append(*itindex);
         }
-        _setRobotLinksToIgnore = setRobotLinksToIgnore;
+        _setBodyLinksToIgnore = setRobotLinksToIgnore;
     }
 
     RobotBase::GrabbedInfoPtr GetGrabbedInfo() const
     {
         RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
         pinfo->_grabbedname = boost::python::extract<std::string>(_grabbedname);
-        pinfo->_robotlinkname = boost::python::extract<std::string>(_robotlinkname);
+        pinfo->_bodylinkName = boost::python::extract<std::string>(_bodylinkName);
         pinfo->_trelative = ExtractTransform(_trelative);
-        std::vector<int> v = ExtractArray<int>(_setRobotLinksToIgnore);
-        pinfo->_setRobotLinksToIgnore.clear();
+        std::vector<int> v = ExtractArray<int>(_setBodyLinksToIgnore);
+        pinfo->_setBodyLinksToIgnore.clear();
         FOREACHC(it,v) {
-            pinfo->_setRobotLinksToIgnore.insert(*it);
+            pinfo->_setBodyLinksToIgnore.insert(*it);
         }
         return pinfo;
     }
 
-    object _grabbedname, _robotlinkname;
+    object _grabbedname, _bodylinkName;
     object _trelative;
-    object _setRobotLinksToIgnore;
+    object _setBodyLinksToIgnore;
 };
 typedef boost::shared_ptr<PyGrabbedInfo> PyGrabbedInfoPtr;
 
