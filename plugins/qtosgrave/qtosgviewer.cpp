@@ -1741,7 +1741,12 @@ void QtOSGViewer::Reset()
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
 {
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color));
+}
 
+void QtOSGViewer::_SetBkgndColor(const RaveVector<float>& color)
+{
+    _posgWidget->GetCamera()->setClearColor(osg::Vec4f(color.x, color.y, color.z, 1.0));
 }
 
 void QtOSGViewer::StartPlaybackTimer()

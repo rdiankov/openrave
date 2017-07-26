@@ -60,9 +60,8 @@ def write_file(name, text, opts):
         print 'File %s already exists, skipping.' % fname
     else:
         print 'Creating file %s.' % fname
-        f = open(fname, 'w')
-        f.write(text)
-        f.close()
+        with open(fname, 'w') as f:
+            f.write(text)
 
 def format_heading(level, text):
     """Create a heading of <level> [1, 2 or 3 supported]."""
