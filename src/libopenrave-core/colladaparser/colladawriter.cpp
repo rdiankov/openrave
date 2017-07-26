@@ -2025,55 +2025,53 @@ private:
     void _WriteDynamicRigidConstraints(domInstance_with_extraRef piscene, const std::list<boost::shared_ptr<instance_articulated_system_output> >& listModelDatabase)
     {
         domTechniqueRef ptec;
-        // go through every robot and check if it has grabbed bodies
+        // go through every body and check if it has grabbed bodies
         std::vector<KinBodyPtr> vGrabbedBodies;
         size_t idynamicconstraint = 0;
         FOREACHC(itias, listModelDatabase) {
-            if( (*itias)->pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>((*itias)->pbody);
-                probot->GetGrabbed(vGrabbedBodies);
-                if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
-                    RAVELOG_DEBUG_FORMAT("physics info is not written to robot %s, so cannot write any grabbed bodies", probot->GetName());
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>((*itias)->pbody);
+            pbody->GetGrabbed(vGrabbedBodies);
+            if( vGrabbedBodies.size() > 0 && !(*itias)->ipmout ) {
+                RAVELOG_DEBUG_FORMAT("physics info is not written to body %s, so cannot write any grabbed bodies", pbody->GetName());
+                continue;
+            }
+            FOREACHC(itgrabbed,vGrabbedBodies) {
+                boost::shared_ptr<instance_articulated_system_output> grabbedias;
+                FOREACHC(itias2,listModelDatabase) {
+                    if( (*itias2)->pbody == *itgrabbed ) {
+                        grabbedias = *itias2;
+                        break;
+                    }
+                }
+                if( !grabbedias ) {
+                    RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
                     continue;
                 }
-                FOREACHC(itgrabbed,vGrabbedBodies) {
-                    boost::shared_ptr<instance_articulated_system_output> grabbedias;
-                    FOREACHC(itias2,listModelDatabase) {
-                        if( (*itias2)->pbody == *itgrabbed ) {
-                            grabbedias = *itias2;
-                            break;
-                        }
-                    }
-                    if( !grabbedias ) {
-                        RAVELOG_WARN(str(boost::format("grabbed body %s not saved in COLLADA so cannot reference")%(*itgrabbed)->GetName()));
-                        continue;
-                    }
 
-                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itgrabbed);
-                    if( !ptec ) {
-                        domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
-                        pextra->setType("dynamic_rigid_constraints");
-                        ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
-                        ptec->setProfile("OpenRAVE");
-                    }
+                KinBody::LinkPtr pgrabbinglink = pbody->IsGrabbing(*itgrabbed);
+                if( !ptec ) {
+                    domExtraRef pextra = daeSafeCast<domExtra>(piscene->add(COLLADA_ELEMENT_EXTRA));
+                    pextra->setType("dynamic_rigid_constraints");
+                    ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
+                    ptec->setProfile("OpenRAVE");
+                }
 
-                    daeElementRef pconstraint = ptec->add("rigid_constraint");
-                    pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
-                    idynamicconstraint++;
-                    string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
-                    pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
-                    rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
-                    pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
+                daeElementRef pconstraint = ptec->add("rigid_constraint");
+                pconstraint->setAttribute("sid",str(boost::format("grab%d")%idynamicconstraint).c_str());
+                idynamicconstraint++;
+                string rigid_body = str(boost::format("%s/%s")%(*itias)->ipmout->ipm->getSid()%(*itias)->ipmout->pmout->vrigidbodysids.at(pgrabbinglink->GetIndex()));
+                pconstraint->add("ref_attachment")->setAttribute("rigid_body",rigid_body.c_str());
+                rigid_body = str(boost::format("%s/%s")%grabbedias->ipmout->ipm->getSid()%grabbedias->ipmout->pmout->vrigidbodysids.at(0));
+                pconstraint->add("attachment")->setAttribute("rigid_body",rigid_body.c_str());
 
-                    std::list<KinBody::LinkConstPtr> listIgnoreLinks;
-                    probot->GetIgnoredLinksOfGrabbed(*itgrabbed, listIgnoreLinks);
-                    if( listIgnoreLinks.size() > 0 ) {
-                        daeElementRef pconstrainttec = pconstraint->add("technique");
-                        pconstrainttec->setAttribute("profile","OpenRAVE");
-                        FOREACHC(itignorelink, listIgnoreLinks) {
-                            string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
-                            pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
-                        }
+                std::list<KinBody::LinkConstPtr> listIgnoreLinks;
+                pbody->GetIgnoredLinksOfGrabbed(*itgrabbed, listIgnoreLinks);
+                if( listIgnoreLinks.size() > 0 ) {
+                    daeElementRef pconstrainttec = pconstraint->add("technique");
+                    pconstrainttec->setAttribute("profile","OpenRAVE");
+                    FOREACHC(itignorelink, listIgnoreLinks) {
+                        string linksid = (*itias)->ipmout->pmout->vrigidbodysids.at((*itignorelink)->GetIndex());
+                        pconstrainttec->add("ignore_link")->setAttribute("link",linksid.c_str());
                     }
                 }
             }

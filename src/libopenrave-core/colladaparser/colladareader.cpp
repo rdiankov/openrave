@@ -598,8 +598,8 @@ public:
                                         }
 
                                         if( !!ref_link && !!link ) {
-                                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(ref_link->GetParent());
-                                            if( !!probot ) {
+                                            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(ref_link->GetParent());
+                                            if( !!pbody ) {
                                                 // see if there are any ignore links
                                                 std::set<int> setRobotLinksToIgnore;
                                                 daeElementRef pchildtec = pchild->getChild("technique");
@@ -641,7 +641,7 @@ public:
                                                         }
                                                     }
                                                 }
-                                                probot->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
+                                                pbody->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
                                             }
                                             else {
                                                 RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));

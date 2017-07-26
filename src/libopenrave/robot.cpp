@@ -143,9 +143,6 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
     if( _options & Save_ActiveManipulator ) {
         _pManipActive = _probot->GetActiveManipulator();
     }
-    if( _options & Save_GrabbedBodies ) {
-        _vGrabbedBodies = _probot->_vGrabbedBodies;
-    }
     if( _options & Save_ActiveManipulatorToolTransform ) {
         _pManipActive = _probot->GetActiveManipulator();
         if( !!_pManipActive ) {
@@ -196,38 +193,6 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
             }
             else {
                 probot->SetActiveManipulator(_pManipActive->GetName());
-            }
-        }
-    }
-    if( _options & Save_GrabbedBodies ) {
-        // have to release all grabbed first
-        probot->ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(probot->_vGrabbedBodies.size(),==,0);
-        FOREACH(itgrabbed, _vGrabbedBodies) {
-            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-            if( !!pbody ) {
-                if( probot->GetEnv() == _probot->GetEnv() ) {
-                    probot->_AttachBody(pbody);
-                    probot->_vGrabbedBodies.push_back(*itgrabbed);
-                }
-                else {
-                    // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = probot->GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId());
-                    if( pbody->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
-                        RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbody->GetName()));
-                    }
-                    else {
-                        GrabbedPtr pnewgrabbed(new Grabbed(pnewbody,probot->GetLinks().at(KinBody::LinkPtr(pgrabbed->_plinkbody)->GetIndex())));
-                        pnewgrabbed->_troot = pgrabbed->_troot;
-                        pnewgrabbed->_listNonCollidingLinks.clear();
-                        FOREACHC(itlinkref, pgrabbed->_listNonCollidingLinks) {
-                            pnewgrabbed->_listNonCollidingLinks.push_back(probot->GetLinks().at((*itlinkref)->GetIndex()));
-                        }
-                        probot->_AttachBody(pnewbody);
-                        probot->_vGrabbedBodies.push_back(pnewgrabbed);
-                    }
-                }
             }
         }
     }

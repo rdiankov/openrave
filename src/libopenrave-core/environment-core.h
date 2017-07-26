@@ -2322,7 +2322,7 @@ protected:
                         pnewrobot->__hashrobotstructure = poldrobot->__hashrobotstructure;
                     }
                     else {
-                        KinBody::KinBodyStateSaver saver(*itbody, 0xffffffff);
+                        KinBody::KinBodyStateSaver saver(*itbody, 0xffffffff&~KinBody::Save_GrabbedBodies);
                         saver.Restore(pnewbody);
                     }
                 }
@@ -2363,7 +2363,7 @@ protected:
                     saver.Restore(pnewrobot);
                 }
                 else {
-                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_LinkVelocities); // all the others should have been saved?
+                    KinBody::KinBodyStateSaver saver(*itbody, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities); // all the others should have been saved?
                     saver.Restore(pnewbody);
                 }
             }

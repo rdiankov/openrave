@@ -117,6 +117,10 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
     if( _options & Save_JointLimits ) {
         _pbody->GetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
+    if( _options & Save_GrabbedBodies ) {
+        _vGrabbedBodies = _pbody->_vGrabbedBodies;
+    }
+
 }
 
 KinBody::KinBodyStateSaver::~KinBodyStateSaver()
@@ -190,6 +194,38 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     if( _options & Save_JointWeights ) {
         pbody->SetDOFWeights(_vDOFWeights);
+    }
+    if( _options & Save_GrabbedBodies ) {
+        // have to release all grabbed first
+        pbody->ReleaseAllGrabbed();
+        OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
+            if( !!pbody ) {
+                if( pbody->GetEnv() == pbody->GetEnv() ) {
+                    pbody->_AttachBody(pbody);
+                    pbody->_vGrabbedBodies.push_back(*itgrabbed);
+                }
+                else {
+                    // pgrabbed points to a different environment, so have to re-initialize
+                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentId(pbody->GetEnvironmentId());
+                    if( pbody->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
+                        RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbody->GetName()));
+                    }
+                    else {
+                        GrabbedPtr pnewgrabbed(new Grabbed(pnewbody,pbody->GetLinks().at(KinBody::LinkPtr(pgrabbed->_plinkbody)->GetIndex())));
+                        pnewgrabbed->_troot = pgrabbed->_troot;
+                        pnewgrabbed->_listNonCollidingLinks.clear();
+                        FOREACHC(itlinkref, pgrabbed->_listNonCollidingLinks) {
+                            pnewgrabbed->_listNonCollidingLinks.push_back(pbody->GetLinks().at((*itlinkref)->GetIndex()));
+                        }
+                        pbody->_AttachBody(pnewbody);
+                        pbody->_vGrabbedBodies.push_back(pnewgrabbed);
+                    }
+                }
+            }
+        }
     }
 }
 

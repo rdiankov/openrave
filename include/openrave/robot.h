@@ -558,7 +558,6 @@ protected:
         int affinedofs;
         Vector rotationaxis;
         ManipulatorPtr _pManipActive;
-        std::vector<UserDataPtr> _vGrabbedBodies;
         Transform _tActiveManipLocalTool;
         Vector _vActiveManipLocalDirection;
         IkSolverBasePtr _pActiveManipIkSolver;

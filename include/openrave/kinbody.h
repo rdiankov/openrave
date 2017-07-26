@@ -1354,7 +1354,7 @@ private:
         Save_JointLimits=0x00000020, ///< saves the dof limits
         Save_ActiveDOF=0x00010000,     ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator=0x00020000,     ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies=0x00040000,     ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_GrabbedBodies=0x00040000,     ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
         Save_ActiveManipulatorToolTransform=0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
     };
 
@@ -1405,6 +1405,7 @@ protected:
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vDOFWeights, _vDOFLimits[2];
         KinBodyPtr _pbody;
+        std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
