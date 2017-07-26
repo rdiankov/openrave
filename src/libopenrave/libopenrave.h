@@ -278,35 +278,35 @@ void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
-    Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkbody(plinkrobot) {
+    Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkbody) : _pgrabbedbody(pgrabbedbody), _plinkbody(plinkbody) {
         _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&Grabbed::UpdateCollidingLinks, this));
         _plinkbody->GetRigidlyAttachedLinks(_vattachedlinks);
     }
     virtual ~Grabbed() {
     }
     KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
-    KinBody::LinkPtr _plinkbody;         ///< robot link that is grabbing the body
+    KinBody::LinkPtr _plinkbody;         ///< body link that is grabbing the body
     std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab
-    Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-    std::set<int> _setBodyLinksToIgnore; ///< original links of the robot to force ignoring
+    Transform _troot;         ///< root transform (of first link of body) relative to plinkbody's transform. In other words, pbody->GetTransform() == plinkbody->GetTransform()*troot
+    std::set<int> _setBodyLinksToIgnore; ///< original links of the body to force ignoring
 
     /// \brief check collision with all links to see which are valid.
     ///
-    /// Use the robot's self-collision checker if possible
+    /// Use the body's self-collision checker if possible
     /// resets all cached data and re-evaluates the collisions
-    /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
-    void _ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore);
+    /// \param setBodyLinksToIgnore indices of the body links to always ignore, in other words remove from non-colliding list
+    void _ProcessCollidingLinks(const std::set<int>& setBodyLinksToIgnore);
 
     inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
         return _vattachedlinks;
     }
 
-    void AddMoreIgnoreLinks(const std::set<int>& setRobotLinksToIgnore)
+    void AddMoreIgnoreLinks(const std::set<int>& setBodyLinksToIgnore)
     {
-        KinBodyPtr probot = RaveInterfaceCast<KinBody>(_plinkbody->GetParent());
-        FOREACHC(itignoreindex, setRobotLinksToIgnore) {
+        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_plinkbody->GetParent());
+        FOREACHC(itignoreindex, setBodyLinksToIgnore) {
             _setBodyLinksToIgnore.insert(*itignoreindex);
-            KinBody::LinkPtr plink = probot->GetLinks().at(*itignoreindex);
+            KinBody::LinkPtr plink = pbody->GetLinks().at(*itignoreindex);
             _mapLinkIsNonColliding[plink] = 0;
             _listNonCollidingLinks.remove(plink);
         }
@@ -324,14 +324,14 @@ public:
 
     /// \brief updates the non-colliding info while reusing the cache data from _ProcessCollidingLinks
     ///
-    /// note that Regrab here is *very* dangerous since the robot could be a in a bad self-colliding state with the body. therefore, update the non-colliding state based on _mapLinkIsNonColliding
+    /// note that Regrab here is *very* dangerous since the body could be a in a bad self-colliding state with the body. therefore, update the non-colliding state based on _mapLinkIsNonColliding
     void UpdateCollidingLinks()
     {
-        RobotBasePtr probot = RaveInterfaceCast<RobotBase>(_plinkbody->GetParent());
-        if( !probot ) {
+        KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_plinkbody->GetParent());
+        if( !pbody ) {
             return;
         }
-        EnvironmentBasePtr penv = probot->GetEnv();
+        EnvironmentBasePtr penv = pbody->GetEnv();
         KinBodyConstPtr pgrabbedbody(_pgrabbedbody);
         if( !pgrabbedbody || !pgrabbedbody->IsEnabled() ) {
             _listNonCollidingLinks.clear();
@@ -339,14 +339,14 @@ public:
         }
 
         CollisionOptionsStateSaverPtr colsaver;
-        CollisionCheckerBasePtr pchecker = probot->GetSelfCollisionChecker();
+        CollisionCheckerBasePtr pchecker = pbody->GetSelfCollisionChecker();
         if( !pchecker ) {
             pchecker = penv->GetCollisionChecker();
         }
 
         std::map<KinBody::LinkConstPtr, int>::iterator itnoncolliding;
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
-        FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
+        FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkbody) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
@@ -379,7 +379,7 @@ public:
         }
 
         std::set<KinBodyConstPtr> _setgrabbed;
-        FOREACHC(itgrabbed, probot->_vGrabbedBodies) {
+        FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
             KinBodyConstPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
             if( !!pothergrabbedbody ) {
@@ -395,7 +395,7 @@ public:
                 _mapLinkIsNonColliding.erase(itnoncolliding++);
                 continue;
             }
-            if( noncollidingparent != probot ) {
+            if( noncollidingparent != pbody ) {
                 // check if body is currently being grabbed
                 if( _setgrabbed.find(noncollidingparent) == _setgrabbed.end() ) {
                     _mapLinkIsNonColliding.erase(itnoncolliding++);
