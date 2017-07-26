@@ -148,6 +148,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
+    RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
+                    "Sets the skybox with cubemap");
     RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
     RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
@@ -1109,6 +1111,18 @@ bool QtOSGViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
     if( !!sinput ) {
         _posgWidget->SetNearPlane(nearplane);
     }
+    return !!sinput;
+}
+
+bool QtOSGViewer::_SetTextureCubeMap(ostream& out, istream& sinput)
+{
+    std::string posx, negx, posy, negy, posz, negz;
+    sinput >> posx >> negx >> posy >> negy >> posz >> negz;
+
+    if(!!sinput) {
+        _posgWidget->SetTextureCubeMap(posx, negx, posy, negy, posz, negz);
+    }
+
     return !!sinput;
 }
 
