@@ -361,6 +361,10 @@ private:
             _dae->getDatabase()->removeDocument(_doc);
             _doc = NULL;
         }
+        // If GlobalDAE is not resetted, there will be memory leak inside the
+        // Collada library because there are some static cache/table that will
+        // only be cleaned when the number of DAE instances alive becomes 0.
+        SetGlobalDAE(boost::shared_ptr<DAE>());
     }
 
     /// \param docname the top level document?
