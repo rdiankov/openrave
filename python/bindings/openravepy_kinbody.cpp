@@ -2899,13 +2899,13 @@ class GrabbedInfo_pickle_suite : public pickle_suite
 public:
     static boost::python::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
     {
-        return boost::python::make_tuple(r._grabbedname, r._bodylinkName, r._trelative, r._setBodyLinksToIgnore);
+        return boost::python::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
     }
     static void setstate(PyKinBody::PyGrabbedInfo& r, boost::python::tuple state) {
         r._grabbedname = state[0];
-        r._bodylinkName = state[1];
+        r._robotlinkname = state[1];
         r._trelative = state[2];
-        r._setBodyLinksToIgnore = state[3];
+        r._setRobotLinksToIgnore = state[3];
     }
 };
 
@@ -3072,9 +3072,9 @@ void init_openravepy_kinbody()
 
     object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, boost::shared_ptr<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
                          .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
-                         .def_readwrite("_bodylinkName",&PyKinBody::PyGrabbedInfo::_bodylinkName)
+                         .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
                          .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
-                         .def_readwrite("_setBodyLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setBodyLinksToIgnore)
+                         .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
                          .def_pickle(GrabbedInfo_pickle_suite())
     ;
 

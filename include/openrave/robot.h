@@ -847,6 +847,24 @@ private:
         @{
      */
 
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
+        when checking collisions between the grabbed body and the robot.
+        \return true if successful and body is grabbed.
+     */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore);
+
+    /** \brief Grab a body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \return true if successful and body is grabbed/
+     */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
+
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
@@ -855,11 +873,6 @@ private:
         \return true if successful and body is grabbed
      */
     virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
-
-    virtual bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith);
-
-    virtual bool Grab(KinBodyPtr pbody, LinkPtr pRobotLinkToGrabWith,
-                      const std::set<int>& setRobotLinksToIgnore);
 
     /** \brief Grabs the body with the active manipulator's end effector.
 

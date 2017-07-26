@@ -2070,11 +2070,11 @@ void TriMesh::serialize(std::ostream& o, int options) const
 
 void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
 {
-    _setBodyLinksToIgnore = setRobotLinksToIgnore;
+    _setRobotLinksToIgnore = setRobotLinksToIgnore;
     _listNonCollidingLinks.clear();
     _mapLinkIsNonColliding.clear();
     KinBodyPtr pgrabbedbody(_pgrabbedbody);
-    KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_plinkbody->GetParent());
+    KinBodyPtr pbody = RaveInterfaceCast<KinBody>(_plinkrobot->GetParent());
     EnvironmentBasePtr penv = pbody->GetEnv();
     CollisionCheckerBasePtr pchecker = pbody->GetSelfCollisionChecker();
     if( !pchecker ) {
@@ -2112,7 +2112,7 @@ void Grabbed::_ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore)
         std::vector<KinBody::LinkPtr > vbodyattachedlinks;
         FOREACHC(itgrabbed, pbody->_vGrabbedBodies) {
             boost::shared_ptr<Grabbed const> pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkbody) != _vattachedlinks.end();
+            bool bsamelink = find(_vattachedlinks.begin(),_vattachedlinks.end(), pgrabbed->_plinkrobot) != _vattachedlinks.end();
             KinBodyPtr pothergrabbedbody(pgrabbed->_pgrabbedbody);
             if( bsamelink ) {
                 pothergrabbedbody->GetLinks().at(0)->GetRigidlyAttachedLinks(vbodyattachedlinks);
