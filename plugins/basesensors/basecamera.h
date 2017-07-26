@@ -249,7 +249,7 @@ public:
     {
         _pdata->vimagedata.resize(0);
         _pdata->__stamp = 0;
-        _vimagedata.resize(3*_pgeom->width*_pgeom->height);
+        _vimagedata.clear(); // do not resize vector here since it might never be used and it will take up lots of memory!
         _fTimeToImage = 0;
         _graphgeometry.reset();
         _dataviewer.reset();
@@ -273,6 +273,7 @@ public:
                 _fTimeToImage = 1 / (float)framerate;
                 GetEnv()->UpdatePublishedBodies();
                 if( !!GetEnv()->GetViewer() ) {
+                    _vimagedata.resize(3*_pgeom->width*_pgeom->height);
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
                         boost::mutex::scoped_lock lock(_mutexdata);
