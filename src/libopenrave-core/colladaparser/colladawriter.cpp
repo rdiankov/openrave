@@ -361,6 +361,17 @@ private:
             _dae->getDatabase()->removeDocument(_doc);
             _doc = NULL;
         }
+
+        // If GlobalDAE is not resetted, there will be memory leak inside the
+        // Collada library because static daeStringTable in daeStringRef.cpp
+        // will only be cleaned by daeStringRef::releaseStringTable when
+        // the number of DAE instances alive becomes 0.
+        //
+        // There is no simple workaround for libxml2 before 2.9.0. Read
+        // the comments of GetGlobalDAE() in OpenRAVE for more details
+#if LIBXML_VERSION >= 20900
+        SetGlobalDAE(boost::shared_ptr<DAE>());
+#endif
     }
 
     /// \param docname the top level document?
