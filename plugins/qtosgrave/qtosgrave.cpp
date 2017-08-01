@@ -109,7 +109,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                     // an event loop is running in a thread, is only available
                     // in QT5.
                     return qtosgrave::CreateQtOSGViewer(penv, sinput);
-
+#if 0
                     //RAVELOG_DEBUG("detect QApplication, so exiting from GUI thread in order to safely create\n");
                     RAVELOG_DEBUG("detect QApplication, so attempting to create new viewer in original GUI thread\n");
                     boost::shared_ptr<qtosgrave::QtOSGViewerCreator> creator(new qtosgrave::QtOSGViewerCreator(penv, sinput));
@@ -129,6 +129,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                         RAVELOG_WARN("timeout trying to create viewer!\n");
                     }
                     return pviewer;
+#endif
                 }
 
 
