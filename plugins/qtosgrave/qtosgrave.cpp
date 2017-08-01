@@ -101,9 +101,13 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                     return qtosgrave::CreateQtOSGViewer(penv, sinput); // no idea...
                 }
                 else {
-                    // TODO: Fix this temporary HACK! The function below is posted
-                    //       before the Qt app is running, so it won't get executed
-                    //       immediately and the GetViewer function will time out.
+                    // The function below can be posted before qt app's exec()
+                    // is called, so the function below won't get executed
+                    // immediately and the GetViewer function will time out.
+                    //
+                    // QThread::eventDispatcher(), which can be used to tell if
+                    // an event loop is running in a thread, is only available
+                    // in QT5.
                     return qtosgrave::CreateQtOSGViewer(penv, sinput);
 
                     //RAVELOG_DEBUG("detect QApplication, so exiting from GUI thread in order to safely create\n");
