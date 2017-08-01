@@ -808,14 +808,13 @@ public:
         worker_params->affinedofs = _robot->GetAffineDOF();
         worker_params->affineaxis = _robot->GetAffineRotationAxis();
 
+        EnvironmentBasePtr pcloneenv = GetEnv()->CloneSelf(Clone_Bodies|Clone_Simulation);
+
         _bContinueWorker = true;
         // start worker threads
         vector<boost::shared_ptr<boost::thread> > listthreads(numthreads);
-        {
-            EnvironmentBasePtr penv = GetEnv();
-            FOREACH(itthread,listthreads) {
-                itthread->reset(new boost::thread(boost::bind(&GrasperModule::_WorkerThread,this,worker_params,penv)));
-            }
+        FOREACH(itthread,listthreads) {
+            itthread->reset(new boost::thread(boost::bind(&GrasperModule::_WorkerThread,this,worker_params,pcloneenv)));
         }
 
         _listGraspResults.clear();
