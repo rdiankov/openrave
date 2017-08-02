@@ -253,6 +253,19 @@ public:
         _fTimeToImage = 0;
         _graphgeometry.reset();
         _dataviewer.reset();
+        _psensor_reference.reset();
+        
+        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
+        if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
+            // does not exist yet
+            SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
+            if( !psensor_reference ) {
+                RAVELOG_WARN_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
+            }
+            else {
+                _psensor_reference = psensor_reference;
+            }
+        }
     }
 
     virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
@@ -290,6 +303,12 @@ public:
     virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
+            if( !!_pgeom ) {
+                SensorBasePtr psensor_reference = _psensor_reference.lock();
+                if( !!psensor_reference ) {
+                    _pgeom->sensor_reference = psensor_reference->GetName();
+                }
+            }
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
             return SensorGeometryConstPtr(boost::shared_ptr<CameraGeomData>(pgeom));
@@ -371,6 +390,7 @@ public:
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
+        // r->_pgeom->sensor_reference should already be correct
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -379,11 +399,18 @@ public:
         _bRenderGeometry = r->_bRenderGeometry;
         _bRenderData = r->_bRenderData;
         _bPower = r->_bPower;
+        _psensor_reference.reset();
         _Reset();
     }
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const
     {
+        if( !!_pgeom ) {
+            SensorBasePtr psensor_reference = _psensor_reference.lock();
+            if( !!psensor_reference ) {
+                _pgeom->sensor_reference = psensor_reference->GetName();
+            }
+        }
         _pgeom->Serialize(writer, options);
         AttributesList atts;
         stringstream ss;
@@ -391,7 +418,7 @@ public:
         writer->AddChild("color",atts)->SetCharData(ss.str());
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     }
-
+    
 protected:
     void _RenderGeometry()
     {
@@ -442,6 +469,7 @@ protected:
     // more geom stuff
     vector<uint8_t> _vimagedata;
     RaveVector<float> _vColor;
+    SensorBaseWeakPtr _psensor_reference; ///< weak pointer to the sensor reference. Used to keep track of name changes!
 
     Transform _trans;
     dReal _fTimeToImage;
