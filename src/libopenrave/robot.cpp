@@ -367,6 +367,15 @@ void RobotBase::SetName(const std::string& newname)
             ss.get(buf,0);
             itgroup->name = str(boost::format("%s %s %s")%grouptype%newname%buf.str());
         }
+
+	// have to rename any attached sensors with robotname:attachedname!!
+	FOREACH(itattached, _vecSensors) {
+	    AttachedSensorPtr pattached = *itattached;
+	    if( !!pattached->psensor ) {
+	        pattached->psensor->SetName(str(boost::format("%s:%s")%newname%pattached->_info._name)); // need a unique targettable name
+	    }
+	}
+
         KinBody::SetName(newname);
     }
 }
