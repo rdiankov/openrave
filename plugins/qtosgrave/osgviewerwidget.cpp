@@ -127,29 +127,58 @@ public:
         setTransformation( newEye, newCenter, prevUp );
     }
 
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        switch( ea.getEventType() )
+        {
+            case osgGA::GUIEventAdapter::DOUBLECLICK:
+                return handleMouseDoubleClick( ea, us );
+
+            default:
+                break;
+        }
+        return osgGA::TrackballManipulator::handle(ea, us);
+    }
+
+    virtual bool seekToMousePointer( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        SetSeekMode(false);
+        if( !isAnimating() ) {
+            setAnimationTime(0.25);
+
+            // get current transformation
+            osg::Vec3d prevCenter, prevEye, prevUp;
+            getTransformation( prevEye, prevCenter, prevUp );
+
+            // center by mouse intersection
+            if( !setCenterByMousePointerIntersection( ea, us ) ) {
+                return false;
+            }
+
+            OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
+            BOOST_ASSERT( !!ad );
+
+            // setup animation data and restore original transformation
+            ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
+            ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
+            setTransformation( prevEye, prevCenter, prevUp );
+            return true;
+        }
+        return false;
+    }
+
+    virtual bool handleMouseDoubleClick( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        if (seekToMousePointer(ea, us)) {
+            return true;
+        }
+        return false;
+    }
+
     virtual bool handleMousePush( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
         if( _bInSeekMode ) {
-            SetSeekMode(false);
-            if( !isAnimating() ) {
-                setAnimationTime(0.25);
-
-                // get current transformation
-                osg::Vec3d prevCenter, prevEye, prevUp;
-                getTransformation( prevEye, prevCenter, prevUp );
-
-                // center by mouse intersection
-                if( !setCenterByMousePointerIntersection( ea, us ) ) {
-                    return false;
-                }
-
-                OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
-                BOOST_ASSERT( !!ad );
-
-                // setup animation data and restore original transformation
-                ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
-                ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
-                setTransformation( prevEye, prevCenter, prevUp );
+            if (seekToMousePointer(ea, us)) {
                 return true;
             }
         }
