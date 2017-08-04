@@ -2725,16 +2725,16 @@ public:
         if( !!_pcurreader ) {
             if( _pcurreader->endElement(xmlname) ) {
                 _pcurreader.reset();
-                _psensor->psensor = RaveInterfaceCast<SensorBase>(_psensorinterface);
+                _psensor->_psensor = RaveInterfaceCast<SensorBase>(_psensorinterface);
             }
             return false;
         }
         else if( xmlname == "attachedsensor" ) {
-            if( !_psensor->psensor ) {
+            if( !_psensor->_psensor ) {
                 RAVELOG_VERBOSE("Attached robot sensor %s points to no real sensor!\n",_psensor->GetName().c_str());
             }
             else {
-                _psensor->pdata = _psensor->psensor->CreateSensorData();
+                _psensor->pdata = _psensor->_psensor->CreateSensorData();
                 if( _psensor->pattachedlink.expired() ) {
                     RAVELOG_INFOA("no attached link, setting to base of robot\n");
                     if( _probot->GetLinks().size() == 0 ) {

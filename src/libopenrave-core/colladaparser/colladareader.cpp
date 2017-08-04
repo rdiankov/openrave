@@ -3060,11 +3060,11 @@ public:
                     daeElementRef instance_sensor = tec->getChild("instance_sensor");
                     if( !!instance_sensor ) {
                         std::pair<SensorBasePtr, daeElementRef> result = _ExtractCreateSensor(instance_sensor);
-                        pattachedsensor->psensor = result.first;
-                        if( !!pattachedsensor->psensor ) {
-                            pattachedsensor->psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
+                        pattachedsensor->_psensor = result.first;
+                        if( !!pattachedsensor->_psensor ) {
+                            pattachedsensor->_psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
                             std::string instance_url = instance_sensor->getAttribute("url");
-                            mapSensorURLsToNames[instance_url] = pattachedsensor->psensor->GetName();
+                            mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
                         }
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
@@ -3079,12 +3079,12 @@ public:
 
         FOREACH(itextract, listSensorsToExtract) {
             RobotBase::AttachedSensorPtr pattachedsensor = itextract->first;
-            if( !pattachedsensor->psensor ) {
+            if( !pattachedsensor->_psensor ) {
                 continue;
             }
 
             // Create the custom XML reader to read in the data (determined by users)
-            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->psensor->GetXMLId(),pattachedsensor->psensor, AttributesList());
+            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->_psensor->GetXMLId(),pattachedsensor->_psensor, AttributesList());
             if( !pcurreader ) {
                 pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
                 continue;
@@ -3092,7 +3092,7 @@ public:
 
             if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
                 if( !!pcurreader->GetReadable() ) {
-                    pattachedsensor->psensor->SetReadableInterface(pattachedsensor->psensor->GetXMLId(),pcurreader->GetReadable());
+                    pattachedsensor->_psensor->SetReadableInterface(pattachedsensor->_psensor->GetXMLId(),pcurreader->GetReadable());
                 }
             }
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values

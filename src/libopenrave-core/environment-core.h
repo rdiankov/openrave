@@ -704,7 +704,7 @@ public:
             SetEnvironmentId(robot);
             _nBodiesModifiedStamp++;
         }
-        robot->_ComputeInternalInformation();
+        robot->_ComputeInternalInformation(); // have to do this after _vecrobots is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
         _pCurrentChecker->InitKinBody(robot);
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
