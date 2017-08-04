@@ -188,6 +188,7 @@ QtOSGViewer::~QtOSGViewer()
     }
 
     _condUpdateModels.notify_all();
+    SetEnvironmentSync(false);
 }
 
 void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
