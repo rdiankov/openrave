@@ -52,6 +52,26 @@ protected:
 };
 typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPtr;
 
+class ViewerImageCallbackData : public UserData
+{
+public:
+    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    }
+    virtual ~ViewerImageCallbackData() {
+        boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
+        if( !!pviewer ) {
+            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            pviewer->_listRegisteredViewerImageCallbacks.erase(_iterator);
+        }
+    }
+
+    list<UserDataWeakPtr>::iterator _iterator;
+    ViewerBase::ViewerImageCallbackFn _callback;
+protected:
+    boost::weak_ptr<QtOSGViewer> _pweakviewer;
+};
+typedef boost::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
+
 class ViewerThreadCallbackData : public UserData
 {
 public:
@@ -160,6 +180,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
+    RegisterCommand("Resize", boost::bind(&QtOSGViewer::_CommandResize, this, _1, _2),
+                    "Accepts width x height to resize internal video frame");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -431,6 +453,30 @@ void QtOSGViewer::_UpdateViewerCallback()
                     catch(const std::exception& e) {
                         RAVELOG_ERROR(str(boost::format("Viewer Thread Callback Failed with error %s")%e.what()));
                     }
+                }
+            }
+        }
+
+        std::list<UserDataWeakPtr> listRegisteredViewerImageCallbacks;
+        {
+            boost::mutex::scoped_lock lock(_mutexCallbacks);
+            if( _listRegisteredViewerImageCallbacks.size() == 0 ) {
+                return;
+            }
+            listRegisteredViewerImageCallbacks = _listRegisteredViewerImageCallbacks;
+        }
+
+        std::vector<std::uint8_t> data(width()*height()*3);
+        glReadBuffer(GL_BACK);
+        glReadPixels(0,0,width(),height(),GL_BGRA,GL_UNSIGNED_BYTE,&data[0]);
+        FOREACH(it,listRegisteredViewerImageCallbacks) {
+            ViewerImageCallbackDataPtr pdata = boost::dynamic_pointer_cast<ViewerImageCallbackData>(it->lock());
+            if( !!pdata ) {
+                try {
+                    pdata->_callback(data.data(), width(), height(), 4);
+                }
+                catch(const std::exception& e) {
+                    RAVELOG_ERROR(str(boost::format("Viewer Image Callback Failed with error %s")%e.what()));
                 }
             }
         }
@@ -1242,6 +1288,18 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_CommandResize(ostream& sout, istream& sinput)
+{
+    int w, h;
+    sinput >> w;
+    sinput >> h;
+    if( !!sinput ) {
+        SetSize(w, h);
+    }
+    return false;
+}
+
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1775,6 +1833,8 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
+
+
 void QtOSGViewer::SetName(const string& name)
 {
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
@@ -1782,7 +1842,8 @@ void QtOSGViewer::SetName(const string& name)
 
 void QtOSGViewer::_SetName(const string& name)
 {
-    setWindowTitle(name.c_str());
+    _name = name;
+    setWindowTitle(_name.c_str());
 }
 
 bool QtOSGViewer::LoadModel(const string& filename)
@@ -2124,6 +2185,13 @@ UserDataPtr QtOSGViewer::RegisterViewerThreadCallback(const ViewerThreadCallback
 {
     ViewerThreadCallbackDataPtr pdata(new ViewerThreadCallbackData(fncallback,shared_viewer()));
     pdata->_iterator = _listRegisteredViewerThreadCallbacks.insert(_listRegisteredViewerThreadCallbacks.end(),pdata);
+    return pdata;
+}
+
+UserDataPtr QtOSGViewer::RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback)
+{
+    ViewerImageCallbackDataPtr pdata(new ViewerImageCallbackData(fncallback,shared_viewer()));
+    pdata->_iterator = _listRegisteredViewerImageCallbacks.insert(_listRegisteredViewerImageCallbacks.end(),pdata);
     return pdata;
 }
 

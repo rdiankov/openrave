@@ -735,6 +735,7 @@ protected:
 
         _frameindex = 0;
         _output = avformat_alloc_context();
+        _output->flags |= AVFMT_FLAG_GENPTS;
         BOOST_ASSERT(!!_output);
 
         _output->oformat = fmt;
@@ -772,6 +773,29 @@ protected:
 #else
         codec_ctx->pix_fmt = PIX_FMT_YUV420P;
 #endif
+        // Hackkkkkkkkkkkkkk
+        codec_ctx->bit_rate = 500*1000;
+        codec_ctx->bit_rate_tolerance = 0;
+        codec_ctx->rc_max_rate = 0;
+        codec_ctx->rc_buffer_size = 0;
+        codec_ctx->gop_size = 40;
+        codec_ctx->max_b_frames = 3;
+        codec_ctx->b_frame_strategy = 1;
+        codec_ctx->coder_type = 1;
+        codec_ctx->me_cmp = 1;
+        codec_ctx->me_range = 16;
+        codec_ctx->qmin = 10;
+        codec_ctx->qmax = 51;
+        codec_ctx->scenechange_threshold = 40;
+        codec_ctx->flags |= CODEC_FLAG_LOOP_FILTER;
+        codec_ctx->me_method = ME_HEX;
+        codec_ctx->me_subpel_quality = 5;
+        codec_ctx->i_quant_factor = 0.71;
+        codec_ctx->qcompress = 0.6;
+        codec_ctx->max_qdiff = 4;
+        //codec_ctx->directpred = 1;
+        // codec_ctx->flags2 |= CODEC_FLAG2_FASTPSKIP;
+        // Enddddddddddddddd
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         // not necessary to set parameters?
@@ -780,18 +804,22 @@ protected:
             throw OPENRAVE_EXCEPTION_FORMAT0("set parameters failed",ORE_Assert);
         }
 #endif
+        _output->flags |= AVFMT_FLAG_GENPTS;
         codec = avcodec_find_encoder(codec_ctx->codec_id);
         BOOST_ASSERT(!!codec);
 
         RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%_output->filename%width%height%frameRate%codec->name));
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
-        AVDictionary * RetunedAVDic=NULL;
-        if (avcodec_open2(codec_ctx, codec,&RetunedAVDic) < 0) {
+        AVDictionary *opts=NULL;
+        av_dict_set(&opts, "preset","veryslow",0);
+        if (avcodec_open2(codec_ctx, codec, &opts) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
         }
 
+        _output->flags |= AVFMT_FLAG_GENPTS;
         int ret = avio_open(&_output->pb, filename.c_str(), AVIO_FLAG_WRITE);
+        _output->flags |= AVFMT_FLAG_GENPTS;
         if (ret < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT("_StartVideo: Unable to open %s for writing: %d\n", filename%ret,ORE_Assert);
         }
@@ -820,6 +848,10 @@ protected:
         _yuv420p = avcodec_alloc_frame();
 #endif
 
+        _picture->width = width;
+        _picture->height = height;
+        _picture->format = AV_PIX_FMT_YUV420P;
+
         _outbuf_size = 500000;
         _outbuf = (char*)malloc(_outbuf_size);
         BOOST_ASSERT(!!_outbuf);
@@ -837,6 +869,10 @@ protected:
 #else
         avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
 #endif
+        _yuv420p->width = width;
+        _yuv420p->height = height;
+        _yuv420p->format = AV_PIX_FMT_YUV420P;
+        _output->flags |= AVFMT_FLAG_GENPTS;
     }
 
     void _AddFrame(void* pdata)
@@ -846,6 +882,7 @@ protected:
             RAVELOG_DEBUG("video resources destroyed\n");
             return;
         }
+        _output->flags |= AVFMT_FLAG_GENPTS;
 
         // flip vertically
         static vector<char> newdata;
@@ -898,6 +935,7 @@ protected:
                 _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
             if( av_write_frame(_output, &pkt) < 0) {
+                _output->flags |= AVFMT_FLAG_GENPTS;
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
                 av_free_packet(&pkt);
 #else
@@ -925,6 +963,7 @@ protected:
         //RAVELOG_INFO("%d\n",index);
         pkt.pts = _frameindex++;
         if( av_write_frame(_output, &pkt) < 0) {
+            _output->flags |= AVFMT_FLAG_GENPTS;
             throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
         }
 
