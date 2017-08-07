@@ -3536,6 +3536,7 @@ bool QtCoinViewer::_WriteCameraImage(int width, int height, const RaveTransform<
 uint8_t* QtCoinViewer::_GetVideoFrame()
 {
     if( !_bCanRenderOffscreen ) {
+        RAVELOG_WARN("Cannot render offscreen\n");
         return NULL;
     }
     _ivOffscreen.setViewportRegion(SbViewportRegion(_nRenderWidth, _nRenderHeight));
