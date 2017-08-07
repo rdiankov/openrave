@@ -812,10 +812,13 @@ protected:
 #endif
         _bWroteHeader = true;
 
-        // _picture = avcodec_alloc_frame();
-        // _yuv420p = avcodec_alloc_frame();
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
         _picture = av_frame_alloc();
         _yuv420p = av_frame_alloc();
+#else
+        _picture = avcodec_alloc_frame();
+        _yuv420p = avcodec_alloc_frame();
+#endif
 
         _outbuf_size = 500000;
         _outbuf = (char*)malloc(_outbuf_size);
