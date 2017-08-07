@@ -93,12 +93,14 @@ Interface Types
             for name,pluginname,itext in descs:
                 text += '  ' + interfacesdir + '/' + str(type) + '/' + name.lower() + '\n'
                 interfacefile = os.path.join(typedir,name.lower()+'.rst')
-                open(interfacefile,'w').write(itext)
+                with open(interfacefile,'w') as f:
+                    f.write(itext)
             text += '\n\n'
         text += """
 """
         mkdir_recursive(options.outdir)
-        open(os.path.join(options.outdir,'interface_types.rst'),'w').write(text)
+        with open(os.path.join(options.outdir,'interface_types.rst'),'w') as f:
+            f.write(text)
 
         coreplugins = {}
         corepluginsdir = '../plugins'
@@ -133,7 +135,8 @@ Plugins
                 if url is not None:
                     text += 'URL: '+url
             text += '\n\n'
-        open(os.path.join(options.outdir,'plugins.rst'),'w').write(text)
+        with open(os.path.join(options.outdir,'plugins.rst'),'w') as f:
+            f.write(text)
     finally:
         env.Destroy()
         RaveDestroy()

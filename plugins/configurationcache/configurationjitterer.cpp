@@ -48,6 +48,40 @@ public:
 
 typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
 
+/// \brief holds parameters for threshing the position. if dot(manipdir, tooldir) > cosanglethresh, then ok
+class ManipPositionConstraints
+{
+public:
+    ManipPositionConstraints() {
+    }
+    ManipPositionConstraints(const ManipPositionConstraints &r) : obb(r.obb) {
+    }
+    
+    inline bool IsInConstraints(const Transform& tmanip) const
+    {
+        // transform tmanip.trans in obb coordinate system
+        Vector vdelta = tmanip.trans - obb.pos;
+        dReal fright = obb.right.dot(vdelta);
+        if( RaveFabs(fright) > obb.extents.x ) {
+            return false;
+        }
+        dReal fup = obb.up.dot(vdelta);
+        if( RaveFabs(fup) > obb.extents.y ) {
+            return false;
+        }
+        dReal fdir = obb.dir.dot(vdelta);
+        if( RaveFabs(fdir) > obb.extents.z ) {
+            return false;
+        }
+
+        return true;
+    }
+    
+    OBB obb;
+};
+
+typedef boost::shared_ptr<ManipPositionConstraints> ManipPositionConstraintsPtr;
+
 class ConfigurationJitterer : public SpaceSamplerBase
 {
 public:
@@ -75,6 +109,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         "sets the minimum distance that nodes can be with respect to each other for the cache");
         RegisterCommand("SetConstraintToolDirection", boost::bind(&ConfigurationJitterer::SetConstraintToolDirectionCommand,this,_1,_2),
                         "constrains an axis of the manipulator around a cone. manipname + 7 values: vManipDir, vGlobalDir, fCosAngleThresh.");
+        RegisterCommand("SetConstraintToolPosition", boost::bind(&ConfigurationJitterer::SetConstraintToolPositionCommand,this,_1,_2),
+                        "constrains the position of the manipulator around an obb: right, up, dir, pos, extents");
+        
         RegisterCommand("SetManipulatorBias",boost::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
@@ -283,6 +320,37 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         return true;
     }
 
+    bool SetConstraintToolPositionCommand(std::ostream& sout, std::istream& sinput)
+    {
+        std::string manipname;
+        ManipPositionConstraintsPtr constraint(new ManipPositionConstraints());
+        sinput >> manipname;
+        if( manipname.size() == 0 ) {
+            // reset the tool position
+            if( !!_pConstraintToolPosition ) {
+                if( !!_cache ) {
+                    _cache->Reset(); // need this here in order to invalidate cache.
+                }
+            }
+            _pConstraintToolPosition.reset();
+            return true;
+        }
+        sinput >> constraint->obb.right.x >> constraint->obb.right.y >> constraint->obb.right.z >> constraint->obb.up.x >> constraint->obb.up.y >> constraint->obb.up.z >> constraint->obb.dir.x >> constraint->obb.dir.y >> constraint->obb.dir.z >> constraint->obb.pos.x >> constraint->obb.pos.y >> constraint->obb.pos.z >> constraint->obb.extents.x >> constraint->obb.extents.y >> constraint->obb.extents.z;
+        if( !sinput ) {
+            return false;
+        }
+        RobotBase::ManipulatorConstPtr pmanip = _probot->GetManipulator(manipname);
+        if( !pmanip ) {
+            return false;
+        }
+        _pmanip = pmanip;
+        _pConstraintToolPosition = constraint;
+        if( !!_cache ) {
+            _cache->Reset(); // need this here in order to invalidate cache.
+        }
+        return true;
+    }
+    
     virtual int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(0);
@@ -414,6 +482,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             if( !!_pConstraintToolDirection && !!_pmanip ) {
                 if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
+                    bConstraintFailed = true;
+                    break;
+
+                }
+            }
+            if( !!_pConstraintToolPosition && !!_pmanip ) {
+                if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
                     bConstraintFailed = true;
                     break;
 
@@ -656,6 +731,40 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( !!_pConstraintToolDirection ) {
                     if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
                         bConstraintFailed = true;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "direction constraints failed, ";
+                            for(size_t i = 0; i < _newdof2.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << _newdof2[i];
+                                }
+                                else {
+                                    ss << "colvalues=[" << _newdof2[i];
+                                }
+                            }
+                            ss << "]; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
+                        break;
+                    }
+                }
+                if( !!_pConstraintToolPosition ) {
+                    if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
+                        bConstraintFailed = true;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "position constraints failed, ";
+                            for(size_t i = 0; i < _newdof2.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << _newdof2[i];
+                                }
+                                else {
+                                    ss << "colvalues=[" << _newdof2[i];
+                                }
+                            }
+                            ss << "]; trans=[" << _pmanip->GetTransform().trans.x << ", " << _pmanip->GetTransform().trans.y << ", " << _pmanip->GetTransform().trans.z << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         break;
                     }
                 }
@@ -901,7 +1010,11 @@ protected:
     std::vector<dReal> _vbiasdofdirection; // direction to bias in configuration space (from jacobian)
     std::vector< std::vector<dReal> > _vbiasnullspace; // configuration nullspace that does not constraint rotation. vectors are unit
 
-    ManipDirectionThreshPtr _pConstraintToolDirection;
+    // manip constraints
+    ManipDirectionThreshPtr _pConstraintToolDirection; ///< constrain direction
+    ManipPositionConstraintsPtr _pConstraintToolPosition; ///< constraint position
+    
+    //Vector vManipConstraintBoxMin, vManipConstraintBoxMax; // constraint position
 
     bool _bSetResultOnRobot; ///< if true, will set the final result on the robot DOF values
     bool _busebiasing; ///< if true will bias the end effector along a certain direction using the jacobian and nullspace.

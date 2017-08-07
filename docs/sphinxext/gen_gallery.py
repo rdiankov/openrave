@@ -86,7 +86,8 @@ class GalleryDirective(Directive):
                 else:
                     newsize = [im.size[0]*maxheight/im.size[1],maxheight]
                 imthumb = im.resize(newsize, Image.ANTIALIAS)
-                imthumb.save(open(os.path.join(imagewritedir,imthumbname),'w'))
+                with open(os.path.join(imagewritedir,imthumbname),'w') as f:
+                    imthumb.save(f)
                 if len(docstring) > 0:
                     docstring = '<p>%s</p>'%docstring
                 rows.append(link_template%(name,linkdir+'/'+gallerytype+'.'+name, imagelinkdir+'/'+gallerytype+'/'+imthumbname, name,docstring))

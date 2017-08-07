@@ -104,7 +104,8 @@ IKFast can also be used as a library in python. Generating 6D IK for the Barrett
   solver = ikfast.IKFastSolver(kinbody=kinbody)
   chaintree = solver.generateIkSolver(baselink=0,eelink=7,freeindices=[2],solvefn=ikfast.IKFastSolver.solveFullIK_6D)
   code = solver.writeIkSolver(chaintree)
-  open('ik.cpp','w').write(code)
+  with open('ik.cpp','w') as f:
+      f.write(code)
 
 .. _ikfast_generatedcpp:
 
@@ -2142,7 +2143,7 @@ class IKFastSolver(AutoReloader):
             else:
                 lang = CodeGenerators.keys()[0]
         log.info('generating %s code...'%lang)
-        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__).generate(chaintree)
+        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype).generate(chaintree)
     
     def generateIkSolver(self, baselink, eelink, freeindices=None, solvefn=None, ikfastoptions=0):
         """
@@ -9537,7 +9538,7 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
     log.addHandler(handler)
     log.setLevel(options.debug)
 
-    solvefn=IKFastSolver.GetSolvers()[options.iktype]
+    solvefn=IKFastSolver.GetSolvers()[options.iktype.lower()]
     if options.robot is not None:
         try:
             env=openravepy.Environment()
@@ -9551,4 +9552,5 @@ python ikfast.py --robot=robots/barrettwam.robot.xml --baselink=0 --eelink=7 --s
             openravepy.RaveDestroy()
 
     if len(code) > 0:
-        open(options.savefile,'w').write(code)
+        with open(options.savefile,'w') as f:
+            f.write(code)

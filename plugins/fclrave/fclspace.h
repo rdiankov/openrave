@@ -429,9 +429,9 @@ public:
 
     void SynchronizeWithAttached(KinBodyConstPtr pbody)
     {
-        _setAttachedpBody.clear();
-        pbody->GetAttached(_setAttachedpBody);
-        FOREACH(itbody, _setAttachedpBody) {
+        std::set<KinBodyPtr> setAttachedpBodyTemp;
+        pbody->GetAttached(setAttachedpBodyTemp);
+        FOREACH(itbody, setAttachedpBodyTemp) {
             Synchronize(*itbody);
         }
     }
@@ -712,7 +712,6 @@ private:
     std::set<KinBodyConstPtr> _setInitializedBodies; ///< Set of the kinbody initialized in this space
     std::map< int, std::map< std::string, KinBodyInfoPtr > > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data
     std::map< int, KinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. The key being environment id makes it easier to compare objects without getting a handle to their pointers.
-    std::set<KinBodyPtr> _setAttachedpBody;
 };
 
 #ifdef RAVE_REGISTER_BOOST

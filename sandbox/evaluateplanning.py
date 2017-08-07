@@ -138,7 +138,8 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             data.robotname = self.robot.GetName()
             data.targetname = gmodel.target.GetName()
             datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
-            pickle.dump(data,open(datafilename,'w'))
+            with open(datafilename,'w') as f:
+                pickle.dump(data, f)
         print 'finished inversereachability'
             
     @staticmethod
@@ -154,7 +155,8 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
         alltimes = []
         for datafile in datafiles:
             try:
-                data = pickle.load(open(datafile,'r'))
+                with open(datafile,'r') as f:
+                    data = pickle.load(f)
             except:
                 continue
             allavg.append((data.targetname,data.samplingavg,data.randomavg))
@@ -244,7 +246,8 @@ class EvaluateDistanceMetric(OpenRAVEEvaluator):
             self.lsmodel.setRobotWeights(weightexp=weightexp,type=type)
             data.catimes.append([self.fntimer(self.planning.basemanip.MoveToHandPosition,matrices=Tgrasps[0:1],maxtries=1,seedik=4,maxiter=10000,execute=False)[0] for i in range(N)])
         datafilename = self.dataprefix+'.pp'
-        pickle.dump(data,open(datafilename,'w'))
+        with open(datafilename,'w') as f:
+            pickle.dump(data, f)
     @staticmethod
     def gatherdata(robotnames):
         env = Environment()
@@ -258,7 +261,8 @@ class EvaluateDistanceMetric(OpenRAVEEvaluator):
             catimes = [[],[]]
             for datafile in datafiles:
                 try:
-                    data = pickle.load(open(datafile,'r'))
+                    with open(datafile,'r') as f:
+                        data = pickle.load(f)
                 except:
                     continue
                 catimes[0] += data.catimes[0]
@@ -319,7 +323,8 @@ class EvaluateResolutions(OpenRAVEEvaluator):
             self.robot.SetAffineRotationAxisResolution(resolutions[2])
             data.catimes.append([self.fntimer(self.planning.basemanip.MoveToHandPosition,matrices=Tgrasps[0:1],maxtries=1,seedik=4,maxiter=10000,execute=False)[0] for i in range(N)])
         datafilename = self.dataprefix+'.pp'
-        pickle.dump(data,open(datafilename,'w'))
+        with open(datafilename, 'w') as f:
+            pickle.dump(data, f)
     @staticmethod
     def gatherdata(robotnames):
         env = Environment()
@@ -333,7 +338,8 @@ class EvaluateResolutions(OpenRAVEEvaluator):
             catimes = [[],[]]
             for datafile in datafiles:
                 try:
-                    data = pickle.load(open(datafile,'r'))
+                    with open(datafile, 'r') as f:
+                        data = pickle.load(f)
                 except:
                     continue
                 catimes[0] += data.catimes[0]

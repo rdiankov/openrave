@@ -13,6 +13,7 @@
 // limitations under the License.
 #include "osgviewerwidget.h"
 #include "osgcartoon.h"
+#include "osgskybox.h"
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -20,7 +21,6 @@
 #include <osg/CullFace>
 #include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
-
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
 #include <osgManipulator/TabPlaneDragger>
@@ -127,29 +127,58 @@ public:
         setTransformation( newEye, newCenter, prevUp );
     }
 
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        switch( ea.getEventType() )
+        {
+            case osgGA::GUIEventAdapter::DOUBLECLICK:
+                return handleMouseDoubleClick( ea, us );
+
+            default:
+                break;
+        }
+        return osgGA::TrackballManipulator::handle(ea, us);
+    }
+
+    virtual bool seekToMousePointer( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        SetSeekMode(false);
+        if( !isAnimating() ) {
+            setAnimationTime(0.25);
+
+            // get current transformation
+            osg::Vec3d prevCenter, prevEye, prevUp;
+            getTransformation( prevEye, prevCenter, prevUp );
+
+            // center by mouse intersection
+            if( !setCenterByMousePointerIntersection( ea, us ) ) {
+                return false;
+            }
+
+            OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
+            BOOST_ASSERT( !!ad );
+
+            // setup animation data and restore original transformation
+            ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
+            ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
+            setTransformation( prevEye, prevCenter, prevUp );
+            return true;
+        }
+        return false;
+    }
+
+    virtual bool handleMouseDoubleClick( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        if (seekToMousePointer(ea, us)) {
+            return true;
+        }
+        return false;
+    }
+
     virtual bool handleMousePush( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
         if( _bInSeekMode ) {
-            SetSeekMode(false);
-            if( !isAnimating() ) {
-                setAnimationTime(0.25);
-
-                // get current transformation
-                osg::Vec3d prevCenter, prevEye, prevUp;
-                getTransformation( prevEye, prevCenter, prevUp );
-
-                // center by mouse intersection
-                if( !setCenterByMousePointerIntersection( ea, us ) ) {
-                    return false;
-                }
-
-                OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
-                BOOST_ASSERT( !!ad );
-
-                // setup animation data and restore original transformation
-                ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
-                ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
-                setTransformation( prevEye, prevCenter, prevUp );
+            if (seekToMousePointer(ea, us)) {
                 return true;
             }
         }
@@ -313,6 +342,12 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
         stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
         _osgFigureRoot->setStateSet(stateset);
+
+    }
+
+    {
+        _osgSkybox = new Skybox;
+        _osgFigureRoot->addChild(_osgSkybox);
     }
 
     // create world axis
@@ -786,6 +821,12 @@ void ViewerWidget::SetViewport(int width, int height, double metersinunit)
     double textheight = (10.0/480.0)*height;
     _osgHudText->setPosition(osg::Vec3(-width/2+10, height/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
+}
+
+void ViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
+        const std::string& negy, const std::string& posz, const std::string& negz)
+{
+    _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
 QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )

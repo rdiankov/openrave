@@ -21,6 +21,7 @@ using namespace ColladaDOM150;
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
+#include <ctime>
 
 #define LIBXML_SAX1_ENABLED
 #include <libxml/globals.h>
@@ -360,6 +361,17 @@ private:
             _dae->getDatabase()->removeDocument(_doc);
             _doc = NULL;
         }
+
+        // If GlobalDAE is not resetted, there will be memory leak inside the
+        // Collada library because static daeStringTable in daeStringRef.cpp
+        // will only be cleaned by daeStringRef::releaseStringTable when
+        // the number of DAE instances alive becomes 0.
+        //
+        // There is no simple workaround for libxml2 before 2.9.0. Read
+        // the comments of GetGlobalDAE() in OpenRAVE for more details
+#if LIBXML_VERSION >= 20900
+        SetGlobalDAE(boost::shared_ptr<DAE>());
+#endif
     }
 
     /// \param docname the top level document?
@@ -373,10 +385,12 @@ private:
         domAssetRef asset = daeSafeCast<domAsset>( _dom->add( COLLADA_ELEMENT_ASSET ) );
         {
             // facet becomes owned by locale, so no need to explicitly delete
-            boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%s");
             std::stringstream ss;
-            ss.imbue(std::locale(ss.getloc(), facet));
-            ss << boost::posix_time::second_clock::local_time();
+            time_t now;
+            time(&now);
+            char timec[80];
+            strftime(timec, sizeof(timec), "%FT%T%z", localtime(&now));
+            ss << timec;
 
             domAsset::domCreatedRef created = daeSafeCast<domAsset::domCreated>( asset->add( COLLADA_ELEMENT_CREATED ) );
             created->setValue(ss.str().c_str());

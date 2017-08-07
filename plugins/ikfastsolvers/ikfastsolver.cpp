@@ -1880,7 +1880,7 @@ protected:
         CollisionReport report;
         CollisionReportPtr ptempreport;
         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());;
+            ptempreport = boost::shared_ptr<CollisionReport>(&report,utils::null_deleter());
         }
         if( !(filteroptions&IKFO_IgnoreSelfCollisions) ) {
             stateCheck.SetSelfCollisionState();
@@ -1954,7 +1954,23 @@ protected:
             if( stateCheck.NeedCheckEndEffectorEnvCollision() ) {
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
-                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform()) ) {
+                    if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "ikfast collision " << ptempreport->__str__() << " colvalues=[";
+                            std::vector<dReal> vallvalues;
+                            probot->GetDOFValues(vallvalues);
+                            for(size_t i = 0; i < vallvalues.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << vallvalues[i];
+                                }
+                                else {
+                                    ss << vallvalues[i];
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         if( paramnewglobal.GetType() == IKP_Transform6D ) {
                             // 6D so end effector is determined
                             return static_cast<IkReturnAction>(retactionall|IKRA_QuitEndEffectorCollision); // stop the search
