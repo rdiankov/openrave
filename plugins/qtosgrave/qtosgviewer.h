@@ -98,6 +98,8 @@ public:
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
+    virtual const std::string& GetName() const { return _name; }
+
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
@@ -125,6 +127,7 @@ public:
 
     virtual UserDataPtr RegisterItemSelectionCallback(const ItemSelectionCallbackFn& fncallback);
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
+    virtual UserDataPtr RegisterViewerImageCallback(const ViewerImageCallbackFn& fncallback);
 
     /// \brief Locks environment
     boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
@@ -367,6 +370,8 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
+    bool _CommandResize(ostream& sout, istream& sinput);
+
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions
@@ -375,6 +380,8 @@ public:
     mutable boost::mutex _mutexGUIFunctions;
     mutable boost::condition _notifyGUIFunctionComplete; ///< signaled when a blocking _listGUIFunctions has been completed
     //@}
+
+    std::string _name;
 
     //@{ osg rendering primitives
     OSGNodePtr _selectedNode;
@@ -399,6 +406,7 @@ public:
     //@{ callbacks
     boost::mutex _mutexCallbacks; ///< maintains lock on list of callsbacks viewer has to make like _listRegisteredViewerThreadCallbacks, _listRegisteredItemSelectionCallbacks
     std::list<UserDataWeakPtr> _listRegisteredItemSelectionCallbacks;
+    std::list<UserDataWeakPtr> _listRegisteredViewerImageCallbacks;
     std::list<UserDataWeakPtr> _listRegisteredViewerThreadCallbacks;
     //@}
 
@@ -506,6 +514,7 @@ public:
     bool _bRenderFiguresInCamera;
 
     friend class ItemSelectionCallbackData;
+    friend class ViewerImageCallbackData;
     friend class ViewerThreadCallbackData;
     friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);
 };
