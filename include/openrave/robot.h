@@ -453,7 +453,7 @@ public:
         virtual ~AttachedSensor();
 
         virtual SensorBasePtr GetSensor() const {
-            return psensor;
+            return _psensor;
         }
         virtual LinkPtr GetAttachingLink() const {
             return LinkPtr(pattachedlink);
@@ -509,10 +509,13 @@ public:
         }
 
 private:
+        /// \brief compute internal information from user-set info
+        //virtual void _ComputeInternalInformation();
+        
         AttachedSensorInfo _info; ///< user specified data
         
         RobotBaseWeakPtr _probot;
-        SensorBasePtr psensor;
+        SensorBasePtr _psensor; ///< initialized by _ComputeInternalInformation when added to the environment
         LinkWeakPtr pattachedlink;         ///< the robot link that the sensor is attached to
         SensorBase::SensorDataPtr pdata;         ///< pointer to a preallocated data using psensor->CreateSensorData()
         mutable std::string __hashstructure;
