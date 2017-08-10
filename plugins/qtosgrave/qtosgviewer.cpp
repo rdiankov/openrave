@@ -169,6 +169,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 QtOSGViewer::~QtOSGViewer()
 {
     RAVELOG_DEBUG("destroying qtosg viewer\n");
+    SetEnvironmentSync(false);
     {
         boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
@@ -1316,8 +1317,28 @@ bool QtOSGViewer::GetFractionOccluded(KinBodyPtr pbody, int width, int height, f
 
 bool QtOSGViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
 {
-    return false;
+    memory.resize(width*height*3);
+    bool bGuiThread = QThread::currentThread() == QCoreApplication::instance()->thread();
+    if (bGuiThread) {
+        printf("gui!!!!!!!!!!!!\n");
+    }
+    glReadBuffer(GL_FRONT);
+    glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, &memory[0]);
+    printf("-------------------%d\n", glGetError());
+    // _PostToGUIThread(boost::bind(&QtOSGViewer::_GetCameraImage, this, memory, width, height, t, KK), true); // block!
+    // boost::this_thread::sleep(boost::posix_time::milliseconds(3000));
+    return true;
 }
+
+bool QtOSGViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
+{
+    glReadBuffer(GL_FRONT);
+    glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, &memory[0]);
+    printf("-------------------%d\n", glGetError());
+
+    return true;
+}
+
 bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
 {
     return false;
