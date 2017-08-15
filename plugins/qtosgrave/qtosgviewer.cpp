@@ -1330,14 +1330,14 @@ bool QtOSGViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int he
     return true;
 }
 
-bool QtOSGViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
-{
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, &memory[0]);
-    printf("-------------------%d\n", glGetError());
+// bool QtOSGViewer::_GetCameraImage(std::vector<uint8_t>& memory, int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK)
+// {
+//     glReadBuffer(GL_FRONT);
+//     glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, &memory[0]);
+//     printf("-------------------%d\n", glGetError());
 
-    return true;
-}
+//     return true;
+// }
 
 bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
 {
