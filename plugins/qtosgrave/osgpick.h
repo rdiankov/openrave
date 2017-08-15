@@ -18,6 +18,8 @@
 
 #include <sstream>
 
+const osg::Node::NodeMask OSG_IS_PICKABLE_MASK = 0x2;
+
 namespace qtosgrave {
 
 /// \brief class to handle events with a pick
