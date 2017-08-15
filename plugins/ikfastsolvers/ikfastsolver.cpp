@@ -114,11 +114,13 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
 
     void _SetJacobianRefine(dReal f, int nMaxIterations)
     {
+#ifdef OPENRAVE_HAS_LAPACK
         _fRefineWithJacobianInverseAllowedError = f;
         _jacobinvsolver.SetErrorThresh(_fRefineWithJacobianInverseAllowedError);
         if( nMaxIterations >= 0 ) {
             _jacobinvsolver.SetMaxIterations(nMaxIterations);
         }
+#endif
     }
 
     bool _SetDefaultIncrementsCommand(ostream& sout, istream& sinput)
@@ -803,8 +805,10 @@ protected:
         _numBacktraceLinksForSelfCollisionWithNonMoving = r->_numBacktraceLinksForSelfCollisionWithNonMoving;
         _numBacktraceLinksForSelfCollisionWithFree = r->_numBacktraceLinksForSelfCollisionWithFree;
         _ikthreshold = r->_ikthreshold;
+#ifdef OPENRAVE_HAS_LAPACK
         _SetJacobianRefine(r->_fRefineWithJacobianInverseAllowedError, r->_jacobinvsolver._nMaxIterations);
-
+#endif
+        
         _bEmptyTransform6D = r->_bEmptyTransform6D;
     }
 

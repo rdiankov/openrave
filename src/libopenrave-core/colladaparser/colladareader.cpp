@@ -78,6 +78,7 @@ public:
                     // should double check that docurifull is not in the current database
                     doc = dae->getDatabase()->getDocument(docurifull.c_str(), true);
                     if( !doc ) {
+                        RAVELOG_DEBUG_FORMAT("could not resolve, so opening %s", docurifull);
                         domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull); // be very careful with this call since it can delete prevoiusly opened documents!
                         if( !!proxy ) {
                             if( !!_preader ) {
