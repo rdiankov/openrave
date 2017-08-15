@@ -291,7 +291,7 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     :param coloradd: an optional 3-element vector for 
     """
     if isinstance(target,basestring):
-        T = self.env.GetKinBody(target).GetTransform()
+        T = env.GetKinBody(target).GetTransform()
     elif len(target) == 7:
         T = openravepy_int.matrixFromPose(target)
     else:
