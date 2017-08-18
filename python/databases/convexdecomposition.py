@@ -284,7 +284,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             geom.InitCollisionMesh()
                             trimesh = geom.GetCollisionMesh()
                         if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
-                            log.info(u'computing hull for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
+                            log.info(u'computing hull for link %d/%d geom %d/%d: vertices=%d, indices=%d',il,len(links), ig, len(geometries), len(trimesh.vertices), len(trimesh.indices))
                             orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
                         else:
                             log.info(u'computing decomposition for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
@@ -320,7 +320,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
             cmd = StringIO()
             cmd.write('ConvexHull returnplanes 0 returnfaces 0 returntriangles 1 points %d %d '%(len(trimesh.vertices),3))
             for v in trimesh.vertices:
-                cmd.write('%.15e %.15e %.15e '%(v[0],v[1],v[2]))            
+                cmd.write('%.15e %.15e %.15e '%(v[0],v[1],v[2]))
+            minpos = numpy.min(trimesh.vertices,axis=0)
+            maxpos = numpy.max(trimesh.vertices,axis=0)
+            if all(abs(maxpos-minpos) <= 1e-7):
+                log.warn('trimesh of %d vertices is very small!', len(trimesh.vertices))
+                return zeros((0,3), float), zeros((0,3),int)# trimesh.vertices, trimesh.indices
             res = self._graspermodule.SendCommand(cmd.getvalue()).split()
             if res is None:
                 raise ConvexDecompositionError(u'failed to compute convex hull')
@@ -415,6 +420,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
         
         The computed planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
         """
+        if len(hull[0]) == 0:
+            return zeros((0,4),float)
+        
         vm = mean(hull[0],0)
         v0 = hull[0][hull[1][:,0],:]
         v1 = hull[0][hull[1][:,1],:]-v0
