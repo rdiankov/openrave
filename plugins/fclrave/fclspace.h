@@ -176,7 +176,7 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)\n", _penv->GetId()%_userdatakey);
+        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {

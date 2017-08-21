@@ -260,31 +260,40 @@ public:
                 _pCurrentChecker->DestroyEnvironment();
             }
 
-            // clear internal interface lists
+            // clear internal interface lists, have to Destroy all kinbodys without locking _mutexInterfaces since some can hold BodyCallbackData, which requires to lock _mutexInterfaces
+            std::vector<RobotBasePtr> vecrobots;
+            std::vector<KinBodyPtr> vecbodies;
+            list<SensorBasePtr> listSensors;
             {
                 boost::timed_mutex::scoped_lock lock(_mutexInterfaces);
-                // release all grabbed
-                FOREACH(itrobot,_vecrobots) {
-                    (*itrobot)->ReleaseAllGrabbed();
-                }
-                FOREACH(itbody,_vecbodies) {
-                    (*itbody)->Destroy();
-                }
-                _vecbodies.clear();
-                FOREACH(itrobot,_vecrobots) {
-                    (*itrobot)->Destroy();
-                }
-                _vecrobots.clear();
+                vecrobots.swap(_vecrobots);
+                vecbodies.swap(_vecbodies);
+                listSensors.swap(_listSensors);
                 _vPublishedBodies.clear();
                 _nBodiesModifiedStamp++;
-                FOREACH(itsensor,_listSensors) {
-                    (*itsensor)->Configure(SensorBase::CC_PowerOff);
-                    (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
-                }
-                _listSensors.clear();
                 _listModules.clear();
                 _listViewers.clear();
-                _listOwnedInterfaces.clear();
+                _listOwnedInterfaces.clear();            
+            }
+
+            // destroy the dangling pointers outside of _mutexInterfaces
+            
+            // release all grabbed
+            FOREACH(itrobot,vecrobots) {
+                (*itrobot)->ReleaseAllGrabbed();
+            }
+            FOREACH(itbody,vecbodies) {
+                (*itbody)->Destroy();
+            }
+            vecbodies.clear();
+            FOREACH(itrobot,vecrobots) {
+                (*itrobot)->Destroy();
+            }
+            vecrobots.clear();
+            
+            FOREACH(itsensor,listSensors) {
+                (*itsensor)->Configure(SensorBase::CC_PowerOff);
+                (*itsensor)->Configure(SensorBase::CC_RenderGeometryOff);
             }
         }
 

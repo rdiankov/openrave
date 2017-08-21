@@ -288,7 +288,6 @@ RobotBase::~RobotBase()
 
 void RobotBase::Destroy()
 {
-    ReleaseAllGrabbed();
     _pManipActive.reset();
     _vecManipulators.clear();
     _vecSensors.clear();
@@ -347,7 +346,7 @@ void RobotBase::SetName(const std::string& newname)
                 pattached->_psensor->SetName(str(boost::format("%s:%s")%newname%pattached->_info._name)); // need a unique targettable name
             }
             else {
-                
+
             }
         }
 
@@ -358,7 +357,6 @@ void RobotBase::SetName(const std::string& newname)
 void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t bCheckLimits, const std::vector<int>& dofindices)
 {
     KinBody::SetDOFValues(vJointValues, bCheckLimits,dofindices);
-    _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
@@ -370,28 +368,24 @@ void RobotBase::SetDOFValues(const std::vector<dReal>& vJointValues, const Trans
 void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms)
 {
     KinBody::SetLinkTransformations(transforms);
-    _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
 void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
 {
     KinBody::SetLinkTransformations(transforms,doflastsetvalues);
-    _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
 void RobotBase::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<int>& dofbranches)
 {
     KinBody::SetLinkTransformations(transforms,dofbranches);
-    _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
 void RobotBase::SetTransform(const Transform& trans)
 {
     KinBody::SetTransform(trans);
-    _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
@@ -400,14 +394,12 @@ bool RobotBase::SetVelocity(const Vector& linearvel, const Vector& angularvel)
     if( !KinBody::SetVelocity(linearvel,angularvel) ) {
         return false;
     }
-    _UpdateGrabbedBodies();
     return true;
 }
 
 void RobotBase::SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits)
 {
     KinBody::SetDOFVelocities(dofvelocities,linearvel,angularvel,checklimits);
-    _UpdateGrabbedBodies();
     // do sensors need to have their velocities updated?
 }
 
@@ -1457,7 +1449,6 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
     return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore);
 }
 
-
 bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith)
 {
     return KinBody::Grab(body, pRobotLinkToGrabWith);
@@ -1629,375 +1620,9 @@ bool RobotBase::RemoveAttachedSensor(AttachedSensorPtr attsensor)
     return false;
 }
 
-/// Check if body is self colliding. Links that are joined together are ignored.
-bool RobotBase::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
-{
-    if( !collisionchecker ) {
-        collisionchecker = _selfcollisionchecker;
-        if( !collisionchecker ) {
-            collisionchecker = GetEnv()->GetCollisionChecker();
-            if( !collisionchecker ) {
-                // no checker set
-                return false;
-            }
-        }
-    }
-
-    bool bAllLinkCollisions = !!(collisionchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-
-    bool bCollision = false;
-    if( KinBody::CheckSelfCollision(report, collisionchecker) ) {
-        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-            return true;
-        }
-        bCollision = true;
-    }
-
-    // if collision checker is set to distance checking, have to compare reports for the minimum distance
-    int coloptions = collisionchecker->GetCollisionOptions();
-    CollisionReport tempreport;
-    CollisionReportPtr pusereport = report;
-    if( !!report && (coloptions & CO_Distance) ) {
-        pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
-    }
-
-    // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
-    FOREACHC(itgrabbed, _vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        KinBodyPtr pbody(pgrabbed->_pgrabbedbody);
-        if( !pbody ) {
-            continue;
-        }
-        FOREACHC(itrobotlink,pgrabbed->_listNonCollidingLinks) {
-            // have to use link/link collision since link/body checks attached bodies
-            FOREACHC(itbodylink,pbody->GetLinks()) {
-                if( collisionchecker->CheckCollision(*itrobotlink,KinBody::LinkConstPtr(*itbodylink),pusereport) ) {
-                    bCollision = true;
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        break;
-                    }
-                }
-                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-                    *report = *pusereport;
-                }
-            }
-            if( bCollision ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    break;
-                }
-            }
-        }
-        if( bCollision ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                break;
-            }
-        }
-
-        if( pbody->CheckSelfCollision(pusereport, collisionchecker) ) {
-            bCollision = true;
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                break;
-            }
-        }
-        if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-            *report = *pusereport;
-        }
-
-        // check attached bodies with each other, this is actually tricky since they are attached "with each other", so regular CheckCollision will not work.
-        // Instead, we will compare each of the body's links with every other
-        if( _vGrabbedBodies.size() > 1 ) {
-            FOREACHC(itgrabbed2, _vGrabbedBodies) {
-                GrabbedConstPtr pgrabbed2 = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed2);
-                KinBodyPtr pbody2(pgrabbed2->_pgrabbedbody);
-                if( pbody == pbody2 ) {
-                    continue;
-                }
-                FOREACHC(itlink2, pbody2->GetLinks()) {
-                    // make sure the two bodies were not initially colliding
-                    if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink2) != pgrabbed->_listNonCollidingLinks.end() ) {
-                        FOREACHC(itlink, pbody->GetLinks()) {
-                            if( find(pgrabbed2->_listNonCollidingLinks.begin(),pgrabbed2->_listNonCollidingLinks.end(),*itlink) != pgrabbed2->_listNonCollidingLinks.end() ) {
-                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(*itlink),KinBody::LinkConstPtr(*itlink2),pusereport) ) {
-                                    bCollision = true;
-                                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                        break;
-                                    }
-                                }
-                                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-                                    *report = *pusereport;
-                                }
-                            }
-                            if( bCollision ) {
-                                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                    break;
-                                }
-                            }
-                        }
-                        if( bCollision ) {
-                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                break;
-                            }
-                        }
-                    }
-                }
-                if( bCollision ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        break;
-                    }
-                }
-            }
-            if( bCollision ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    break;
-                }
-            }
-        }
-    }
-
-    if( bCollision && !!report ) {
-        if( report != pusereport ) {
-            *report = *pusereport;
-        }
-        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-            std::vector<OpenRAVE::dReal> v;
-            GetDOFValues(v);
-            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-            ss << "self collision report=" << report->__str__() << " ";
-            for(size_t i = 0; i < v.size(); ++i ) {
-                if( i > 0 ) {
-                    ss << "," << v[i];
-                }
-                else {
-                    ss << "colvalues=[" << v[i];
-                }
-            }
-            ss << "]";
-            RAVELOG_VERBOSE(ss.str());
-        }
-    }
-    return bCollision;
-}
-
-bool RobotBase::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
-{
-    LinkPtr plink = _veclinks.at(ilinkindex);
-    CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
-    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-
-    bool bincollision = false;
-    if( plink->IsEnabled() ) {
-        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
-        plink->SetTransform(tlinktrans);
-        if( pchecker->CheckCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
-            }
-            bincollision = true;
-        }
-    }
-
-    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
-    // it is important to make sure to add all other attached bodies in the ignored list!
-    std::vector<KinBodyConstPtr> vbodyexcluded;
-    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    FOREACHC(itgrabbed,_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        if( pgrabbed->_plinkrobot == plink ) {
-            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-            if( !!pbody ) {
-                vbodyexcluded.resize(0);
-                vbodyexcluded.push_back(shared_kinbody_const());
-                FOREACHC(itgrabbed2,_vGrabbedBodies) {
-                    if( itgrabbed2 != itgrabbed ) {
-                        GrabbedConstPtr pgrabbed2 = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed2);
-                        KinBodyPtr pbody2 = pgrabbed2->_pgrabbedbody.lock();
-                        if( !!pbody2 ) {
-                            vbodyexcluded.push_back(pbody2);
-                        }
-                    }
-                }
-                KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
-                pbody->SetTransform(tlinktrans * pgrabbed->_troot);
-                if( pchecker->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-            }
-        }
-    }
-    return bincollision;
-}
-
-bool RobotBase::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
-{
-    LinkPtr plink = _veclinks.at(ilinkindex);
-    CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
-    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-    bool bincollision = false;
-    if( plink->IsEnabled() ) {
-        if( pchecker->CheckCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
-            }
-            bincollision = true;
-        }
-    }
-
-    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
-    // it is important to make sure to add all other attached bodies in the ignored list!
-    std::vector<KinBodyConstPtr> vbodyexcluded;
-    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    FOREACHC(itgrabbed,_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        if( pgrabbed->_plinkrobot == plink ) {
-            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-            if( !!pbody ) {
-                vbodyexcluded.resize(0);
-                vbodyexcluded.push_back(shared_kinbody_const());
-                FOREACHC(itgrabbed2,_vGrabbedBodies) {
-                    if( itgrabbed2 != itgrabbed ) {
-                        GrabbedConstPtr pgrabbed2 = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed2);
-                        KinBodyPtr pbody2 = pgrabbed2->_pgrabbedbody.lock();
-                        if( !!pbody2 ) {
-                            vbodyexcluded.push_back(pbody2);
-                        }
-                    }
-                }
-                if( pchecker->CheckCollision(KinBodyConstPtr(pbody),vbodyexcluded, vlinkexcluded, report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-            }
-        }
-    }
-    return bincollision;
-}
-
-bool RobotBase::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
-{
-    // TODO: have to consider rigidly attached links??
-    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-    bool bincollision = false;
-    LinkPtr plink = _veclinks.at(ilinkindex);
-    if( plink->IsEnabled() ) {
-        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
-        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
-            }
-            bincollision = true;
-        }
-    }
-
-    KinBodyStateSaverPtr linksaver;
-    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
-    // it is important to make sure to add all other attached bodies in the ignored list!
-    std::vector<KinBodyConstPtr> vbodyexcluded;
-    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    FOREACHC(itgrabbed,_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        if( pgrabbed->_plinkrobot == plink ) {
-            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-            if( !!pbody ) {
-                if( !linksaver ) {
-                    linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
-                    plink->Enable(false);
-                    // also disable rigidly attached links?
-                }
-                KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
-                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pbody),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-            }
-        }
-    }
-    return bincollision;
-}
-
-bool RobotBase::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
-{
-    // TODO: have to consider rigidly attached links??
-    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-    bool bincollision = false;
-    LinkPtr plink = _veclinks.at(ilinkindex);
-    if( plink->IsEnabled() ) {
-        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
-        plink->SetTransform(tlinktrans);
-        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
-            }
-            bincollision = true;
-        }
-    }
-
-    KinBodyStateSaverPtr linksaver;
-    // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
-    // it is important to make sure to add all other attached bodies in the ignored list!
-    std::vector<KinBodyConstPtr> vbodyexcluded;
-    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    FOREACHC(itgrabbed,_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbed);
-        if( pgrabbed->_plinkrobot == plink ) {
-            KinBodyPtr pbody = pgrabbed->_pgrabbedbody.lock();
-            if( !!pbody ) {
-                if( !linksaver ) {
-                    linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
-                    plink->Enable(false);
-                    // also disable rigidly attached links?
-                }
-                KinBodyStateSaver bodysaver(pbody,Save_LinkTransformation);
-                pbody->SetTransform(tlinktrans * pgrabbed->_troot);
-                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pbody),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-            }
-        }
-    }
-    return bincollision;
-}
-
 void RobotBase::SimulationStep(dReal fElapsedTime)
 {
     KinBody::SimulationStep(fElapsedTime);
-    _UpdateGrabbedBodies();
     _UpdateAttachedSensors();
 }
 
@@ -2118,60 +1743,6 @@ void RobotBase::_PostprocessChangedParameters(uint32_t parameters)
         }
     }
     KinBody::_PostprocessChangedParameters(parameters);
-
-    if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
-        // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled
-        std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
-        FOREACH(itlink,_veclinks) {
-            if( (*itlink)->IsEnabled() ) {
-                FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-                    if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
-                        std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
-                        if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
-                            if( pgrabbed->WasLinkNonColliding(*itlink) == 0 ) {
-                                pgrabbed->_listNonCollidingLinks.erase(itnoncolliding);
-                            }
-                            mapcheckcollisions[pgrabbed].push_back(*itlink);
-                        }
-                        else {
-                            // try to restore
-                            if( pgrabbed->WasLinkNonColliding(*itlink) == 1 ) {
-                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                // add since it is disabled?
-                FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-                    if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
-                        if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                            if( pgrabbed->WasLinkNonColliding(*itlink) != 0 ) {
-                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-//        if( mapcheckcollisions.size() > 0 ) {
-//            CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
-//            FOREACH(itgrabbed, mapcheckcollisions) {
-//                KinBodyPtr pgrabbedbody(itgrabbed->first->_pgrabbedbody);
-//                _RemoveAttachedBody(pgrabbedbody);
-//                CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
-//                FOREACH(itlink, itgrabbed->second) {
-//                    if( pchecker->CheckCollision(*itlink, KinBodyConstPtr(pgrabbedbody)) ) {
-//                        itgrabbed->first->_listNonCollidingLinks.remove(*itlink);
-//                    }
-//                }
-//            }
-//        }
-    }
 }
 
 std::vector<RobotBase::ManipulatorPtr>& RobotBase::GetManipulators()
@@ -2253,27 +1824,6 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         if( !SetController(RaveCreateController(GetEnv(), "IdealController"),dofindices, 1) ) {
             RAVELOG_WARN("failed to set IdealController\n");
-        }
-    }
-
-    // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
-    _vGrabbedBodies.resize(0);
-    FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
-
-        KinBodyPtr pbodyref(pgrabbedref->_pgrabbedbody);
-        KinBodyPtr pgrabbedbody;
-        if( !!pbodyref ) {
-            pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
-            BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
-
-            GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_plinkrobot)->GetIndex())));
-            pgrabbed->_troot = pgrabbedref->_troot;
-            pgrabbed->_listNonCollidingLinks.clear();
-            FOREACHC(itlinkref, pgrabbedref->_listNonCollidingLinks) {
-                pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
-            }
-            _vGrabbedBodies.push_back(pgrabbed);
         }
     }
 }

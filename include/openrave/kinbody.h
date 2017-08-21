@@ -1966,11 +1966,51 @@ private:
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
     virtual CollisionCheckerBasePtr GetSelfCollisionChecker() const;
 
-    /// \brief Check if body is self colliding. Links that are joined together are ignored.
-    ///
-    /// \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
+    /// Collision checking utilities that use internal structures of the kinbody like grabbed info or the self-collision checker.
+    /// @name Collision Checking Utilities
+    //@{
+
+    /** \brief Check if body is self colliding with its links or its grabbed bodies.
+
+        Links that are joined together are ignored.
+        Collisions between grabbed bodies are also considered as self-collisions for this body.
+        \param report [optional] collision report
+        \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
+     */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
+        /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] tlinktrans The transform of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+    
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] tlinktrans The transform of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+    
+    //@}
+    
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr body) const;
 
@@ -2121,7 +2161,7 @@ private:
         @name Grabbing Bodies
         @{
      */
-
+    
     /** \brief Grab the body with the specified link.
 
         \param[in] body the body to be grabbed
@@ -2261,7 +2301,6 @@ protected:
     virtual bool _RemoveAttachedBody(KinBodyPtr body);
 
     virtual void _UpdateGrabbedBodies();
-
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
