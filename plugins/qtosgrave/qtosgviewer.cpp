@@ -163,11 +163,16 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
+    _bExternalLoop = false;
 }
 
 QtOSGViewer::~QtOSGViewer()
 {
     RAVELOG_DEBUG("destroying qtosg viewer\n");
+    // _notifyGUIFunctionComplete can still be waiting. Code will crash when
+    // the mutex is destroyed in that state. SetEnvironmentSync will release
+    // _notifyGUIFunctionComplete
+    SetEnvironmentSync(false);
     {
         boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
@@ -1222,9 +1227,12 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
     //_StartPlaybackTimer();
     Show(1);
     if( bcallmain ) {
+        _bExternalLoop = false;
         _posgWidget->SetHome();
         QApplication::instance()->exec();
         _nQuitMainLoop = 2; // have to specify that quit!
+    } else {
+        _bExternalLoop = true;
     }
     return true;
 }
@@ -1267,6 +1275,7 @@ int QtOSGViewer::main(bool bShow)
     UpdateFromModel();
     _posgWidget->SetHome();
     if( _nQuitMainLoop < 0 ) {
+        _bExternalLoop = false;
         QApplication::instance()->exec();
         _nQuitMainLoop = 2; // have to specify that quit!
     }
@@ -1281,7 +1290,9 @@ void QtOSGViewer::quitmainloop()
     if( !bGuiThread ) {
         SetEnvironmentSync(false);
     }
-    QApplication::instance()->exit(0);
+    if (!_bExternalLoop) {
+        QApplication::instance()->exit(0);
+    }
     _nQuitMainLoop = 2;
 }
 
@@ -1311,6 +1322,7 @@ bool QtOSGViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int he
 {
     return false;
 }
+
 bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
 {
     return false;
