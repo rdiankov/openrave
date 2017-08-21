@@ -170,7 +170,8 @@ QtOSGViewer::~QtOSGViewer()
 {
     RAVELOG_DEBUG("destroying qtosg viewer\n");
     // _notifyGUIFunctionComplete can still be waiting. Code will crash when
-    // the mutex is destroyed in that state
+    // the mutex is destroyed in that state. SetEnvironmentSync will release
+    // _notifyGUIFunctionComplete
     SetEnvironmentSync(false);
     {
         boost::mutex::scoped_lock lock(_mutexGUIFunctions);
