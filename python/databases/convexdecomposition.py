@@ -222,8 +222,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     ghulls = glinkhulls['hulls']
                     geometryhulls = []
                     for j, ghull in ghulls.iteritems():
-                        hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
-                        geometryhulls.append(hull)
+                        if 'vertices' in ghull and len(ghull['vertices'].shape) == 2 and 'indices' in ghull and len(ghull['indices'].shape\
+) == 2 and 'planes' in ghull and len(ghull['planes'].shape) == 2:
+			    hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                            geometryhulls.append(hull)
+                        else:
+                            log.warn('could not open link %s geometry %s hull %s: %r', ilink, ig, j, ghull)
                     linkgeometry.append((int(ig),geometryhulls))
                 while len(self.linkgeometry) <= int(ilink):
                     self.linkgeometry.append(None)
