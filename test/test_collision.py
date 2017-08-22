@@ -84,11 +84,11 @@ class RunCollision(EnvironmentSetup):
 
     def test_attachedbodiescollision(self):
         with self.env:
-            self.loadEnv('data/lab1.env.xml')
-            robot = env.GetRobot('BarrettWAM')
+            self.LoadEnv('data/lab1.env.xml')
+            robot = self.env.GetRobot('BarrettWAM')
             link1 = robot.GetLink('wam5')
             link2 = robot.GetLink('wam6')
-            assert(env.CheckCollision(link1, link2))
+            assert(self.env.CheckCollision(link1, link2))
 
 
     def test_selfcollision_joinxml(self):

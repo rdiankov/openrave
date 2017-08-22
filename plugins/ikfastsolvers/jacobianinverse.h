@@ -506,7 +506,7 @@ public:
             }
             T fiscale = 1/fscale;
             RAVELOG_VERBOSE_FORMAT("fiscale=%f", fiscale);
-            for(int i = 0; i < error.size1(); ++i) {
+            for(int i = 0; i < (int)error.size1(); ++i) {
                 error(i,0) *= fiscale;
             }
         }

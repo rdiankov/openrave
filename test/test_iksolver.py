@@ -158,13 +158,13 @@ class TestIkSolver(EnvironmentSetup):
             ikparam = ikmodel.manip.GetIkParameterization(IkParameterizationType.Transform6D)
             solexpected = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)
             assert(solexpected is None)
-            expectedaction = int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.RejectJointLimits)
+            expectedactions = [int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.RejectJointLimits), int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.Reject)]
             ikreturn = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions,ikreturn=True)
-            assert(ikreturn.GetAction()==expectedaction)
+            assert(ikreturn.GetAction() in expectedactions)
             
             ikparam2 = ikparam.Transform(Tbaseinv)
             ikreturn = solver.Solve(ikparam2,None, IkFilterOptions.CheckEnvCollisions)
-            assert( ikreturn.GetAction() == expectedaction)
+            assert( ikreturn.GetAction() in expectedactions)
         
     def test_customikvalues(self):
         env=self.env
@@ -250,7 +250,7 @@ class TestIkSolver(EnvironmentSetup):
 
     def test_ikfastrobotsolutions(self):
         env=self.env
-        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 31)])]
+        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 100)])]
         for robotfilename, manipname, testsolutions in testrobotfiles:
             env.Reset()
             robot=self.LoadRobot(robotfilename)
@@ -260,13 +260,28 @@ class TestIkSolver(EnvironmentSetup):
                 ikmodel.autogenerate()
             for values, numexpected in testsolutions:
                 robot.SetDOFValues(values,manip.GetArmIndices())
+                realpose = manip.GetTransformPose()
                 solutions=manip.FindIKSolutions(manip.GetIkParameterization(ikmodel.iktype),0)
                 numsolutions = len(solutions)
-                if numsolutions != numexpected:
+                if numsolutions < numexpected:
                     raise ValueError('%s!=%s, robot=%s, manip=%s, values=%r'%(numsolutions,numexpected,robotfilename,manipname, values))
                 
-                assert(numsolutions==numexpected)
-
+                # test every solution
+                counts = 0
+                f = 0
+                usedindices = []
+                for isolution, testsolution in enumerate(solutions):
+                    robot.SetDOFValues(testsolution)
+                    testpose = manip.GetTransformPose()
+                    distquat = arccos(min(1, abs(dot(testpose[:4],realpose[:4]))))
+                    disttrans2 = sum((testpose[4:]-realpose[4:])**2)
+                    assert(distquat+sqrt(disttrans2) <= 1e-6)
+                    
+                    # make sure this solution is unique
+                    numCloseSolutions = sum(sum((solutions - tile(testsolution, (len(solutions),1)))**2, axis=1) <= 1e-10)
+                    f += 1.0/numCloseSolutions
+                    assert(numCloseSolutions==1)
+    
     def test_circularfree(self):
         # test when free joint is circular and IK doesn't succeed (thanks to Chris Dellin)
         robotxmldata = '''<Robot name="BarrettWAM">

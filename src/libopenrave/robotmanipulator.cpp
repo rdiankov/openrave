@@ -361,7 +361,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizat
         if( !inworld ) {
             // remove the base link velocity frame
             // v_B = v_A + angularvel x (B-A)
-            Transform tbase = GetBase()->GetTransform();
+            //Transform tbase = GetBase()->GetTransform();
             // TODO, have to convert relative to the base's velocity!
             vlinearvel -= vangularvel.cross(t.trans); // t.trans = GetTransform().trans - tbase.trans
             //Vector vbaselinear, vbaseangular;
@@ -465,7 +465,7 @@ IkParameterization RobotBase::Manipulator::GetIkParameterization(const IkParamet
         if( !inworld ) {
             // remove the base link velocity frame
             // v_B = v_A + angularvel x (B-A)
-            Transform tbase = GetBase()->GetTransform();
+            //Transform tbase = GetBase()->GetTransform();
             // TODO, have to convert relative to the base's velocity!
             vlinearvel -= vangularvel.cross(t.trans); // t.trans = GetTransform().trans - tbase.trans
             //Vector vbaselinear, vbaseangular;
@@ -861,9 +861,15 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
 
     bool bincollision = false;
 
+    // parameters used only when bIgnoreManipulatorLinks is true
+    CollisionCheckerBasePtr pselfchecker;
+    std::vector<LinkPtr> vindependentinks;
     if( bIgnoreManipulatorLinks ) {
-        CollisionCheckerBasePtr pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
-        std::vector<LinkPtr> vindependentinks;
+        GetIndependentLinks(vindependentinks);
+        pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
+    }
+    
+    if( bIgnoreManipulatorLinks ) {
         GetIndependentLinks(vindependentinks);
         FOREACHC(itlink,vattachedlinks) {
             KinBody::LinkPtr plink = *itlink;
@@ -916,11 +922,30 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         }
         for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
             if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
+                if( bIgnoreManipulatorLinks ) {
+                    boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
+                    Transform tlinktrans = tdelta*(*itlink)->GetTransform();
+                    (*itlink)->SetTransform(tlinktrans);
+                    
+                    FOREACHC(itindependentlink,vindependentinks) {
+                        if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
+                            if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                    RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                                    return true;
+                                }
+                                bincollision = true;
+                            }
+                        }
                     }
-                    bincollision = true;
+                }
+                else {
+                    if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+                        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                            return true;
+                        }
+                        bincollision = true;
+                    }
                 }
                 break;
             }

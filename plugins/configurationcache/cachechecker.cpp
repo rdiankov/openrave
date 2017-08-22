@@ -82,7 +82,7 @@ public:
 
     virtual ~CacheCollisionChecker() {
     }
-
+    
     ConfigurationCachePtr GetCache()
     {
         return _cache;
@@ -143,6 +143,8 @@ public:
         if( !!_pintchecker ) {
             _pintchecker->DestroyEnvironment();
         }
+        _handleRobotDOFChange.reset();
+        _probot.reset();
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)

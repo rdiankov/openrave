@@ -14,5 +14,5 @@ if not ikmodel.load():
 
 manipprob = interfaces.BaseManipulation(robot) # create the interface for basic manipulation programs
 Tgoal = numpy.array([[0,-1,0,-0.21],[-1,0,0,0.04],[0,0,-1,0.92],[0,0,0,1]])
-res = manipprob.MoveToHandPosition(matrices=[Tgoal],seedik=10) # call motion planner with goal joint angles
+res = manipprob.MoveToHandPosition(matrices=[Tgoal],seedik=10, goalsamples=1000, goalmaxtries=1000) # call motion planner with goal joint angles
 robot.WaitForController(0) # wait
