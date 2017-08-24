@@ -537,20 +537,6 @@ private:
     typedef boost::shared_ptr<RobotBase::AttachedSensor const> AttachedSensorConstPtr;
     typedef boost::weak_ptr<RobotBase::AttachedSensor> AttachedSensorWeakPtr;
     
-    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
-    ///
-    /// This is serializable and independent of environment.
-    class OPENRAVE_API GrabbedInfo
-    {
-public:
-        std::string _grabbedname; ///< the name of the body to grab
-        std::string _robotlinkname;  ///< the name of the robot link that is grabbing the body
-        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == robotlink->GetTransform()*trelative
-        std::set<int> _setRobotLinksToIgnore; ///< links of the robot to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the robot and the relative position of the grabbed body.
-    };
-    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
-    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
-
     /// \brief Helper class derived from KinBodyStateSaver to additionaly save robot information.
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
@@ -575,7 +561,6 @@ protected:
         int affinedofs;
         Vector rotationaxis;
         ManipulatorPtr _pManipActive;
-        std::vector<UserDataPtr> _vGrabbedBodies;
         Transform _tActiveManipLocalTool;
         Vector _vActiveManipLocalDirection;
         IkSolverBasePtr _pActiveManipIkSolver;
@@ -899,53 +884,6 @@ private:
      */
     virtual bool Grab(KinBodyPtr body);
 
-    /** \brief Release the body if grabbed.
-
-        \param body body to release
-     */
-    virtual void Release(KinBodyPtr body);
-
-    /// Release all grabbed bodies.
-    virtual void ReleaseAllGrabbed();     ///< release all bodies
-
-    /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
-
-        This has the effect of resetting the current collisions any grabbed body makes with the robot into an ignore list.
-     */
-    virtual void RegrabAll();
-
-    /** \brief return the robot link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
-
-        \param[in] body the body to check
-     */
-    virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
-
-    /** \brief gets all grabbed bodies of the robot
-
-        \param[out] vbodies filled with the grabbed bodies
-     */
-    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
-
-    /** \brief gets all grabbed bodies of the robot
-
-        \param[out] vgrabbedinfo filled with the grabbed info for every body
-     */
-    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
-
-    /** \brief resets the grabbed bodies of the robot
-
-        Any currently grabbed bodies will be first released.
-        \param[out] vgrabbedinfo filled with the grabbed info for every body
-     */
-    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
-
-    /** \brief returns all the links of the robot whose links are being ignored by the grabbed body.
-
-        \param[in] body the grabbed body
-        \param[out] list of the ignored links
-     */
-    virtual void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
-
     //@}
 
     /** \brief Simulate the robot and update the grabbed bodies and attached sensors
@@ -953,44 +891,6 @@ private:
         Do not call SimulationStep for the attached sensors in this function.
      */
     virtual void SimulationStep(dReal fElapsedTime);
-
-    /** \brief Check if body is self colliding with its links or its grabbed bodies.
-
-        Links that are joined together are ignored.
-        Collisions between grabbed bodies are also considered as self-collisions for this body.
-        \param report [optional] collision report
-     */
-    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
-
-    /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
-
-        \param[in] ilinkindex the index of the link to check
-        \param[in] tlinktrans The transform of the link to check
-        \param[out] report [optional] collision report
-     */
-    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
-
-    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
-
-        \param[in] ilinkindex the index of the link to check
-        \param[out] report [optional] collision report
-     */
-    virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
-
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
-
-        \param[in] ilinkindex the index of the link to check
-        \param[out] report [optional] collision report
-     */
-    virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
-    
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
-
-        \param[in] ilinkindex the index of the link to check
-        \param[in] tlinktrans The transform of the link to check
-        \param[out] report [optional] collision report
-     */
-    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
 
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
@@ -1029,9 +929,6 @@ protected:
         return boost::static_pointer_cast<RobotBase const>(shared_from_this());
     }
 
-    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
-    virtual void _Regrab(UserDataPtr pgrabbed);
-
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     virtual void _ComputeInternalInformation();
 
@@ -1040,8 +937,6 @@ protected:
     /// This function in calls every registers calledback that is tracking the changes.
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
-    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
-    virtual void _UpdateGrabbedBodies();
     virtual void _UpdateAttachedSensors();
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;

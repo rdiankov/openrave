@@ -241,7 +241,7 @@ class TestCOLLADA(EnvironmentSetup):
         assert(env.LoadURI(reffile))
         robot=env.GetRobots()[0]
         robot.SetDOFValues(ones(robot.GetDOF()))
-        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'skipwrite':'geometry'}) # have to skip geometry since link geometry groups are always written right now
         with open('test_externalref_joints.dae','r') as f:
             filedata=f.read()
         assert(filedata.find(reffile)>=0)
@@ -255,7 +255,7 @@ class TestCOLLADA(EnvironmentSetup):
         
         assert(env.Load('robots/schunk-lwa3.zae'))
         robot=env.GetRobots()[0]
-        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme'})
+        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme', 'skipwrite':'geometry'})
         with open('test_externalref_joints.dae','r') as f:
             filedata=f.read()
         assert(filedata.find('testscheme:/')>=0)
@@ -266,7 +266,7 @@ class TestCOLLADA(EnvironmentSetup):
         env.Reset()
         env.Load('robots/barrett-hand.zae')
         robot=env.GetRobots()[0]
-        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'})
+        env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*'}) # don't skip geometry?
         env2.Reset()
         assert(env2.Load('test_externalref_joints.dae'))
         misc.CompareBodies(robot,env2.GetRobots()[0])
@@ -412,7 +412,7 @@ class TestCOLLADA(EnvironmentSetup):
         self.log.info('test writing kinematics only')
         env=self.env
         robot = self.LoadRobot('robots/pr2-beta-static.zae')
-        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'visual readable sensors physics'})
+        env.Save('test_writekinematicsonly.dae',Environment.SelectionOptions.Body,{'target':robot.GetName(), 'skipwrite':'visual geometry readable sensors physics'})
         with open('test_writekinematicsonly.dae','r') as f:
             filedata=f.read()
         assert(len(filedata)<400000) # should be ~331kb

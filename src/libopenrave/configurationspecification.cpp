@@ -641,7 +641,7 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-    
+
 static std::set<std::string> s_setBodyGroupNames;
 static boost::once_flag _onceSetBodyGroupNames = BOOST_ONCE_INIT;
 
@@ -663,9 +663,8 @@ static void _CreateSetBodyGroupNames()
 void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
-    
+
     // have to look through all groups since groups can contain the same body
-    std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
     std::string bodyname = body->GetName();
     std::stringstream ss;
     useddofindices.resize(0);
@@ -1784,15 +1783,15 @@ bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0,
 {
     return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
 }
-    
+
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
     std::vector<int> vgroupindices(spec._vgroups.size());
-    for(int i = 0; i < vgroupindices.size(); ++i) {
+    for(int i = 0; i < (int)vgroupindices.size(); ++i) {
         vgroupindices[i] = i;
     }
     std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(spec), _1, _2));
-    
+
     O << "<configuration>" << endl;
     FOREACH(itgroupindex, vgroupindices) {
         const ConfigurationSpecification::Group& group = spec._vgroups[*itgroupindex];

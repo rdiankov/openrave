@@ -2418,6 +2418,76 @@ object PyKinBody::GetConfigurationValues() const
     return toPyArray(values);
 }
 
+
+bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
+{
+    CHECK_POINTER(pbody);
+    CHECK_POINTER(pylink);
+    std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
+}
+
+bool PyKinBody::Grab(PyKinBodyPtr pbody, object pylink)
+{
+    CHECK_POINTER(pbody);
+    CHECK_POINTER(pylink);
+    KinBody::LinkPtr plink = GetKinBodyLink(pylink);
+    return _pbody->Grab(pbody->GetBody(), plink);
+}
+
+void PyKinBody::Release(PyKinBodyPtr pbody)
+{
+    CHECK_POINTER(pbody); _pbody->Release(pbody->GetBody());
+}
+void PyKinBody::ReleaseAllGrabbed() {
+    _pbody->ReleaseAllGrabbed();
+}
+void PyKinBody::RegrabAll()
+{
+    _pbody->RegrabAll();
+}
+object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
+{
+    CHECK_POINTER(pbody);
+    KinBody::LinkPtr plink = _pbody->IsGrabbing(pbody->GetBody());
+    return toPyKinBodyLink(plink,_pyenv);
+}
+
+object PyKinBody::GetGrabbed() const
+{
+    boost::python::list bodies;
+    std::vector<KinBodyPtr> vbodies;
+    _pbody->GetGrabbed(vbodies);
+    FOREACH(itbody, vbodies) {
+        bodies.append(PyKinBodyPtr(new PyKinBody(*itbody,_pyenv)));
+    }
+    return bodies;
+}
+
+object PyKinBody::GetGrabbedInfo() const
+{
+    boost::python::list ograbbed;
+    std::vector<RobotBase::GrabbedInfoPtr> vgrabbedinfo;
+    _pbody->GetGrabbedInfo(vgrabbedinfo);
+    FOREACH(itgrabbed, vgrabbedinfo) {
+        ograbbed.append(PyGrabbedInfoPtr(new PyGrabbedInfo(**itgrabbed)));
+    }
+    return ograbbed;
+}
+
+void PyKinBody::ResetGrabbed(object ograbbedinfos)
+{
+    std::vector<RobotBase::GrabbedInfoConstPtr> vgrabbedinfos(len(ograbbedinfos));
+    for(size_t i = 0; i < vgrabbedinfos.size(); ++i) {
+        PyGrabbedInfoPtr pygrabbed = boost::python::extract<PyGrabbedInfoPtr>(ograbbedinfos[i]);
+        if( !pygrabbed ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to Robot.GrabbedInfo"),ORE_InvalidArguments);
+        }
+        vgrabbedinfos[i] = pygrabbed->GetGrabbedInfo();
+    }
+    _pbody->ResetGrabbed(vgrabbedinfos);
+}
+
 bool PyKinBody::IsRobot() const
 {
     return _pbody->IsRobot();
@@ -2824,6 +2894,21 @@ public:
     }
 };
 
+class GrabbedInfo_pickle_suite : public pickle_suite
+{
+public:
+    static boost::python::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
+    {
+        return boost::python::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setRobotLinksToIgnore);
+    }
+    static void setstate(PyKinBody::PyGrabbedInfo& r, boost::python::tuple state) {
+        r._grabbedname = state[0];
+        r._robotlinkname = state[1];
+        r._trelative = state[2];
+        r._setRobotLinksToIgnore = state[3];
+    }
+};
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(IsMimic_overloads, IsMimic, 0, 1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicEquation_overloads, GetMimicEquation, 0, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetMimicDOFIndices_overloads, GetMimicDOFIndices, 0, 1)
@@ -2985,6 +3070,15 @@ void init_openravepy_kinbody()
                        .def_pickle(JointInfo_pickle_suite())
     ;
 
+    object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, boost::shared_ptr<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
+                         .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
+                         .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
+                         .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
+                         .def_readwrite("_setRobotLinksToIgnore",&PyKinBody::PyGrabbedInfo::_setRobotLinksToIgnore)
+                         .def_pickle(GrabbedInfo_pickle_suite())
+    ;
+
+
     {
         void (PyKinBody::*psetdofvalues1)(object) = &PyKinBody::SetDOFValues;
         void (PyKinBody::*psetdofvalues2)(object,object) = &PyKinBody::SetDOFValues;
@@ -3013,6 +3107,8 @@ void init_openravepy_kinbody()
         void (PyKinBody::*setdofvelocities2)(object,object,object) = &PyKinBody::SetDOFVelocities;
         void (PyKinBody::*setdofvelocities3)(object,uint32_t,object) = &PyKinBody::SetDOFVelocities;
         void (PyKinBody::*setdofvelocities4)(object,object,object,uint32_t) = &PyKinBody::SetDOFVelocities;
+        bool (PyKinBody::*pgrab2)(PyKinBodyPtr,object) = &PyKinBody::Grab;
+        bool (PyKinBody::*pgrab4)(PyKinBodyPtr,object,object) = &PyKinBody::Grab;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
@@ -3109,6 +3205,15 @@ void init_openravepy_kinbody()
                         .def("CalculateJacobian",&PyKinBody::CalculateJacobian,args("linkindex","position"), DOXY_FN(KinBody,CalculateJacobian "int; const Vector; std::vector"))
                         .def("CalculateRotationJacobian",&PyKinBody::CalculateRotationJacobian,args("linkindex","quat"), DOXY_FN(KinBody,CalculateRotationJacobian "int; const Vector; std::vector"))
                         .def("CalculateAngularVelocityJacobian",&PyKinBody::CalculateAngularVelocityJacobian,args("linkindex"), DOXY_FN(KinBody,CalculateAngularVelocityJacobian "int; std::vector"))
+                        .def("Grab",pgrab2,args("body","grablink"), DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
+                        .def("Grab",pgrab4,args("body","grablink","linkstoignore"), DOXY_FN(KinBody,Grab "KinBodyPtr; LinkPtr; const std::set"))
+                        .def("Release",&PyKinBody::Release,args("body"), DOXY_FN(KinBody,Release))
+                        .def("ReleaseAllGrabbed",&PyKinBody::ReleaseAllGrabbed, DOXY_FN(KinBody,ReleaseAllGrabbed))
+                        .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
+                        .def("IsGrabbing",&PyKinBody::IsGrabbing,args("body"), DOXY_FN(KinBody,IsGrabbing))
+                        .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
+                        .def("GetGrabbedInfo",&PyKinBody::GetGrabbedInfo, DOXY_FN(KinBody,GetGrabbedInfo))
+                        .def("ResetGrabbed",&PyKinBody::ResetGrabbed, args("grabbedinfos"), DOXY_FN(KinBody,ResetGrabbed))
                         .def("ComputeHessianTranslation",&PyKinBody::ComputeHessianTranslation,ComputeHessianTranslation_overloads(args("linkindex","position","indices"), DOXY_FN(KinBody,ComputeHessianTranslation)))
                         .def("ComputeHessianAxisAngle",&PyKinBody::ComputeHessianAxisAngle,ComputeHessianAxisAngle_overloads(args("linkindex","indices"), DOXY_FN(KinBody,ComputeHessianAxisAngle)))
                         .def("ComputeInverseDynamics",&PyKinBody::ComputeInverseDynamics, ComputeInverseDynamics_overloads(args("dofaccelerations","externalforcetorque","returncomponents"), sComputeInverseDynamicsDoc.c_str()))
@@ -3175,6 +3280,7 @@ void init_openravepy_kinbody()
         kinbody.attr("LinkInfo") = linkinfo;
         kinbody.attr("GeometryInfo") = geometryinfo;
         kinbody.attr("JointInfo") = jointinfo;
+        kinbody.attr("GrabbedInfo") = grabbedinfo;
         {
             scope link = class_<PyLink, boost::shared_ptr<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
                          .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))

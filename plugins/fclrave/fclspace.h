@@ -176,7 +176,7 @@ public:
 
     void DestroyEnvironment()
     {
-        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)\n", _penv->GetId()%_userdatakey);
+        RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
         FOREACH(itbody, _setInitializedBodies) {
             KinBodyInfoPtr pinfo = GetInfo(*itbody);
             if( !!pinfo ) {
@@ -440,7 +440,7 @@ public:
     {
         int envId = pbody->GetEnvironmentId();
         if ( envId == 0 ) {
-            RAVELOG_WARN_FORMAT("body %s has invalid environment id", pbody->GetName());
+            RAVELOG_WARN_FORMAT("body %s has invalid environment id 0", pbody->GetName());
             return KinBodyInfoPtr();
         }
 
