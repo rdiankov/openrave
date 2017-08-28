@@ -1363,8 +1363,11 @@ class IKFastSolver(AutoReloader):
                 if handledcases == currentcases:
                     return True
             return False
-
+    
     def __init__(self, kinbody=None,kinematicshash='',precision=None, checkpreemptfn=None):
+        """
+        :param checkpreemptfn: checkpreemptfn(msg, progress) called periodically at various points in ikfast. Takes in two arguments to notify user how far the process has completed.
+        """
         self._checkpreemptfn = checkpreemptfn
         self.usinglapack = False
         self.useleftmultiply = True
@@ -1393,10 +1396,12 @@ class IKFastSolver(AutoReloader):
                 name = str('j%d')%idof
                 self.axismap[name] = axis
                 self.axismapinv[idof] = name
-
-    def _CheckPreemptFn(self):
+    
+    def _CheckPreemptFn(self, msg=u'', progress=0.25):
+        """progress is a value from [0,1] where 0 is just starting and 1 is complete 
+        """
         if self._checkpreemptfn is not None:
-            self._checkpreemptfn()
+            self._checkpreemptfn(msg, progress=progress)
     
     def convertRealToRational(self, x,precision=None):
         if precision is None:
@@ -2137,18 +2142,28 @@ class IKFastSolver(AutoReloader):
     def writeIkSolver(self,chaintree,lang=None):
         """write the ast into a specific langauge, prioritize c++
         """
+        self._CheckPreemptFn(progress=0.5)
         if lang is None:
             if CodeGenerators.has_key('cpp'):
                 lang = 'cpp'
             else:
                 lang = CodeGenerators.keys()[0]
         log.info('generating %s code...'%lang)
-        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype).generate(chaintree)
+        if self._checkpreemptfn is not None:
+            import weakref
+            weakself = weakref.proxy(self)
+            def _CheckPreemtCodeGen(msg, progress):
+                # put the progress in the latter half
+                weakself._checkpreemptfn(u'CodeGen %s'%msg, 0.5+0.5*progress)
+        else:
+            _CheckPreemtCodeGen = None
+        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype, checkpreemptfn=_CheckPreemtCodeGen).generate(chaintree)
     
     def generateIkSolver(self, baselink, eelink, freeindices=None, solvefn=None, ikfastoptions=0):
         """
         :param ikfastoptions: options that control how ikfast.
         """
+        self._CheckPreemptFn(progress=0)
         if solvefn is None:
             solvefn = IKFastSolver.solveFullIK_6D
         chainlinks = self.kinbody.GetChain(baselink,eelink,returnjoints=False)
@@ -2292,7 +2307,7 @@ class IKFastSolver(AutoReloader):
 #             LinksRaw = LinksRaw2
 #             self.globalsymbols += numbersubs
         self.Teeleftmult = self.multiplyMatrix(LinksLeft) # the raw ee passed to the ik solver function
-        self._CheckPreemptFn()
+        self._CheckPreemptFn(progress=0.01)
         chaintree = solvefn(self, LinksRaw, jointvars, isolvejointvars)
         if self.useleftmultiply:
             chaintree.leftmultiply(Tleft=self.multiplyMatrix(LinksLeft), Tleftinv=self.multiplyMatrix(LinksLeftInv[::-1]))
@@ -3745,7 +3760,7 @@ class IKFastSolver(AutoReloader):
         polysubs = []
         polyvars = []
         for v in solvejointvars:
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.05)
             polyvars.append(v)
             if self.IsHinge(v.name):
                 var = self.Variable(v)
@@ -3765,7 +3780,7 @@ class IKFastSolver(AutoReloader):
         for i in range(len(eqs)):
             polyeqs.append([None,None])        
         for j in range(2):
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.05)
             for i in range(len(eqs)):
                 poly0 = Poly(eqs[i][j].subs(polysubs),*usedvars[j]).subs(trigsubs)
                 poly1 = Poly(poly0.expand().subs(trigsubs),*usedvars[j])
@@ -3815,7 +3830,7 @@ class IKFastSolver(AutoReloader):
         for j in range(2):
             usedvars.append([var for var in polyvars if any([eq[j].subs(polysubs).has(var) for eq in eqs])])
         for i in range(len(eqs)):
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.05)
             if not self.CheckEquationForVarying(eqs[i][0]) and not self.CheckEquationForVarying(eqs[i][1]):
                 for j in range(2):
                     if polyeqs[i][j] is not None:
@@ -3878,7 +3893,7 @@ class IKFastSolver(AutoReloader):
         reducedeqs = []
         tree = []
         for j,leftsideeqs,rightsideeqs,numsymbolcoeffs, _computereducedequations in reducedelayed:
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.06)
             try:
                 reducedeqs2 = _computereducedequations()
                 if len(reducedeqs2) == 0:
@@ -3938,7 +3953,7 @@ class IKFastSolver(AutoReloader):
             Asymbols.append([Symbol('gconst%d_%d'%(i,j)) for j in range(A.shape[1])])
         solution = None
         for eqindices in combinations(range(len(leftsideeqs)),len(allmonomsleft)):
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.06)
             for i,index in enumerate(eqindices):
                 for k in range(len(allmonomsleft)):
                     A[i,k] = systemcoeffs[index][2][k]
@@ -4508,7 +4523,7 @@ class IKFastSolver(AutoReloader):
             
         hasreducedeqs = True
         while hasreducedeqs:
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.08)
             hasreducedeqs = False
             for ipeq,peq in enumerate(neweqs):
                 peq0dict = peq[0].as_dict()
@@ -4828,7 +4843,7 @@ class IKFastSolver(AutoReloader):
                 AU = A[0:1,:]
                 rows = [0]
                 for i in range(1,A.shape[0]):
-                    self._CheckPreemptFn()
+                    self._CheckPreemptFn(progress=0.09)
                     AU2 = AU.col_join(A[i:(i+1),:])
                     if AU2.shape[0] == AU2.shape[1]:
                         AUdetmat = AU2
@@ -5194,7 +5209,7 @@ class IKFastSolver(AutoReloader):
         newreducedeqs = []
         hassinglevariable = False
         for eq in reducedeqs:
-            self._CheckPreemptFn()
+            self._CheckPreemptFn(progress=0.10)
             complexity = self.codeComplexity(eq)
             if complexity > 1500:
                 log.warn('equation way too complex (%d), looking for another solution', complexity)
@@ -5354,7 +5369,7 @@ class IKFastSolver(AutoReloader):
             if exportcoeffeqs is not None:
                 break
         
-        self._CheckPreemptFn()
+        self._CheckPreemptFn(progress=0.11)
         if exportcoeffeqs is None:
             if len(nonhtvars) > 0 and newreducedeqs[0].degree:
                 log.info('try to solve one variable in terms of the others')
@@ -6137,7 +6152,7 @@ class IKFastSolver(AutoReloader):
 
         Method also checks if the equations are linearly dependent
         """
-        self._CheckPreemptFn()
+        self._CheckPreemptFn(progress=0.12)
         if len(dialyticeqs) == 0:
             raise self.CannotSolveError('solveDialytically given zero equations')
         
@@ -6706,7 +6721,7 @@ class IKFastSolver(AutoReloader):
         """
         :param canguessvars: if True, can guess the variables given internal conditions are satisified
         """
-        self._CheckPreemptFn()
+        self._CheckPreemptFn(progress=0.15+(0.3-0.3*100/(self._scopecounter+100))) # go from 0.15 - 0.45. usually scope counters go to several hundred
         if len(curvars) == 0:
             return endbranchtree
         
