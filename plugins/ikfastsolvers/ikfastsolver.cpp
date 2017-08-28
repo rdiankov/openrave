@@ -379,7 +379,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         // auto-conversion
         if( _nTotalDOF == 4 ) {
             if( _iktype == IKP_Transform6D ) {
-                return iktype == IKP_TranslationXAxisAngleZNorm4D;
+                return iktype == IKP_TranslationXAxisAngleZNorm4D || iktype == IKP_TranslationYAxisAngleXNorm4D;
             }
         }
         else if( _nTotalDOF == 5 ) {
@@ -2281,7 +2281,14 @@ protected:
         if( param.GetType() == IKP_Transform6D ) {
             if( _nTotalDOF == 4 ) {
                 ikdummy = param; // copy the custom data!
-                ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans, -normalizeAxisRotation(Vector(0,0,1), param.GetTransform6D().rot).first);
+                RobotBase::ManipulatorPtr pmanip(_pmanip);
+                Vector vglobaldirection = param.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
+                if( _iktype == IKP_TranslationYAxisAngleXNorm4D ) {
+                    ikdummy.SetTranslationYAxisAngleXNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.z,vglobaldirection.y));
+                }
+                else {
+                    ikdummy.SetTranslationXAxisAngleZNorm4D(param.GetTransform6D().trans,RaveAtan2(vglobaldirection.y,vglobaldirection.x));
+                }
                 return ikdummy;
             }
             else if( _nTotalDOF == 5 ) {
