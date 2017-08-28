@@ -342,11 +342,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
             return self.PadMesh(trimesh.vertices,reshape(array(res[offset:(offset+3*numtriangles)],int32),(numtriangles,3)), padding)
         
     @staticmethod
-    def PadMesh(vertices, indices, padding, mergeDuplicated=True, rtol=1e-05, atol=1e-08):
+    def PadMesh(vertices, indices, padding, mergeDuplicated=True, rtol=1e-05, atol=1e-08, setNormalsAwayFromCenter=False):
         """pads a mesh by increasing towards the normal
         :param mergeDuplicated: This function will return a bad mesh when there are duplicated vertices and mergeDuplicated=False
         :param rtol: The relative tolerance parameter to np.isclose when finding duplicated vertices
         :param atol: The absolute tolerance parameter to np.isclose when finding duplicated vertices
+        :param setNormalsAwayFromCenter: if True, then will normalize all normals so that they point away from center-of-geometry.
         """
         M = mean(vertices,0)
 
@@ -369,11 +370,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
         # make sure normals are facing outward
         newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
         originaledges = empty((3 * len(facenormals), 4), dtype=int32)
-
-        flip = inner1d(vertices[indices[:,0]] - M, facenormals) < 0
-        facenormals[flip] *= -1
+        
+        if setNormalsAwayFromCenter:
+            flip = inner1d(vertices[indices[:,0]] - M, facenormals) < 0
+            facenormals[flip] *= -1 # dangerous for hollow objects!
         newvertices = vertices[indices.ravel()] + repeat(facenormals*padding, 3, axis=0)
-
+        
         offsets = arange(0, 3 * len(facenormals), 3)
         indices_j = [indices[:, j] for j in range(3)]
         for j0, j1, n in [[0,1,0],[0,2,1],[1,2,2]]:
@@ -383,7 +385,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             originaledges_n[:, 1] = where(swap, indices_j[j1], indices_j[j0])
             originaledges_n[:, 2] = offsets + where(swap, j0, j1)
             originaledges_n[:, 3] = offsets + where(swap, j1, j0)
-
+        
         # find the connecting edges across the new faces
         offset = 0
         verticesofinterest = {}
@@ -407,17 +409,18 @@ class ConvexDecompositionModel(DatabaseGenerator):
             assert(len(vertexindices) > 0)
             newvertices[newvertex,:] = mean(newvertices[vertexindices],0)
         assert(not any(isnan(newvertices)))
-
+        
         # make sure all faces are facing outward
-        newvertices_0 = newvertices[newindices[:, 0]]
-        flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices_0,
-                             newvertices[newindices[:, 2]] - newvertices_0), newvertices_0 - M) < 0
-        for n, inds in enumerate(newindices):
-            if flip[n]:
-                inds[1],inds[2] = inds[2],inds[1]
-
+        if setNormalsAwayFromCenter:
+            newvertices_0 = newvertices[newindices[:, 0]]
+            flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices_0,
+                                 newvertices[newindices[:, 2]] - newvertices_0), newvertices_0 - M) < 0
+            for n, inds in enumerate(newindices):
+                if flip[n]:
+                    inds[1],inds[2] = inds[2],inds[1]
+        
         return newvertices,newindices
-
+    
     @staticmethod
     def ComputeHullPlanes(hull,thresh=0.99999):
         """computes the planes of a hull
