@@ -231,6 +231,33 @@ class RunRobot(EnvironmentSetup):
                     robot.SetActiveDOFValues(sol)
                     assert(not robot.CheckSelfCollision())
 
+    def test_grabstatesaver(self):
+        self.log.info('test if can solve IK during collisions')
+        env=self.env
+        robot = self.LoadRobot('robots/pr2-beta-static.zae')
+        manip = robot.GetManipulator('rightarm')
+        target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+        
+        env.Add(target)
+        targetpose = manip.GetTransformPose()
+        target.SetTransform(targetpose)
+        robot.Grab(target, grablink=manip.GetEndEffector())
+        
+        with robot:
+            robot.SetDOFValues([-1],manip.GetArmIndices()[:1])
+            newtargetpose = target.GetTransformPose()
+            assert(ComputePoseDistance(targetpose, newtargetpose) > 1e-7)
+        assert(ComputePoseDistance(targetpose, target.GetTransformPose()) <= 1e-7)
+        
+        with robot.CreateRobotStateSaver(KinBody.SaveParameters.GrabbedBodies): # do not save joint values!
+            robot.ReleaseAllGrabbed()
+            robot.SetDOFValues([-0.5],manip.GetArmIndices()[:1])
+            assert(ComputePoseDistance(targetpose, target.GetTransformPose()) <= 1e-7)
+            # should not move the cup!
+        # here the robot state does not get restored, only the grabbed state does. So the cup should have moved!
+        assert(robot.IsGrabbing(target))
+        assert(ComputePoseDistance(targetpose, target.GetTransformPose()) > 1e-7)
+    
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')
         env=self.env
@@ -632,7 +659,8 @@ class RunRobot(EnvironmentSetup):
 
         assert robot.CheckSelfCollision() # succeeds
         assert cloned_robot.CheckSelfCollision() # fails
-        
+
+    
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunRobot):

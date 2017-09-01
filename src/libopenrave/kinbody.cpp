@@ -143,6 +143,44 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( _options & Save_JointLimits ) {
         pbody->SetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
+    // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
+    if( _options & Save_GrabbedBodies ) {
+        // have to release all grabbed first
+        pbody->ReleaseAllGrabbed();
+        OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
+        FOREACH(itgrabbed, _vGrabbedBodies) {
+            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
+            KinBodyPtr pbodygrab = pgrabbed->_pgrabbedbody.lock();
+            if( !!pbodygrab ) {
+                if( pbody->GetEnv() == _pbody->GetEnv() ) {
+                    pbody->_AttachBody(pbodygrab);
+                    pbody->_vGrabbedBodies.push_back(*itgrabbed);
+                }
+                else {
+                    // pgrabbed points to a different environment, so have to re-initialize
+                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentId());
+                    if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
+                        RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbodygrab->GetName()));
+                    }
+                    else {
+                        GrabbedPtr pnewgrabbed(new Grabbed(pnewbody,pbody->GetLinks().at(KinBody::LinkPtr(pgrabbed->_plinkrobot)->GetIndex())));
+                        pnewgrabbed->_troot = pgrabbed->_troot;
+                        pnewgrabbed->_listNonCollidingLinks.clear();
+                        FOREACHC(itlinkref, pgrabbed->_listNonCollidingLinks) {
+                            pnewgrabbed->_listNonCollidingLinks.push_back(pbody->GetLinks().at((*itlinkref)->GetIndex()));
+                        }
+                        pbody->_AttachBody(pnewbody);
+                        pbody->_vGrabbedBodies.push_back(pnewgrabbed);
+                    }
+                }
+            }
+        }
+
+        // if not calling SetLinkTransformations, then manually call _UpdateGrabbedBodies
+        if( !(_options & Save_LinkTransformation ) ) {
+            pbody->_UpdateGrabbedBodies();
+        }
+    }
     if( _options & Save_LinkTransformation ) {
         pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
 //        if( IS_DEBUGLEVEL(Level_Warn) ) {
@@ -180,39 +218,6 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     if( _options & Save_JointWeights ) {
         pbody->SetDOFWeights(_vDOFWeights);
-    }
-    if( _options & Save_GrabbedBodies ) {
-        // have to release all grabbed first
-        pbody->ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
-        FOREACH(itgrabbed, _vGrabbedBodies) {
-            GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-            KinBodyPtr pbodygrab = pgrabbed->_pgrabbedbody.lock();
-            if( !!pbodygrab ) {
-                if( pbody->GetEnv() == _pbody->GetEnv() ) {
-                    pbody->_AttachBody(pbodygrab);
-                    pbody->_vGrabbedBodies.push_back(*itgrabbed);
-                }
-                else {
-                    // pgrabbed points to a different environment, so have to re-initialize
-                    KinBodyPtr pnewbody = pbody->GetEnv()->GetBodyFromEnvironmentId(pbodygrab->GetEnvironmentId());
-                    if( pbodygrab->GetKinematicsGeometryHash() != pnewbody->GetKinematicsGeometryHash() ) {
-                        RAVELOG_WARN(str(boost::format("body %s is not similar across environments")%pbodygrab->GetName()));
-                    }
-                    else {
-                        GrabbedPtr pnewgrabbed(new Grabbed(pnewbody,pbody->GetLinks().at(KinBody::LinkPtr(pgrabbed->_plinkrobot)->GetIndex())));
-                        pnewgrabbed->_troot = pgrabbed->_troot;
-                        pnewgrabbed->_listNonCollidingLinks.clear();
-                        FOREACHC(itlinkref, pgrabbed->_listNonCollidingLinks) {
-                            pnewgrabbed->_listNonCollidingLinks.push_back(pbody->GetLinks().at((*itlinkref)->GetIndex()));
-                        }
-                        pbody->_AttachBody(pnewbody);
-                        pbody->_vGrabbedBodies.push_back(pnewgrabbed);
-                    }
-                }
-            }
-        }
-        pbody->_UpdateGrabbedBodies();
     }
 }
 
