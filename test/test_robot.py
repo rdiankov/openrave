@@ -232,7 +232,7 @@ class RunRobot(EnvironmentSetup):
                     assert(not robot.CheckSelfCollision())
 
     def test_grabstatesaver(self):
-        self.log.info('test if can solve IK during collisions')
+        self.log.info('test grab state saver')
         env=self.env
         robot = self.LoadRobot('robots/pr2-beta-static.zae')
         manip = robot.GetManipulator('rightarm')
@@ -248,7 +248,7 @@ class RunRobot(EnvironmentSetup):
             newtargetpose = target.GetTransformPose()
             assert(ComputePoseDistance(targetpose, newtargetpose) > 1e-7)
         assert(ComputePoseDistance(targetpose, target.GetTransformPose()) <= 1e-7)
-        
+
         with robot.CreateRobotStateSaver(KinBody.SaveParameters.GrabbedBodies): # do not save joint values!
             robot.ReleaseAllGrabbed()
             robot.SetDOFValues([-0.5],manip.GetArmIndices()[:1])
@@ -257,7 +257,18 @@ class RunRobot(EnvironmentSetup):
         # here the robot state does not get restored, only the grabbed state does. So the cup should have moved!
         assert(robot.IsGrabbing(target))
         assert(ComputePoseDistance(targetpose, target.GetTransformPose()) > 1e-7)
-    
+        
+        # the opposite, grab the target inside and see if it gets restored correctly
+        robot.Release(target)
+        targetpose = manip.GetTransformPose()
+        
+        with robot.CreateRobotStateSaver(KinBody.SaveParameters.GrabbedBodies|KinBody.SaveParameters.LinkTransformation): # do not save joint values!
+            robot.Grab(target, grablink=manip.GetEndEffector())
+            robot.SetDOFValues([-1],manip.GetArmIndices()[:1])
+            assert(ComputePoseDistance(targetpose, target.GetTransformPose()) > 1e-7) # target should have moved
+            newtargetpose = target.GetTransformPose()
+        assert(ComputePoseDistance(newtargetpose, target.GetTransformPose()) <= 1e-7) # target should not have moved after state saver exits
+
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')
         env=self.env
