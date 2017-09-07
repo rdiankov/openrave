@@ -163,12 +163,12 @@ OPENRAVE_API log4cxx::LevelPtr RaveGetVerboseLogLevel();
 #endif
 #define LOG4CXX_LOCATION ::log4cxx::spi::LocationInfo(OpenRAVE::RaveGetSourceFilename(__FILE__), __LOG4CXX_FUNC__, __LINE__)
 
-#define OPENRAVE_LOG4CXX_FATALLEVEL(logger, message, location) {if (logger->isFatalEnabled()) { logger->forcedLog(::log4cxx::Level::getFatal(), message, location); }}
-#define OPENRAVE_LOG4CXX_ERRORLEVEL(logger, message, location) {if (logger->isErrorEnabled()) { logger->forcedLog(::log4cxx::Level::getError(), message, location); }}
-#define OPENRAVE_LOG4CXX_WARNLEVEL(logger, message, location) {if (logger->isWarnEnabled()) { logger->forcedLog(::log4cxx::Level::getWarn(), message, location); }}
-#define OPENRAVE_LOG4CXX_INFOLEVEL(logger, message, location) {if (logger->isInfoEnabled()) { logger->forcedLog(::log4cxx::Level::getInfo(), message, location); }}
-#define OPENRAVE_LOG4CXX_DEBUGLEVEL(logger, message, location) {if (logger->isDebugEnabled()) { logger->forcedLog(::log4cxx::Level::getDebug(), message, location); }}
-#define OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, message, location) {if (logger->isTraceEnabled()) { logger->forcedLog(OpenRAVE::RaveGetVerboseLogLevel(), message, location); }}
+#define OPENRAVE_LOG4CXX_FATALLEVEL(logger, message, location) {if (!!logger && logger->isFatalEnabled()) { logger->forcedLog(::log4cxx::Level::getFatal(), message, location); }}
+#define OPENRAVE_LOG4CXX_ERRORLEVEL(logger, message, location) {if (!!logger && logger->isErrorEnabled()) { logger->forcedLog(::log4cxx::Level::getError(), message, location); }}
+#define OPENRAVE_LOG4CXX_WARNLEVEL(logger, message, location) {if (!!logger && logger->isWarnEnabled()) { logger->forcedLog(::log4cxx::Level::getWarn(), message, location); }}
+#define OPENRAVE_LOG4CXX_INFOLEVEL(logger, message, location) {if (!!logger && logger->isInfoEnabled()) { logger->forcedLog(::log4cxx::Level::getInfo(), message, location); }}
+#define OPENRAVE_LOG4CXX_DEBUGLEVEL(logger, message, location) {if (!!logger && logger->isDebugEnabled()) { logger->forcedLog(::log4cxx::Level::getDebug(), message, location); }}
+#define OPENRAVE_LOG4CXX_VERBOSELEVEL(logger, message, location) {if (!!logger && logger->isTraceEnabled()) { logger->forcedLog(OpenRAVE::RaveGetVerboseLogLevel(), message, location); }}
 
 #define DefineRavePrintfW(LEVEL) \
     inline int RavePrintfW ## LEVEL(const log4cxx::LoggerPtr& logger, const log4cxx::spi::LocationInfo& location, const wchar_t *wfmt, ...) \
@@ -200,7 +200,7 @@ OPENRAVE_API log4cxx::LevelPtr RaveGetVerboseLogLevel();
             if (wr > 0 && ws[wr-1] == L'\n') { \
                 ws[wr-1] = '\0'; \
             } \
-            if (logger != NULL) { \
+            if (!!logger) { \
                 OPENRAVE_LOG4CXX ## LEVEL(logger, ws, location); \
             } else { \
                 wprintf(L"%ls\n", ws); \
@@ -217,7 +217,7 @@ OPENRAVE_API log4cxx::LevelPtr RaveGetVerboseLogLevel();
 #define DefineRavePrintfA(LEVEL) \
     inline int RavePrintfA ## LEVEL(const log4cxx::LoggerPtr& logger, const log4cxx::spi::LocationInfo& location, const std::string& s) \
     { \
-        if (logger != NULL) { \
+        if (!!logger) { \
             if (s.size() > 0 && s[s.size()-1] == '\n') { \
                 std::string s1(s, 0, s.size()-1); \
                 OPENRAVE_LOG4CXX ## LEVEL(logger, s1, location); \
@@ -258,7 +258,7 @@ OPENRAVE_API log4cxx::LevelPtr RaveGetVerboseLogLevel();
             if (r > 0 && s[r-1] == '\n') { \
                 s[r-1] = '\0'; \
             } \
-            if (logger != NULL) { \
+            if (!!logger) { \
                 OPENRAVE_LOG4CXX ## LEVEL(logger, s, location); \
             } else { \
                 printf("%s\n", s); \
@@ -279,7 +279,7 @@ inline int RavePrintfA(const std::string& s, uint32_t level)
 {
     if( (RaveGetDebugLevel()&Level_OutputMask)>=level ) {
         const log4cxx::LoggerPtr& logger = RaveGetLogger();
-        if (logger != NULL) {
+        if (!!logger) {
             log4cxx::LevelPtr levelptr = log4cxx::Level::getInfo();
             switch(level&Level_OutputMask) {
             case Level_Fatal: levelptr = log4cxx::Level::getFatal(); break;

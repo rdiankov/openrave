@@ -67,8 +67,8 @@ InterfaceBasePtr TrajectoryBase::deserialize(std::istream& I)
     else {
         throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </trajectory> in %s"),buf.str(),ORE_InvalidArguments);
     }
-    xmlreaders::TrajectoryReader reader(GetEnv(),shared_trajectory());
-    LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
+    xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
+    LocalXML::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
     return shared_from_this();
 }
 
@@ -82,13 +82,16 @@ void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     Insert(0,data);
 }
 
-void TrajectoryBase::Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const
+void TrajectoryBase::Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData) const
 {
     RAVELOG_VERBOSE(str(boost::format("TrajectoryBase::Sample: calling slow implementation %s")%GetXMLId()));
     vector<dReal> vinternaldata;
     Sample(vinternaldata,time);
-    data.resize(spec.GetDOF());
-    ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),GetConfigurationSpecification(),1,GetEnv());
+    if( reintializeData ) {
+        data.resize(0);
+    }
+    data.resize(spec.GetDOF(),0);
+    ConfigurationSpecification::ConvertData(data.begin(),spec,vinternaldata.begin(),GetConfigurationSpecification(),1,GetEnv(),reintializeData);
 }
 
 void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const

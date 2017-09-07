@@ -20,6 +20,7 @@
 #include "libopenrave.h"
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/thread/once.hpp>
 
 namespace OpenRAVE {
 
@@ -640,9 +641,12 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+
+static std::set<std::string> s_setBodyGroupNames;
+static boost::once_flag _onceSetBodyGroupNames = BOOST_ONCE_INIT;
+
+static void _CreateSetBodyGroupNames()
 {
-    static std::set<std::string> s_setBodyGroupNames;
     if( s_setBodyGroupNames.size() == 0 ) {
         s_setBodyGroupNames.insert("joint_values");
         s_setBodyGroupNames.insert("joint_velocities");
@@ -654,9 +658,13 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector
         s_setBodyGroupNames.insert("affine_accelerations");
         s_setBodyGroupNames.insert("affine_jerks");
     }
+}
+
+void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+{
+    boost::call_once(_CreateSetBodyGroupNames,_onceSetBodyGroupNames);
 
     // have to look through all groups since groups can contain the same body
-    std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
     std::string bodyname = body->GetName();
     std::stringstream ss;
     useddofindices.resize(0);
@@ -710,7 +718,6 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                         itcompatgroup->interpolation = itrgroup->interpolation;
                     }
                 }
-                itrgroup->interpolation != itcompatgroup->interpolation;
             }
 
             if( itcompatgroup->name == itrgroup->name ) {
@@ -1772,11 +1779,23 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
     }
 }
 
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
+    std::vector<int> vgroupindices(spec._vgroups.size());
+    for(int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(spec), _1, _2));
+
     O << "<configuration>" << endl;
-    FOREACHC(it,spec._vgroups) {
-        O << "<group name=\"" << it->name << "\" offset=\"" << it->offset << "\" dof=\"" << it->dof << "\" interpolation=\"" << it->interpolation << "\"/>" << endl;
+    FOREACH(itgroupindex, vgroupindices) {
+        const ConfigurationSpecification::Group& group = spec._vgroups[*itgroupindex];
+        O << "<group name=\"" << group.name << "\" offset=\"" << group.offset << "\" dof=\"" << group.dof << "\" interpolation=\"" << group.interpolation << "\"/>" << endl;
     }
     O << "</configuration>" << endl;
     return O;
@@ -1801,7 +1820,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </configuration> in %s"),buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
-        LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
+        LocalXML::ParseXMLData(reader, pbuf.c_str(), ppsize);
         BOOST_ASSERT(spec.IsValid());
     }
 

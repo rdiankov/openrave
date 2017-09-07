@@ -74,16 +74,22 @@ public:
                         RAVELOG_WARN(str(boost::format("daeOpenRAVEURIResolver::resolveElement() - Failed to resolve %s ")%uri.str()));
                         return NULL;
                     }
-                    domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull);
-                    if( !!proxy ) {
-                        if( !!_preader ) {
-                            // have to convert the first element back to URI with %20 since that's what other functions input
-                            _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
-                        }
-                        doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
-                        if( !!doc ) {
-                            // insert it again with the original URI
-                            uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+
+                    // should double check that docurifull is not in the current database
+                    doc = dae->getDatabase()->getDocument(docurifull.c_str(), true);
+                    if( !doc ) {
+                        RAVELOG_DEBUG_FORMAT("could not resolve, so opening %s", docurifull);
+                        domCOLLADA* proxy = (domCOLLADA*)dae->open(docurifull); // be very careful with this call since it can delete prevoiusly opened documents!
+                        if( !!proxy ) {
+                            if( !!_preader ) {
+                                // have to convert the first element back to URI with %20 since that's what other functions input
+                                _preader->_mapInverseResolvedURIList.insert(make_pair(docurifull,daeURI(*uri.getDAE(),docuri)));
+                            }
+                            doc = uri.getDAE()->getDatabase()->getDocument(docurifull.c_str(),true);
+                            if( !!doc ) {
+                                // insert it again with the original URI
+                                uri.getDAE()->getDatabase()->insertDocument(docuri.c_str(),doc->getDomRoot(),&doc,doc->isZAERootDocument(),doc->getExtractedFileURI().getURI());
+                            }
                         }
                     }
                 }
@@ -593,8 +599,8 @@ public:
                                         }
 
                                         if( !!ref_link && !!link ) {
-                                            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(ref_link->GetParent());
-                                            if( !!probot ) {
+                                            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(ref_link->GetParent());
+                                            if( !!pbody ) {
                                                 // see if there are any ignore links
                                                 std::set<int> setRobotLinksToIgnore;
                                                 daeElementRef pchildtec = pchild->getChild("technique");
@@ -636,7 +642,7 @@ public:
                                                         }
                                                     }
                                                 }
-                                                probot->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
+                                                pbody->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
                                             }
                                             else {
                                                 RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));
@@ -725,8 +731,8 @@ public:
 
     /// \extract robot from the scene
     ///
-    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(RobotBasePtr& probot, const std::string& articulatdSystemId=std::string())
+    /// \param articulatedSystemId If not empty, will extract the first articulated_system whose id matches articulatedSystemId. If empty, will extract the first articulated system found.
+    bool Extract(RobotBasePtr& probot, const std::string& articulatedSystemId=std::string())
     {
         std::list< pair<domInstance_kinematics_modelRef, boost::shared_ptr<KinematicsSceneBindings> > > listPossibleBodies;
         domCOLLADA::domSceneRef allscene = _dom->getScene();
@@ -767,9 +773,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -792,9 +798,9 @@ public:
         if( !bSuccess ) {
             KinBodyPtr pbody = probot;
             FOREACH(it, listPossibleBodies) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = it->first->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -832,8 +838,8 @@ public:
 
     /// \extract a kinbody from the scene
     ///
-    /// \param articulatdSystemId If not empty, will extract the first articulated_system whose id matches articulatdSystemId. If empty, will extract the first articulated system found.
-    bool Extract(KinBodyPtr& pbody, const std::string& articulatdSystemId=std::string())
+    /// \param articulatedSystemId If not empty, will extract the first articulated_system whose id matches articulatedSystemId. If empty, will extract the first articulated system found.
+    bool Extract(KinBodyPtr& pbody, const std::string& articulatedSystemId=std::string())
     {
         domCOLLADA::domSceneRef allscene = _dom->getScene();
         if( !allscene ) {
@@ -864,9 +870,9 @@ public:
             _ExtractKinematicsVisualBindings(allscene->getInstance_visual_scene(),kiscene,*bindings);
             _ExtractPhysicsBindings(allscene,*bindings);
             for(size_t ias = 0; ias < kscene->getInstance_articulated_system_array().getCount(); ++ias) {
-                if( articulatdSystemId.size() > 0 ) {
+                if( articulatedSystemId.size() > 0 ) {
                     xsAnyURI articulatedSystemURI = kscene->getInstance_articulated_system_array()[ias]->getUrl();
-                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                    if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                         continue;
                     }
                 }
@@ -884,9 +890,9 @@ public:
             }
         }
         FOREACH(it, listPossibleBodies) {
-            if( articulatdSystemId.size() > 0 ) {
+            if( articulatedSystemId.size() > 0 ) {
                 xsAnyURI articulatedSystemURI = it->first->getUrl();
-                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatdSystemId ) {
+                if( articulatedSystemURI.getReferencedDocument() != _dom->getDocument() || articulatedSystemURI.fragment() != articulatedSystemId ) {
                     continue;
                 }
             }
@@ -2177,7 +2183,7 @@ public:
                 itgeominfo->_vGeomData.y *= vscale.z;
                 break;
             case GT_TriMesh:
-                itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(itgeominfo->_t).inverse() * tmnodegeom * TransformMatrix(toriginal));
+                itgeominfo->_meshcollision.ApplyTransform(TransformMatrix(tmnodegeom * toriginal).inverse() * TransformMatrix(toriginal));
                 break;
             default:
                 RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
@@ -2639,6 +2645,10 @@ public:
             return false;
         }
 
+        std::string geomname;
+        if( !!domgeom->getName() ) {
+            geomname = domgeom->getName();
+        }
         Transform tlocalgeom;
         bool bgeomvisible = true;
         // check for OpenRAVE profile simple geometric primitives
@@ -2705,6 +2715,23 @@ public:
                                 }
                             }
                         }
+                        else if( name == "cylinderz" ) {
+                            daeElementRef pradius = children[i]->getChild("radius");
+                            daeElementRef pheight = children[i]->getChild("height");
+                            if( !!pradius && !!pheight ) {
+                                Vector vGeomData;
+                                stringstream ss(pradius->getCharData());
+                                ss >> vGeomData.x;
+                                stringstream ss2(pheight->getCharData());
+                                ss2 >> vGeomData.y;
+                                if( (ss.eof() || !!ss) && (ss2.eof() || !!ss2) ) {
+                                    geominfo._type = GT_Cylinder;
+                                    geominfo._vGeomData = vGeomData;
+                                    geominfo._t = tlocalgeom;
+                                    bfoundgeom = true;
+                                }
+                            }
+                        }
                         else if( name == "container" ) {
                             daeElementRef pouter_extents = children[i]->getChild("outer_extents");
                             if( !!pouter_extents ) {
@@ -2756,6 +2783,7 @@ public:
                     }
                     if( bfoundgeom ) {
                         FillGeometryColor(_ExtractFirstMaterial(domgeom,mapmaterials),geominfo);
+                        geominfo._name = geomname;
                         listGeometryInfos.push_back(geominfo);
                         return true;
                     }
@@ -2769,24 +2797,28 @@ public:
             for (size_t tg = 0; tg<meshRef->getTriangles_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
             }
@@ -2846,6 +2878,7 @@ public:
 
             if( vconvexhull.size()> 0 ) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
+                listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._type = GT_TriMesh;
                 listGeometryInfos.back()._t = tlocalgeom;
                 listGeometryInfos.back()._bVisible = bgeomvisible;
@@ -2911,6 +2944,16 @@ public:
                         if( !!pdirection ) {
                             stringstream ss(pdirection->getCharData());
                             ss >> manipinfo._vdirection.x >> manipinfo._vdirection.y >> manipinfo._vdirection.z;
+                            // have to normalize direction!
+                            dReal dirlen2 = manipinfo._vdirection.lengthsqr3();
+                            if( dirlen2 > g_fEpsilon ) {
+                                manipinfo._vdirection /= RaveSqrt(dirlen2);
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("invalid direction specified for manip %s, using [0,0,1]", manipinfo._name);
+                                manipinfo._vdirection = Vector(0,0,1);
+                            }
+
                             if( !ss ) {
                                 RAVELOG_WARN(str(boost::format("could not read frame_tip/direction of manipulator %s frame tip %s")%name%pframe_tip->getAttribute("link")));
                             }
@@ -2947,7 +2990,7 @@ public:
                             RAVELOG_WARN(str(boost::format("could not find manipulator '%s' gripper joint '%s'\n")%manipinfo._name%pmanipchild->getAttribute("joint")));
                         }
                         else if( pmanipchild->getElementName() == string("iksolver") ) {
-                            InterfaceTypePtr pinterfacetype = _ExtractInterfaceType(tec->getContents()[ic]);
+                            InterfaceTypePtr pinterfacetype = _ExtractInterfaceType(pmanipchild);
                             if( !!pinterfacetype ) {
                                 if( pinterfacetype->type.size() == 0 || pinterfacetype->type == "iksolver" ) {
                                     manipinfo._sIkSolverXMLId = pinterfacetype->name;
@@ -3018,11 +3061,11 @@ public:
                     daeElementRef instance_sensor = tec->getChild("instance_sensor");
                     if( !!instance_sensor ) {
                         std::pair<SensorBasePtr, daeElementRef> result = _ExtractCreateSensor(instance_sensor);
-                        pattachedsensor->psensor = result.first;
-                        if( !!pattachedsensor->psensor ) {
-                            pattachedsensor->psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
+                        pattachedsensor->_psensor = result.first;
+                        if( !!pattachedsensor->_psensor ) {
+                            pattachedsensor->_psensor->SetName(str(boost::format("%s:%s")%probot->GetName()%name));
                             std::string instance_url = instance_sensor->getAttribute("url");
-                            mapSensorURLsToNames[instance_url] = pattachedsensor->psensor->GetName();
+                            mapSensorURLsToNames[instance_url] = pattachedsensor->_psensor->GetName();
                         }
                         listSensorsToExtract.push_back(std::make_pair(pattachedsensor,result.second));
                     }
@@ -3037,12 +3080,12 @@ public:
 
         FOREACH(itextract, listSensorsToExtract) {
             RobotBase::AttachedSensorPtr pattachedsensor = itextract->first;
-            if( !pattachedsensor->psensor ) {
+            if( !pattachedsensor->_psensor ) {
                 continue;
             }
 
             // Create the custom XML reader to read in the data (determined by users)
-            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->psensor->GetXMLId(),pattachedsensor->psensor, AttributesList());
+            BaseXMLReaderPtr pcurreader = RaveCallXMLReader(PT_Sensor,pattachedsensor->_psensor->GetXMLId(),pattachedsensor->_psensor, AttributesList());
             if( !pcurreader ) {
                 pattachedsensor->pdata = pattachedsensor->GetSensor()->CreateSensorData();
                 continue;
@@ -3050,7 +3093,7 @@ public:
 
             if( _ProcessXMLReader(pcurreader,itextract->second, mapSensorURLsToNames) ) {
                 if( !!pcurreader->GetReadable() ) {
-                    pattachedsensor->psensor->SetReadableInterface(pattachedsensor->psensor->GetXMLId(),pcurreader->GetReadable());
+                    pattachedsensor->_psensor->SetReadableInterface(pattachedsensor->_psensor->GetXMLId(),pcurreader->GetReadable());
                 }
             }
             pattachedsensor->UpdateInfo(); // need to update the _info struct with the latest values
@@ -3519,6 +3562,9 @@ public:
         return false;
     }
     template <typename U> static domFloat resolveFloat(domCommon_float_or_paramRef paddr, const U& parent) {
+        if( !paddr ) {
+            return 0;
+        }
         if( !!paddr->getFloat() ) {
             return paddr->getFloat()->getValue();
         }
@@ -4159,47 +4205,49 @@ private:
                         }
                         else if( pelt->getElementName() == string("bind_instance_geometry") ) {
 
-                            const std::string groupname = pelt->getAttribute("type");
-                            if( groupname == "" ) {
-                                RAVELOG_WARN("encountered an empty group name");
-                            }
+                            // for now don't load since we don't have good way of updating the geometry throughout the system yet.
 
-                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
-                            KinBody::LinkPtr plink;
-                            if( !!pdomlink ) {
-                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
-                            }
-                            else {
-                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
-                            }
-                            if( !plink ) {
-                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
-                                continue;
-                            }
-                            BOOST_ASSERT(plink->GetParent()==pbody);
-
-                            domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
-                            if( !domgeom ) {
-                                RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
-                                continue;
-                            }
-
-                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
-                            if( !dommat ) {
-                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
-                            } else {
-                              mapmaterials["mat0"] = dommat;
-                            }
-
-
-                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
-                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
-                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
-                                continue;
-                            }
-                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
-                                itgeominfo->InitCollisionMesh();
-                            }
+//                            const std::string groupname = pelt->getAttribute("type");
+//                            if( groupname == "" ) {
+//                                RAVELOG_WARN("encountered an empty group name");
+//                            }
+//
+//                            domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
+//                            KinBody::LinkPtr plink;
+//                            if( !!pdomlink ) {
+//                                plink = pbody->GetLink(_ExtractLinkName(pdomlink));
+//                            }
+//                            else {
+//                                plink = _ResolveLinkBinding(listInstanceLinkBindings, pelt->getAttribute("link"), pbody);
+//                            }
+//                            if( !plink ) {
+//                                RAVELOG_WARN(str(boost::format("failed to resolve link %s\n")%pelt->getAttribute("link")));
+//                                continue;
+//                            }
+//                            BOOST_ASSERT(plink->GetParent()==pbody);
+//
+//                            domGeometryRef domgeom = daeSafeCast<domGeometry>(daeURI(*referenceElt, pelt->getAttribute("url")).getElement());
+//                            if( !domgeom ) {
+//                                RAVELOG_WARN_FORMAT("failed to retrieve geometry %s\n", pelt->getAttribute("url"));
+//                                continue;
+//                            }
+//
+//                            domMaterialRef dommat = daeSafeCast<domMaterial>(daeURI(*referenceElt, pelt->getAttribute("material")).getElement());
+//                            if( !dommat ) {
+//                              RAVELOG_WARN_FORMAT("failed to retrieve material for geometry %s\n", pelt->getAttribute("material"));
+//                            } else {
+//                              mapmaterials["mat0"] = dommat;
+//                            }
+//
+//
+//                            // TODO : There seems to be scaling factors and transforms that might be forgotten here (c.f.: ExtractGeometries)
+//                            if( !ExtractGeometry(domgeom, mapmaterials, mapGeometryGroups[plink][groupname]) ) {
+//                                RAVELOG_WARN_FORMAT("failed to add geometry to geometry group %s, link %s\n", groupname%plink->GetName());
+//                                continue;
+//                            }
+//                            FOREACH(itgeominfo, mapGeometryGroups[plink][groupname]) {
+//                                itgeominfo->InitCollisionMesh();
+//                            }
                         }
                         else if( pelt->getElementName() == string("link_collision_state") ) {
                             domLinkRef pdomlink = daeSafeCast<domLink>(daeSidRef(pelt->getAttribute("link"), referenceElt).resolve().elt);
@@ -4814,7 +4862,7 @@ private:
         daeBool bhas1 = elt1->hasAttribute(attr.c_str());
         daeBool bhas2 = elt2->hasAttribute(attr.c_str());
         if( !bhas1 || !bhas2 ) {
-            if( !bhas1 && !bhas1 && elt1 == elt2 ) {
+            if( !bhas1 && !bhas2 && elt1 == elt2 ) {
                 return 1;
             }
             return -1;
@@ -4908,6 +4956,10 @@ private:
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
             return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second;
+        }
+        domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
+        if (!!passet && !!passet->getUnit()) {
+            return passet->getUnit()->getMeter() / _penv->GetUnit().second;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);
@@ -5097,14 +5149,14 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
         return false;
     }
 
-    std::string articulatdSystemId;
+    std::string articulatedSystemId;
     FOREACHC(itatt, atts) {
-        if( itatt->first == "articulatdSystemId" ) {
-            articulatdSystemId = itatt->second;
+        if( itatt->first == "articulatedSystemId" ) {
+            articulatedSystemId = itatt->second;
         }
     }
 
-    return reader.Extract(pbody, articulatdSystemId);
+    return reader.Extract(pbody, articulatedSystemId);
 }
 
 bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
@@ -5115,14 +5167,18 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
         return false;
     }
 
-    std::string articulatdSystemId;
+    std::string articulatedSystemId;
     FOREACHC(itatt, atts) {
-        if( itatt->first == "articulatdSystemId" ) {
-            articulatdSystemId = itatt->second;
+        if( itatt->first == "articulatedSystemId" ) {
+            articulatedSystemId = itatt->second;
+        }
+        else if( itatt->first == "articulatedSystemId" ) {
+            RAVELOG_WARN("mispelled articulatedSystemId\n");
+            articulatedSystemId = itatt->second;
         }
     }
 
-    return reader.Extract(probot, articulatdSystemId);
+    return reader.Extract(probot, articulatedSystemId);
 }
 
 // register for typeof (MSVC only)

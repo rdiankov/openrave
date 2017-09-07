@@ -157,7 +157,7 @@ public:
     class LinkAdjacentFilterCallback : public OpenRAVEFilterCallback
     {
 public:
-        LinkAdjacentFilterCallback(KinBodyConstPtr pparent, const std::set<int>& setadjacency) : OpenRAVEFilterCallback(), _pparent(pparent), _setadjacency(setadjacency) {
+        LinkAdjacentFilterCallback(KinBodyConstPtr pparent, const std::vector<int>& setadjacency) : OpenRAVEFilterCallback(), _pparent(pparent), _setadjacency(setadjacency) {
         }
 
         virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
@@ -168,11 +168,11 @@ public:
             // check if links are in adjacency list
             int index0 = plink0->GetIndex();
             int index1 = plink1->GetIndex();
-            return _setadjacency.find(index0|(index1<<16)) != _setadjacency.end() || _setadjacency.find(index1|(index0<<16)) != _setadjacency.end();
+            return find(_setadjacency.begin(), _setadjacency.end(), index0|(index1<<16)) != _setadjacency.end() || find(_setadjacency.begin(), _setadjacency.end(), index1|(index0<<16)) != _setadjacency.end();
         }
 
         KinBodyConstPtr _pparent;
-        const std::set<int>& _setadjacency;
+        const std::vector<int>& _setadjacency;
     };
 
     class KinBodyLinkFilterCallback : public OpenRAVEFilterCallback

@@ -393,6 +393,7 @@ enum CloningOptions {
     Clone_RealControllers = 8, ///< if specified, will clone the real controllers of all the robots, otherwise each robot gets ideal controller
     Clone_Sensors = 0x0010, ///< if specified, will clone the sensors attached to the robot and added to the environment
     Clone_Modules = 0x0020, ///< if specified, will clone the modules attached to the environment
+    Clone_IgnoreAttachedBodies = 0x00010001, ///< if set, then ignore cloning any attached bodies so _listAttachedBodies becomes empty. Usually used to control grabbing states.
     Clone_All = 0xffffffff,
 };
 
@@ -1942,19 +1943,28 @@ protected:
                 transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
             }
             if( transformtype == "direction" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v = t.rotate(v);
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "point" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v = t*v;
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "quat" ) {
-                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                if (values.size() < 4) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 4", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2],values[3]);
                 v = quatMultiply(t.rot,v);
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2]; values[3] = v[3];
             }
             else if( transformtype == "ikparam" ) {
                 IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));
@@ -1983,19 +1993,28 @@ protected:
                 transformtype = name.substr(startoffset+11,endoffset-startoffset-11);
             }
             if( transformtype == "direction" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v = quatRotate(quatMultiply(quatRotateDirection(Vector(0,0,1),v), t.rot), Vector(0,0,1));
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "point" ) {
-                Vector v(values.at(0),values.at(1), values.at(2));
+                if (values.size() < 3) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 3", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2]);
                 v += t.trans;
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2];
             }
             else if( transformtype == "quat" ) {
-                Vector v(values.at(0),values.at(1), values.at(2),values.at(3));
+                if (values.size() < 4) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0("Vector size < 4", ORE_InvalidArguments);
+                }
+                Vector v(values[0],values[1], values[2],values[3]);
                 v = quatMultiply(v,t.rot);
-                values.at(0) = v[0]; values.at(1) = v[1]; values.at(2) = v[2]; values.at(3) = v[3];
+                values[0] = v[0]; values[1] = v[1]; values[2] = v[2]; values[3] = v[3];
             }
             else if( transformtype == "ikparam" ) {
                 IkParameterizationType newiktype = RaveGetIkTypeFromUniqueId(static_cast<int>(values.at(0)+0.5));
@@ -2114,7 +2133,7 @@ class OPENRAVE_API TriMesh
 {
 public:
     std::vector<Vector> vertices;
-    std::vector<int> indices;
+    std::vector<int32_t> indices;
 
     void ApplyTransform(const Transform& t);
     void ApplyTransform(const TransformMatrix& t);
@@ -2540,6 +2559,14 @@ typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, in
 /// \ingroup plugin_exports
 typedef void (*PluginExportFn_DestroyPlugin)();
 
+/// \brief Called when OpenRAVE global runtime is finished initializing. See \ref OnRaveInitialized
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_OnRaveInitialized)();
+
+/// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
+/// \ingroup plugin_exports
+typedef void (*PluginExportFn_OnRavePreDestroy)();
+    
 /// \deprecated (12/01/01)
 typedef InterfaceBasePtr (*PluginExportFn_CreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, EnvironmentBasePtr env) RAVE_DEPRECATED;
 

@@ -72,9 +72,12 @@ void ORCSetDebugLevel(int level)
     RaveSetDebugLevel((OpenRAVE::DebugLevel)level);
 }
 
-void ORCInitialize(bool bLoadAllPlugins, int level)
+void ORCInitialize(int bLoadAllPlugins, int level)
 {
-    RaveInitialize(bLoadAllPlugins,level);
+    if (bLoadAllPlugins == 1)
+        RaveInitialize(true,level);
+    else
+        RaveInitialize(false,level);
 }
 
 void ORCDestroy()
@@ -142,9 +145,12 @@ void ORCEnvironmentDestroy(void* env)
     penv->Destroy();
 }
 
-bool ORCEnvironmentLoad(void* env, const char* filename)
+int ORCEnvironmentLoad(void* env, const char* filename)
 {
-    return GetEnvironment(env)->Load(filename);
+    if(GetEnvironment(env)->Load(filename))
+        return 1;
+    else
+        return 0;
 }
 
 void* ORCEnvironmentGetKinBody(void* env, const char* name)
@@ -222,7 +228,7 @@ void ORCEnvironmentUnlock(void* env)
 #endif
 }
 
-void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer)
+void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, int bShowViewer)
 {
     ViewerBasePtr pviewer;
     {
@@ -237,11 +243,15 @@ void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, bool bShowV
     if( !pviewer ) {
         return;
     }
-    pviewer->main(bShowViewer);     // spin until quitfrommainloop is called
+
+    if (bShowViewer == 1)
+        pviewer->main(true);                                    // spin until quitfrommainloop is called
+    else
+        pviewer->main(false);
     penv->Remove(pviewer);
 }
 
-bool ORCEnvironmentSetViewer(void* env, const char* viewername)
+int ORCEnvironmentSetViewer(void* env, const char* viewername)
 {
     EnvironmentBasePtr penv = GetEnvironment(env);
     VIEWERMAP::iterator it = s_mapEnvironmentThreadViewers.find(penv);
@@ -258,7 +268,7 @@ bool ORCEnvironmentSetViewer(void* env, const char* viewername)
         s_mapEnvironmentThreadViewers[penv] = threadviewer;
         s_conditionViewer.wait(lock);
     }
-    return true;
+    return 1;
 }
 
 char* ORCInterfaceSendCommand(void* pinterface, const char* command)
@@ -377,10 +387,21 @@ void ORCBodyGetTransformMatrix(void* body, dReal* matrix)
     }
 }
 
-bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible)
+int ORCBodyInitFromTrimesh(void* body, void* trimesh, int visible)
 {
     TriMesh* ptrimesh = static_cast<TriMesh*>(trimesh);
-    return GetBody(body)->InitFromTrimesh(*ptrimesh,visible);
+    if (visible == 1) {
+        if (GetBody(body)->InitFromTrimesh(*ptrimesh, true))
+            return 1;
+        else
+            return 0;
+    }
+    else {
+        if (GetBody(body)->InitFromTrimesh(*ptrimesh, false))
+            return 1;
+        else
+            return 0;
+    }
 }
 
 int ORCBodyLinkGetGeometries(void* link, void** geometries)

@@ -149,6 +149,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "Accepts 0/1 value that decides whether to render the cross hairs");
     RegisterCommand("SetNearPlane", boost::bind(&QtOSGViewer::_SetNearPlaneCommand, this, _1, _2),
                     "Sets the near plane for rendering of the image. Useful when tweaking rendering units");
+    RegisterCommand("SetTextureCubeMap", boost::bind(&QtOSGViewer::_SetTextureCubeMap, this, _1, _2),
+                    "Sets the skybox with cubemap");
     RegisterCommand("TrackLink", boost::bind(&QtOSGViewer::_TrackLinkCommand, this, _1, _2),
                     "camera tracks the link maintaining a specific relative transform: robotname, manipname, focalDistance");
     RegisterCommand("TrackManipulator", boost::bind(&QtOSGViewer::_TrackManipulatorCommand, this, _1, _2),
@@ -162,11 +164,16 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
+    _bExternalLoop = false;
 }
 
 QtOSGViewer::~QtOSGViewer()
 {
     RAVELOG_DEBUG("destroying qtosg viewer\n");
+    // _notifyGUIFunctionComplete can still be waiting. Code will crash when
+    // the mutex is destroyed in that state. SetEnvironmentSync will release
+    // _notifyGUIFunctionComplete
+    SetEnvironmentSync(false);
     {
         boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
@@ -192,6 +199,13 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 {
     osg::ArgumentParser arguments(0, NULL);
 
+    if( !QApplication::instance() ) {
+        RAVELOG_WARN("no app instance to attach close\n");
+    }
+    else {
+        connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
+    }
+    
     _posgWidget = new ViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second);
     setCentralWidget(_posgWidget);
 
@@ -1105,6 +1119,18 @@ bool QtOSGViewer::_SetNearPlaneCommand(ostream& sout, istream& sinput)
     return !!sinput;
 }
 
+bool QtOSGViewer::_SetTextureCubeMap(ostream& out, istream& sinput)
+{
+    std::string posx, negx, posy, negy, posz, negz;
+    sinput >> posx >> negx >> posy >> negy >> posz >> negz;
+
+    if(!!sinput) {
+        _posgWidget->SetTextureCubeMap(posx, negx, posy, negy, posz, negz);
+    }
+
+    return !!sinput;
+}
+
 bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
 {
     bool bresetvelocity = true;
@@ -1169,6 +1195,27 @@ bool QtOSGViewer::_SetTrackingAngleToUpCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+void QtOSGViewer::_ProcessApplicationQuit()
+{
+    RAVELOG_VERBOSE("processing viewer application quit\n");
+    // remove all messages in order to release the locks
+    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+    if( _listGUIFunctions.size() > 0 ) {
+        bool bnotify = false;
+        FOREACH(it,_listGUIFunctions) {
+            (*it)->SetFinished();
+            if( (*it)->IsBlocking() ) {
+                bnotify = true;
+            }
+        }
+        if( bnotify ) {
+            _notifyGUIFunctionComplete.notify_all();
+        }
+    }
+    _listGUIFunctions.clear();
+
+}
+
 bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
 {
     if( !QApplication::instance() ) {
@@ -1179,10 +1226,14 @@ bool QtOSGViewer::_StartViewerLoopCommand(ostream& sout, istream& sinput)
     sinput >> bcallmain;
     _nQuitMainLoop = -1;
     //_StartPlaybackTimer();
-    this->show();
+    Show(1);
     if( bcallmain ) {
+        _bExternalLoop = false;
         _posgWidget->SetHome();
         QApplication::instance()->exec();
+        _nQuitMainLoop = 2; // have to specify that quit!
+    } else {
+        _bExternalLoop = true;
     }
     return true;
 }
@@ -1220,14 +1271,16 @@ int QtOSGViewer::main(bool bShow)
     //_StartPlaybackTimer();
     if (bShow) {
         if( _nQuitMainLoop < 0 ) {
-            this->show();
+            Show(1);
         }
     }
 
     UpdateFromModel();
     _posgWidget->SetHome();
     if( _nQuitMainLoop < 0 ) {
+        _bExternalLoop = false;
         QApplication::instance()->exec();
+        _nQuitMainLoop = 2; // have to specify that quit!
     }
     SetEnvironmentSync(false);
     return 0;
@@ -1240,7 +1293,9 @@ void QtOSGViewer::quitmainloop()
     if( !bGuiThread ) {
         SetEnvironmentSync(false);
     }
-    QApplication::instance()->exit(0);
+    if (!_bExternalLoop) {
+        QApplication::instance()->exit(0);
+    }
     _nQuitMainLoop = 2;
 }
 
@@ -1270,6 +1325,7 @@ bool QtOSGViewer::GetCameraImage(std::vector<uint8_t>& memory, int width, int he
 {
     return false;
 }
+
 bool QtOSGViewer::WriteCameraImage(int width, int height, const RaveTransform<float>& t, const SensorBase::CameraIntrinsics& KK, const std::string& filename, const std::string& extension)
 {
     return false;
@@ -1708,7 +1764,12 @@ void QtOSGViewer::Reset()
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
 {
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color));
+}
 
+void QtOSGViewer::_SetBkgndColor(const RaveVector<float>& color)
+{
+    _posgWidget->GetCamera()->setClearColor(osg::Vec4f(color.x, color.y, color.z, 1.0));
 }
 
 void QtOSGViewer::StartPlaybackTimer()
@@ -1729,9 +1790,14 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
-void QtOSGViewer::SetName(const string& ptitle)
+void QtOSGViewer::SetName(const string& name)
 {
-    setWindowTitle(ptitle.c_str());
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
+}
+
+void QtOSGViewer::_SetName(const string& name)
+{
+    setWindowTitle(name.c_str());
 }
 
 bool QtOSGViewer::LoadModel(const string& filename)
@@ -1964,8 +2030,17 @@ void QtOSGViewer::_UpdateEnvironment(float fTimeElapsed)
 
 void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
 {
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
+    if( _nQuitMainLoop != -1 ) {
+        // viewer quit, so anything posted won't get processed
+        return;
+    }
+    
     boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
+    if( _listGUIFunctions.size() > 1000 ) {
+        RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
+        return;
+    }
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
     _listGUIFunctions.push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {

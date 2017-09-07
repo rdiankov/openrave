@@ -2,7 +2,7 @@ from mpmath import mp, iv, arange
 import numpy as np
 
 from ramp import Ramp, ParabolicCurve, ParabolicCurvesND
-from ramp import ConvertFloatArrayToMPF
+from ramp import ConvertFloatToMPF, ConvertFloatArrayToMPF
 from ramp import zero, pointfive, epsilon
 from ramp import Add, Abs, IsEqual, Mul, Neg, Prod, Sqr, Sub, Sum, FuzzyEquals, FuzzyZero
 
@@ -47,8 +47,11 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
             vMin = min(vMin, vmVect[i]/Abs(dVect[i]))
             aMin = min(aMin, amVect[i]/Abs(dVect[i]))
 
-    assert(vMin < inf)
-    assert(aMin < inf)
+    if (not (vMin < inf and aMin < inf)):
+        # dVect is zero.
+        curvesnd = ParabolicCurvesND()
+        curvesnd.SetConstant(x0Vect_, 0)
+        return curvesnd
 
     if delta == zero:
         sdProfile = Interpolate1D(zero, one, zero, zero, vMin, aMin) # parabolic ramp (velocity profile sd(t))
@@ -75,24 +78,28 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
     return curvesnd
 
 
-def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xminVect, xmaxVect, vmVect, amVect, delta=zero, tryHarder=False):
+def InterpolateArbitraryVelND(x0Vect_, x1Vect_, v0Vect_, v1Vect_, xminVect_, xmaxVect_, vmVect_, amVect_, delta=zero, tryHarder=False):
     """Interpolate a trajectory connecting two waypoints, (x0Vect, v0Vect) and (x1Vect, v1Vect).
 
     """
-    ndof = len(x0Vect)
-    assert(ndof == len(x1Vect))
-    assert(ndof == len(vmVect))
-    assert(ndof == len(amVect))
+    ndof = len(x0Vect_)
+    assert(ndof == len(x1Vect_))
+    assert(ndof == len(v0Vect_))
+    assert(ndof == len(v1Vect_))
+    assert(ndof == len(xminVect_))
+    assert(ndof == len(xmaxVect_))
+    assert(ndof == len(vmVect_))
+    assert(ndof == len(amVect_))
 
     # Convert all vector elements into mp.mpf (if necessary)
-    x0Vect_ = ConvertFloatArrayToMPF(x0Vect)
-    x1Vect_ = ConvertFloatArrayToMPF(x1Vect)
-    v0Vect_ = ConvertFloatArrayToMPF(v0Vect)
-    v1Vect_ = ConvertFloatArrayToMPF(v1Vect)
-    xminVect_ = ConvertFloatArrayToMPF(xminVect)
-    xmaxVect_ = ConvertFloatArrayToMPF(xmaxVect)
-    vmVect_ = ConvertFloatArrayToMPF(vmVect)
-    amVect_ = ConvertFloatArrayToMPF(amVect)
+    x0Vect = ConvertFloatArrayToMPF(x0Vect_)
+    x1Vect = ConvertFloatArrayToMPF(x1Vect_)
+    v0Vect = ConvertFloatArrayToMPF(v0Vect_)
+    v1Vect = ConvertFloatArrayToMPF(v1Vect_)
+    xminVect = ConvertFloatArrayToMPF(xminVect_)
+    xmaxVect = ConvertFloatArrayToMPF(xmaxVect_)
+    vmVect = ConvertFloatArrayToMPF(vmVect_)
+    amVect = ConvertFloatArrayToMPF(amVect_)
     
     dVect = x1Vect - x0Vect
 
@@ -105,7 +112,7 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xminVect, xmaxVect
     maxIndex = 0
     for i in xrange(ndof):
         if delta == zero:
-            curve = Interpolate1D(x0Vect_[i], x1Vect_[i], v0Vect_[i], v1Vect_[i], vmVect_[i], amVect_[i])
+            curve = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i])
         else:
             raise NotImplementedError
         curves.append(curve)
@@ -115,11 +122,11 @@ def InterpolateArbitraryVelND(x0Vect, x1Vect, v0Vect, v1Vect, xminVect, xmaxVect
 
     ## TEMPORARY
     # print "maxIndex = {0}".format(maxIndex)
-    curvesnd = ReinterpolateNDFixedDuration(curves, vmVect_, amVect_, maxIndex, delta, tryHarder)
+    curvesnd = ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta, tryHarder)
 
     newCurves = []
     for (i, curve) in enumerate(curvesnd.curves):
-        newCurve = _ImposeJointLimitFixedDuration(curve, xminVect_[i], xmaxVect_[i], vmVect_[i], amVect_[i])
+        newCurve = _ImposeJointLimitFixedDuration(curve, xminVect[i], xmaxVect[i], vmVect[i], amVect[i])
         if newCurve.isEmpty:
             return ParabolicCurvesND()
         newCurves.append(newCurve)
@@ -190,6 +197,46 @@ def ReinterpolateNDFixedDuration(curves, vmVect, amVect, maxIndex, delta=zero, t
 
         assert(len(newCurves) == ndof)
         return ParabolicCurvesND(newCurves)
+
+
+def InterpolateNDFixedDuration(x0Vect_, x1Vect_, v0Vect_, v1Vect_, duration, xminVect_, xmaxVect_, vmVect_, amVect_):
+    assert(duration > 0)
+
+    ndof = len(x0Vect_)
+    assert(ndof == len(x1Vect_))
+    assert(ndof == len(v0Vect_))
+    assert(ndof == len(v1Vect_))
+    assert(ndof == len(xminVect_))
+    assert(ndof == len(xmaxVect_))
+    assert(ndof == len(vmVect_))
+    assert(ndof == len(amVect_))
+
+    # Convert all vector elements into mp.mpf (if necessary)
+    x0Vect = ConvertFloatArrayToMPF(x0Vect_)
+    x1Vect = ConvertFloatArrayToMPF(x1Vect_)
+    v0Vect = ConvertFloatArrayToMPF(v0Vect_)
+    v1Vect = ConvertFloatArrayToMPF(v1Vect_)
+    xminVect = ConvertFloatArrayToMPF(xminVect_)
+    xmaxVect = ConvertFloatArrayToMPF(xmaxVect_)
+    vmVect = ConvertFloatArrayToMPF(vmVect_)
+    amVect = ConvertFloatArrayToMPF(amVect_)
+    
+    dVect = x1Vect - x0Vect
+
+    duration = ConvertFloatToMPF(duration)
+
+    curves = []
+    for idof in xrange(ndof):
+        curve = Interpolate1DFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], duration, vmVect[idof], amVect[idof])
+        if curve.isEmpty:
+            return ParabolicCurvesND()
+
+        newCurve = _ImposeJointLimitFixedDuration(curve, xminVect[idof], xmaxVect[idof], vmVect[idof], amVect[idof])
+        if newCurve.isEmpty:
+            return ParabolicCurvesND()
+        
+        curves.append(newCurve)
+    return ParabolicCurvesND(curves)
 
 
 ####################################################################################################
@@ -532,41 +579,66 @@ def _ImposeJointLimitFixedDuration(curve, xmin, xmax, vm, am):
     
 
 def _Stretch1D(curve, newDuration, vm, am):
+    return Interpolate1DFixedDuration(curve.x0, curve.x1, curve.v0, curve.v1, newDuration, vm, am)
 
-    log.debug("\nx0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; vm = {4}; am = {5}; prevDuration = {6}; newDuration = {7}".\
-              format(mp.nstr(curve.x0, n=_prec), mp.nstr(curve.EvalPos(curve.duration), n=_prec),
-                     mp.nstr(curve.v0, n=_prec), mp.nstr(curve.EvalVel(curve.duration), n=_prec),
-                     mp.nstr(vm, n=_prec), mp.nstr(am, n=_prec), mp.nstr(curve.duration, n=_prec),
-                     mp.nstr(newDuration, n=_prec)))
+
+def Interpolate1DFixedDuration(x0, x1, v0, v1, newDuration, vm, am):
+    x0 = ConvertFloatToMPF(x0)
+    x1 = ConvertFloatToMPF(x1)
+    v0 = ConvertFloatToMPF(v0)
+    v1 = ConvertFloatToMPF(v1)
+    vm = ConvertFloatToMPF(vm)
+    am = ConvertFloatToMPF(am)
+    newDuration = ConvertFloatToMPF(newDuration)
+    log.debug("\nx0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; vm = {4}; am = {5}; newDuration = {6}".\
+              format(mp.nstr(x0, n=_prec), mp.nstr(x1, n=_prec), mp.nstr(v0, n=_prec), mp.nstr(v1, n=_prec),
+                     mp.nstr(vm, n=_prec), mp.nstr(am, n=_prec), mp.nstr(newDuration, n=_prec)))
     
-    # Check types
-    if type(newDuration) is not mp.mpf:
-        newDuration = mp.mpf("{:.15e}".format(newDuration))
-    if type(vm) is not mp.mpf:
-        vm = mp.mpf("{:.15e}".format(vm))
-    if type(am) is not mp.mpf:
-        am = mp.mpf("{:.15e}".format(am))
-
     # Check inputs
-    # assert(newDuration > curve.duration)
     assert(vm > zero)
     assert(am > zero)
 
     if (newDuration < -epsilon):
+        log.info("duration = {0} is negative".format(newDuration))
         return ParabolicCurve()
     if (newDuration <= epsilon):
         # Check if this is a stationary trajectory
-        if (FuzzyEquals(curve.x0, curve.EvalPos(x1), epsilon) and FuzzyEquals(curve.v0, curve.v1, epsilon)):
-            ramp0 = Ramp(curve.v0, 0, 0, curve.x0)
+        if (FuzzyEquals(x0, x1, epsilon) and FuzzyEquals(v0, v1, epsilon)):
+            log.info("stationary trajectory")
+            ramp0 = Ramp(v0, 0, 0, x0)
             newCurve = ParabolicCurve(ramp0)
             return newCurve
         else:
-            # newDuration is too short to any movement to be made
+            log.info("newDuration is too short for any movement to be made")
             return ParabolicCurve()
 
-    v0 = curve[0].v0
-    v1 = curve[-1].v1
-    d = curve.d
+    # Correct small discrepancies if any
+    if (v0 > vm):
+        if FuzzyEquals(v0, vm, epsilon):
+            v0 = vm
+        else:
+            log.info("v0 > vm: {0} > {1}".format(v0, vm))
+            return ParabolicCurve()
+    elif (v0 < -vm):
+        if FuzzyEquals(v0, -vm, epsilon):
+            v0 = -vm
+        else:
+            log.info("v0 < -vm: {0} < {1}".format(v0, -vm))
+            return ParabolicCurve()
+    if (v1 > vm):
+        if FuzzyEquals(v1, vm, epsilon):
+            v1 = vm
+        else:
+            log.info("v1 > vm: {0} > {1}".format(v1, vm))
+            return ParabolicCurve()
+    elif (v1 < -vm):
+        if FuzzyEquals(v1, -vm, epsilon):
+            v1 = -vm
+        else:
+            log.info("v1 < -vm: {0} < {1}".format(v1, -vm))
+            return ParabolicCurve()
+
+    d = Sub(x1, x0)
 
     # First assume no velocity bound -> re-interpolated trajectory will have only two ramps.
     # Solve for a0 and a1 (the acceleration of the first and the last ramps).
@@ -591,8 +663,14 @@ def _Stretch1D(curve, newDuration, vm, am):
               format(mp.nstr(A, n=_prec), mp.nstr(B, n=_prec), mp.nstr(C, n=_prec), mp.nstr(D, n=_prec),
                      mp.nstr(sum1, n=_prec), mp.nstr(sum2, n=_prec)))
 
-    assert(not (sum1 > zero))
-    assert(not (sum2 < zero))
+    if (sum1 > zero):
+        # This implied that the duration is too short
+        log.debug("the given duration ({0}) is too short.".format(newDuration))
+        return ParabolicCurve()
+    if (sum2 < zero):
+        # This implied that the duration is too short
+        log.debug("the given duration ({0}) is too short.".format(newDuration))
+        return ParabolicCurve()
     
     if IsEqual(sum1, zero):
         raise NotImplementedError # not yet considered
@@ -634,7 +712,7 @@ def _Stretch1D(curve, newDuration, vm, am):
         return ParabolicCurve()
 
     if Sub(interval5.a, interval4.b) > epsilon or Sub(interval4.a, interval5.b) > epsilon:
-        # interval4 and interval5 do not intersect each other
+        log.debug("interval4 and interval5 do not intersect each other")
         return ParabolicCurve()
     # interval6 = interval4 \cap interval5 : valid interval for t0 computed from a1's constraints
     interval6 = iv.mpf([max(interval4.a, interval5.a), min(interval4.b, interval5.b)])
@@ -642,13 +720,13 @@ def _Stretch1D(curve, newDuration, vm, am):
     # import IPython; IPython.embed()
 
     if Sub(interval3.a, interval6.b) > epsilon or Sub(interval6.a, interval3.b) > epsilon:
-        # interval3 and interval6 do not intersect each other
+        log.debug("interval3 and interval6 do not intersect each other")
         return ParabolicCurve()
     # interval7 = interval3 \cap interval6
     interval7 = iv.mpf([max(interval3.a, interval6.a), min(interval3.b, interval6.b)])
 
     if Sub(interval0.a, interval7.b) > epsilon or Sub(interval7.a, interval0.b) > epsilon:
-        # interval0 and interval7 do not intersect each other
+        log.debug("interval0 and interval7 do not intersect each other")
         return ParabolicCurve()
     # interval8 = interval0 \cap interval7 : valid interval of t0 when considering all constraints (from a0 and a1)
     interval8 = iv.mpf([max(interval0.a, interval7.a), min(interval0.b, interval7.b)])
@@ -701,13 +779,21 @@ def _Stretch1D(curve, newDuration, vm, am):
         log.debug("root = {0}".format(mp.nstr(root, n=_prec)))
         a0new = mp.fdiv(Add(A2, root), C2)
         if (Abs(a0new) > Add(am, epsilon)):
+            if FuzzyZero(Sub(Mul(C2, a0new), A2), epsilon):
+                # The computed a0new is exceeding the bound and its corresponding a1new is
+                # zero. Therefore, there is no other way to fix this. This is probably because the
+                # given newDuration is less than the minimum duration (x0, x1, v0, v1, vm, am) can
+                # get.
+                log.debug("abs(a0new) > am and a1new = 0; Cannot fix this case. This happens probably because the given newDuration is too short.")
+                return ParabolicCurve()
+            
             a0new = Mul(mp.sign(a0new), am)
 
         if (Abs(a0new) < epsilon):
             a1new = mp.fdiv(B2, C2)
             if (Abs(a1new) > Add(am, epsilon)):
-                log.warn("abs(a1new) > am; cannot fix this case")
-                # Cannot fix this case
+                # Similar to the case above
+                log.debug("a0new = 0 and abs(a1new) > am; Cannot fix this case. This happens probably because the given newDuration is too short.")
                 return ParabolicCurve()
 
         else:
@@ -738,14 +824,14 @@ def _Stretch1D(curve, newDuration, vm, am):
 
             t0new = Sub(newDuration, t1new)
             assert(t0new > 0)
-            ramp1 = Ramp(v0, zero, t0new, curve.x0)
+            ramp1 = Ramp(v0, zero, t0new, x0)
             newCurve = ParabolicCurve([ramp1, ramp2])
             return newCurve
 
         elif (Abs(a1new) < epsilon):
             t0new = mp.fdiv(Sub(vmnew, v0), a0new)
             assert(t0new > 0)
-            ramp1 = Ramp(v0, a0new, t0new, curve.x0)
+            ramp1 = Ramp(v0, a0new, t0new, x0)
             
             t1new = Sub(newDuration, t0new)
             assert(t1new > 0)
@@ -757,47 +843,40 @@ def _Stretch1D(curve, newDuration, vm, am):
             # No problem with those new accelerations
             # import IPython; IPython.embed()
             t0new = mp.fdiv(Sub(vmnew, v0), a0new)
-            assert(t0new > 0)
+            if (t0new < 0):
+                log.debug("t0new < 0. The given newDuration not achievable with the given bounds")
+                return ParabolicCurve()
+            
             t1new = mp.fdiv(Sub(v1, vmnew), a1new)
-            assert(t1new > 0)
+            if (t1new < 0):
+                log.debug("t1new < 0. The given newDuration not achievable with the given bounds")
+                return ParabolicCurve()
+            
             if (Add(t0new, t1new) > newDuration):
                 # Final fix. Since we give more weight to acceleration bounds, we make the velocity
                 # bound saturated. Therefore, we set vp to vmnew.
 
                 # import IPython; IPython.embed()
+                if FuzzyZero(A, epsilon):
+                    log.warn("(final fix) A is zero. Don't know how to fix this case")
+                    return ParabolicCurve()
+
                 t0new = mp.fdiv(Sub(Sub(vmnew, v0), B), A)
+                if (t0new < 0):
+                    log.debug("(final fix) t0new is negative")
+                    return ParabolicCurve()
+
                 t1new = Sub(newDuration, t0new)
-                assert(t1new > zero)
+                
                 a0new = Add(A, Mul(mp.fdiv(one, t0new), B))
                 a1new = Add(A, Mul(mp.fdiv(one, Neg(t1new)), B))
-                ramp1 = Ramp(v0, a0new, t0new, curve.x0)
+                ramp1 = Ramp(v0, a0new, t0new, x0)
                 ramp2 = Ramp(ramp1.v1, a1new, t1new)
                 newCurve = ParabolicCurve([ramp1, ramp2])
 
             else:
-                # t0new = mp.fdiv(Sub(vmnew, v0), a0new)
-                # assert(t0new > 0)
-                ramp1 = Ramp(v0, a0new, t0new, curve.x0)
-                
-                # t1new = mp.fdiv(Sub(v1, vmnew), a1new)
-                # assert(t1new > 0)
+                ramp1 = Ramp(v0, a0new, t0new, x0)
                 ramp3 = Ramp(ramp1.v1, a1new, t1new)
-                # print "a1",
-                # mp.nprint(a1, n=_prec)
-                # print "a1new",
-                # mp.nprint(a1new, n=_prec)
-                
-                # print "t0trimmed",
-                # mp.nprint(t0trimmed, n=_prec)
-                # print "t0new",
-                # mp.nprint(t0new, n=_prec)
-                # print "t1trimmed", 
-                # mp.nprint(t1trimmed, n=_prec)
-                # print "t1new", 
-                # mp.nprint(t1new, n=_prec)
-                # print "T", 
-                # mp.nprint(newDuration, n=_prec)
-                
                 ramp2 = Ramp(ramp1.v1, zero, Sub(newDuration, Add(t0new , t1new)))
                 newCurve = ParabolicCurve([ramp1, ramp2, ramp3])
                 
@@ -805,7 +884,7 @@ def _Stretch1D(curve, newDuration, vm, am):
             
             return newCurve
     else:    
-        ramp1 = Ramp(v0, a0, t0, curve.x0)
+        ramp1 = Ramp(v0, a0, t0, x0)
         ramp2 = Ramp(ramp1.v1, a1, t1)
         newCurve = ParabolicCurve([ramp1, ramp2])
         return newCurve
@@ -855,10 +934,16 @@ def _CalculateLeastUpperBoundInoperativeInterval(x0, x1, v0, v1, vm, am):
             assert(dExcess > 0)
             deltaTime = mp.fdiv(dExcess, vm)
             newDuration = Add(newDuration, deltaTime)
+
+        log.debug('Calculation successful: T0 = {0}; T1 = {1}; T2 = {2}; T3 = {3}'.format(mp.nstr(T0, n=_prec), mp.nstr(T1, n=_prec), mp.nstr(T2, n=_prec), mp.nstr(T3, n=_prec)))
         
         newDuration = Mul(newDuration, number('1.01')) # add 1% safety bound
         return newDuration
     else:
+        if (FuzzyEquals(x0, x1, epsilon) and FuzzyZero(v0, epsilon) and FuzzyZero(v1, epsilon)):
+            # t = 0 is actually a correct solution
+            newDuration = 0
+            return newDuration
         log.debug('Unable to calculate the least upper bound: T0 = {0}; T1 = {1}; T2 = {2}; T3 = {3}'.\
                   format(mp.nstr(T0, n=_prec), mp.nstr(T1, n=_prec), mp.nstr(T2, n=_prec), mp.nstr(T3, n=_prec)))
         return number('-1')

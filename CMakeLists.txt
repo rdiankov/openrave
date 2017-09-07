@@ -81,7 +81,7 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
 include(InstallSymlink)
-include(FindIntl)
+#include(FindIntl)
 
 find_package(PkgConfig) # pkg_check_modules
 
@@ -588,6 +588,8 @@ if( NOT libpcrecpp_FOUND )
   message(STATUS "System pcre not found, using local from sources")
   # include the local pcre
   add_subdirectory(3rdparty/pcre-8.02)
+
+  set(libpcrecpp_FOUND 1)
 endif()
 
 if( OPT_COLLADA )
@@ -597,6 +599,14 @@ if( OPT_COLLADA )
   endif()
   #find_package(COLLADA_DOM 2.4 COMPONENTS 1.5 1.4 PATHS ${COLLADA_PATH})
   find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
+
+  if( ${COLLADA_DOM_VERSION} VERSION_LESS "2.5.0" )
+    message(STATUS "collada version ${COLLADA_DOM_VERSION} does not support write to memory")
+    set(COLLADA_SUPPORT_WRITE_MEMORY 0)
+  else()
+    message(STATUS "collada version ${COLLADA_DOM_VERSION} supports write to memory")
+    set(COLLADA_SUPPORT_WRITE_MEMORY 1)
+  endif()
   
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )
@@ -714,7 +724,7 @@ if( NOT FPARSER_FOUND )
   endif()
   if( NOT FPARSER_FOUND )
     message(STATUS "compiling local fparser library")
-    add_subdirectory(3rdparty/fparser-4.5)
+    add_subdirectory(3rdparty/fparser-4.5.2)
     set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
   else()
     set(FPARSER_CXX_FLAGS "${FPARSER_CFLAGS}")

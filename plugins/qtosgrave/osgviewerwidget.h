@@ -17,6 +17,7 @@
 #include "qtosg.h"
 #include "osgrenderitem.h"
 #include "osgpick.h"
+#include "osgskybox.h"
 
 #include <QtCore/QTimer>
 #include <QtGui/QApplication>
@@ -79,6 +80,14 @@ public:
 
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
+
+    /// \brief set the cubemap for skybox
+    void SetTextureCubeMap(const std::string& posx,
+            const std::string& negx,
+            const std::string& posy,
+            const std::string& negy,
+            const std::string& posz,
+            const std::string& negz);
 
     /// \brief returns the near plane set on the camera
     double GetCameraNearPlane();
@@ -194,6 +203,8 @@ protected:
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
     std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
+
+    osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;

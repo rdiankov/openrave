@@ -197,6 +197,15 @@ public:
             else {
                 size_t index = it-_vaccumtime.begin();
                 dReal deltatime = time-_vaccumtime.at(index-1);
+                dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
+                if( deltatime < 0 ) {
+                    // most likely small epsilon
+                    deltatime = 0;
+                }
+                else if( deltatime > waypointdeltatime ) {
+                    deltatime = waypointdeltatime;
+                }
                 for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                     if( !!_vgroupinterpolators[i] ) {
                         _vgroupinterpolators[i](index-1,deltatime,data);
@@ -208,7 +217,7 @@ public:
         }
     }
 
-    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const
+    void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData) const
     {
         BOOST_ASSERT(_bInit);
         OPENRAVE_ASSERT_OP(_timeoffset,>=,0);
@@ -218,7 +227,9 @@ public:
         if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             _VerifySampling();
         }
-        data.resize(0);
+        if( reintializeData ) {
+            data.resize(0);
+        }
         data.resize(spec.GetDOF(),0);
         if( time >= GetDuration() ) {
             ConfigurationSpecification::ConvertData(data.begin(),spec,_vtrajdata.end()-_spec.GetDOF(),_spec,1,GetEnv());
@@ -233,6 +244,15 @@ public:
                 vector<dReal> vinternaldata(_spec.GetDOF(),0);
                 size_t index = it-_vaccumtime.begin();
                 dReal deltatime = time-_vaccumtime.at(index-1);
+                dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                // unfortunately due to floating-point error deltatime might not be in the range [0, waypointdeltatime], so double check!
+                if( deltatime < 0 ) {
+                    // most likely small epsilon
+                    deltatime = 0;
+                }
+                else if( deltatime > waypointdeltatime ) {
+                    deltatime = waypointdeltatime;
+                }
                 for(size_t i = 0; i < _vgroupinterpolators.size(); ++i) {
                     if( !!_vgroupinterpolators[i] ) {
                         _vgroupinterpolators[i](index-1,deltatime,vinternaldata);

@@ -784,6 +784,7 @@ class TestKinematics(EnvironmentSetup):
                 for myiter in range(10):
                     body.GetLinks()[0].SetStatic(myiter%2)
                     body.SetDOFValues(zerovalues)
+                    zerovalues = body.GetDOFValues() # in case 0 is not in the limits
                     Tlinks = body.GetLinkTransformations()
                     offsets = randlimits(*limits)
                     raveLogDebug(repr(offsets))

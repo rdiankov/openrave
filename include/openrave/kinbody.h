@@ -112,6 +112,8 @@ public:
         Prop_RobotManipulatorSolver = 0x00400000,
         Prop_RobotManipulators = Prop_RobotManipulatorTool | Prop_RobotManipulatorName | Prop_RobotManipulatorSolver,     ///< [robot only] all properties of all manipulators
         Prop_RobotGrabbed = 0x01000000, ///< [robot only] if grabbed bodies changed
+
+        Prop_BodyRemoved = 0x10000000, ///< if a KinBody is removed from the environment
     };
 
     /// \brief used for specifying the type of limit checking and the messages associated with it
@@ -153,7 +155,7 @@ public:
         Vector _vGeomData; ///< for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         Vector _vGeomData2; ///< For containers, the first 3 values are the full inner extents.
         Vector _vGeomData3; ///< For containers, the first 3 values is the bottom cross XY full extents and Z height from bottom face.
-        
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -168,6 +170,8 @@ public:
 
         GeometryType _type; ///< the type of geometry primitive
 
+        std::string _name; ///< the name of the geometry
+        
         /// \brief filename for render model (optional)
         ///
         /// Should be transformed by _t before rendering.
@@ -317,6 +321,9 @@ public:
             inline const RaveVector<float>& GetAmbientColor() const {
                 return _info._vAmbientColor;
             }
+            inline const std::string& GetName() const {
+                return _info._name;
+            }
 
             /// \brief returns the local collision mesh
             inline const TriMesh& GetCollisionMesh() const {
@@ -360,6 +367,9 @@ public:
             /// \brief sets a new render filename for the geometry. This does not change the collision
             virtual void SetRenderFilename(const std::string& renderfilename);
 
+            /// \brief sets the name of the geometry
+            virtual void SetName(const std::string& name);
+            
 protected:
             boost::weak_ptr<Link> _parent;
             KinBody::GeometryInfo _info; ///< geometry info
@@ -794,9 +804,9 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
-        
+
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
-        
+
         /// true if joint axis has an identification at some of its lower and upper limits.
         ///
         /// An identification of the lower and upper limits means that once the joint reaches its upper limits, it is also
@@ -863,7 +873,7 @@ public:
         /// If _infoElectricMotor is filled, the will compute the nominal torque limits depending on the current speed of the joint.
         /// \return min and max of torque limits
         std::pair<dReal, dReal> GetNominalTorqueLimits(int iaxis=0) const;
-        
+
         inline dReal GetMaxInertia(int iaxis=0) const {
             return _info._vmaxinertia[iaxis];
         }
@@ -917,6 +927,9 @@ public:
 
         /// \brief The degrees of freedom of the joint. Each joint supports a max of 3 degrees of freedom.
         virtual int GetDOF() const;
+
+        /// \brief Return true if any of the joint axes has an identification at some of its lower and upper limits.
+        virtual bool IsCircular() const;
 
         /// \brief Return true if joint axis has an identification at some of its lower and upper limits.
         ///
@@ -1341,9 +1354,23 @@ private:
         Save_JointLimits=0x00000020, ///< saves the dof limits
         Save_ActiveDOF=0x00010000,     ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator=0x00020000,     ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies=0x00040000,     ///< [robot only], saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_GrabbedBodies=0x00040000,     ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
         Save_ActiveManipulatorToolTransform=0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
     };
+
+    /// \brief holds all user-set attached sensor information used to initialize the AttachedSensor class.
+    ///
+    /// This is serializable and independent of environment.
+    class OPENRAVE_API GrabbedInfo
+    {
+public:
+        std::string _grabbedname; ///< the name of the body to grab
+        std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
+        Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
+        std::set<int> _setRobotLinksToIgnore; ///< links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+    };
+    typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
+    typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
 
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
@@ -1378,6 +1405,7 @@ protected:
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vDOFWeights, _vDOFLimits[2];
         KinBodyPtr _pbody;
+        std::vector<UserDataPtr> _vGrabbedBodies;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -1453,7 +1481,7 @@ private:
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
-    /// \brief Unique name of the robot.
+    /// \brief Unique name of the body.
     virtual const std::string& GetName() const {
         return _name;
     }
@@ -1938,11 +1966,51 @@ private:
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
     virtual CollisionCheckerBasePtr GetSelfCollisionChecker() const;
 
-    /// \brief Check if body is self colliding. Links that are joined together are ignored.
-    ///
-    /// \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
+    /// Collision checking utilities that use internal structures of the kinbody like grabbed info or the self-collision checker.
+    /// @name Collision Checking Utilities
+    //@{
+
+    /** \brief Check if body is self colliding with its links or its grabbed bodies.
+
+        Links that are joined together are ignored.
+        Collisions between grabbed bodies are also considered as self-collisions for this body.
+        \param report [optional] collision report
+        \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
+     */
     virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
+        /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] tlinktrans The transform of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+    
+    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision.
+
+        \param[in] ilinkindex the index of the link to check
+        \param[in] tlinktrans The transform of the link to check
+        \param[out] report [optional] collision report
+     */
+    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+    
+    //@}
+    
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     virtual bool IsAttached(KinBodyConstPtr body) const;
 
@@ -2000,10 +2068,13 @@ private:
 
     /// \brief return all possible link pairs that could get in collision.
     /// \param adjacentoptions a bitmask of \ref AdjacentOptions values
-    virtual const std::set<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
+    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
 
     /// \brief return all possible link pairs whose collisions are ignored.
     virtual const std::set<int>& GetAdjacentLinks() const;
+
+    /// \brief adds the pair of links to the adjacency list. This is
+    virtual void SetAdjacentLinks(int linkindex0, int linkindex1);
 
     /// \deprecated (12/12/11)
     virtual UserDataPtr GetPhysicsData() const RAVE_DEPRECATED {
@@ -2082,6 +2153,82 @@ private:
 
     //@}
 
+    /** A grabbed body becomes part of the body and its relative pose with respect to a body's
+        link will be fixed. KinBody::_AttachBody is called for every grabbed body in order to make
+        the grabbed body a part of the body. Once grabbed, the inter-collisions between the grabbing body
+        and the grabbed body are regarded as self-collisions; any outside collisions of the grabbed body and the
+        environment are regarded as environment collisions with the grabbing body.
+        @name Grabbing Bodies
+        @{
+     */
+    
+    /** \brief Grab the body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
+        when checking collisions between the grabbed body and the body.
+        \return true if successful and body is grabbed.
+     */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
+
+    /** \brief Grab a body with the specified link.
+
+        \param[in] body the body to be grabbed
+        \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \return true if successful and body is grabbed/
+     */
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith);
+
+    /** \brief Release the body if grabbed.
+
+        \param body body to release
+     */
+    virtual void Release(KinBodyPtr body);
+
+    /// Release all grabbed bodies.
+    virtual void ReleaseAllGrabbed();     ///< release all bodies
+
+    /** \brief Releases and grabs all bodies, has the effect of recalculating all the initial collision with the bodies.
+
+        This has the effect of resetting the current collisions any grabbed body makes with the body into an ignore list.
+     */
+    virtual void RegrabAll();
+
+    /** \brief return the body link that is currently grabbing the body. If the body is not grabbed, will return an  empty pointer.
+
+        \param[in] body the body to check
+     */
+    virtual LinkPtr IsGrabbing(KinBodyConstPtr body) const;
+
+    /** \brief gets all grabbed bodies of the body
+
+        \param[out] vbodies filled with the grabbed bodies
+     */
+    virtual void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /** \brief gets all grabbed bodies of the body
+
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void GetGrabbedInfo(std::vector<GrabbedInfoPtr>& vgrabbedinfo) const;
+
+    /** \brief resets the grabbed bodies of the body
+
+        Any currently grabbed bodies will be first released.
+        \param[out] vgrabbedinfo filled with the grabbed info for every body
+     */
+    virtual void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vgrabbedinfo);
+
+    /** \brief returns all the links of the body whose links are being ignored by the grabbed body.
+
+        \param[in] body the grabbed body
+        \param[out] list of the ignored links
+     */
+    virtual void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
+
+    //@}
+
     /// only used for hashes...
     virtual void serialize(std::ostream& o, int options) const;
 
@@ -2094,6 +2241,9 @@ protected:
     inline KinBodyConstPtr shared_kinbody_const() const {
         return boost::static_pointer_cast<KinBody const>(shared_from_this());
     }
+
+    /// \brief **internal use only** Releases and grabs the body inside the grabbed structure from _vGrabbedBodies.
+    virtual void _Regrab(UserDataPtr pgrabbed);
 
     /// \deprecated (12/12/11)
     virtual void SetPhysicsData(UserDataPtr pdata) RAVE_DEPRECATED {
@@ -2150,6 +2300,8 @@ protected:
     /// \return true if body was successfully found and removed
     virtual bool _RemoveAttachedBody(KinBodyPtr body);
 
+    virtual void _UpdateGrabbedBodies();
+
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
 
@@ -2171,9 +2323,12 @@ protected:
     std::vector< std::pair<std::string, std::string> > _vForcedAdjacentLinks; ///< internally stores forced adjacent links
     std::list<KinBodyWeakPtr> _listAttachedBodies; ///< list of bodies that are directly attached to this body (can have duplicates)
 
+    std::vector<UserDataPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
-    mutable boost::array<std::set<int>, 4> _setNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
+    mutable boost::array<std::vector<int>, 4> _vNonAdjacentLinks; ///< contains cached versions of the non-adjacent links depending on values in AdjacentOptions. Declared as mutable since data is cached.
+    mutable boost::array<std::set<int>, 4> _cacheSetNonAdjacentLinks; ///< used for caching return value of GetNonAdjacentLinks.
     mutable int _nNonAdjacentLinkCache; ///< specifies what information is currently valid in the AdjacentOptions.  Declared as mutable since data is cached. If 0x80000000 (ie < 0), then everything needs to be recomputed including _setNonAdjacentLinks[0].
     std::vector<Transform> _vInitialLinkTransformations; ///< the initial transformations of each link specifying at least one pose where the robot is collision free
 
@@ -2185,7 +2340,8 @@ protected:
     uint32_t _nParametersChanged; ///< set of parameters that changed and need callbacks
     ManageDataPtr _pManageData;
     uint32_t _nHierarchyComputed; ///< true if the joint heirarchy and other cached information is computed
-    bool _bMakeJoinedLinksAdjacent;
+    bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
+    bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
 private:
     mutable std::string __hashkinematics;
     mutable std::vector<dReal> _vTempJoints;
@@ -2215,6 +2371,7 @@ private:
     friend class SensorSystemBase;
     friend class RaveDatabase;
     friend class ChangeCallbackData;
+    friend class Grabbed;
 };
 
 } // end namespace OpenRAVE

@@ -17,6 +17,8 @@
 #include "openravepy_int.h"
 
 #include <openrave/utils.h>
+#include <boost/thread/once.hpp>
+#include <boost/scoped_ptr.hpp>
 
 namespace openravepy
 {
@@ -132,6 +134,12 @@ public:
         Destroy();
     }
 
+    static ViewerManager& GetInstance() {
+        boost::call_once(_InitializeSingleton, _onceInitialize);
+        // Return reference to object.
+        return *_singleton;
+    }
+
     /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
     ///
     /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
@@ -164,7 +172,7 @@ public:
                     }
                 }
             }
-                
+
             ViewerInfoPtr pinfo(new ViewerInfo());
             pinfo->_penv = penv;
             pinfo->_viewername = strviewer;
@@ -294,7 +302,7 @@ protected:
                     else {
                         ++itinfo;
                     }
-                    
+
                     if( !!pinfo->_pviewer ) {
                         if( listviewers.size() == 0 ) {
                             bShowViewer = pinfo->_bShowViewer;
@@ -307,7 +315,7 @@ protected:
             FOREACH(itaddviewer, listtempviewers) {
                 (*itaddviewer)->GetEnv()->AddViewer(*itaddviewer);
             }
-            
+
             ViewerBasePtr puseviewer;
             FOREACH(itviewer, listviewers) {
                 // double check if viewer is added to env
@@ -335,7 +343,16 @@ protected:
 
             if( !!puseviewer ) {
                 _bInMain = true;
-                puseviewer->main(bShowViewer);
+                try {
+                    puseviewer->main(bShowViewer);
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_ERROR_FORMAT("got exception in viewer main thread %s", ex.what());
+                }
+                catch(...) {
+                    RAVELOG_ERROR("got unknown exception in viewer main thread\n");
+                }
+
                 _bInMain = false;
                 // remove from _listviewerinfos in order to avoid running the main loop again
                 {
@@ -354,23 +371,27 @@ protected:
         RAVELOG_DEBUG("shutting down viewer manager thread\n");
     }
 
+    static void _InitializeSingleton()
+    {
+        _singleton.reset(new ViewerManager());
+
+    }
+
     boost::shared_ptr<boost::thread> _threadviewer;
     boost::mutex _mutexViewer;
     boost::condition _conditionViewer;
     std::list<ViewerInfoPtr> _listviewerinfos;
-    
+
     bool _bShutdown; ///< if true, shutdown everything
     bool _bInMain; ///< if true, viewer thread is running a main function
+
+    static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
+    static boost::once_flag _onceInitialize; ///< makes sure initialization is atomic
+
 };
 
-boost::shared_ptr<ViewerManager> GetViewerManager()
-{
-    static boost::shared_ptr<ViewerManager> viewermanager;
-    if( !viewermanager ) {
-        viewermanager.reset(new ViewerManager());
-    }
-    return viewermanager;
-}
+boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
+boost::once_flag ViewerManager::_onceInitialize = BOOST_ONCE_INIT;
 
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
@@ -532,7 +553,7 @@ public:
         _penv->Reset();
     }
     void Destroy() {
-        GetViewerManager()->RemoveViewersOfEnvironment(_penv);        
+        ViewerManager::GetInstance().RemoveViewersOfEnvironment(_penv);
         _penv->Destroy();
     }
 
@@ -1005,6 +1026,27 @@ public:
         }
     }
 
+    object WriteToMemory(const string &filetype, EnvironmentBase::SelectionOptions options=EnvironmentBase::SO_Everything, object odictatts=object()) {
+        std::vector<char> output;
+        extract<std::string> otarget(odictatts);
+        if( otarget.check() ) {
+            // old versions
+            AttributesList atts;
+            atts.push_back(std::make_pair(std::string("target"),(std::string)otarget));
+            _penv->WriteToMemory(filetype,output,options,atts);
+        }
+        else {
+            _penv->WriteToMemory(filetype,output,options,toAttributesList(odictatts));
+        }
+
+        if( output.size() == 0 ) {
+            return boost::python::object();
+        }
+        else {
+            return boost::python::object(boost::python::handle<>(PyString_FromStringAndSize(&output[0], output.size())));
+        }
+    }
+
     object ReadRobotURI(const string &filename)
     {
         return object(openravepy::toPyRobot(_penv->ReadRobotURI(filename),shared_from_this()));
@@ -1116,6 +1158,10 @@ public:
         return _penv->Remove(openravepy::GetKinBody(pbody));
     }
 
+    bool RemoveKinBodyByName(const std::string& name) {
+        return _penv->RemoveKinBodyByName(name);
+    }
+
     object GetKinBody(const string &name)
     {
         KinBodyPtr pbody = _penv->GetKinBody(name);
@@ -1158,7 +1204,7 @@ public:
         // have to check if viewer in order to notify viewer manager
         ViewerBasePtr pviewer = RaveInterfaceCast<ViewerBase>(obj->GetInterfaceBase());
         if( !!pviewer ) {
-            GetViewerManager()->RemoveViewer(pviewer);
+            ViewerManager::GetInstance().RemoveViewer(pviewer);
         }
         return _penv->Remove(obj->GetInterfaceBase());
     }
@@ -1340,7 +1386,7 @@ public:
 
     bool SetViewer(const string &viewername, bool showviewer=true)
     {
-        ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+        ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
         return !(pviewer == NULL);
     }
 
@@ -1349,7 +1395,7 @@ public:
     {
         std::string viewername = RaveGetDefaultViewerType();
         if( viewername.size() > 0 ) {
-            ViewerBasePtr pviewer = GetViewerManager()->AddViewer(_penv, viewername, showviewer, true);
+            ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
             return !!pviewer;
         }
 
@@ -1620,6 +1666,51 @@ public:
         return ostates;
     }
 
+    object GetPublishedBody(const string &name, uint64_t timeout = 0)
+    {
+        KinBody::BodyState bodystate;
+        if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {
+            return object();
+        }
+
+        boost::python::dict ostate;
+        ostate["body"] = toPyKinBody(bodystate.pbody, shared_from_this());
+        boost::python::list olinktransforms;
+        FOREACH(ittransform, bodystate.vectrans) {
+            olinktransforms.append(ReturnTransform(*ittransform));
+        }
+        ostate["linktransforms"] = olinktransforms;
+        ostate["jointvalues"] = toPyArray(bodystate.jointvalues);
+        ostate["name"] = ConvertStringToUnicode(bodystate.strname);
+        ostate["uri"] = ConvertStringToUnicode(bodystate.uri);
+        ostate["updatestamp"] = bodystate.updatestamp;
+        ostate["environmentid"] = bodystate.environmentid;
+        ostate["activeManipulatorName"] = bodystate.activeManipulatorName;
+        ostate["activeManipulatorTransform"] = ReturnTransform(bodystate.activeManipulatorTransform);
+        return ostate;
+    }
+
+    object GetPublishedBodyJointValues(const string &name, uint64_t timeout=0)
+    {
+        std::vector<dReal> jointValues;
+        if( !_penv->GetPublishedBodyJointValues(name, jointValues, timeout) ) {
+            return object();
+        }
+        return toPyArray(jointValues);
+    }
+
+    object GetPublishedBodyTransformsMatchingPrefix(const string &prefix, uint64_t timeout=0) {
+        std::vector< std::pair<std::string, Transform> > nameTransfPairs;
+        _penv->GetPublishedBodyTransformsMatchingPrefix(prefix, nameTransfPairs, timeout);
+
+        boost::python::dict otransforms;
+        FOREACH(itpair, nameTransfPairs) {
+            otransforms[itpair->first] = ReturnTransform(itpair->second);
+        }
+
+        return otransforms;
+    }
+
     object Triangulate(PyKinBodyPtr pbody)
     {
         CHECK_POINTER(pbody);
@@ -1660,10 +1751,10 @@ public:
         _penv->SetUnit(std::make_pair(unitname, unitmult));
     }
 
-    object GetUnit() const{
+    object GetUnit() const {
         std::pair<std::string, dReal> unit = _penv->GetUnit();
         return boost::python::make_tuple(unit.first, unit.second);
-        
+
     }
 
     bool __eq__(PyEnvironmentBasePtr p) {
@@ -1815,8 +1906,12 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SendCommand_overloads, SendCommand, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Add_overloads, Add, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Save_overloads, Save, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(WriteToMemory_overloads, WriteToMemory, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetUserData_overloads, GetUserData, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBody_overloads, GetPublishedBody, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodies_overloads, GetPublishedBodies, 0, 1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyJointValues_overloads, GetPublishedBodyJointValues, 1, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetPublishedBodyTransformsMatchingPrefix_overloads, GetPublishedBodyTransformsMatchingPrefix, 1, 2)
 
 object get_openrave_exception_unicode(openrave_exception* p)
 {
@@ -2005,13 +2100,14 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("CheckCollision",pcolyr,args("ray"), DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
                     .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                          CheckCollisionRays_overloads(args("rays","body","front_facing_only"),
-                                                      "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction+range."))
+                                                      "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columsn are position, last 3 are direction*range."))
                     .def("LoadURI",&PyEnvironmentBase::LoadURI,LoadURI_overloads(args("filename","atts"), DOXY_FN(EnvironmentBase,LoadURI)))
                     .def("Load",load1,args("filename"), DOXY_FN(EnvironmentBase,Load))
                     .def("Load",load2,args("filename","atts"), DOXY_FN(EnvironmentBase,Load))
                     .def("LoadData",loaddata1,args("data"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("LoadData",loaddata2,args("data","atts"), DOXY_FN(EnvironmentBase,LoadData))
                     .def("Save",&PyEnvironmentBase::Save,Save_overloads(args("filename","options","atts"), DOXY_FN(EnvironmentBase,Save)))
+                    .def("WriteToMemory",&PyEnvironmentBase::WriteToMemory,WriteToMemory_overloads(args("filetype","options","atts"), DOXY_FN(EnvironmentBase,WriteToMemory)))
                     .def("ReadRobotURI",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotXMLFile",readrobotxmlfile1,args("filename"), DOXY_FN(EnvironmentBase,ReadRobotURI "const std::string"))
                     .def("ReadRobotURI",readrobotxmlfile2,args("filename","atts"), DOXY_FN(EnvironmentBase,ReadRobotURI "RobotBasePtr; const std::string; const AttributesList"))
@@ -2047,6 +2143,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("AddSensor",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddSensor))
                     .def("AddViewer",addsensor2,args("sensor","anonymous"), DOXY_FN(EnvironmentBase,AddViewer))
                     .def("RemoveKinBody",&PyEnvironmentBase::RemoveKinBody,args("body"), DOXY_FN(EnvironmentBase,RemoveKinBody))
+                    .def("RemoveKinBodyByName",&PyEnvironmentBase::RemoveKinBodyByName,args("name"), DOXY_FN(EnvironmentBase,RemoveKinBodyByName))
                     .def("Remove",&PyEnvironmentBase::Remove,args("interface"), DOXY_FN(EnvironmentBase,Remove))
                     .def("GetKinBody",&PyEnvironmentBase::GetKinBody,args("name"), DOXY_FN(EnvironmentBase,GetKinBody))
                     .def("GetRobot",&PyEnvironmentBase::GetRobot,args("name"), DOXY_FN(EnvironmentBase,GetRobot))
@@ -2088,7 +2185,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
                     .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
                     .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                     .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
+                    .def("GetPublishedBody",&PyEnvironmentBase::GetPublishedBody, GetPublishedBody_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBody)))
                     .def("GetPublishedBodies",&PyEnvironmentBase::GetPublishedBodies, GetPublishedBodies_overloads(args("timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodies)))
+                    .def("GetPublishedBodyJointValues",&PyEnvironmentBase::GetPublishedBodyJointValues, GetPublishedBodyJointValues_overloads(args("name", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodyJointValues)))
+                    .def("GetPublishedBodyTransformsMatchingPrefix",&PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix, GetPublishedBodyTransformsMatchingPrefix_overloads(args("prefix", "timeout"), DOXY_FN(EnvironmentBase,GetPublishedBodyTransformsMatchingPrefix)))
                     .def("Triangulate",&PyEnvironmentBase::Triangulate,args("body"), DOXY_FN(EnvironmentBase,Triangulate))
                     .def("TriangulateScene",&PyEnvironmentBase::TriangulateScene,args("options","name"), DOXY_FN(EnvironmentBase,TriangulateScene))
                     .def("SetDebugLevel",&PyEnvironmentBase::SetDebugLevel,args("level"), DOXY_FN(EnvironmentBase,SetDebugLevel))

@@ -2,6 +2,7 @@ from mpmath import mp, iv, arange
 import numpy as np
 import matplotlib.pyplot as plt
 import bisect
+from copy import deepcopy
 
 _prec = 500
 epsilon = mp.mpf('1e-100')
@@ -70,40 +71,50 @@ class Ramp(object):
     d  : the total displacement 'done' by this ramp (i.e. x1 = x0 + d)
     """
     def __init__(self, v0, a, dur, x0=zero):
-        if type(dur) is not mp.mpf:
-            dur = mp.mpf("{:.15e}".format(dur))
+        dur = ConvertFloatToMPF(dur)
         assert(dur >= -epsilon)
 
-        # Check types
-        if type(x0) is not mp.mpf:
-            x0 = mp.mpf("{:.15e}".format(x0))
-        if type(v0) is not mp.mpf:
-            v0 = mp.mpf("{:.15e}".format(v0))
-        if type(a) is not mp.mpf:
-            a = mp.mpf("{:.15e}".format(a))
-        
-        self.x0 = x0
-        self.v0 = v0
-        self.a = a
+        self.x0 = ConvertFloatToMPF(x0)
+        self.v0 = ConvertFloatToMPF(v0)
+        self.a = ConvertFloatToMPF(a)
         self.duration = dur
-        
+
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
-   
+        self.x1 = Add(self.x0, self.d)
+
+
+    def Initialize(self, v0, a, dur, x0=zero):
+        dur = ConvertFloatToMPF(dur)
+        assert(dur >= -epsilon)
+
+        self.x0 = ConvertFloatToMPF(x0)
+        self.v0 = ConvertFloatToMPF(v0)
+        self.a = ConvertFloatToMPF(a)
+        self.duration = dur
+
+        self.v1 = Add(self.v0, Mul(self.a, self.duration))
+        self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
+        self.x1 = Add(self.x0, self.d)
+        
 
     def UpdateDuration(self, newDur):
-        if type(newDur) is not mp.mpf:
-            newDur = mp.mpf("{:.15e}".format(newDur))
+        newDur = ConvertFloatToMPF(newDur)
         assert(newDur >= -epsilon)
 
         self.duration = newDur
         self.v1 = Add(self.v0, Mul(self.a, self.duration))
         self.d = Prod([pointfive, Add(self.v0, self.v1), self.duration])
+        self.x1 = Add(self.x0, self.d)
 
+        
+    def SetInitialValue(self, newx0):
+        self.x0 = ConvertFloatToMPF(newx0)
+        self.x1 = Add(self.x0, self.d)
+        
 
     def EvalPos(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)        
 
@@ -112,8 +123,7 @@ class Ramp(object):
 
     
     def EvalVel(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
         
@@ -121,31 +131,55 @@ class Ramp(object):
         
 
     def EvalAcc(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
 
         return self.a
 
+    
     def GetPeaks(self):
+        return self._GetPeaks(0, self.duration)
+
+    
+    def _GetPeaks(self, ta, tb):
+        if (ta > tb):
+            return self._GetPeaks(tb, ta)
+
+        if (ta < 0):
+            ta = 0
+        elif (ta >= self.duration):
+            xmin = self.x1
+            xmax = self.x1
+            return [xmin, xmax]
+
+        if (tb <= 0):
+            xmin = self.x0
+            xmax = self.x0
+            return [xmin, xmax]
+        elif (tb >= self.duration):
+            tb = self.duration        
+        
         if (FuzzyZero(self.a, epsilon)):
             if self.v0 > 0:
-                xmin = self.x0
-                xmax = self.EvalPos(self.duration)
+                xmin = self.EvalPos(ta)
+                xmax = self.EvalPos(tb)
             else:
-                xmin = self.EvalPos(self.duration)
-                xmax = self.x0
+                xmin = self.EvalPos(tb)
+                xmax = self.EvalPos(ta)
             return [xmin, xmax]
-        elif (self.a > 0):
-            xmin = self.x0
-            xmax = self.EvalPos(self.duration)
+
+        tempa = self.EvalPos(ta)
+        tempb = self.EvalPos(tb)
+        if (tempa < tempb):
+            xmin = tempa
+            xmax = tempb
         else:
-            xmin = self.EvalPos(self.duration)
-            xmax = self.x0            
-            
+            xmin = tempb
+            xmax = tempa
+        
         tDeflection = Neg(mp.fdiv(self.v0, self.a))
-        if (tDeflection <= 0) or (tDeflection >= self.duration):
+        if (tDeflection <= ta) or (tDeflection >= tb):
             return [xmin, xmax]
         
         xDeflection = self.EvalPos(tDeflection)
@@ -172,12 +206,67 @@ class Ramp(object):
         return line
 
 
+    def Cut(self, t):
+        """
+        Cut reduces the duration of this ramp to t and returns the remaining ramp (duration - t).
+        """
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
+
+        if (t <= 0):
+            remRamp = Ramp(self.v0, self.a, self.duration, self.x0)
+            self.Initialize(self.v0, 0, 0, self.x0)
+            return remRamp
+        elif (t >= self.duration):
+            renRamp = Ramp(self.v1, 0, 0, self.x1)
+            return remRamp
+
+        remRampDuration = Sub(self.duration, t)
+        self.UpdateDuration(t)
+        remRamp = Ramp(self.v1, self.a, remRampDuration, self.x1)
+        return remRamp
+
+
+    def TrimFront(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
+
+        if (t <= 0):
+            return
+        elif (t >= self.duration):
+            self.Initialize(self.v1, 0, 0, self.x1)
+            return
+
+        remDuration = Sub(self.duration, t)
+        newx0 = self.EvalPos(t)
+        newv0 = self.EvalVel(t)
+        self.Initialize(newv0, self.a, remDuration, newx0)
+        return
+
+
+    def TrimBack(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
+
+        if (t <= 0):
+            self.Initialize(self.v0, 0, 0, self.x0)
+            return
+        elif (t >= self.duration):
+            return
+
+        self.UpdateDuration(t)
+        return
+        
+
     def __repr__(self):
         bmin, bmax = self.GetPeaks()
         return "x0 = {0}; x1 = {1}; v0 = {2}; v1 = {3}; a = {4}; duration = {5}; bmin = {6}; bmax = {7}".\
-            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.EvalPos(curve.duration), n=_prec),
-                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.duration, n=_prec),
-                   mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
+            format(mp.nstr(self.x0, n=_prec), mp.nstr(self.x1, n=_prec),
+                   mp.nstr(self.v0, n=_prec), mp.nstr(self.v1, n=_prec), mp.nstr(self.a, n=_prec),
+                   mp.nstr(self.duration, n=_prec), mp.nstr(bmin, n=_prec), mp.nstr(bmax, n=_prec))
 # end class Ramp
 
 
@@ -199,15 +288,15 @@ class ParabolicCurve(object):
         if len(ramps) == 0:
             self.isEmpty = True
             self.x0 = zero
+            self.x1 = zero
             self.v0 = zero
             self.v1 = zero
             self.switchpointsList = []
             self.duration = dur
             self.d = d
         else:
-            self.ramps = ramps[:] # copy all the ramps
+            self.ramps = deepcopy(ramps) # copy all the ramps
             self.isEmpty = False
-            self.SetInitialValue(self.ramps[0].x0) # set self.x0
             self.v0 = self.ramps[0].v0
             self.v1 = self.ramps[-1].v1
             
@@ -219,6 +308,8 @@ class ParabolicCurve(object):
             self.duration = dur
             self.d = d
 
+            self.SetInitialValue(self.ramps[0].x0) # set self.x0
+
 
     def __getitem__(self, index):
         return self.ramps[index]
@@ -228,14 +319,47 @@ class ParabolicCurve(object):
         return len(self.ramps)
 
 
+    def Initialize(self, ramps):
+        self.switchpointsList = [] # a list of all switch points, including ones at t = 0 and t = duration
+        dur = zero
+        d = zero
+        self.ramps = []
+        
+        if len(ramps) == 0:
+            self.isEmpty = True
+            self.x0 = zero
+            self.x1 = zero
+            self.v0 = zero
+            self.v1 = zero
+            self.switchpointsList = []
+            self.duration = dur
+            self.d = d
+        else:
+            self.ramps = deepcopy(ramps) # copy all the ramps
+            self.isEmpty = False
+            self.v0 = self.ramps[0].v0
+            self.v1 = self.ramps[-1].v1
+            
+            self.switchpointsList.append(dur)
+            for ramp in self.ramps:
+                dur = Add(dur, ramp.duration)
+                self.switchpointsList.append(dur)
+                d = Add(d, ramp.d)
+            self.duration = dur
+            self.d = d
+
+            self.SetInitialValue(self.ramps[0].x0) # set self.x0
+
+
     def Append(self, curve):
         if self.isEmpty:
             if not curve.isEmpty:
-                self.ramps = curve.ramps[:]
+                self.ramps = deepcopy(curve.ramps)
                 self.x0 = curve.x0
+                self.x1 = curve.x1
                 self.v0 = curve.v0
                 self.v1 = curve.v1
-                self.switchpointsList = curve.switchpointsList[:]
+                self.switchpointsList = deepcopy(curve.switchpointsList)
                 self.isEmpty = False
                 self.duration = curve.duration
                 self.d = curve.d
@@ -245,11 +369,10 @@ class ParabolicCurve(object):
         else:
             dur = self.duration
             d = self.d
-            ramps_ = curve[:]
-            for ramp in ramps_:
-                self.ramps.append(ramp)
+            for ramp in curve.ramps:
+                self.ramps.append(deepcopy(ramp))
                 # Update displacement
-                self.ramps[-1].x0 = d
+                self.ramps[-1].SetInitialValue(self.ramps[-2].x1)
                 d = Add(d, self.ramps[-1].d)                
                 dur = Add(dur, self.ramps[-1].duration)
                 self.switchpointsList.append(dur)
@@ -257,18 +380,31 @@ class ParabolicCurve(object):
             self.v1 = self.ramps[-1].v1
             self.duration = dur
             self.d = d
+            self.x1 = Add(self.x0, self.d)
 
 
-    def Merge(self):
+    def Merge(self, prec=epsilon):
         """
         Merge merges consecutive ramp(s) if they have the same acceleration
         """
         if not self.isEmpty:
+            if Abs((Abs(mp.log10(prec)) - (Abs(mp.floor(mp.log10(prec)))))) < Abs((Abs(mp.log10(prec)) - (Abs(mp.ceil(mp.log10(prec)))))):
+                precexp = mp.floor(mp.log10(prec))
+            else:
+                precexp = mp.ceil(mp.log10(prec))
+                
             aCur = self.ramps[0].a
             nmerged = 0 # the number of merged ramps
             for i in xrange(1, len(self.ramps)):
                 j = i - nmerged
-                if Abs(Sub(self.ramps[j].a, aCur)) < epsilon:
+                if (Abs(self.ramps[j].a) > 1):
+                    if Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.floor(mp.log10(Abs(self.ramps[j].a))))))) < Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.ceil(mp.log10(Abs(self.ramps[j].a))))))):
+                        threshold = 10**(precexp + mp.floor(mp.log10(Abs(self.ramps[j].a))) + 1)
+                    else:
+                        threshold = 10**(precexp + mp.ceil(mp.log10(Abs(self.ramps[j].a))) + 1)
+                else:
+                    threshold = 10**(precexp)
+                if Abs(Sub(self.ramps[j].a, aCur)) < threshold:
                     # merge ramps
                     redundantRamp = self.ramps.pop(j)
                     newDur = Add(self.ramps[j - 1].duration, redundantRamp.duration)
@@ -297,8 +433,7 @@ class ParabolicCurve(object):
 
 
     def EvalPos(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
 
@@ -307,8 +442,7 @@ class ParabolicCurve(object):
 
 
     def EvalVel(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
 
@@ -317,8 +451,7 @@ class ParabolicCurve(object):
 
 
     def EvalAcc(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
 
@@ -327,6 +460,10 @@ class ParabolicCurve(object):
 
 
     def GetPeaks(self):
+        return self._GetPeaks(0, self.duration)
+
+
+    def _GetPeaks(self, ta, tb):
         xmin = inf
         xmax = -inf
 
@@ -343,48 +480,114 @@ class ParabolicCurve(object):
 
 
     def SetInitialValue(self, x0):
-        if type(x0) is not mp.mpf:
-            x0 = mp.mpf("{:.15e}".format(x0))
+        x0 = ConvertFloatToMPF(x0)
         self.x0 = x0
         newx0 = x0
         for ramp in self.ramps:
-            ramp.x0 = newx0
+            ramp.SetInitialValue(newx0)
             newx0 = Add(newx0, ramp.d)
-    
+        self.x1 = Add(self.x0, self.d)
 
-    def Trim(self, deltaT):
-        """
-        Trim trims the curve such that it has the duration of self.duration - deltaT.
 
-        Trim also takes care of where to trim out the deltaT. However, normally we should not have any problem
-        since deltaT is expected to be very small. This function is aimed to be used when combining Curves to
-        get ParabolicCurvesND.
+    def SetConstant(self, x0, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= 0)
+        x0 = ConvertFloatToMPF(x0)
 
-        Return True if the operation is successful, False otherwise.
-        """
-        if type(deltaT) is not mp.mpf:
-            dt = mp.mpf("{:.15e}".format(deltaT))
+        ramp0 = Ramp(0, 0, t, x0)
+        self.Initialize([ramp0])
+        return
+
+
+    def SetSegment(self, x0, x1, v0, v1, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= 0)
+        x0 = ConvertFloatToMPF(x0)
+        x1 = ConvertFloatToMPF(x1)
+        v0 = ConvertFloatToMPF(v0)
+        v1 = ConvertFloatToMPF(v1)
+
+        if FuzzyZero(t, epsilon):
+            a = 0
         else:
-            dt = deltaT
-        if dt > self.duration:
-            return False # cannot trim
-        if Abs(dt) < epsilon:
-            return True # no trimming needed
+            tSqr = Sqr(t)
+            a = mp.fdiv(Neg(Sum([Mul(v0, tSqr), Mul(t, Sub(x0, x1)), Mul(2, Sub(v0, v1))])), Mul(t, Add(Mul(pointfive, tSqr), 2)))
+        ramp0 = Ramp(v0, a, t, x0)
+        self.Initialize([ramp0])
+        return
+
+
+    def SetZeroDuration(self, x0, v0):
+        ramp0 = Ramp(v0, 0, 0, x0)
+        self.Initialize([ramp0])
+        return
         
-        if dt < self.ramps[-1].duration:
-            # trim the last ramp
-            newDur = Sub(self.ramps[-1].duration, dt)
-            self.ramps[-1].UpdateDuration(newDur)
-            self.v1 = self.ramps[-1].v1
-            return True
-        else:
-            # have not decided what to do here yet. This is not likely to happen, though, since
-            # deltaT is expected to be very small.
-            return False
+        
+    def Cut(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
+
+        if (t <= 0):
+            remCurve = ParabolicCurve(self.ramps)
+            self.SetZeroDuration(self.x0, self.v0)
+            return remCurve
+        elif (t >= self.duration):
+            remCurve = ParabolicCurve()
+            remCurve.SetZeroDuration(self.x1, self.v1)
+            return
+
+        i, remainder = self._FindRampIndex(t)
+        leftHalf = self.ramps[0:i + 1]
+        rightHalf = self.ramps[i:]
+
+        leftHalf[-1].TrimBack(remainder)
+        rightHalf[0].TrimFront(remainder)
+        self.Initialize(leftHalf)
+        remCurve = ParabolicCurve(rightHalf)
+        return remCurve
+
+
+    def TrimFront(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
+
+        if (t <= 0):
+            return
+        elif (t >= self.duration):
+            self.SetZeroDuration(self.x1, self.v1)
+            return
+
+        i, remainder = self._FindRampIndex(t)
+        rightHalf = self.ramps[i:]
+
+        rightHalf[0].TrimFront(remainder)
+        self.Initialize(rightHalf)
+        return
+
+
+    def TrimBack(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= self.duration + epsilon)
+
+        if (t <= 0):
+            self.SetZeroDuration(self.x0, self.v0)
+            return
+        elif (t >= self.duration):
+            return
+
+        i, remainder = self._FindRampIndex(t)
+        leftHalf = self.ramps[0:i + 1]
+
+        leftHalf[-1].TrimBack(remainder)
+        self.Initialize(leftHalf)
+        return
 
 
     # Visualization
-    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2):
+    def PlotPos(self, fignum=None, color='g', dt=0.01, lw=2, includingSW=False):
         tVect = arange(0, self.duration, dt)
         if tVect[-1] < self.duration:
             tVect = np.append(tVect, self.duration)
@@ -393,10 +596,16 @@ class ParabolicCurve(object):
         if fignum is not None:
             plt.figure(fignum)
         plt.plot(tVect, xVect, color=color, linewidth=lw)
+
+        if includingSW:
+            ax = plt.gca().axis()
+            for s in self.switchpointsList:
+                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
+                
         plt.show(False)
 
 
-    def PlotVel(self, fignum=None, color=None, lw=2, **kwargs):
+    def PlotVel(self, fignum=None, color=None, lw=2, includingSW=False, **kwargs):
         if fignum is not None:
             plt.figure(fignum)
 
@@ -408,6 +617,12 @@ class ParabolicCurve(object):
             else:
                 line = ramp.PlotVel(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
             t0 += ramp.duration
+
+        if includingSW:
+            ax = plt.gca().axis()
+            for s in self.switchpointsList:
+                plt.plot([s, s], [ax[2], ax[3]], 'r', linewidth=1)
+            
         plt.show(False)
         return line
 
@@ -417,13 +632,16 @@ class ParabolicCurve(object):
             plt.figure(fignum)
             
         t0 = zero
+        prevacc = self.ramps[0].a
         for ramp in self.ramps:
             if color is None:
                 line = ramp.PlotAcc(t0=t0, fignum=fignum, linewidth=lw, **kwargs)
                 color = line.get_color()
             else:
                 line = ramp.PlotAcc(t0=t0, fignum=fignum, color=color, linewidth=lw, **kwargs)
+            plt.plot([t0, t0], [prevacc, ramp.a], color=color, linewidth=lw, **kwargs)
             t0 += ramp.duration
+            prevacc = ramp.a
         plt.show(False)
         return line
 # end class ParabolicCurve
@@ -437,7 +655,9 @@ class ParabolicCurvesND(object):
             self.curves = []
             self.isEmpty = True
             self.x0Vect = None
+            self.x1Vect = None
             self.v0Vect = None
+            self.v1Vect = None
             self.dVect = None
             self.ndof = 0
             self.switchpointsList = []
@@ -445,18 +665,14 @@ class ParabolicCurvesND(object):
         else:
             # Check first if every curve in curves has the same duration.
             # (if necessary) Trim all curve to have the same duration.
-            curves_ = curves[:]
+            curves_ = deepcopy(curves)
             minDur = curves_[0].duration
             for curve in curves_[1:]:
                 assert(Abs(Sub(curve.duration, minDur)) < epsilon)
                 minDur = min(minDur, curve.duration)
-            for curve in curves_:
-                deltaT = Sub(curve.duration, minDur)
-                if curve.Trim(deltaT):
-                    continue
-                else:
-                    # Cannot trim the curve
-                    assert(False)
+            # for curve in curves_:
+            #     deltaT = Sub(curve.duration, minDur)
+            #     curve.TrimBack(deltaT)
 
             # Now all curves have the same duration
             self.isEmpty = False
@@ -464,11 +680,13 @@ class ParabolicCurvesND(object):
             self.curves = curves_
             self.ndof = len(self.curves)
             self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+            self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
             self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+            self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
             self.dVect = np.asarray([curve.d for curve in self.curves])
-
+            
             # Create a list of switch points
-            switchpointsList = curves[0].switchpointsList[:]
+            switchpointsList = deepcopy(curves[0].switchpointsList)
             for curve in self.curves[1:]:
                 for s in curve.switchpointsList:
                     switchpointsList.insert(bisect.bisect_left(switchpointsList, s), s)
@@ -482,6 +700,56 @@ class ParabolicCurvesND(object):
                         self.switchpointsList.append(s)
 
 
+    def Initialize(self, curves):
+        if (len(curves) == 0):
+            self.curves = []
+            self.isEmpty = True
+            self.x0Vect = None
+            self.x1Vect = None
+            self.v0Vect = None
+            self.v1Vect = None
+            self.dVect = None
+            self.ndof = 0
+            self.switchpointsList = []
+            self.duration = zero
+        else:
+            # Check first if every curve in curves has the same duration.
+            # (if necessary) Trim all curve to have the same duration.
+            curves_ = deepcopy(curves)
+            minDur = curves_[0].duration
+            for curve in curves_[1:]:
+                assert(Abs(Sub(curve.duration, minDur)) < epsilon)
+                minDur = min(minDur, curve.duration)
+            # for curve in curves_:
+            #     deltaT = Sub(curve.duration, minDur)
+            #     curve.TrimBack(deltaT)
+
+            # Now all curves have the same duration
+            self.isEmpty = False
+            self.duration = minDur
+            self.curves = curves_
+            self.ndof = len(self.curves)
+            self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+            self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
+            self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+            self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
+            self.dVect = np.asarray([curve.d for curve in self.curves])
+            
+            # Create a list of switch points
+            switchpointsList = deepcopy(curves[0].switchpointsList)
+            for curve in self.curves[1:]:
+                for s in curve.switchpointsList:
+                    switchpointsList.insert(bisect.bisect_left(switchpointsList, s), s)
+
+            self.switchpointsList = []
+            if len(switchpointsList) > 0:
+                self.switchpointsList.append(switchpointsList[0])
+                for s in switchpointsList[1:]:
+                    if Sub(s, self.switchpointsList[-1]) > epsilon:
+                        # Add only non-redundant switch points
+                        self.switchpointsList.append(s)
+                        
+
     def __getitem__(self, index):
         return self.curves[index]
 
@@ -494,12 +762,14 @@ class ParabolicCurvesND(object):
         if self.isEmpty:
             if len(curvesnd) > 0:
                 self.duration = curvesnd.duration
-                self.curves = curvesnd[:]
+                self.curves = deepcopy(curvesnd.curves)
                 self.ndof = len(self.curves)
                 self.x0Vect = np.asarray([curve.x0 for curve in self.curves])
+                self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
                 self.v0Vect = np.asarray([curve.v0 for curve in self.curves])
+                self.v1Vect = np.asarray([curve.v1 for curve in self.curves])
                 self.dVect = np.asarray([curve.d for curve in self.curves])
-                self.switchpointsList = curvesnd.switchpointsList[:]
+                self.switchpointsList = deepcopy(curvesnd.switchpointsList)
                 self.isEmpty = False
         else:
             assert(self.ndof == curvesnd.ndof)
@@ -509,8 +779,9 @@ class ParabolicCurvesND(object):
                 self.curves[i].Append(curve)
                 self.dVect[i] = Add(self.dVect[i], curve.d)
 
-            newSwitchpoints = [Add(s, originalDur) for s in curvesnd.switchpointsList]
+            newSwitchpoints = [Add(s, originalDur) for s in curvesnd.switchpointsList[1:]]
             self.switchpointsList.extend(newSwitchpoints)
+            self.x1Vect = np.asarray([curve.x1 for curve in self.curves])
 
 
     def SetInitialValues(self, x0Vect):
@@ -518,11 +789,11 @@ class ParabolicCurvesND(object):
         self.x0Vect = np.array(x0Vect_)
         for (i, curve) in enumerate(self.curves):
             curve.SetInitialValue(self.x0Vect[i])
+        self.x1Vect = np.asarray([Add(x0, d) for (x0, d) in zip(self.x0Vect, self.dVect)])
             
 
     def EvalPos(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
         
@@ -531,8 +802,7 @@ class ParabolicCurvesND(object):
 
 
     def EvalVel(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
         
@@ -541,22 +811,135 @@ class ParabolicCurvesND(object):
 
 
     def EvalAcc(self, t):
-        if type(t) is not mp.mpf:
-            t = mp.mpf("{:.15e}".format(t))
+        t = ConvertFloatToMPF(t)
         assert(t >= -epsilon)
         assert(t <= self.duration + epsilon)
         
         aVect = [curve.EvalAcc(t) for curve in self.curves]
         return np.asarray(aVect)
 
-
+    
     def GetPeaks(self):
+        return self._GetPeaks(0, self.duration)
+    
+    
+    def _GetPeaks(self, ta, tb):
         xmin = np.zeros(self.ndof)
         xmax = np.zeros(self.ndof)
         for i in xrange(self.ndof):
-            xmin[i], xmax[i] = self.curves[i].GetPeaks()
+            xmin[i], xmax[i] = self.curves[i]._GetPeaks(ta, tb)
         return [xmin, xmax]
+
+
+    def SetConstant(self, x0Vect_, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= 0)
+        x0Vect = ConvertFloatArrayToMPF(x0Vect_)
         
+        ndof = len(x0Vect)
+        curves = []
+        for i in xrange(ndof):
+            curve = ParabolicCurve()
+            curve.SetConstant(x0Vect[i], t)
+            curves.append(curve)
+
+        self.Initialize(curves)
+        return
+
+
+    def SetSegment(self, x0Vect_, x1Vect_, v0Vect_, v1Vect_, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= 0)
+
+        x0Vect = ConvertFloatArrayToMPF(x0Vect_)
+        x1Vect = ConvertFloatArrayToMPF(x1Vect_)
+        v0Vect = ConvertFloatArrayToMPF(v0Vect_)
+        v1Vect = ConvertFloatArrayToMPF(v1Vect_)
+
+        ndof = len(x0Vect)
+        curves = []
+        for i in xrange(ndof):
+            curve = ParabolicCurve()
+            curve.SetSegment(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], t)
+            curves.append(curve)
+
+        self.Initialize(curves)
+        return
+
+    
+    def SetZeroDuration(self, x0Vect_, v0Vect_):
+        x0Vect = ConvertFloatArrayToMPF(x0Vect_)
+        v0Vect = ConvertFloatArrayToMPF(v0Vect_)
+        ndof = len(x0Vect)
+        curves = []
+        for i in xrange(ndof):
+            curve = ParabolicCurve()
+            curve.SetZeroDuration(x0Vect[i], v0Vect[i])
+            curves.append(curve)
+
+        self.Initialize(curves)
+        return
+
+
+    def Cut(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= Add(self.duration, epsilon))
+
+        if (t <= 0):
+            remCurvesND = ParabolicCurvesND()
+            remCurvesND.SetZeroDuration(self.x0Vect, self.v0Vect)
+            return
+        elif (t >= self.duration):
+            remCurvesND = ParabolicCurvesND()
+            remCurvesND.SetZeroDuration(self.x1Vect, self.v1Vect)
+            return
+
+        leftHalf = self.curves
+        rightHalf = []
+        for i in xrange(self.ndof):
+            rightHalf.append(leftHalf[i].Cut(t))
+
+        self.Initialize(leftHalf)
+        remCurvesND = ParabolicCurvesND(rightHalf)
+        return remCurvesND
+
+
+    def TrimFront(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= Add(self.duration, epsilon))
+
+        if (t <= 0):
+            return
+        elif (t >= self.duration):
+            self.SetZeroDuration(self.x1Vect, self.v1Vect)
+            return
+
+        newCurves = self.curves
+        for i in xrange(self.ndof):
+            newCurves[i].TrimFront(t)
+        self.Initialize(newCurves)
+        return
+
+
+    def TrimBack(self, t):
+        t = ConvertFloatToMPF(t)
+        assert(t >= -epsilon)
+        assert(t <= Add(self.duration, epsilon))
+
+        if (t <= 0):
+            self.SetZeroDuration(self.x0Vect, self.v0Vect)
+            return
+        elif (t >= self.duration):
+            return
+
+        newCurves = self.curves
+        for i in xrange(self.ndof):
+            newCurves[i].TrimBack(t)
+        self.Initialize(newCurves)
+        return
+
 
     # Visualization
     def PlotPos(self, fignum='Displacement Profiles', includingSW=False, dt=0.005):
@@ -747,10 +1130,10 @@ def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
             ramp0 = Ramp(v0, a1, tswitch1, x0)
             if ramp0.duration > epsilon:
                 ramps.append(ramp0)
-            ramp1 = Ramp(v, 0, tswitch2 - tswitch1)
+            ramp1 = Ramp(v, 0, tswitch2 - tswitch1, ramp0.x1)
             if ramp1.duration > epsilon:
                 ramps.append(ramp1)
-            ramp2 = Ramp(v, a2, ttotal - tswitch2)
+            ramp2 = Ramp(v, a2, ttotal - tswitch2, ramp1.x1)
             if ramp2.duration > epsilon:
                 ramps.append(ramp2)
             assert(len(ramps) > 0)
@@ -759,3 +1142,191 @@ def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
             curves[idof].Append(curve)
 
     return ParabolicCurvesND(curves)
+
+
+def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
+    """
+    Data format:
+
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 1 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 2 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+     :
+     :
+    
+    chunk N
+
+    For each ParabolicCurve:
+      ramp 0      ramp 1            ramp M
+    v0 a t x0 | v0 a t x0 | ... | v0 a t x0
+    
+    """
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    ndof = int(rawdata[0])
+    nlines_chunk = 2 + ndof
+
+    nchunks = len(rawdata)/nlines_chunk
+
+    curvesnd = ParabolicCurvesND()
+    for ichunk in xrange(nchunks):
+        curves = []
+        for idof in xrange(ndof):
+            curvedata = rawdata[(ichunk*nlines_chunk) + 2 + idof]
+            curvedata = curvedata.strip().split(" ")
+            curve = ParabolicCurve()
+            nramps = len(curvedata)/4
+            for iramp in xrange(nramps):
+                v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
+                ramp = Ramp(v, a, t, x0)
+                nextCurve = ParabolicCurve([ramp])
+                curve.Append(nextCurve)
+            curves.append(curve)
+        nextCurvesND = ParabolicCurvesND(curves)
+        curvesnd.Append(nextCurvesND)
+
+    return curvesnd
+
+
+def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
+    """
+    Data format:
+
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 1 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+             /   ndof
+             |   duration
+             |   curve1
+    chunk 2 <   curve2
+             |   curve3
+             |   :
+             |   :
+             \   curvendof
+     :
+     :
+    
+    chunk N
+
+    For each ParabolicCurve:
+      ramp 0      ramp 1            ramp M
+    v0 a t x0 | v0 a t x0 | ... | v0 a t x0
+    
+    """
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    ndof = int(rawdata[0])
+    nlines_chunk = 2 + ndof
+
+    nchunks = len(rawdata)/nlines_chunk
+
+    curves = []
+    for idof in xrange(ndof):
+        curvedata = rawdata[(chunkindex*nlines_chunk) + 2 + idof]
+        curvedata = curvedata.strip().split(" ")
+        curve = ParabolicCurve()
+        nramps = len(curvedata)/4
+        for iramp in xrange(nramps):
+            v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
+            ramp = Ramp(v, a, t, x0)
+            nextCurve = ParabolicCurve([ramp])
+            curve.Append(nextCurve)
+        curves.append(curve)
+    curvesnd = ParabolicCurvesND(curves)
+
+    return curvesnd
+
+
+def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
+    """Data format
+    rampnd1
+    rampnd2
+    rampnd3
+      :
+      :
+
+    For each RampND:
+    rampnd data = [ndof x0, x1, v0, v1, a, t]
+    len(data) = 5*ndof + 2
+    """
+
+    parabolicpathstring = parabolicpathstring.strip()
+    rawdata = parabolicpathstring.split("\n")
+    nrampnds = len(rawdata)
+    finalcurvesnd = ParabolicCurvesND()
+
+    # check soundness
+    ndof = int(rawdata[0].strip().split(" ")[0])
+    for i in xrange(nrampnds):
+        assert( ndof == int((len(rawdata[i].strip().split(" ")) - 2)/5) )
+
+    for i in xrange(nrampnds):
+        data = rawdata[i].strip().split(" ")
+        data = [float(x) for x in data[1:]]
+        offset = 0
+        x0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        x1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v0 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        v1 = np.array(data[offset : offset + ndof])
+        offset += ndof
+        a = np.array(data[offset : offset + ndof])
+        offset += ndof
+        t = data[offset]
+
+        curvesnd = ParabolicCurvesND()
+        curvesnd.SetSegment(x0, x1, v0, v1, t)
+        finalcurvesnd.Append(curvesnd)
+
+    return finalcurvesnd
+        
+
+def ConvertOpenRAVETrajectoryToParabolicCurvesND(traj):
+    nwaypoints = traj.GetNumWaypoints()
+    curvesnd = ParabolicCurvesND()
+    
+    spec = traj.GetConfigurationSpecification()
+    xgroup = spec.GetGroupFromName('joint_values')
+    xoffset = xgroup.offset
+    xdof = xgroup.dof
+    if not (xgroup.interpolation == 'quadratic'):
+        raise ValueError("This function supports only parabolic trajectory. The given trajectory has interpolation == {0}".format(xgroup.interpolation))
+    
+    vgroup = spec.GetGroupFromName('joint_velocities')
+    voffset = vgroup.offset
+    vdof = vgroup.dof
+    deltatimegroup = spec.GetGroupFromName('deltatime')
+    toffset = deltatimegroup.offset
+
+    for iwaypoint in xrange(nwaypoints - 1):
+        x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
+        x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
+        v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]
+        v1 = traj.GetWaypoint(iwaypoint + 1)[voffset: voffset + vdof]
+        t = traj.GetWaypoint(iwaypoint + 1)[toffset]
+        temp = ParabolicCurvesND()
+        temp.SetSegment(x0, x1, v0, v1, t)
+        curvesnd.Append(temp)
+    
+    return curvesnd
+

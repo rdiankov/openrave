@@ -13,6 +13,7 @@
 // limitations under the License.
 #include "osgviewerwidget.h"
 #include "osgcartoon.h"
+#include "osgskybox.h"
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
@@ -20,7 +21,6 @@
 #include <osg/CullFace>
 #include <osg/CoordinateSystemNode>
 #include <osg/BlendFunc>
-
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
 #include <osgManipulator/TabPlaneDragger>
@@ -127,29 +127,134 @@ public:
         setTransformation( newEye, newCenter, prevUp );
     }
 
+    virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        switch( ea.getEventType() )
+        {
+        case osgGA::GUIEventAdapter::DOUBLECLICK:
+            return handleMouseDoubleClick( ea, us );
+
+        default:
+            break;
+        }
+        return osgGA::TrackballManipulator::handle(ea, us);
+    }
+
+    bool setCenterByMousePointerIntersection( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        using namespace osg;
+        using namespace osgUtil; // to preserve struct with osg library
+        osg::View* view = us.asView();
+        if( !view )
+            return false;
+
+        Camera *camera = view->getCamera();
+        if( !camera )
+            return false;
+
+        // prepare variables
+        float x = ( ea.getX() - ea.getXmin() ) / ( ea.getXmax() - ea.getXmin() );
+        float y = ( ea.getY() - ea.getYmin() ) / ( ea.getYmax() - ea.getYmin() );
+        LineSegmentIntersector::CoordinateFrame cf;
+        Viewport *vp = camera->getViewport();
+        if( vp ) {
+            cf = Intersector::WINDOW;
+            x *= vp->width();
+            y *= vp->height();
+        } else
+            cf = Intersector::PROJECTION;
+
+        // perform intersection computation
+        ref_ptr< LineSegmentIntersector > picker = new LineSegmentIntersector( cf, x, y );
+        IntersectionVisitor iv( picker.get() );
+        iv.setTraversalMask(OSG_IS_PICKABLE_MASK); // different from OSG implementation!
+        camera->accept( iv );
+
+        // return on no intersections
+        if( !picker->containsIntersections() )
+            return false;
+
+        // get all intersections
+        LineSegmentIntersector::Intersections& intersections = picker->getIntersections();
+
+        // get current transformation
+        osg::Vec3d eye, oldCenter, up;
+        getTransformation( eye, oldCenter, up );
+
+        // new center
+        osg::Vec3d newCenter = (*intersections.begin()).getWorldIntersectPoint();
+
+        // make vertical axis correction
+        if( getVerticalAxisFixed() )
+        {
+
+            CoordinateFrame coordinateFrame = getCoordinateFrame( newCenter );
+            Vec3d localUp = getUpVector( coordinateFrame );
+
+            fixVerticalAxis( newCenter - eye, up, up, localUp, true );
+
+        }
+
+        // set the new center
+        setTransformation( eye, newCenter, up );
+
+
+        // warp pointer
+        // note: this works for me on standard camera on GraphicsWindowEmbedded and Qt,
+        //       while it was necessary to implement requestWarpPointer like follows:
+        //
+        // void QOSGWidget::requestWarpPointer( float x, float y )
+        // {
+        //    osgViewer::Viewer::requestWarpPointer( x, y );
+        //    QCursor::setPos( this->mapToGlobal( QPoint( int( x+.5f ), int( y+.5f ) ) ) );
+        // }
+        //
+        // Additions of .5f are just for the purpose of rounding.
+        centerMousePointer( ea, us );
+
+        return true;
+    }
+
+
+    virtual bool seekToMousePointer( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        SetSeekMode(false);
+        if( !isAnimating() ) {
+            setAnimationTime(0.25);
+
+            // get current transformation
+            osg::Vec3d prevCenter, prevEye, prevUp;
+            getTransformation( prevEye, prevCenter, prevUp );
+
+            // center by mouse intersection
+            if( !setCenterByMousePointerIntersection( ea, us ) ) {
+                return false;
+            }
+
+            OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
+            BOOST_ASSERT( !!ad );
+
+            // setup animation data and restore original transformation
+            ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
+            ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
+            setTransformation( prevEye, prevCenter, prevUp );
+            return true;
+        }
+        return false;
+    }
+
+    virtual bool handleMouseDoubleClick( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
+    {
+        if (seekToMousePointer(ea, us)) {
+            return true;
+        }
+        return false;
+    }
+
     virtual bool handleMousePush( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
         if( _bInSeekMode ) {
-            SetSeekMode(false);
-            if( !isAnimating() ) {
-                setAnimationTime(0.25);
-
-                // get current transformation
-                osg::Vec3d prevCenter, prevEye, prevUp;
-                getTransformation( prevEye, prevCenter, prevUp );
-
-                // center by mouse intersection
-                if( !setCenterByMousePointerIntersection( ea, us ) ) {
-                    return false;
-                }
-
-                OpenRAVEAnimationData *ad = dynamic_cast< OpenRAVEAnimationData*>( _animationData.get() );
-                BOOST_ASSERT( !!ad );
-
-                // setup animation data and restore original transformation
-                ad->start( osg::Vec3d(_center) - prevCenter, ea.getTime() );
-                ad->_eyemovement = (osg::Vec3d(_center) - prevEye)*0.5;
-                setTransformation( prevEye, prevCenter, prevUp );
+            if (seekToMousePointer(ea, us)) {
                 return true;
             }
         }
@@ -314,6 +419,13 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
         stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
         _osgFigureRoot->setStateSet(stateset);
+
+    }
+
+    {
+        _osgSkybox = new Skybox;
+        _osgFigureRoot->addChild(_osgSkybox);
+        _osgFigureRoot->setNodeMask(~OSG_IS_PICKABLE_MASK);
     }
 
     // create world axis
@@ -321,7 +433,7 @@ ViewerWidget::ViewerWidget(EnvironmentBasePtr penv, const std::string& userdatak
     //_osgWorldAxis->getOrCreateStateSet()->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE );
 
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
-    
+
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
 
@@ -379,7 +491,7 @@ ViewerWidget::~ViewerWidget()
     }
     _selectedItem.reset();
 }
-    
+
 bool ViewerWidget::HandleOSGKeyDown(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& aa)
 {
     int key = ea.getKey();
@@ -419,7 +531,7 @@ void ViewerWidget::RestoreCursor()
         gw->getGLWidget()->setCursor(_currentCursor);
     }
 }
-    
+
 void ViewerWidget::ActivateSelection(bool active)
 {
     _bIsSelectiveActive = active;
@@ -786,6 +898,12 @@ void ViewerWidget::SetViewport(int width, int height, double metersinunit)
     double textheight = (10.0/480.0)*height;
     _osgHudText->setPosition(osg::Vec3(-width/2+10, height/2-textheight, -50));
     _osgHudText->setCharacterSize(textheight);
+}
+
+void ViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
+                                     const std::string& negy, const std::string& posz, const std::string& negz)
+{
+    _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
 QWidget* ViewerWidget::_AddViewWidget( osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view, osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview )
