@@ -1779,6 +1779,16 @@ void QtOSGViewer::Move(int x, int y)
     _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
 }
 
+void QtOSGViewer::Zoom(float factor)
+{
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));   
+}
+
+void QtOSGViewer::_Zoom(float factor)
+{
+    _posgWidget->Zoom(factor);
+}
+
 void QtOSGViewer::SetName(const string& name)
 {
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));

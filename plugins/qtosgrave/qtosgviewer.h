@@ -95,6 +95,8 @@ public:
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
 
+    virtual void Zoom(float factor);
+
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
@@ -324,6 +326,7 @@ public:
     virtual void _SetBkgndColor(const RaveVector<float>& color);
 
     virtual void _SetName(const std::string& name);
+    virtual void _Zoom(float factor);
 
     /// \brief posts a function to be executed in the GUI thread
     ///

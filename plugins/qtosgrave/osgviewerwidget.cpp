@@ -900,6 +900,21 @@ void ViewerWidget::SetViewport(int width, int height, double metersinunit)
     _osgHudText->setCharacterSize(textheight);
 }
 
+void ViewerWidget::Zoom(float factor)
+{
+    if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
+        int width = _osgview->getCamera()->getViewport()->width();
+        int height = _osgview->getCamera()->getViewport()->height();
+        double aspect = static_cast<double>(width)/static_cast<double>(height);
+        double nearplane = GetCameraNearPlane();
+
+        double distance = 0.5 * _osgCameraManipulator->getDistance() * factor;
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
+    } else {
+        // TODO: implement this
+    }   
+}
+
 void ViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
                                      const std::string& negy, const std::string& posz, const std::string& negz)
 {

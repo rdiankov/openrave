@@ -81,6 +81,8 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
+    void Zoom(float factor);
+
     /// \brief set the cubemap for skybox
     void SetTextureCubeMap(const std::string& posx,
             const std::string& negx,
