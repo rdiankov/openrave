@@ -370,6 +370,7 @@ public:
     bool _SetTrackingAngleToUpCommand(ostream& sout, istream& sinput);
     bool _StartViewerLoopCommand(ostream& sout, istream& sinput);
     bool _SetProjectionModeCommand(ostream& sout, istream& sinput);
+    bool _ZoomCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     list<GUIThreadFunctionPtr> _listGUIFunctions; ///< list of GUI functions that should be called in the viewer update thread. protected by _mutexGUIFunctions

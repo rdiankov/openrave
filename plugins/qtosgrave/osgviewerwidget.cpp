@@ -842,32 +842,23 @@ void ViewerWidget::_UpdateHUDText()
 
 void ViewerWidget::SetNearPlane(double nearplane)
 {
+    _zNear = nearplane;
     if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
         // orthogonal
         double left, right, bottom, top, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(left, right, bottom, top, nearplane, zFar);
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(left, right, bottom, top, nearplane, 10000.0 * nearplane);
     }
     else {
         double fovy, aspectRatio, zNear, zFar;
         _osgview->getCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
-        _osgview->getCamera()->setProjectionMatrixAsPerspective(fovy, aspectRatio, nearplane, zFar);
+        _osgview->getCamera()->setProjectionMatrixAsPerspective(fovy, aspectRatio, nearplane, 10000.0 * nearplane);
     }
 }
 
 double ViewerWidget::GetCameraNearPlane()
 {
-    if( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
-        // orthogonal
-        double left, right, bottom, top, zNear, zFar;
-        _osgview->getCamera()->getProjectionMatrixAsOrtho(left, right, bottom, top, zNear, zFar);
-        return zNear;
-    }
-    else {
-        double fovy, aspectRatio, zNear, zFar;
-        _osgview->getCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
-        return zNear;
-    }
+    return _zNear;
 }
 
 void ViewerWidget::SetViewType(int isorthogonal)
@@ -875,13 +866,12 @@ void ViewerWidget::SetViewType(int isorthogonal)
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
-    double nearplane = GetCameraNearPlane();
     if( isorthogonal ) {
         double distance = 0.5*_osgCameraManipulator->getDistance();
-        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
+        _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, _zNear, _zNear * 10000.0);
     }
     else {
-        _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, nearplane, 10000*nearplane );
+        _osgview->getCamera()->setProjectionMatrixAsPerspective(45.0f, aspect, _zNear, _zNear * 10000.0);
     }
 }
 
@@ -902,17 +892,16 @@ void ViewerWidget::SetViewport(int width, int height, double metersinunit)
 
 void ViewerWidget::Zoom(float factor)
 {
+    // Ortho
     if ( _osgview->getCamera()->getProjectionMatrix()(2,3) == 0 ) {
-        int width = _osgview->getCamera()->getViewport()->width();
-        int height = _osgview->getCamera()->getViewport()->height();
-        double aspect = static_cast<double>(width)/static_cast<double>(height);
-        double nearplane = GetCameraNearPlane();
+        const int width = _osgview->getCamera()->getViewport()->width();
+        const int height = _osgview->getCamera()->getViewport()->height();
+        const double aspect = static_cast<double>(width)/static_cast<double>(height);
+        const double nearplane = GetCameraNearPlane();
+        const double distance = 0.5 * _osgCameraManipulator->getDistance() * factor;
 
-        double distance = 0.5 * _osgCameraManipulator->getDistance() * factor;
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
-    } else {
-        // TODO: implement this
-    }   
+    }
 }
 
 void ViewerWidget::SetTextureCubeMap(const std::string& posx, const std::string& negx, const std::string& posy,
@@ -966,8 +955,8 @@ osg::ref_ptr<osg::Camera> ViewerWidget::_CreateCamera( int x, int y, int w, int 
 
     camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
-    double fnear = 0.01/metersinunit;
-    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), fnear, 100.0/metersinunit);
+    _zNear = 0.01/metersinunit;
+    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), _zNear, 100.0/metersinunit);
     camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }

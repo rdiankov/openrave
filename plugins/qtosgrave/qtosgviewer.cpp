@@ -160,6 +160,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
                     "starts the viewer sync loop and shows the viewer. expects someone else will call the qapplication exec fn");
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
+    RegisterCommand("Zoom", boost::bind(&QtOSGViewer::_ZoomCommand, this, _1, _2),
+                    "Set the zooming factor of the view");
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -1242,6 +1244,14 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
     std::string projectionMode = "";
     sinput >> projectionMode;
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
+    return true;
+}
+
+bool QtOSGViewer::_ZoomCommand(ostream& sout, istream& sinput)
+{
+    float factor = 1.0f;
+    sinput >> factor;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Zoom, this, factor));
     return true;
 }
 
