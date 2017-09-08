@@ -95,6 +95,8 @@ public:
     virtual void SetSize(int w, int h);
     virtual void Move(int x, int y);
 
+    /// \brief sets the zoom factor. only affects orthogonal view
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
     virtual void Zoom(float factor);
 
     /// \brief Set title of the viewer window

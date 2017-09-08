@@ -81,6 +81,8 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
+    /// \brief sets the zoom factor. only affects orthogonal view 
+    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
     void Zoom(float factor);
 
     /// \brief set the cubemap for skybox

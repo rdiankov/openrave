@@ -898,7 +898,7 @@ void ViewerWidget::Zoom(float factor)
         const int height = _osgview->getCamera()->getViewport()->height();
         const double aspect = static_cast<double>(width)/static_cast<double>(height);
         const double nearplane = GetCameraNearPlane();
-        const double distance = 0.5 * _osgCameraManipulator->getDistance() * factor;
+        const double distance = 0.5 * _osgCameraManipulator->getDistance() / factor;
 
         _osgview->getCamera()->setProjectionMatrixAsOrtho(-distance, distance, -distance/aspect, distance/aspect, nearplane, 10000*nearplane);
     }
