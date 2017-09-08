@@ -2247,7 +2247,7 @@ private:
                 link_collision_state->add("bool")->setCharData((*itlink)->IsEnabled() ? "true" : "false");
             }
         }
-        if( IsWrite("bind_instance_geometry") ) {
+        if( IsForceWrite("bind_instance_geometry") ) {
             FOREACHC(itlink, pbody->GetLinks()) {
                 FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
                     int igeom = 0;

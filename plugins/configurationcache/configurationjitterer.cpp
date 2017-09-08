@@ -48,7 +48,7 @@ public:
 
 typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
 
-/// \brief holds parameters for threshing the position. if dot(manipdir, tooldir) > cosanglethresh, then ok
+/// \brief holds parameters for threshing the position with respect to a bounding box.
 class ManipPositionConstraints
 {
 public:
