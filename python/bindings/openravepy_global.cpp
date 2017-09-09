@@ -1054,6 +1054,13 @@ object MultiplyPose(object opose1, object opose2)
     return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
 }
 
+object poseTransformPoint(object opose, object opoint)
+{
+    Transform t = ExtractTransformType<dReal>(opose);
+    Vector newpoint = t*ExtractVector3(opoint);
+    return toPyVector3(newpoint);
+}
+
 object poseTransformPoints(object opose, object opoints)
 {
     Transform t = ExtractTransformType<dReal>(opose);
@@ -1385,6 +1392,7 @@ void init_openravepy_global()
     def("InvertQuat",openravepy::InvertQuat,args("quat"),DOXY_FN1(quatInverse));
     def("quatInverse",openravepy::InvertQuat,args("quat"),DOXY_FN1(quatInverse));
     def("MultiplyPose",openravepy::MultiplyPose,args("pose1","pose2"),"multiplies two poses.\n\n:param pose1: 7 values\n\n:param pose2: 7 values\n");
+    def("poseTransformPoint",openravepy::poseTransformPoint,args("pose","point"),"left-transforms a 3D point by a pose transformation.\n\n:param pose: 7 values\n\n:param points: 3 values");
     def("poseTransformPoints",openravepy::poseTransformPoints,args("pose","points"),"left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
     def("TransformLookat",openravepy::TransformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
     def("transformLookat",openravepy::TransformLookat,args("lookat","camerapos","cameraup"),"Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
