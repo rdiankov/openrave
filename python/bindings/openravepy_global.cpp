@@ -1033,6 +1033,11 @@ object quatRotateDirection(object source, object target)
     return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
+object ExtractAxisFromQuat(object oquat, int iaxis)
+{
+    return toPyVector3(ExtractAxisFromQuat(ExtractVector4(oquat), iaxis));
+}
+
 object normalizeAxisRotation(object axis, object quat)
 {
     std::pair<dReal, Vector > res = normalizeAxisRotation(ExtractVector3(axis), ExtractVector4(quat));
@@ -1386,6 +1391,7 @@ void init_openravepy_global()
     def("InvertPoses",openravepy::InvertPoses,args("poses"), "Inverts a Nx7 array of poses where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param poses: nx7 array");
     def("InvertPose",openravepy::InvertPose,args("pose"), "Inverts a 7-element pose where first 4 columns are the quaternion and last 3 are the translation components.\n\n:param pose: 7-element array");
     def("quatRotateDirection",openravepy::quatRotateDirection,args("sourcedir,targetdir"), DOXY_FN1(quatRotateDirection));
+    def("ExtractAxisFromQuat",openravepy::ExtractAxisFromQuat,args("quat","iaxis"),DOXY_FN1(ExtractAxisFromQuat));
     def("MultiplyQuat",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("quatMult",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
     def("quatMultiply",openravepy::MultiplyQuat,args("quat0","quat1"),DOXY_FN1(quatMultiply));
