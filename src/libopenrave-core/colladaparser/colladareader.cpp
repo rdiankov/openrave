@@ -1246,7 +1246,8 @@ public:
 
         RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
         if( !!probot ) {
-            ExtractRobotManipulators(probot, articulated_system, bindings);
+            ExtractRobotManipulators(probot, articulated_system->getExtra_array(), articulated_system, bindings);
+            ExtractRobotManipulators(probot, ias->getExtra_array(), articulated_system, bindings); // have to also read from the instance_articulated_system!
             ExtractRobotAttachedSensors(probot, articulated_system, bindings);
             ExtractRobotAttachedActuators(probot, articulated_system, bindings);
         }
@@ -2890,10 +2891,10 @@ public:
     }
 
     /// \brief extract the robot manipulators
-    void ExtractRobotManipulators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
+    void ExtractRobotManipulators(RobotBasePtr probot, domExtra_Array& manipulatorExtraArray, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
     {
-        for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
-            domExtraRef pextra = as->getExtra_array()[ie];
+        for(size_t ie = 0; ie < manipulatorExtraArray.getCount(); ++ie) {
+            domExtraRef pextra = manipulatorExtraArray[ie];
             if( !pextra->getType() ) {
                 continue;
             }
