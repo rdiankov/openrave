@@ -533,7 +533,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
 
         BOOST_ASSERT(!_busebiasing || _vbiasdofdirection.size() > 0);
-        const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
+        const boost::array<dReal, 3> rayincs = {{0.2, 0.5, 0.9}};
 
         bool busebiasing = _busebiasing;
         const int nMaxIterRadiusThresh=_maxiterations/2;
