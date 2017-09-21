@@ -3010,6 +3010,23 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
                 }
+                if( j == 1 ) {
+                    dReal fFriction = 0; // torque due to friction
+                    // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
+                    if( !!pjoint->_info._infoElectricMotor ) {
+                        if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
+                            if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
+                                fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
+                            }
+                            else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
+                                fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
+                            }
+                            fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
+                        }
+
+                        vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += fFriction;
+                    }
+                }
             }
             else if( bIsMimic ) {
                 // passive joint, so have to transfer the torque to its dependent joints.
