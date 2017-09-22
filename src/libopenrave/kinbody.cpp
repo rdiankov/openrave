@@ -2714,6 +2714,46 @@ void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian
     }
 }
 
+void KinBody::GetMotorFrictionTorques(std::vector<dReal>& doftorques) const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    doftorques.resize(GetDOF());
+    if( _vecjoints.size() == 0 ) {
+        return;
+    }
+    std::vector<dReal> vDOFVelocities;
+    std::vector<pair<Vector, Vector> > vLinkVelocities; // linear, angular
+    _ComputeDOFLinkVelocities(vDOFVelocities, vLinkVelocities);
+    for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
+        JointPtr pjoint = _vTopologicallySortedJointsAll.at(_vTopologicallySortedJointsAll.size()-1-ijoint);
+        if( pjoint->GetDOFIndex() >= 0 ) {
+            dReal fFriction = 0; // torque due to friction
+            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
+            if( !!pjoint->_info._infoElectricMotor ) {
+                if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
+                    if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
+                        fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
+                    }
+                    else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
+                        fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
+                    }
+                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
+               }
+
+               doftorques.at(pjoint->GetDOFIndex()) += fFriction;
+           }
+        }
+    }
+}
+
+void KinBody::GetJointNominalTorques(std::vector<dReal>& doftorques) const
+{
+}
+
+void KinBody::GetMotorNominalTorques(std::vector<dReal>& doftorques) const
+{
+}
+
 void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
@@ -2791,22 +2831,6 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
-            }
-
-            dReal fFriction = 0; // torque due to friction
-            // see if any friction needs to be added. Only add if the velocity is non-zero since with zero velocity do not know the exact torque on the joint...
-            if( !!pjoint->_info._infoElectricMotor ) {
-                if( pjoint->GetDOFIndex() < (int)vDOFVelocities.size() ) {
-                    if( vDOFVelocities.at(pjoint->GetDOFIndex()) > g_fEpsilonLinear ) {
-                        fFriction += pjoint->_info._infoElectricMotor->coloumb_friction;
-                    }
-                    else if( vDOFVelocities.at(pjoint->GetDOFIndex()) < -g_fEpsilonLinear ) {
-                        fFriction -= pjoint->_info._infoElectricMotor->coloumb_friction;
-                    }
-                    fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pjoint->_info._infoElectricMotor->viscous_friction;
-                }
-
-                doftorques.at(pjoint->GetDOFIndex()) += fFriction;
             }
         }
         else if( pjoint->IsMimic(0) ) {

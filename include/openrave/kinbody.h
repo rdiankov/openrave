@@ -1927,6 +1927,18 @@ private:
     /// \brief link index and the linear forces and torques. Value.first is linear force acting on the link's COM and Value.second is torque
     typedef std::map<int, std::pair<Vector,Vector> > ForceTorqueMap;
 
+    /** Return motor friction torques
+     */
+    virtual void GetMotorFrictionTorques(std::vector<dReal>& doftorques) const;
+
+    /** todo
+     */
+    virtual void GetJointNominalTorques(std::vector<dReal>& doftorques) const;
+
+    /** todo
+     */
+    virtual void GetMotorNominalTorques(std::vector<dReal>& doftorques) const;
+
     /** \brief Computes the inverse dynamics (torques) from the current robot position, velocity, and acceleration.
 
         The dof values are ready from GetDOFValues() and GetDOFVelocities(). Because openrave does not have a state for robot acceleration,
