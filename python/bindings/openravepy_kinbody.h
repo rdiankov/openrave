@@ -118,6 +118,15 @@ public:
         return pinfo;
     }
 
+    std::string __str__() {
+        std::string robotlinkname = boost::python::extract<std::string>(_robotlinkname);
+        std::string grabbedname = boost::python::extract<std::string>(_grabbedname);
+        return boost::str(boost::format("<grabbedinfo:%s -> %s>")%robotlinkname%grabbedname);
+    }
+    object __unicode__() {
+        return ConvertStringToUnicode(__str__());
+    }
+
     object _grabbedname, _robotlinkname;
     object _trelative;
     object _setRobotLinksToIgnore;
