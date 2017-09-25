@@ -2746,14 +2746,6 @@ void KinBody::GetMotorFrictionTorques(std::vector<dReal>& doftorques) const
     }
 }
 
-void KinBody::GetJointNominalTorques(std::vector<dReal>& doftorques) const
-{
-}
-
-void KinBody::GetMotorNominalTorques(std::vector<dReal>& doftorques) const
-{
-}
-
 void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::vector<dReal>& vDOFAccelerations, const KinBody::ForceTorqueMap& mapExternalForceTorque) const
 {
     CHECK_INTERNAL_COMPUTATION;
