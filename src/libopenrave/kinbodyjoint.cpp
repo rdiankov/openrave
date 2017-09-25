@@ -1205,10 +1205,11 @@ std::pair<dReal, dReal> KinBody::Joint::GetMotorNominalTorqueLimits(int iaxis) c
 std::pair<dReal, dReal> KinBody::Joint::GetJointNominalTorqueLimits(int iaxis) const
 {
     std::pair<dReal, dReal> torques = GetNominalTorqueLimits(iaxis);
-    if( _info._type == KinBody::JointPrismatic ) {
+    if( _info._infoElectricMotor && _info._type == KinBody::JointPrismatic ) {
         torques.first *= 2*PI;
         torques.second *= 2*PI;
     }
+    return torques;
 }
 
 int KinBody::Joint::GetMimicJointIndex() const
